@@ -4,6 +4,7 @@ import { useRestaurants } from "@/hooks/use-restaurants";
 import { Restaurant } from "@/types/restaurant";
 import { FilterState } from "@/components/filters/FilterPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -156,13 +157,26 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
   }
 
   return (
-    <div className="relative w-full h-full">
+    <div className="relative w-full h-full flex">
       {/* Map container */}
-      <div ref={mapRef} className="w-full h-full" />
+      <div ref={mapRef} className="flex-1 h-full" />
+
+      {/* Restaurant Detail Panel */}
+      {selectedRestaurant && (
+        <div className="w-96 h-full">
+          <RestaurantDetailPanel
+            restaurant={selectedRestaurant}
+            onClose={() => setSelectedRestaurant(null)}
+            onWriteReview={() => {
+              setIsReviewModalOpen(true);
+            }}
+          />
+        </div>
+      )}
 
       {/* Loading indicator */}
       {isLoadingRestaurants && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 z-10">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
           <span className="text-sm font-medium">맛집 로딩 중...</span>
         </div>
@@ -170,7 +184,7 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
 
       {/* Restaurant count */}
       {!isLoadingRestaurants && restaurants.length > 0 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10">
           <span className="text-sm font-medium">
             🔥 {restaurants.length}개의 맛집 발견
           </span>
@@ -181,94 +195,13 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
       {onAdminAddRestaurant && (
         <button
           onClick={onAdminAddRestaurant}
-          className="absolute bottom-8 right-8 bg-gradient-primary text-primary-foreground px-6 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity font-semibold flex items-center gap-2"
+          className="absolute bottom-8 right-8 bg-gradient-primary text-primary-foreground px-6 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity font-semibold flex items-center gap-2 z-10"
         >
           <span className="text-xl">+</span>
           맛집 등록
         </button>
       )}
 
-      {/* Restaurant detail panel */}
-      {selectedRestaurant && (
-        <div className="absolute right-4 top-4 w-80 bg-card border border-border rounded-lg shadow-primary p-4 space-y-4 max-h-[calc(100vh-8rem)] overflow-y-auto">
-          <div className="flex justify-between items-start">
-            <div className="flex-1">
-              <h3 className="font-bold text-lg">{selectedRestaurant.name}</h3>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm bg-accent text-accent-foreground px-2 py-1 rounded">
-                  {selectedRestaurant.category}
-                </span>
-              </div>
-            </div>
-            <button
-              onClick={() => setSelectedRestaurant(null)}
-              className="text-muted-foreground hover:text-foreground ml-2"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">
-                {(selectedRestaurant.ai_rating ?? 0) >= 4 ? "🔥" : "⭐"}
-              </span>
-              <span className="font-semibold">
-                AI 점수: {selectedRestaurant.ai_rating ?? "N/A"}
-              </span>
-            </div>
-            <div className="text-sm text-muted-foreground">
-              📍 {selectedRestaurant.address}
-            </div>
-            {selectedRestaurant.phone && (
-              <div className="text-sm text-muted-foreground">
-                📞 {selectedRestaurant.phone}
-              </div>
-            )}
-            <div className="flex gap-4 text-sm">
-              <span>👥 방문: {selectedRestaurant.visit_count ?? 0}회</span>
-              <span>💬 리뷰: {selectedRestaurant.review_count ?? 0}개</span>
-            </div>
-          </div>
-
-          {selectedRestaurant.tzuyang_review && (
-            <div className="pt-2 border-t border-border">
-              <h4 className="font-semibold text-sm mb-2">🎬 쯔양 리뷰</h4>
-              <p className="text-sm text-muted-foreground">
-                {selectedRestaurant.tzuyang_review}
-              </p>
-            </div>
-          )}
-
-          {selectedRestaurant.youtube_link && (
-            <div className="pt-2">
-              <a
-                href={selectedRestaurant.youtube_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline flex items-center gap-1"
-              >
-                🎥 유튜브 영상 보기 →
-              </a>
-            </div>
-          )}
-
-          <div className="pt-4 border-t border-border">
-            <button
-              onClick={() => {
-                if (!user) {
-                  alert("로그인이 필요합니다");
-                  return;
-                }
-                setIsReviewModalOpen(true);
-              }}
-              className="w-full bg-gradient-primary text-primary-foreground py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity"
-            >
-              리뷰 작성하기
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Review Modal */}
       {selectedRestaurant && isReviewModalOpen && (

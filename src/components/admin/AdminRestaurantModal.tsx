@@ -30,10 +30,11 @@ export function AdminRestaurantModal({
         phone: "",
         category: RESTAURANT_CATEGORIES[0],
         youtube_link: "",
-        tzuyang_review: "",
+        description: "",
         lat: "",
         lng: "",
-        ai_rating: "",
+        rating_ai: "",
+        jjyang_visit_count: "",
     });
 
     useEffect(() => {
@@ -44,10 +45,11 @@ export function AdminRestaurantModal({
                 phone: restaurant.phone || "",
                 category: restaurant.category || RESTAURANT_CATEGORIES[0],
                 youtube_link: restaurant.youtube_link || "",
-                tzuyang_review: restaurant.tzuyang_review || "",
+                description: restaurant.description || "",
                 lat: String(restaurant.lat || ""),
                 lng: String(restaurant.lng || ""),
-                ai_rating: String(restaurant.ai_rating || ""),
+                rating_ai: String(restaurant.rating_ai || ""),
+                jjyang_visit_count: String(restaurant.jjyang_visit_count || ""),
             });
         } else {
             resetForm();
@@ -61,10 +63,11 @@ export function AdminRestaurantModal({
             phone: "",
             category: RESTAURANT_CATEGORIES[0],
             youtube_link: "",
-            tzuyang_review: "",
+            description: "",
             lat: "",
             lng: "",
-            ai_rating: "",
+            rating_ai: "",
+            jjyang_visit_count: "",
         });
     };
 
@@ -131,10 +134,11 @@ export function AdminRestaurantModal({
                 phone: formData.phone.trim() || null,
                 category: formData.category,
                 youtube_link: formData.youtube_link.trim() || null,
-                tzuyang_review: formData.tzuyang_review.trim() || null,
+                description: formData.description.trim() || null,
                 lat,
                 lng,
-                ai_rating: formData.ai_rating ? parseFloat(formData.ai_rating) : null,
+                rating_ai: formData.rating_ai ? parseFloat(formData.rating_ai) : null,
+                jjyang_visit_count: formData.jjyang_visit_count ? parseInt(formData.jjyang_visit_count) : 0,
             };
 
             let error;
@@ -274,20 +278,34 @@ export function AdminRestaurantModal({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="ai_rating">AI 점수 (1-10)</Label>
+                            <Label htmlFor="rating_ai">AI 별점 (1-10)</Label>
                             <Input
-                                id="ai_rating"
+                                id="rating_ai"
                                 type="number"
                                 step="0.1"
                                 min="1"
                                 max="10"
-                                value={formData.ai_rating}
+                                value={formData.rating_ai}
                                 onChange={(e) =>
-                                    setFormData({ ...formData, ai_rating: e.target.value })
+                                    setFormData({ ...formData, rating_ai: e.target.value })
                                 }
                                 placeholder="8.5"
                             />
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="jjyang_visit_count">쯔양 방문횟수</Label>
+                        <Input
+                            id="jjyang_visit_count"
+                            type="number"
+                            min="0"
+                            value={formData.jjyang_visit_count}
+                            onChange={(e) =>
+                                setFormData({ ...formData, jjyang_visit_count: e.target.value })
+                            }
+                            placeholder="쯔양이 방문한 횟수"
+                        />
                     </div>
 
                     <div className="space-y-2">
@@ -313,14 +331,14 @@ export function AdminRestaurantModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="tzuyang_review">쯔양 리뷰</Label>
+                        <Label htmlFor="description">쯔양의 리뷰</Label>
                         <Textarea
-                            id="tzuyang_review"
-                            value={formData.tzuyang_review}
+                            id="description"
+                            value={formData.description}
                             onChange={(e) =>
-                                setFormData({ ...formData, tzuyang_review: e.target.value })
+                                setFormData({ ...formData, description: e.target.value })
                             }
-                            placeholder="쯔양이 방문한 소감..."
+                            placeholder="쯔양이 어떤 리뷰를 남겼는지 입력해주세요..."
                             rows={4}
                         />
                     </div>

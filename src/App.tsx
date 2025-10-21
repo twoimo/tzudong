@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import FilteringPage from "./pages/FilteringPage";
+import ReviewsPage from "./pages/ReviewsPage";
+import LeaderboardPage from "./pages/LeaderboardPage";
+import ServerCostsPage from "./pages/ServerCostsPage";
 import NotFound from "./pages/NotFound";
 import { useState } from "react";
 import Header from "./components/layout/Header";
@@ -52,6 +55,9 @@ function AppLayout() {
           <Routes>
             <Route path="/" element={<Index refreshTrigger={refreshTrigger} />} />
             <Route path="/filtering" element={<FilteringPage />} />
+            <Route path="/reviews" element={<ReviewsPage />} />
+            <Route path="/leaderboard" element={<LeaderboardPage />} />
+            <Route path="/costs" element={<ServerCostsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
