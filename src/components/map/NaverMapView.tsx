@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { FilterState } from "@/components/filters/FilterPanel";
@@ -14,7 +14,7 @@ interface NaverMapViewProps {
     onAdminAddRestaurant?: () => void;
 }
 
-const NaverMapView = ({ filters, refreshTrigger }: NaverMapViewProps) => {
+const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
@@ -24,12 +24,12 @@ const NaverMapView = ({ filters, refreshTrigger }: NaverMapViewProps) => {
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
-        category: filters.categories.length > 0 ? filters.categories[0] : undefined,
+        category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
         minRating: filters.minRating,
         minReviews: filters.minReviews,
         minUserVisits: filters.minUserVisits,
         minJjyangVisits: filters.minJjyangVisits,
-        enabled: true,
+        enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
     });
 
     const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
@@ -150,8 +150,18 @@ const NaverMapView = ({ filters, refreshTrigger }: NaverMapViewProps) => {
             {/* 지도 컨테이너 */}
             <div ref={mapRef} className="w-full h-full" />
 
+            {/* 로딩 상태 표시 */}
+            {(isLoadingRestaurants || !isLoaded) && (
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <span className="text-sm font-medium">
+                        {!isLoaded ? '지도 로딩 중...' : '맛집 검색 중...'}
+                    </span>
+                </div>
+            )}
+
             {/* 레스토랑 개수 표시 */}
-            {!isLoadingRestaurants && restaurants.length > 0 && (
+            {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && (
                 <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
                     <span className="text-sm font-medium">
                         🔥 {restaurants.length}개의 맛집 발견
@@ -178,21 +188,20 @@ const NaverMapView = ({ filters, refreshTrigger }: NaverMapViewProps) => {
             )}
 
             {/* 리뷰 작성 모달 */}
-            {selectedRestaurant && (
-                <ReviewModal
-                    isOpen={isReviewModalOpen}
-                    onClose={() => setIsReviewModalOpen(false)}
-                    restaurantId={selectedRestaurant.id}
-                    restaurantName={selectedRestaurant.name}
-                    onSuccess={() => {
-                        refetch();
-                        toast.success("리뷰가 성공적으로 등록되었습니다!");
-                    }}
-                />
-            )}
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
+                onSuccess={() => {
+                    refetch();
+                    toast.success("리뷰가 성공적으로 등록되었습니다!");
+                }}
+            />
         </div>
     );
-};
+});
+
+NaverMapView.displayName = 'NaverMapView';
 
 export default NaverMapView;
 
