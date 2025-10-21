@@ -46,6 +46,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   // 관리자에게만 보이는 메뉴
   const adminMenuItems = (user && isAdmin) ? [
     { icon: Shield, label: "제보 관리", path: "/admin/submissions", onClick: () => navigate("/admin/submissions") },
+    { icon: MessageSquare, label: "리뷰 관리", path: "/admin/reviews", onClick: () => navigate("/admin/reviews") },
   ] : [];
 
   // 공통 메뉴

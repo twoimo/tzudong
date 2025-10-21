@@ -12,6 +12,7 @@ import LeaderboardPage from "./pages/LeaderboardPage";
 import ServerCostsPage from "./pages/ServerCostsPage";
 import RestaurantSubmissionsPage from "./pages/RestaurantSubmissionsPage";
 import AdminSubmissionsPage from "./pages/AdminSubmissionsPage";
+import AdminReviewsPage from "./pages/AdminReviewsPage";
 import NotFound from "./pages/NotFound";
 import { useState } from "react";
 import Header from "./components/layout/Header";
@@ -78,6 +79,7 @@ function AppLayout() {
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/submissions" element={<RestaurantSubmissionsPage />} />
             <Route path="/admin/submissions" element={<AdminSubmissionsPage />} />
+            <Route path="/admin/reviews" element={<AdminReviewsPage />} />
             <Route path="/costs" element={<ServerCostsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

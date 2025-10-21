@@ -122,10 +122,11 @@ const ReviewsPage = () => {
             try {
                 console.log('🔍 리뷰 데이터 가져오는 중...');
 
-                // 1. 리뷰 데이터 가져오기 (조인 없이)
+                // 1. 리뷰 데이터 가져오기 (모든 리뷰 조회 - 사용자가 작성한 것만)
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
                     .select('*')
+                    .eq('user_id', user.id)  // 현재 사용자가 작성한 리뷰만 조회
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false });
 
@@ -213,8 +214,9 @@ const ReviewsPage = () => {
 
         const matchesStatus =
             filterStatus === "all" ||
-            (filterStatus === "verified" && review.isVerified) ||
-            (filterStatus === "pending" && !review.isVerified);
+            (filterStatus === "approved" && review.isVerified) ||
+            (filterStatus === "rejected" && !review.isVerified && review.admin_note) ||
+            (filterStatus === "pending" && !review.isVerified && !review.admin_note);
 
         return matchesSearch && matchesCategory && matchesStatus;
     });
@@ -434,11 +436,12 @@ const ReviewsPage = () => {
 
                     <Select value={filterStatus} onValueChange={setFilterStatus}>
                         <SelectTrigger>
-                            <SelectValue placeholder="인증 상태" />
+                            <SelectValue placeholder="리뷰 상태" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">전체</SelectItem>
-                            <SelectItem value="verified">✅ 인증완료</SelectItem>
+                            <SelectItem value="approved">✅ 승인됨</SelectItem>
+                            <SelectItem value="rejected">❌ 거부됨</SelectItem>
                             <SelectItem value="pending">⏳ 검토중</SelectItem>
                         </SelectContent>
                     </Select>
@@ -477,7 +480,12 @@ const ReviewsPage = () => {
                                             {review.isVerified ? (
                                                 <Badge variant="default" className="gap-1 bg-green-600">
                                                     <CheckCircle className="h-3 w-3" />
-                                                    인증완료
+                                                    승인됨
+                                                </Badge>
+                                            ) : review.admin_note ? (
+                                                <Badge variant="destructive" className="gap-1">
+                                                    <XCircle className="h-3 w-3" />
+                                                    거부됨
                                                 </Badge>
                                             ) : (
                                                 <Badge variant="secondary" className="gap-1">
@@ -511,6 +519,21 @@ const ReviewsPage = () => {
                                 <div className="mb-4">
                                     <p className="text-sm whitespace-pre-wrap">{review.content}</p>
                                 </div>
+
+                                {/* 거부 사유 (거부된 리뷰인 경우) */}
+                                {review.admin_note && (
+                                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <XCircle className="h-4 w-4 text-red-600" />
+                                            <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                                                거부 사유
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-red-600 dark:text-red-400">
+                                            {review.admin_note}
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Photos placeholder */}
                                 {review.photos.length > 0 && (
