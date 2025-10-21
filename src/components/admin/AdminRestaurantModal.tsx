@@ -173,13 +173,28 @@ export function AdminRestaurantModal({
     const handleDelete = async () => {
         if (!restaurant) return;
 
-        if (!confirm("정말 이 맛집을 삭제하시겠습니까?")) {
+        if (!confirm("정말로 이 맛집을 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.")) {
             return;
         }
 
         setIsSubmitting(true);
 
         try {
+            // 해결책 1: 코드 레벨에서 제보 먼저 삭제 (임시 해결책)
+            // 참고: 데이터베이스 레벨에서 CASCADE DELETE 설정을 권장합니다.
+            // 새 마이그레이션 파일: 20251021200000_update_restaurant_submissions_cascade.sql
+
+            const { error: submissionsError } = await supabase
+                .from("restaurant_submissions")
+                .delete()
+                .eq("approved_restaurant_id", restaurant.id);
+
+            if (submissionsError) {
+                console.error("Submissions deletion error:", submissionsError);
+                // 제보 삭제 실패 시에도 계속 진행 (외래 키 제약 조건으로 어차피 실패할 것임)
+            }
+
+            // 레스토랑 삭제
             const { error } = await supabase
                 .from("restaurants")
                 .delete()
