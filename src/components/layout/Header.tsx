@@ -23,8 +23,21 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onAdminClic
   const [isDark, setIsDark] = useState(false);
 
   const toggleTheme = () => {
+    // 다크모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
+    const root = document.documentElement;
+
+    // 모든 transition 비활성화
+    const style = document.createElement('style');
+    style.textContent = '* { transition: none !important; }';
+    document.head.appendChild(style);
+
     setIsDark(!isDark);
-    document.documentElement.classList.toggle("dark");
+    root.classList.toggle("dark");
+
+    // 다음 프레임에서 transition 복구
+    requestAnimationFrame(() => {
+      document.head.removeChild(style);
+    });
   };
 
   const toggleFullscreen = () => {

@@ -22,7 +22,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col h-full",
+        "bg-sidebar border-r border-sidebar-border transition-[width] duration-300 flex flex-col h-full",
         isOpen ? "w-64" : "w-0 overflow-hidden"
       )}
     >
