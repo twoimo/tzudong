@@ -1,9 +1,10 @@
-import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign } from "lucide-react";
+import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
+  const { user, profile } = useAuth();
 
   // 레스토랑 데이터 프리페치 함수
   const prefetchRestaurants = async () => {
@@ -31,14 +33,32 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     });
   };
 
-  const menuItems = [
+  // 기본 메뉴 항목
+  const baseMenuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
     { icon: Globe, label: "쯔동여지도 글로벌", path: "/global", onClick: () => navigate("/global") },
     { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
     { icon: Trophy, label: "쯔양 팬 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
     { icon: MessageSquare, label: "쯔양 팬 맛집 리뷰", path: "/reviews", onClick: () => navigate("/reviews") },
+  ];
+
+  // 로그인한 사용자에게만 보이는 메뉴
+  const userMenuItems = user ? [
+    { icon: Send, label: "쯔양 맛집 제보", path: "/submissions", onClick: () => navigate("/submissions") },
+  ] : [];
+
+  // 관리자에게만 보이는 메뉴
+  const adminMenuItems = (user && profile?.is_admin) ? [
+    { icon: Shield, label: "제보 관리", path: "/admin/submissions", onClick: () => navigate("/admin/submissions") },
+  ] : [];
+
+  // 공통 메뉴
+  const commonMenuItems = [
     { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => navigate("/costs") },
   ];
+
+  // 모든 메뉴 합치기
+  const menuItems = [...baseMenuItems, ...userMenuItems, ...adminMenuItems, ...commonMenuItems];
 
   return (
     <aside
