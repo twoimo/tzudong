@@ -21,7 +21,6 @@ interface LeaderboardUser {
     username: string;
     reviewCount: number;
     verifiedReviewCount: number;
-    trustScore: number;
     badges: { name: string; icon: string; earnedAt: string }[];
 }
 
@@ -33,7 +32,6 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         username: "쯔양팬123 (샘플)",
         reviewCount: 128,
         verifiedReviewCount: 120,
-        trustScore: 98.5,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
             { name: "리뷰 마스터", icon: "👑", earnedAt: "" },
@@ -46,7 +44,6 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         username: "맛집러버 (샘플)",
         reviewCount: 95,
         verifiedReviewCount: 88,
-        trustScore: 95.2,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
             { name: "리뷰 마스터", icon: "👑", earnedAt: "" },
@@ -58,7 +55,6 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         username: "먹방마니아 (샘플)",
         reviewCount: 76,
         verifiedReviewCount: 70,
-        trustScore: 92.1,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
             { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
@@ -70,7 +66,6 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         username: "쯔양따라잡기 (샘플)",
         reviewCount: 64,
         verifiedReviewCount: 58,
-        trustScore: 90.6,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
             { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
@@ -82,7 +77,6 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         username: "리뷰왕 (샘플)",
         reviewCount: 52,
         verifiedReviewCount: 49,
-        trustScore: 89.4,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
         ],
@@ -93,7 +87,6 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         username: "칼국수조아 (샘플)",
         reviewCount: 45,
         verifiedReviewCount: 42,
-        trustScore: 87.8,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
         ],
@@ -104,7 +97,6 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         username: "야식킹 (샘플)",
         reviewCount: 38,
         verifiedReviewCount: 35,
-        trustScore: 85.3,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
         ],
@@ -112,7 +104,7 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
 ];
 
 const LeaderboardPage = () => {
-    const [sortBy, setSortBy] = useState<"reviews" | "trust">("trust");
+    const [sortBy, setSortBy] = useState<"reviews">("reviews");
 
     // Fetch leaderboard data from Supabase
     const { data: leaderboardData = [], isLoading } = useQuery({
@@ -126,12 +118,8 @@ const LeaderboardPage = () => {
                         profiles!user_stats_user_id_fkey(nickname)
                     `);
 
-                // Sort by selected column
-                if (sortBy === 'reviews') {
-                    query.order('review_count', { ascending: false });
-                } else {
-                    query.order('trust_score', { ascending: false });
-                }
+                // Sort by review count
+                query.order('review_count', { ascending: false });
 
                 const { data, error } = await query;
 
@@ -153,9 +141,6 @@ const LeaderboardPage = () => {
                         if (stat.review_count && stat.review_count >= 50) {
                             badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
                         }
-                        if (stat.trust_score && stat.trust_score >= 90) {
-                            badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
-                        }
 
                         return {
                             id: stat.user_id,
@@ -163,7 +148,6 @@ const LeaderboardPage = () => {
                             username: stat.profiles?.nickname || '익명',
                             reviewCount: stat.review_count || 0,
                             verifiedReviewCount: stat.verified_review_count || 0,
-                            trustScore: stat.trust_score || 0,
                             badges,
                         } as LeaderboardUser;
                     });
@@ -210,12 +194,6 @@ const LeaderboardPage = () => {
         }
     };
 
-    const getTrustScoreColor = (score: number) => {
-        if (score >= 95) return "text-green-600";
-        if (score >= 85) return "text-blue-600";
-        if (score >= 70) return "text-yellow-600";
-        return "text-gray-600";
-    };
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -235,7 +213,7 @@ const LeaderboardPage = () => {
                             )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                            맛집 리뷰로 쌓은 신뢰도 랭킹
+                            맛집 리뷰로 쌓은 랭킹
                         </p>
                     </div>
                 </div>
@@ -259,12 +237,6 @@ const LeaderboardPage = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">신뢰도 점수</span>
-                                    <span className={`font-bold ${getTrustScoreColor(user.trustScore)}`}>
-                                        {user.trustScore.toFixed(1)}점
-                                    </span>
-                                </div>
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-muted-foreground">리뷰 수</span>
                                     <span className="font-semibold">{user.reviewCount}개</span>
@@ -318,15 +290,6 @@ const LeaderboardPage = () => {
                                         </button>
                                     </TableHead>
                                     <TableHead className="text-center">검증된 리뷰</TableHead>
-                                    <TableHead className="text-center">
-                                        <button
-                                            onClick={() => setSortBy("trust")}
-                                            className="flex items-center gap-1 mx-auto hover:text-primary"
-                                        >
-                                            신뢰도
-                                            {sortBy === "trust" && <TrendingUp className="h-3 w-3" />}
-                                        </button>
-                                    </TableHead>
                                     <TableHead>배지</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -357,14 +320,6 @@ const LeaderboardPage = () => {
                                                 <CheckCircle className="h-3 w-3 mr-1" />
                                                 {user.verifiedReviewCount}
                                             </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <Star className={`h-4 w-4 ${getTrustScoreColor(user.trustScore)}`} />
-                                                <span className={`font-bold ${getTrustScoreColor(user.trustScore)}`}>
-                                                    {user.trustScore.toFixed(1)}
-                                                </span>
-                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex gap-1 flex-wrap">

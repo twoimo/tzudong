@@ -210,7 +210,7 @@ export default function RestaurantSubmissionsPage() {
                                 제보 가이드
                             </p>
                             <ul className="space-y-1 text-blue-700 dark:text-blue-300 list-disc list-inside">
-                                <li>쯔양 유튜브 영상에서 방문한 맛집을 발견하셨나요?</li>
+                                <li>유튜브 영상에서 쯔양이 직접 방문한 맛집을 발견하셨나요?</li>
                                 <li>영상 링크와 함께 맛집 정보를 제보해주세요</li>
                                 <li>관리자 검토 후 승인되면 지도에 표시됩니다</li>
                                 <li>정확한 정보 제공을 부탁드립니다 🙏</li>
@@ -402,17 +402,17 @@ export default function RestaurantSubmissionsPage() {
                                 placeholder="https://youtube.com/watch?v=..."
                             />
                             <p className="text-xs text-muted-foreground">
-                                쯔양이 이 맛집을 방문한 유튜브 영상 링크를 입력해주세요
+                                쯔양이 방문한 맛집 유튜브 영상 링크를 입력해주세요
                             </p>
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="description">추가 설명</Label>
+                            <Label htmlFor="description">쯔양의 리뷰</Label>
                             <Textarea
                                 id="description"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="이 맛집에 대한 추가 정보가 있다면 알려주세요..."
+                                placeholder="쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요... (팩트 체크 예정)"
                                 rows={4}
                             />
                         </div>

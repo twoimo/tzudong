@@ -505,7 +505,7 @@ const FilteringPage = () => {
                                         onClick={() => handleSort("fanVisits")}
                                         className="hover:bg-accent w-full justify-center"
                                     >
-                                        쯔양 팬 방문
+                                        쯔양 팬 방문 (리뷰)
                                         {getSortIcon("fanVisits")}
                                     </Button>
                                 </TableHead>
