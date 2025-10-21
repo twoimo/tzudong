@@ -55,7 +55,7 @@ const FilteringPage = () => {
         jjyangVisitsMin: 0,
         userVisitsMin: 0,
         reviewsMin: 0,
-        ratingMin: 1,
+        ratingMin: 0,
         ratingMax: 10,
     });
 
@@ -98,7 +98,7 @@ const FilteringPage = () => {
             jjyangVisitsMin: 0,
             userVisitsMin: 0,
             reviewsMin: 0,
-            ratingMin: 1,
+            ratingMin: 0,
             ratingMax: 10,
         });
         setSortColumn(null);
@@ -200,7 +200,7 @@ const FilteringPage = () => {
         (filters.jjyangVisitsMin > 0 ? 1 : 0) +
         (filters.userVisitsMin > 0 ? 1 : 0) +
         (filters.reviewsMin > 0 ? 1 : 0) +
-        (filters.ratingMin > 1 || filters.ratingMax < 10 ? 1 : 0);
+        (filters.ratingMin > 0 || filters.ratingMax < 10 ? 1 : 0);
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -341,21 +341,20 @@ const FilteringPage = () => {
                     <div className="flex items-center justify-between mb-2">
                         <label className="text-sm font-medium">AI 별점</label>
                         <span className="text-sm text-primary font-semibold">
-                            {filters.ratingMin}⭐ ~ {filters.ratingMax}⭐
+                            {filters.ratingMin.toFixed(1)}⭐ ~ {filters.ratingMax.toFixed(1)}⭐
                         </span>
                     </div>
                     <Slider
                         value={[filters.ratingMin, filters.ratingMax]}
                         onValueChange={([min, max]) => setFilters({ ...filters, ratingMin: min, ratingMax: max })}
-                        min={1}
+                        min={0}
                         max={10}
-                        step={1}
-                        minStepsBetweenThumbs={1}
+                        step={0.1}
                         className="w-full"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>1⭐ (맛집X)</span>
-                        <span>10⭐ (맛집O)</span>
+                        <span>0.0⭐ (맛집X)</span>
+                        <span>10.0⭐ (맛집O)</span>
                     </div>
                 </div>
 
