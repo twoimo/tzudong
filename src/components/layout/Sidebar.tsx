@@ -12,7 +12,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     { icon: Filter, label: "쯔동여지도 필터링" },
     { icon: Trophy, label: "사용자 리더보드" },
     { icon: MessageSquare, label: "사용자 맛집 리뷰" },
-    { icon: DollarSign, label: "월 서버비용" },
+    { icon: DollarSign, label: "월 서버 운영 비용" },
   ];
 
   return (
