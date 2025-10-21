@@ -170,19 +170,13 @@ export default function RestaurantSubmissionsPage() {
         }
     };
 
-    if (!user) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <Card className="p-8 max-w-md text-center">
-                    <div className="text-6xl mb-4">🔒</div>
-                    <h2 className="text-2xl font-bold mb-2">로그인이 필요합니다</h2>
-                    <p className="text-muted-foreground">
-                        쯔양 맛집 제보는 로그인 후 이용 가능합니다.
-                    </p>
-                </Card>
-            </div>
-        );
-    }
+    const handleSubmitClick = () => {
+        if (!user) {
+            toast.error('맛집 제보는 로그인 후 이용 가능합니다');
+            return;
+        }
+        setIsSubmitModalOpen(true);
+    };
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -199,7 +193,7 @@ export default function RestaurantSubmissionsPage() {
                         </p>
                     </div>
                     <Button
-                        onClick={() => setIsSubmitModalOpen(true)}
+                        onClick={handleSubmitClick}
                         className="bg-gradient-primary hover:opacity-90 gap-2"
                     >
                         <Send className="h-4 w-4" />
@@ -230,7 +224,18 @@ export default function RestaurantSubmissionsPage() {
             <div className="flex-1 overflow-auto p-6 space-y-4">
                 <h2 className="text-xl font-bold">내 제보 내역</h2>
 
-                {isLoading ? (
+                {!user ? (
+                    <Card className="p-12 text-center">
+                        <div className="text-6xl mb-4">🔒</div>
+                        <h3 className="text-xl font-semibold mb-2">로그인이 필요합니다</h3>
+                        <p className="text-muted-foreground mb-4">
+                            로그인 후 제보 내역을 확인하실 수 있습니다
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            우측 상단의 로그인 버튼을 클릭해주세요
+                        </p>
+                    </Card>
+                ) : isLoading ? (
                     <div className="flex items-center justify-center py-12">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
@@ -242,7 +247,7 @@ export default function RestaurantSubmissionsPage() {
                             쯔양이 방문한 맛집을 발견하시면 제보해주세요!
                         </p>
                         <Button
-                            onClick={() => setIsSubmitModalOpen(true)}
+                            onClick={handleSubmitClick}
                             className="bg-gradient-primary hover:opacity-90"
                         >
                             첫 제보하기
