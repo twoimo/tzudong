@@ -78,23 +78,15 @@ const NaverMapView = ({ filters, refreshTrigger }: NaverMapViewProps) => {
         restaurants.forEach((restaurant) => {
             const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
 
-            // HTML 마커 생성
+            // HTML 마커 생성 (이모티콘만 표시)
             const markerContent = `
         <div style="
           position: relative;
-          background: white;
-          border: 2px solid ${isHotPlace ? '#ef4444' : '#fbbf24'};
-          border-radius: 50%;
-          width: 40px;
-          height: 40px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 20px;
+          font-size: 32px;
           cursor: pointer;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.2);
           transition: transform 0.2s;
-        " onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
           ${isHotPlace ? '🔥' : '⭐'}
         </div>
       `;
@@ -104,7 +96,7 @@ const NaverMapView = ({ filters, refreshTrigger }: NaverMapViewProps) => {
                 map: mapInstanceRef.current,
                 icon: {
                     content: markerContent,
-                    anchor: new naver.maps.Point(20, 20),
+                    anchor: new naver.maps.Point(16, 16),
                 },
                 title: restaurant.name,
             });
