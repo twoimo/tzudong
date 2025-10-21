@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import {
     Dialog,
     DialogContent,
@@ -56,11 +57,35 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const { user } = useAuth();
     const [visitedDate, setVisitedDate] = useState("");
     const [visitedTime, setVisitedTime] = useState("");
+    const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("");
     const [category, setCategory] = useState<Category | "">("");
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // 쯔양이 방문한 맛집 목록 조회
+    const { data: jjyangRestaurants = [] } = useQuery({
+        queryKey: ['jjyang-restaurants'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('restaurants')
+                .select('id, name')
+                .gt('jjyang_visit_count', 0)
+                .order('name');
+
+            if (error) throw error;
+            return data || [];
+        },
+        enabled: isOpen,
+    });
+
+    // restaurant prop이 전달되면 해당 맛집을 기본 선택
+    useEffect(() => {
+        if (restaurant?.id) {
+            setSelectedRestaurantId(restaurant.id);
+        }
+    }, [restaurant]);
 
     const handleVerificationPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -79,7 +104,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     };
 
     const handleSubmit = async () => {
-        if (!visitedDate || !visitedTime || !category || !content || !verificationPhoto || foodPhotos.length === 0) {
+        if (!visitedDate || !visitedTime || !selectedRestaurantId || !category || !content || !verificationPhoto || foodPhotos.length === 0) {
             toast({
                 title: "필수 항목 누락",
                 description: "모든 필수 항목을 입력해주세요",
@@ -97,10 +122,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             return;
         }
 
-        if (!restaurant) {
+        // 선택된 맛집 정보 가져오기
+        const selectedRestaurant = jjyangRestaurants.find(r => r.id === selectedRestaurantId);
+        if (!selectedRestaurant) {
             toast({
-                title: "맛집 선택 필요",
-                description: "리뷰를 작성할 맛집을 선택해주세요",
+                title: "맛집 선택 오류",
+                description: "선택된 맛집 정보를 찾을 수 없습니다",
                 variant: "destructive",
             });
             return;
@@ -174,8 +201,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 .from('reviews')
                 .insert({
                     user_id: user.id,
-                    restaurant_id: restaurant.id,
-                    title: `${restaurant.name} 방문 후기`,
+                    restaurant_id: selectedRestaurantId,
+                    title: `${selectedRestaurant.name} 방문 후기`,
                     content: content.trim(),
                     visited_at: visitedAtDateTime,
                     verification_photo: verificationPhotoPath,
@@ -213,6 +240,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const handleClose = () => {
         setVisitedDate("");
         setVisitedTime("");
+        setSelectedRestaurantId("");
         setCategory("");
         setContent("");
         setVerificationPhoto(null);
@@ -220,7 +248,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         onClose();
     };
 
-    const isFormValid = visitedDate && visitedTime && category && content && verificationPhoto && foodPhotos.length > 0;
+    const isFormValid = visitedDate && visitedTime && selectedRestaurantId && category && content && verificationPhoto && foodPhotos.length > 0;
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -231,7 +259,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                             쯔양 팬 맛집 리뷰 작성
                         </DialogTitle>
                         <DialogDescription>
-                            {restaurant ? `${restaurant.name}에 대한` : ""} 방문 후기를 공유해주세요
+                            쯔양이 방문한 맛집에 대한 방문 후기를 공유해주세요
                         </DialogDescription>
                     </DialogHeader>
 
@@ -255,6 +283,30 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                     </div>
                                 </AlertDescription>
                             </Alert>
+
+                            {/* Restaurant Selection */}
+                            <div className="space-y-2">
+                                <Label htmlFor="restaurant">
+                                    방문한 쯔양 맛집 <span className="text-red-500">*</span>
+                                </Label>
+                                <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="쯔양이 방문한 맛집을 선택해주세요" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {jjyangRestaurants.map((restaurant) => (
+                                            <SelectItem key={restaurant.id} value={restaurant.id}>
+                                                {restaurant.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {selectedRestaurantId && (
+                                    <p className="text-xs text-muted-foreground">
+                                        선택된 맛집: {jjyangRestaurants.find(r => r.id === selectedRestaurantId)?.name}
+                                    </p>
+                                )}
+                            </div>
 
                             {/* Visit Date & Time */}
                             <div className="grid grid-cols-2 gap-4">
