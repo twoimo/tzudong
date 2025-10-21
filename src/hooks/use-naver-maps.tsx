@@ -8,7 +8,10 @@ declare global {
 }
 
 export function useNaverMaps() {
-    const [isLoaded, setIsLoaded] = useState(false);
+    // 초기 상태를 스크립트 로드 여부로 설정 (페이지 전환 시 즉시 감지)
+    const [isLoaded, setIsLoaded] = useState(() => {
+        return !!(window.naver && window.naver.maps);
+    });
     const [loadError, setLoadError] = useState<Error | null>(null);
 
     useEffect(() => {
