@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar } from "lucide-react";
+import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 
@@ -183,7 +183,8 @@ const ReviewsPage = () => {
             <div className="border-b border-border bg-card p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                            <MessageSquare className="h-6 w-6 text-primary" />
                             맛집 리뷰
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">

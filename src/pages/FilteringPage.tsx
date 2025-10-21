@@ -207,7 +207,8 @@ const FilteringPage = () => {
             <div className="border-b border-border bg-card p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                            <Filter className="h-6 w-6 text-primary" />
                             쯔동여지도 필터링
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
