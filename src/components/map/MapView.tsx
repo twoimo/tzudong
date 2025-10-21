@@ -56,6 +56,20 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
     }
   }, [refreshTrigger, refetch]);
 
+  // refreshTrigger 변경 시 선택된 레스토랑 정보 업데이트
+  useEffect(() => {
+    if (selectedRestaurant) {
+      // 업데이트된 레스토랑 정보 찾기
+      const updatedRestaurant = restaurants.find(r => r.id === selectedRestaurant.id);
+      if (updatedRestaurant) {
+        setSelectedRestaurant(updatedRestaurant);
+      } else {
+        // 삭제된 경우에만 패널 닫기
+        setSelectedRestaurant(null);
+      }
+    }
+  }, [restaurants, refreshTrigger]);
+
   // Initialize map
   useEffect(() => {
     if (!isLoaded || !mapRef.current) return;

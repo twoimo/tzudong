@@ -36,17 +36,19 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
 
     const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
 
-    // 디버깅: 레스토랑 데이터 상태 로그
+    // refreshTrigger 변경 시 선택된 레스토랑 정보 업데이트
     useEffect(() => {
-        console.log('🍽️ 레스토랑 데이터 상태:', {
-            count: restaurants.length,
-            isLoading: isLoadingRestaurants,
-            isDummy: isDummyData,
-            isLoaded,
-            hasMap: !!mapInstanceRef.current,
-            refreshTrigger
-        });
-    }, [restaurants, isLoadingRestaurants, isDummyData, isLoaded, refreshTrigger]);
+        if (selectedRestaurant) {
+            // 업데이트된 레스토랑 정보 찾기
+            const updatedRestaurant = restaurants.find(r => r.id === selectedRestaurant.id);
+            if (updatedRestaurant) {
+                setSelectedRestaurant(updatedRestaurant);
+            } else {
+                // 삭제된 경우에만 패널 닫기
+                setSelectedRestaurant(null);
+            }
+        }
+    }, [restaurants, refreshTrigger]);
 
     // 지도 초기화
     useEffect(() => {
@@ -80,14 +82,7 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
 
     // 마커 업데이트 (최적화됨)
     useEffect(() => {
-        console.log('🔄 마커 업데이트 useEffect 실행:', {
-            hasMap: !!mapInstanceRef.current,
-            hasNaver: !!window.naver,
-            restaurantCount: restaurants.length
-        });
-
         if (!mapInstanceRef.current || !window.naver) {
-            console.warn('⚠️ 지도 또는 네이버 객체가 없음');
             return;
         }
 
@@ -95,21 +90,15 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
 
         // requestAnimationFrame을 사용하여 렌더링 최적화
         requestAnimationFrame(() => {
-            console.log('🎨 requestAnimationFrame 실행');
-
             // 기존 마커 제거 (배치로 처리)
             const oldMarkers = markersRef.current;
-            console.log(`🗑️ 기존 마커 ${oldMarkers.length}개 제거 중`);
             oldMarkers.forEach(marker => marker.setMap(null));
             markersRef.current = [];
 
             // restaurants가 없으면 마커만 제거하고 종료
             if (restaurants.length === 0) {
-                console.log('🗺️ 레스토랑 데이터 없음, 마커 제거됨');
                 return;
             }
-
-            console.log(`📍 ${restaurants.length}개 레스토랑 마커 생성 시작`);
 
             // 새 마커 배열 준비
             const newMarkers: any[] = [];
@@ -142,7 +131,6 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
 
             // 모든 마커를 한 번에 할당
             markersRef.current = newMarkers;
-            console.log(`✅ ${newMarkers.length}개 마커 표시됨`);
         });
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)

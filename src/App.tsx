@@ -1,7 +1,7 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
@@ -26,6 +26,7 @@ const queryClient = new QueryClient();
 
 function AppLayout() {
   const { user, signOut, isAdmin } = useAuth();
+  const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
@@ -41,8 +42,10 @@ function AppLayout() {
   };
 
   const handleAdminSuccess = () => {
+    // React Query 캐시 무효화 - 모든 restaurants 쿼리 다시 불러오기
+    queryClient.invalidateQueries({ queryKey: ['restaurants'] });
     setRefreshTrigger(prev => prev + 1);
-    setSelectedRestaurant(null);
+    // selectedRestaurant는 초기화하지 않음 - 맵 컴포넌트에서 업데이트됨
   };
 
   const handleAdminEditRestaurant = (restaurant: Restaurant) => {
@@ -91,7 +94,7 @@ function AppLayout() {
           isOpen={isAdminModalOpen}
           onClose={() => {
             setIsAdminModalOpen(false);
-            setSelectedRestaurant(null);
+            // selectedRestaurant는 유지 - 맵에서 업데이트된 정보를 보여줌
           }}
           restaurant={selectedRestaurant}
           onSuccess={handleAdminSuccess}

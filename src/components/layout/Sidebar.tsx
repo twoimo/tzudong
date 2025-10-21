@@ -109,8 +109,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
 
       <div className="p-4 border-t border-sidebar-border">
         <div className="text-xs text-muted-foreground space-y-1">
-          <p>쯔양 공식 맛집 지도</p>
-          <p className="text-primary font-semibold">© 2025 쯔동여지도</p>
+          <p>쯔동여지도, 유튜브 쯔양 맛집 지도</p>
+          <p className="text-primary font-semibold">@ 2025 Tzudong. All rights reserved.</p>
         </div>
       </div>
     </aside>
