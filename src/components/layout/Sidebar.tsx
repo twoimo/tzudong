@@ -23,7 +23,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
           .from("restaurants")
           .select("*")
           .order("ai_rating", { ascending: false });
-        
+
         if (error) throw error;
         return data || [];
       },
@@ -62,7 +62,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         {menuItems.map((item, index) => {
           const isActive = location.pathname === item.path;
           const isHomePage = item.path === "/";
-          
+
           return (
             <Button
               key={index}
