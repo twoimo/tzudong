@@ -249,28 +249,38 @@ export default function AdminSubmissionsPage() {
     const geocodeAddress = async (address: string) => {
         try {
             toast.info("주소로 좌표를 검색 중...");
-            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+            // Vite 프록시를 통해 네이버 클라우드 플랫폼 Geocoding API 호출
             const response = await fetch(
-                `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(
-                    address
-                )}&key=${apiKey}`
+                `/api/naver-geocode?query=${encodeURIComponent(address)}`
             );
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
             const data = await response.json();
 
-            if (data.results && data.results.length > 0) {
-                const location = data.results[0].geometry.location;
+            console.log('Geocoding 응답:', data);
+
+            if (data.status === 'OK' && data.addresses && data.addresses.length > 0) {
+                const item = data.addresses[0];
+                const lat = item.y; // 위도
+                const lng = item.x; // 경도
+
                 setApprovalData({
                     ...approvalData,
-                    lat: String(location.lat),
-                    lng: String(location.lng),
+                    lat: String(lat),
+                    lng: String(lng),
                 });
-                toast.success("좌표가 자동으로 입력되었습니다");
+                toast.success(`✅ 좌표가 입력되었습니다!\n📍 위도: ${lat}\n📍 경도: ${lng}`);
             } else {
-                toast.error("주소에서 좌표를 찾을 수 없습니다");
+                console.warn('Geocoding 결과 없음:', data);
+                toast.error("주소에서 좌표를 찾을 수 없습니다. 더 자세한 주소를 입력해주세요.");
             }
         } catch (error) {
             console.error("Geocoding error:", error);
-            toast.error("주소 검색 중 오류가 발생했습니다");
+            toast.error("주소 검색 중 오류가 발생했습니다. 수동으로 좌표를 입력해주세요.");
         }
     };
 
@@ -505,34 +515,50 @@ export default function AdminSubmissionsPage() {
                                             onClick={() => geocodeAddress(selectedSubmission.address)}
                                             className="flex-1"
                                         >
-                                            주소로 좌표 자동 입력
+                                            📍 주소로 좌표 자동 입력
                                         </Button>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="lat">위도 *</Label>
-                                            <Input
-                                                id="lat"
-                                                type="number"
-                                                step="0.00000001"
-                                                value={approvalData.lat}
-                                                onChange={(e) => setApprovalData({ ...approvalData, lat: e.target.value })}
-                                                placeholder="37.5665"
-                                            />
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <Label>좌표 입력 *</Label>
+                                            <a
+                                                href={`https://map.naver.com/p/search/${encodeURIComponent(selectedSubmission.address)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-xs text-blue-500 hover:underline"
+                                            >
+                                                네이버 지도에서 확인 →
+                                            </a>
                                         </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <Label htmlFor="lat">위도</Label>
+                                                <Input
+                                                    id="lat"
+                                                    type="number"
+                                                    step="0.00000001"
+                                                    value={approvalData.lat}
+                                                    onChange={(e) => setApprovalData({ ...approvalData, lat: e.target.value })}
+                                                    placeholder="37.5665"
+                                                />
+                                            </div>
 
-                                        <div className="space-y-2">
-                                            <Label htmlFor="lng">경도 *</Label>
-                                            <Input
-                                                id="lng"
-                                                type="number"
-                                                step="0.00000001"
-                                                value={approvalData.lng}
-                                                onChange={(e) => setApprovalData({ ...approvalData, lng: e.target.value })}
-                                                placeholder="126.9780"
-                                            />
+                                            <div className="space-y-2">
+                                                <Label htmlFor="lng">경도</Label>
+                                                <Input
+                                                    id="lng"
+                                                    type="number"
+                                                    step="0.00000001"
+                                                    value={approvalData.lng}
+                                                    onChange={(e) => setApprovalData({ ...approvalData, lng: e.target.value })}
+                                                    placeholder="126.9780"
+                                                />
+                                            </div>
                                         </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            💡 위 버튼으로 자동 입력하거나, 네이버 지도에서 직접 확인하여 입력하세요
+                                        </p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">

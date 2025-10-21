@@ -40,12 +40,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
     { icon: Trophy, label: "쯔양 팬 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
     { icon: MessageSquare, label: "쯔양 팬 맛집 리뷰", path: "/reviews", onClick: () => navigate("/reviews") },
-  ];
-
-  // 로그인한 사용자에게만 보이는 메뉴
-  const userMenuItems = user ? [
     { icon: Send, label: "쯔양 맛집 제보", path: "/submissions", onClick: () => navigate("/submissions") },
-  ] : [];
+  ];
 
   // 관리자에게만 보이는 메뉴
   const adminMenuItems = (user && isAdmin) ? [
@@ -58,7 +54,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   ];
 
   // 모든 메뉴 합치기
-  const menuItems = [...baseMenuItems, ...userMenuItems, ...adminMenuItems, ...commonMenuItems];
+  const menuItems = [...baseMenuItems, ...adminMenuItems, ...commonMenuItems];
 
   return (
     <aside
