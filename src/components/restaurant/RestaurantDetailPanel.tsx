@@ -50,8 +50,7 @@ export function RestaurantDetailPanel({
     ];
 
     const getStarEmoji = (rating: number) => {
-        const count = Math.round(rating);
-        return "⭐".repeat(count);
+        return "⭐".repeat(Math.min(rating, 5));
     };
 
     const formatTimeAgo = (dateString: string) => {
@@ -66,7 +65,7 @@ export function RestaurantDetailPanel({
         return '방금 전';
     };
 
-    const isHotPlace = (restaurant.ai_rating || 0) >= 4;
+    const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
 
     const handleGetDirections = () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
@@ -93,22 +92,25 @@ export function RestaurantDetailPanel({
                 </div>
 
                 {/* AI Rating */}
-                <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="flex-1">
-                        <p className="text-xs text-muted-foreground mb-1">AI 별점</p>
-                        <div className="flex items-center gap-2">
-                            <span className="text-lg">{getStarEmoji(restaurant.ai_rating || 0)}</span>
-                            <span className="text-sm font-semibold">
-                                {restaurant.ai_rating?.toFixed(1) || "0.0"} / 10.0
-                            </span>
+                <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-primary">
+                            <span className="text-2xl">⭐</span>
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground mb-0.5">AI 별점</p>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-2xl font-bold text-primary">
+                                    {(restaurant.ai_rating ?? 0).toFixed(1)}
+                                </span>
+                                <span className="text-sm text-muted-foreground">/ 10.0</span>
+                            </div>
                         </div>
                     </div>
                     {isHotPlace && (
-                        <div className="text-right">
-                            <Badge variant="default" className="bg-gradient-primary">
-                                인기 맛집
-                            </Badge>
-                        </div>
+                        <Badge variant="default" className="bg-gradient-primary shrink-0">
+                            인기 맛집
+                        </Badge>
                     )}
                 </div>
             </div>
@@ -122,21 +124,21 @@ export function RestaurantDetailPanel({
                             <Star className="h-4 w-4 mx-auto mb-1 text-yellow-500" />
                             <p className="text-xs text-muted-foreground">쯔양 방문</p>
                             <p className="text-lg font-bold text-primary">
-                                {restaurant.jjyang_visit_count || 0}회
+                                {restaurant.jjyang_visit_count ?? 0}회
                             </p>
                         </Card>
                         <Card className="p-3 text-center">
                             <Users className="h-4 w-4 mx-auto mb-1 text-blue-500" />
                             <p className="text-xs text-muted-foreground">사용자 방문</p>
                             <p className="text-lg font-bold">
-                                {restaurant.visit_count || 0}회
+                                {restaurant.visit_count ?? 0}회
                             </p>
                         </Card>
                         <Card className="p-3 text-center">
                             <MessageSquare className="h-4 w-4 mx-auto mb-1 text-green-500" />
                             <p className="text-xs text-muted-foreground">리뷰</p>
                             <p className="text-lg font-bold">
-                                {restaurant.review_count || 0}개
+                                {restaurant.review_count ?? 0}개
                             </p>
                         </Card>
                     </div>
