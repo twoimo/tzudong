@@ -240,8 +240,19 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                             {/* Important Notice */}
                             <Alert className="bg-amber-50 border-amber-200">
                                 <AlertCircle className="h-4 w-4 text-amber-600" />
-                                <AlertDescription className="text-amber-800">
-                                    <strong>필수 인증:</strong> 신뢰도 높은 리뷰를 위해 본인의 닉네임이 포함된 인증 사진과 음식 사진이 필수입니다.
+                                <AlertDescription className="text-amber-800 space-y-2">
+                                    <div>
+                                        <strong>📸 인증 사진 필수 가이드라인:</strong>
+                                    </div>
+                                    <ul className="text-sm space-y-1 ml-4 list-disc">
+                                        <li>본인의 닉네임이 잘 보이게 영수증에 적어주세요</li>
+                                        <li>상호명, 날짜/시간, 주문 메뉴 등 중요 정보는 가리지 말고 그대로 촬영해주세요</li>
+                                        <li>방문 날짜는 <strong className="text-red-600">3개월 이내</strong>여야 합니다</li>
+                                        <li>음식 사진도 함께 업로드하면 더 신뢰할 수 있습니다</li>
+                                    </ul>
+                                    <div className="text-xs text-amber-700 mt-2">
+                                        💡 팁: 영수증 위에 메모지로 닉네임을 적거나, 영수증에 직접 닉네임을 써서 촬영해주세요!
+                                    </div>
                                 </AlertDescription>
                             </Alert>
 
@@ -258,7 +269,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         value={visitedDate}
                                         onChange={(e) => setVisitedDate(e.target.value)}
                                         max={new Date().toISOString().split('T')[0]}
+                                        min={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                                     />
+                                    <p className="text-xs text-muted-foreground">
+                                        📅 3개월 이내 방문한 맛집만 리뷰 작성 가능합니다
+                                    </p>
                                 </div>
 
                                 <div className="space-y-2">
@@ -322,14 +337,15 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                             </div>
                                         ) : (
                                             <>
-                                                <Upload className="h-8 w-8 text-muted-foreground" />
-                                                <p className="text-sm text-center text-muted-foreground">
-                                                    맛집 방문을 증명하는 인증 사진을 업로드해주세요
-                                                    <br />
-                                                    <span className="text-xs">
-                                                        (화면에 본인의 닉네임이 함께 보이도록 촬영)
-                                                    </span>
-                                                </p>
+                                                <div className="text-center">
+                                                    <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+                                                    <p className="text-sm text-muted-foreground mb-1">
+                                                        영수증 인증 사진을 업로드해주세요
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        본인 닉네임이 포함된 영수증 사진
+                                                    </p>
+                                                </div>
                                                 <Input
                                                     id="verificationPhoto"
                                                     type="file"
