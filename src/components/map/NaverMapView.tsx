@@ -41,11 +41,11 @@ const NaverMapView = ({ filters, refreshTrigger }: NaverMapViewProps) => {
         try {
             const { naver } = window;
 
-            // 서울 중심으로 지도 생성
+            // 한반도 전체(제주도 포함)가 보이도록 지도 생성
             const map = new naver.maps.Map(mapRef.current, {
-                center: new naver.maps.LatLng(37.5665, 126.9780), // 서울 시청
-                zoom: 13,
-                minZoom: 7,
+                center: new naver.maps.LatLng(36.5, 127.5), // 한반도 중앙
+                zoom: 7, // 제주도까지 포함되는 줌 레벨
+                minZoom: 6,
                 maxZoom: 18,
                 zoomControl: true,
                 zoomControlOptions: {
