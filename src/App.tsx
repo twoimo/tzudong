@@ -16,6 +16,7 @@ import Sidebar from "./components/layout/Sidebar";
 import AuthModal from "./components/auth/AuthModal";
 import { AdminRestaurantModal } from "./components/admin/AdminRestaurantModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 
 const queryClient = new QueryClient();
 
@@ -42,7 +43,10 @@ function AppLayout() {
     <div className="h-screen flex overflow-hidden">
       <Sidebar isOpen={isSidebarOpen} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={cn(
+        "flex-1 flex flex-col overflow-hidden transition-all duration-300",
+        isSidebarOpen ? "ml-64" : "ml-0"
+      )}>
         <Header
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           isLoggedIn={!!user}
