@@ -250,9 +250,9 @@ export default function AdminSubmissionsPage() {
         try {
             toast.info("주소로 좌표를 검색 중...");
 
-            // Vite 프록시를 통해 네이버 클라우드 플랫폼 Geocoding API 호출
+            // 외부 프록시 서버를 통해 네이버 Geocoding API 호출
             const response = await fetch(
-                `/api/naver-geocode?query=${encodeURIComponent(address)}`
+                `http://www.moamodu.com/develop/naver_map_new_proxy.php?query=${encodeURIComponent(address)}`
             );
 
             if (!response.ok) {

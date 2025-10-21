@@ -1,10 +1,114 @@
-# 네이버 클라우드 Geocoding API 설정 가이드
+# 네이버 지도 Geocoding API 설정 가이드
 
-## 📋 개요
+이 문서는 **제보 관리 페이지**에서 "주소로 좌표 자동 입력" 기능을 사용하기 위한 설정 방법을 안내합니다.
 
-주소를 좌표(위도/경도)로 변환하는 Geocoding 기능을 위해 네이버 클라우드 플랫폼의 Geocoding API를 사용합니다.
+---
 
-## 🔑 API 키 발급 방법
+## 📌 현재 구성
+
+### ✅ 외부 프록시 서버 사용 (권장)
+
+**엔드포인트**: `http://www.moamodu.com/develop/naver_map_new_proxy.php`
+
+#### 장점
+- ✅ **API 키 설정 불필요** - 즉시 사용 가능
+- ✅ **CORS 문제 없음** - 서버사이드에서 처리
+- ✅ **보안 강화** - 클라이언트에 API 키 노출 위험 없음
+- ✅ **관리 편의성** - 별도 환경 변수 설정 불필요
+
+---
+
+## 🔧 API 사용 방법
+
+### 요청 형식
+
+```typescript
+const response = await fetch(
+  `http://www.moamodu.com/develop/naver_map_new_proxy.php?query=${encodeURIComponent(address)}`
+);
+```
+
+### 응답 형식
+
+```json
+{
+  "status": "OK",
+  "meta": {
+    "totalCount": 1,
+    "page": 1,
+    "count": 1
+  },
+  "addresses": [
+    {
+      "roadAddress": "경기도 포천시 선마로 7",
+      "jibunAddress": "경기도 포천시 선단동 56-7",
+      "englishAddress": "7, Seonma-ro, Pocheon-si, Gyeonggi-do, Republic of Korea",
+      "x": "127.1673391",  // 경도 (longitude)
+      "y": "37.8538400",   // 위도 (latitude)
+      "distance": 0.0
+    }
+  ],
+  "errorMessage": ""
+}
+```
+
+### 응답 데이터 파싱
+
+```typescript
+const geocodeAddress = async (address: string) => {
+    try {
+        const response = await fetch(
+            `http://www.moamodu.com/develop/naver_map_new_proxy.php?query=${encodeURIComponent(address)}`
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (data.status === 'OK' && data.addresses && data.addresses.length > 0) {
+            const item = data.addresses[0];
+            const lat = item.y; // 위도
+            const lng = item.x; // 경도
+
+            console.log('위도:', lat);
+            console.log('경도:', lng);
+        } else {
+            console.error('주소를 찾을 수 없습니다');
+        }
+    } catch (error) {
+        console.error('Geocoding error:', error);
+    }
+};
+```
+
+---
+
+## 🎯 사용 예시
+
+### 테스트용 주소
+
+```
+경기도 포천시 선마로 7
+서울특별시 강남구 테헤란로 427
+경기도 성남시 분당구 판교역로 152
+부산광역시 해운대구 해운대해변로 264
+```
+
+### 예상 결과
+
+```
+주소: 경기도 포천시 선마로 7
+위도: 37.8538400
+경도: 127.1673391
+```
+
+---
+
+## 🛠️ 대안: 직접 네이버 클라우드 API 사용
+
+외부 프록시 서버를 사용하지 않고 직접 네이버 클라우드 플랫폼 API를 사용하려면:
 
 ### 1단계: 네이버 클라우드 플랫폼 가입
 
@@ -25,20 +129,18 @@
 3. Application 이름 입력 (예: "Tzudong Map")
 4. **Maps** 서비스 선택
    - ✅ **Geocoding** 체크
-   - ✅ **Maps** 체크 (지도 표시용)
 5. **Web 서비스 URL** 등록
-   - 개발: `http://localhost:8081`
-   - 배포: `https://your-domain.com`
-6. **등록** 클릭
+   - 개발: `http://localhost:8080`
+   - 운영: `https://your-domain.com`
 
-### 4단계: 인증 정보 확인
+### 4단계: API 키 확인
 
 1. 등록한 Application 클릭
 2. **인증 정보** 탭에서 확인:
    - **Client ID** (X-NCP-APIGW-API-KEY-ID)
    - **Client Secret** (X-NCP-APIGW-API-KEY)
 
-## ⚙️ 환경 변수 설정
+### 5단계: 환경 변수 설정
 
 프로젝트 루트에 `.env.local` 파일 생성:
 
@@ -56,27 +158,9 @@ VITE_NAVER_CLIENT_SECRET=your_client_secret_here
 npm run dev
 ```
 
-## 🔧 API 사용 방법
+### 6단계: Vite 프록시 설정 (CORS 해결)
 
-### CORS 해결 - Vite 프록시 사용
-
-클라이언트에서 직접 API를 호출하면 CORS 에러가 발생합니다. 
-**Vite 프록시**를 통해 우회합니다.
-
-### 요청 형식 (자동 프록시 처리)
-
-```typescript
-// 클라이언트에서는 프록시 경로로 요청
-const response = await fetch(
-  `/api/naver-geocode?query=${encodeURIComponent(address)}`
-);
-
-// Vite가 자동으로 다음 URL로 프록시:
-// https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=...
-// + API 키 헤더 자동 추가
-```
-
-### Vite 프록시 설정 (vite.config.ts)
+`vite.config.ts`:
 
 ```typescript
 proxy: {
@@ -86,7 +170,6 @@ proxy: {
     rewrite: (path) => path.replace(/^\/api\/naver-geocode/, '/map-geocode/v2/geocode'),
     configure: (proxy, options) => {
       proxy.on('proxyReq', (proxyReq, req, res) => {
-        // 환경 변수에서 API 키 읽어서 헤더 추가
         const apiKeyId = process.env.VITE_NAVER_CLIENT_ID;
         const apiKey = process.env.VITE_NAVER_CLIENT_SECRET;
         if (apiKeyId && apiKey) {
@@ -99,92 +182,70 @@ proxy: {
 }
 ```
 
-### 응답 형식
+### 7단계: API 호출 코드 변경
 
-```json
-{
-  "status": "OK",
-  "addresses": [
-    {
-      "roadAddress": "경기도 성남시 분당구 불정로 6",
-      "jibunAddress": "경기도 성남시 분당구 정자동 178-1",
-      "x": "127.1054328",  // 경도
-      "y": "37.3595963",   // 위도
-      "distance": 0.0
-    }
-  ]
-}
+```typescript
+// 프록시 경로로 요청
+const response = await fetch(
+  `/api/naver-geocode?query=${encodeURIComponent(address)}`
+);
 ```
 
-## 📊 사용량 및 요금
+---
 
-- **무료 사용량**: 월 100,000건
-- **초과 요금**: 건당 약 0.5원
-- **모니터링**: 콘솔 → **이용 현황** 에서 확인 가능
+## 📊 비용 안내
 
-## 🔒 보안 주의사항
+### 무료 사용량
 
-⚠️ **중요**: 현재는 클라이언트에서 직접 API를 호출하고 있어 API 키가 노출될 수 있습니다.
+- **월 300,000건** 무료
+- 초과 시: 건당 0.5원 (VAT 별도)
 
-### 권장 사항 (프로덕션 환경)
+### 참고 링크
 
-1. **Supabase Edge Function** 또는 **백엔드 API**로 프록시 구현
-2. 클라이언트 → 백엔드 → 네이버 API 구조로 변경
-3. API 키를 서버 측에서만 관리
+- [네이버 클라우드 플랫폼 요금 안내](https://www.ncloud.com/product/applicationService/maps)
+- [Geocoding API 문서](https://api.ncloud-docs.com/docs/ai-naver-mapsgeocoding)
 
-### 임시 보안 조치
-
-1. **Web 서비스 URL 제한** 설정 (네이버 클라우드 콘솔에서)
-2. 허용된 도메인만 API 호출 가능하도록 제한
-
-## 🧪 테스트
-
-### 테스트 주소
-```
-서울특별시 강남구 테헤란로 152
-```
-
-### 예상 결과
-```json
-{
-  "x": "127.0363925",  // 경도
-  "y": "37.5055967"    // 위도
-}
-```
-
-## 📚 참고 문서
-
-- [네이버 클라우드 Geocoding API 문서](https://api.ncloud-docs.com/docs/ko/application-maps-geocoding)
-- [네이버 클라우드 플랫폼](https://www.ncloud.com/)
-- [Maps API 가격 정책](https://www.ncloud.com/product/applicationService/maps)
-
-## ✅ 설정 확인 체크리스트
-
-- [ ] 네이버 클라우드 플랫폼 가입
-- [ ] Maps API 서비스 신청
-- [ ] Application 등록 (Geocoding 포함)
-- [ ] Client ID, Client Secret 발급
-- [ ] `.env.local` 파일에 환경 변수 추가
-- [ ] Web 서비스 URL 등록 (localhost + 배포 도메인)
-- [ ] 웹사이트에서 "주소로 좌표 자동 입력" 테스트
+---
 
 ## 🐛 문제 해결
 
-### "Geocoding API 키가 설정되지 않았습니다" 에러
+### "Failed to fetch" 에러
 
-1. `.env.local` 파일 확인
-2. 환경 변수 이름 확인 (VITE_ 접두사 필수)
-3. 개발 서버 재시작 (`npm run dev`)
+**현재 구성 (외부 프록시):**
+- 프록시 서버가 정상 작동하는지 확인
+- 주소 형식이 올바른지 확인
 
-### CORS 에러
+**직접 API 사용 시:**
+1. 개발 서버 재시작 확인
+2. 환경 변수 `.env.local` 파일 위치 확인
+3. API 키 형식 확인 (따옴표 없이)
+4. 웹 서비스 URL 등록 확인
 
-1. 네이버 클라우드 콘솔에서 Web 서비스 URL 확인
-2. 현재 도메인이 등록되어 있는지 확인
-3. `http://localhost:8081` 추가
+### 좌표를 찾을 수 없음
 
-### "주소에서 좌표를 찾을 수 없습니다" 에러
+- 더 자세한 주소 입력 (도로명 주소 권장)
+- 예: ❌ "서울 강남" → ✅ "서울특별시 강남구 테헤란로 427"
 
-1. 주소를 더 자세히 입력 (도로명 주소 권장)
-2. "시/도 + 구/군 + 도로명 + 건물번호" 형식 사용
-3. 예: "서울특별시 강남구 테헤란로 152"
+---
 
+## ✅ 체크리스트
+
+### 현재 구성 (외부 프록시)
+
+- [x] 프록시 서버 엔드포인트 설정 완료
+- [x] API 호출 코드 구현 완료
+- [x] 즉시 사용 가능 ✨
+
+### 직접 API 사용 시
+
+- [ ] 네이버 클라우드 플랫폼 가입
+- [ ] Maps API 신청
+- [ ] Application 등록 및 API 키 발급
+- [ ] 환경 변수 설정 (`.env.local`)
+- [ ] Vite 프록시 설정
+- [ ] 개발 서버 재시작
+- [ ] 테스트 완료
+
+---
+
+**🎉 현재는 외부 프록시 서버를 사용하므로 별도 설정 없이 바로 사용 가능합니다!**
