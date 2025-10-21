@@ -1,5 +1,5 @@
 import { useState } from "react";
-import MapView from "@/components/map/MapView";
+import NaverMapView from "@/components/map/NaverMapView";
 import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,7 +25,7 @@ const Index = ({ refreshTrigger }: IndexProps) => {
 
   return (
     <>
-      <MapView
+      <NaverMapView
         filters={filters}
         refreshTrigger={refreshTrigger}
         onAdminAddRestaurant={isAdmin ? undefined : undefined}

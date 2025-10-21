@@ -1,4 +1,4 @@
-import { Home, Filter, Trophy, MessageSquare, DollarSign } from "lucide-react";
+import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -13,6 +13,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
 
   const menuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
+    { icon: Globe, label: "쯔동여지도 글로벌", path: "/global", onClick: () => navigate("/global") },
     { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
     { icon: Trophy, label: "쯔양 팬 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
     { icon: MessageSquare, label: "쯔양 팬 맛집 리뷰", path: "/reviews", onClick: () => navigate("/reviews") },

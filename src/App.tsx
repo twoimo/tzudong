@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
+import GlobalMapPage from "./pages/GlobalMapPage";
 import FilteringPage from "./pages/FilteringPage";
 import ReviewsPage from "./pages/ReviewsPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
@@ -58,6 +59,7 @@ function AppLayout() {
         <main className="flex-1 relative overflow-hidden">
           <Routes>
             <Route path="/" element={<Index refreshTrigger={refreshTrigger} />} />
+            <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} />} />
             <Route path="/filtering" element={<FilteringPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
