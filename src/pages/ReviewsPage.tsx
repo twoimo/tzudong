@@ -120,47 +120,81 @@ const ReviewsPage = () => {
         queryKey: ['reviews', filterCategory, filterStatus],
         queryFn: async () => {
             try {
-                const query = supabase
+                console.log('🔍 리뷰 데이터 가져오는 중...');
+
+                // 1. 리뷰 데이터 가져오기 (조인 없이)
+                const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
-                    .select(`
-                        *,
-                        profiles!reviews_user_id_fkey(nickname),
-                        restaurants!reviews_restaurant_id_fkey(name, category)
-                    `)
+                    .select('*')
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false });
 
-                const { data, error } = await query;
-
-                // 에러가 발생하거나 데이터가 없으면 더미 데이터 반환
-                if (error) {
-                    console.warn('리뷰 데이터 조회 실패, 샘플 데이터 표시:', error.message);
+                if (reviewsError) {
+                    console.error('❌ 리뷰 조회 실패:', reviewsError);
                     return DUMMY_REVIEWS;
                 }
 
-                const reviews = (data || []).map(review => ({
-                    id: review.id,
-                    restaurantName: review.restaurants?.name || '알 수 없음',
-                    restaurantCategory: review.restaurants?.category || review.category,
-                    userName: review.profiles?.nickname || '익명',
-                    visitedAt: review.visited_at,
-                    submittedAt: review.created_at || '',
-                    content: review.content,
-                    isVerified: review.is_verified || false,
-                    isPinned: review.is_pinned || false,
-                    isEditedByAdmin: review.is_edited_by_admin || false,
-                    photos: [],
-                    category: review.category,
-                })) as Review[];
-
-                // 실제 데이터가 없으면 더미 데이터 반환
-                if (reviews.length === 0) {
+                if (!reviewsData || reviewsData.length === 0) {
+                    console.warn('⚠️ 리뷰 데이터가 없음');
                     return DUMMY_REVIEWS;
                 }
+
+                console.log(`📊 ${reviewsData.length}개 리뷰 조회됨`);
+
+                // 2. 필요한 user_id와 restaurant_id 수집
+                const userIds = [...new Set(reviewsData.map(r => r.user_id))];
+                const restaurantIds = [...new Set(reviewsData.map(r => r.restaurant_id))];
+
+                console.log('👥 User IDs:', userIds);
+                console.log('🏪 Restaurant IDs:', restaurantIds);
+
+                // 3. Profiles 가져오기
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('user_id, nickname')
+                    .in('user_id', userIds);
+
+                // 4. Restaurants 가져오기
+                const { data: restaurantsData } = await supabase
+                    .from('restaurants')
+                    .select('id, name, category')
+                    .in('id', restaurantIds);
+
+                console.log('👥 Profiles:', profilesData);
+                console.log('🏪 Restaurants:', restaurantsData);
+
+                // 5. Map으로 변환 (빠른 조회)
+                const profilesMap = new Map(
+                    (profilesData || []).map(p => [p.user_id, p.nickname])
+                );
+                const restaurantsMap = new Map(
+                    (restaurantsData || []).map(r => [r.id, { name: r.name, category: r.category }])
+                );
+
+                // 6. 리뷰 데이터 매핑
+                const reviews = reviewsData.map(review => {
+                    const restaurant = restaurantsMap.get(review.restaurant_id);
+                    return {
+                        id: review.id,
+                        restaurantName: restaurant?.name || '알 수 없음',
+                        restaurantCategory: restaurant?.category || review.category,
+                        userName: profilesMap.get(review.user_id) || '익명',
+                        visitedAt: review.visited_at,
+                        submittedAt: review.created_at || '',
+                        content: review.content,
+                        isVerified: review.is_verified || false,
+                        isPinned: review.is_pinned || false,
+                        isEditedByAdmin: review.is_edited_by_admin || false,
+                        photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+                        category: review.category,
+                    };
+                }) as Review[];
+
+                console.log(`✅ 총 ${reviews.length}개 리뷰 매핑 완료`);
 
                 return reviews;
             } catch (error) {
-                console.warn('리뷰 데이터 조회 중 오류 발생, 샘플 데이터 표시:', error);
+                console.error('❌ 리뷰 데이터 조회 중 오류:', error);
                 return DUMMY_REVIEWS;
             }
         },

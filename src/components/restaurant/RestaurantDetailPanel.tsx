@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Star, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle } from "lucide-react";
+import { X, MapPin, Phone, Star, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -6,6 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import { Restaurant } from "@/types/restaurant";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -28,6 +30,9 @@ export function RestaurantDetailPanel({
     onWriteReview,
 }: RestaurantDetailPanelProps) {
     if (!restaurant) return null;
+
+    // 쯔양 방문 여부 확인
+    const isJjyangVisited = (restaurant.jjyang_visit_count ?? 0) > 0;
 
     // Mock recent reviews - 실제로는 Supabase에서 가져와야 함
     const recentReviews: Review[] = [
@@ -289,13 +294,39 @@ export function RestaurantDetailPanel({
                     <Navigation className="h-4 w-4" />
                     길찾기
                 </Button>
-                <Button
-                    onClick={onWriteReview}
-                    className="w-full bg-gradient-primary hover:opacity-90 gap-2"
-                >
-                    <MessageSquare className="h-4 w-4" />
-                    리뷰 작성하기
-                </Button>
+
+                {/* 쯔양 미방문 경고 메시지 */}
+                {!isJjyangVisited && (
+                    <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
+                        <AlertCircle className="h-4 w-4 text-amber-600" />
+                        <AlertDescription className="text-xs text-amber-800 dark:text-amber-200">
+                            이 맛집은 쯔양이 아직 방문하지 않은 곳입니다. <br />
+                            쯔양이 방문한 맛집에만 리뷰를 작성할 수 있습니다.
+                        </AlertDescription>
+                    </Alert>
+                )}
+
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <div className="w-full">
+                                <Button
+                                    onClick={onWriteReview}
+                                    disabled={!isJjyangVisited}
+                                    className="w-full bg-gradient-primary hover:opacity-90 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <MessageSquare className="h-4 w-4" />
+                                    리뷰 작성하기
+                                </Button>
+                            </div>
+                        </TooltipTrigger>
+                        {!isJjyangVisited && (
+                            <TooltipContent>
+                                <p className="text-xs">쯔양이 방문한 맛집에만 리뷰를 작성할 수 있습니다</p>
+                            </TooltipContent>
+                        )}
+                    </Tooltip>
+                </TooltipProvider>
             </div>
         </div>
     );

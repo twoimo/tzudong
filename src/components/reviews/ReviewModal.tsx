@@ -142,7 +142,28 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             }
 
             // 3. Create review record
-            const visitedAtDateTime = `${visitedDate}T${visitedTime}:00`;
+            // 시간 형식 처리 및 검증
+            let visitedAtDateTime: string;
+            try {
+                // 시간이 HH:MM 형식인 경우 초 추가
+                const timeParts = visitedTime.split(':');
+                const timeWithSeconds = timeParts.length === 2
+                    ? `${visitedTime}:00`
+                    : visitedTime;
+
+                // ISO 8601 형식으로 조합
+                visitedAtDateTime = `${visitedDate}T${timeWithSeconds}`;
+
+                // 유효성 검증
+                const testDate = new Date(visitedAtDateTime);
+                if (isNaN(testDate.getTime())) {
+                    throw new Error("유효하지 않은 날짜/시간 형식입니다");
+                }
+
+                console.log('방문 날짜/시간:', visitedAtDateTime); // 디버깅용
+            } catch (error) {
+                throw new Error(`날짜/시간 형식 오류: ${visitedDate} ${visitedTime}`);
+            }
 
             // 타입 안전성을 위한 검증
             if (!category) {
@@ -247,6 +268,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                     <Input
                                         id="visitTime"
                                         type="time"
+                                        step="60"
                                         value={visitedTime}
                                         onChange={(e) => setVisitedTime(e.target.value)}
                                     />
