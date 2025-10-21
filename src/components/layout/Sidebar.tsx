@@ -23,6 +23,17 @@ const Sidebar = ({ isOpen, onFilterClick }: SidebarProps) => {
         isOpen ? "w-64" : "w-0 overflow-hidden"
       )}
     >
+      <div className="p-4 border-b border-sidebar-border">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+            <span className="text-xl">🔥</span>
+          </div>
+          <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            쯔동여지도
+          </h1>
+        </div>
+      </div>
+
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item, index) => (
           <Button

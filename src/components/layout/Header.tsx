@@ -37,7 +37,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onAdminClic
 
   return (
     <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 shadow-sm z-10">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center">
         <Button
           variant="ghost"
           size="icon"
@@ -46,15 +46,6 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onAdminClic
         >
           <Menu className="h-5 w-5" />
         </Button>
-
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-            <span className="text-xl">🔥</span>
-          </div>
-          <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-            쯔동여지도
-          </h1>
-        </div>
       </div>
 
       <div className="flex items-center gap-2">
