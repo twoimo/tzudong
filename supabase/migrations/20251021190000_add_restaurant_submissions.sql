@@ -29,6 +29,7 @@ CREATE INDEX idx_restaurant_submissions_created_at ON public.restaurant_submissi
 ALTER TABLE public.restaurant_submissions ENABLE ROW LEVEL SECURITY;
 
 -- RLS 정책: 일반 사용자는 자신의 제보만 조회 가능
+DROP POLICY IF EXISTS "Users can view their own submissions" ON public.restaurant_submissions;
 CREATE POLICY "Users can view their own submissions"
     ON public.restaurant_submissions
     FOR SELECT
@@ -36,6 +37,7 @@ CREATE POLICY "Users can view their own submissions"
     USING (auth.uid() = user_id);
 
 -- RLS 정책: 관리자는 모든 제보 조회 가능
+DROP POLICY IF EXISTS "Admins can view all submissions" ON public.restaurant_submissions;
 CREATE POLICY "Admins can view all submissions"
     ON public.restaurant_submissions
     FOR SELECT
@@ -43,6 +45,7 @@ CREATE POLICY "Admins can view all submissions"
     USING (public.has_role(auth.uid(), 'admin'));
 
 -- RLS 정책: 인증된 사용자는 제보 생성 가능
+DROP POLICY IF EXISTS "Authenticated users can create submissions" ON public.restaurant_submissions;
 CREATE POLICY "Authenticated users can create submissions"
     ON public.restaurant_submissions
     FOR INSERT
@@ -50,6 +53,7 @@ CREATE POLICY "Authenticated users can create submissions"
     WITH CHECK (auth.uid() = user_id);
 
 -- RLS 정책: 사용자는 자신의 pending 제보만 수정 가능
+DROP POLICY IF EXISTS "Users can update their own pending submissions" ON public.restaurant_submissions;
 CREATE POLICY "Users can update their own pending submissions"
     ON public.restaurant_submissions
     FOR UPDATE
@@ -58,6 +62,7 @@ CREATE POLICY "Users can update their own pending submissions"
     WITH CHECK (auth.uid() = user_id AND status = 'pending');
 
 -- RLS 정책: 관리자는 모든 제보 수정 가능 (검토용)
+DROP POLICY IF EXISTS "Admins can update all submissions" ON public.restaurant_submissions;
 CREATE POLICY "Admins can update all submissions"
     ON public.restaurant_submissions
     FOR UPDATE
@@ -65,6 +70,7 @@ CREATE POLICY "Admins can update all submissions"
     USING (public.has_role(auth.uid(), 'admin'));
 
 -- RLS 정책: 사용자는 자신의 pending 제보만 삭제 가능
+DROP POLICY IF EXISTS "Users can delete their own pending submissions" ON public.restaurant_submissions;
 CREATE POLICY "Users can delete their own pending submissions"
     ON public.restaurant_submissions
     FOR DELETE
@@ -72,6 +78,7 @@ CREATE POLICY "Users can delete their own pending submissions"
     USING (auth.uid() = user_id AND status = 'pending');
 
 -- RLS 정책: 관리자는 모든 제보 삭제 가능
+DROP POLICY IF EXISTS "Admins can delete all submissions" ON public.restaurant_submissions;
 CREATE POLICY "Admins can delete all submissions"
     ON public.restaurant_submissions
     FOR DELETE
