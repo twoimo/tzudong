@@ -29,12 +29,19 @@ import {
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { useRestaurants } from "@/hooks/use-restaurants";
 
+// 지역 목록
+const REGIONS = [
+    "서울", "경기", "인천", "부산", "대구", "광주", "대전", "울산",
+    "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"
+];
+
 type SortColumn = "name" | "category" | "jjyangVisits" | "userVisits" | "reviews" | "rating";
 type SortDirection = "asc" | "desc" | null;
 
 interface FilterState {
     searchQuery: string;
     categories: string[];
+    regions: string[];
     jjyangVisitsMin: number;
     userVisitsMin: number;
     reviewsMin: number;
@@ -52,6 +59,7 @@ const FilteringPage = () => {
     const [filters, setFilters] = useState<FilterState>({
         searchQuery: "",
         categories: [],
+        regions: [],
         jjyangVisitsMin: 0,
         userVisitsMin: 0,
         reviewsMin: 0,
@@ -91,10 +99,20 @@ const FilteringPage = () => {
         }));
     };
 
+    const handleRegionToggle = (region: string) => {
+        setFilters(prev => ({
+            ...prev,
+            regions: prev.regions.includes(region)
+                ? prev.regions.filter(r => r !== region)
+                : [...prev.regions, region]
+        }));
+    };
+
     const handleResetFilters = () => {
         setFilters({
             searchQuery: "",
             categories: [],
+            regions: [],
             jjyangVisitsMin: 0,
             userVisitsMin: 0,
             reviewsMin: 0,
@@ -103,6 +121,40 @@ const FilteringPage = () => {
         });
         setSortColumn(null);
         setSortDirection(null);
+    };
+
+    // 주소에서 지역 추출 함수
+    const extractRegion = (address: string): string => {
+        if (!address) return "";
+
+        // 시/도 패턴 매칭
+        const regionPatterns = [
+            { pattern: /^서울/, region: "서울" },
+            { pattern: /^경기도|^경기/, region: "경기" },
+            { pattern: /^인천/, region: "인천" },
+            { pattern: /^부산/, region: "부산" },
+            { pattern: /^대구/, region: "대구" },
+            { pattern: /^광주/, region: "광주" },
+            { pattern: /^대전/, region: "대전" },
+            { pattern: /^울산/, region: "울산" },
+            { pattern: /^세종/, region: "세종" },
+            { pattern: /^강원/, region: "강원" },
+            { pattern: /^충청북도|^충북/, region: "충북" },
+            { pattern: /^충청남도|^충남/, region: "충남" },
+            { pattern: /^전라북도|^전북/, region: "전북" },
+            { pattern: /^전라남도|^전남/, region: "전남" },
+            { pattern: /^경상북도|^경북/, region: "경북" },
+            { pattern: /^경상남도|^경남/, region: "경남" },
+            { pattern: /^제주/, region: "제주" },
+        ];
+
+        for (const { pattern, region } of regionPatterns) {
+            if (pattern.test(address)) {
+                return region;
+            }
+        }
+
+        return "";
     };
 
     const filteredAndSortedRestaurants = useMemo(() => {
@@ -120,6 +172,14 @@ const FilteringPage = () => {
         // 카테고리 필터
         if (filters.categories.length > 0) {
             result = result.filter(r => filters.categories.includes(r.category || ""));
+        }
+
+        // 지역 필터
+        if (filters.regions.length > 0) {
+            result = result.filter(r => {
+                const region = extractRegion(r.address || "");
+                return filters.regions.includes(region);
+            });
         }
 
         // 쯔양 방문횟수 필터
@@ -197,6 +257,7 @@ const FilteringPage = () => {
     const activeFilterCount =
         (filters.searchQuery ? 1 : 0) +
         filters.categories.length +
+        filters.regions.length +
         (filters.jjyangVisitsMin > 0 ? 1 : 0) +
         (filters.userVisitsMin > 0 ? 1 : 0) +
         (filters.reviewsMin > 0 ? 1 : 0) +
@@ -234,7 +295,7 @@ const FilteringPage = () => {
                 </div>
 
                 {/* Filter Controls */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
                     {/* 검색 */}
                     <div className="lg:col-span-2">
                         <div className="relative">
@@ -247,6 +308,42 @@ const FilteringPage = () => {
                             />
                         </div>
                     </div>
+
+                    {/* 지역 */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="justify-between">
+                                <span className="truncate">
+                                    지역 {filters.regions.length > 0 && `(${filters.regions.length})`}
+                                </span>
+                                <Filter className="h-4 w-4 ml-2" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64" align="start">
+                            <div className="space-y-2">
+                                <h4 className="font-semibold text-sm mb-3">지역 선택</h4>
+                                <ScrollArea className="h-64">
+                                    <div className="grid grid-cols-2 gap-2 pr-3">
+                                        {REGIONS.map((region) => (
+                                            <div key={region} className="flex items-center space-x-2">
+                                                <Checkbox
+                                                    id={`region-${region}`}
+                                                    checked={filters.regions.includes(region)}
+                                                    onCheckedChange={() => handleRegionToggle(region)}
+                                                />
+                                                <label
+                                                    htmlFor={`region-${region}`}
+                                                    className="text-sm cursor-pointer flex-1"
+                                                >
+                                                    {region}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </ScrollArea>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
 
                     {/* 카테고리 */}
                     <Popover>
@@ -366,6 +463,11 @@ const FilteringPage = () => {
                                 검색: {filters.searchQuery}
                             </Badge>
                         )}
+                        {filters.regions.map(region => (
+                            <Badge key={region} variant="secondary" className="gap-1">
+                                📍 {region}
+                            </Badge>
+                        ))}
                         {filters.categories.map(cat => (
                             <Badge key={cat} variant="secondary">
                                 {cat}
