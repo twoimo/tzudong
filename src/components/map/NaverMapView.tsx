@@ -82,7 +82,7 @@ const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
             const markerContent = `
         <div style="
           position: relative;
-          font-size: 32px;
+          font-size: 24px;
           cursor: pointer;
           transition: transform 0.2s;
           filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
@@ -96,7 +96,7 @@ const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
                 map: mapInstanceRef.current,
                 icon: {
                     content: markerContent,
-                    anchor: new naver.maps.Point(16, 16),
+                    anchor: new naver.maps.Point(12, 12),
                 },
                 title: restaurant.name,
             });
@@ -109,13 +109,8 @@ const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
             markersRef.current.push(marker);
         });
 
-        // 첫 번째 레스토랑으로 지도 중심 이동 (레스토랑이 있을 경우)
-        if (restaurants.length > 0 && !isDummyData) {
-            const firstRestaurant = restaurants[0];
-            mapInstanceRef.current.setCenter(
-                new naver.maps.LatLng(firstRestaurant.lat, firstRestaurant.lng)
-            );
-        }
+        // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
+        // 마커 표시 후 자동 이동하지 않음
     }, [restaurants, isDummyData]);
 
     // 로딩 에러 처리

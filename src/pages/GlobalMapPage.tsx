@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import MapView from "@/components/map/MapView";
 import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -8,7 +8,7 @@ interface GlobalMapPageProps {
     refreshTrigger: number;
 }
 
-const GlobalMapPage = ({ refreshTrigger }: GlobalMapPageProps) => {
+const GlobalMapPage = memo(({ refreshTrigger }: GlobalMapPageProps) => {
     const { isAdmin } = useAuth();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({
@@ -42,7 +42,9 @@ const GlobalMapPage = ({ refreshTrigger }: GlobalMapPageProps) => {
             </Sheet>
         </>
     );
-};
+});
+
+GlobalMapPage.displayName = 'GlobalMapPage';
 
 export default GlobalMapPage;
 

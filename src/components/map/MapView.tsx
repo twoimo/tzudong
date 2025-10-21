@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { Restaurant } from "@/types/restaurant";
@@ -18,7 +18,7 @@ interface MapViewProps {
   onAdminAddRestaurant?: () => void;
 }
 
-const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps) => {
+const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps) => {
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -99,8 +99,14 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
       const markerElement = document.createElement("div");
       markerElement.className = "custom-marker";
       markerElement.innerHTML = `
-        <div class="flex flex-col items-center cursor-pointer transform transition-transform hover:scale-110">
-          <div class="text-2xl">${icon}</div>
+        <div style="
+          position: relative;
+          font-size: 24px;
+          cursor: pointer;
+          transition: transform 0.2s;
+          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        " class="hover:scale-125">
+          ${icon}
         </div>
       `;
 
@@ -113,7 +119,7 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
 
       markerElement.addEventListener("click", () => {
         setSelectedRestaurant(restaurant);
-        googleMapRef.current?.panTo({ lat: Number(restaurant.lat), lng: Number(restaurant.lng) });
+        // 지도 이동 제거 - 현재 위치 유지
       });
 
       markersRef.current.push(marker);
@@ -222,6 +228,8 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
       )}
     </div>
   );
-};
+});
+
+MapView.displayName = 'MapView';
 
 export default MapView;
