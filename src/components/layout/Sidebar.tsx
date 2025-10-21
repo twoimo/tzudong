@@ -2,6 +2,8 @@ import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign } from "lucide-r
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -10,6 +12,24 @@ interface SidebarProps {
 const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
+
+  // 레스토랑 데이터 프리페치 함수
+  const prefetchRestaurants = async () => {
+    await queryClient.prefetchQuery({
+      queryKey: ["restaurants", undefined, undefined, undefined, undefined, undefined, undefined],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("restaurants")
+          .select("*")
+          .order("ai_rating", { ascending: false });
+        
+        if (error) throw error;
+        return data || [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  };
 
   const menuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
@@ -41,6 +61,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item, index) => {
           const isActive = location.pathname === item.path;
+          const isHomePage = item.path === "/";
+          
           return (
             <Button
               key={index}
@@ -50,6 +72,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
                 isActive && "bg-gradient-primary shadow-primary"
               )}
               onClick={item.onClick}
+              onMouseEnter={() => {
+                // 홈 페이지 호버 시 레스토랑 데이터 미리 로드
+                if (isHomePage && !isActive) {
+                  prefetchRestaurants();
+                }
+              }}
               disabled={!item.onClick}
             >
               <item.icon className="h-5 w-5" />

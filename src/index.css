@@ -108,3 +108,24 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* 네이버 지도 마커 최적화 */
+.marker-icon {
+  position: relative;
+  font-size: 24px;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.marker-icon:hover {
+  transform: scale(1.2);
+}
+
+/* GPU 가속 활성화 */
+.marker-icon {
+  transform: translateZ(0);
+}

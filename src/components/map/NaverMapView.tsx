@@ -64,49 +64,50 @@ const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
         }
     }, [isLoaded]);
 
-    // 마커 업데이트
+    // 마커 업데이트 (최적화됨)
     useEffect(() => {
-        if (!mapInstanceRef.current || !window.naver) return;
-
-        // 기존 마커 제거
-        markersRef.current.forEach(marker => marker.setMap(null));
-        markersRef.current = [];
+        if (!mapInstanceRef.current || !window.naver || restaurants.length === 0) return;
 
         const { naver } = window;
 
-        // 새 마커 추가
-        restaurants.forEach((restaurant) => {
-            const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
+        // requestAnimationFrame을 사용하여 렌더링 최적화
+        requestAnimationFrame(() => {
+            // 기존 마커 제거 (배치로 처리)
+            const oldMarkers = markersRef.current;
+            oldMarkers.forEach(marker => marker.setMap(null));
+            markersRef.current = [];
 
-            // HTML 마커 생성 (이모티콘만 표시)
-            const markerContent = `
-        <div style="
-          position: relative;
-          font-size: 24px;
-          cursor: pointer;
-          transition: transform 0.2s;
-          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        " onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'">
-          ${isHotPlace ? '🔥' : '⭐'}
-        </div>
-      `;
+            // 새 마커 배열 준비
+            const newMarkers: any[] = [];
 
-            const marker = new naver.maps.Marker({
-                position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
-                map: mapInstanceRef.current,
-                icon: {
-                    content: markerContent,
-                    anchor: new naver.maps.Point(12, 12),
-                },
-                title: restaurant.name,
+            // 모든 마커를 한 번에 생성 (DOM 조작 최소화)
+            restaurants.forEach((restaurant) => {
+                const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
+                const icon = isHotPlace ? '🔥' : '⭐';
+
+                // 간단한 HTML 마커 (인라인 스타일 최소화)
+                const markerContent = `<div class="marker-icon">${icon}</div>`;
+
+                const marker = new naver.maps.Marker({
+                    position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                    map: mapInstanceRef.current,
+                    icon: {
+                        content: markerContent,
+                        anchor: new naver.maps.Point(12, 12),
+                    },
+                    title: restaurant.name,
+                });
+
+                // 마커 클릭 이벤트
+                naver.maps.Event.addListener(marker, "click", () => {
+                    setSelectedRestaurant(restaurant);
+                });
+
+                newMarkers.push(marker);
             });
 
-            // 마커 클릭 이벤트
-            naver.maps.Event.addListener(marker, "click", () => {
-                setSelectedRestaurant(restaurant);
-            });
-
-            markersRef.current.push(marker);
+            // 모든 마커를 한 번에 할당
+            markersRef.current = newMarkers;
         });
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
