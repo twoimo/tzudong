@@ -1,7 +1,6 @@
 import { Home, Filter, Trophy, MessageSquare, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { NavLink } from "react-router-dom";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -9,11 +8,11 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen }: SidebarProps) => {
   const menuItems = [
-    { icon: Home, label: "쯔동여지도 홈", path: "/" },
-    { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering" },
-    { icon: Trophy, label: "사용자 리더보드", path: "/leaderboard" },
-    { icon: MessageSquare, label: "사용자 맛집 리뷰", path: "/reviews" },
-    { icon: DollarSign, label: "월 서버 운영 비용", path: "/server-costs" },
+    { icon: Home, label: "쯔동여지도 홈", active: true },
+    { icon: Filter, label: "쯔동여지도 필터링" },
+    { icon: Trophy, label: "사용자 리더보드" },
+    { icon: MessageSquare, label: "사용자 맛집 리뷰" },
+    { icon: DollarSign, label: "월 서버 운영 비용" },
   ];
 
   return (
@@ -25,20 +24,17 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     >
       <nav className="flex-1 p-4 space-y-2">
         {menuItems.map((item, index) => (
-          <NavLink key={index} to={item.path}>
-            {({ isActive }) => (
-              <Button
-                variant={isActive ? "default" : "ghost"}
-                className={cn(
-                  "w-full justify-start gap-3",
-                  isActive && "bg-gradient-primary shadow-primary"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                <span>{item.label}</span>
-              </Button>
+          <Button
+            key={index}
+            variant={item.active ? "default" : "ghost"}
+            className={cn(
+              "w-full justify-start gap-3",
+              item.active && "bg-gradient-primary shadow-primary"
             )}
-          </NavLink>
+          >
+            <item.icon className="h-5 w-5" />
+            <span>{item.label}</span>
+          </Button>
         ))}
       </nav>
 
