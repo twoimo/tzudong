@@ -48,13 +48,15 @@ const CATEGORIES = [
     "아시안",
     "야식",
     "도시락",
-];
+] as const;
+
+type Category = typeof CATEGORIES[number];
 
 export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewModalProps) {
     const { user } = useAuth();
     const [visitedDate, setVisitedDate] = useState("");
     const [visitedTime, setVisitedTime] = useState("");
-    const [category, setCategory] = useState("");
+    const [category, setCategory] = useState<Category | "">("");
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
@@ -141,6 +143,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
 
             // 3. Create review record
             const visitedAtDateTime = `${visitedDate}T${visitedTime}:00`;
+
+            // 타입 안전성을 위한 검증
+            if (!category) {
+                throw new Error("카테고리를 선택해주세요");
+            }
+
             const { error: insertError } = await supabase
                 .from('reviews')
                 .insert({
@@ -151,7 +159,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                     visited_at: visitedAtDateTime,
                     verification_photo: verificationPhotoPath,
                     food_photos: foodPhotoUrls,
-                    category: category as any,
+                    category: category as Category,
                     is_verified: false, // 관리자 검토 대기
                 });
 
@@ -168,11 +176,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 onSuccess();
             }
             handleClose();
-        } catch (error: any) {
+        } catch (error) {
             console.error('리뷰 제출 오류:', error);
+            const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다";
             toast({
                 title: "리뷰 등록 실패",
-                description: error.message || "알 수 없는 오류가 발생했습니다",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -249,7 +258,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 <Label>
                                     카테고리 <span className="text-red-500">*</span>
                                 </Label>
-                                <Select value={category} onValueChange={setCategory}>
+                                <Select value={category} onValueChange={(value) => setCategory(value as Category)}>
                                     <SelectTrigger>
                                         <SelectValue placeholder="어떤 종류의 음식을 드셨나요?" />
                                     </SelectTrigger>
@@ -363,13 +372,29 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                             </div>
 
                             {/* Review Content */}
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 <Label htmlFor="content">
                                     리뷰 내용 <span className="text-red-500">*</span>
                                 </Label>
+
+                                {/* 작성 가이드 (항상 표시) */}
+                                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
+                                    <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
+                                        <p className="font-semibold flex items-center gap-1">
+                                            💡 작성 가이드
+                                        </p>
+                                        <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
+                                            <li>어떤 메뉴를 드셨나요?</li>
+                                            <li>맛은 어떠셨나요?</li>
+                                            <li>분위기나 서비스는 어땠나요?</li>
+                                            <li>추천하고 싶은 메뉴가 있나요?</li>
+                                        </ul>
+                                    </div>
+                                </Card>
+
                                 <Textarea
                                     id="content"
-                                    placeholder="맛집에 대한 솔직한 후기를 작성해주세요.&#10;&#10;- 어떤 메뉴를 드셨나요?&#10;- 맛은 어땠나요?&#10;- 분위기나 서비스는 어땠나요?&#10;- 추천하고 싶은 메뉴가 있나요?"
+                                    placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
                                     value={content}
                                     onChange={(e) => setContent(e.target.value)}
                                     rows={8}
