@@ -26,7 +26,7 @@ export function useNaverMaps() {
 
         // 이미 로딩 중인지 확인
         const existingScript = document.querySelector(
-            'script[src*="openapi.map.naver.com"]'
+            'script[src*="oapi.map.naver.com"]'
         );
         if (existingScript) {
             existingScript.addEventListener("load", () => {
@@ -45,7 +45,7 @@ export function useNaverMaps() {
         // 스크립트 로드
         const script = document.createElement("script");
         script.type = "text/javascript";
-        script.src = `https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${NAVER_MAPS_CONFIG.clientId}`;
+        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAPS_CONFIG.clientId}`;
         script.async = true;
 
         script.onload = () => {
