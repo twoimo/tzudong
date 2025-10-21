@@ -47,7 +47,7 @@ interface SubmissionWithUser extends RestaurantSubmission {
 }
 
 export default function AdminSubmissionsPage() {
-    const { user, profile } = useAuth();
+    const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithUser | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -61,23 +61,53 @@ export default function AdminSubmissionsPage() {
     });
 
     // 모든 제보 조회 (관리자만)
-    const { data: submissions = [], isLoading } = useQuery({
+    const { data: submissions = [], isLoading, error: queryError } = useQuery({
         queryKey: ['admin-submissions'],
         queryFn: async () => {
-            const { data, error } = await supabase
+            console.log('🔍 제보 데이터 조회 시작...');
+
+            // 1. 제보 데이터 가져오기
+            const { data: submissionsData, error: submissionsError } = await supabase
                 .from('restaurant_submissions')
-                .select(`
-                    *,
-                    profiles:user_id (
-                        nickname
-                    )
-                `)
+                .select('*')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
-            return data as SubmissionWithUser[];
+            if (submissionsError) {
+                console.error('❌ 제보 조회 실패:', submissionsError);
+                throw submissionsError;
+            }
+
+            if (!submissionsData || submissionsData.length === 0) {
+                console.log('✅ 제보 데이터 없음');
+                return [];
+            }
+
+            // 2. user_id 목록 추출
+            const userIds = [...new Set(submissionsData.map(s => s.user_id))];
+
+            // 3. profiles 데이터 가져오기
+            const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('user_id, nickname')
+                .in('user_id', userIds);
+
+            // 4. Map으로 변환 (빠른 조회)
+            const profilesMap = new Map(
+                (profilesData || []).map(p => [p.user_id, p.nickname])
+            );
+
+            // 5. 데이터 매핑
+            const result = submissionsData.map(submission => ({
+                ...submission,
+                profiles: {
+                    nickname: profilesMap.get(submission.user_id) || '알 수 없음'
+                }
+            })) as SubmissionWithUser[];
+
+            console.log('✅ 제보 데이터 조회 성공:', result.length, '개');
+            return result;
         },
-        enabled: !!user && !!profile?.is_admin,
+        enabled: !!user && !!isAdmin,
     });
 
     // 제보 승인 (레스토랑 테이블에 추가)
@@ -272,7 +302,7 @@ export default function AdminSubmissionsPage() {
         }
     };
 
-    if (!user || !profile?.is_admin) {
+    if (!user || !isAdmin) {
         return (
             <div className="flex items-center justify-center h-full">
                 <Card className="p-8 max-w-md text-center">
@@ -290,6 +320,15 @@ export default function AdminSubmissionsPage() {
     const approvedSubmissions = submissions.filter(s => s.status === 'approved');
     const rejectedSubmissions = submissions.filter(s => s.status === 'rejected');
 
+    console.log('📊 제보 통계:', {
+        total: submissions.length,
+        pending: pendingSubmissions.length,
+        approved: approvedSubmissions.length,
+        rejected: rejectedSubmissions.length,
+        isAdmin: isAdmin,
+        userId: user?.id,
+    });
+
     return (
         <div className="flex flex-col h-full bg-background">
             {/* 헤더 */}
@@ -302,6 +341,11 @@ export default function AdminSubmissionsPage() {
                     <p className="text-muted-foreground text-sm mt-1">
                         쯔양 팬들이 제보한 맛집을 검토하고 승인/거부할 수 있습니다
                     </p>
+                    {queryError && (
+                        <p className="text-sm text-red-500 mt-2">
+                            ⚠️ 데이터 로드 실패: {(queryError as Error).message}
+                        </p>
+                    )}
                 </div>
 
                 {/* 통계 카드 */}

@@ -14,7 +14,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
-  const { user, profile } = useAuth();
+  const { user, isAdmin } = useAuth();
 
   // 레스토랑 데이터 프리페치 함수
   const prefetchRestaurants = async () => {
@@ -48,7 +48,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   ] : [];
 
   // 관리자에게만 보이는 메뉴
-  const adminMenuItems = (user && profile?.is_admin) ? [
+  const adminMenuItems = (user && isAdmin) ? [
     { icon: Shield, label: "제보 관리", path: "/admin/submissions", onClick: () => navigate("/admin/submissions") },
   ] : [];
 
