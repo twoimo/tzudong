@@ -36,17 +36,17 @@ function AppLayout() {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <Header
-        onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
-        isLoggedIn={!!user}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onLogout={handleLogout}
-        onAdminClick={() => setIsAdminModalOpen(true)}
-      />
+    <div className="h-screen flex overflow-hidden">
+      <Sidebar isOpen={isSidebarOpen} />
 
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar isOpen={isSidebarOpen} />
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          isLoggedIn={!!user}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
+          onAdminClick={() => setIsAdminModalOpen(true)}
+        />
 
         <main className="flex-1 relative overflow-hidden">
           <Routes>

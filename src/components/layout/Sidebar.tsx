@@ -10,7 +10,7 @@ interface SidebarProps {
 const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const menuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
     { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
@@ -22,7 +22,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col",
+        "bg-sidebar border-r border-sidebar-border transition-all duration-300 flex flex-col h-full",
         isOpen ? "w-64" : "w-0 overflow-hidden"
       )}
     >
