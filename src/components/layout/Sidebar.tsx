@@ -1,19 +1,22 @@
 import { Home, Filter, Trophy, MessageSquare, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useNavigate, useLocation } from "react-router-dom";
 
 interface SidebarProps {
   isOpen: boolean;
-  onFilterClick?: () => void;
 }
 
-const Sidebar = ({ isOpen, onFilterClick }: SidebarProps) => {
+const Sidebar = ({ isOpen }: SidebarProps) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
   const menuItems = [
-    { icon: Home, label: "쯔동여지도 홈", active: true, onClick: undefined },
-    { icon: Filter, label: "쯔동여지도 필터링", active: false, onClick: onFilterClick },
-    { icon: Trophy, label: "사용자 리더보드", active: false, onClick: undefined },
-    { icon: MessageSquare, label: "사용자 맛집 리뷰", active: false, onClick: undefined },
-    { icon: DollarSign, label: "월 서버 운영 비용", active: false, onClick: undefined },
+    { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
+    { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
+    { icon: Trophy, label: "사용자 리더보드", path: "/leaderboard", onClick: undefined },
+    { icon: MessageSquare, label: "맛집 리뷰", path: "/reviews", onClick: undefined },
+    { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: undefined },
   ];
 
   return (
@@ -35,20 +38,24 @@ const Sidebar = ({ isOpen, onFilterClick }: SidebarProps) => {
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
-        {menuItems.map((item, index) => (
-          <Button
-            key={index}
-            variant={item.active ? "default" : "ghost"}
-            className={cn(
-              "w-full justify-start gap-3",
-              item.active && "bg-gradient-primary shadow-primary"
-            )}
-            onClick={item.onClick}
-          >
-            <item.icon className="h-5 w-5" />
-            <span>{item.label}</span>
-          </Button>
-        ))}
+        {menuItems.map((item, index) => {
+          const isActive = location.pathname === item.path;
+          return (
+            <Button
+              key={index}
+              variant={isActive ? "default" : "ghost"}
+              className={cn(
+                "w-full justify-start gap-3",
+                isActive && "bg-gradient-primary shadow-primary"
+              )}
+              onClick={item.onClick}
+              disabled={!item.onClick}
+            >
+              <item.icon className="h-5 w-5" />
+              <span>{item.label}</span>
+            </Button>
+          );
+        })}
       </nav>
 
       <div className="p-4 border-t border-sidebar-border">

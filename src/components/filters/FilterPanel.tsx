@@ -12,7 +12,8 @@ export interface FilterState {
     categories: string[];
     minRating: number;
     minReviews: number;
-    minVisits: number;
+    minUserVisits: number;
+    minJjyangVisits: number;
 }
 
 interface FilterPanelProps {
@@ -42,7 +43,8 @@ export function FilterPanel({ filters, onFilterChange, onClose }: FilterPanelPro
             categories: [],
             minRating: 1,
             minReviews: 0,
-            minVisits: 0,
+            minUserVisits: 0,
+            minJjyangVisits: 0,
         };
         setLocalFilters(resetFilters);
         onFilterChange(resetFilters);
@@ -52,7 +54,8 @@ export function FilterPanel({ filters, onFilterChange, onClose }: FilterPanelPro
         localFilters.categories.length +
         (localFilters.minRating > 1 ? 1 : 0) +
         (localFilters.minReviews > 0 ? 1 : 0) +
-        (localFilters.minVisits > 0 ? 1 : 0);
+        (localFilters.minUserVisits > 0 ? 1 : 0) +
+        (localFilters.minJjyangVisits > 0 ? 1 : 0);
 
     return (
         <div className="flex flex-col h-full">
@@ -152,27 +155,53 @@ export function FilterPanel({ filters, onFilterChange, onClose }: FilterPanelPro
 
                     <Separator />
 
-                    {/* Visit Count */}
+                    {/* 쯔양 방문횟수 */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-base font-semibold">방문 횟수</Label>
+                            <Label className="text-base font-semibold">쯔양 방문횟수</Label>
                             <span className="text-sm font-medium text-primary">
-                                {localFilters.minVisits}회 이상
+                                {localFilters.minJjyangVisits}회 이상
                             </span>
                         </div>
                         <Slider
-                            value={[localFilters.minVisits]}
+                            value={[localFilters.minJjyangVisits]}
                             onValueChange={([value]) =>
-                                setLocalFilters({ ...localFilters, minVisits: value })
+                                setLocalFilters({ ...localFilters, minJjyangVisits: value })
                             }
                             min={0}
-                            max={50}
+                            max={10}
                             step={1}
                             className="w-full"
                         />
                         <div className="flex justify-between text-xs text-muted-foreground">
                             <span>0회</span>
-                            <span>50회+</span>
+                            <span>10회+</span>
+                        </div>
+                    </div>
+
+                    <Separator />
+
+                    {/* 사용자 방문횟수 */}
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-base font-semibold">사용자 방문횟수</Label>
+                            <span className="text-sm font-medium text-primary">
+                                {localFilters.minUserVisits}회 이상
+                            </span>
+                        </div>
+                        <Slider
+                            value={[localFilters.minUserVisits]}
+                            onValueChange={([value]) =>
+                                setLocalFilters({ ...localFilters, minUserVisits: value })
+                            }
+                            min={0}
+                            max={500}
+                            step={10}
+                            className="w-full"
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>0회</span>
+                            <span>500회+</span>
                         </div>
                     </div>
                 </div>

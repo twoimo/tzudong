@@ -39,7 +39,8 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
     category: filters.categories.length > 0 ? filters.categories : undefined,
     minRating: filters.minRating,
     minReviews: filters.minReviews,
-    minVisits: filters.minVisits,
+    minUserVisits: filters.minUserVisits,
+    minJjyangVisits: filters.minJjyangVisits,
     enabled: isLoaded && !!mapBounds,
   });
 
@@ -88,7 +89,7 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
 
     // Create new markers
     restaurants.forEach((restaurant) => {
-      const markerType = (restaurant.ai_rating ?? 0) >= 4 ? "fire" : "star";
+      const markerType = (restaurant.rating_ai ?? 0) >= 4 ? "fire" : "star";
       const icon = markerType === "fire" ? "🔥" : "⭐";
 
       const markerElement = document.createElement("div");

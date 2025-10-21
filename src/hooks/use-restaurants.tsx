@@ -12,20 +12,21 @@ interface UseRestaurantsOptions {
     category?: string[];
     minRating?: number;
     minReviews?: number;
-    minVisits?: number;
+    minUserVisits?: number;
+    minJjyangVisits?: number;
     enabled?: boolean;
 }
 
 export function useRestaurants(options: UseRestaurantsOptions = {}) {
-    const { bounds, category, minRating, minReviews, minVisits, enabled = true } = options;
+    const { bounds, category, minRating, minReviews, minUserVisits, minJjyangVisits, enabled = true } = options;
 
     return useQuery({
-        queryKey: ["restaurants", bounds, category, minRating, minReviews, minVisits],
+        queryKey: ["restaurants", bounds, category, minRating, minReviews, minUserVisits, minJjyangVisits],
         queryFn: async () => {
             let query = supabase
                 .from("restaurants")
                 .select("*")
-                .order("ai_rating", { ascending: false });
+                .order("rating_ai", { ascending: false });
 
             // Apply bounds filter if provided
             if (bounds) {
@@ -43,7 +44,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             // Apply rating filter
             if (minRating && minRating > 1) {
-                query = query.gte("ai_rating", minRating);
+                query = query.gte("rating_ai", minRating);
             }
 
             // Apply review count filter
@@ -51,9 +52,14 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 query = query.gte("review_count", minReviews);
             }
 
-            // Apply visit count filter
-            if (minVisits && minVisits > 0) {
-                query = query.gte("visit_count", minVisits);
+            // Apply user visit count filter
+            if (minUserVisits && minUserVisits > 0) {
+                query = query.gte("visit_count", minUserVisits);
+            }
+
+            // Apply jjyang visit count filter
+            if (minJjyangVisits && minJjyangVisits > 0) {
+                query = query.gte("jjyang_visit_count", minJjyangVisits);
             }
 
             const { data, error } = await query;
