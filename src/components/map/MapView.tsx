@@ -7,6 +7,7 @@ import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 };
 const INITIAL_ZOOM = 12;
@@ -44,6 +45,8 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
     minJjyangVisits: filters.minJjyangVisits,
     enabled: isLoaded && !!mapBounds,
   });
+
+  const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
 
   // Refetch when refreshTrigger changes
   useEffect(() => {
@@ -184,10 +187,15 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
 
       {/* Restaurant count */}
       {!isLoadingRestaurants && restaurants.length > 0 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
           <span className="text-sm font-medium">
             🔥 {restaurants.length}개의 맛집 발견
           </span>
+          {isDummyData && (
+            <Badge variant="secondary" className="text-xs">
+              📊 샘플
+            </Badge>
+          )}
         </div>
       )}
 

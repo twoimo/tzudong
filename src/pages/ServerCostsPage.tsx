@@ -43,6 +43,38 @@ interface ServerCost {
     updated_at: string | null;
 }
 
+// 더미 서버 비용 데이터
+const DUMMY_SERVER_COSTS: ServerCost[] = [
+    {
+        id: "dummy-cost-1",
+        item_name: "Supabase Pro 플랜 (샘플)",
+        monthly_cost: 25000,
+        description: "데이터베이스, 인증, Storage 포함",
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: "dummy-cost-2",
+        item_name: "Google Maps API (샘플)",
+        monthly_cost: 15000,
+        description: "Maps JavaScript API, Geocoding API 사용료",
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: "dummy-cost-3",
+        item_name: "Vercel Pro 플랜 (샘플)",
+        monthly_cost: 20000,
+        description: "웹 호스팅 및 CDN",
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: "dummy-cost-4",
+        item_name: "도메인 비용 (샘플)",
+        monthly_cost: 2000,
+        description: "tzudong-map.com 연간 구독 (월 환산)",
+        updated_at: new Date().toISOString(),
+    },
+];
+
 const ServerCostsPage = () => {
     const { isAdmin } = useAuth();
     const queryClient = useQueryClient();
@@ -59,17 +91,30 @@ const ServerCostsPage = () => {
     const { data: costs = [], isLoading } = useQuery({
         queryKey: ['server-costs'],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('server_costs')
-                .select('*')
-                .order('monthly_cost', { ascending: false });
+            try {
+                const { data, error } = await supabase
+                    .from('server_costs')
+                    .select('*')
+                    .order('monthly_cost', { ascending: false });
 
-            if (error) {
-                console.error('서버 비용 조회 오류:', error);
-                throw error;
+                // 에러가 발생하거나 데이터가 없으면 더미 데이터 반환
+                if (error) {
+                    console.warn('서버 비용 데이터 조회 실패, 샘플 데이터 표시:', error.message);
+                    return DUMMY_SERVER_COSTS;
+                }
+
+                const costs = (data || []) as ServerCost[];
+
+                // 실제 데이터가 없으면 더미 데이터 반환
+                if (costs.length === 0) {
+                    return DUMMY_SERVER_COSTS;
+                }
+
+                return costs;
+            } catch (error) {
+                console.warn('서버 비용 데이터 조회 중 오류 발생, 샘플 데이터 표시:', error);
+                return DUMMY_SERVER_COSTS;
             }
-
-            return (data || []) as ServerCost[];
         },
     });
 
@@ -159,6 +204,7 @@ const ServerCostsPage = () => {
     });
 
     const totalMonthlyCost = costs.reduce((sum, cost) => sum + cost.monthly_cost, 0);
+    const isDummyData = costs.length > 0 && costs[0].id.startsWith('dummy-');
 
     const handleEdit = (cost: ServerCost) => {
         setEditingCost({ ...cost });
@@ -218,10 +264,17 @@ const ServerCostsPage = () => {
             <div className="border-b border-border bg-card p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-                            <DollarSign className="h-6 w-6 text-primary" />
-                            월 서버 운영 비용
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                                <DollarSign className="h-6 w-6 text-primary" />
+                                월 서버 운영 비용
+                            </h1>
+                            {isDummyData && (
+                                <Badge variant="secondary" className="text-xs">
+                                    📊 샘플 데이터
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             투명한 서비스 운영을 위한 비용 공개
                         </p>

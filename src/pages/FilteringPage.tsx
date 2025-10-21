@@ -43,7 +43,8 @@ interface FilterState {
 }
 
 const FilteringPage = () => {
-    const { restaurants, isLoading } = useRestaurants();
+    const { data: restaurants = [], isLoading } = useRestaurants({ enabled: true });
+    const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
 
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
@@ -207,10 +208,17 @@ const FilteringPage = () => {
             <div className="border-b border-border bg-card p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-                            <Filter className="h-6 w-6 text-primary" />
-                            쯔동여지도 필터링
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                                <Filter className="h-6 w-6 text-primary" />
+                                쯔동여지도 필터링
+                            </h1>
+                            {isDummyData && (
+                                <Badge variant="secondary" className="text-xs">
+                                    📊 샘플 데이터
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             총 {filteredAndSortedRestaurants.length}개의 맛집
                             {activeFilterCount > 0 && (

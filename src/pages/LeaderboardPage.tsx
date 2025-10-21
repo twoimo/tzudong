@@ -25,6 +25,92 @@ interface LeaderboardUser {
     badges: { name: string; icon: string; earnedAt: string }[];
 }
 
+// 더미 리더보드 데이터
+const DUMMY_LEADERBOARD: LeaderboardUser[] = [
+    {
+        id: "dummy-user-1",
+        rank: 1,
+        username: "쯔양팬123 (샘플)",
+        reviewCount: 128,
+        verifiedReviewCount: 120,
+        trustScore: 98.5,
+        badges: [
+            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "리뷰 마스터", icon: "👑", earnedAt: "" },
+            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
+        ],
+    },
+    {
+        id: "dummy-user-2",
+        rank: 2,
+        username: "맛집러버 (샘플)",
+        reviewCount: 95,
+        verifiedReviewCount: 88,
+        trustScore: 95.2,
+        badges: [
+            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "리뷰 마스터", icon: "👑", earnedAt: "" },
+        ],
+    },
+    {
+        id: "dummy-user-3",
+        rank: 3,
+        username: "먹방마니아 (샘플)",
+        reviewCount: 76,
+        verifiedReviewCount: 70,
+        trustScore: 92.1,
+        badges: [
+            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
+        ],
+    },
+    {
+        id: "dummy-user-4",
+        rank: 4,
+        username: "쯔양따라잡기 (샘플)",
+        reviewCount: 64,
+        verifiedReviewCount: 58,
+        trustScore: 90.6,
+        badges: [
+            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
+        ],
+    },
+    {
+        id: "dummy-user-5",
+        rank: 5,
+        username: "리뷰왕 (샘플)",
+        reviewCount: 52,
+        verifiedReviewCount: 49,
+        trustScore: 89.4,
+        badges: [
+            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+        ],
+    },
+    {
+        id: "dummy-user-6",
+        rank: 6,
+        username: "칼국수조아 (샘플)",
+        reviewCount: 45,
+        verifiedReviewCount: 42,
+        trustScore: 87.8,
+        badges: [
+            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+        ],
+    },
+    {
+        id: "dummy-user-7",
+        rank: 7,
+        username: "야식킹 (샘플)",
+        reviewCount: 38,
+        verifiedReviewCount: 35,
+        trustScore: 85.3,
+        badges: [
+            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+        ],
+    },
+];
+
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews" | "trust">("trust");
 
@@ -32,57 +118,71 @@ const LeaderboardPage = () => {
     const { data: leaderboardData = [], isLoading } = useQuery({
         queryKey: ['leaderboard', sortBy],
         queryFn: async () => {
-            const query = supabase
-                .from('user_stats')
-                .select(`
-                    *,
-                    profiles!user_stats_user_id_fkey(nickname)
-                `);
+            try {
+                const query = supabase
+                    .from('user_stats')
+                    .select(`
+                        *,
+                        profiles!user_stats_user_id_fkey(nickname)
+                    `);
 
-            // Sort by selected column
-            if (sortBy === 'reviews') {
-                query.order('review_count', { ascending: false });
-            } else {
-                query.order('trust_score', { ascending: false });
+                // Sort by selected column
+                if (sortBy === 'reviews') {
+                    query.order('review_count', { ascending: false });
+                } else {
+                    query.order('trust_score', { ascending: false });
+                }
+
+                const { data, error } = await query;
+
+                // 에러가 발생하거나 데이터가 없으면 더미 데이터 반환
+                if (error) {
+                    console.warn('리더보드 데이터 조회 실패, 샘플 데이터 표시:', error.message);
+                    return DUMMY_LEADERBOARD;
+                }
+
+                const leaderboard = (data || [])
+                    .filter(stat => (stat.review_count || 0) > 0) // Only show users with reviews
+                    .map((stat, index) => {
+                        const badges = [];
+
+                        // Award badges based on achievements
+                        if (stat.review_count && stat.review_count >= 1) {
+                            badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
+                        }
+                        if (stat.review_count && stat.review_count >= 50) {
+                            badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
+                        }
+                        if (stat.trust_score && stat.trust_score >= 90) {
+                            badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
+                        }
+
+                        return {
+                            id: stat.user_id,
+                            rank: index + 1,
+                            username: stat.profiles?.nickname || '익명',
+                            reviewCount: stat.review_count || 0,
+                            verifiedReviewCount: stat.verified_review_count || 0,
+                            trustScore: stat.trust_score || 0,
+                            badges,
+                        } as LeaderboardUser;
+                    });
+
+                // 실제 데이터가 없으면 더미 데이터 반환
+                if (leaderboard.length === 0) {
+                    return DUMMY_LEADERBOARD;
+                }
+
+                return leaderboard;
+            } catch (error) {
+                console.warn('리더보드 데이터 조회 중 오류 발생, 샘플 데이터 표시:', error);
+                return DUMMY_LEADERBOARD;
             }
-
-            const { data, error } = await query;
-
-            if (error) {
-                console.error('리더보드 조회 오류:', error);
-                throw error;
-            }
-
-            return (data || [])
-                .filter(stat => (stat.review_count || 0) > 0) // Only show users with reviews
-                .map((stat, index) => {
-                    const badges = [];
-
-                    // Award badges based on achievements
-                    if (stat.review_count && stat.review_count >= 1) {
-                        badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
-                    }
-                    if (stat.review_count && stat.review_count >= 50) {
-                        badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
-                    }
-                    if (stat.trust_score && stat.trust_score >= 90) {
-                        badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
-                    }
-
-                    return {
-                        id: stat.user_id,
-                        rank: index + 1,
-                        username: stat.profiles?.nickname || '익명',
-                        reviewCount: stat.review_count || 0,
-                        verifiedReviewCount: stat.verified_review_count || 0,
-                        trustScore: stat.trust_score || 0,
-                        badges,
-                    } as LeaderboardUser;
-                });
         },
     });
 
     const sortedLeaderboard = leaderboardData;
+    const isDummyData = leaderboardData.length > 0 && leaderboardData[0].id.startsWith('dummy-');
 
     const getRankIcon = (rank: number) => {
         switch (rank) {
@@ -123,10 +223,17 @@ const LeaderboardPage = () => {
             <div className="border-b border-border bg-card p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-                            <Trophy className="h-6 w-6 text-primary" />
-                            쯔양 팬 랭킹
-                        </h1>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                                <Trophy className="h-6 w-6 text-primary" />
+                                쯔양 팬 랭킹
+                            </h1>
+                            {isDummyData && (
+                                <Badge variant="secondary" className="text-xs">
+                                    📊 샘플 데이터
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             맛집 리뷰로 쌓은 신뢰도 랭킹
                         </p>
