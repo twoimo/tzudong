@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trophy, Medal, Award, TrendingUp, Star, CheckCircle } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LeaderboardUser {
     id: string;
@@ -23,77 +25,64 @@ interface LeaderboardUser {
     badges: { name: string; icon: string; earnedAt: string }[];
 }
 
-// Mock data
-const mockLeaderboard: LeaderboardUser[] = [
-    {
-        id: "1",
-        rank: 1,
-        username: "쯔양팬123",
-        reviewCount: 128,
-        verifiedReviewCount: 120,
-        trustScore: 98.5,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "2025-01-01" },
-            { name: "리뷰 마스터", icon: "👑", earnedAt: "2025-01-15" },
-            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "2025-01-20" },
-        ],
-    },
-    {
-        id: "2",
-        rank: 2,
-        username: "맛집러버",
-        reviewCount: 95,
-        verifiedReviewCount: 88,
-        trustScore: 95.2,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "2025-01-02" },
-            { name: "리뷰 마스터", icon: "👑", earnedAt: "2025-01-18" },
-        ],
-    },
-    {
-        id: "3",
-        rank: 3,
-        username: "맛집탐험가",
-        reviewCount: 76,
-        verifiedReviewCount: 70,
-        trustScore: 92.1,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "2025-01-03" },
-        ],
-    },
-    {
-        id: "4",
-        rank: 4,
-        username: "쯔양따라잡기",
-        reviewCount: 64,
-        verifiedReviewCount: 58,
-        trustScore: 90.6,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "2025-01-05" },
-        ],
-    },
-    {
-        id: "5",
-        rank: 5,
-        username: "리뷰왕",
-        reviewCount: 52,
-        verifiedReviewCount: 49,
-        trustScore: 89.4,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "2025-01-07" },
-        ],
-    },
-];
-
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews" | "trust">("trust");
 
-    const sortedLeaderboard = [...mockLeaderboard].sort((a, b) => {
-        if (sortBy === "reviews") {
-            return b.reviewCount - a.reviewCount;
-        }
-        return b.trustScore - a.trustScore;
+    // Fetch leaderboard data from Supabase
+    const { data: leaderboardData = [], isLoading } = useQuery({
+        queryKey: ['leaderboard', sortBy],
+        queryFn: async () => {
+            const query = supabase
+                .from('user_stats')
+                .select(`
+                    *,
+                    profiles!user_stats_user_id_fkey(nickname)
+                `);
+
+            // Sort by selected column
+            if (sortBy === 'reviews') {
+                query.order('review_count', { ascending: false });
+            } else {
+                query.order('trust_score', { ascending: false });
+            }
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('리더보드 조회 오류:', error);
+                throw error;
+            }
+
+            return (data || [])
+                .filter(stat => (stat.review_count || 0) > 0) // Only show users with reviews
+                .map((stat, index) => {
+                    const badges = [];
+
+                    // Award badges based on achievements
+                    if (stat.review_count && stat.review_count >= 1) {
+                        badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
+                    }
+                    if (stat.review_count && stat.review_count >= 50) {
+                        badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
+                    }
+                    if (stat.trust_score && stat.trust_score >= 90) {
+                        badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
+                    }
+
+                    return {
+                        id: stat.user_id,
+                        rank: index + 1,
+                        username: stat.profiles?.nickname || '익명',
+                        reviewCount: stat.review_count || 0,
+                        verifiedReviewCount: stat.verified_review_count || 0,
+                        trustScore: stat.trust_score || 0,
+                        badges,
+                    } as LeaderboardUser;
+                });
+        },
     });
+
+    const sortedLeaderboard = leaderboardData;
 
     const getRankIcon = (rank: number) => {
         switch (rank) {

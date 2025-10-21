@@ -14,6 +14,9 @@ import {
 import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 interface Review {
     id: string;
@@ -30,52 +33,6 @@ interface Review {
     category: string;
 }
 
-// Mock data for demonstration
-const mockReviews: Review[] = [
-    {
-        id: "1",
-        restaurantName: "홍대 떡볶이",
-        restaurantCategory: "분식",
-        userName: "관리자",
-        visitedAt: "2025-01-10T18:30:00",
-        submittedAt: "2025-01-10T19:00:00",
-        content: "인증사진 필수! 닉네임을 포함해서 찍어주세요. 맛집 리뷰 작성 시 참고해주세요.",
-        isVerified: true,
-        isPinned: true,
-        isEditedByAdmin: true,
-        photos: [],
-        category: "분식",
-    },
-    {
-        id: "2",
-        restaurantName: "홍대 떡볶이",
-        restaurantCategory: "분식",
-        userName: "쯔양팬123",
-        visitedAt: "2025-01-10T18:30:00",
-        submittedAt: "2025-01-10T19:00:00",
-        content: "정말 맛있었어요! 쯔양이 추천한 그 메뉴 먹었는데 양도 많고 맛도 좋았습니다! 떡볶이 소스가 진짜 특별해요.",
-        isVerified: true,
-        isPinned: false,
-        isEditedByAdmin: false,
-        photos: [],
-        category: "분식",
-    },
-    {
-        id: "3",
-        restaurantName: "강남 파스타집",
-        restaurantCategory: "양식",
-        userName: "맛집러버",
-        visitedAt: "2025-01-09T12:00:00",
-        submittedAt: "2025-01-09T14:00:00",
-        content: "맛은 괜찮은데 가격이 좀 비싼 편이에요. 분위기는 좋았습니다.",
-        isVerified: false,
-        isPinned: false,
-        isEditedByAdmin: false,
-        photos: [],
-        category: "양식",
-    },
-];
-
 const ReviewsPage = () => {
     const { user, isAdmin } = useAuth();
     const [searchQuery, setSearchQuery] = useState("");
@@ -84,7 +41,45 @@ const ReviewsPage = () => {
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
-    const filteredReviews = mockReviews.filter((review) => {
+    // Fetch reviews from Supabase
+    const { data: reviewsData = [], isLoading, refetch } = useQuery({
+        queryKey: ['reviews', filterCategory, filterStatus],
+        queryFn: async () => {
+            const query = supabase
+                .from('reviews')
+                .select(`
+                    *,
+                    profiles!reviews_user_id_fkey(nickname),
+                    restaurants!reviews_restaurant_id_fkey(name, category)
+                `)
+                .order('is_pinned', { ascending: false })
+                .order('created_at', { ascending: false });
+
+            const { data, error } = await query;
+
+            if (error) {
+                console.error('리뷰 조회 오류:', error);
+                throw error;
+            }
+
+            return (data || []).map(review => ({
+                id: review.id,
+                restaurantName: review.restaurants?.name || '알 수 없음',
+                restaurantCategory: review.restaurants?.category || review.category,
+                userName: review.profiles?.nickname || '익명',
+                visitedAt: review.visited_at,
+                submittedAt: review.created_at || '',
+                content: review.content,
+                isVerified: review.is_verified || false,
+                isPinned: review.is_pinned || false,
+                isEditedByAdmin: review.is_edited_by_admin || false,
+                photos: [],
+                category: review.category,
+            })) as Review[];
+        },
+    });
+
+    const filteredReviews = reviewsData.filter((review) => {
         const matchesSearch =
             review.restaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             review.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -119,50 +114,130 @@ const ReviewsPage = () => {
         setIsReviewModalOpen(true);
     };
 
-    const handlePinReview = (reviewId: string) => {
+    const handlePinReview = async (reviewId: string) => {
         if (!isAdmin) {
-            alert("관리자만 사용할 수 있는 기능입니다");
+            toast({
+                title: "권한 없음",
+                description: "관리자만 사용할 수 있는 기능입니다",
+                variant: "destructive",
+            });
             return;
         }
-        // TODO: Implement pin review in Supabase
-        alert(`리뷰 ${reviewId}를 상단에 고정했습니다`);
+
+        const { error } = await supabase
+            .from('reviews')
+            .update({ is_pinned: true })
+            .eq('id', reviewId);
+
+        if (error) {
+            toast({
+                title: "고정 실패",
+                description: error.message,
+                variant: "destructive",
+            });
+        } else {
+            toast({
+                title: "리뷰 고정 완료",
+                description: "리뷰를 상단에 고정했습니다",
+            });
+            refetch();
+        }
     };
 
-    const handleUnpinReview = (reviewId: string) => {
+    const handleUnpinReview = async (reviewId: string) => {
         if (!isAdmin) {
-            alert("관리자만 사용할 수 있는 기능입니다");
+            toast({
+                title: "권한 없음",
+                description: "관리자만 사용할 수 있는 기능입니다",
+                variant: "destructive",
+            });
             return;
         }
-        // TODO: Implement unpin review in Supabase
-        alert(`리뷰 ${reviewId}의 고정을 해제했습니다`);
+
+        const { error } = await supabase
+            .from('reviews')
+            .update({ is_pinned: false })
+            .eq('id', reviewId);
+
+        if (error) {
+            toast({
+                title: "고정 해제 실패",
+                description: error.message,
+                variant: "destructive",
+            });
+        } else {
+            toast({
+                title: "고정 해제 완료",
+                description: "리뷰 고정을 해제했습니다",
+            });
+            refetch();
+        }
     };
 
     const handleEditReview = (review: Review) => {
         if (!user) {
-            alert("로그인이 필요합니다");
+            toast({
+                title: "로그인 필요",
+                description: "로그인이 필요합니다",
+                variant: "destructive",
+            });
             return;
         }
         if (!isAdmin && review.userName !== user.email) {
-            alert("본인의 리뷰만 수정할 수 있습니다");
+            toast({
+                title: "권한 없음",
+                description: "본인의 리뷰만 수정할 수 있습니다",
+                variant: "destructive",
+            });
             return;
         }
-        // TODO: Implement edit review
-        alert(`리뷰 ${review.id}를 수정합니다`);
+
+        // TODO: Implement edit review modal
+        toast({
+            title: "개발 중",
+            description: "리뷰 수정 기능은 개발 중입니다",
+        });
     };
 
-    const handleDeleteReview = (review: Review) => {
+    const handleDeleteReview = async (review: Review) => {
         if (!user) {
-            alert("로그인이 필요합니다");
+            toast({
+                title: "로그인 필요",
+                description: "로그인이 필요합니다",
+                variant: "destructive",
+            });
             return;
         }
         if (!isAdmin && review.userName !== user.email) {
-            alert("본인의 리뷰만 삭제할 수 있습니다");
+            toast({
+                title: "권한 없음",
+                description: "본인의 리뷰만 삭제할 수 있습니다",
+                variant: "destructive",
+            });
             return;
         }
 
-        if (confirm("정말로 이 리뷰를 삭제하시겠습니까?")) {
-            // TODO: Implement delete review in Supabase
-            alert(`리뷰 ${review.id}를 삭제했습니다`);
+        if (!confirm("정말로 이 리뷰를 삭제하시겠습니까?")) {
+            return;
+        }
+
+        const { error } = await supabase
+            .from('reviews')
+            .delete()
+            .eq('id', review.id);
+
+        if (error) {
+            toast({
+                title: "삭제 실패",
+                description: error.message,
+                variant: "destructive",
+            });
+        } else {
+            toast({
+                title: "삭제 완료",
+                description: "리뷰를 삭제했습니다",
+            });
+            refetch();
         }
     };
 
@@ -384,6 +459,7 @@ const ReviewsPage = () => {
                 isOpen={isReviewModalOpen}
                 onClose={() => setIsReviewModalOpen(false)}
                 restaurant={null}
+                onSuccess={refetch}
             />
         </div>
     );

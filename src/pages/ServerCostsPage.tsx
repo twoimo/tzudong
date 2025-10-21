@@ -5,6 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import {
     Table,
     TableBody,
     TableCell,
@@ -17,114 +24,174 @@ import { Badge } from "@/components/ui/badge";
 import {
     DollarSign,
     Server,
-    Zap,
-    Brain,
-    TrendingUp,
-    TrendingDown,
     Edit,
     Save,
     X,
+    Plus,
+    Trash2,
 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface MonthlyCost {
-    yearMonth: string;
-    hostingCost: number;
-    apiCost: number;
-    aiCost: number;
-    totalCost: number;
-    notes: string;
+interface ServerCost {
+    id: string;
+    item_name: string;
+    monthly_cost: number;
+    description: string | null;
+    updated_at: string | null;
 }
-
-// Mock data
-const mockCosts: MonthlyCost[] = [
-    {
-        yearMonth: "2025-01",
-        hostingCost: 15000,
-        apiCost: 8000,
-        aiCost: 12000,
-        totalCost: 35000,
-        notes: "초기 서비스 시작, 트래픽 증가 예상",
-    },
-    {
-        yearMonth: "2024-12",
-        hostingCost: 15000,
-        apiCost: 6000,
-        aiCost: 10000,
-        totalCost: 31000,
-        notes: "베타 테스트 기간",
-    },
-    {
-        yearMonth: "2024-11",
-        hostingCost: 15000,
-        apiCost: 5000,
-        aiCost: 8000,
-        totalCost: 28000,
-        notes: "개발 단계",
-    },
-];
 
 const ServerCostsPage = () => {
     const { isAdmin } = useAuth();
-    const [costs, setCosts] = useState<MonthlyCost[]>(mockCosts);
+    const queryClient = useQueryClient();
     const [isEditing, setIsEditing] = useState(false);
-    const [editingMonth, setEditingMonth] = useState<string | null>(null);
-    const [editForm, setEditForm] = useState<MonthlyCost | null>(null);
+    const [editingCost, setEditingCost] = useState<ServerCost | null>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [formData, setFormData] = useState({
+        item_name: "",
+        monthly_cost: "",
+        description: "",
+    });
 
-    const currentMonth = costs[0];
-    const previousMonth = costs[1];
-    const totalHosting = costs.reduce((sum, c) => sum + c.hostingCost, 0);
-    const totalApi = costs.reduce((sum, c) => sum + c.apiCost, 0);
-    const totalAi = costs.reduce((sum, c) => sum + c.aiCost, 0);
-    const grandTotal = costs.reduce((sum, c) => sum + c.totalCost, 0);
+    // Fetch server costs
+    const { data: costs = [], isLoading } = useQuery({
+        queryKey: ['server-costs'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('server_costs')
+                .select('*')
+                .order('monthly_cost', { ascending: false });
 
-    const getCostTrend = (current: number, previous: number) => {
-        if (current > previous) {
-            return {
-                icon: <TrendingUp className="h-4 w-4 text-red-500" />,
-                color: "text-red-500",
-                text: `+${((current - previous) / previous * 100).toFixed(1)}%`,
-            };
-        } else if (current < previous) {
-            return {
-                icon: <TrendingDown className="h-4 w-4 text-green-500" />,
-                color: "text-green-500",
-                text: `-${((previous - current) / previous * 100).toFixed(1)}%`,
-            };
-        }
-        return {
-            icon: null,
-            color: "text-muted-foreground",
-            text: "0%",
-        };
-    };
+            if (error) {
+                console.error('서버 비용 조회 오류:', error);
+                throw error;
+            }
 
-    const hostingTrend = getCostTrend(currentMonth.hostingCost, previousMonth.hostingCost);
-    const apiTrend = getCostTrend(currentMonth.apiCost, previousMonth.apiCost);
-    const aiTrend = getCostTrend(currentMonth.aiCost, previousMonth.aiCost);
-    const totalTrend = getCostTrend(currentMonth.totalCost, previousMonth.totalCost);
+            return (data || []) as ServerCost[];
+        },
+    });
 
-    const handleEdit = (cost: MonthlyCost) => {
-        setEditingMonth(cost.yearMonth);
-        setEditForm({ ...cost });
+    // Create mutation
+    const createMutation = useMutation({
+        mutationFn: async (newCost: { item_name: string; monthly_cost: number; description: string }) => {
+            const { error } = await supabase
+                .from('server_costs')
+                .insert([newCost]);
+
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['server-costs'] });
+            toast({
+                title: "추가 완료",
+                description: "비용 항목이 추가되었습니다",
+            });
+            setIsCreating(false);
+            setFormData({ item_name: "", monthly_cost: "", description: "" });
+        },
+        onError: (error: any) => {
+            toast({
+                title: "추가 실패",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
+    // Update mutation
+    const updateMutation = useMutation({
+        mutationFn: async (updatedCost: ServerCost) => {
+            const { error } = await supabase
+                .from('server_costs')
+                .update({
+                    item_name: updatedCost.item_name,
+                    monthly_cost: updatedCost.monthly_cost,
+                    description: updatedCost.description,
+                })
+                .eq('id', updatedCost.id);
+
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['server-costs'] });
+            toast({
+                title: "수정 완료",
+                description: "비용 항목이 수정되었습니다",
+            });
+            setIsEditing(false);
+            setEditingCost(null);
+        },
+        onError: (error: any) => {
+            toast({
+                title: "수정 실패",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
+    // Delete mutation
+    const deleteMutation = useMutation({
+        mutationFn: async (id: string) => {
+            const { error } = await supabase
+                .from('server_costs')
+                .delete()
+                .eq('id', id);
+
+            if (error) throw error;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['server-costs'] });
+            toast({
+                title: "삭제 완료",
+                description: "비용 항목이 삭제되었습니다",
+            });
+        },
+        onError: (error: any) => {
+            toast({
+                title: "삭제 실패",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
+    const totalMonthlyCost = costs.reduce((sum, cost) => sum + cost.monthly_cost, 0);
+
+    const handleEdit = (cost: ServerCost) => {
+        setEditingCost({ ...cost });
         setIsEditing(true);
     };
 
     const handleSave = () => {
-        if (editForm) {
-            setCosts(costs.map(c =>
-                c.yearMonth === editForm.yearMonth ? editForm : c
-            ));
-            setIsEditing(false);
-            setEditingMonth(null);
-            setEditForm(null);
+        if (editingCost) {
+            updateMutation.mutate(editingCost);
         }
     };
 
-    const handleCancel = () => {
-        setIsEditing(false);
-        setEditingMonth(null);
-        setEditForm(null);
+    const handleCreate = () => {
+        if (!formData.item_name || !formData.monthly_cost) {
+            toast({
+                title: "필수 항목 누락",
+                description: "항목명과 월 비용을 입력해주세요",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        createMutation.mutate({
+            item_name: formData.item_name,
+            monthly_cost: parseFloat(formData.monthly_cost),
+            description: formData.description.trim() || "",
+        });
+    };
+
+    const handleDelete = (id: string) => {
+        if (confirm("정말로 이 비용 항목을 삭제하시겠습니까?")) {
+            deleteMutation.mutate(id);
+        }
     };
 
     const formatCurrency = (amount: number) => {
@@ -133,6 +200,17 @@ const ServerCostsPage = () => {
             currency: 'KRW',
         }).format(amount);
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <Server className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                    <p className="text-muted-foreground">비용 데이터를 불러오는 중...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -148,233 +226,155 @@ const ServerCostsPage = () => {
                             투명한 서비스 운영을 위한 비용 공개
                         </p>
                     </div>
+                    {isAdmin && (
+                        <Button onClick={() => setIsCreating(true)} className="bg-gradient-primary">
+                            <Plus className="h-4 w-4 mr-2" />
+                            비용 항목 추가
+                        </Button>
+                    )}
                 </div>
 
-                {/* Current Month Summary */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                    <Card className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <Server className="h-4 w-4 text-blue-500" />
-                                <span className="text-sm font-medium text-muted-foreground">호스팅</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {hostingTrend.icon}
-                                <span className={`text-xs ${hostingTrend.color}`}>
-                                    {hostingTrend.text}
-                                </span>
-                            </div>
-                        </div>
-                        <p className="text-2xl font-bold">{formatCurrency(currentMonth.hostingCost)}</p>
-                    </Card>
-
-                    <Card className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <Zap className="h-4 w-4 text-yellow-500" />
-                                <span className="text-sm font-medium text-muted-foreground">API</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {apiTrend.icon}
-                                <span className={`text-xs ${apiTrend.color}`}>
-                                    {apiTrend.text}
-                                </span>
-                            </div>
-                        </div>
-                        <p className="text-2xl font-bold">{formatCurrency(currentMonth.apiCost)}</p>
-                    </Card>
-
-                    <Card className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <Brain className="h-4 w-4 text-purple-500" />
-                                <span className="text-sm font-medium text-muted-foreground">AI</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {aiTrend.icon}
-                                <span className={`text-xs ${aiTrend.color}`}>
-                                    {aiTrend.text}
-                                </span>
-                            </div>
-                        </div>
-                        <p className="text-2xl font-bold">{formatCurrency(currentMonth.aiCost)}</p>
-                    </Card>
-
-                    <Card className="p-4 border-primary border-2">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <DollarSign className="h-4 w-4 text-primary" />
-                                <span className="text-sm font-medium text-muted-foreground">총 비용</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {totalTrend.icon}
-                                <span className={`text-xs ${totalTrend.color}`}>
-                                    {totalTrend.text}
-                                </span>
-                            </div>
-                        </div>
-                        <p className="text-2xl font-bold text-primary">
-                            {formatCurrency(currentMonth.totalCost)}
-                        </p>
-                    </Card>
-                </div>
-
-                {/* Current Month Notes */}
-                {currentMonth.notes && (
-                    <Card className="p-4 mt-4 bg-muted/50">
-                        <p className="text-sm">
-                            <span className="font-semibold">💡 {currentMonth.yearMonth}: </span>
-                            {currentMonth.notes}
-                        </p>
-                    </Card>
-                )}
-            </div>
-
-            {/* Cost History Table */}
-            <div className="flex-1 overflow-hidden p-6">
-                <Card className="h-full flex flex-col">
-                    <div className="p-4 border-b border-border flex items-center justify-between">
-                        <h2 className="font-semibold">월별 운영 비용 내역</h2>
-                        <Badge variant="outline">
-                            누적 총액: {formatCurrency(grandTotal)}
-                        </Badge>
-                    </div>
-
-                    <ScrollArea className="flex-1">
-                        <Table>
-                            <TableHeader className="sticky top-0 bg-muted">
-                                <TableRow>
-                                    <TableHead>년월</TableHead>
-                                    <TableHead className="text-right">호스팅 비용</TableHead>
-                                    <TableHead className="text-right">API 비용</TableHead>
-                                    <TableHead className="text-right">AI 비용</TableHead>
-                                    <TableHead className="text-right">총 비용</TableHead>
-                                    <TableHead>비고</TableHead>
-                                    {isAdmin && <TableHead className="text-right">작업</TableHead>}
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {costs.map((cost) => (
-                                    <TableRow key={cost.yearMonth}>
-                                        <TableCell className="font-medium">
-                                            {cost.yearMonth}
-                                            {cost === currentMonth && (
-                                                <Badge variant="default" className="ml-2">현재</Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {formatCurrency(cost.hostingCost)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {formatCurrency(cost.apiCost)}
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            {formatCurrency(cost.aiCost)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-bold">
-                                            {formatCurrency(cost.totalCost)}
-                                        </TableCell>
-                                        <TableCell className="max-w-md truncate">
-                                            {cost.notes}
-                                        </TableCell>
-                                        {isAdmin && (
-                                            <TableCell className="text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleEdit(cost)}
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                            </TableCell>
-                                        )}
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </ScrollArea>
-
-                    {/* Cumulative Stats */}
-                    <div className="p-4 border-t border-border bg-muted/30">
-                        <div className="grid grid-cols-4 gap-4 text-sm">
-                            <div>
-                                <p className="text-muted-foreground mb-1">총 호스팅 비용</p>
-                                <p className="font-bold">{formatCurrency(totalHosting)}</p>
-                            </div>
-                            <div>
-                                <p className="text-muted-foreground mb-1">총 API 비용</p>
-                                <p className="font-bold">{formatCurrency(totalApi)}</p>
-                            </div>
-                            <div>
-                                <p className="text-muted-foreground mb-1">총 AI 비용</p>
-                                <p className="font-bold">{formatCurrency(totalAi)}</p>
-                            </div>
-                            <div>
-                                <p className="text-muted-foreground mb-1">누적 총 비용</p>
-                                <p className="font-bold text-primary text-lg">{formatCurrency(grandTotal)}</p>
-                            </div>
-                        </div>
+                {/* Total Monthly Cost */}
+                <Card className="p-6 bg-gradient-primary">
+                    <div className="text-center text-white">
+                        <p className="text-sm opacity-90 mb-2">총 월 운영 비용</p>
+                        <p className="text-4xl font-bold">{formatCurrency(totalMonthlyCost)}</p>
+                        <p className="text-xs opacity-80 mt-2">{costs.length}개 항목</p>
                     </div>
                 </Card>
             </div>
 
-            {/* Edit Modal (Simple inline for demo) */}
-            {isEditing && editForm && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-2xl p-6">
-                        <h3 className="text-lg font-bold mb-4">{editForm.yearMonth} 비용 수정</h3>
+            {/* Cost Items Table */}
+            <div className="flex-1 overflow-hidden p-6">
+                <Card className="h-full flex flex-col">
+                    <div className="p-4 border-b border-border">
+                        <h2 className="font-semibold">비용 항목 상세</h2>
+                    </div>
 
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                    <Label>호스팅 비용</Label>
-                                    <Input
-                                        type="number"
-                                        value={editForm.hostingCost}
-                                        onChange={(e) => setEditForm({
-                                            ...editForm,
-                                            hostingCost: parseFloat(e.target.value) || 0,
-                                            totalCost: (parseFloat(e.target.value) || 0) + editForm.apiCost + editForm.aiCost,
-                                        })}
-                                    />
-                                </div>
-                                <div>
-                                    <Label>API 비용</Label>
-                                    <Input
-                                        type="number"
-                                        value={editForm.apiCost}
-                                        onChange={(e) => setEditForm({
-                                            ...editForm,
-                                            apiCost: parseFloat(e.target.value) || 0,
-                                            totalCost: editForm.hostingCost + (parseFloat(e.target.value) || 0) + editForm.aiCost,
-                                        })}
-                                    />
-                                </div>
-                                <div>
-                                    <Label>AI 비용</Label>
-                                    <Input
-                                        type="number"
-                                        value={editForm.aiCost}
-                                        onChange={(e) => setEditForm({
-                                            ...editForm,
-                                            aiCost: parseFloat(e.target.value) || 0,
-                                            totalCost: editForm.hostingCost + editForm.apiCost + (parseFloat(e.target.value) || 0),
-                                        })}
-                                    />
-                                </div>
+                    <ScrollArea className="flex-1">
+                        {costs.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                                <Server className="h-12 w-12 mb-4" />
+                                <p>등록된 비용 항목이 없습니다</p>
+                                {isAdmin && (
+                                    <p className="text-sm mt-2">첫 번째 비용 항목을 추가해보세요!</p>
+                                )}
+                            </div>
+                        ) : (
+                            <Table>
+                                <TableHeader className="sticky top-0 bg-muted">
+                                    <TableRow>
+                                        <TableHead>항목명</TableHead>
+                                        <TableHead className="text-right">월 비용</TableHead>
+                                        <TableHead className="text-right">비율</TableHead>
+                                        <TableHead>설명</TableHead>
+                                        {isAdmin && <TableHead className="text-right">작업</TableHead>}
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {costs.map((cost) => {
+                                        const percentage = totalMonthlyCost > 0
+                                            ? ((cost.monthly_cost / totalMonthlyCost) * 100).toFixed(1)
+                                            : "0.0";
+
+                                        return (
+                                            <TableRow key={cost.id}>
+                                                <TableCell className="font-medium">
+                                                    {cost.item_name}
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold">
+                                                    {formatCurrency(cost.monthly_cost)}
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <Badge variant="outline">{percentage}%</Badge>
+                                                </TableCell>
+                                                <TableCell className="max-w-md">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {cost.description || "-"}
+                                                    </span>
+                                                </TableCell>
+                                                {isAdmin && (
+                                                    <TableCell className="text-right">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleEdit(cost)}
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                onClick={() => handleDelete(cost.id)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4 text-destructive" />
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                )}
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        )}
+                    </ScrollArea>
+                </Card>
+            </div>
+
+            {/* Edit Dialog */}
+            <Dialog open={isEditing} onOpenChange={setIsEditing}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>비용 항목 수정</DialogTitle>
+                        <DialogDescription>
+                            비용 항목의 정보를 수정합니다
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {editingCost && (
+                        <div className="space-y-4 mt-4">
+                            <div>
+                                <Label>항목명</Label>
+                                <Input
+                                    value={editingCost.item_name}
+                                    onChange={(e) => setEditingCost({
+                                        ...editingCost,
+                                        item_name: e.target.value,
+                                    })}
+                                    placeholder="예: Supabase 호스팅"
+                                />
                             </div>
 
                             <div>
-                                <Label>비고</Label>
+                                <Label>월 비용 (₩)</Label>
+                                <Input
+                                    type="number"
+                                    value={editingCost.monthly_cost}
+                                    onChange={(e) => setEditingCost({
+                                        ...editingCost,
+                                        monthly_cost: parseFloat(e.target.value) || 0,
+                                    })}
+                                    placeholder="0"
+                                />
+                            </div>
+
+                            <div>
+                                <Label>설명</Label>
                                 <Textarea
-                                    value={editForm.notes}
-                                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                                    value={editingCost.description || ""}
+                                    onChange={(e) => setEditingCost({
+                                        ...editingCost,
+                                        description: e.target.value,
+                                    })}
+                                    placeholder="비용 항목에 대한 추가 설명"
                                     rows={3}
                                 />
                             </div>
 
                             <div className="flex gap-2 justify-end">
-                                <Button variant="outline" onClick={handleCancel}>
+                                <Button variant="outline" onClick={() => setIsEditing(false)}>
                                     <X className="h-4 w-4 mr-2" />
                                     취소
                                 </Button>
@@ -384,12 +384,74 @@ const ServerCostsPage = () => {
                                 </Button>
                             </div>
                         </div>
-                    </Card>
-                </div>
-            )}
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Create Dialog */}
+            <Dialog open={isCreating} onOpenChange={setIsCreating}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>비용 항목 추가</DialogTitle>
+                        <DialogDescription>
+                            새로운 비용 항목을 추가합니다
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 mt-4">
+                        <div>
+                            <Label>항목명 *</Label>
+                            <Input
+                                value={formData.item_name}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    item_name: e.target.value,
+                                })}
+                                placeholder="예: Google Maps API"
+                            />
+                        </div>
+
+                        <div>
+                            <Label>월 비용 (₩) *</Label>
+                            <Input
+                                type="number"
+                                value={formData.monthly_cost}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    monthly_cost: e.target.value,
+                                })}
+                                placeholder="0"
+                            />
+                        </div>
+
+                        <div>
+                            <Label>설명</Label>
+                            <Textarea
+                                value={formData.description}
+                                onChange={(e) => setFormData({
+                                    ...formData,
+                                    description: e.target.value,
+                                })}
+                                placeholder="비용 항목에 대한 추가 설명"
+                                rows={3}
+                            />
+                        </div>
+
+                        <div className="flex gap-2 justify-end">
+                            <Button variant="outline" onClick={() => setIsCreating(false)}>
+                                <X className="h-4 w-4 mr-2" />
+                                취소
+                            </Button>
+                            <Button onClick={handleCreate} className="bg-gradient-primary">
+                                <Plus className="h-4 w-4 mr-2" />
+                                추가
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
 
 export default ServerCostsPage;
-

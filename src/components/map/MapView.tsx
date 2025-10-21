@@ -90,7 +90,7 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
 
     // Create new markers
     restaurants.forEach((restaurant) => {
-      const markerType = (restaurant.rating_ai ?? 0) >= 4 ? "fire" : "star";
+      const markerType = (restaurant.ai_rating ?? 0) >= 4 ? "fire" : "star";
       const icon = markerType === "fire" ? "🔥" : "⭐";
 
       const markerElement = document.createElement("div");
@@ -209,6 +209,7 @@ const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps
           isOpen={isReviewModalOpen}
           onClose={() => setIsReviewModalOpen(false)}
           restaurant={selectedRestaurant}
+          onSuccess={refetch}
         />
       )}
     </div>

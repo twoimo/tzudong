@@ -26,7 +26,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             let query = supabase
                 .from("restaurants")
                 .select("*")
-                .order("rating_ai", { ascending: false });
+                .order("ai_rating", { ascending: false });
 
             // Apply bounds filter if provided
             if (bounds) {

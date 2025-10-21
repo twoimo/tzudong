@@ -48,7 +48,7 @@ export function AdminRestaurantModal({
                 description: restaurant.description || "",
                 lat: String(restaurant.lat || ""),
                 lng: String(restaurant.lng || ""),
-                rating_ai: String(restaurant.rating_ai || ""),
+                rating_ai: String(restaurant.ai_rating || ""),
                 jjyang_visit_count: String(restaurant.jjyang_visit_count || ""),
             });
         } else {
@@ -137,7 +137,7 @@ export function AdminRestaurantModal({
                 description: formData.description.trim() || null,
                 lat,
                 lng,
-                rating_ai: formData.rating_ai ? parseFloat(formData.rating_ai) : null,
+                ai_rating: formData.rating_ai ? parseFloat(formData.rating_ai) : null,
                 jjyang_visit_count: formData.jjyang_visit_count ? parseInt(formData.jjyang_visit_count) : 0,
             };
 

@@ -22,19 +22,44 @@ https://console.cloud.google.com/
 - 프로젝트 이름: `tzudong-map`
 - 위치: 조직 없음
 
-### 1.3. Maps JavaScript API 활성화
+### 1.3. 필수 API 활성화
+다음 API들을 모두 활성화해야 합니다:
+
+#### Maps JavaScript API
 1. **API 및 서비스** → **라이브러리**
 2. **Maps JavaScript API** 검색
+3. **사용** 버튼 클릭
+
+#### Geocoding API (주소 → 좌표 변환용)
+1. **API 및 서비스** → **라이브러리**
+2. **Geocoding API** 검색  
+3. **사용** 버튼 클릭
+
+#### Places API (선택사항, 향후 기능용)
+1. **API 및 서비스** → **라이브러리**
+2. **Places API** 검색
 3. **사용** 버튼 클릭
 
 ### 1.4. API 키 생성
 1. **API 및 서비스** → **사용자 인증 정보**
 2. **사용자 인증 정보 만들기** → **API 키**
 3. 생성된 키 복사
-4. (선택) **API 키 제한** 설정
+4. (권장) **API 키 제한** 설정
    - 애플리케이션 제한사항: HTTP 리퍼러
-   - 리퍼러: `http://localhost:5173/*`, `https://yourdomain.com/*`
-   - API 제한사항: Maps JavaScript API만 허용
+   - 리퍼러: 
+     - `http://localhost:5173/*`
+     - `http://localhost:*/*`
+     - `https://yourdomain.com/*`
+   - API 제한사항: 다음 API만 허용
+     - Maps JavaScript API
+     - Geocoding API
+     - Places API (선택사항)
+
+### 1.5. 빌링 설정 (필수)
+Google Maps Platform은 무료 크레딧($200/월)을 제공하지만 빌링 계정 연결이 필수입니다:
+1. **결제** → **결제 계정 만들기**
+2. 카드 정보 입력 (무료 크레딧 소진 전까지는 과금되지 않음)
+3. 월별 할당량 초과 알림 설정 권장
 
 ---
 
@@ -98,7 +123,18 @@ VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
 supabase db push
 ```
 
-> 마이그레이션 파일은 `supabase/migrations/` 폴더에 있습니다.
+마이그레이션 파일들 (`supabase/migrations/`):
+- `20251021075749_*.sql` - 기본 테이블 생성 (users, profiles, restaurants, reviews, etc.)
+- `20251021075837_*.sql` - 함수 보안 설정
+- `20251021140000_add_helper_functions.sql` - 헬퍼 함수 및 Storage 설정
+- `20251021180000_add_missing_columns.sql` - 추가 컬럼 (jjyang_visit_count, description, etc.)
+
+### 3.5. 마이그레이션 확인
+```bash
+supabase migration list
+```
+
+모든 마이그레이션이 ✓ 표시되어 있어야 합니다.
 
 ---
 
@@ -150,12 +186,35 @@ VALUES ('사용자-id', 'admin');
 ### 6.2. 테스트 데이터
 ```sql
 -- SQL Editor에서 샘플 데이터 삽입
-INSERT INTO restaurants (name, address, category, lat, lng, ai_rating, youtube_link, tzuyang_review)
+INSERT INTO restaurants (
+  name, address, category, lat, lng, ai_rating, 
+  jjyang_visit_count, youtube_link, tzuyang_review, description
+)
 VALUES 
-  ('홍대 떡볶이', '서울특별시 마포구 홍익로 123', '분식', 37.5563, 126.9236, 8.5, 
-   'https://youtube.com/watch?v=example', '정말 맛있었어요!'),
-  ('강남 삼겹살', '서울특별시 강남구 테헤란로 456', '고기', 37.4979, 127.0276, 7.8, 
-   NULL, '양이 많고 고기 질이 좋아요');
+  (
+    '홍대 떡볶이', 
+    '서울특별시 마포구 홍익로 123', 
+    '분식', 
+    37.5563, 
+    126.9236, 
+    8.5,
+    2,
+    'https://youtube.com/watch?v=example', 
+    '정말 맛있었어요!',
+    '쯔양이 두 번이나 방문한 떡볶이 맛집'
+  ),
+  (
+    '강남 삼겹살', 
+    '서울특별시 강남구 테헤란로 456', 
+    '고기', 
+    37.4979, 
+    127.0276, 
+    7.8,
+    1,
+    NULL, 
+    '양이 많고 고기 질이 좋아요',
+    '1인분 양이 푸짐한 삼겹살집'
+  );
 ```
 
 ---
@@ -165,11 +224,25 @@ VALUES
 ### 7.1. Storage Bucket 확인
 Supabase Dashboard → **Storage** → `review-photos` 버킷 확인
 
-> 마이그레이션으로 자동 생성됩니다.
+> 마이그레이션 `20251021140000_add_helper_functions.sql`에서 자동 생성됩니다.
 
 ### 7.2. Public Access 설정 확인
-- Bucket은 Public으로 설정되어 있어야 합니다.
-- Policy가 올바르게 적용되었는지 확인
+- Bucket은 **Public**으로 설정되어 있어야 합니다
+- 다음 Policy들이 적용되어 있어야 합니다:
+  - `Anyone can view review photos` - 모든 사용자가 사진 조회 가능
+  - `Authenticated users can upload review photos` - 로그인한 사용자만 업로드
+  - `Users can update own review photos` - 본인 사진만 수정
+  - `Users can delete own review photos` - 본인 사진만 삭제
+
+### 7.3. 파일 업로드 테스트
+1. 리뷰 작성 모달에서 이미지 업로드 테스트
+2. Supabase Dashboard → Storage에서 파일 확인
+3. 파일 경로: `review-photos/{user_id}/{timestamp}_{filename}`
+
+### 7.4. Storage 용량 관리
+- Free 플랜: 1GB 무료
+- Pro 플랜: 100GB 포함, 초과 시 $0.021/GB
+- 정기적으로 미사용 파일 정리 권장
 
 ---
 
@@ -205,9 +278,18 @@ vercel --prod
 ## ⚠️ 문제 해결
 
 ### Google Maps가 로딩되지 않아요
-- API 키가 올바른지 확인
-- Google Cloud Console에서 Maps JavaScript API가 활성화되었는지 확인
+- `.env.local`의 API 키가 올바른지 확인
+- Google Cloud Console에서 다음 API들이 활성화되었는지 확인:
+  - Maps JavaScript API
+  - Geocoding API
+- **빌링 계정이 연결되었는지 확인** (가장 흔한 원인)
 - 브라우저 콘솔에서 에러 메시지 확인
+- API 키 제한이 너무 엄격하지 않은지 확인
+
+### 주소 입력 시 좌표 변환이 안 돼요
+- Geocoding API가 활성화되었는지 확인
+- API 키 제한에 Geocoding API가 포함되어 있는지 확인
+- 주소를 더 상세하게 입력 (예: "서울특별시 강남구 테헤란로 152")
 
 ### Supabase 연결 오류
 - `.env.local` 파일의 URL과 키가 정확한지 확인
@@ -228,6 +310,18 @@ supabase db push
 - `user_roles` 테이블에 admin 권한이 추가되었는지 확인
 - 로그아웃 후 다시 로그인
 - 브라우저 캐시 삭제
+
+### 리뷰 사진 업로드가 실패해요
+- Supabase Storage에 `review-photos` 버킷이 생성되었는지 확인
+- 버킷이 Public으로 설정되어 있는지 확인
+- Storage Policy가 올바르게 적용되었는지 확인
+- 파일 크기 제한 확인 (Free 플랜: 50MB/파일)
+- 지원되는 이미지 포맷: JPG, PNG, GIF, WebP
+
+### 리뷰 작성 후 목록에 안 나타나요
+- 리뷰는 기본적으로 `is_verified: false` 상태로 저장됩니다
+- 관리자가 검토 후 승인해야 공개됩니다
+- 필터에서 "검토 대기" 상태로 확인할 수 있습니다
 
 ---
 

@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import {
     Dialog,
     DialogContent,
@@ -27,6 +30,7 @@ interface ReviewModalProps {
     isOpen: boolean;
     onClose: () => void;
     restaurant: { id: string; name: string } | null;
+    onSuccess?: () => void;
 }
 
 const CATEGORIES = [
@@ -47,7 +51,8 @@ const CATEGORIES = [
     "도시락",
 ];
 
-export function ReviewModal({ isOpen, onClose, restaurant }: ReviewModalProps) {
+export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewModalProps) {
+    const { user } = useAuth();
     const [visitedDate, setVisitedDate] = useState("");
     const [visitedTime, setVisitedTime] = useState("");
     const [category, setCategory] = useState("");
@@ -74,21 +79,106 @@ export function ReviewModal({ isOpen, onClose, restaurant }: ReviewModalProps) {
 
     const handleSubmit = async () => {
         if (!visitedDate || !visitedTime || !category || !content || !verificationPhoto || foodPhotos.length === 0) {
-            alert("모든 필수 항목을 입력해주세요");
+            toast({
+                title: "필수 항목 누락",
+                description: "모든 필수 항목을 입력해주세요",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!user) {
+            toast({
+                title: "로그인 필요",
+                description: "리뷰를 작성하려면 로그인이 필요합니다",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!restaurant) {
+            toast({
+                title: "맛집 선택 필요",
+                description: "리뷰를 작성할 맛집을 선택해주세요",
+                variant: "destructive",
+            });
             return;
         }
 
         setIsSubmitting(true);
 
-        // TODO: Submit to Supabase
-        // Upload photos to storage
-        // Create review record
+        try {
+            // 1. Upload verification photo
+            const verificationPhotoPath = `${user.id}/${Date.now()}_verification_${verificationPhoto.name}`;
+            const { error: verificationUploadError } = await supabase.storage
+                .from('review-photos')
+                .upload(verificationPhotoPath, verificationPhoto, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
 
-        setTimeout(() => {
-            alert("리뷰가 성공적으로 등록되었습니다! 관리자 검토 후 공개됩니다.");
-            setIsSubmitting(false);
+            if (verificationUploadError) {
+                throw new Error(`인증 사진 업로드 실패: ${verificationUploadError.message}`);
+            }
+
+            // 2. Upload food photos
+            const foodPhotoUrls: string[] = [];
+            for (let i = 0; i < foodPhotos.length; i++) {
+                const photo = foodPhotos[i];
+                const photoPath = `${user.id}/${Date.now()}_food_${i}_${photo.name}`;
+                const { error: foodUploadError } = await supabase.storage
+                    .from('review-photos')
+                    .upload(photoPath, photo, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (foodUploadError) {
+                    throw new Error(`음식 사진 업로드 실패: ${foodUploadError.message}`);
+                }
+
+                foodPhotoUrls.push(photoPath);
+            }
+
+            // 3. Create review record
+            const visitedAtDateTime = `${visitedDate}T${visitedTime}:00`;
+            const { error: insertError } = await supabase
+                .from('reviews')
+                .insert({
+                    user_id: user.id,
+                    restaurant_id: restaurant.id,
+                    title: `${restaurant.name} 방문 후기`,
+                    content: content.trim(),
+                    visited_at: visitedAtDateTime,
+                    verification_photo: verificationPhotoPath,
+                    food_photos: foodPhotoUrls,
+                    category: category as any,
+                    is_verified: false, // 관리자 검토 대기
+                });
+
+            if (insertError) {
+                throw new Error(`리뷰 등록 실패: ${insertError.message}`);
+            }
+
+            toast({
+                title: "리뷰 등록 성공! 🎉",
+                description: "관리자 검토 후 공개됩니다. 소중한 후기 감사합니다!",
+            });
+
+            if (onSuccess) {
+                onSuccess();
+            }
             handleClose();
-        }, 1000);
+        } catch (error: any) {
+            console.error('리뷰 제출 오류:', error);
+            toast({
+                title: "리뷰 등록 실패",
+                description: error.message || "알 수 없는 오류가 발생했습니다",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleClose = () => {

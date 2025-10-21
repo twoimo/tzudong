@@ -60,13 +60,13 @@ export function RestaurantDetailPanel({
         const diff = now.getTime() - date.getTime();
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const days = Math.floor(hours / 24);
-        
+
         if (days > 0) return `${days}일 전`;
         if (hours > 0) return `${hours}시간 전`;
         return '방금 전';
     };
 
-    const isHotPlace = (restaurant.rating_ai || 0) >= 4;
+    const isHotPlace = (restaurant.ai_rating || 0) >= 4;
 
     const handleGetDirections = () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
@@ -97,9 +97,9 @@ export function RestaurantDetailPanel({
                     <div className="flex-1">
                         <p className="text-xs text-muted-foreground mb-1">AI 별점</p>
                         <div className="flex items-center gap-2">
-                            <span className="text-lg">{getStarEmoji(restaurant.rating_ai || 0)}</span>
+                            <span className="text-lg">{getStarEmoji(restaurant.ai_rating || 0)}</span>
                             <span className="text-sm font-semibold">
-                                {restaurant.rating_ai?.toFixed(1) || "0.0"} / 10.0
+                                {restaurant.ai_rating?.toFixed(1) || "0.0"} / 10.0
                             </span>
                         </div>
                     </div>
@@ -229,7 +229,7 @@ export function RestaurantDetailPanel({
                                 전체보기 →
                             </Button>
                         </div>
-                        
+
                         {recentReviews.length === 0 ? (
                             <div className="text-sm text-muted-foreground text-center py-4">
                                 리뷰가 없습니다

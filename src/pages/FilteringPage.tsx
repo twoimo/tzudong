@@ -138,7 +138,7 @@ const FilteringPage = () => {
 
         // AI 별점 필터
         result = result.filter(r => {
-            const rating = r.rating_ai || 0;
+            const rating = r.ai_rating || 0;
             return rating >= filters.ratingMin && rating <= filters.ratingMax;
         });
 
@@ -170,8 +170,8 @@ const FilteringPage = () => {
                         bValue = b.review_count || 0;
                         break;
                     case "rating":
-                        aValue = a.rating_ai || 0;
-                        bValue = b.rating_ai || 0;
+                        aValue = a.ai_rating || 0;
+                        bValue = b.ai_rating || 0;
                         break;
                 }
 
@@ -482,7 +482,7 @@ const FilteringPage = () => {
                                     >
                                         <TableCell className="font-medium">
                                             <div className="flex items-center gap-2">
-                                                {(restaurant.rating_ai || 0) >= 4 ? "🔥" : "⭐"}
+                                                {(restaurant.ai_rating || 0) >= 4 ? "🔥" : "⭐"}
                                                 <span className="truncate">{restaurant.name}</span>
                                             </div>
                                         </TableCell>
@@ -505,10 +505,10 @@ const FilteringPage = () => {
                                         <TableCell className="text-center">
                                             <div className="flex flex-col items-center gap-1">
                                                 <span className="text-lg">
-                                                    {getStarEmoji(restaurant.rating_ai || 0)}
+                                                    {getStarEmoji(restaurant.ai_rating || 0)}
                                                 </span>
                                                 <span className="text-xs text-muted-foreground">
-                                                    {restaurant.rating_ai?.toFixed(1) || "0.0"}점
+                                                    {restaurant.ai_rating?.toFixed(1) || "0.0"}점
                                                 </span>
                                             </div>
                                         </TableCell>
