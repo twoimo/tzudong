@@ -8,10 +8,10 @@ interface SidebarProps {
 
 const Sidebar = ({ isOpen }: SidebarProps) => {
   const menuItems = [
-    { icon: Home, label: "홈", active: true },
-    { icon: Filter, label: "필터링" },
-    { icon: Trophy, label: "리더보드" },
-    { icon: MessageSquare, label: "리뷰 작성" },
+    { icon: Home, label: "쯔동여지도 홈", active: true },
+    { icon: Filter, label: "쯔동여지도 필터링" },
+    { icon: Trophy, label: "사용자 리더보드" },
+    { icon: MessageSquare, label: "사용자 맛집 리뷰" },
     { icon: DollarSign, label: "월 서버비용" },
   ];
 
