@@ -1,21 +1,25 @@
-import { Menu, Moon, Sun, Bell, Maximize, User, LogOut } from "lucide-react";
+import { Menu, Moon, Sun, Bell, Maximize, User, LogOut, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
   isLoggedIn: boolean;
   onOpenAuth: () => void;
   onLogout: () => void;
+  onAdminClick?: () => void;
 }
 
-const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout }: HeaderProps) => {
+const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onAdminClick }: HeaderProps) => {
+  const { isAdmin } = useAuth();
   const [isDark, setIsDark] = useState(false);
 
   const toggleTheme = () => {
@@ -42,7 +46,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout }: HeaderPro
         >
           <Menu className="h-5 w-5" />
         </Button>
-        
+
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
             <span className="text-xl">🔥</span>
@@ -66,6 +70,16 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout }: HeaderPro
                 <User className="mr-2 h-4 w-4" />
                 프로필
               </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={onAdminClick}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    관리자 설정
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
                 로그아웃
@@ -98,7 +112,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout }: HeaderPro
         </Button>
 
         {!isLoggedIn && (
-          <Button 
+          <Button
             onClick={onOpenAuth}
             className="ml-2 bg-gradient-primary hover:opacity-90 transition-opacity"
           >

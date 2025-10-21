@@ -12,9 +12,11 @@ const INITIAL_ZOOM = 12;
 
 interface MapViewProps {
   filters: FilterState;
+  refreshTrigger?: number;
+  onAdminAddRestaurant?: () => void;
 }
 
-const MapView = ({ filters }: MapViewProps) => {
+const MapView = ({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps) => {
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -27,7 +29,7 @@ const MapView = ({ filters }: MapViewProps) => {
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
-  const { data: restaurants = [], isLoading: isLoadingRestaurants } = useRestaurants({
+  const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
     bounds: mapBounds ? {
       south: mapBounds.getSouthWest().lat(),
       west: mapBounds.getSouthWest().lng(),
@@ -40,6 +42,13 @@ const MapView = ({ filters }: MapViewProps) => {
     minVisits: filters.minVisits,
     enabled: isLoaded && !!mapBounds,
   });
+
+  // Refetch when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger) {
+      refetch();
+    }
+  }, [refreshTrigger, refetch]);
 
   // Initialize map
   useEffect(() => {
@@ -165,6 +174,17 @@ const MapView = ({ filters }: MapViewProps) => {
             🔥 {restaurants.length}개의 맛집 발견
           </span>
         </div>
+      )}
+
+      {/* Admin Add Button */}
+      {onAdminAddRestaurant && (
+        <button
+          onClick={onAdminAddRestaurant}
+          className="absolute bottom-8 right-8 bg-gradient-primary text-primary-foreground px-6 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity font-semibold flex items-center gap-2"
+        >
+          <span className="text-xl">+</span>
+          맛집 등록
+        </button>
       )}
 
       {/* Restaurant detail panel */}

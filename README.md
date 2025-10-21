@@ -1,73 +1,151 @@
-# Welcome to your Lovable project
+# 🔥 쯔동여지도 (Tzudong Map)
 
-## Project info
+쯔양이 방문한 맛집을 팬들이 함께 리뷰하고 공유하는 크라우드소싱 맛집 지도
 
-**URL**: https://lovable.dev/projects/ba48be4c-1ee8-4502-8ee8-e2f36c325e31
+## ✨ 주요 기능
 
-## How can I edit this code?
+### Phase 1: MVP (완료)
+- ✅ Google Maps 기반 지도 인터페이스
+- ✅ Supabase 인증 시스템 (회원가입/로그인)
+- ✅ 맛집 마커 표시 (🔥 별점 ≥4, ⭐ 그 외)
+- ✅ 맛집 상세 정보 패널
+- ✅ 필터링 시스템
+  - 카테고리 필터 (15개 카테고리)
+  - AI 점수 필터 (1-10점)
+  - 리뷰 수 / 방문 횟수 필터
+- ✅ 리뷰 작성 시스템
+  - 인증사진 필수 (닉네임 포함)
+  - 음식 사진 최대 5장
+  - 관리자 승인 시스템
+- ✅ 관리자 기능
+  - 맛집 등록/수정/삭제
+  - 주소 → 좌표 자동 변환
+  - 리뷰 검증
 
-There are several ways of editing your application.
+## 🛠️ 기술 스택
 
-**Use Lovable**
+### Frontend
+- **Framework**: React 18 + TypeScript
+- **Build Tool**: Vite
+- **UI Components**: Shadcn UI + Radix UI
+- **Styling**: Tailwind CSS
+- **State Management**: TanStack Query
+- **Map**: Google Maps JavaScript API
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/ba48be4c-1ee8-4502-8ee8-e2f36c325e31) and start prompting.
+### Backend
+- **Database**: Supabase (PostgreSQL)
+- **Authentication**: Supabase Auth
+- **Storage**: Supabase Storage
+- **Real-time**: Supabase Realtime
 
-Changes made via Lovable will be committed automatically to this repo.
+## 📦 설치 및 실행
 
-**Use your preferred IDE**
+### 1. 환경 변수 설정
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+`.env.local` 파일을 생성하고 다음 값들을 입력하세요:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```env
+# Supabase
+VITE_SUPABASE_URL=your-supabase-project-url
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
 
-Follow these steps:
+# Google Maps
+VITE_GOOGLE_MAPS_API_KEY=your-google-maps-api-key
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 2. 의존성 설치
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+```bash
+npm install
+```
 
-# Step 3: Install the necessary dependencies.
-npm i
+### 3. Supabase 마이그레이션 실행
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+# Supabase CLI 설치 (최초 1회)
+npm install -g supabase
+
+# Supabase 프로젝트와 연결
+supabase link --project-ref your-project-ref
+
+# 마이그레이션 실행
+supabase db push
+```
+
+### 4. 개발 서버 실행
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+브라우저에서 `http://localhost:5173` 열기
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🗄️ 데이터베이스 스키마
 
-**Use GitHub Codespaces**
+### 주요 테이블
+- **users**: 사용자 정보
+- **user_roles**: 사용자 권한 관리
+- **profiles**: 사용자 프로필
+- **restaurants**: 맛집 정보
+- **reviews**: 리뷰 (인증사진, 음식사진, 내용)
+- **user_stats**: 사용자 통계 (리더보드용)
+- **server_costs**: 서버 비용 투명성
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🎨 UI/UX 특징
 
-## What technologies are used for this project?
+### 반응형 디자인
+- Mobile-first 접근
+- 태블릿/데스크톱 최적화
 
-This project is built with:
+### 다크모드 지원
+- 시스템 테마 감지
+- 수동 전환 가능
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### 접근성
+- ARIA 레이블
+- 키보드 네비게이션
+- 스크린 리더 지원
 
-## How can I deploy this project?
+## 🔐 보안
 
-Simply open [Lovable](https://lovable.dev/projects/ba48be4c-1ee8-4502-8ee8-e2f36c325e31) and click on Share -> Publish.
+- Row Level Security (RLS) 정책 적용
+- JWT 기반 인증
+- 파일 업로드 검증 (5MB 제한)
+- SQL Injection 방어
+- XSS 방어
 
-## Can I connect a custom domain to my Lovable project?
+## 🚀 배포
 
-Yes, you can!
+### Vercel (추천)
+```bash
+npm run build
+vercel --prod
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### 환경 변수 설정
+Vercel 대시보드에서 환경 변수 설정:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_GOOGLE_MAPS_API_KEY`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## 📝 라이선스
+
+MIT License
+
+## 👥 기여
+
+기여는 언제나 환영합니다!
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📧 문의
+
+프로젝트 관련 문의사항은 Issue를 통해 남겨주세요.
+
+---
+
+**Made with ❤️ for Tzuyang fans**
