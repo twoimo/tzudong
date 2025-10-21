@@ -35,7 +35,7 @@ const REGIONS = [
     "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"
 ];
 
-type SortColumn = "name" | "category" | "jjyangVisits" | "userVisits" | "reviews" | "rating";
+type SortColumn = "name" | "category" | "jjyangVisits" | "fanVisits" | "rating";
 type SortDirection = "asc" | "desc" | null;
 
 interface FilterState {
@@ -43,8 +43,7 @@ interface FilterState {
     categories: string[];
     regions: string[];
     jjyangVisitsMin: number;
-    userVisitsMin: number;
-    reviewsMin: number;
+    fanVisitsMin: number;
     ratingMin: number;
     ratingMax: number;
 }
@@ -61,8 +60,7 @@ const FilteringPage = () => {
         categories: [],
         regions: [],
         jjyangVisitsMin: 0,
-        userVisitsMin: 0,
-        reviewsMin: 0,
+        fanVisitsMin: 0,
         ratingMin: 0,
         ratingMax: 10,
     });
@@ -114,8 +112,7 @@ const FilteringPage = () => {
             categories: [],
             regions: [],
             jjyangVisitsMin: 0,
-            userVisitsMin: 0,
-            reviewsMin: 0,
+            fanVisitsMin: 0,
             ratingMin: 0,
             ratingMax: 10,
         });
@@ -187,15 +184,11 @@ const FilteringPage = () => {
             result = result.filter(r => (r.jjyang_visit_count || 0) >= filters.jjyangVisitsMin);
         }
 
-        // 사용자 방문횟수 필터
-        if (filters.userVisitsMin > 0) {
-            result = result.filter(r => (r.visit_count || 0) >= filters.userVisitsMin);
+        // 쯔양 팬 방문 (리뷰) 횟수 필터
+        if (filters.fanVisitsMin > 0) {
+            result = result.filter(r => (r.visit_count || 0) >= filters.fanVisitsMin);
         }
 
-        // 리뷰수 필터
-        if (filters.reviewsMin > 0) {
-            result = result.filter(r => (r.review_count || 0) >= filters.reviewsMin);
-        }
 
         // AI 별점 필터
         result = result.filter(r => {
@@ -222,13 +215,9 @@ const FilteringPage = () => {
                         aValue = a.jjyang_visit_count || 0;
                         bValue = b.jjyang_visit_count || 0;
                         break;
-                    case "userVisits":
+                    case "fanVisits":
                         aValue = a.visit_count || 0;
                         bValue = b.visit_count || 0;
-                        break;
-                    case "reviews":
-                        aValue = a.review_count || 0;
-                        bValue = b.review_count || 0;
                         break;
                     case "rating":
                         aValue = a.ai_rating || 0;
@@ -259,8 +248,7 @@ const FilteringPage = () => {
         filters.categories.length +
         filters.regions.length +
         (filters.jjyangVisitsMin > 0 ? 1 : 0) +
-        (filters.userVisitsMin > 0 ? 1 : 0) +
-        (filters.reviewsMin > 0 ? 1 : 0) +
+        (filters.fanVisitsMin > 0 ? 1 : 0) +
         (filters.ratingMin > 0 || filters.ratingMax < 10 ? 1 : 0);
 
     return (
@@ -295,7 +283,7 @@ const FilteringPage = () => {
                 </div>
 
                 {/* Filter Controls */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
                     {/* 검색 */}
                     <div className="lg:col-span-2">
                         <div className="relative">
@@ -398,16 +386,16 @@ const FilteringPage = () => {
                         </SelectContent>
                     </Select>
 
-                    {/* 사용자 방문횟수 */}
+                    {/* 쯔양 팬 방문횟수 */}
                     <Select
-                        value={filters.userVisitsMin.toString()}
-                        onValueChange={(v) => setFilters({ ...filters, userVisitsMin: parseInt(v) })}
+                        value={filters.fanVisitsMin.toString()}
+                        onValueChange={(v) => setFilters({ ...filters, fanVisitsMin: parseInt(v) })}
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="사용자 방문" />
+                            <SelectValue placeholder="쯔양 팬 방문" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="0">사용자 방문 (전체)</SelectItem>
+                            <SelectItem value="0">쯔양 팬 방문 (전체)</SelectItem>
                             <SelectItem value="10">10회 이상</SelectItem>
                             <SelectItem value="50">50회 이상</SelectItem>
                             <SelectItem value="100">100회 이상</SelectItem>
@@ -415,22 +403,6 @@ const FilteringPage = () => {
                         </SelectContent>
                     </Select>
 
-                    {/* 리뷰수 */}
-                    <Select
-                        value={filters.reviewsMin.toString()}
-                        onValueChange={(v) => setFilters({ ...filters, reviewsMin: parseInt(v) })}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="리뷰수" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="0">리뷰수 (전체)</SelectItem>
-                            <SelectItem value="5">5개 이상</SelectItem>
-                            <SelectItem value="10">10개 이상</SelectItem>
-                            <SelectItem value="20">20개 이상</SelectItem>
-                            <SelectItem value="50">50개 이상</SelectItem>
-                        </SelectContent>
-                    </Select>
                 </div>
 
                 {/* AI 별점 슬라이더 */}
@@ -478,14 +450,9 @@ const FilteringPage = () => {
                                 쯔양 {filters.jjyangVisitsMin}회+
                             </Badge>
                         )}
-                        {filters.userVisitsMin > 0 && (
+                        {filters.fanVisitsMin > 0 && (
                             <Badge variant="secondary">
-                                사용자 {filters.userVisitsMin}회+
-                            </Badge>
-                        )}
-                        {filters.reviewsMin > 0 && (
-                            <Badge variant="secondary">
-                                리뷰 {filters.reviewsMin}개+
+                                쯔양 팬 {filters.fanVisitsMin}회+
                             </Badge>
                         )}
                     </div>
@@ -535,22 +502,11 @@ const FilteringPage = () => {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleSort("userVisits")}
+                                        onClick={() => handleSort("fanVisits")}
                                         className="hover:bg-accent w-full justify-center"
                                     >
-                                        사용자 방문
-                                        {getSortIcon("userVisits")}
-                                    </Button>
-                                </TableHead>
-                                <TableHead className="w-[100px] text-center">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleSort("reviews")}
-                                        className="hover:bg-accent w-full justify-center"
-                                    >
-                                        리뷰수
-                                        {getSortIcon("reviews")}
+                                        쯔양 팬 방문
+                                        {getSortIcon("fanVisits")}
                                     </Button>
                                 </TableHead>
                                 <TableHead className="w-[200px] text-center">
@@ -570,7 +526,7 @@ const FilteringPage = () => {
                         <TableBody>
                             {isLoading ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-12">
+                                    <TableCell colSpan={6} className="text-center py-12">
                                         <div className="flex items-center justify-center gap-2">
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                                             <span className="text-muted-foreground">로딩 중...</span>
@@ -579,7 +535,7 @@ const FilteringPage = () => {
                                 </TableRow>
                             ) : filteredAndSortedRestaurants.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={7} className="text-center py-12">
+                                    <TableCell colSpan={6} className="text-center py-12">
                                         <p className="text-muted-foreground">필터 조건에 맞는 맛집이 없습니다.</p>
                                     </TableCell>
                                 </TableRow>
@@ -607,9 +563,6 @@ const FilteringPage = () => {
                                             <span className="font-semibold">
                                                 {restaurant.visit_count || 0}회
                                             </span>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            {restaurant.review_count || 0}개
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <div className="flex flex-col items-center gap-1">
