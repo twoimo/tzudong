@@ -14,8 +14,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const menuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
     { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
-    { icon: Trophy, label: "사용자 리더보드", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
-    { icon: MessageSquare, label: "맛집 리뷰", path: "/reviews", onClick: () => navigate("/reviews") },
+    { icon: Trophy, label: "쯔양 팬 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
+    { icon: MessageSquare, label: "쯔양 팬 맛집 리뷰", path: "/reviews", onClick: () => navigate("/reviews") },
     { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => navigate("/costs") },
   ];
 

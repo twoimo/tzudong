@@ -185,7 +185,7 @@ const ReviewsPage = () => {
                     <div>
                         <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                             <MessageSquare className="h-6 w-6 text-primary" />
-                            맛집 리뷰
+                            쯔양 팬 맛집 리뷰
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
                             총 {sortedReviews.length}개의 리뷰

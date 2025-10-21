@@ -136,7 +136,7 @@ const LeaderboardPage = () => {
                     <div>
                         <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                             <Trophy className="h-6 w-6 text-primary" />
-                            사용자 리더보드
+                            쯔양 팬 랭킹
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
                             맛집 리뷰로 쌓은 신뢰도 랭킹

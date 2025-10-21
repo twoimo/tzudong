@@ -108,7 +108,7 @@ export function ReviewModal({ isOpen, onClose, restaurant }: ReviewModalProps) {
             <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                     <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                        맛집 리뷰 작성
+                        쯔양 팬 맛집 리뷰 작성
                     </DialogTitle>
                     <DialogDescription>
                         {restaurant ? `${restaurant.name}에 대한` : ""} 방문 후기를 공유해주세요
