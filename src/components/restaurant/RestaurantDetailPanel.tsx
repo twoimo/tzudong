@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Star, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, AlertCircle } from "lucide-react";
+import { X, MapPin, Phone, Star, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, AlertCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,11 +8,13 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
     onClose: () => void;
     onWriteReview?: () => void;
+    onEditRestaurant?: () => void;
 }
 
 interface Review {
@@ -28,7 +30,10 @@ export function RestaurantDetailPanel({
     restaurant,
     onClose,
     onWriteReview,
+    onEditRestaurant,
 }: RestaurantDetailPanelProps) {
+    const { isAdmin } = useAuth();
+
     if (!restaurant) return null;
 
     // 쯔양 방문 여부 확인
@@ -91,9 +96,21 @@ export function RestaurantDetailPanel({
                             {restaurant.category}
                         </Badge>
                     </div>
-                    <Button variant="ghost" size="icon" onClick={onClose}>
-                        <X className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                        {isAdmin && onEditRestaurant && (
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={onEditRestaurant}
+                                className="text-primary hover:text-primary"
+                            >
+                                <Settings className="h-4 w-4" />
+                            </Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={onClose}>
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
 
                 {/* AI Rating */}

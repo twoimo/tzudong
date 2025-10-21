@@ -3,12 +3,14 @@ import MapView from "@/components/map/MapView";
 import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { Restaurant } from "@/types/restaurant";
 
 interface GlobalMapPageProps {
     refreshTrigger: number;
+    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
 }
 
-const GlobalMapPage = memo(({ refreshTrigger }: GlobalMapPageProps) => {
+const GlobalMapPage = memo(({ refreshTrigger, onAdminEditRestaurant }: GlobalMapPageProps) => {
     const { isAdmin } = useAuth();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [filters, setFilters] = useState<FilterState>({
@@ -28,7 +30,7 @@ const GlobalMapPage = memo(({ refreshTrigger }: GlobalMapPageProps) => {
             <MapView
                 filters={filters}
                 refreshTrigger={refreshTrigger}
-                onAdminAddRestaurant={isAdmin ? undefined : undefined}
+                onAdminEditRestaurant={onAdminEditRestaurant}
             />
 
             <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>

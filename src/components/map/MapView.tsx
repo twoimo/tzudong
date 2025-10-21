@@ -16,9 +16,10 @@ interface MapViewProps {
   filters: FilterState;
   refreshTrigger?: number;
   onAdminAddRestaurant?: () => void;
+  onAdminEditRestaurant?: (restaurant: Restaurant) => void;
 }
 
-const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant }: MapViewProps) => {
+const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant }: MapViewProps) => {
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -179,6 +180,9 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant }: MapView
             onWriteReview={() => {
               setIsReviewModalOpen(true);
             }}
+            onEditRestaurant={onAdminEditRestaurant ? () => {
+              onAdminEditRestaurant(selectedRestaurant);
+            } : undefined}
           />
         </div>
       )}

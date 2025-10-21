@@ -13,9 +13,10 @@ interface NaverMapViewProps {
     filters: FilterState;
     refreshTrigger: number;
     onAdminAddRestaurant?: () => void;
+    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
 }
 
-const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
+const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
@@ -227,6 +228,9 @@ const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
                         onWriteReview={() => {
                             setIsReviewModalOpen(true);
                         }}
+                        onEditRestaurant={onAdminEditRestaurant ? () => {
+                            onAdminEditRestaurant(selectedRestaurant);
+                        } : undefined}
                     />
                 </div>
             )}

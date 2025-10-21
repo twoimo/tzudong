@@ -20,6 +20,7 @@ import AuthModal from "./components/auth/AuthModal";
 import { AdminRestaurantModal } from "./components/admin/AdminRestaurantModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { Restaurant } from "@/types/restaurant";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const handleLogout = async () => {
@@ -40,6 +42,12 @@ function AppLayout() {
 
   const handleAdminSuccess = () => {
     setRefreshTrigger(prev => prev + 1);
+    setSelectedRestaurant(null);
+  };
+
+  const handleAdminEditRestaurant = (restaurant: Restaurant) => {
+    setSelectedRestaurant(restaurant);
+    setIsAdminModalOpen(true);
   };
 
   return (
@@ -60,8 +68,8 @@ function AppLayout() {
 
         <main className="flex-1 relative overflow-hidden">
           <Routes>
-            <Route path="/" element={<Index refreshTrigger={refreshTrigger} />} />
-            <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} />} />
+            <Route path="/" element={<Index refreshTrigger={refreshTrigger} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
+            <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/filtering" element={<FilteringPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
@@ -81,7 +89,11 @@ function AppLayout() {
       {isAdmin && (
         <AdminRestaurantModal
           isOpen={isAdminModalOpen}
-          onClose={() => setIsAdminModalOpen(false)}
+          onClose={() => {
+            setIsAdminModalOpen(false);
+            setSelectedRestaurant(null);
+          }}
+          restaurant={selectedRestaurant}
           onSuccess={handleAdminSuccess}
         />
       )}

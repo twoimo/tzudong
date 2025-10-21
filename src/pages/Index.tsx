@@ -3,12 +3,14 @@ import NaverMapView from "@/components/map/NaverMapView";
 import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
+import { Restaurant } from "@/types/restaurant";
 
 interface IndexProps {
   refreshTrigger: number;
+  onAdminEditRestaurant?: (restaurant: Restaurant) => void;
 }
 
-const Index = memo(({ refreshTrigger }: IndexProps) => {
+const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
   const { isAdmin } = useAuth();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -28,7 +30,7 @@ const Index = memo(({ refreshTrigger }: IndexProps) => {
       <NaverMapView
         filters={filters}
         refreshTrigger={refreshTrigger}
-        onAdminAddRestaurant={isAdmin ? undefined : undefined}
+        onAdminEditRestaurant={onAdminEditRestaurant}
       />
 
       <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
