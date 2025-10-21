@@ -11,43 +11,76 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: () => void;
 }
 
-const AuthModal = ({ isOpen, onClose, onLoginSuccess }: AuthModalProps) => {
+const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
+  const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [username, setUsername] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const resetForm = () => {
+    setEmail("");
+    setPassword("");
+    setConfirmPassword("");
+    setUsername("");
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error("이메일과 비밀번호를 입력해주세요");
       return;
     }
-    // Mock login
-    toast.success("로그인 성공!");
-    onLoginSuccess();
+
+    setIsLoading(true);
+    try {
+      await signIn(email, password);
+      toast.success("로그인 성공!");
+      resetForm();
+      onClose();
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast.error(error.message || "로그인에 실패했습니다");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !username) {
       toast.error("모든 필드를 입력해주세요");
+      return;
+    }
+    if (password.length < 8) {
+      toast.error("비밀번호는 최소 8자 이상이어야 합니다");
       return;
     }
     if (password !== confirmPassword) {
       toast.error("비밀번호가 일치하지 않습니다");
       return;
     }
-    // Mock signup
-    toast.success("회원가입 성공!");
-    onLoginSuccess();
+
+    setIsLoading(true);
+    try {
+      await signUp(email, password, username);
+      toast.success("회원가입 성공! 로그인해주세요.");
+      resetForm();
+      onClose();
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      toast.error(error.message || "회원가입에 실패했습니다");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -98,8 +131,9 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }: AuthModalProps) => {
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90"
+                disabled={isLoading}
               >
-                로그인
+                {isLoading ? "로그인 중..." : "로그인"}
               </Button>
             </form>
           </TabsContent>
@@ -148,8 +182,9 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }: AuthModalProps) => {
               <Button
                 type="submit"
                 className="w-full bg-gradient-primary hover:opacity-90"
+                disabled={isLoading}
               >
-                회원가입
+                {isLoading ? "가입 중..." : "회원가입"}
               </Button>
             </form>
           </TabsContent>

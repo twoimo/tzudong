@@ -4,15 +4,16 @@ import { Button } from "@/components/ui/button";
 
 interface SidebarProps {
   isOpen: boolean;
+  onFilterClick?: () => void;
 }
 
-const Sidebar = ({ isOpen }: SidebarProps) => {
+const Sidebar = ({ isOpen, onFilterClick }: SidebarProps) => {
   const menuItems = [
-    { icon: Home, label: "쯔동여지도 홈", active: true },
-    { icon: Filter, label: "쯔동여지도 필터링" },
-    { icon: Trophy, label: "사용자 리더보드" },
-    { icon: MessageSquare, label: "사용자 맛집 리뷰" },
-    { icon: DollarSign, label: "월 서버 운영 비용" },
+    { icon: Home, label: "쯔동여지도 홈", active: true, onClick: undefined },
+    { icon: Filter, label: "쯔동여지도 필터링", active: false, onClick: onFilterClick },
+    { icon: Trophy, label: "사용자 리더보드", active: false, onClick: undefined },
+    { icon: MessageSquare, label: "사용자 맛집 리뷰", active: false, onClick: undefined },
+    { icon: DollarSign, label: "월 서버 운영 비용", active: false, onClick: undefined },
   ];
 
   return (
@@ -31,6 +32,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               "w-full justify-start gap-3",
               item.active && "bg-gradient-primary shadow-primary"
             )}
+            onClick={item.onClick}
           >
             <item.icon className="h-5 w-5" />
             <span>{item.label}</span>
