@@ -7,6 +7,7 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface NaverMapViewProps {
     filters: FilterState;
@@ -117,13 +118,20 @@ const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
     // 로딩 에러 처리
     if (loadError) {
         return (
-            <div className="h-full flex items-center justify-center bg-muted">
-                <div className="text-center space-y-2">
-                    <p className="text-lg font-semibold text-destructive">⚠️ 지도 로드 실패</p>
-                    <p className="text-sm text-muted-foreground">{loadError.message}</p>
-                    <p className="text-xs text-muted-foreground">
-                        네이버 지도 API 설정을 확인해주세요.
-                    </p>
+            <div className="flex items-center justify-center h-full bg-muted">
+                <div className="text-center space-y-4">
+                    <div className="text-6xl">❌</div>
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-bold text-destructive">
+                            지도 로딩 실패
+                        </h2>
+                        <p className="text-muted-foreground">
+                            네이버 지도 API를 불러오는데 실패했습니다.
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                            {loadError.message}
+                        </p>
+                    </div>
                 </div>
             </div>
         );
@@ -132,10 +140,17 @@ const NaverMapView = memo(({ filters, refreshTrigger }: NaverMapViewProps) => {
     // 로딩 중
     if (!isLoaded) {
         return (
-            <div className="h-full flex items-center justify-center bg-muted">
-                <div className="text-center space-y-2">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="text-sm text-muted-foreground">네이버 지도 로딩 중...</p>
+            <div className="flex items-center justify-center h-full bg-muted">
+                <div className="text-center space-y-4">
+                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
+                    <div className="space-y-2">
+                        <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                            지도 로딩 중...
+                        </h2>
+                        <p className="text-muted-foreground">
+                            쯔양의 맛집을 불러오고 있습니다
+                        </p>
+                    </div>
                 </div>
             </div>
         );
