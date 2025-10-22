@@ -18,7 +18,7 @@ import { useState } from "react";
 import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import AuthModal from "./components/auth/AuthModal";
-import { AdminRestaurantModal } from "./components/admin/AdminRestaurantModal";
+import { ProfileModal } from "./components/profile/ProfileModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
@@ -30,7 +30,7 @@ function AppLayout() {
   const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -67,7 +67,7 @@ function AppLayout() {
           isLoggedIn={!!user}
           onOpenAuth={() => setIsAuthModalOpen(true)}
           onLogout={handleLogout}
-          onAdminClick={() => setIsAdminModalOpen(true)}
+          onProfileClick={() => setIsProfileModalOpen(true)}
         />
 
         <main className="flex-1 relative overflow-hidden">
@@ -91,17 +91,11 @@ function AppLayout() {
         onClose={() => setIsAuthModalOpen(false)}
       />
 
-      {isAdmin && (
-        <AdminRestaurantModal
-          isOpen={isAdminModalOpen}
-          onClose={() => {
-            setIsAdminModalOpen(false);
-            // selectedRestaurant는 유지 - 맵에서 업데이트된 정보를 보여줌
-          }}
-          restaurant={selectedRestaurant}
-          onSuccess={handleAdminSuccess}
-        />
-      )}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+      />
+
     </div>
   );
 }

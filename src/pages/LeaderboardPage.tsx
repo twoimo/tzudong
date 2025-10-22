@@ -164,7 +164,12 @@ const LeaderboardPage = () => {
 
                 reviewsData.forEach(review => {
                     const userId = review.user_id;
-                    const nickname = profilesMap.get(userId) || '익명';
+                    const nickname = profilesMap.get(userId);
+
+                    // 탈퇴한 사용자는 랭킹에서 제외 (프로필이 없거나 '탈퇴한 사용자'인 경우)
+                    if (!nickname || nickname === '탈퇴한 사용자') {
+                        return;
+                    }
 
                     const current = userStats.get(userId) || {
                         userId,

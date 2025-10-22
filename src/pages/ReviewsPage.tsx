@@ -192,7 +192,7 @@ const ReviewsPage = () => {
                         restaurantCategories: Array.isArray(restaurant?.category)
                             ? restaurant.category
                             : [restaurant?.category || review.categories?.[0] || review.category || '기타'],
-                        userName: profilesMap.get(review.user_id) || '익명',
+                        userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
                         content: review.content,
