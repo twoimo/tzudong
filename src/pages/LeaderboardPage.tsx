@@ -367,9 +367,11 @@ const LeaderboardPage = () => {
                                             return (
                                                 <Tooltip key={idx}>
                                                     <TooltipTrigger asChild>
-                                                        <Badge variant="outline" className="text-xs cursor-help">
-                                                            {badge.icon} {badge.name}
-                                                        </Badge>
+                                                        <div className="inline-block">
+                                                            <Badge variant="outline" className="text-xs cursor-help">
+                                                                {badge.icon} {badge.name}
+                                                            </Badge>
+                                                        </div>
                                                     </TooltipTrigger>
                                                     <TooltipContent>
                                                         <p className="whitespace-pre-line text-sm">
@@ -490,9 +492,11 @@ const LeaderboardPage = () => {
                                                         return (
                                                             <Tooltip key={idx}>
                                                                 <TooltipTrigger asChild>
-                                                                    <span className="text-lg cursor-help">
-                                                                        {badge.icon}
-                                                                    </span>
+                                                                    <div className="inline-block">
+                                                                        <span className="text-lg cursor-help">
+                                                                            {badge.icon}
+                                                                        </span>
+                                                                    </div>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
                                                                     <p className="text-sm">
