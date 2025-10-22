@@ -498,13 +498,20 @@ const ReviewsPage = () => {
                                             {review.isPinned && (
                                                 <Pin className="h-4 w-4 text-primary fill-primary" />
                                             )}
-                                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                            <h3 className="text-lg font-bold flex items-center gap-2 flex-wrap">
                                                 {review.userName === "관리자" && (
                                                     <Badge variant="default" className="bg-gradient-primary">
                                                         관리자
                                                     </Badge>
                                                 )}
                                                 <span>{review.restaurantName}</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {review.restaurantCategories.map((category, index) => (
+                                                        <Badge key={index} variant="secondary" className="text-xs">
+                                                            {category}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
                                             </h3>
                                             {review.isVerified ? (
                                                 <Badge variant="default" className="gap-1 bg-green-600">
@@ -534,11 +541,6 @@ const ReviewsPage = () => {
                                             <div className="flex items-center gap-1">
                                                 <User className="h-3 w-3" />
                                                 <span className="font-medium">{review.userName}</span>
-                                            </div>
-                                            <div className="flex flex-wrap gap-1">
-                                                {review.restaurantCategories.map((category, index) => (
-                                                    <Badge key={index} variant="outline">{category}</Badge>
-                                                ))}
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Calendar className="h-3 w-3" />
