@@ -126,19 +126,18 @@ const ReviewsPage = () => {
     // 로그인하지 않은 경우 더미 데이터 표시
     const isLoggedIn = !!user;
 
-    // Fetch reviews from Supabase
+    // Fetch reviews from Supabase - 모든 승인된 리뷰 조회
     const { data: reviewsData = [], isLoading, refetch } = useQuery({
-        queryKey: ['reviews', filterCategory, filterStatus, user?.id],
-        enabled: isLoggedIn, // 로그인한 경우에만 쿼리 실행
+        queryKey: ['reviews', filterCategory, filterStatus],
         queryFn: async () => {
             try {
                 console.log('🔍 리뷰 데이터 가져오는 중...');
 
-                // 1. 리뷰 데이터 가져오기 (모든 리뷰 조회 - 사용자가 작성한 것만)
+                // 1. 모든 승인된 리뷰 조회 (공개 리뷰)
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
                     .select('*')
-                    .eq('user_id', user.id)  // 현재 사용자가 작성한 리뷰만 조회
+                    .eq('is_verified', true)  // 승인된 리뷰만 조회
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false });
 
@@ -216,10 +215,9 @@ const ReviewsPage = () => {
         },
     });
 
-    // 로그인하지 않은 경우 더미 데이터 사용
-    const displayData = isLoggedIn ? reviewsData : DUMMY_REVIEWS;
+    // 실제 데이터가 있으면 실제 데이터 사용, 없으면 더미 데이터 사용
+    const displayData = reviewsData.length > 0 ? reviewsData : DUMMY_REVIEWS;
     const isDummyData = displayData.length > 0 && displayData[0].id.startsWith('dummy-');
-    const isLoadingData = isLoggedIn ? isLoading : false; // 로그인하지 않은 경우 로딩 아님
 
     const filteredReviews = displayData.filter((review) => {
         const matchesSearch =
@@ -250,7 +248,11 @@ const ReviewsPage = () => {
 
     const handleWriteReview = () => {
         if (!user) {
-            alert("로그인이 필요합니다");
+            toast({
+                title: "로그인이 필요합니다",
+                description: "리뷰를 작성하려면 로그인이 필요합니다.",
+                variant: "destructive",
+            });
             return;
         }
         setSelectedReview(null);
@@ -416,15 +418,22 @@ const ReviewsPage = () => {
                             )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                            총 {sortedReviews.length}개의 리뷰
+                            {isLoggedIn
+                                ? `총 ${sortedReviews.length}개의 승인된 리뷰`
+                                : `총 ${sortedReviews.length}개의 승인된 리뷰 (로그인하여 리뷰를 작성해보세요)`
+                            }
                         </p>
                     </div>
                     <Button
                         onClick={handleWriteReview}
-                        className="bg-gradient-primary hover:opacity-90 gap-2"
+                        className={`gap-2 ${isLoggedIn
+                                ? "bg-gradient-primary hover:opacity-90"
+                                : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                            }`}
+                        disabled={!isLoggedIn}
                     >
                         <Plus className="h-4 w-4" />
-                        글쓰기
+                        {isLoggedIn ? "글쓰기" : "로그인 후 글쓰기"}
                     </Button>
                 </div>
 
