@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare, XCircle } from "lucide-react";
+import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare, XCircle, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
@@ -504,7 +504,7 @@ const ReviewsPage = () => {
                                                         관리자
                                                     </Badge>
                                                 )}
-                                                <span>{review.userName}</span>
+                                                <span>{review.restaurantName}</span>
                                             </h3>
                                             {review.isVerified ? (
                                                 <Badge variant="default" className="gap-1 bg-green-600">
@@ -532,8 +532,8 @@ const ReviewsPage = () => {
 
                                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                                             <div className="flex items-center gap-1">
-                                                <MapPin className="h-3 w-3" />
-                                                <span className="font-medium">{review.restaurantName}</span>
+                                                <User className="h-3 w-3" />
+                                                <span className="font-medium">{review.userName}</span>
                                             </div>
                                             <div className="flex flex-wrap gap-1">
                                                 {review.restaurantCategories.map((category, index) => (
