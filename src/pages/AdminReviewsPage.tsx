@@ -107,7 +107,7 @@ export default function AdminReviewsPage() {
             const reviews = reviewsData.map(review => ({
                 ...review,
                 profiles: {
-                    nickname: profilesMap.get(review.user_id) || '익명'
+                    nickname: profilesMap.get(review.user_id) || '탈퇴한 사용자'
                 },
                 restaurants: restaurantsMap.get(review.restaurant_id) || { name: '알 수 없음', address: '' }
             })) as Review[];

@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare, XCircle } from "lucide-react";
+import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare, XCircle, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
@@ -192,7 +192,7 @@ const ReviewsPage = () => {
                         restaurantCategories: Array.isArray(restaurant?.category)
                             ? restaurant.category
                             : [restaurant?.category || review.categories?.[0] || review.category || '기타'],
-                        userName: profilesMap.get(review.user_id) || '익명',
+                        userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
                         content: review.content,
@@ -498,13 +498,20 @@ const ReviewsPage = () => {
                                             {review.isPinned && (
                                                 <Pin className="h-4 w-4 text-primary fill-primary" />
                                             )}
-                                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                            <h3 className="text-lg font-bold flex items-center gap-2 flex-wrap">
                                                 {review.userName === "관리자" && (
                                                     <Badge variant="default" className="bg-gradient-primary">
                                                         관리자
                                                     </Badge>
                                                 )}
-                                                <span>{review.userName}</span>
+                                                <span>{review.restaurantName}</span>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {review.restaurantCategories.map((category, index) => (
+                                                        <Badge key={index} variant="secondary" className="text-xs">
+                                                            {category}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
                                             </h3>
                                             {review.isVerified ? (
                                                 <Badge variant="default" className="gap-1 bg-green-600">
@@ -532,13 +539,8 @@ const ReviewsPage = () => {
 
                                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
                                             <div className="flex items-center gap-1">
-                                                <MapPin className="h-3 w-3" />
-                                                <span className="font-medium">{review.restaurantName}</span>
-                                            </div>
-                                            <div className="flex flex-wrap gap-1">
-                                                {review.restaurantCategories.map((category, index) => (
-                                                    <Badge key={index} variant="outline">{category}</Badge>
-                                                ))}
+                                                <User className="h-3 w-3" />
+                                                <span className="font-medium">{review.userName}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Calendar className="h-3 w-3" />

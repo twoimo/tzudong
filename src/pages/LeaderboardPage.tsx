@@ -164,7 +164,12 @@ const LeaderboardPage = () => {
 
                 reviewsData.forEach(review => {
                     const userId = review.user_id;
-                    const nickname = profilesMap.get(userId) || '익명';
+                    const nickname = profilesMap.get(userId);
+
+                    // 탈퇴한 사용자는 랭킹에서 제외 (프로필이 없거나 '탈퇴한 사용자'인 경우)
+                    if (!nickname || nickname === '탈퇴한 사용자') {
+                        return;
+                    }
 
                     const current = userStats.get(userId) || {
                         userId,
@@ -230,16 +235,31 @@ const LeaderboardPage = () => {
     });
     const isDummyData = leaderboardData.length > 0 && leaderboardData[0].id.startsWith('dummy-');
 
-    const getRankIcon = (rank: number) => {
-        switch (rank) {
-            case 1:
-                return <Trophy className="h-6 w-6 text-yellow-500" />;
-            case 2:
-                return <Medal className="h-6 w-6 text-gray-400" />;
-            case 3:
-                return <Award className="h-6 w-6 text-amber-600" />;
-            default:
-                return <span className="text-lg font-bold text-muted-foreground">{rank}</span>;
+    const getRankIcon = (rank: number, forTable: boolean = false) => {
+        if (forTable) {
+            // 테이블에서는 각 등수에 맞는 색상 사용
+            switch (rank) {
+                case 1:
+                    return <Trophy className="h-6 w-6 text-yellow-500" />;
+                case 2:
+                    return <Medal className="h-6 w-6 text-gray-400" />;
+                case 3:
+                    return <Award className="h-6 w-6 text-amber-600" />;
+                default:
+                    return <span className="text-lg font-bold text-muted-foreground">{rank}</span>;
+            }
+        } else {
+            // 카드에서는 흰색 사용 (배경색 대비)
+            switch (rank) {
+                case 1:
+                    return <Trophy className="h-6 w-6 text-white" />;
+                case 2:
+                    return <Medal className="h-6 w-6 text-white" />;
+                case 3:
+                    return <Award className="h-6 w-6 text-white" />;
+                default:
+                    return <span className="text-lg font-bold text-muted-foreground">{rank}</span>;
+            }
         }
     };
 
@@ -443,7 +463,7 @@ const LeaderboardPage = () => {
                                         <TableRow key={user.id} className="hover:bg-muted/50">
                                             <TableCell>
                                                 <div className="flex items-center justify-center">
-                                                    {getRankIcon(user.rank)}
+                                                    {getRankIcon(user.rank, true)}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
