@@ -33,4 +33,52 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    // 코드 스플리팅 최적화
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React 관련 코드를 분리
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          // UI 라이브러리 분리
+          'ui-vendor': [
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-toast',
+            '@radix-ui/react-tooltip'
+          ],
+          // Supabase 분리
+          'supabase-vendor': ['@supabase/supabase-js'],
+          // React Query 분리
+          'query-vendor': ['@tanstack/react-query'],
+          // 아이콘 및 유틸리티
+          'utils-vendor': ['lucide-react', 'clsx', 'tailwind-merge', 'class-variance-authority']
+        }
+      }
+    },
+    // 소스맵 비활성화 (프로덕션)
+    sourcemap: mode === 'development',
+    // 최소화 설정
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production'
+      }
+    },
+    // 청크 크기 제한
+    chunkSizeWarningLimit: 1000
+  },
+  // 의존성 최적화
+  optimizeDeps: {
+    include: [
+      'react',
+      'react-dom',
+      'react-router-dom',
+      '@supabase/supabase-js',
+      '@tanstack/react-query'
+    ]
+  }
 }));

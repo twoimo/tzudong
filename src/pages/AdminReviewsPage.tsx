@@ -321,10 +321,10 @@ export default function AdminReviewsPage() {
                             검토 대기 ({pendingReviews.length})
                         </TabsTrigger>
                         <TabsTrigger value="approved">
-                            승인됨 ({approvedReviews.length})
+                            승인된 리뷰 ({approvedReviews.length})
                         </TabsTrigger>
                         <TabsTrigger value="rejected">
-                            거부됨 ({rejectedReviews.length})
+                            거부된 리뷰 ({rejectedReviews.length})
                         </TabsTrigger>
                     </TabsList>
 

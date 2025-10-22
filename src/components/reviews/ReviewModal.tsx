@@ -203,13 +203,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             const { error: insertError } = await supabase
                 .from('reviews')
                 .insert({
-                    user_id: user.id,
+                user_id: user.id,
                     restaurant_id: selectedRestaurantId,
                     title: `${selectedRestaurant.name} 방문 후기`,
-                    content: content.trim(),
+                content: content.trim(),
                     visited_at: visitedAtDateTime,
                     verification_photo: verificationPhotoPath,
-                    food_photos: foodPhotoUrls,
+                food_photos: foodPhotoUrls,
                     categories: categories,
                     is_verified: false, // 관리자 검토 대기
                 });
@@ -260,11 +260,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                     <DialogHeader className="px-6 pt-6 pb-4 border-b">
                         <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
                             쯔양 팬 맛집 리뷰 작성
-                        </DialogTitle>
+                    </DialogTitle>
                         <DialogDescription>
                             쯔양이 방문한 맛집에 대한 방문 후기를 공유해주세요
                         </DialogDescription>
-                    </DialogHeader>
+                </DialogHeader>
 
                     <div className="flex-1 overflow-y-auto px-6 py-4">
                         <div className="space-y-6">
@@ -288,7 +288,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                             </Alert>
 
                             {/* Restaurant Selection */}
-                            <div className="space-y-2">
+                    <div className="space-y-2">
                                 <Label htmlFor="restaurant">
                                     방문한 쯔양 맛집 <span className="text-red-500">*</span>
                                 </Label>
@@ -309,44 +309,44 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         선택된 맛집: {jjyangRestaurants.find(r => r.id === selectedRestaurantId)?.name}
                                     </p>
                                 )}
-                            </div>
+                    </div>
 
                             {/* Visit Date & Time */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
                                     <Label htmlFor="visitDate" className="flex items-center gap-2">
                                         <Calendar className="h-4 w-4" />
                                         방문 날짜 <span className="text-red-500">*</span>
                                     </Label>
-                                    <Input
+                            <Input
                                         id="visitDate"
-                                        type="date"
-                                        value={visitedDate}
-                                        onChange={(e) => setVisitedDate(e.target.value)}
+                                type="date"
+                                value={visitedDate}
+                                onChange={(e) => setVisitedDate(e.target.value)}
                                         max={new Date().toISOString().split('T')[0]}
                                         min={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                                    />
+                            />
                                     <p className="text-xs text-muted-foreground">
                                         📅 3개월 이내 방문한 맛집만 리뷰 작성 가능합니다
                                     </p>
-                                </div>
+                        </div>
 
-                                <div className="space-y-2">
+                        <div className="space-y-2">
                                     <Label htmlFor="visitTime">
                                         방문 시간 <span className="text-red-500">*</span>
                                     </Label>
-                                    <Input
+                            <Input
                                         id="visitTime"
-                                        type="time"
+                                type="time"
                                         step="60"
-                                        value={visitedTime}
-                                        onChange={(e) => setVisitedTime(e.target.value)}
-                                    />
-                                </div>
-                            </div>
+                                value={visitedTime}
+                                onChange={(e) => setVisitedTime(e.target.value)}
+                            />
+                        </div>
+                    </div>
 
-                            {/* Category */}
-                            <div className="space-y-2">
+                    {/* Category */}
+                    <div className="space-y-2">
                                 <Label>
                                     카테고리 <span className="text-red-500">*</span>
                                 </Label>
@@ -370,7 +370,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                             <h4 className="font-semibold text-sm">카테고리 선택</h4>
                                             <div className="space-y-2 max-h-48 overflow-y-auto">
                                                 {CATEGORIES.map((cat) => (
-                                                    <div key={cat} className="flex items-center space-x-2">
+                                <div key={cat} className="flex items-center space-x-2">
                                                         <Checkbox
                                                             id={`review-category-${cat}`}
                                                             checked={categories.includes(cat)}
@@ -386,10 +386,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                                             htmlFor={`review-category-${cat}`}
                                                             className="text-sm cursor-pointer flex-1"
                                                         >
-                                                            {cat}
-                                                        </Label>
-                                                    </div>
-                                                ))}
+                                        {cat}
+                                    </Label>
+                                </div>
+                            ))}
                                             </div>
                                             {categories.length > 0 && (
                                                 <div className="pt-2 border-t">
@@ -422,17 +422,17 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         ))}
                                     </div>
                                 )}
-                            </div>
+                    </div>
 
-                            {/* Verification Photo */}
-                            <div className="space-y-2">
+                    {/* Verification Photo */}
+                    <div className="space-y-2">
                                 <Label htmlFor="verificationPhoto" className="flex items-center gap-2">
                                     인증 사진 (본인 닉네임 포함) <span className="text-red-500">*</span>
                                 </Label>
                                 <Card className="p-4 border-dashed">
                                     <div className="flex flex-col items-center gap-3">
-                                        {verificationPhoto ? (
-                                            <div className="relative">
+                            {verificationPhoto ? (
+                                <div className="relative">
                                                 <Badge variant="default" className="gap-1 mb-2">
                                                     <CheckCircle2 className="h-3 w-3" />
                                                     인증 사진 업로드 완료
@@ -440,17 +440,17 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                                 <div className="text-sm text-muted-foreground">
                                                     {verificationPhoto.name}
                                                 </div>
-                                                <Button
+                                    <Button
                                                     variant="ghost"
                                                     size="sm"
                                                     className="mt-2"
-                                                    onClick={() => setVerificationPhoto(null)}
-                                                >
+                                        onClick={() => setVerificationPhoto(null)}
+                                    >
                                                     <XIcon className="h-4 w-4 mr-2" />
                                                     제거
-                                                </Button>
-                                            </div>
-                                        ) : (
+                                    </Button>
+                                </div>
+                            ) : (
                                             <>
                                                 <div className="text-center">
                                                     <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
@@ -463,19 +463,19 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                                 </div>
                                                 <Input
                                                     id="verificationPhoto"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={handleVerificationPhotoChange}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleVerificationPhotoChange}
                                                     className="max-w-xs"
-                                                />
+                                    />
                                             </>
-                                        )}
-                                    </div>
+                            )}
+                        </div>
                                 </Card>
-                            </div>
+                    </div>
 
-                            {/* Food Photos */}
-                            <div className="space-y-2">
+                    {/* Food Photos */}
+                    <div className="space-y-2">
                                 <Label htmlFor="foodPhotos" className="flex items-center gap-2">
                                     음식 사진 (다양한 각도) <span className="text-red-500">*</span>
                                 </Label>
@@ -484,40 +484,40 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         {foodPhotos.length > 0 && (
                                             <div className="grid grid-cols-3 gap-3">
                                                 {foodPhotos.map((photo, index) => (
-                                                    <div key={index} className="relative">
+                                <div key={index} className="relative">
                                                         <Card className="p-2">
                                                             <div className="text-xs text-muted-foreground truncate">
                                                                 📷 {photo.name}
                                                             </div>
                                                         </Card>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="icon"
+                                    <Button
+                                        variant="destructive"
+                                        size="icon"
                                                             className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                                                            onClick={() => removeFoodPhoto(index)}
-                                                        >
+                                        onClick={() => removeFoodPhoto(index)}
+                                    >
                                                             <XIcon className="h-3 w-3" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
+                                    </Button>
+                                </div>
+                            ))}
                                             </div>
                                         )}
 
                                         <div className="flex flex-col items-center gap-3 pt-3 border-t border-dashed">
-                                            <Upload className="h-6 w-6 text-muted-foreground" />
+                                    <Upload className="h-6 w-6 text-muted-foreground" />
                                             <p className="text-sm text-center text-muted-foreground">
                                                 먹은 음식을 다양한 각도에서 촬영한 사진을 올려주세요
                                             </p>
                                             <Input
                                                 id="foodPhotos"
-                                                type="file"
-                                                accept="image/*"
-                                                multiple
-                                                onChange={handleFoodPhotosChange}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={handleFoodPhotosChange}
                                                 className="max-w-xs"
-                                            />
-                                        </div>
-                                    </div>
+                                    />
+                        </div>
+                    </div>
                                 </Card>
                                 <p className="text-xs text-muted-foreground">
                                     업로드된 사진: {foodPhotos.length}개
@@ -545,11 +545,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                     </div>
                                 </Card>
 
-                                <Textarea
-                                    id="content"
+                        <Textarea
+                            id="content"
                                     placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
                                     rows={8}
                                     className="resize-none"
                                 />
@@ -576,18 +576,18 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                             )}
                         </div>
 
-                        <div className="flex gap-2">
+                    <div className="flex gap-2">
                             <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
-                                취소
-                            </Button>
-                            <Button
+                            취소
+                        </Button>
+                        <Button
                                 onClick={handleSubmit}
                                 disabled={!isFormValid || isSubmitting}
                                 className="bg-gradient-primary"
                             >
                                 {isSubmitting ? "등록 중..." : "리뷰 등록"}
-                            </Button>
-                        </div>
+                        </Button>
+                    </div>
                     </div>
                 </div>
             </DialogContent>
