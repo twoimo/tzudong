@@ -36,7 +36,7 @@ interface Review {
     visited_at: string;
     verification_photo: string;
     food_photos: string[];
-    category: string[] | string;
+    category: string;
     is_verified: boolean;
     admin_note: string | null;
     is_pinned: boolean;
@@ -106,7 +106,6 @@ export default function AdminReviewsPage() {
             // 6. 리뷰 데이터 매핑
             const reviews = reviewsData.map(review => ({
                 ...review,
-                category: review.categories || review.category, // categories 우선 사용
                 profiles: {
                     nickname: profilesMap.get(review.user_id) || '익명'
                 },
@@ -314,37 +313,36 @@ export default function AdminReviewsPage() {
             </div>
 
             {/* 리뷰 목록 */}
-            <ScrollArea className="flex-1">
-                <div className="p-6">
-                    <Tabs defaultValue="pending" className="w-full">
-                        <TabsList className="grid w-full grid-cols-3 mb-6">
-                            <TabsTrigger value="pending">
-                                검토 대기 ({pendingReviews.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="approved">
-                                승인된 리뷰 ({approvedReviews.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="rejected">
-                                거부된 리뷰 ({rejectedReviews.length})
-                            </TabsTrigger>
-                        </TabsList>
+            <div className="flex-1 overflow-auto p-6">
+                <Tabs defaultValue="pending" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="pending">
+                            검토 대기 ({pendingReviews.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="approved">
+                            승인된 리뷰 ({approvedReviews.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="rejected">
+                            거부된 리뷰 ({rejectedReviews.length})
+                        </TabsTrigger>
+                    </TabsList>
 
-                        <TabsContent value="pending">
-                            {isLoading ? (
-                                <div className="flex items-center justify-center py-12">
-                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                                </div>
-                            ) : pendingReviews.length === 0 ? (
-                                <Card className="p-12 text-center">
-                                    <div className="text-6xl mb-4">📋</div>
-                                    <h3 className="text-xl font-semibold mb-2">검토 대기 중인 리뷰가 없습니다</h3>
-                                    <p className="text-muted-foreground">
-                                        모든 리뷰가 검토되었거나 아직 작성된 리뷰가 없습니다.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="space-y-4">
-                                    {pendingReviews.map((review) => (
+                    <TabsContent value="pending" className="mt-6">
+                        {isLoading ? (
+                            <div className="flex items-center justify-center py-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                            </div>
+                        ) : pendingReviews.length === 0 ? (
+                            <Card className="p-12 text-center">
+                                <div className="text-6xl mb-4">📋</div>
+                                <h3 className="text-xl font-semibold mb-2">검토 대기 중인 리뷰가 없습니다</h3>
+                                <p className="text-muted-foreground">
+                                    모든 리뷰가 검토되었거나 아직 작성된 리뷰가 없습니다.
+                                </p>
+                            </Card>
+                        ) : (
+                            <div className="grid gap-4">
+                                {pendingReviews.map((review) => (
                                     <Card key={review.id} className="p-4">
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex-1">
@@ -422,13 +420,7 @@ export default function AdminReviewsPage() {
 
                                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                 <span>작성일: {new Date(review.created_at).toLocaleString('ko-KR')}</span>
-                                                {Array.isArray(review.category) ? (
-                                                    review.category.map((cat, index) => (
-                                                        <Badge key={index} variant="outline">{cat}</Badge>
-                                                    ))
-                                                ) : (
-                                                    <Badge variant="outline">{review.category}</Badge>
-                                                )}
+                                                <Badge variant="outline">{review.category}</Badge>
                                             </div>
                                         </div>
                                     </Card>
@@ -437,18 +429,18 @@ export default function AdminReviewsPage() {
                         )}
                     </TabsContent>
 
-                        <TabsContent value="approved">
-                            {approvedReviews.length === 0 ? (
-                                <Card className="p-12 text-center">
-                                    <div className="text-6xl mb-4">✅</div>
-                                    <h3 className="text-xl font-semibold mb-2">승인된 리뷰가 없습니다</h3>
-                                    <p className="text-muted-foreground">
-                                        아직 승인된 리뷰가 없습니다.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="space-y-4">
-                                    {approvedReviews.map((review) => (
+                    <TabsContent value="approved" className="mt-6">
+                        {approvedReviews.length === 0 ? (
+                            <Card className="p-12 text-center">
+                                <div className="text-6xl mb-4">✅</div>
+                                <h3 className="text-xl font-semibold mb-2">승인된 리뷰가 없습니다</h3>
+                                <p className="text-muted-foreground">
+                                    아직 승인된 리뷰가 없습니다.
+                                </p>
+                            </Card>
+                        ) : (
+                            <div className="grid gap-4">
+                                {approvedReviews.map((review) => (
                                     <Card key={review.id} className="p-4">
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex-1">
@@ -520,13 +512,7 @@ export default function AdminReviewsPage() {
 
                                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                 <span>작성일: {new Date(review.created_at).toLocaleString('ko-KR')}</span>
-                                                {Array.isArray(review.category) ? (
-                                                    review.category.map((cat, index) => (
-                                                        <Badge key={index} variant="outline">{cat}</Badge>
-                                                    ))
-                                                ) : (
-                                                    <Badge variant="outline">{review.category}</Badge>
-                                                )}
+                                                <Badge variant="outline">{review.category}</Badge>
                                             </div>
                                         </div>
                                     </Card>
@@ -535,18 +521,18 @@ export default function AdminReviewsPage() {
                         )}
                     </TabsContent>
 
-                        <TabsContent value="rejected">
-                            {rejectedReviews.length === 0 ? (
-                                <Card className="p-12 text-center">
-                                    <div className="text-6xl mb-4">❌</div>
-                                    <h3 className="text-xl font-semibold mb-2">거부된 리뷰가 없습니다</h3>
-                                    <p className="text-muted-foreground">
-                                        아직 거부된 리뷰가 없습니다.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="space-y-4">
-                                    {rejectedReviews.map((review) => (
+                    <TabsContent value="rejected" className="mt-6">
+                        {rejectedReviews.length === 0 ? (
+                            <Card className="p-12 text-center">
+                                <div className="text-6xl mb-4">❌</div>
+                                <h3 className="text-xl font-semibold mb-2">거부된 리뷰가 없습니다</h3>
+                                <p className="text-muted-foreground">
+                                    아직 거부된 리뷰가 없습니다.
+                                </p>
+                            </Card>
+                        ) : (
+                            <div className="grid gap-4">
+                                {rejectedReviews.map((review) => (
                                     <Card key={review.id} className="p-4">
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex-1">
@@ -629,13 +615,7 @@ export default function AdminReviewsPage() {
 
                                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                 <span>작성일: {new Date(review.created_at).toLocaleString('ko-KR')}</span>
-                                                {Array.isArray(review.category) ? (
-                                                    review.category.map((cat, index) => (
-                                                        <Badge key={index} variant="outline">{cat}</Badge>
-                                                    ))
-                                                ) : (
-                                                    <Badge variant="outline">{review.category}</Badge>
-                                                )}
+                                                <Badge variant="outline">{review.category}</Badge>
                                             </div>
                                         </div>
                                     </Card>
