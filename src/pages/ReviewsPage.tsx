@@ -427,8 +427,8 @@ const ReviewsPage = () => {
                     <Button
                         onClick={handleWriteReview}
                         className={`gap-2 ${isLoggedIn
-                                ? "bg-gradient-primary hover:opacity-90"
-                                : "bg-muted hover:bg-muted/80 text-muted-foreground"
+                            ? "bg-gradient-primary hover:opacity-90"
+                            : "bg-muted hover:bg-muted/80 text-muted-foreground"
                             }`}
                         disabled={!isLoggedIn}
                     >
