@@ -158,15 +158,14 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
         setLoading(true);
         try {
-            // 1. 프로필 익명화 (삭제 대신 닉네임 변경)
+            // 1. 프로필 삭제
             const { error: profileError } = await supabase
                 .from('profiles')
-                .update({ nickname: '탈퇴한 사용자' })
+                .delete()
                 .eq('user_id', user.id);
 
             if (profileError) {
-                console.warn('프로필 익명화 실패:', profileError);
-                // 프로필 익명화 실패해도 계속 진행
+                throw new Error(`프로필 삭제 실패: ${profileError.message}`);
             }
 
             // 2. user_stats 정보 삭제
@@ -180,19 +179,42 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 // 통계 삭제 실패해도 계속 진행
             }
 
-            // 3. 계정 탈퇴 처리 완료
-            toast.success('계정 탈퇴가 완료되었습니다. 잠시 후 로그아웃됩니다.');
+            // 3. Auth 계정 삭제 시도 (관리자 권한 필요)
+            let authDeleted = false;
+            try {
+                const { error: authError } = await supabase.auth.admin.deleteUser(user.id);
+                if (authError) {
+                    console.warn('Auth 계정 삭제 실패 (관리자 권한 필요):', authError);
+                } else {
+                    authDeleted = true;
+                }
+            } catch (authError) {
+                console.warn('Auth 계정 삭제 시도 실패:', authError);
+            }
+
+            // 4. 계정 탈퇴 처리 완료
+            if (authDeleted) {
+                toast.success('계정이 완전히 삭제되었습니다. 잠시 후 로그아웃됩니다.');
+            } else {
+                toast.success('프로필이 삭제되었습니다. Auth 계정은 유지되지만 더 이상 사용하실 수 없습니다.');
+            }
 
             // 로그아웃
             onClose();
             setTimeout(async () => {
-                try {
-                    await supabase.auth.signOut();
+                if (authDeleted) {
+                    // Auth 계정이 삭제되었으면 자동 로그아웃됨
                     window.location.reload();
-                } catch (signOutError) {
-                    console.warn('로그아웃 실패:', signOutError);
-                    // 로그아웃 실패해도 페이지 리로드
-                    window.location.reload();
+                } else {
+                    // Auth 계정이 유지되므로 수동 로그아웃
+                    try {
+                        await supabase.auth.signOut();
+                        window.location.reload();
+                    } catch (signOutError) {
+                        console.warn('로그아웃 실패:', signOutError);
+                        // 로그아웃 실패해도 페이지 리로드
+                        window.location.reload();
+                    }
                 }
             }, 2000);
 
@@ -404,8 +426,9 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         <AlertDialogDescription>
                                             계정을 탈퇴하면:
                                             <br />• 작성한 리뷰는 '탈퇴한 사용자'로 유지됩니다
-                                            <br />• 프로필이 익명화됩니다
+                                            <br />• 프로필이 완전히 삭제됩니다
                                             <br />• 랭킹에서 제외됩니다
+                                            <br />• Auth 계정도 삭제됩니다 (가능한 경우)
                                             <br />• 자동으로 로그아웃됩니다
                                             <br />
                                             <br />계속하시려면 아래에 계정 이메일을 입력해주세요.

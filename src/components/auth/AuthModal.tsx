@@ -43,7 +43,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     setIsLoading(true);
     try {
       await signIn(email, password);
-      toast.success("로그인 성공!");
+      // 로그인 성공 토스트는 AuthContext에서 프로필 확인 후 표시
       resetForm();
       onClose();
     } catch (error: any) {
