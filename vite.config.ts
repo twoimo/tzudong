@@ -60,14 +60,8 @@ export default defineConfig(({ mode }) => ({
     },
     // 소스맵 비활성화 (프로덕션)
     sourcemap: mode === 'development',
-    // 최소화 설정
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: mode === 'production',
-        drop_debugger: mode === 'production'
-      }
-    },
+    // 최소화 설정 (esbuild 사용 - 더 빠르고 안정적)
+    minify: 'esbuild',
     // 청크 크기 제한
     chunkSizeWarningLimit: 1000
   },
