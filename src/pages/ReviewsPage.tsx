@@ -22,7 +22,7 @@ import { toast } from "@/hooks/use-toast";
 interface Review {
     id: string;
     restaurantName: string;
-    restaurantCategory: string;
+    restaurantCategories: string[];
     userName: string;
     visitedAt: string;
     submittedAt: string;
@@ -40,7 +40,7 @@ const DUMMY_REVIEWS: Review[] = [
     {
         id: "dummy-review-1",
         restaurantName: "홍대 떡볶이 (샘플)",
-        restaurantCategory: "분식",
+        restaurantCategories: ["분식"],
         userName: "쯔양팬123",
         visitedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
         submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
@@ -55,7 +55,7 @@ const DUMMY_REVIEWS: Review[] = [
     {
         id: "dummy-review-2",
         restaurantName: "강남 삼겹살 (샘플)",
-        restaurantCategory: "고기",
+        restaurantCategories: ["고기"],
         userName: "맛집러버",
         visitedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
         submittedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
@@ -70,7 +70,7 @@ const DUMMY_REVIEWS: Review[] = [
     {
         id: "dummy-review-3",
         restaurantName: "종로 찜닭 (샘플)",
-        restaurantCategory: "찜·탕",
+        restaurantCategories: ["찜·탕"],
         userName: "먹방마니아",
         visitedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         submittedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
@@ -85,7 +85,7 @@ const DUMMY_REVIEWS: Review[] = [
     {
         id: "dummy-review-4",
         restaurantName: "명동 칼국수 (샘플)",
-        restaurantCategory: "한식",
+        restaurantCategories: ["한식"],
         userName: "칼국수조아",
         visitedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
         submittedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
@@ -100,7 +100,7 @@ const DUMMY_REVIEWS: Review[] = [
     {
         id: "dummy-review-5",
         restaurantName: "신촌 치킨 (샘플)",
-        restaurantCategory: "치킨",
+        restaurantCategories: ["치킨"],
         userName: "야식킹",
         visitedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
         submittedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
@@ -189,9 +189,9 @@ const ReviewsPage = () => {
                     return {
                         id: review.id,
                         restaurantName: restaurant?.name || '알 수 없음',
-                        restaurantCategory: Array.isArray(restaurant?.category)
-                            ? restaurant.category[0] || review.categories?.[0] || '기타'
-                            : restaurant?.category || review.categories?.[0] || review.category || '기타',
+                        restaurantCategories: Array.isArray(restaurant?.category)
+                            ? restaurant.category
+                            : [restaurant?.category || review.categories?.[0] || review.category || '기타'],
                         userName: profilesMap.get(review.user_id) || '익명',
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
@@ -535,7 +535,11 @@ const ReviewsPage = () => {
                                                 <MapPin className="h-3 w-3" />
                                                 <span className="font-medium">{review.restaurantName}</span>
                                             </div>
-                                            <Badge variant="outline">{review.restaurantCategory}</Badge>
+                                            <div className="flex flex-wrap gap-1">
+                                                {review.restaurantCategories.map((category, index) => (
+                                                    <Badge key={index} variant="outline">{category}</Badge>
+                                                ))}
+                                            </div>
                                             <div className="flex items-center gap-1">
                                                 <Calendar className="h-3 w-3" />
                                                 방문: {formatDateTime(review.visitedAt)}
