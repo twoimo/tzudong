@@ -26,8 +26,9 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
-import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
+import { RESTAURANT_CATEGORIES, Restaurant } from "@/types/restaurant";
 import { useRestaurants } from "@/hooks/use-restaurants";
+import { useAuth } from "@/contexts/AuthContext";
 
 // 지역 목록
 const REGIONS = [
@@ -48,9 +49,14 @@ interface FilterState {
     ratingMax: number;
 }
 
-const FilteringPage = () => {
+interface FilteringPageProps {
+    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+}
+
+const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const { data: restaurants = [], isLoading } = useRestaurants({ enabled: true });
     const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
+    const { isAdmin } = useAuth();
 
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
@@ -554,6 +560,11 @@ const FilteringPage = () => {
                                     <TableRow
                                         key={restaurant.id}
                                         className="hover:bg-muted/50 cursor-pointer transition-colors"
+                                        onClick={() => {
+                                            if (isAdmin && onAdminEditRestaurant) {
+                                                onAdminEditRestaurant(restaurant);
+                                            }
+                                        }}
                                     >
                                         <TableCell className="font-medium">
                                             <div className="flex items-center gap-2">
@@ -562,7 +573,14 @@ const FilteringPage = () => {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline">{restaurant.category}</Badge>
+                                            <div className="flex flex-wrap gap-1">
+                                                {Array.isArray(restaurant.category)
+                                                    ? restaurant.category.map((cat, idx) => (
+                                                        <Badge key={idx} variant="outline">{cat}</Badge>
+                                                    ))
+                                                    : <Badge variant="outline">{restaurant.category}</Badge>
+                                                }
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <span className="font-semibold text-primary">
