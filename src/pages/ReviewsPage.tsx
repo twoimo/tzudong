@@ -143,12 +143,12 @@ const ReviewsPage = () => {
 
                 if (reviewsError) {
                     console.error('❌ 리뷰 조회 실패:', reviewsError);
-                    return DUMMY_REVIEWS;
+                    return [];
                 }
 
                 if (!reviewsData || reviewsData.length === 0) {
-                    console.warn('⚠️ 리뷰 데이터가 없음');
-                    return DUMMY_REVIEWS;
+                    console.warn('⚠️ 승인된 리뷰 데이터가 없음');
+                    return [];
                 }
 
                 console.log(`📊 ${reviewsData.length}개 리뷰 조회됨`);
@@ -210,14 +210,14 @@ const ReviewsPage = () => {
                 return reviews;
             } catch (error) {
                 console.error('❌ 리뷰 데이터 조회 중 오류:', error);
-                return DUMMY_REVIEWS;
+                return [];
             }
         },
     });
 
-    // 실제 데이터가 있으면 실제 데이터 사용, 없으면 더미 데이터 사용
-    const displayData = reviewsData.length > 0 ? reviewsData : DUMMY_REVIEWS;
-    const isDummyData = displayData.length > 0 && displayData[0].id.startsWith('dummy-');
+    // 실제 승인된 리뷰 데이터 사용
+    const displayData = reviewsData;
+    const isDummyData = false; // 더미 데이터 사용하지 않음
 
     const filteredReviews = displayData.filter((review) => {
         const matchesSearch =

@@ -127,13 +127,13 @@ const LeaderboardPage = () => {
                     .eq('is_verified', true); // Only verified reviews
 
                 if (reviewsError) {
-                    console.warn('리뷰 데이터 조회 실패, 샘플 데이터 표시:', reviewsError.message);
-                    return DUMMY_LEADERBOARD;
+                    console.warn('리뷰 데이터 조회 실패:', reviewsError.message);
+                    return [];
                 }
 
                 if (!reviewsData || reviewsData.length === 0) {
-                    console.warn('승인된 리뷰 데이터가 없음, 샘플 데이터 표시');
-                    return DUMMY_LEADERBOARD;
+                    console.warn('승인된 리뷰 데이터가 없음');
+                    return [];
                 }
 
                 // Get unique user IDs
@@ -212,16 +212,11 @@ const LeaderboardPage = () => {
                         } as LeaderboardUser;
                     });
 
-                // 실제 데이터가 없으면 더미 데이터 반환
-                if (leaderboard.length === 0) {
-                    return DUMMY_LEADERBOARD;
-                }
-
                 console.log(`🏆 리더보드 데이터 로드 완료: ${leaderboard.length}명의 사용자`);
                 return leaderboard;
             } catch (error) {
-                console.warn('리더보드 데이터 조회 중 오류 발생, 샘플 데이터 표시:', error);
-                return DUMMY_LEADERBOARD;
+                console.warn('리더보드 데이터 조회 중 오류 발생:', error);
+                return [];
             }
         },
     });
