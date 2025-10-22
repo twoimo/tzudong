@@ -38,6 +38,9 @@ interface RestaurantSubmission {
     reviewed_at: string | null;
     reviewed_by_admin_id: string | null;
     approved_restaurant_id: string | null;
+    submission_type?: 'new' | 'update';
+    original_restaurant_id?: string;
+    changes_requested?: any;
 }
 
 interface SubmissionWithUser extends RestaurantSubmission {
@@ -115,41 +118,77 @@ export default function AdminSubmissionsPage() {
         mutationFn: async ({ submissionId, submission }: { submissionId: string; submission: SubmissionWithUser }) => {
             if (!user) throw new Error('로그인이 필요합니다');
 
-            const lat = parseFloat(approvalData.lat);
-            const lng = parseFloat(approvalData.lng);
+            let restaurantId: string;
 
-            if (isNaN(lat) || isNaN(lng)) {
-                throw new Error('올바른 좌표를 입력해주세요');
+            // 수정 요청인지 확인 (컬럼이 존재하는 경우에만)
+            const isUpdateRequest = submission.submission_type === 'update' && submission.original_restaurant_id;
+
+            if (isUpdateRequest) {
+                // 수정 요청: 기존 맛집 데이터 업데이트
+                const lat = parseFloat(approvalData.lat);
+                const lng = parseFloat(approvalData.lng);
+
+                if (isNaN(lat) || isNaN(lng)) {
+                    throw new Error('올바른 좌표를 입력해주세요');
+                }
+
+                const { error: updateError } = await supabase
+                    .from('restaurants')
+                    .update({
+                        name: submission.restaurant_name,
+                        address: submission.address,
+                        phone: submission.phone,
+                        category: submission.category,
+                        youtube_link: submission.youtube_link,
+                        description: submission.description,
+                        lat,
+                        lng,
+                        ai_rating: approvalData.ai_rating ? parseFloat(approvalData.ai_rating) : null,
+                        jjyang_visit_count: parseInt(approvalData.jjyang_visit_count) || 1,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', submission.original_restaurant_id);
+
+                if (updateError) throw updateError;
+                restaurantId = submission.original_restaurant_id;
+            } else {
+                // 신규 제보: 새로운 맛집 생성
+                const lat = parseFloat(approvalData.lat);
+                const lng = parseFloat(approvalData.lng);
+
+                if (isNaN(lat) || isNaN(lng)) {
+                    throw new Error('올바른 좌표를 입력해주세요');
+                }
+
+                const { data: restaurant, error: restaurantError } = await supabase
+                    .from('restaurants')
+                    .insert({
+                        name: submission.restaurant_name,
+                        address: submission.address,
+                        phone: submission.phone,
+                        category: submission.category,
+                        youtube_link: submission.youtube_link,
+                        description: submission.description,
+                        lat,
+                        lng,
+                        ai_rating: approvalData.ai_rating ? parseFloat(approvalData.ai_rating) : null,
+                        jjyang_visit_count: parseInt(approvalData.jjyang_visit_count) || 1,
+                    })
+                    .select()
+                    .single();
+
+                if (restaurantError) throw restaurantError;
+                restaurantId = restaurant.id;
             }
 
-            // 1. 레스토랑 테이블에 추가
-            const { data: restaurant, error: restaurantError } = await supabase
-                .from('restaurants')
-                .insert({
-                    name: submission.restaurant_name,
-                    address: submission.address,
-                    phone: submission.phone,
-                    category: submission.category,
-                    youtube_link: submission.youtube_link,
-                    description: submission.description,
-                    lat,
-                    lng,
-                    ai_rating: approvalData.ai_rating ? parseFloat(approvalData.ai_rating) : null,
-                    jjyang_visit_count: parseInt(approvalData.jjyang_visit_count) || 1,
-                })
-                .select()
-                .single();
-
-            if (restaurantError) throw restaurantError;
-
-            // 2. 제보 상태 업데이트
+            // 제보 상태 업데이트
             const { error: updateError } = await supabase
                 .from('restaurant_submissions')
                 .update({
                     status: 'approved',
                     reviewed_by_admin_id: user.id,
                     reviewed_at: new Date().toISOString(),
-                    approved_restaurant_id: restaurant.id,
+                    approved_restaurant_id: restaurantId,
                 })
                 .eq('id', submissionId);
 
@@ -692,6 +731,9 @@ function SubmissionCard({
                             <h3 className="text-lg font-semibold">{submission.restaurant_name}</h3>
                             {getStatusBadge(submission.status)}
                             <Badge variant="outline">{submission.category}</Badge>
+                            <Badge variant={submission.original_restaurant_id ? 'secondary' : 'default'}>
+                                {submission.original_restaurant_id ? '수정 요청' : '신규 제보'}
+                            </Badge>
                         </div>
 
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -718,6 +760,32 @@ function SubmissionCard({
                             <Youtube className="h-4 w-4" />
                             유튜브 영상 보기
                         </a>
+
+                        {/* 수정 요청 변경사항 표시 */}
+                        {submission.original_restaurant_id && submission.changes_requested && (
+                            <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded">
+                                <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">
+                                    🔄 요청된 변경사항:
+                                </p>
+                                <div className="space-y-1">
+                                    {Object.entries(submission.changes_requested).map(([field, change]: [string, any]) => (
+                                        <div key={field} className="text-xs">
+                                            <span className="font-medium text-blue-700 dark:text-blue-300">
+                                                {field === 'restaurant_name' ? '이름' :
+                                                    field === 'address' ? '주소' :
+                                                        field === 'phone' ? '전화번호' :
+                                                            field === 'category' ? '카테고리' :
+                                                                field === 'youtube_link' ? '유튜브 링크' :
+                                                                    field === 'description' ? '설명' : field}:
+                                            </span>
+                                            <span className="text-muted-foreground ml-1">
+                                                {change.from || '(없음)'} → {change.to || '(없음)'}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {submission.status === 'rejected' && submission.rejection_reason && (
                             <div className="mt-2 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">

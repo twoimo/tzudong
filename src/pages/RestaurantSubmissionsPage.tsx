@@ -26,12 +26,18 @@ interface RestaurantSubmission {
     rejection_reason: string | null;
     created_at: string;
     reviewed_at: string | null;
+    submission_type?: 'new' | 'update';
+    original_restaurant_id?: string;
+    changes_requested?: any;
 }
 
 export default function RestaurantSubmissionsPage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+    const [submissionMode, setSubmissionMode] = useState<'new' | 'update'>('new');
+    const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
+    const [originalData, setOriginalData] = useState<any>(null);
     const [formData, setFormData] = useState({
         restaurant_name: "",
         address: "",
@@ -39,6 +45,20 @@ export default function RestaurantSubmissionsPage() {
         category: RESTAURANT_CATEGORIES[0],
         youtube_link: "",
         description: "",
+    });
+
+    // 모든 맛집 조회 (수정 요청용)
+    const { data: allRestaurants = [] } = useQuery({
+        queryKey: ['all-restaurants'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('restaurants')
+                .select('id, name, address, category, phone, youtube_link, description')
+                .order('name');
+
+            if (error) throw error;
+            return data || [];
+        },
     });
 
     // 내 제보 내역 조회
@@ -64,31 +84,109 @@ export default function RestaurantSubmissionsPage() {
         mutationFn: async (data: typeof formData) => {
             if (!user) throw new Error('로그인이 필요합니다');
 
+            // 기본 제보 데이터
+            const submissionData: any = {
+                user_id: user.id,
+                restaurant_name: data.restaurant_name.trim(),
+                address: data.address.trim(),
+                phone: data.phone.trim() || null,
+                category: data.category,
+                youtube_link: data.youtube_link.trim(),
+                description: data.description.trim() || null,
+                status: 'pending',
+            };
+
+            // 수정 요청인 경우 추가 데이터 (컬럼이 존재하는 경우에만)
+            if (submissionMode === 'update' && selectedRestaurant) {
+                try {
+                    // submission_type 컬럼 존재 확인
+                    const { error: testError } = await supabase
+                        .from('restaurant_submissions')
+                        .select('submission_type')
+                        .limit(1);
+
+                    if (!testError) {
+                        submissionData.submission_type = submissionMode;
+                        submissionData.original_restaurant_id = selectedRestaurant.id;
+
+                        // 변경사항 계산
+                        if (originalData) {
+                            const changes_requested: any = {};
+                            Object.keys(data).forEach(key => {
+                                if (originalData[key as keyof typeof originalData] !== data[key as keyof typeof data]) {
+                                    changes_requested[key] = {
+                                        from: originalData[key] || '',
+                                        to: data[key as keyof typeof data] || ''
+                                    };
+                                }
+                            });
+                            if (Object.keys(changes_requested).length > 0) {
+                                submissionData.changes_requested = changes_requested;
+                            }
+                        }
+                    }
+                } catch (error) {
+                    // 컬럼이 존재하지 않으면 그냥 신규 제보로 처리
+                    console.warn('수정 요청 관련 컬럼이 존재하지 않아 신규 제보로 처리합니다');
+                }
+            }
+
             const { error } = await supabase
                 .from('restaurant_submissions')
-                .insert({
-                    user_id: user.id,
-                    restaurant_name: data.restaurant_name.trim(),
-                    address: data.address.trim(),
-                    phone: data.phone.trim() || null,
-                    category: data.category,
-                    youtube_link: data.youtube_link.trim(),
-                    description: data.description.trim() || null,
-                    status: 'pending',
-                });
+                .insert(submissionData);
 
             if (error) throw error;
         },
         onSuccess: () => {
-            toast.success('맛집 제보가 성공적으로 제출되었습니다!');
+            const modeText = submissionMode === 'new' ? '맛집 제보' : '수정 요청';
+            toast.success(`${modeText}가 성공적으로 제출되었습니다!`);
             queryClient.invalidateQueries({ queryKey: ['my-submissions'] });
             setIsSubmitModalOpen(false);
             resetForm();
         },
         onError: (error: any) => {
-            toast.error(error.message || '제보 제출에 실패했습니다');
+            const modeText = submissionMode === 'new' ? '제보' : '수정 요청';
+            toast.error(error.message || `${modeText} 제출에 실패했습니다`);
         },
     });
+
+    // 모드 변경 핸들러
+    const handleModeChange = (mode: 'new' | 'update') => {
+        setSubmissionMode(mode);
+        if (mode === 'new') {
+            setFormData({
+                restaurant_name: "",
+                address: "",
+                phone: "",
+                category: RESTAURANT_CATEGORIES[0] as typeof RESTAURANT_CATEGORIES[0],
+                youtube_link: "",
+                description: "",
+            });
+            setSelectedRestaurant(null);
+            setOriginalData(null);
+        }
+    };
+
+    // 기존 맛집 선택 핸들러
+    const handleRestaurantSelect = (restaurant: any) => {
+        setSelectedRestaurant(restaurant);
+        setOriginalData({
+            restaurant_name: restaurant.name,
+            address: restaurant.address,
+            phone: restaurant.phone || "",
+            category: restaurant.category,
+            youtube_link: restaurant.youtube_link || "",
+            description: restaurant.description || "",
+        });
+        setFormData({
+            restaurant_name: restaurant.name,
+            address: restaurant.address,
+            phone: restaurant.phone || "",
+            category: restaurant.category as typeof RESTAURANT_CATEGORIES[0],
+            youtube_link: restaurant.youtube_link || "",
+            description: restaurant.description || "",
+        });
+    };
 
     // 제보 삭제 (pending 상태만)
     const deleteMutation = useMutation({
@@ -192,13 +290,37 @@ export default function RestaurantSubmissionsPage() {
                             쯔양이 방문한 맛집을 유튜브 영상과 함께 제보해주세요!
                         </p>
                     </div>
-                    <Button
-                        onClick={handleSubmitClick}
-                        className="bg-gradient-primary hover:opacity-90 gap-2"
-                    >
-                        <Send className="h-4 w-4" />
-                        맛집 제보하기
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button
+                            onClick={() => {
+                                if (!user) {
+                                    toast.error('맛집 제보는 로그인 후 이용 가능합니다');
+                                    return;
+                                }
+                                setSubmissionMode('new');
+                                setIsSubmitModalOpen(true);
+                            }}
+                            className="bg-gradient-primary hover:opacity-90 gap-2"
+                        >
+                            <Send className="h-4 w-4" />
+                            신규 맛집 제보
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                if (!user) {
+                                    toast.error('맛집 수정 요청은 로그인 후 이용 가능합니다');
+                                    return;
+                                }
+                                setSubmissionMode('update');
+                                setIsSubmitModalOpen(true);
+                            }}
+                            variant="outline"
+                            className="gap-2"
+                        >
+                            <Youtube className="h-4 w-4" />
+                            기존 맛집 수정 요청
+                        </Button>
+                    </div>
                 </div>
 
                 {/* 안내 카드 */}
@@ -265,6 +387,9 @@ export default function RestaurantSubmissionsPage() {
                                             </h3>
                                             {getStatusBadge(submission.status)}
                                             <Badge variant="outline">{submission.category}</Badge>
+                                            <Badge variant={submission.original_restaurant_id ? 'secondary' : 'default'}>
+                                                {submission.original_restaurant_id ? '수정 요청' : '신규 제보'}
+                                            </Badge>
                                         </div>
 
                                         <p className="text-sm text-muted-foreground">
@@ -328,14 +453,119 @@ export default function RestaurantSubmissionsPage() {
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                            쯔양 맛집 제보하기
+                            {submissionMode === 'new' ? '쯔양 맛집 제보하기' : '기존 맛집 수정 요청'}
                         </DialogTitle>
                         <DialogDescription>
-                            쯔양이 방문한 맛집 정보와 유튜브 영상 링크를 알려주세요
+                            {submissionMode === 'new'
+                                ? '쯔양이 방문한 맛집 정보와 유튜브 영상 링크를 알려주세요'
+                                : '잘못된 정보나 오타가 있는 맛집 정보를 수정해주세요'
+                            }
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                        {/* 기존 맛집 선택 (수정 요청 모드일 때만) */}
+                        {submissionMode === 'update' && (
+                            <div className="space-y-2">
+                                <Label>
+                                    수정할 맛집 선택 <span className="text-red-500">*</span>
+                                </Label>
+                                <Select
+                                    value={selectedRestaurant?.id || ""}
+                                    onValueChange={(value) => {
+                                        const restaurant = allRestaurants.find(r => r.id === value);
+                                        if (restaurant) {
+                                            handleRestaurantSelect(restaurant);
+                                        }
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="수정할 맛집을 선택해주세요" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {allRestaurants.map((restaurant) => (
+                                            <SelectItem key={restaurant.id} value={restaurant.id}>
+                                                {restaurant.name} - {restaurant.category}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {/* 변경사항 표시 (수정 요청 모드일 때만) */}
+                        {submissionMode === 'update' && selectedRestaurant && originalData && (
+                            <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <div className="text-blue-600">📋</div>
+                                        <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                            수정 요청 내용
+                                        </Label>
+                                    </div>
+
+                                    {(() => {
+                                        const changes = Object.entries(formData).filter(([key, value]) => {
+                                            const originalValue = originalData[key as keyof typeof originalData];
+                                            return originalValue !== value;
+                                        });
+
+                                        if (changes.length === 0) {
+                                            return (
+                                                <div className="text-center py-4">
+                                                    <div className="text-2xl mb-2">✨</div>
+                                                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                                                        아직 변경사항이 없습니다
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        정보를 수정하면 여기에 표시됩니다
+                                                    </p>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div className="space-y-3">
+                                                {changes.map(([key, value]) => {
+                                                    const originalValue = originalData[key as keyof typeof originalData];
+                                                    const fieldName = {
+                                                        restaurant_name: '맛집 이름',
+                                                        address: '주소',
+                                                        phone: '전화번호',
+                                                        category: '카테고리',
+                                                        youtube_link: '유튜브 링크',
+                                                        description: '설명'
+                                                    }[key] || key;
+
+                                                    return (
+                                                        <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                    {fieldName}
+                                                                </span>
+                                                                <div className="flex items-center gap-1 text-xs text-orange-600">
+                                                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                                                    변경됨
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <div className="text-xs text-red-600 line-through">
+                                                                    기존: {originalValue || '없음'}
+                                                                </div>
+                                                                <div className="text-xs text-green-600 font-medium">
+                                                                    변경: {value || '없음'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            </Card>
+                        )}
+
                         <div className="space-y-2">
                             <Label htmlFor="restaurant_name">
                                 맛집 이름 <span className="text-red-500">*</span>
@@ -354,7 +584,7 @@ export default function RestaurantSubmissionsPage() {
                             </Label>
                             <Select
                                 value={formData.category}
-                                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                                onValueChange={(value) => setFormData({ ...formData, category: value as typeof RESTAURANT_CATEGORIES[0] })}
                             >
                                 <SelectTrigger>
                                     <SelectValue />
