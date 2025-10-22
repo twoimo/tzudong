@@ -163,8 +163,8 @@ export default function AdminReviewsPage() {
                 .from('reviews')
                 .update({
                     is_verified: false,
-                    admin_note: adminNote.trim() || null,
-                    edited_by_admin: !!adminNote.trim(),
+                    admin_note: adminNote.trim() ? `거부: ${adminNote.trim()}` : '거부: 관리자에 의해 거부됨',
+                    edited_by_admin: true,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', reviewId);
@@ -252,9 +252,9 @@ export default function AdminReviewsPage() {
         );
     }
 
-    const pendingReviews = reviews.filter(r => !r.is_verified);
+    const pendingReviews = reviews.filter(r => !r.is_verified && (!r.admin_note || r.admin_note.trim() === ''));
     const approvedReviews = reviews.filter(r => r.is_verified);
-    const rejectedReviews = reviews.filter(r => r.admin_note && r.admin_note.includes('거부'));
+    const rejectedReviews = reviews.filter(r => !r.is_verified && r.admin_note && r.admin_note.trim() !== '' && r.admin_note.includes('거부'));
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -591,7 +591,7 @@ export default function AdminReviewsPage() {
                                                         거부 사유:
                                                     </p>
                                                     <p className="text-sm text-red-600 dark:text-red-400">
-                                                        {review.admin_note}
+                                                        {review.admin_note.startsWith('거부: ') ? review.admin_note.substring(4) : review.admin_note}
                                                     </p>
                                                 </div>
                                             )}

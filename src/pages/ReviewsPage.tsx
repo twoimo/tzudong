@@ -11,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare } from "lucide-react";
+import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +29,7 @@ interface Review {
     isVerified: boolean;
     isPinned: boolean;
     isEditedByAdmin: boolean;
+    admin_note: string | null;
     photos: { url: string; type: string }[];
     category: string;
 }
@@ -46,6 +47,7 @@ const DUMMY_REVIEWS: Review[] = [
         isVerified: true,
         isPinned: true,
         isEditedByAdmin: false,
+        admin_note: null,
         photos: [],
         category: "분식",
     },
@@ -60,6 +62,7 @@ const DUMMY_REVIEWS: Review[] = [
         isVerified: true,
         isPinned: false,
         isEditedByAdmin: false,
+        admin_note: null,
         photos: [],
         category: "고기",
     },
@@ -74,6 +77,7 @@ const DUMMY_REVIEWS: Review[] = [
         isVerified: true,
         isPinned: false,
         isEditedByAdmin: false,
+        admin_note: null,
         photos: [],
         category: "찜·탕",
     },
@@ -88,6 +92,7 @@ const DUMMY_REVIEWS: Review[] = [
         isVerified: false,
         isPinned: false,
         isEditedByAdmin: false,
+        admin_note: "거부: 영수증에 닉네임이 제대로 표시되지 않음. 재제출 요청 필요.",
         photos: [],
         category: "한식",
     },
@@ -102,6 +107,7 @@ const DUMMY_REVIEWS: Review[] = [
         isVerified: false,
         isPinned: false,
         isEditedByAdmin: false,
+        admin_note: null,
         photos: [],
         category: "치킨",
     },
@@ -186,6 +192,7 @@ const ReviewsPage = () => {
                         isVerified: review.is_verified || false,
                         isPinned: review.is_pinned || false,
                         isEditedByAdmin: review.is_edited_by_admin || false,
+                        admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
                         category: review.category,
                     };
@@ -215,8 +222,8 @@ const ReviewsPage = () => {
         const matchesStatus =
             filterStatus === "all" ||
             (filterStatus === "approved" && review.isVerified) ||
-            (filterStatus === "rejected" && !review.isVerified && review.admin_note) ||
-            (filterStatus === "pending" && !review.isVerified && !review.admin_note);
+            (filterStatus === "rejected" && !review.isVerified && review.admin_note && review.admin_note.trim() !== '' && review.admin_note.includes('거부')) ||
+            (filterStatus === "pending" && !review.isVerified && (!review.admin_note || review.admin_note.trim() === ''));
 
         return matchesSearch && matchesCategory && matchesStatus;
     });
@@ -521,7 +528,7 @@ const ReviewsPage = () => {
                                 </div>
 
                                 {/* 거부 사유 (거부된 리뷰인 경우) */}
-                                {review.admin_note && (
+                                {review.admin_note && review.admin_note.includes('거부') && (
                                     <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
                                         <div className="flex items-center gap-2 mb-2">
                                             <XCircle className="h-4 w-4 text-red-600" />
@@ -530,7 +537,7 @@ const ReviewsPage = () => {
                                             </span>
                                         </div>
                                         <p className="text-sm text-red-600 dark:text-red-400">
-                                            {review.admin_note}
+                                            {review.admin_note.startsWith('거부: ') ? review.admin_note.substring(4) : review.admin_note}
                                         </p>
                                     </div>
                                 )}
