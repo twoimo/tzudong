@@ -137,6 +137,11 @@ CREATE POLICY "Users can insert own profile"
   TO authenticated
   WITH CHECK (user_id = auth.uid());
 
+CREATE POLICY "Users can delete own profile"
+  ON public.profiles FOR DELETE
+  TO authenticated
+  USING (user_id = auth.uid());
+
 -- RLS Policies for restaurants
 CREATE POLICY "Restaurants are viewable by everyone"
   ON public.restaurants FOR SELECT

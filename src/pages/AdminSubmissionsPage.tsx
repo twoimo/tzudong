@@ -17,6 +17,7 @@ import {
     Shield,
     User,
 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -469,7 +470,43 @@ export default function AdminSubmissionsPage() {
                     </TabsContent>
 
                     <TabsContent value="approved" className="space-y-4 mt-4">
-                        {approvedSubmissions.length === 0 ? (
+                        {isLoading ? (
+                            // Loading Skeleton
+                            <div className="space-y-4">
+                                {Array.from({ length: 2 }).map((_, index) => (
+                                    <Card key={index} className="p-6">
+                                        <div className="space-y-4">
+                                            {/* Header Skeleton */}
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1 space-y-2">
+                                                    <Skeleton className="h-6 w-40" />
+                                                    <Skeleton className="h-4 w-32" />
+                                                </div>
+                                                <Skeleton className="h-6 w-20" />
+                                            </div>
+
+                                            {/* Content Skeleton */}
+                                            <div className="space-y-2">
+                                                <Skeleton className="h-4 w-full" />
+                                                <Skeleton className="h-4 w-3/4" />
+                                                <div className="flex gap-2 mt-2">
+                                                    <Skeleton className="h-5 w-16" />
+                                                    <Skeleton className="h-5 w-20" />
+                                                </div>
+                                            </div>
+
+                                            {/* Footer Skeleton */}
+                                            <div className="flex items-center justify-between pt-4 border-t">
+                                                <Skeleton className="h-4 w-24" />
+                                                <div className="flex gap-2">
+                                                    <Skeleton className="h-8 w-16" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : approvedSubmissions.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">📋</div>
                                 <h3 className="text-xl font-semibold mb-2">승인된 제보가 없습니다</h3>
@@ -486,7 +523,43 @@ export default function AdminSubmissionsPage() {
                     </TabsContent>
 
                     <TabsContent value="rejected" className="space-y-4 mt-4">
-                        {rejectedSubmissions.length === 0 ? (
+                        {isLoading ? (
+                            // Loading Skeleton
+                            <div className="space-y-4">
+                                {Array.from({ length: 2 }).map((_, index) => (
+                                    <Card key={index} className="p-6">
+                                        <div className="space-y-4">
+                                            {/* Header Skeleton */}
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1 space-y-2">
+                                                    <Skeleton className="h-6 w-40" />
+                                                    <Skeleton className="h-4 w-32" />
+                                                </div>
+                                                <Skeleton className="h-6 w-20" />
+                                            </div>
+
+                                            {/* Content Skeleton */}
+                                            <div className="space-y-2">
+                                                <Skeleton className="h-4 w-full" />
+                                                <Skeleton className="h-4 w-3/4" />
+                                                <div className="flex gap-2 mt-2">
+                                                    <Skeleton className="h-5 w-16" />
+                                                    <Skeleton className="h-5 w-20" />
+                                                </div>
+                                            </div>
+
+                                            {/* Footer Skeleton */}
+                                            <div className="flex items-center justify-between pt-4 border-t">
+                                                <Skeleton className="h-4 w-24" />
+                                                <div className="flex gap-2">
+                                                    <Skeleton className="h-8 w-16" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : rejectedSubmissions.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">📋</div>
                                 <h3 className="text-xl font-semibold mb-2">거부된 제보가 없습니다</h3>
