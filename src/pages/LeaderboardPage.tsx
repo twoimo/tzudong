@@ -11,7 +11,7 @@ import {
     TableRow,
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, Medal, Award, TrendingUp, Star, CheckCircle } from "lucide-react";
+import { Trophy, Medal, Award, TrendingUp, Star, CheckCircle, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -34,6 +34,7 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         verifiedReviewCount: 120,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
             { name: "리뷰 마스터", icon: "👑", earnedAt: "" },
             { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
         ],
@@ -46,7 +47,9 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         verifiedReviewCount: 88,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
             { name: "리뷰 마스터", icon: "👑", earnedAt: "" },
+            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
         ],
     },
     {
@@ -57,6 +60,7 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         verifiedReviewCount: 70,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
             { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
         ],
     },
@@ -68,6 +72,7 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         verifiedReviewCount: 58,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
             { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
         ],
     },
@@ -79,6 +84,7 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         verifiedReviewCount: 49,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
         ],
     },
     {
@@ -89,6 +95,7 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         verifiedReviewCount: 42,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
         ],
     },
     {
@@ -99,6 +106,7 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
         verifiedReviewCount: 35,
         badges: [
             { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
+            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
         ],
     },
 ];
@@ -106,48 +114,74 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
 
-    // Fetch leaderboard data from Supabase
+    // Fetch leaderboard data from Supabase with real-time calculations
     const { data: leaderboardData = [], isLoading } = useQuery({
         queryKey: ['leaderboard', sortBy],
         queryFn: async () => {
             try {
-                const query = supabase
+                // Get user stats with profile info
+                const { data: statsData, error: statsError } = await supabase
                     .from('user_stats')
                     .select(`
                         *,
                         profiles!user_stats_user_id_fkey(nickname)
-                    `);
+                    `)
+                    .gt('review_count', 0) // Only users with reviews
+                    .order('review_count', { ascending: false });
 
-                // Sort by review count
-                query.order('review_count', { ascending: false });
-
-                const { data, error } = await query;
-
-                // 에러가 발생하거나 데이터가 없으면 더미 데이터 반환
-                if (error) {
-                    console.warn('리더보드 데이터 조회 실패, 샘플 데이터 표시:', error.message);
+                if (statsError) {
+                    console.warn('리더보드 데이터 조회 실패, 샘플 데이터 표시:', statsError.message);
                     return DUMMY_LEADERBOARD;
                 }
 
-                const leaderboard = (data || [])
-                    .filter(stat => (stat.review_count || 0) > 0) // Only show users with reviews
+                // Calculate real-time review counts from reviews table
+                const { data: reviewsData, error: reviewsError } = await supabase
+                    .from('reviews')
+                    .select('user_id, is_verified');
+
+                if (reviewsError) {
+                    console.warn('리뷰 데이터 조회 실패:', reviewsError.message);
+                }
+
+                // Count reviews per user
+                const reviewCounts = new Map<string, { total: number; verified: number }>();
+                (reviewsData || []).forEach(review => {
+                    const userId = review.user_id;
+                    const current = reviewCounts.get(userId) || { total: 0, verified: 0 };
+                    current.total++;
+                    if (review.is_verified) current.verified++;
+                    reviewCounts.set(userId, current);
+                });
+
+                const leaderboard = (statsData || [])
+                    .filter(stat => {
+                        const realCount = reviewCounts.get(stat.user_id)?.total || 0;
+                        return realCount > 0;
+                    })
                     .map((stat, index) => {
+                        const realCounts = reviewCounts.get(stat.user_id) || { total: 0, verified: 0 };
                         const badges = [];
 
                         // Award badges based on achievements
-                        if (stat.review_count && stat.review_count >= 1) {
+                        if (realCounts.total >= 1) {
                             badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
                         }
-                        if (stat.review_count && stat.review_count >= 50) {
+                        if (realCounts.total >= 10) {
+                            badges.push({ name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" });
+                        }
+                        if (realCounts.total >= 50) {
                             badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
+                        }
+                        if (realCounts.verified >= 10) {
+                            badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
                         }
 
                         return {
                             id: stat.user_id,
                             rank: index + 1,
                             username: stat.profiles?.nickname || '익명',
-                            reviewCount: stat.review_count || 0,
-                            verifiedReviewCount: stat.verified_review_count || 0,
+                            reviewCount: realCounts.total,
+                            verifiedReviewCount: realCounts.verified,
                             badges,
                         } as LeaderboardUser;
                     });
@@ -165,7 +199,13 @@ const LeaderboardPage = () => {
         },
     });
 
-    const sortedLeaderboard = leaderboardData;
+    // Apply sorting
+    const sortedLeaderboard = [...leaderboardData].sort((a, b) => {
+        if (sortBy === "reviews") {
+            return b.reviewCount - a.reviewCount;
+        }
+        return 0;
+    });
     const isDummyData = leaderboardData.length > 0 && leaderboardData[0].id.startsWith('dummy-');
 
     const getRankIcon = (rank: number) => {
@@ -220,7 +260,32 @@ const LeaderboardPage = () => {
 
                 {/* Top 3 Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                    {sortedLeaderboard.slice(0, 3).map((user) => (
+                    {isLoading ? (
+                        // Loading skeleton for top 3
+                        Array.from({ length: 3 }).map((_, index) => (
+                            <Card key={index} className="p-4">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className="w-12 h-12 rounded-full bg-muted animate-pulse flex items-center justify-center">
+                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="h-5 bg-muted rounded animate-pulse mb-1"></div>
+                                        <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="h-3 bg-muted rounded animate-pulse w-12"></div>
+                                        <div className="h-3 bg-muted rounded animate-pulse w-8"></div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <div className="h-3 bg-muted rounded animate-pulse w-20"></div>
+                                        <div className="h-3 bg-muted rounded animate-pulse w-8"></div>
+                                    </div>
+                                </div>
+                            </Card>
+                        ))
+                    ) : sortedLeaderboard.slice(0, 3).map((user) => (
                         <Card
                             key={user.id}
                             className={`p-4 ${user.rank === 1 ? "border-2 border-primary shadow-lg" : ""
@@ -294,7 +359,36 @@ const LeaderboardPage = () => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {sortedLeaderboard.map((user) => (
+                                {isLoading ? (
+                                    // Loading skeleton for table
+                                    Array.from({ length: 10 }).map((_, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>
+                                                <div className="flex items-center justify-center">
+                                                    <div className="w-8 h-8 bg-muted rounded animate-pulse"></div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 bg-muted rounded animate-pulse"></div>
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="w-12 h-5 bg-muted rounded animate-pulse mx-auto"></div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex gap-1">
+                                                    <div className="w-6 h-6 bg-muted rounded animate-pulse"></div>
+                                                    <div className="w-6 h-6 bg-muted rounded animate-pulse"></div>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : sortedLeaderboard.map((user) => (
                                     <TableRow key={user.id} className="hover:bg-muted/50">
                                         <TableCell>
                                             <div className="flex items-center justify-center">

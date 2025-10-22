@@ -14,7 +14,7 @@ import {
 import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -115,6 +115,7 @@ const DUMMY_REVIEWS: Review[] = [
 
 const ReviewsPage = () => {
     const { user, isAdmin } = useAuth();
+    const queryClient = useQueryClient();
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCategory, setFilterCategory] = useState<string>("all");
     const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -273,6 +274,7 @@ const ReviewsPage = () => {
                 description: "리뷰를 상단에 고정했습니다",
             });
             refetch();
+            queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
         }
     };
 
@@ -303,6 +305,7 @@ const ReviewsPage = () => {
                 description: "리뷰 고정을 해제했습니다",
             });
             refetch();
+            queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
         }
     };
 
@@ -370,6 +373,7 @@ const ReviewsPage = () => {
                 description: "리뷰를 삭제했습니다",
             });
             refetch();
+            queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
         }
     };
 
@@ -619,7 +623,10 @@ const ReviewsPage = () => {
                 isOpen={isReviewModalOpen}
                 onClose={() => setIsReviewModalOpen(false)}
                 restaurant={null}
-                onSuccess={refetch}
+                onSuccess={() => {
+                    refetch();
+                    queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+                }}
             />
         </div>
     );

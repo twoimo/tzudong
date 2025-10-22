@@ -148,6 +148,7 @@ export default function AdminReviewsPage() {
         onSuccess: () => {
             toast.success('리뷰가 승인되었습니다');
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
+            queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
             setIsReviewModalOpen(false);
             setAdminNote("");
         },
@@ -174,6 +175,7 @@ export default function AdminReviewsPage() {
         onSuccess: () => {
             toast.success('리뷰가 거부되었습니다');
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
+            queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
             setIsReviewModalOpen(false);
             setAdminNote("");
         },
@@ -195,6 +197,7 @@ export default function AdminReviewsPage() {
         onSuccess: () => {
             toast.success('리뷰가 삭제되었습니다');
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
+            queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
         },
         onError: (error: Error) => {
             toast.error(error.message || '삭제에 실패했습니다');
