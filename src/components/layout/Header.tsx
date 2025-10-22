@@ -16,9 +16,10 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   onAdminClick?: () => void;
+  onProfileClick?: () => void;
 }
 
-const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onAdminClick }: HeaderProps) => {
+const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onAdminClick, onProfileClick }: HeaderProps) => {
   const { isAdmin } = useAuth();
   const [isDark, setIsDark] = useState(false);
 
@@ -70,7 +71,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onAdminClic
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={onProfileClick}>
                 <User className="mr-2 h-4 w-4" />
                 프로필
               </DropdownMenuItem>
