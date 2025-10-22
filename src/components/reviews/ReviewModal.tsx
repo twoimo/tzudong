@@ -21,9 +21,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Calendar, Upload, X, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Calendar, Upload, X as XIcon, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ReviewModalProps {
@@ -58,7 +61,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const [visitedDate, setVisitedDate] = useState("");
     const [visitedTime, setVisitedTime] = useState("");
     const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("");
-    const [category, setCategory] = useState<Category | "">("");
+    const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
@@ -104,7 +107,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     };
 
     const handleSubmit = async () => {
-        if (!visitedDate || !visitedTime || !selectedRestaurantId || !category || !content || !verificationPhoto || foodPhotos.length === 0) {
+        if (!visitedDate || !visitedTime || !selectedRestaurantId || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
             toast({
                 title: "필수 항목 누락",
                 description: "모든 필수 항목을 입력해주세요",
@@ -193,7 +196,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             }
 
             // 타입 안전성을 위한 검증
-            if (!category) {
+            if (categories.length === 0) {
                 throw new Error("카테고리를 선택해주세요");
             }
 
@@ -207,7 +210,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                     visited_at: visitedAtDateTime,
                     verification_photo: verificationPhotoPath,
                     food_photos: foodPhotoUrls,
-                    category: category as Category,
+                    categories: categories,
                     is_verified: false, // 관리자 검토 대기
                 });
 
@@ -241,14 +244,14 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         setVisitedDate("");
         setVisitedTime("");
         setSelectedRestaurantId("");
-        setCategory("");
+        setCategories([]);
         setContent("");
         setVerificationPhoto(null);
         setFoodPhotos([]);
         onClose();
     };
 
-    const isFormValid = visitedDate && visitedTime && selectedRestaurantId && category && content && verificationPhoto && foodPhotos.length > 0;
+    const isFormValid = visitedDate && visitedTime && selectedRestaurantId && categories.length > 0 && content && verificationPhoto && foodPhotos.length > 0;
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -347,18 +350,78 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 <Label>
                                     카테고리 <span className="text-red-500">*</span>
                                 </Label>
-                                <Select value={category} onValueChange={(value) => setCategory(value as Category)}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="어떤 종류의 음식을 드셨나요?" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {CATEGORIES.map((cat) => (
-                                            <SelectItem key={cat} value={cat}>
-                                                {cat}
-                                            </SelectItem>
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-between"
+                                        >
+                                            <span className="truncate">
+                                                {categories.length > 0
+                                                    ? `${categories.length}개 선택됨`
+                                                    : "어떤 종류의 음식을 드셨나요?"
+                                                }
+                                            </span>
+                                            <ChevronDown className="h-4 w-4 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-64" align="start">
+                                        <div className="space-y-2">
+                                            <h4 className="font-semibold text-sm">카테고리 선택</h4>
+                                            <div className="space-y-2 max-h-48 overflow-y-auto">
+                                                {CATEGORIES.map((cat) => (
+                                                    <div key={cat} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`review-category-${cat}`}
+                                                            checked={categories.includes(cat)}
+                                                            onCheckedChange={(checked) => {
+                                                                if (checked) {
+                                                                    setCategories([...categories, cat]);
+                                                                } else {
+                                                                    setCategories(categories.filter(c => c !== cat));
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Label
+                                                            htmlFor={`review-category-${cat}`}
+                                                            className="text-sm cursor-pointer flex-1"
+                                                        >
+                                                            {cat}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {categories.length > 0 && (
+                                                <div className="pt-2 border-t">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setCategories([])}
+                                                        className="w-full"
+                                                    >
+                                                        선택 해제
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
+                                {categories.length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-2">
+                                        {categories.map((category) => (
+                                            <Badge key={category} variant="secondary" className="text-xs">
+                                                {category}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setCategories(categories.filter(c => c !== category))}
+                                                    className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                                                >
+                                                    <XIcon className="h-3 w-3" />
+                                                </button>
+                                            </Badge>
                                         ))}
-                                    </SelectContent>
-                                </Select>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Verification Photo */}
@@ -383,7 +446,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                                     className="mt-2"
                                                     onClick={() => setVerificationPhoto(null)}
                                                 >
-                                                    <X className="h-4 w-4 mr-2" />
+                                                    <XIcon className="h-4 w-4 mr-2" />
                                                     제거
                                                 </Button>
                                             </div>
@@ -433,7 +496,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                                             className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
                                                             onClick={() => removeFoodPhoto(index)}
                                                         >
-                                                            <X className="h-3 w-3" />
+                                                            <XIcon className="h-3 w-3" />
                                                         </Button>
                                                     </div>
                                                 ))}

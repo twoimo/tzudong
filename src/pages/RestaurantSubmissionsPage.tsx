@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube } from "lucide-react";
+import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube, ChevronDown, X } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -42,7 +44,7 @@ export default function RestaurantSubmissionsPage() {
         restaurant_name: "",
         address: "",
         phone: "",
-        category: RESTAURANT_CATEGORIES[0],
+        categories: [] as string[],
         youtube_link: "",
         description: "",
     });
@@ -90,7 +92,7 @@ export default function RestaurantSubmissionsPage() {
                 restaurant_name: data.restaurant_name.trim(),
                 address: data.address.trim(),
                 phone: data.phone.trim() || null,
-                category: data.category,
+                category: data.categories, // TEXT[] 배열로 저장
                 youtube_link: data.youtube_link.trim(),
                 description: data.description.trim() || null,
                 status: 'pending',
@@ -113,10 +115,21 @@ export default function RestaurantSubmissionsPage() {
                         if (originalData) {
                             const changes_requested: any = {};
                             Object.keys(data).forEach(key => {
-                                if (originalData[key as keyof typeof originalData] !== data[key as keyof typeof data]) {
+                                const originalValue = originalData[key as keyof typeof originalData];
+                                const newValue = data[key as keyof typeof data];
+
+                                // 배열 비교 (categories)
+                                if (Array.isArray(originalValue) && Array.isArray(newValue)) {
+                                    if (JSON.stringify(originalValue.sort()) !== JSON.stringify(newValue.sort())) {
+                                        changes_requested[key] = {
+                                            from: originalValue,
+                                            to: newValue
+                                        };
+                                    }
+                                } else if (originalValue !== newValue) {
                                     changes_requested[key] = {
-                                        from: originalData[key] || '',
-                                        to: data[key as keyof typeof data] || ''
+                                        from: originalValue || '',
+                                        to: newValue || ''
                                     };
                                 }
                             });
@@ -158,7 +171,7 @@ export default function RestaurantSubmissionsPage() {
                 restaurant_name: "",
                 address: "",
                 phone: "",
-                category: RESTAURANT_CATEGORIES[0] as typeof RESTAURANT_CATEGORIES[0],
+                categories: [],
                 youtube_link: "",
                 description: "",
             });
@@ -170,11 +183,13 @@ export default function RestaurantSubmissionsPage() {
     // 기존 맛집 선택 핸들러
     const handleRestaurantSelect = (restaurant: any) => {
         setSelectedRestaurant(restaurant);
+        const safeCategories = Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category].filter(Boolean);
+
         setOriginalData({
             restaurant_name: restaurant.name,
             address: restaurant.address,
             phone: restaurant.phone || "",
-            category: restaurant.category,
+            categories: safeCategories,
             youtube_link: restaurant.youtube_link || "",
             description: restaurant.description || "",
         });
@@ -182,7 +197,7 @@ export default function RestaurantSubmissionsPage() {
             restaurant_name: restaurant.name,
             address: restaurant.address,
             phone: restaurant.phone || "",
-            category: restaurant.category as typeof RESTAURANT_CATEGORIES[0],
+            categories: safeCategories,
             youtube_link: restaurant.youtube_link || "",
             description: restaurant.description || "",
         });
@@ -212,7 +227,7 @@ export default function RestaurantSubmissionsPage() {
             restaurant_name: "",
             address: "",
             phone: "",
-            category: RESTAURANT_CATEGORIES[0],
+            categories: [],
             youtube_link: "",
             description: "",
         });
@@ -221,7 +236,7 @@ export default function RestaurantSubmissionsPage() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        if (!formData.restaurant_name.trim() || !formData.address.trim() || !formData.youtube_link.trim()) {
+        if (!formData.restaurant_name.trim() || !formData.address.trim() || !formData.youtube_link.trim() || formData.categories.length === 0) {
             toast.error('필수 항목을 모두 입력해주세요');
             return;
         }
@@ -507,6 +522,17 @@ export default function RestaurantSubmissionsPage() {
                                     {(() => {
                                         const changes = Object.entries(formData).filter(([key, value]) => {
                                             const originalValue = originalData[key as keyof typeof originalData];
+
+                                            // 배열 비교 (categories)
+                                            if (key === 'categories') {
+                                                const origCategories = Array.isArray(originalValue) ? originalValue : [];
+                                                const newCategories = Array.isArray(value) ? value : [];
+                                                return JSON.stringify(origCategories.sort()) !== JSON.stringify(newCategories.sort());
+                                            }
+                                            // 일반 배열 비교
+                                            if (Array.isArray(originalValue) && Array.isArray(value)) {
+                                                return JSON.stringify(originalValue.sort()) !== JSON.stringify(value.sort());
+                                            }
                                             return originalValue !== value;
                                         });
 
@@ -532,7 +558,7 @@ export default function RestaurantSubmissionsPage() {
                                                         restaurant_name: '맛집 이름',
                                                         address: '주소',
                                                         phone: '전화번호',
-                                                        category: '카테고리',
+                                                        categories: '카테고리',
                                                         youtube_link: '유튜브 링크',
                                                         description: '설명'
                                                     }[key] || key;
@@ -550,10 +576,10 @@ export default function RestaurantSubmissionsPage() {
                                                             </div>
                                                             <div className="space-y-1">
                                                                 <div className="text-xs text-red-600 line-through">
-                                                                    기존: {originalValue || '없음'}
+                                                                    기존: {Array.isArray(originalValue) ? originalValue.join(', ') : (originalValue || '없음')}
                                                                 </div>
                                                                 <div className="text-xs text-green-600 font-medium">
-                                                                    변경: {value || '없음'}
+                                                                    변경: {Array.isArray(value) ? value.join(', ') : (value || '없음')}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -579,24 +605,90 @@ export default function RestaurantSubmissionsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="category">
+                            <Label>
                                 카테고리 <span className="text-red-500">*</span>
                             </Label>
-                            <Select
-                                value={formData.category}
-                                onValueChange={(value) => setFormData({ ...formData, category: value as typeof RESTAURANT_CATEGORIES[0] })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {RESTAURANT_CATEGORIES.map((cat) => (
-                                        <SelectItem key={cat} value={cat}>
-                                            {cat}
-                                        </SelectItem>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-between"
+                                    >
+                                        <span className="truncate">
+                                            {formData.categories.length > 0
+                                                ? `${formData.categories.length}개 선택됨`
+                                                : "카테고리 선택"
+                                            }
+                                        </span>
+                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64" align="start">
+                                    <div className="space-y-2">
+                                        <h4 className="font-semibold text-sm">카테고리 선택</h4>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            {RESTAURANT_CATEGORIES.map((category) => (
+                                                <div key={category} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`category-${category}`}
+                                                        checked={formData.categories.includes(category)}
+                                                        onCheckedChange={(checked) => {
+                                                            if (checked) {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    categories: [...formData.categories, category]
+                                                                });
+                                                            } else {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    categories: formData.categories.filter(c => c !== category)
+                                                                });
+                                                            }
+                                                        }}
+                                                    />
+                                                    <Label
+                                                        htmlFor={`category-${category}`}
+                                                        className="text-sm cursor-pointer flex-1"
+                                                    >
+                                                        {category}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {formData.categories.length > 0 && (
+                                            <div className="pt-2 border-t">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setFormData({ ...formData, categories: [] })}
+                                                    className="w-full"
+                                                >
+                                                    선택 해제
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            {formData.categories.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                    {formData.categories.map((category) => (
+                                        <Badge key={category} variant="secondary" className="text-xs">
+                                            {category}
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({
+                                                    ...formData,
+                                                    categories: formData.categories.filter(c => c !== category)
+                                                })}
+                                                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
                                     ))}
-                                </SelectContent>
-                            </Select>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-2">

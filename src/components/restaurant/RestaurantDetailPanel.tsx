@@ -92,9 +92,27 @@ export function RestaurantDetailPanel({
                             <span className="text-2xl">{isHotPlace ? "🔥" : "⭐"}</span>
                             <h2 className="text-xl font-bold line-clamp-2">{restaurant.name}</h2>
                         </div>
-                        <Badge variant={isHotPlace ? "default" : "secondary"} className="mt-1">
-                            {restaurant.category}
-                        </Badge>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                            {(() => {
+                                // 카테고리 타입 처리: TEXT[] 배열 또는 단일 값
+                                let categories: string[] = [];
+                                if (Array.isArray(restaurant.category)) {
+                                    categories = restaurant.category;
+                                } else {
+                                    categories = [String(restaurant.category)].filter(Boolean);
+                                }
+
+                                return categories.map((cat, index) => (
+                                    <Badge
+                                        key={index}
+                                        variant={isHotPlace && index === 0 ? "default" : "secondary"}
+                                        className="text-xs"
+                                    >
+                                        {cat}
+                                    </Badge>
+                                ));
+                            })()}
+                        </div>
                     </div>
                     <div className="flex gap-1">
                         {isAdmin && onEditRestaurant && (

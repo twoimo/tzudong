@@ -29,7 +29,7 @@ interface RestaurantSubmission {
     restaurant_name: string;
     address: string;
     phone: string | null;
-    category: string;
+    category: string[] | string; // 다중 카테고리 지원
     youtube_link: string;
     description: string | null;
     status: 'pending' | 'approved' | 'rejected';
@@ -138,7 +138,7 @@ export default function AdminSubmissionsPage() {
                         name: submission.restaurant_name,
                         address: submission.address,
                         phone: submission.phone,
-                        category: submission.category,
+                        category: Array.isArray(submission.category) ? submission.category : [submission.category],
                         youtube_link: submission.youtube_link,
                         description: submission.description,
                         lat,
@@ -166,7 +166,7 @@ export default function AdminSubmissionsPage() {
                         name: submission.restaurant_name,
                         address: submission.address,
                         phone: submission.phone,
-                        category: submission.category,
+                        category: Array.isArray(submission.category) ? submission.category : [submission.category],
                         youtube_link: submission.youtube_link,
                         description: submission.description,
                         lat,

@@ -168,7 +168,17 @@ const FilteringPage = () => {
 
         // 카테고리 필터
         if (filters.categories.length > 0) {
-            result = result.filter(r => filters.categories.includes(r.category || ""));
+            result = result.filter(r => {
+                // 카테고리 타입 처리: TEXT[] 배열 또는 단일 값
+                let restaurantCategories: string[] = [];
+                if (Array.isArray(r.category)) {
+                    restaurantCategories = r.category;
+                } else {
+                    restaurantCategories = [String(r.category)].filter(Boolean);
+                }
+
+                return filters.categories.some(filterCat => restaurantCategories.includes(filterCat));
+            });
         }
 
         // 지역 필터

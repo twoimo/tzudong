@@ -5,10 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown, X } from "lucide-react";
 
 interface AdminRestaurantModalProps {
     isOpen: boolean;
@@ -28,7 +31,7 @@ export function AdminRestaurantModal({
         name: "",
         address: "",
         phone: "",
-        category: RESTAURANT_CATEGORIES[0],
+        categories: [] as string[],
         youtube_link: "",
         description: "",
         lat: "",
@@ -43,7 +46,7 @@ export function AdminRestaurantModal({
                 name: restaurant.name || "",
                 address: restaurant.address || "",
                 phone: restaurant.phone || "",
-                category: restaurant.category || RESTAURANT_CATEGORIES[0],
+                categories: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category].filter(Boolean),
                 youtube_link: restaurant.youtube_link || "",
                 description: restaurant.description || "",
                 lat: String(restaurant.lat || ""),
@@ -61,7 +64,7 @@ export function AdminRestaurantModal({
             name: "",
             address: "",
             phone: "",
-            category: RESTAURANT_CATEGORIES[0],
+            categories: [],
             youtube_link: "",
             description: "",
             lat: "",
@@ -132,7 +135,7 @@ export function AdminRestaurantModal({
                 name: formData.name.trim(),
                 address: formData.address.trim(),
                 phone: formData.phone.trim() || null,
-                category: formData.category,
+                category: formData.categories, // TEXT[] 배열로 저장
                 youtube_link: formData.youtube_link.trim() || null,
                 description: formData.description.trim() || null,
                 lat,
@@ -235,24 +238,88 @@ export function AdminRestaurantModal({
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="category">카테고리 *</Label>
-                            <Select
-                                value={formData.category}
-                                onValueChange={(value) =>
-                                    setFormData({ ...formData, category: value as any })
-                                }
-                            >
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {RESTAURANT_CATEGORIES.map((cat) => (
-                                        <SelectItem key={cat} value={cat}>
-                                            {cat}
-                                        </SelectItem>
+                            <Label>카테고리 *</Label>
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-between"
+                                    >
+                                        <span className="truncate">
+                                            {formData.categories.length > 0
+                                                ? `${formData.categories.length}개 선택됨`
+                                                : "카테고리 선택"
+                                            }
+                                        </span>
+                                        <ChevronDown className="h-4 w-4 opacity-50" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64" align="start">
+                                    <div className="space-y-2">
+                                        <h4 className="font-semibold text-sm">카테고리 선택</h4>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                            {RESTAURANT_CATEGORIES.map((category) => (
+                                                <div key={category} className="flex items-center space-x-2">
+                                                    <Checkbox
+                                                        id={`admin-category-${category}`}
+                                                        checked={formData.categories.includes(category)}
+                                                        onCheckedChange={(checked) => {
+                                                            if (checked) {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    categories: [...formData.categories, category]
+                                                                });
+                                                            } else {
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    categories: formData.categories.filter(c => c !== category)
+                                                                });
+                                                            }
+                                                        }}
+                                                    />
+                                                    <Label
+                                                        htmlFor={`admin-category-${category}`}
+                                                        className="text-sm cursor-pointer flex-1"
+                                                    >
+                                                        {category}
+                                                    </Label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {formData.categories.length > 0 && (
+                                            <div className="pt-2 border-t">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setFormData({ ...formData, categories: [] })}
+                                                    className="w-full"
+                                                >
+                                                    선택 해제
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+                            {formData.categories.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-2">
+                                    {formData.categories.map((category) => (
+                                        <Badge key={category} variant="secondary" className="text-xs">
+                                            {category}
+                                            <button
+                                                type="button"
+                                                onClick={() => setFormData({
+                                                    ...formData,
+                                                    categories: formData.categories.filter(c => c !== category)
+                                                })}
+                                                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                                            >
+                                                <X className="h-3 w-3" />
+                                            </button>
+                                        </Badge>
                                     ))}
-                                </SelectContent>
-                            </Select>
+                                </div>
+                            )}
                         </div>
                     </div>
 

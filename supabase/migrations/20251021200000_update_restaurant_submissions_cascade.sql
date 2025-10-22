@@ -17,5 +17,38 @@ ADD COLUMN IF NOT EXISTS submission_type TEXT DEFAULT 'new' CHECK (submission_ty
 ADD COLUMN IF NOT EXISTS original_restaurant_id UUID REFERENCES public.restaurants(id),
 ADD COLUMN IF NOT EXISTS changes_requested JSONB;
 
+-- 다중 카테고리 지원을 위한 스키마 변경
+-- 안전한 마이그레이션: 임시 컬럼 사용
+BEGIN;
+
+-- 1. restaurants 테이블 마이그레이션
+ALTER TABLE public.restaurants ADD COLUMN category_temp TEXT[];
+UPDATE public.restaurants SET category_temp = ARRAY[category::TEXT] WHERE category IS NOT NULL;
+UPDATE public.restaurants SET category_temp = ARRAY[]::TEXT[] WHERE category IS NULL;
+ALTER TABLE public.restaurants DROP COLUMN category;
+ALTER TABLE public.restaurants RENAME COLUMN category_temp TO category;
+
+-- 2. restaurant_submissions 테이블 마이그레이션
+ALTER TABLE public.restaurant_submissions ADD COLUMN category_temp TEXT[];
+UPDATE public.restaurant_submissions SET category_temp = ARRAY[category::TEXT] WHERE category IS NOT NULL;
+UPDATE public.restaurant_submissions SET category_temp = ARRAY[]::TEXT[] WHERE category IS NULL;
+ALTER TABLE public.restaurant_submissions DROP COLUMN category;
+ALTER TABLE public.restaurant_submissions RENAME COLUMN category_temp TO category;
+
+-- 3. reviews 테이블의 기존 category 컬럼도 TEXT[]로 변환 (enum 의존성 제거)
+ALTER TABLE public.reviews ADD COLUMN category_temp TEXT[];
+UPDATE public.reviews SET category_temp = ARRAY[category::TEXT] WHERE category IS NOT NULL;
+UPDATE public.reviews SET category_temp = ARRAY[]::TEXT[] WHERE category IS NULL;
+ALTER TABLE public.reviews DROP COLUMN category;
+ALTER TABLE public.reviews RENAME COLUMN category_temp TO category;
+
+-- 4. enum 타입 제거 (모든 테이블이 업데이트된 후)
+DROP TYPE IF EXISTS restaurant_category CASCADE;
+
+-- 5. reviews 테이블에 새로운 categories 컬럼 추가 (다중 카테고리용)
+ALTER TABLE public.reviews ADD COLUMN IF NOT EXISTS categories TEXT[];
+
+COMMIT;
+
 -- 설명: 이제 레스토랑을 삭제하면 해당 레스토랑을 참조하는 모든 제보도 자동으로 삭제됩니다.
 -- 수정 요청 기능: submission_type으로 신규/수정 구분, original_restaurant_id로 대상 맛집 지정, changes_requested로 변경사항 저장
