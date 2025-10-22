@@ -114,19 +114,15 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
 
-    // Fetch leaderboard data from Supabase - reviews 테이블에서 직접 집계
+    // Fetch leaderboard data from Supabase - reviews와 profiles 별도 조회 후 조인
     const { data: leaderboardData = [], isLoading } = useQuery({
         queryKey: ['leaderboard', sortBy],
         queryFn: async () => {
             try {
-                // Get all verified reviews with user profile info
+                // Get all verified reviews
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
-                    .select(`
-                        user_id,
-                        is_verified,
-                        profiles!reviews_user_id_fkey(nickname)
-                    `)
+                    .select('user_id, is_verified')
                     .eq('is_verified', true); // Only verified reviews
 
                 if (reviewsError) {
@@ -139,6 +135,24 @@ const LeaderboardPage = () => {
                     return DUMMY_LEADERBOARD;
                 }
 
+                // Get unique user IDs
+                const userIds = [...new Set(reviewsData.map(review => review.user_id))];
+
+                // Get profile info for these users
+                const { data: profilesData, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('user_id, nickname')
+                    .in('user_id', userIds);
+
+                if (profilesError) {
+                    console.warn('프로필 데이터 조회 실패:', profilesError.message);
+                }
+
+                // Create profiles map
+                const profilesMap = new Map(
+                    (profilesData || []).map(profile => [profile.user_id, profile.nickname])
+                );
+
                 // Group reviews by user and calculate stats
                 const userStats = new Map<string, {
                     userId: string;
@@ -149,7 +163,7 @@ const LeaderboardPage = () => {
 
                 reviewsData.forEach(review => {
                     const userId = review.user_id;
-                    const nickname = review.profiles?.nickname || '익명';
+                    const nickname = profilesMap.get(userId) || '익명';
 
                     const current = userStats.get(userId) || {
                         userId,
