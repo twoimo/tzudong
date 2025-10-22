@@ -103,7 +103,7 @@ export default function AdminSubmissionsPage() {
             const result = submissionsData.map(submission => ({
                 ...submission,
                 profiles: {
-                    nickname: profilesMap.get(submission.user_id) || '알 수 없음'
+                    nickname: profilesMap.get(submission.user_id) || '탈퇴한 사용자'
                 }
             })) as SubmissionWithUser[];
 

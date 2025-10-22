@@ -164,7 +164,7 @@ const LeaderboardPage = () => {
 
                 reviewsData.forEach(review => {
                     const userId = review.user_id;
-                    const nickname = profilesMap.get(userId) || '익명';
+                    const nickname = profilesMap.get(userId) || '탈퇴한 사용자';
 
                     const current = userStats.get(userId) || {
                         userId,
