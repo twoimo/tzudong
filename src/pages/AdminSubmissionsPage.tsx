@@ -730,7 +730,13 @@ function SubmissionCard({
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-lg font-semibold">{submission.restaurant_name}</h3>
                             {getStatusBadge(submission.status)}
-                            <Badge variant="outline">{submission.category}</Badge>
+                            {Array.isArray(submission.category) ? (
+                                submission.category.map((cat, index) => (
+                                    <Badge key={index} variant="outline">{cat}</Badge>
+                                ))
+                            ) : (
+                                <Badge variant="outline">{submission.category}</Badge>
+                            )}
                             <Badge variant={submission.original_restaurant_id ? 'secondary' : 'default'}>
                                 {submission.original_restaurant_id ? '수정 요청' : '신규 제보'}
                             </Badge>
@@ -774,12 +780,21 @@ function SubmissionCard({
                                                 {field === 'restaurant_name' ? '이름' :
                                                     field === 'address' ? '주소' :
                                                         field === 'phone' ? '전화번호' :
-                                                            field === 'category' ? '카테고리' :
+                                                            (field === 'category' || field === 'categories') ? '카테고리' :
                                                                 field === 'youtube_link' ? '유튜브 링크' :
                                                                     field === 'description' ? '설명' : field}:
                                             </span>
                                             <span className="text-muted-foreground ml-1">
-                                                {change.from || '(없음)'} → {change.to || '(없음)'}
+                                                {(field === 'category' || field === 'categories') ? (
+                                                    <>
+                                                        {change.from ? (Array.isArray(change.from) ? change.from.join(', ') : change.from) : '(없음)'} →
+                                                        {change.to ? (Array.isArray(change.to) ? change.to.join(', ') : change.to) : '(없음)'}
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        {change.from || '(없음)'} → {change.to || '(없음)'}
+                                                    </>
+                                                )}
                                             </span>
                                         </div>
                                     ))}
