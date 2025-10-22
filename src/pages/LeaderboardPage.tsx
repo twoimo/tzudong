@@ -114,74 +114,85 @@ const DUMMY_LEADERBOARD: LeaderboardUser[] = [
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
 
-    // Fetch leaderboard data from Supabase with real-time calculations
+    // Fetch leaderboard data from Supabase - reviews 테이블에서 직접 집계
     const { data: leaderboardData = [], isLoading } = useQuery({
         queryKey: ['leaderboard', sortBy],
         queryFn: async () => {
             try {
-                // Get user stats with profile info
-                const { data: statsData, error: statsError } = await supabase
-                    .from('user_stats')
+                // Get all verified reviews with user profile info
+                const { data: reviewsData, error: reviewsError } = await supabase
+                    .from('reviews')
                     .select(`
-                        *,
-                        profiles!user_stats_user_id_fkey(nickname)
+                        user_id,
+                        is_verified,
+                        profiles!reviews_user_id_fkey(nickname)
                     `)
-                    .gt('review_count', 0) // Only users with reviews
-                    .order('review_count', { ascending: false });
+                    .eq('is_verified', true); // Only verified reviews
 
-                if (statsError) {
-                    console.warn('리더보드 데이터 조회 실패, 샘플 데이터 표시:', statsError.message);
+                if (reviewsError) {
+                    console.warn('리뷰 데이터 조회 실패, 샘플 데이터 표시:', reviewsError.message);
                     return DUMMY_LEADERBOARD;
                 }
 
-                // Calculate real-time review counts from reviews table
-                const { data: reviewsData, error: reviewsError } = await supabase
-                    .from('reviews')
-                    .select('user_id, is_verified');
-
-                if (reviewsError) {
-                    console.warn('리뷰 데이터 조회 실패:', reviewsError.message);
+                if (!reviewsData || reviewsData.length === 0) {
+                    console.warn('승인된 리뷰 데이터가 없음, 샘플 데이터 표시');
+                    return DUMMY_LEADERBOARD;
                 }
 
-                // Count reviews per user
-                const reviewCounts = new Map<string, { total: number; verified: number }>();
-                (reviewsData || []).forEach(review => {
+                // Group reviews by user and calculate stats
+                const userStats = new Map<string, {
+                    userId: string;
+                    nickname: string;
+                    totalReviews: number;
+                    verifiedReviews: number;
+                }>();
+
+                reviewsData.forEach(review => {
                     const userId = review.user_id;
-                    const current = reviewCounts.get(userId) || { total: 0, verified: 0 };
-                    current.total++;
-                    if (review.is_verified) current.verified++;
-                    reviewCounts.set(userId, current);
+                    const nickname = review.profiles?.nickname || '익명';
+
+                    const current = userStats.get(userId) || {
+                        userId,
+                        nickname,
+                        totalReviews: 0,
+                        verifiedReviews: 0
+                    };
+
+                    current.totalReviews++;
+                    if (review.is_verified) {
+                        current.verifiedReviews++;
+                    }
+
+                    userStats.set(userId, current);
                 });
 
-                const leaderboard = (statsData || [])
-                    .filter(stat => {
-                        const realCount = reviewCounts.get(stat.user_id)?.total || 0;
-                        return realCount > 0;
-                    })
-                    .map((stat, index) => {
-                        const realCounts = reviewCounts.get(stat.user_id) || { total: 0, verified: 0 };
+                // Convert to leaderboard format and sort
+                const leaderboard = Array.from(userStats.values())
+                    .filter(user => user.totalReviews > 0)
+                    .sort((a, b) => b.totalReviews - a.totalReviews)
+                    .map((user, index) => {
                         const badges = [];
 
                         // Award badges based on achievements
-                        if (realCounts.total >= 1) {
+                        if (user.totalReviews >= 1) {
                             badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
                         }
-                        if (realCounts.total >= 10) {
+                        if (user.totalReviews >= 10) {
                             badges.push({ name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" });
                         }
-                        if (realCounts.total >= 50) {
+                        if (user.totalReviews >= 50) {
                             badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
                         }
-                        if (realCounts.verified >= 10) {
+                        if (user.verifiedReviews >= 10) {
                             badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
                         }
 
                         return {
-                            id: stat.user_id,
+                            id: user.userId,
                             rank: index + 1,
-                            username: stat.profiles?.nickname || '익명',
-                            reviewCount: realCounts.total,
-                            verifiedReviewCount: realCounts.verified,
+                            username: user.nickname,
+                            reviewCount: user.totalReviews,
+                            verifiedReviewCount: user.verifiedReviews,
                             badges,
                         } as LeaderboardUser;
                     });
@@ -191,6 +202,7 @@ const LeaderboardPage = () => {
                     return DUMMY_LEADERBOARD;
                 }
 
+                console.log(`🏆 리더보드 데이터 로드 완료: ${leaderboard.length}명의 사용자`);
                 return leaderboard;
             } catch (error) {
                 console.warn('리더보드 데이터 조회 중 오류 발생, 샘플 데이터 표시:', error);
