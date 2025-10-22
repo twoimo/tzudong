@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,9 +123,13 @@ const ReviewsPage = () => {
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
 
+    // 로그인하지 않은 경우 더미 데이터 표시
+    const isLoggedIn = !!user;
+
     // Fetch reviews from Supabase
     const { data: reviewsData = [], isLoading, refetch } = useQuery({
-        queryKey: ['reviews', filterCategory, filterStatus],
+        queryKey: ['reviews', filterCategory, filterStatus, user?.id],
+        enabled: isLoggedIn, // 로그인한 경우에만 쿼리 실행
         queryFn: async () => {
             try {
                 console.log('🔍 리뷰 데이터 가져오는 중...');
@@ -185,7 +190,9 @@ const ReviewsPage = () => {
                     return {
                         id: review.id,
                         restaurantName: restaurant?.name || '알 수 없음',
-                        restaurantCategory: restaurant?.category || review.category,
+                        restaurantCategory: Array.isArray(restaurant?.category)
+                            ? restaurant.category[0] || review.categories?.[0] || '기타'
+                            : restaurant?.category || review.categories?.[0] || review.category || '기타',
                         userName: profilesMap.get(review.user_id) || '익명',
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
@@ -195,7 +202,7 @@ const ReviewsPage = () => {
                         isEditedByAdmin: review.is_edited_by_admin || false,
                         admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                        category: review.category,
+                        category: review.categories?.[0] || review.category,
                     };
                 }) as Review[];
 
@@ -209,9 +216,12 @@ const ReviewsPage = () => {
         },
     });
 
-    const isDummyData = reviewsData.length > 0 && reviewsData[0].id.startsWith('dummy-');
+    // 로그인하지 않은 경우 더미 데이터 사용
+    const displayData = isLoggedIn ? reviewsData : DUMMY_REVIEWS;
+    const isDummyData = displayData.length > 0 && displayData[0].id.startsWith('dummy-');
+    const isLoadingData = isLoggedIn ? isLoading : false; // 로그인하지 않은 경우 로딩 아님
 
-    const filteredReviews = reviewsData.filter((review) => {
+    const filteredReviews = displayData.filter((review) => {
         const matchesSearch =
             review.restaurantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             review.userName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -436,12 +446,11 @@ const ReviewsPage = () => {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">전체 카테고리</SelectItem>
-                            <SelectItem value="치킨">치킨</SelectItem>
-                            <SelectItem value="중식">중식</SelectItem>
-                            <SelectItem value="분식">분식</SelectItem>
-                            <SelectItem value="한식">한식</SelectItem>
-                            <SelectItem value="양식">양식</SelectItem>
-                            <SelectItem value="카페·디저트">카페·디저트</SelectItem>
+                            {RESTAURANT_CATEGORIES.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                    {category}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
 
