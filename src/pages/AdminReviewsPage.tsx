@@ -344,36 +344,55 @@ export default function AdminReviewsPage() {
                             <div className="grid gap-4">
                                 {pendingReviews.map((review) => (
                                     <Card key={review.id} className="p-4">
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <h3 className="text-lg font-semibold">{review.title}</h3>
-                                                    {getStatusBadge(review.is_verified)}
-                                                </div>
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span className="flex items-center gap-1">
-                                                        <Avatar className="h-6 w-6">
+                                        <div className="space-y-3">
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1 space-y-2">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <h3 className="text-lg font-semibold">{review.title}</h3>
+                                                        {getStatusBadge(review.is_verified)}
+                                                        <Badge variant="outline">{Array.isArray(review.categories) ? review.categories.join(', ') : review.category}</Badge>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <Avatar className="h-4 w-4">
                                                             <AvatarFallback className="text-xs">
                                                                 {review.profiles?.nickname?.[0] || '익'}
                                                             </AvatarFallback>
                                                         </Avatar>
-                                                        {review.profiles?.nickname || '익명'}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <MapPin className="h-4 w-4" />
-                                                        {review.restaurants?.name}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar className="h-4 w-4" />
-                                                        {new Date(review.visited_at).toLocaleDateString('ko-KR')}
-                                                    </span>
+                                                        <span>{review.profiles?.nickname || '익명'}</span>
+                                                    </div>
+
+                                                    <p className="text-sm text-muted-foreground">🏪 {review.restaurants?.name}</p>
+                                                    <p className="text-sm text-muted-foreground">📅 방문일: {new Date(review.visited_at).toLocaleDateString('ko-KR')}</p>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-1">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleReviewAction('approve', review)}
+
+                                            {review.is_verified === false && (
+                                                <div className="flex gap-2">
+                                                    <Button
+                                                        onClick={() => handleReviewAction('approve', review)}
+                                                        className="flex-1 bg-green-500 hover:bg-green-600"
+                                                    >
+                                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                                        승인
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => handleReviewAction('reject', review)}
+                                                        variant="destructive"
+                                                        className="flex-1"
+                                                    >
+                                                        <XCircle className="mr-2 h-4 w-4" />
+                                                        거부
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => handleDelete(review.id)}
+                                                        variant="outline"
+                                                        size="icon"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
                                                     className="text-green-600 hover:text-green-700"
                                                 >
                                                     <CheckCircle2 className="h-4 w-4 mr-1" />
@@ -443,32 +462,27 @@ export default function AdminReviewsPage() {
                                 {approvedReviews.map((review) => (
                                     <Card key={review.id} className="p-4">
                                         <div className="flex items-start justify-between mb-3">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex-1 space-y-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <h3 className="text-lg font-semibold">{review.title}</h3>
                                                     {getStatusBadge(review.is_verified)}
                                                     {review.is_pinned && (
                                                         <Badge variant="default">📌 고정됨</Badge>
                                                     )}
+                                                    <Badge variant="outline">{Array.isArray(review.categories) ? review.categories.join(', ') : review.category}</Badge>
                                                 </div>
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span className="flex items-center gap-1">
-                                                        <Avatar className="h-6 w-6">
-                                                            <AvatarFallback className="text-xs">
-                                                                {review.profiles?.nickname?.[0] || '익'}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        {review.profiles?.nickname || '익명'}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <MapPin className="h-4 w-4" />
-                                                        {review.restaurants?.name}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar className="h-4 w-4" />
-                                                        {new Date(review.visited_at).toLocaleDateString('ko-KR')}
-                                                    </span>
+
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <Avatar className="h-4 w-4">
+                                                        <AvatarFallback className="text-xs">
+                                                            {review.profiles?.nickname?.[0] || '익'}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span>{review.profiles?.nickname || '익명'}</span>
                                                 </div>
+
+                                                <p className="text-sm text-muted-foreground">🏪 {review.restaurants?.name}</p>
+                                                <p className="text-sm text-muted-foreground">📅 방문일: {new Date(review.visited_at).toLocaleDateString('ko-KR')}</p>
                                             </div>
                                             <div className="flex gap-1">
                                                 <Button
@@ -536,31 +550,26 @@ export default function AdminReviewsPage() {
                                     <Card key={review.id} className="p-4">
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <h3 className="text-lg font-semibold">{review.title}</h3>
                                                     <Badge variant="destructive" className="gap-1">
                                                         <XCircle className="h-3 w-3" />
                                                         거부됨
                                                     </Badge>
+                                                    <Badge variant="outline">{Array.isArray(review.categories) ? review.categories.join(', ') : review.category}</Badge>
                                                 </div>
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span className="flex items-center gap-1">
-                                                        <Avatar className="h-6 w-6">
-                                                            <AvatarFallback className="text-xs">
-                                                                {review.profiles?.nickname?.[0] || '익'}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        {review.profiles?.nickname || '익명'}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <MapPin className="h-4 w-4" />
-                                                        {review.restaurants?.name}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar className="h-4 w-4" />
-                                                        {new Date(review.visited_at).toLocaleDateString('ko-KR')}
-                                                    </span>
+
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                    <Avatar className="h-4 w-4">
+                                                        <AvatarFallback className="text-xs">
+                                                            {review.profiles?.nickname?.[0] || '익'}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span>{review.profiles?.nickname || '익명'}</span>
                                                 </div>
+
+                                                <p className="text-sm text-muted-foreground">🏪 {review.restaurants?.name}</p>
+                                                <p className="text-sm text-muted-foreground">📅 방문일: {new Date(review.visited_at).toLocaleDateString('ko-KR')}</p>
                                             </div>
                                             <div className="flex gap-1">
                                                 <Button
