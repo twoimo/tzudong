@@ -1,4 +1,4 @@
-import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield } from "lucide-react";
+import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -65,11 +65,18 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       )}
     >
       <div className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
-            <span className="text-xl">🔥</span>
+        <div className="flex items-center gap-3 group">
+          {/* Enhanced Logo */}
+          <div className="relative">
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110">
+              <MapPin className="w-4 h-4 text-white drop-shadow-sm" />
+            </div>
+            {/* Subtle glow effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/30 to-pink-500/30 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </div>
-          <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+
+          {/* Enhanced Title */}
+          <h1 className="text-xl font-bold bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-red-400 group-hover:to-pink-400 transition-all duration-300">
             쯔동여지도
           </h1>
         </div>
