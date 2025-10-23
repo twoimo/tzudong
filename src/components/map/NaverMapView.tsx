@@ -71,6 +71,13 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
                 mapTypeControlOptions: {
                     position: naver.maps.Position.TOP_LEFT,
                 },
+                // 스크롤 휠 이벤트 최적화 (passive 이벤트 리스너 사용 유도)
+                scrollWheel: true,
+                disableDoubleClickZoom: false,
+                disableDoubleTapZoom: false,
+                // 터치 이벤트 최적화
+                pinchZoom: true,
+                rotateControl: false,
             });
 
             mapInstanceRef.current = map;
