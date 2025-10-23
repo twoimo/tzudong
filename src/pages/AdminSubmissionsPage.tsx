@@ -758,13 +758,15 @@ function SubmissionCard({
                         <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="text-lg font-semibold">{submission.restaurant_name}</h3>
                             {getStatusBadge(submission.status)}
-                            {Array.isArray(submission.category) ? (
-                                submission.category.map((cat, index) => (
-                                    <Badge key={index} variant="outline">{cat}</Badge>
-                                ))
-                            ) : (
-                                <Badge variant="outline">{submission.category}</Badge>
-                            )}
+                            <div className="flex flex-wrap gap-1">
+                                {Array.isArray(submission.category) ? (
+                                    submission.category.map((cat, index) => (
+                                        <Badge key={index} variant="outline" className="text-xs">{cat}</Badge>
+                                    ))
+                                ) : (
+                                    <Badge variant="outline" className="text-xs">{submission.category}</Badge>
+                                )}
+                            </div>
                             <Badge variant={submission.original_restaurant_id ? 'secondary' : 'default'}>
                                 {submission.original_restaurant_id ? '수정 요청' : '신규 제보'}
                             </Badge>

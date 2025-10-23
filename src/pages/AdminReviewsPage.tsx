@@ -451,7 +451,20 @@ export default function AdminReviewsPage() {
 
                                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                 <span>작성일: {new Date(review.created_at).toLocaleString('ko-KR')}</span>
-                                                <Badge variant="outline">{review.category}</Badge>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.isArray(review.category)
+                                                        ? review.category.map((cat: string) => (
+                                                            <Badge key={cat} variant="outline" className="text-xs">
+                                                                {cat}
+                                                            </Badge>
+                                                        ))
+                                                        : (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {review.category}
+                                                            </Badge>
+                                                        )
+                                                    }
+                                                </div>
                                             </div>
                                         </div>
                                     </Card>
@@ -543,7 +556,20 @@ export default function AdminReviewsPage() {
 
                                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                 <span>작성일: {new Date(review.created_at).toLocaleString('ko-KR')}</span>
-                                                <Badge variant="outline">{review.category}</Badge>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.isArray(review.category)
+                                                        ? review.category.map((cat: string) => (
+                                                            <Badge key={cat} variant="outline" className="text-xs">
+                                                                {cat}
+                                                            </Badge>
+                                                        ))
+                                                        : (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {review.category}
+                                                            </Badge>
+                                                        )
+                                                    }
+                                                </div>
                                             </div>
                                         </div>
                                     </Card>
@@ -646,7 +672,20 @@ export default function AdminReviewsPage() {
 
                                             <div className="flex items-center justify-between text-xs text-muted-foreground">
                                                 <span>작성일: {new Date(review.created_at).toLocaleString('ko-KR')}</span>
-                                                <Badge variant="outline">{review.category}</Badge>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {Array.isArray(review.category)
+                                                        ? review.category.map((cat: string) => (
+                                                            <Badge key={cat} variant="outline" className="text-xs">
+                                                                {cat}
+                                                            </Badge>
+                                                        ))
+                                                        : (
+                                                            <Badge variant="outline" className="text-xs">
+                                                                {review.category}
+                                                            </Badge>
+                                                        )
+                                                    }
+                                                </div>
                                             </div>
                                         </div>
                                     </Card>
