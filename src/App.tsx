@@ -93,18 +93,8 @@ function AppLayout() {
         />
 
         <main className="flex-1 relative overflow-hidden">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-full">
-              <div className="space-y-4 w-full max-w-4xl p-6">
-                <Skeleton className="h-8 w-64" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <Skeleton key={i} className="h-48 w-full rounded-lg" />
-                  ))}
-                </div>
-              </div>
-            </div>
-          }>
+          <Suspense fallback={<div />}>
+
             <Routes>
               <Route path="/" element={<Index refreshTrigger={refreshTrigger} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
               <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
