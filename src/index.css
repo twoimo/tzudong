@@ -119,10 +119,13 @@ All colors MUST be HSL.
   will-change: transform;
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
-  transform: translateZ(0);
-  /* GPU 가속화 */
 }
 
 .marker-icon:hover {
-  transform: scale(1.2) translateZ(0);
+  transform: scale(1.2);
+}
+
+/* GPU 가속 활성화 */
+.marker-icon {
+  transform: translateZ(0);
 }

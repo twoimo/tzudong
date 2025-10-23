@@ -1,6 +1,6 @@
-import React, { useState } from "react";
 import { Menu, Moon, Sun, Bell, Maximize, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ interface HeaderProps {
   onProfileClick?: () => void;
 }
 
-const Header = React.memo<HeaderProps>(({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick }) => {
+const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick }: HeaderProps) => {
   const [isDark, setIsDark] = useState(false);
 
   const toggleTheme = () => {
@@ -60,6 +60,8 @@ const Header = React.memo<HeaderProps>(({ onToggleSidebar, isLoggedIn, onOpenAut
       </div>
 
       <div className="flex items-center gap-2">
+
+
         <Button
           variant="ghost"
           size="icon"
@@ -115,8 +117,6 @@ const Header = React.memo<HeaderProps>(({ onToggleSidebar, isLoggedIn, onOpenAut
       </div>
     </header>
   );
-});
-
-Header.displayName = "Header";
+};
 
 export default Header;

@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
     DollarSign,
     Server,
@@ -43,6 +42,7 @@ interface ServerCost {
     description: string | null;
     updated_at: string | null;
 }
+
 
 const ServerCostsPage = () => {
     const { isAdmin } = useAuth();
@@ -173,7 +173,6 @@ const ServerCostsPage = () => {
     });
 
     const totalMonthlyCost = costs.reduce((sum, cost) => sum + cost.monthly_cost, 0);
-    const isDummyData = costs.length > 0 && costs[0].id.startsWith('dummy-');
 
     const handleEdit = (cost: ServerCost) => {
         setEditingCost({ ...cost });
@@ -216,6 +215,52 @@ const ServerCostsPage = () => {
         }).format(amount);
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex flex-col h-full bg-background">
+                {/* Header Skeleton */}
+                <div className="border-b border-border bg-card p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <div className="h-7 bg-muted rounded animate-pulse w-48"></div>
+                                <div className="h-5 bg-muted rounded animate-pulse w-20"></div>
+                            </div>
+                            <div className="h-4 bg-muted rounded animate-pulse w-32 mt-1"></div>
+                        </div>
+                        <div className="h-9 bg-muted rounded animate-pulse w-32"></div>
+                    </div>
+                    <div className="p-6 bg-muted rounded-lg">
+                        <div className="text-center">
+                            <div className="h-4 bg-muted-foreground/20 rounded animate-pulse w-24 mx-auto mb-2"></div>
+                            <div className="h-10 bg-muted-foreground/20 rounded animate-pulse w-40 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Content Skeleton */}
+                <div className="flex-1 p-6">
+                    <div className="space-y-4">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                            <div key={index} className="flex items-center justify-between p-4 border border-border rounded-lg">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 bg-muted rounded-lg animate-pulse"></div>
+                                    <div className="space-y-2">
+                                        <div className="h-5 bg-muted rounded animate-pulse w-32"></div>
+                                        <div className="h-4 bg-muted rounded animate-pulse w-48"></div>
+                                    </div>
+                                </div>
+                                <div className="text-right space-y-2">
+                                    <div className="h-5 bg-muted rounded animate-pulse w-24"></div>
+                                    <div className="h-4 bg-muted rounded animate-pulse w-20"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -228,11 +273,6 @@ const ServerCostsPage = () => {
                                 <DollarSign className="h-6 w-6 text-primary" />
                                 월 서버 운영 비용
                             </h1>
-                            {isDummyData && (
-                                <Badge variant="secondary" className="text-xs">
-                                    📊 샘플 데이터
-                                </Badge>
-                            )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             투명한 서비스 운영을 위한 비용 공개
@@ -264,7 +304,15 @@ const ServerCostsPage = () => {
                     </div>
 
                     <ScrollArea className="flex-1">
-                        {isLoading || costs.length > 0 ? (
+                        {costs.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                                <Server className="h-12 w-12 mb-4" />
+                                <p>등록된 비용 항목이 없습니다</p>
+                                {isAdmin && (
+                                    <p className="text-sm mt-2">첫 번째 비용 항목을 추가해보세요!</p>
+                                )}
+                            </div>
+                        ) : (
                             <Table>
                                 <TableHeader className="sticky top-0 bg-muted">
                                     <TableRow>
@@ -276,24 +324,7 @@ const ServerCostsPage = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isLoading ? (
-                                        Array.from({ length: 5 }).map((_, i) => (
-                                            <TableRow key={`skeleton-${i}`}>
-                                                <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                                <TableCell className="text-right"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
-                                                <TableCell className="text-right"><Skeleton className="h-5 w-12 ml-auto" /></TableCell>
-                                                <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                                                {isAdmin && (
-                                                    <TableCell className="text-right">
-                                                        <div className="flex gap-2 justify-end">
-                                                            <Skeleton className="h-8 w-8" />
-                                                            <Skeleton className="h-8 w-8" />
-                                                        </div>
-                                                    </TableCell>
-                                                )}
-                                            </TableRow>
-                                        ))
-                                    ) : costs.map((cost) => {
+                                    {costs.map((cost) => {
                                         const percentage = totalMonthlyCost > 0
                                             ? ((cost.monthly_cost / totalMonthlyCost) * 100).toFixed(1)
                                             : "0.0";
@@ -339,7 +370,7 @@ const ServerCostsPage = () => {
                                     })}
                                 </TableBody>
                             </Table>
-                        ) : null}
+                        )}
                     </ScrollArea>
                 </Card>
             </div>

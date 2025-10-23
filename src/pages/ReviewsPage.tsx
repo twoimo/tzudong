@@ -12,7 +12,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare, XCircle, User } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
@@ -140,7 +139,6 @@ const ReviewsPage = () => {
 
     // 실제 승인된 리뷰 데이터 사용
     const displayData = reviewsData;
-    const isDummyData = false; // 더미 데이터 사용하지 않음
 
     const filteredReviews = displayData.filter((review) => {
         const matchesSearch =
@@ -334,11 +332,6 @@ const ReviewsPage = () => {
                                 <MessageSquare className="h-6 w-6 text-primary" />
                                 쯔양 팬 맛집 리뷰
                             </h1>
-                            {isDummyData && (
-                                <Badge variant="secondary" className="text-xs">
-                                    📊 샘플 데이터
-                                </Badge>
-                            )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             {isLoggedIn
@@ -403,45 +396,7 @@ const ReviewsPage = () => {
             {/* Reviews List */}
             <ScrollArea className="flex-1">
                 <div className="p-6 space-y-4">
-                    {isLoading ? (
-                        // Loading Skeleton
-                        Array.from({ length: 3 }).map((_, index) => (
-                            <Card key={index} className="p-6">
-                                <div className="space-y-4">
-                                    {/* Header Skeleton */}
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1 space-y-2">
-                                            <Skeleton className="h-6 w-48" />
-                                            <div className="flex gap-2">
-                                                <Skeleton className="h-5 w-16" />
-                                                <Skeleton className="h-5 w-20" />
-                                            </div>
-                                        </div>
-                                        <Skeleton className="h-8 w-20" />
-                                    </div>
-
-                                    {/* Content Skeleton */}
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-3/4" />
-                                    </div>
-
-                                    {/* Footer Skeleton */}
-                                    <div className="flex items-center justify-between pt-4 border-t">
-                                        <div className="flex items-center gap-4">
-                                            <Skeleton className="h-4 w-24" />
-                                            <Skeleton className="h-4 w-20" />
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Skeleton className="h-8 w-16" />
-                                            <Skeleton className="h-8 w-16" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))
-                    ) : sortedReviews.length === 0 ? (
+                    {sortedReviews.length === 0 ? (
                         <div className="text-center py-12">
                             <p className="text-muted-foreground">검색 결과가 없습니다.</p>
                         </div>

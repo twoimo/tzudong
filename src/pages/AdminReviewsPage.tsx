@@ -20,7 +20,6 @@ import {
     MapPin,
     Star,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -321,53 +320,44 @@ export default function AdminReviewsPage() {
                             검토 대기 ({pendingReviews.length})
                         </TabsTrigger>
                         <TabsTrigger value="approved">
-                            승인된 리뷰 ({approvedReviews.length})
+                            승인됨 ({approvedReviews.length})
                         </TabsTrigger>
                         <TabsTrigger value="rejected">
-                            거부된 리뷰 ({rejectedReviews.length})
+                            거부됨 ({rejectedReviews.length})
                         </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="pending" className="mt-6">
                         {isLoading ? (
-                            // Loading Skeleton
-                            <div className="space-y-4">
+                            // Loading skeleton
+                            <div className="grid gap-4">
                                 {Array.from({ length: 3 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-6 w-48" />
-                                                    <Skeleton className="h-4 w-32" />
+                                    <Card key={index} className="p-4">
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="h-5 bg-muted rounded animate-pulse w-40"></div>
+                                                    <div className="h-5 bg-muted rounded animate-pulse w-16"></div>
                                                 </div>
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                            </div>
-
-                                            {/* Photos Skeleton */}
-                                            <div className="flex gap-2">
-                                                <Skeleton className="h-20 w-20 rounded" />
-                                                <Skeleton className="h-20 w-20 rounded" />
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-4 border-t">
-                                                <div className="flex items-center gap-4">
-                                                    <Skeleton className="h-4 w-24" />
-                                                    <Skeleton className="h-4 w-20" />
+                                                <div className="flex items-center gap-4 text-sm mb-3">
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-5 h-5 bg-muted rounded-full animate-pulse"></div>
+                                                        <div className="h-3 bg-muted rounded animate-pulse w-12"></div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
+                                                        <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
+                                                        <div className="h-3 bg-muted rounded animate-pulse w-20"></div>
+                                                    </div>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                    <Skeleton className="h-8 w-16" />
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
+                                                <div className="h-12 bg-muted rounded animate-pulse w-full"></div>
+                                            </div>
+                                            <div className="flex gap-1 ml-4">
+                                                <div className="h-8 bg-muted rounded animate-pulse w-16"></div>
+                                                <div className="h-8 bg-muted rounded animate-pulse w-20"></div>
                                             </div>
                                         </div>
                                     </Card>
@@ -471,43 +461,7 @@ export default function AdminReviewsPage() {
                     </TabsContent>
 
                     <TabsContent value="approved" className="mt-6">
-                        {isLoading ? (
-                            // Loading Skeleton
-                            <div className="space-y-4">
-                                {Array.from({ length: 2 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-6 w-48" />
-                                                    <Skeleton className="h-4 w-32" />
-                                                </div>
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-4 border-t">
-                                                <div className="flex items-center gap-4">
-                                                    <Skeleton className="h-4 w-24" />
-                                                    <Skeleton className="h-4 w-20" />
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : approvedReviews.length === 0 ? (
+                        {approvedReviews.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">✅</div>
                                 <h3 className="text-xl font-semibold mb-2">승인된 리뷰가 없습니다</h3>
@@ -599,43 +553,7 @@ export default function AdminReviewsPage() {
                     </TabsContent>
 
                     <TabsContent value="rejected" className="mt-6">
-                        {isLoading ? (
-                            // Loading Skeleton
-                            <div className="space-y-4">
-                                {Array.from({ length: 2 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-6 w-48" />
-                                                    <Skeleton className="h-4 w-32" />
-                                                </div>
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-4 border-t">
-                                                <div className="flex items-center gap-4">
-                                                    <Skeleton className="h-4 w-24" />
-                                                    <Skeleton className="h-4 w-20" />
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : rejectedReviews.length === 0 ? (
+                        {rejectedReviews.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">❌</div>
                                 <h3 className="text-xl font-semibold mb-2">거부된 리뷰가 없습니다</h3>

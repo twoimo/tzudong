@@ -21,8 +21,11 @@ CREATE TABLE IF NOT EXISTS public.restaurant_submissions (
 );
 
 -- 인덱스 생성
+DROP INDEX IF EXISTS idx_restaurant_submissions_user_id;
 CREATE INDEX idx_restaurant_submissions_user_id ON public.restaurant_submissions(user_id);
+DROP INDEX IF EXISTS idx_restaurant_submissions_status;
 CREATE INDEX idx_restaurant_submissions_status ON public.restaurant_submissions(status);
+DROP INDEX IF EXISTS idx_restaurant_submissions_created_at;
 CREATE INDEX idx_restaurant_submissions_created_at ON public.restaurant_submissions(created_at DESC);
 
 -- RLS (Row Level Security) 활성화

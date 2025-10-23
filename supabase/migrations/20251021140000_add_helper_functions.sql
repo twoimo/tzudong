@@ -81,21 +81,25 @@ VALUES ('review-photos', 'review-photos', true)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage policies for review photos
+DROP POLICY IF EXISTS "Anyone can view review photos" ON storage.objects;
 CREATE POLICY "Anyone can view review photos"
   ON storage.objects FOR SELECT
   TO public
   USING (bucket_id = 'review-photos');
 
+DROP POLICY IF EXISTS "Authenticated users can upload review photos" ON storage.objects;
 CREATE POLICY "Authenticated users can upload review photos"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (bucket_id = 'review-photos');
 
+DROP POLICY IF EXISTS "Users can update own review photos" ON storage.objects;
 CREATE POLICY "Users can update own review photos"
   ON storage.objects FOR UPDATE
   TO authenticated
   USING (bucket_id = 'review-photos' AND auth.uid()::text = (storage.foldername(name))[1]);
 
+DROP POLICY IF EXISTS "Users can delete own review photos" ON storage.objects;
 CREATE POLICY "Users can delete own review photos"
   ON storage.objects FOR DELETE
   TO authenticated

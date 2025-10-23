@@ -29,7 +29,6 @@ import {
 import { RESTAURANT_CATEGORIES, Restaurant } from "@/types/restaurant";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { useAuth } from "@/contexts/AuthContext";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // 지역 목록
 const REGIONS = [
@@ -56,7 +55,6 @@ interface FilteringPageProps {
 
 const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const { data: restaurants = [], isLoading } = useRestaurants({ enabled: true });
-    const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
     const { isAdmin } = useAuth();
 
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -537,14 +535,36 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                Array.from({ length: 8 }).map((_, i) => (
-                                    <TableRow key={`skeleton-${i}`}>
-                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
-                                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                // Loading skeleton
+                                Array.from({ length: 5 }).map((_, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-5 h-5 bg-muted rounded animate-pulse"></div>
+                                                <div className="h-4 bg-muted rounded animate-pulse w-32"></div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-1">
+                                                <div className="h-5 bg-muted rounded animate-pulse w-16"></div>
+                                                <div className="h-5 bg-muted rounded animate-pulse w-12"></div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="h-4 bg-muted rounded animate-pulse w-12 mx-auto"></div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="h-4 bg-muted rounded animate-pulse w-10 mx-auto"></div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
+                                                <div className="h-4 bg-muted rounded animate-pulse w-6"></div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             ) : filteredAndSortedRestaurants.length === 0 ? (

@@ -17,7 +17,6 @@ import {
     Shield,
     User,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -64,19 +63,16 @@ export default function AdminSubmissionsPage() {
         jjyang_visit_count: "1",
     });
 
-    // 모든 제보 조회 (관리자만) - 최적화된 쿼리
+    // 모든 제보 조회 (관리자만)
     const { data: submissions = [], isLoading, error: queryError } = useQuery({
-        queryKey: ['admin-submissions', user?.id], // 사용자별 캐싱
+        queryKey: ['admin-submissions'],
         queryFn: async () => {
-            // 제보 데이터와 프로필 데이터를 한 번에 조회 (최적화)
+            console.log('🔍 제보 데이터 조회 시작...');
+
+            // 1. 제보 데이터 가져오기
             const { data: submissionsData, error: submissionsError } = await supabase
                 .from('restaurant_submissions')
-                .select(`
-                    *,
-                    profiles:user_id (
-                        nickname
-                    )
-                `)
+                .select('*')
                 .order('created_at', { ascending: false });
 
             if (submissionsError) {
@@ -85,22 +81,36 @@ export default function AdminSubmissionsPage() {
             }
 
             if (!submissionsData || submissionsData.length === 0) {
+                console.log('✅ 제보 데이터 없음');
                 return [];
             }
 
-            // 데이터 매핑 (프로필 정보 포함)
+            // 2. user_id 목록 추출
+            const userIds = [...new Set(submissionsData.map(s => s.user_id))];
+
+            // 3. profiles 데이터 가져오기
+            const { data: profilesData } = await supabase
+                .from('profiles')
+                .select('user_id, nickname')
+                .in('user_id', userIds);
+
+            // 4. Map으로 변환 (빠른 조회)
+            const profilesMap = new Map(
+                (profilesData || []).map(p => [p.user_id, p.nickname])
+            );
+
+            // 5. 데이터 매핑
             const result = submissionsData.map(submission => ({
                 ...submission,
                 profiles: {
-                    nickname: (submission.profiles as any)?.nickname || '탈퇴한 사용자'
+                    nickname: profilesMap.get(submission.user_id) || '탈퇴한 사용자'
                 }
             })) as SubmissionWithUser[];
 
+            console.log('✅ 제보 데이터 조회 성공:', result.length, '개');
             return result;
         },
         enabled: !!user && !!isAdmin,
-        staleTime: 2 * 60 * 1000, // 2분 (관리자 데이터는 자주 변경되지 않음)
-        gcTime: 5 * 60 * 1000, // 5분 캐시 유지
     });
 
     // 제보 승인 (레스토랑 테이블에 추가)
@@ -436,44 +446,32 @@ export default function AdminSubmissionsPage() {
 
                     <TabsContent value="pending" className="space-y-4 mt-4">
                         {isLoading ? (
-                            // Loading Skeleton
+                            // Loading skeleton
                             <div className="space-y-4">
-                                {Array.from({ length: 2 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
+                                {Array.from({ length: 3 }).map((_, index) => (
+                                    <Card key={index} className="p-4">
+                                        <div className="flex items-start justify-between mb-4">
+                                            <div className="flex-1 space-y-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="h-6 bg-muted rounded animate-pulse w-48"></div>
+                                                    <div className="h-5 bg-muted rounded animate-pulse w-16"></div>
+                                                    <div className="h-5 bg-muted rounded animate-pulse w-20"></div>
+                                                    <div className="h-5 bg-muted rounded animate-pulse w-24"></div>
+                                                </div>
                                                 <div className="space-y-2">
-                                                    <Skeleton className="h-5 w-48" />
-                                                    <Skeleton className="h-4 w-32" />
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-56"></div>
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-40"></div>
                                                 </div>
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                    <Skeleton className="h-8 w-16" />
+                                                <div className="flex items-center gap-4 text-sm">
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-28"></div>
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
                                                 </div>
+                                                <div className="h-16 bg-muted rounded animate-pulse w-full"></div>
                                             </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                            </div>
-
-                                            {/* Categories Skeleton */}
-                                            <div className="flex flex-wrap gap-2">
-                                                <Skeleton className="h-6 w-16" />
-                                                <Skeleton className="h-6 w-20" />
-                                                <Skeleton className="h-6 w-14" />
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-2 border-t">
-                                                <Skeleton className="h-4 w-24" />
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                    <Skeleton className="h-8 w-16" />
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
+                                            <div className="flex gap-2 ml-4">
+                                                <div className="h-9 bg-muted rounded animate-pulse w-20"></div>
+                                                <div className="h-9 bg-muted rounded animate-pulse w-20"></div>
+                                                <div className="h-9 bg-muted rounded animate-pulse w-16"></div>
                                             </div>
                                         </div>
                                     </Card>
@@ -499,43 +497,7 @@ export default function AdminSubmissionsPage() {
                     </TabsContent>
 
                     <TabsContent value="approved" className="space-y-4 mt-4">
-                        {isLoading ? (
-                            // Loading Skeleton
-                            <div className="space-y-4">
-                                {Array.from({ length: 2 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-6 w-40" />
-                                                    <Skeleton className="h-4 w-32" />
-                                                </div>
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                                <div className="flex gap-2 mt-2">
-                                                    <Skeleton className="h-5 w-16" />
-                                                    <Skeleton className="h-5 w-20" />
-                                                </div>
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-4 border-t">
-                                                <Skeleton className="h-4 w-24" />
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : approvedSubmissions.length === 0 ? (
+                        {approvedSubmissions.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">📋</div>
                                 <h3 className="text-xl font-semibold mb-2">승인된 제보가 없습니다</h3>
@@ -552,43 +514,7 @@ export default function AdminSubmissionsPage() {
                     </TabsContent>
 
                     <TabsContent value="rejected" className="space-y-4 mt-4">
-                        {isLoading ? (
-                            // Loading Skeleton
-                            <div className="space-y-4">
-                                {Array.from({ length: 2 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-6 w-40" />
-                                                    <Skeleton className="h-4 w-32" />
-                                                </div>
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                                <div className="flex gap-2 mt-2">
-                                                    <Skeleton className="h-5 w-16" />
-                                                    <Skeleton className="h-5 w-20" />
-                                                </div>
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-4 border-t">
-                                                <Skeleton className="h-4 w-24" />
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : rejectedSubmissions.length === 0 ? (
+                        {rejectedSubmissions.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">📋</div>
                                 <h3 className="text-xl font-semibold mb-2">거부된 제보가 없습니다</h3>

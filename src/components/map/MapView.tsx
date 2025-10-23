@@ -47,7 +47,6 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
     enabled: isLoaded && !!mapBounds,
   });
 
-  const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
 
   // Refetch when refreshTrigger changes
   useEffect(() => {

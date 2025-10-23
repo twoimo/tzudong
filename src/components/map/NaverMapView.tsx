@@ -34,7 +34,6 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
         enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
     });
 
-    const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
 
     // refreshTrigger 변경 시 선택된 레스토랑 정보 업데이트
     useEffect(() => {
@@ -71,13 +70,6 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
                 mapTypeControlOptions: {
                     position: naver.maps.Position.TOP_LEFT,
                 },
-                // 스크롤 휠 이벤트 최적화 (passive 이벤트 리스너 사용 유도)
-                scrollWheel: true,
-                disableDoubleClickZoom: false,
-                disableDoubleTapZoom: false,
-                // 터치 이벤트 최적화
-                pinchZoom: true,
-                rotateControl: false,
             });
 
             mapInstanceRef.current = map;
@@ -142,7 +134,7 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [restaurants, isDummyData, refreshTrigger]);
+    }, [restaurants, refreshTrigger]);
 
     // 로딩 에러 처리
     if (loadError) {

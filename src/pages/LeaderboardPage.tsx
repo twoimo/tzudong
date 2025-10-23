@@ -25,7 +25,6 @@ interface LeaderboardUser {
     badges: { name: string; icon: string; earnedAt: string }[];
 }
 
-// 실제 데이터베이스에서 리뷰 데이터를 집계하여 사용
 
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
@@ -148,7 +147,6 @@ const LeaderboardPage = () => {
         }
         return 0;
     });
-    const isDummyData = leaderboardData.length > 0 && leaderboardData[0].id.startsWith('dummy-');
 
     const getRankIcon = (rank: number, forTable: boolean = false) => {
         if (forTable) {
@@ -204,11 +202,6 @@ const LeaderboardPage = () => {
                                     <Trophy className="h-6 w-6 text-primary" />
                                     쯔양 팬 랭킹
                                 </h1>
-                                {isDummyData && (
-                                    <Badge variant="secondary" className="text-xs">
-                                        📊 샘플 데이터
-                                    </Badge>
-                                )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
                                 맛집 리뷰로 쌓은 랭킹
