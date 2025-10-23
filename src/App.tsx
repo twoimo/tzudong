@@ -5,7 +5,6 @@ import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/reac
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Suspense, lazy } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 // Lazy load pages for code splitting
 const Index = lazy(() => import("./pages/Index"));
@@ -95,13 +94,9 @@ function AppLayout() {
         <main className="flex-1 relative overflow-hidden">
           <Suspense fallback={
             <div className="flex items-center justify-center h-full">
-              <div className="space-y-4 w-full max-w-4xl p-6">
-                <Skeleton className="h-8 w-64" />
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <Skeleton key={i} className="h-48 w-full rounded-lg" />
-                  ))}
-                </div>
+              <div className="text-center">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <p className="mt-4 text-muted-foreground">로딩 중...</p>
               </div>
             </div>
           }>
