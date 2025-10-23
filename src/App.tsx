@@ -19,6 +19,7 @@ import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import AuthModal from "./components/auth/AuthModal";
 import { ProfileModal } from "./components/profile/ProfileModal";
+import { AdminRestaurantModal } from "./components/admin/AdminRestaurantModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
@@ -31,6 +32,7 @@ function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -94,6 +96,13 @@ function AppLayout() {
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
+      />
+
+      <AdminRestaurantModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+        restaurant={selectedRestaurant}
+        onSuccess={handleAdminSuccess}
       />
 
     </div>
