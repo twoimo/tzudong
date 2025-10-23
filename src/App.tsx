@@ -7,7 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Lazy load pages for code splitting
+// Lazy load pages for code splitting with preload
 const Index = lazy(() => import("./pages/Index"));
 const GlobalMapPage = lazy(() => import("./pages/GlobalMapPage"));
 const FilteringPage = lazy(() => import("./pages/FilteringPage"));
@@ -18,6 +18,16 @@ const RestaurantSubmissionsPage = lazy(() => import("./pages/RestaurantSubmissio
 const AdminSubmissionsPage = lazy(() => import("./pages/AdminSubmissionsPage"));
 const AdminReviewsPage = lazy(() => import("./pages/AdminReviewsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Preload functions for performance optimization
+const preloadGlobalMapPage = () => import("./pages/GlobalMapPage");
+const preloadFilteringPage = () => import("./pages/FilteringPage");
+const preloadReviewsPage = () => import("./pages/ReviewsPage");
+const preloadLeaderboardPage = () => import("./pages/LeaderboardPage");
+const preloadServerCostsPage = () => import("./pages/ServerCostsPage");
+const preloadRestaurantSubmissionsPage = () => import("./pages/RestaurantSubmissionsPage");
+const preloadAdminSubmissionsPage = () => import("./pages/AdminSubmissionsPage");
+const preloadAdminReviewsPage = () => import("./pages/AdminReviewsPage");
 import { useState } from "react";
 import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";

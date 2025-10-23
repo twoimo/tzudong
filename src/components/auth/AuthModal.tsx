@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
+const AuthModal = React.memo<AuthModalProps>(({ isOpen, onClose }) => {
   const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -196,6 +196,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
       </DialogContent>
     </Dialog>
   );
-};
+});
+
+AuthModal.displayName = "AuthModal";
 
 export default AuthModal;
