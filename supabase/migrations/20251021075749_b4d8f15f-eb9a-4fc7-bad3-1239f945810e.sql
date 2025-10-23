@@ -153,7 +153,7 @@ CREATE POLICY "Users can insert own profile"
 -- RLS Policies for restaurants
 CREATE POLICY "Restaurants are viewable by everyone"
   ON public.restaurants FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 CREATE POLICY "Admins can insert restaurants"
@@ -174,7 +174,7 @@ CREATE POLICY "Admins can delete restaurants"
 -- RLS Policies for reviews (최적화된 정책)
 CREATE POLICY "Reviews are viewable by everyone"
   ON public.reviews FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 CREATE POLICY "Users can insert own reviews"
@@ -195,7 +195,7 @@ CREATE POLICY "Users and admins can delete reviews"
 -- RLS Policies for server_costs
 CREATE POLICY "Server costs are viewable by everyone"
   ON public.server_costs FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 CREATE POLICY "Admins can manage server costs"
@@ -206,7 +206,7 @@ CREATE POLICY "Admins can manage server costs"
 -- RLS Policies for user_stats
 CREATE POLICY "User stats are viewable by everyone"
   ON public.user_stats FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 -- Create trigger function for profile creation
