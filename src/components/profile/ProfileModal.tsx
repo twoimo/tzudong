@@ -58,14 +58,23 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('user_id', user.id)
-                .single();
+                .eq('user_id', user.id);
 
             if (error) throw error;
 
-            setProfile(data);
-            setNewNickname(data.nickname || "");
-            setNicknameChanged(data.nickname_changed || false);
+            // 프로필이 존재하는 경우
+            if (data && data.length > 0) {
+                const profileData = data[0];
+                setProfile(profileData);
+                setNewNickname(profileData.nickname || "");
+                setNicknameChanged(profileData.nickname_changed || false);
+            } else {
+                // 프로필이 없는 경우 기본값 설정
+                setProfile(null);
+                setNewNickname(user.email?.split('@')[0] || "사용자");
+                setNicknameChanged(false);
+                console.log('프로필이 존재하지 않아 기본값으로 설정합니다');
+            }
         } catch (error: any) {
             toast.error('프로필 정보를 불러오는데 실패했습니다');
             console.error('Profile load error:', error);
