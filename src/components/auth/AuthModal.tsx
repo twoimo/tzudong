@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,7 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-const AuthModal = React.memo<AuthModalProps>(({ isOpen, onClose }) => {
+const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
   const { signIn, signUp } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +43,7 @@ const AuthModal = React.memo<AuthModalProps>(({ isOpen, onClose }) => {
     setIsLoading(true);
     try {
       await signIn(email, password);
-      // 로그인 성공 토스트는 AuthContext에서 프로필 확인 후 표시
+      toast.success("로그인 성공!");
       resetForm();
       onClose();
     } catch (error: any) {
@@ -196,8 +196,6 @@ const AuthModal = React.memo<AuthModalProps>(({ isOpen, onClose }) => {
       </DialogContent>
     </Dialog>
   );
-});
-
-AuthModal.displayName = "AuthModal";
+};
 
 export default AuthModal;

@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
     DollarSign,
     Server,
@@ -43,6 +42,38 @@ interface ServerCost {
     description: string | null;
     updated_at: string | null;
 }
+
+// 더미 서버 비용 데이터
+const DUMMY_SERVER_COSTS: ServerCost[] = [
+    {
+        id: "dummy-cost-1",
+        item_name: "Supabase Pro 플랜 (샘플)",
+        monthly_cost: 25000,
+        description: "데이터베이스, 인증, Storage 포함",
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: "dummy-cost-2",
+        item_name: "Google Maps API (샘플)",
+        monthly_cost: 15000,
+        description: "Maps JavaScript API, Geocoding API 사용료",
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: "dummy-cost-3",
+        item_name: "Vercel Pro 플랜 (샘플)",
+        monthly_cost: 20000,
+        description: "웹 호스팅 및 CDN",
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: "dummy-cost-4",
+        item_name: "도메인 비용 (샘플)",
+        monthly_cost: 2000,
+        description: "tzudong-map.com 연간 구독 (월 환산)",
+        updated_at: new Date().toISOString(),
+    },
+];
 
 const ServerCostsPage = () => {
     const { isAdmin } = useAuth();
@@ -216,6 +247,16 @@ const ServerCostsPage = () => {
         }).format(amount);
     };
 
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                    <Server className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+                    <p className="text-muted-foreground">비용 데이터를 불러오는 중...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -264,7 +305,15 @@ const ServerCostsPage = () => {
                     </div>
 
                     <ScrollArea className="flex-1">
-                        {isLoading || costs.length > 0 ? (
+                        {costs.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                                <Server className="h-12 w-12 mb-4" />
+                                <p>등록된 비용 항목이 없습니다</p>
+                                {isAdmin && (
+                                    <p className="text-sm mt-2">첫 번째 비용 항목을 추가해보세요!</p>
+                                )}
+                            </div>
+                        ) : (
                             <Table>
                                 <TableHeader className="sticky top-0 bg-muted">
                                     <TableRow>
@@ -276,24 +325,7 @@ const ServerCostsPage = () => {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {isLoading ? (
-                                        Array.from({ length: 5 }).map((_, i) => (
-                                            <TableRow key={`skeleton-${i}`}>
-                                                <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                                                <TableCell className="text-right"><Skeleton className="h-4 w-24 ml-auto" /></TableCell>
-                                                <TableCell className="text-right"><Skeleton className="h-5 w-12 ml-auto" /></TableCell>
-                                                <TableCell><Skeleton className="h-4 w-48" /></TableCell>
-                                                {isAdmin && (
-                                                    <TableCell className="text-right">
-                                                        <div className="flex gap-2 justify-end">
-                                                            <Skeleton className="h-8 w-8" />
-                                                            <Skeleton className="h-8 w-8" />
-                                                        </div>
-                                                    </TableCell>
-                                                )}
-                                            </TableRow>
-                                        ))
-                                    ) : costs.map((cost) => {
+                                    {costs.map((cost) => {
                                         const percentage = totalMonthlyCost > 0
                                             ? ((cost.monthly_cost / totalMonthlyCost) * 100).toFixed(1)
                                             : "0.0";
@@ -339,7 +371,7 @@ const ServerCostsPage = () => {
                                     })}
                                 </TableBody>
                             </Table>
-                        ) : null}
+                        )}
                     </ScrollArea>
                 </Card>
             </div>

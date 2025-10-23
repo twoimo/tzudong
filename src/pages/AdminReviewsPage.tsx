@@ -20,7 +20,6 @@ import {
     MapPin,
     Star,
 } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -330,48 +329,8 @@ export default function AdminReviewsPage() {
 
                     <TabsContent value="pending" className="mt-6">
                         {isLoading ? (
-                            // Loading Skeleton
-                            <div className="space-y-4">
-                                {Array.from({ length: 3 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-6 w-48" />
-                                                    <Skeleton className="h-4 w-32" />
-                                                </div>
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                            </div>
-
-                                            {/* Photos Skeleton */}
-                                            <div className="flex gap-2">
-                                                <Skeleton className="h-20 w-20 rounded" />
-                                                <Skeleton className="h-20 w-20 rounded" />
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-4 border-t">
-                                                <div className="flex items-center gap-4">
-                                                    <Skeleton className="h-4 w-24" />
-                                                    <Skeleton className="h-4 w-20" />
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                    <Skeleton className="h-8 w-16" />
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
+                            <div className="flex items-center justify-center py-12">
+                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                             </div>
                         ) : pendingReviews.length === 0 ? (
                             <Card className="p-12 text-center">
@@ -471,43 +430,7 @@ export default function AdminReviewsPage() {
                     </TabsContent>
 
                     <TabsContent value="approved" className="mt-6">
-                        {isLoading ? (
-                            // Loading Skeleton
-                            <div className="space-y-4">
-                                {Array.from({ length: 2 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-6 w-48" />
-                                                    <Skeleton className="h-4 w-32" />
-                                                </div>
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-4 border-t">
-                                                <div className="flex items-center gap-4">
-                                                    <Skeleton className="h-4 w-24" />
-                                                    <Skeleton className="h-4 w-20" />
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : approvedReviews.length === 0 ? (
+                        {approvedReviews.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">✅</div>
                                 <h3 className="text-xl font-semibold mb-2">승인된 리뷰가 없습니다</h3>
@@ -599,43 +522,7 @@ export default function AdminReviewsPage() {
                     </TabsContent>
 
                     <TabsContent value="rejected" className="mt-6">
-                        {isLoading ? (
-                            // Loading Skeleton
-                            <div className="space-y-4">
-                                {Array.from({ length: 2 }).map((_, index) => (
-                                    <Card key={index} className="p-6">
-                                        <div className="space-y-4">
-                                            {/* Header Skeleton */}
-                                            <div className="flex items-start justify-between">
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-6 w-48" />
-                                                    <Skeleton className="h-4 w-32" />
-                                                </div>
-                                                <Skeleton className="h-6 w-20" />
-                                            </div>
-
-                                            {/* Content Skeleton */}
-                                            <div className="space-y-2">
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-full" />
-                                                <Skeleton className="h-4 w-3/4" />
-                                            </div>
-
-                                            {/* Footer Skeleton */}
-                                            <div className="flex items-center justify-between pt-4 border-t">
-                                                <div className="flex items-center gap-4">
-                                                    <Skeleton className="h-4 w-24" />
-                                                    <Skeleton className="h-4 w-20" />
-                                                </div>
-                                                <div className="flex gap-2">
-                                                    <Skeleton className="h-8 w-16" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : rejectedReviews.length === 0 ? (
+                        {rejectedReviews.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">❌</div>
                                 <h3 className="text-xl font-semibold mb-2">거부된 리뷰가 없습니다</h3>

@@ -1,5 +1,4 @@
-import React from "react";
-import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield, MapPin } from "lucide-react";
+import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -7,21 +6,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-// Preload functions for performance optimization
-const preloadGlobalMapPage = () => import("../../pages/GlobalMapPage");
-const preloadFilteringPage = () => import("../../pages/FilteringPage");
-const preloadReviewsPage = () => import("../../pages/ReviewsPage");
-const preloadLeaderboardPage = () => import("../../pages/LeaderboardPage");
-const preloadServerCostsPage = () => import("../../pages/ServerCostsPage");
-const preloadRestaurantSubmissionsPage = () => import("../../pages/RestaurantSubmissionsPage");
-const preloadAdminSubmissionsPage = () => import("../../pages/AdminSubmissionsPage");
-const preloadAdminReviewsPage = () => import("../../pages/AdminReviewsPage");
-
 interface SidebarProps {
   isOpen: boolean;
 }
 
-const Sidebar = React.memo<SidebarProps>(({ isOpen }) => {
+const Sidebar = ({ isOpen }: SidebarProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -46,86 +35,23 @@ const Sidebar = React.memo<SidebarProps>(({ isOpen }) => {
 
   // 기본 메뉴 항목
   const baseMenuItems = [
-    {
-      icon: Home,
-      label: "쯔동여지도 홈",
-      path: "/",
-      onClick: () => navigate("/"),
-      onMouseEnter: () => { },
-      onFocus: () => { }
-    },
-    {
-      icon: Globe,
-      label: "쯔동여지도 글로벌",
-      path: "/global",
-      onClick: () => navigate("/global"),
-      onMouseEnter: preloadGlobalMapPage,
-      onFocus: preloadGlobalMapPage
-    },
-    {
-      icon: Filter,
-      label: "쯔동여지도 필터링",
-      path: "/filtering",
-      onClick: () => navigate("/filtering"),
-      onMouseEnter: preloadFilteringPage,
-      onFocus: preloadFilteringPage
-    },
-    {
-      icon: Trophy,
-      label: "쯔양 팬 랭킹",
-      path: "/leaderboard",
-      onClick: () => navigate("/leaderboard"),
-      onMouseEnter: preloadLeaderboardPage,
-      onFocus: preloadLeaderboardPage
-    },
-    {
-      icon: MessageSquare,
-      label: "쯔양 팬 맛집 리뷰",
-      path: "/reviews",
-      onClick: () => navigate("/reviews"),
-      onMouseEnter: preloadReviewsPage,
-      onFocus: preloadReviewsPage
-    },
-    {
-      icon: Send,
-      label: "쯔양 맛집 제보",
-      path: "/submissions",
-      onClick: () => navigate("/submissions"),
-      onMouseEnter: preloadRestaurantSubmissionsPage,
-      onFocus: preloadRestaurantSubmissionsPage
-    },
+    { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
+    { icon: Globe, label: "쯔동여지도 글로벌", path: "/global", onClick: () => navigate("/global") },
+    { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
+    { icon: Trophy, label: "쯔양 팬 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
+    { icon: MessageSquare, label: "쯔양 팬 맛집 리뷰", path: "/reviews", onClick: () => navigate("/reviews") },
+    { icon: Send, label: "쯔양 맛집 제보", path: "/submissions", onClick: () => navigate("/submissions") },
   ];
 
   // 관리자에게만 보이는 메뉴
   const adminMenuItems = (user && isAdmin) ? [
-    {
-      icon: Shield,
-      label: "제보 관리",
-      path: "/admin/submissions",
-      onClick: () => navigate("/admin/submissions"),
-      onMouseEnter: preloadAdminSubmissionsPage,
-      onFocus: preloadAdminSubmissionsPage
-    },
-    {
-      icon: MessageSquare,
-      label: "리뷰 관리",
-      path: "/admin/reviews",
-      onClick: () => navigate("/admin/reviews"),
-      onMouseEnter: preloadAdminReviewsPage,
-      onFocus: preloadAdminReviewsPage
-    },
+    { icon: Shield, label: "제보 관리", path: "/admin/submissions", onClick: () => navigate("/admin/submissions") },
+    { icon: MessageSquare, label: "리뷰 관리", path: "/admin/reviews", onClick: () => navigate("/admin/reviews") },
   ] : [];
 
   // 공통 메뉴
   const commonMenuItems = [
-    {
-      icon: DollarSign,
-      label: "월 서버 운영 비용",
-      path: "/costs",
-      onClick: () => navigate("/costs"),
-      onMouseEnter: preloadServerCostsPage,
-      onFocus: preloadServerCostsPage
-    },
+    { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => navigate("/costs") },
   ];
 
   // 모든 메뉴 합치기
@@ -139,18 +65,11 @@ const Sidebar = React.memo<SidebarProps>(({ isOpen }) => {
       )}
     >
       <div className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3 group">
-          {/* Enhanced Logo */}
-          <div className="relative">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110">
-              <MapPin className="w-4 h-4 text-white drop-shadow-sm" />
-            </div>
-            {/* Subtle glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/30 to-pink-500/30 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-primary rounded-lg flex items-center justify-center">
+            <span className="text-xl">🔥</span>
           </div>
-
-          {/* Enhanced Title */}
-          <h1 className="text-xl font-bold bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-red-400 group-hover:to-pink-400 transition-all duration-300">
+          <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
             쯔동여지도
           </h1>
         </div>
@@ -175,16 +94,6 @@ const Sidebar = React.memo<SidebarProps>(({ isOpen }) => {
                 if (isHomePage && !isActive) {
                   prefetchRestaurants();
                 }
-                // 페이지 preload
-                if (item.onMouseEnter && !isActive) {
-                  item.onMouseEnter();
-                }
-              }}
-              onFocus={() => {
-                // 페이지 preload (키보드 네비게이션용)
-                if (item.onFocus && !isActive) {
-                  item.onFocus();
-                }
               }}
               disabled={!item.onClick}
             >
@@ -203,8 +112,6 @@ const Sidebar = React.memo<SidebarProps>(({ isOpen }) => {
       </div>
     </aside>
   );
-});
-
-Sidebar.displayName = "Sidebar";
+};
 
 export default Sidebar;

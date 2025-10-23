@@ -13,7 +13,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube, ChevronDown, X } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -374,41 +373,8 @@ export default function RestaurantSubmissionsPage() {
                         </p>
                     </Card>
                 ) : isLoading ? (
-                    // Loading Skeleton
-                    <div className="space-y-4">
-                        {Array.from({ length: 3 }).map((_, index) => (
-                            <Card key={index} className="p-6">
-                                <div className="space-y-4">
-                                    {/* Header Skeleton */}
-                                    <div className="flex items-start justify-between">
-                                        <div className="flex-1 space-y-2">
-                                            <Skeleton className="h-6 w-40" />
-                                            <Skeleton className="h-4 w-32" />
-                                        </div>
-                                        <Skeleton className="h-6 w-20" />
-                                    </div>
-
-                                    {/* Content Skeleton */}
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-4 w-full" />
-                                        <Skeleton className="h-4 w-3/4" />
-                                        <div className="flex gap-2 mt-2">
-                                            <Skeleton className="h-5 w-16" />
-                                            <Skeleton className="h-5 w-20" />
-                                        </div>
-                                    </div>
-
-                                    {/* Footer Skeleton */}
-                                    <div className="flex items-center justify-between pt-4 border-t">
-                                        <Skeleton className="h-4 w-24" />
-                                        <div className="flex gap-2">
-                                            <Skeleton className="h-8 w-16" />
-                                            <Skeleton className="h-8 w-16" />
-                                        </div>
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
+                    <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
                 ) : submissions.length === 0 ? (
                     <Card className="p-12 text-center">

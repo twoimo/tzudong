@@ -1,6 +1,6 @@
-import React, { useState } from "react";
 import { Menu, Moon, Sun, Bell, Maximize, User, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ interface HeaderProps {
   onProfileClick?: () => void;
 }
 
-const Header = React.memo<HeaderProps>(({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick }) => {
+const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick }: HeaderProps) => {
   const [isDark, setIsDark] = useState(false);
 
   const toggleTheme = () => {
@@ -60,6 +60,27 @@ const Header = React.memo<HeaderProps>(({ onToggleSidebar, isLoggedIn, onOpenAut
       </div>
 
       <div className="flex items-center gap-2">
+        {isLoggedIn && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="hover:bg-accent">
+                <User className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onProfileClick}>
+                <User className="mr-2 h-4 w-4" />
+                프로필
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                로그아웃
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         <Button
           variant="ghost"
           size="icon"
@@ -83,27 +104,6 @@ const Header = React.memo<HeaderProps>(({ onToggleSidebar, isLoggedIn, onOpenAut
           <Maximize className="h-5 w-5" />
         </Button>
 
-        {isLoggedIn && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-accent">
-                <User className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onProfileClick}>
-                <User className="mr-2 h-4 w-4" />
-                프로필
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                로그아웃
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
         {!isLoggedIn && (
           <Button
             onClick={onOpenAuth}
@@ -115,8 +115,6 @@ const Header = React.memo<HeaderProps>(({ onToggleSidebar, isLoggedIn, onOpenAut
       </div>
     </header>
   );
-});
-
-Header.displayName = "Header";
+};
 
 export default Header;
