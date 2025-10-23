@@ -169,7 +169,7 @@ export function RestaurantDetailPanel({
                         </Card>
                         <Card className="p-3 text-center">
                             <Users className="h-4 w-4 mx-auto mb-1 text-blue-500" />
-                            <p className="text-xs text-muted-foreground">사용자 방문</p>
+                            <p className="text-xs text-muted-foreground">쯔양 팬 방문</p>
                             <p className="text-lg font-bold">
                                 {restaurant.visit_count ?? 0}회
                             </p>

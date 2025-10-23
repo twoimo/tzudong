@@ -133,7 +133,17 @@ export default function AdminReviewsPage() {
     // 리뷰 승인
     const approveMutation = useMutation({
         mutationFn: async (reviewId: string) => {
-            const { error } = await supabase
+            // 승인할 리뷰 정보 조회
+            const { data: review, error: reviewError } = await supabase
+                .from('reviews')
+                .select('restaurant_id')
+                .eq('id', reviewId)
+                .single();
+
+            if (reviewError) throw reviewError;
+
+            // 리뷰 승인
+            const { error: approveError } = await supabase
                 .from('reviews')
                 .update({
                     is_verified: true,
@@ -143,12 +153,34 @@ export default function AdminReviewsPage() {
                 })
                 .eq('id', reviewId);
 
-            if (error) throw error;
+            if (approveError) throw approveError;
+
+            // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
+            const { data: restaurant, error: fetchError } = await supabase
+                .from('restaurants')
+                .select('visit_count, review_count')
+                .eq('id', review.restaurant_id)
+                .single();
+
+            if (fetchError) throw fetchError;
+
+            // 해당 맛집의 사용자 방문 횟수 및 리뷰 수 증가
+            const { error: visitError } = await supabase
+                .from('restaurants')
+                .update({
+                    visit_count: (restaurant.visit_count ?? 0) + 1,
+                    review_count: (restaurant.review_count ?? 0) + 1,
+                    updated_at: new Date().toISOString(),
+                })
+                .eq('id', review.restaurant_id);
+
+            if (visitError) throw visitError;
         },
         onSuccess: () => {
             toast.success('리뷰가 승인되었습니다');
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
             queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurants'] }); // 맛집 데이터도 갱신
             setIsReviewModalOpen(false);
             setAdminNote("");
         },
@@ -160,7 +192,17 @@ export default function AdminReviewsPage() {
     // 리뷰 거부
     const rejectMutation = useMutation({
         mutationFn: async (reviewId: string) => {
-            const { error } = await supabase
+            // 거부할 리뷰의 현재 상태 확인
+            const { data: review, error: reviewError } = await supabase
+                .from('reviews')
+                .select('restaurant_id, is_verified')
+                .eq('id', reviewId)
+                .single();
+
+            if (reviewError) throw reviewError;
+
+            // 리뷰 거부
+            const { error: rejectError } = await supabase
                 .from('reviews')
                 .update({
                     is_verified: false,
@@ -170,12 +212,37 @@ export default function AdminReviewsPage() {
                 })
                 .eq('id', reviewId);
 
-            if (error) throw error;
+            if (rejectError) throw rejectError;
+
+            // 승인된 리뷰를 거부하는 경우에만 방문 횟수 및 리뷰 수 감소
+            if (review.is_verified) {
+                // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
+                const { data: restaurant, error: fetchError } = await supabase
+                    .from('restaurants')
+                    .select('visit_count, review_count')
+                    .eq('id', review.restaurant_id)
+                    .single();
+
+                if (fetchError) throw fetchError;
+
+                // 해당 맛집의 사용자 방문 횟수 및 리뷰 수 감소 (0 이하로 내려가지 않도록)
+                const { error: visitError } = await supabase
+                    .from('restaurants')
+                    .update({
+                        visit_count: Math.max((restaurant.visit_count ?? 0) - 1, 0),
+                        review_count: Math.max((restaurant.review_count ?? 0) - 1, 0),
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', review.restaurant_id);
+
+                if (visitError) throw visitError;
+            }
         },
         onSuccess: () => {
             toast.success('리뷰가 거부되었습니다');
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
             queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurants'] }); // 맛집 데이터도 갱신
             setIsReviewModalOpen(false);
             setAdminNote("");
         },
