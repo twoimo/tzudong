@@ -58,31 +58,33 @@ const handleAuthError = async (error: any) => {
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // 데이터가 신선한 상태로 유지되는 시간 (3분으로 단축)
-      staleTime: 3 * 60 * 1000,
-      // 캐시 유지 시간 (5분으로 단축)
-      gcTime: 5 * 60 * 1000,
-      // 재시도 횟수 (1회로 감소) 및 지수 백오프
+      // 데이터가 신선한 상태로 유지되는 시간 (15분으로 증가 - 새로고침 시 안정성 향상)
+      staleTime: 15 * 60 * 1000,
+      // 캐시 유지 시간 (60분으로 증가 - 장기 캐시로 새로고침 시 로딩 감소)
+      gcTime: 60 * 60 * 1000,
+      // 재시도 횟수 (3회로 증가 - 새로고침 시 네트워크 문제 대응)
       retry: (failureCount, error: any) => {
         // 401 에러 (인증 실패)인 경우 재시도하지 않고 바로 에러 핸들러 호출
         if (error?.status === 401 || error?.code === 'PGRST301' || error?.message?.includes('JWT')) {
           handleAuthError(error);
           return false;
         }
-        // 다른 에러는 최대 1회 재시도 (성능 향상)
-        return failureCount < 1;
+        // 다른 에러는 최대 3회 재시도 (새로고침 시 안정성 향상)
+        return failureCount < 3;
       },
-      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000), // 최대 10초
-      // 백그라운드 리패치 비활성화 (성능 향상)
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // 최대 30초
+      // 백그라운드 리패치 제한적 활성화
+      refetchOnWindowFocus: true, // 창 포커스 시 리패치
+      refetchOnReconnect: true, // 재연결 시 리패치
       // 글로벌 에러 핸들러
       onError: (error: any) => {
         console.error('Query error:', error);
         handleAuthError(error);
       },
-      // 필요한 데이터만 가져오기 (성능 최적화)
-      refetchOnMount: 'always', // 마운트 시 항상 최신 데이터 확인
+      // 마운트 시 리패치 비활성화 (새로고침 시 과도한 API 호출 방지)
+      refetchOnMount: false, // 캐시 우선 사용
+      // 네트워크 모드 설정 (새로고침 시 안정성 향상)
+      networkMode: 'online', // 온라인 상태일 때만 쿼리 실행
     },
     mutations: {
       // 뮤테이션 재시도 비활성화
@@ -97,13 +99,27 @@ const queryClient = new QueryClient({
 });
 
 function AppLayout() {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // 새로고침 시 인증 로딩 중일 때는 기본 UI 표시 (안정성 향상)
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            <p className="text-muted-foreground">앱을 초기화하는 중...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleLogout = async () => {
     try {
