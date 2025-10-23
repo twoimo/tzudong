@@ -37,27 +37,27 @@ CREATE POLICY "Everyone can view restaurants v2"
   TO public
   USING (true);
 
--- 관리자용 INSERT 정책 (성능 최적화)
+-- 관리자용 INSERT 정책 (auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Admins can insert restaurants v2"
   ON public.restaurants FOR INSERT
   TO authenticated
-  WITH CHECK ((SELECT auth.uid()) IN (
+  WITH CHECK (auth.uid() IN (
     SELECT user_id FROM public.user_roles WHERE role = 'admin'
   ));
 
--- 관리자용 UPDATE 정책 (성능 최적화)
+-- 관리자용 UPDATE 정책 (auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Admins can update restaurants v2"
   ON public.restaurants FOR UPDATE
   TO authenticated
-  USING ((SELECT auth.uid()) IN (
+  USING (auth.uid() IN (
     SELECT user_id FROM public.user_roles WHERE role = 'admin'
   ));
 
--- 관리자용 DELETE 정책 (성능 최적화)
+-- 관리자용 DELETE 정책 (auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Admins can delete restaurants v2"
   ON public.restaurants FOR DELETE
   TO authenticated
-  USING ((SELECT auth.uid()) IN (
+  USING (auth.uid() IN (
     SELECT user_id FROM public.user_roles WHERE role = 'admin'
   ));
 
@@ -72,8 +72,8 @@ CREATE POLICY "Users and admins can view roles v3"
   ON public.user_roles FOR SELECT
   TO authenticated
   USING (
-    user_id = (SELECT auth.uid()) OR
-    (SELECT auth.uid()) IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
+    user_id = auth.uid() OR
+    auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
   );
 
 -- profiles 테이블 정책 재생성 (성능 최적화)
@@ -81,23 +81,23 @@ DROP POLICY IF EXISTS "Users can insert own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can delete own profile" ON public.profiles;
 
--- 프로필 INSERT 정책 (성능 최적화)
+-- 프로필 INSERT 정책 (auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users can insert own profile v2"
   ON public.profiles FOR INSERT
   TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
+  WITH CHECK (user_id = auth.uid());
 
--- 프로필 UPDATE 정책 (성능 최적화)
+-- 프로필 UPDATE 정책 (auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users can update own profile v2"
   ON public.profiles FOR UPDATE
   TO authenticated
-  USING (user_id = (SELECT auth.uid()));
+  USING (user_id = auth.uid());
 
--- 프로필 DELETE 정책 (성능 최적화)
+-- 프로필 DELETE 정책 (auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users can delete own profile v2"
   ON public.profiles FOR DELETE
   TO authenticated
-  USING (user_id = (SELECT auth.uid()));
+  USING (user_id = auth.uid());
 
 -- reviews 테이블 정책 재생성 (중복 제거 및 성능 최적화)
 DROP POLICY IF EXISTS "Reviews are viewable by everyone" ON public.reviews;
@@ -117,31 +117,31 @@ CREATE POLICY "Reviews are viewable by everyone v2"
   TO public
   USING (true);
 
--- 리뷰 INSERT 정책 (사용자 + 관리자, 성능 최적화)
+-- 리뷰 INSERT 정책 (사용자 + 관리자, auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users and admins can insert reviews v2"
   ON public.reviews FOR INSERT
   TO authenticated
   WITH CHECK (
-    user_id = (SELECT auth.uid()) OR
-    (SELECT auth.uid()) IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
+    user_id = auth.uid() OR
+    auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
   );
 
--- 리뷰 UPDATE 정책 (사용자 본인 + 관리자, 성능 최적화)
+-- 리뷰 UPDATE 정책 (사용자 본인 + 관리자, auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users and admins can update reviews v2"
   ON public.reviews FOR UPDATE
   TO authenticated
   USING (
-    user_id = (SELECT auth.uid()) OR
-    (SELECT auth.uid()) IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
+    user_id = auth.uid() OR
+    auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
   );
 
--- 리뷰 DELETE 정책 (사용자 본인 + 관리자, 성능 최적화)
+-- 리뷰 DELETE 정책 (사용자 본인 + 관리자, auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users and admins can delete reviews v2"
   ON public.reviews FOR DELETE
   TO authenticated
   USING (
-    user_id = (SELECT auth.uid()) OR
-    (SELECT auth.uid()) IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
+    user_id = auth.uid() OR
+    auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
   );
 
 -- server_costs 테이블 정책 재생성 (중복 제거 및 성능 최적화)
@@ -156,25 +156,25 @@ CREATE POLICY "Server costs are viewable by everyone v3"
   TO public
   USING (true);
 
--- 서버 비용 관리 정책 (관리자만, INSERT/UPDATE/DELETE)
+-- 서버 비용 관리 정책 (관리자만, auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Admins can manage server costs v3"
   ON public.server_costs FOR INSERT
   TO authenticated
-  WITH CHECK ((SELECT auth.uid()) IN (
+  WITH CHECK (auth.uid() IN (
     SELECT user_id FROM public.user_roles WHERE role = 'admin'
   ));
 
 CREATE POLICY "Admins can manage server costs update v3"
   ON public.server_costs FOR UPDATE
   TO authenticated
-  USING ((SELECT auth.uid()) IN (
+  USING (auth.uid() IN (
     SELECT user_id FROM public.user_roles WHERE role = 'admin'
   ));
 
 CREATE POLICY "Admins can manage server costs delete v3"
   ON public.server_costs FOR DELETE
   TO authenticated
-  USING ((SELECT auth.uid()) IN (
+  USING (auth.uid() IN (
     SELECT user_id FROM public.user_roles WHERE role = 'admin'
   ));
 
@@ -190,37 +190,37 @@ DROP POLICY IF EXISTS "Users and admins can view submissions" ON public.restaura
 DROP POLICY IF EXISTS "Users and admins can update submissions" ON public.restaurant_submissions;
 DROP POLICY IF EXISTS "Users and admins can delete submissions" ON public.restaurant_submissions;
 
--- 제보 CREATE 정책 (인증된 사용자, 성능 최적화)
+-- 제보 CREATE 정책 (인증된 사용자, auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Authenticated users can create submissions v2"
   ON public.restaurant_submissions FOR INSERT
   TO authenticated
-  WITH CHECK (user_id = (SELECT auth.uid()));
+  WITH CHECK (user_id = auth.uid());
 
--- 제보 SELECT 정책 (사용자 본인 + 관리자, 성능 최적화)
+-- 제보 SELECT 정책 (사용자 본인 + 관리자, auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users and admins can view submissions v2"
   ON public.restaurant_submissions FOR SELECT
   TO authenticated
   USING (
-    user_id = (SELECT auth.uid()) OR
-    (SELECT auth.uid()) IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
+    user_id = auth.uid() OR
+    auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
   );
 
--- 제보 UPDATE 정책 (사용자 본인 + 관리자, 성능 최적화)
+-- 제보 UPDATE 정책 (사용자 본인 + 관리자, auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users and admins can update submissions v2"
   ON public.restaurant_submissions FOR UPDATE
   TO authenticated
   USING (
-    user_id = (SELECT auth.uid()) OR
-    (SELECT auth.uid()) IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
+    user_id = auth.uid() OR
+    auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
   );
 
--- 제보 DELETE 정책 (사용자 본인 + 관리자, 성능 최적화)
+-- 제보 DELETE 정책 (사용자 본인 + 관리자, auth.uid() 직접 사용으로 성능 최적화)
 CREATE POLICY "Users and admins can delete submissions v2"
   ON public.restaurant_submissions FOR DELETE
   TO authenticated
   USING (
-    user_id = (SELECT auth.uid()) OR
-    (SELECT auth.uid()) IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
+    user_id = auth.uid() OR
+    auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role = 'admin')
   );
 
 -- user_stats 테이블 정책 (누락된 부분 추가)
