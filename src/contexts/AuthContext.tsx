@@ -86,11 +86,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
-            setSession(session);
-            setUser(session?.user ?? null);
-
-            if (session?.user) {
-                // 프로필 존재 여부 확인 (탈퇴한 사용자 체크)
+            // SIGNED_IN 이벤트에서만 프로필 체크 (최적화)
+            if (event === 'SIGNED_IN' && session?.user) {
+                // 프로필 존재 여부 확인 (탈퇴한 사용자 체크) - SIGNED_IN시에만
                 const { data: profile, error: profileError } = await supabase
                     .from('profiles')
                     .select('user_id')
@@ -108,8 +106,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return;
                 }
 
+                setSession(session);
+                setUser(session?.user ?? null);
                 checkAdminRole(session.user.id);
             } else {
+                // 다른 이벤트에서는 세션 정보만 업데이트
+                setSession(session);
+                setUser(session?.user ?? null);
                 setIsAdmin(false);
             }
         });

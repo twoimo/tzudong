@@ -215,11 +215,6 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
           <span className="text-sm font-medium">
             🔥 {restaurants.length}개의 맛집 발견
           </span>
-          {isDummyData && (
-            <Badge variant="secondary" className="text-xs">
-              📊 샘플
-            </Badge>
-          )}
         </div>
       )}
 

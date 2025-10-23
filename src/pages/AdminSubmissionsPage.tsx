@@ -64,16 +64,19 @@ export default function AdminSubmissionsPage() {
         jjyang_visit_count: "1",
     });
 
-    // 모든 제보 조회 (관리자만)
+    // 모든 제보 조회 (관리자만) - 최적화된 쿼리
     const { data: submissions = [], isLoading, error: queryError } = useQuery({
-        queryKey: ['admin-submissions'],
+        queryKey: ['admin-submissions', user?.id], // 사용자별 캐싱
         queryFn: async () => {
-            console.log('🔍 제보 데이터 조회 시작...');
-
-            // 1. 제보 데이터 가져오기
+            // 제보 데이터와 프로필 데이터를 한 번에 조회 (최적화)
             const { data: submissionsData, error: submissionsError } = await supabase
                 .from('restaurant_submissions')
-                .select('*')
+                .select(`
+                    *,
+                    profiles:user_id (
+                        nickname
+                    )
+                `)
                 .order('created_at', { ascending: false });
 
             if (submissionsError) {
@@ -82,36 +85,22 @@ export default function AdminSubmissionsPage() {
             }
 
             if (!submissionsData || submissionsData.length === 0) {
-                console.log('✅ 제보 데이터 없음');
                 return [];
             }
 
-            // 2. user_id 목록 추출
-            const userIds = [...new Set(submissionsData.map(s => s.user_id))];
-
-            // 3. profiles 데이터 가져오기
-            const { data: profilesData } = await supabase
-                .from('profiles')
-                .select('user_id, nickname')
-                .in('user_id', userIds);
-
-            // 4. Map으로 변환 (빠른 조회)
-            const profilesMap = new Map(
-                (profilesData || []).map(p => [p.user_id, p.nickname])
-            );
-
-            // 5. 데이터 매핑
+            // 데이터 매핑 (프로필 정보 포함)
             const result = submissionsData.map(submission => ({
                 ...submission,
                 profiles: {
-                    nickname: profilesMap.get(submission.user_id) || '탈퇴한 사용자'
+                    nickname: (submission.profiles as any)?.nickname || '탈퇴한 사용자'
                 }
             })) as SubmissionWithUser[];
 
-            console.log('✅ 제보 데이터 조회 성공:', result.length, '개');
             return result;
         },
         enabled: !!user && !!isAdmin,
+        staleTime: 2 * 60 * 1000, // 2분 (관리자 데이터는 자주 변경되지 않음)
+        gcTime: 5 * 60 * 1000, // 5분 캐시 유지
     });
 
     // 제보 승인 (레스토랑 테이블에 추가)
