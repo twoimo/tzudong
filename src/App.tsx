@@ -72,7 +72,6 @@ function AppLayout() {
 
   const handleAdminEditRestaurant = (restaurant: Restaurant) => {
     setSelectedRestaurant(restaurant);
-    setIsAdminModalOpen(true);
   };
 
   return (
