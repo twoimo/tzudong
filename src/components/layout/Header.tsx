@@ -60,26 +60,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
       </div>
 
       <div className="flex items-center gap-2">
-        {isLoggedIn && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-accent">
-                <User className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onProfileClick}>
-                <User className="mr-2 h-4 w-4" />
-                프로필
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                로그아웃
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+
 
         <Button
           variant="ghost"
@@ -103,6 +84,27 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
         >
           <Maximize className="h-5 w-5" />
         </Button>
+
+        {isLoggedIn && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="hover:bg-accent">
+                <User className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onProfileClick}>
+                <User className="mr-2 h-4 w-4" />
+                프로필
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={onLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                로그아웃
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {!isLoggedIn && (
           <Button
