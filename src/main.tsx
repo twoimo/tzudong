@@ -88,4 +88,31 @@ if (import.meta.env.DEV) {
     });
 }
 
+// 새로고침 시 앱 상태 모니터링 (디버깅용)
+if (import.meta.env.DEV) {
+    console.log('🚀 App starting...', new Date().toISOString());
+
+    // 페이지 로드 완료 시점 로깅
+    window.addEventListener('load', () => {
+        console.log('✅ App loaded successfully');
+    });
+
+    // 새로고침 또는 페이지 이동 시 로깅
+    window.addEventListener('beforeunload', () => {
+        console.log('🔄 Page unloading (refresh or navigation)');
+    });
+
+    // 새로고침 감지 및 로깅
+    let isRefreshing = false;
+    const originalLocation = window.location.href;
+
+    setInterval(() => {
+        if (window.location.href !== originalLocation && !isRefreshing) {
+            isRefreshing = true;
+            console.log('🔄 Page refresh/navigation detected');
+            setTimeout(() => { isRefreshing = false; }, 1000);
+        }
+    }, 500);
+}
+
 createRoot(document.getElementById("root")!).render(<App />);

@@ -41,47 +41,69 @@ supabase.auth.onAuthStateChange(async (event, session) => {
   }
 });
 
-// 글로벌 API 요청 인터셉터
+// 개선된 글로벌 API 요청 인터셉터 (새로고침 시 안정성 향상)
 const originalFetch = globalThis.fetch;
 globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
   try {
     const response = await originalFetch(input, init);
 
-    // 401 에러 감지 시 토큰 갱신 시도
-    if (response.status === 401) {
+    // 401 에러 감지 시 토큰 갱신 시도 (새로고침 시 더 안전하게)
+    if (response.status === 401 && !response.url?.includes('/auth/')) {
       if (!isRefreshing) {
         isRefreshing = true;
-        try {
-          console.log('Attempting to refresh token due to 401 error');
-          const { data, error } = await supabase.auth.refreshSession();
+        refreshPromise = (async () => {
+          try {
+            console.log('Attempting to refresh token due to 401 error');
+            const { data, error } = await supabase.auth.refreshSession();
 
-          if (error) {
-            console.error('Token refresh failed:', error);
-            // 토큰 갱신 실패 시 로그아웃
-            await supabase.auth.signOut();
-            window.location.reload();
-            return response;
-          }
+            if (error) {
+              console.error('Token refresh failed:', error);
+              // 토큰 갱신 실패 시 세션 클리어 (강제 리로드하지 않음)
+              await supabase.auth.signOut();
+              return null;
+            }
 
-          if (data.session) {
-            console.log('Token refreshed, retrying request');
-            // 토큰 갱신 성공 시 원래 요청 재시도
-            return originalFetch(input, {
-              ...init,
-              headers: {
-                ...init?.headers,
-                Authorization: `Bearer ${data.session.access_token}`,
-              },
-            });
+            if (data.session) {
+              console.log('Token refreshed successfully');
+              return data.session.access_token;
+            }
+            return null;
+          } finally {
+            isRefreshing = false;
+            refreshPromise = null;
           }
-        } finally {
-          isRefreshing = false;
+        })();
+
+        const newToken = await refreshPromise;
+        if (newToken) {
+          console.log('Retrying request with refreshed token');
+          // 토큰 갱신 성공 시 원래 요청 재시도
+          return originalFetch(input, {
+            ...init,
+            headers: {
+              ...init?.headers,
+              Authorization: `Bearer ${newToken}`,
+            },
+          });
+        }
+      } else if (refreshPromise) {
+        // 이미 리프레시 중인 경우 대기
+        const newToken = await refreshPromise;
+        if (newToken) {
+          return originalFetch(input, {
+            ...init,
+            headers: {
+              ...init?.headers,
+              Authorization: `Bearer ${newToken}`,
+            },
+          });
         }
       }
     }
 
     return response;
   } catch (error) {
+    // 네트워크 에러인 경우 재시도하지 않음 (새로고침 시 안정성)
     console.error('Network error:', error);
     throw error;
   }
