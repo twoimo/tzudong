@@ -44,56 +44,35 @@ CREATE INDEX IF NOT EXISTS idx_restaurant_submissions_created_at ON public.resta
 -- 5. RLS (Row Level Security) 활성화
 ALTER TABLE public.restaurant_submissions ENABLE ROW LEVEL SECURITY;
 
--- 6. RLS 정책 생성
--- 일반 사용자는 자신의 제보만 조회 가능
-CREATE POLICY "Users can view their own submissions"
+-- 6. RLS 정책 생성 (최적화된 단일 정책)
+-- 인증된 사용자는 자신의 제보나 관리자인 경우 모든 제보 조회 가능
+CREATE POLICY "Users and admins can view submissions"
     ON public.restaurant_submissions
     FOR SELECT
     TO authenticated
-    USING (auth.uid() = user_id);
-
--- 관리자는 모든 제보 조회 가능
-CREATE POLICY "Admins can view all submissions"
-    ON public.restaurant_submissions
-    FOR SELECT
-    TO authenticated
-    USING (public.has_role(auth.uid(), 'admin'));
+    USING ((select auth.uid()) = user_id OR public.has_role((select auth.uid()), 'admin'));
 
 -- 인증된 사용자는 제보 생성 가능
 CREATE POLICY "Authenticated users can create submissions"
     ON public.restaurant_submissions
     FOR INSERT
     TO authenticated
-    WITH CHECK (auth.uid() = user_id);
+    WITH CHECK ((select auth.uid()) = user_id);
 
--- 사용자는 자신의 pending 제보만 수정 가능
-CREATE POLICY "Users can update their own pending submissions"
+-- 사용자는 자신의 pending 제보만 수정 가능, 관리자는 모든 제보 수정 가능
+CREATE POLICY "Users and admins can update submissions"
     ON public.restaurant_submissions
     FOR UPDATE
     TO authenticated
-    USING (auth.uid() = user_id AND status = 'pending')
-    WITH CHECK (auth.uid() = user_id AND status = 'pending');
+    USING (((select auth.uid()) = user_id AND status = 'pending') OR public.has_role((select auth.uid()), 'admin'))
+    WITH CHECK (((select auth.uid()) = user_id AND status = 'pending') OR public.has_role((select auth.uid()), 'admin'));
 
--- 관리자는 모든 제보 수정 가능 (검토용)
-CREATE POLICY "Admins can update all submissions"
-    ON public.restaurant_submissions
-    FOR UPDATE
-    TO authenticated
-    USING (public.has_role(auth.uid(), 'admin'));
-
--- 사용자는 자신의 pending 제보만 삭제 가능
-CREATE POLICY "Users can delete their own pending submissions"
+-- 사용자는 자신의 pending 제보만 삭제 가능, 관리자는 모든 제보 삭제 가능
+CREATE POLICY "Users and admins can delete submissions"
     ON public.restaurant_submissions
     FOR DELETE
     TO authenticated
-    USING (auth.uid() = user_id AND status = 'pending');
-
--- 관리자는 모든 제보 삭제 가능
-CREATE POLICY "Admins can delete all submissions"
-    ON public.restaurant_submissions
-    FOR DELETE
-    TO authenticated
-    USING (public.has_role(auth.uid(), 'admin'));
+    USING (((select auth.uid()) = user_id AND status = 'pending') OR public.has_role((select auth.uid()), 'admin'));
 
 -- 7. 제보 통계를 위한 뷰 생성
 CREATE OR REPLACE VIEW public.submission_stats AS

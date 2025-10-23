@@ -426,7 +426,20 @@ export default function RestaurantSubmissionsPage() {
                                                 {submission.restaurant_name}
                                             </h3>
                                             {getStatusBadge(submission.status)}
-                                            <Badge variant="outline">{submission.category}</Badge>
+                                            <div className="flex flex-wrap gap-1">
+                                                {Array.isArray(submission.category)
+                                                    ? submission.category.map((cat: string) => (
+                                                        <Badge key={cat} variant="outline" className="text-xs">
+                                                            {cat}
+                                                        </Badge>
+                                                    ))
+                                                    : (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            {submission.category}
+                                                        </Badge>
+                                                    )
+                                                }
+                                            </div>
                                             <Badge variant={submission.original_restaurant_id ? 'secondary' : 'default'}>
                                                 {submission.original_restaurant_id ? '수정 요청' : '신규 제보'}
                                             </Badge>

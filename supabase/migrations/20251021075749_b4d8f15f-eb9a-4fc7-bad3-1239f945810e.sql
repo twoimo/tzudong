@@ -128,16 +128,11 @@ AS $$
   )
 $$;
 
--- RLS Policies for user_roles
-CREATE POLICY "Users can view their own roles"
+-- RLS Policies for user_roles (최적화된 정책)
+CREATE POLICY "Users and admins can view roles"
   ON public.user_roles FOR SELECT
   TO authenticated
-  USING (user_id = auth.uid());
-
-CREATE POLICY "Admins can view all roles"
-  ON public.user_roles FOR SELECT
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+  USING (user_id = (select auth.uid()) OR public.has_role((select auth.uid()), 'admin'));
 
 -- RLS Policies for profiles
 CREATE POLICY "Public profiles are viewable by everyone"
@@ -148,80 +143,70 @@ CREATE POLICY "Public profiles are viewable by everyone"
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
   TO authenticated
-  USING (user_id = auth.uid());
+  USING (user_id = (select auth.uid()));
 
 CREATE POLICY "Users can insert own profile"
   ON public.profiles FOR INSERT
   TO authenticated
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (user_id = (select auth.uid()));
 
 -- RLS Policies for restaurants
 CREATE POLICY "Restaurants are viewable by everyone"
   ON public.restaurants FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 CREATE POLICY "Admins can insert restaurants"
   ON public.restaurants FOR INSERT
   TO authenticated
-  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  WITH CHECK (public.has_role((select auth.uid()), 'admin'));
 
 CREATE POLICY "Admins can update restaurants"
   ON public.restaurants FOR UPDATE
   TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+  USING (public.has_role((select auth.uid()), 'admin'));
 
 CREATE POLICY "Admins can delete restaurants"
   ON public.restaurants FOR DELETE
   TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+  USING (public.has_role((select auth.uid()), 'admin'));
 
--- RLS Policies for reviews
+-- RLS Policies for reviews (최적화된 정책)
 CREATE POLICY "Reviews are viewable by everyone"
   ON public.reviews FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 CREATE POLICY "Users can insert own reviews"
   ON public.reviews FOR INSERT
   TO authenticated
-  WITH CHECK (user_id = auth.uid());
+  WITH CHECK (user_id = (select auth.uid()));
 
-CREATE POLICY "Users can update own reviews"
+CREATE POLICY "Users and admins can update reviews"
   ON public.reviews FOR UPDATE
   TO authenticated
-  USING (user_id = auth.uid());
+  USING (user_id = (select auth.uid()) OR public.has_role((select auth.uid()), 'admin'));
 
-CREATE POLICY "Admins can update all reviews"
-  ON public.reviews FOR UPDATE
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
-CREATE POLICY "Users can delete own reviews"
+CREATE POLICY "Users and admins can delete reviews"
   ON public.reviews FOR DELETE
   TO authenticated
-  USING (user_id = auth.uid());
-
-CREATE POLICY "Admins can delete all reviews"
-  ON public.reviews FOR DELETE
-  TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+  USING (user_id = (select auth.uid()) OR public.has_role((select auth.uid()), 'admin'));
 
 -- RLS Policies for server_costs
 CREATE POLICY "Server costs are viewable by everyone"
   ON public.server_costs FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 CREATE POLICY "Admins can manage server costs"
   ON public.server_costs FOR ALL
   TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+  USING (public.has_role((select auth.uid()), 'admin'));
 
 -- RLS Policies for user_stats
 CREATE POLICY "User stats are viewable by everyone"
   ON public.user_stats FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 -- Create trigger function for profile creation
