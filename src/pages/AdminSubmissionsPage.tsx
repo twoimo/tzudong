@@ -445,11 +445,7 @@ export default function AdminSubmissionsPage() {
                     </TabsList>
 
                     <TabsContent value="pending" className="space-y-4 mt-4">
-                        {isLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            </div>
-                        ) : pendingSubmissions.length === 0 ? (
+                        {pendingSubmissions.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">✅</div>
                                 <h3 className="text-xl font-semibold mb-2">검토 대기 중인 제보가 없습니다</h3>

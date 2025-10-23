@@ -540,16 +540,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                                            <span className="text-muted-foreground">로딩 중...</span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ) : filteredAndSortedRestaurants.length === 0 ? (
+                            {filteredAndSortedRestaurants.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center py-12">
                                         <p className="text-muted-foreground">필터 조건에 맞는 맛집이 없습니다.</p>

@@ -247,17 +247,6 @@ const ServerCostsPage = () => {
         }).format(amount);
     };
 
-    if (isLoading) {
-        return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                    <Server className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
-                    <p className="text-muted-foreground">비용 데이터를 불러오는 중...</p>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}

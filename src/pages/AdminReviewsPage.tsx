@@ -328,11 +328,7 @@ export default function AdminReviewsPage() {
                     </TabsList>
 
                     <TabsContent value="pending" className="mt-6">
-                        {isLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                            </div>
-                        ) : pendingReviews.length === 0 ? (
+                        {pendingReviews.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">📋</div>
                                 <h3 className="text-xl font-semibold mb-2">검토 대기 중인 리뷰가 없습니다</h3>
