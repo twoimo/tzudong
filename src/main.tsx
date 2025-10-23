@@ -53,10 +53,35 @@ if (import.meta.env.DEV) {
             const message = args.join(' ');
             // Filter out browser violation warnings
             if (message.includes('[Violation]') &&
-                message.includes('Added non-passive event listener')) {
+                (message.includes('Added non-passive event listener') ||
+                    message.includes('passive'))) {
                 return;
             }
             originalError(...args);
+        },
+        configurable: true,
+        enumerable: true
+    });
+
+    // Override console.warn to catch all remaining violations
+    Object.defineProperty(console, 'warn', {
+        value: (...args: any[]) => {
+            const message = args.join(' ');
+            // Filter out React Router future flag warnings
+            if (message.includes('React Router Future Flag Warning') ||
+                message.includes('v7_startTransition') ||
+                message.includes('v7_relativeSplatPath')) {
+                return;
+            }
+            // Filter out Naver Maps API passive event listener warnings
+            if (message.includes('Added non-passive event listener to a scroll-blocking')) {
+                return;
+            }
+            // Filter out DOM warnings
+            if (message.includes('Input elements should have autocomplete attributes')) {
+                return;
+            }
+            originalWarn(...args);
         },
         configurable: true,
         enumerable: true
