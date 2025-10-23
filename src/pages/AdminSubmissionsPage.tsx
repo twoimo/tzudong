@@ -447,8 +447,48 @@ export default function AdminSubmissionsPage() {
 
                     <TabsContent value="pending" className="space-y-4 mt-4">
                         {isLoading ? (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                            // Loading Skeleton
+                            <div className="space-y-4">
+                                {Array.from({ length: 2 }).map((_, index) => (
+                                    <Card key={index} className="p-6">
+                                        <div className="space-y-4">
+                                            {/* Header Skeleton */}
+                                            <div className="flex items-start justify-between">
+                                                <div className="space-y-2">
+                                                    <Skeleton className="h-5 w-48" />
+                                                    <Skeleton className="h-4 w-32" />
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <Skeleton className="h-8 w-16" />
+                                                    <Skeleton className="h-8 w-16" />
+                                                </div>
+                                            </div>
+
+                                            {/* Content Skeleton */}
+                                            <div className="space-y-2">
+                                                <Skeleton className="h-4 w-full" />
+                                                <Skeleton className="h-4 w-3/4" />
+                                            </div>
+
+                                            {/* Categories Skeleton */}
+                                            <div className="flex flex-wrap gap-2">
+                                                <Skeleton className="h-6 w-16" />
+                                                <Skeleton className="h-6 w-20" />
+                                                <Skeleton className="h-6 w-14" />
+                                            </div>
+
+                                            {/* Footer Skeleton */}
+                                            <div className="flex items-center justify-between pt-2 border-t">
+                                                <Skeleton className="h-4 w-24" />
+                                                <div className="flex gap-2">
+                                                    <Skeleton className="h-8 w-16" />
+                                                    <Skeleton className="h-8 w-16" />
+                                                    <Skeleton className="h-8 w-16" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
                             </div>
                         ) : pendingSubmissions.length === 0 ? (
                             <Card className="p-12 text-center">

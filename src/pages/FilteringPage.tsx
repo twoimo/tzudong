@@ -29,6 +29,7 @@ import {
 import { RESTAURANT_CATEGORIES, Restaurant } from "@/types/restaurant";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { useAuth } from "@/contexts/AuthContext";
+import { Skeleton } from "@/components/ui/skeleton";
 
 // 지역 목록
 const REGIONS = [
@@ -541,14 +542,16 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         </TableHeader>
                         <TableBody>
                             {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12">
-                                        <div className="flex items-center justify-center gap-2">
-                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                                            <span className="text-muted-foreground">로딩 중...</span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
+                                Array.from({ length: 8 }).map((_, i) => (
+                                    <TableRow key={`skeleton-${i}`}>
+                                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                    </TableRow>
+                                ))
                             ) : filteredAndSortedRestaurants.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center py-12">
