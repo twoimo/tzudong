@@ -137,7 +137,7 @@ CREATE POLICY "Users and admins can view roles"
 -- RLS Policies for profiles
 CREATE POLICY "Public profiles are viewable by everyone"
   ON public.profiles FOR SELECT
-  TO authenticated
+  TO public
   USING (true);
 
 CREATE POLICY "Users can update own profile"
