@@ -47,7 +47,6 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
     enabled: isLoaded && !!mapBounds,
   });
 
-  const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
 
   // Refetch when refreshTrigger changes
   useEffect(() => {
@@ -215,11 +214,6 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
           <span className="text-sm font-medium">
             🔥 {restaurants.length}개의 맛집 발견
           </span>
-          {isDummyData && (
-            <Badge variant="secondary" className="text-xs">
-              📊 샘플
-            </Badge>
-          )}
         </div>
       )}
 

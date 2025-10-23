@@ -25,92 +25,6 @@ interface LeaderboardUser {
     badges: { name: string; icon: string; earnedAt: string }[];
 }
 
-// 더미 리더보드 데이터
-const DUMMY_LEADERBOARD: LeaderboardUser[] = [
-    {
-        id: "dummy-user-1",
-        rank: 1,
-        username: "쯔양팬123 (샘플)",
-        reviewCount: 128,
-        verifiedReviewCount: 120,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
-            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
-            { name: "리뷰 마스터", icon: "👑", earnedAt: "" },
-            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
-        ],
-    },
-    {
-        id: "dummy-user-2",
-        rank: 2,
-        username: "맛집러버 (샘플)",
-        reviewCount: 95,
-        verifiedReviewCount: 88,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
-            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
-            { name: "리뷰 마스터", icon: "👑", earnedAt: "" },
-            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
-        ],
-    },
-    {
-        id: "dummy-user-3",
-        rank: 3,
-        username: "먹방마니아 (샘플)",
-        reviewCount: 76,
-        verifiedReviewCount: 70,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
-            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
-            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
-        ],
-    },
-    {
-        id: "dummy-user-4",
-        rank: 4,
-        username: "쯔양따라잡기 (샘플)",
-        reviewCount: 64,
-        verifiedReviewCount: 58,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
-            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
-            { name: "신뢰의 아이콘", icon: "💎", earnedAt: "" },
-        ],
-    },
-    {
-        id: "dummy-user-5",
-        rank: 5,
-        username: "리뷰왕 (샘플)",
-        reviewCount: 52,
-        verifiedReviewCount: 49,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
-            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
-        ],
-    },
-    {
-        id: "dummy-user-6",
-        rank: 6,
-        username: "칼국수조아 (샘플)",
-        reviewCount: 45,
-        verifiedReviewCount: 42,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
-            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
-        ],
-    },
-    {
-        id: "dummy-user-7",
-        rank: 7,
-        username: "야식킹 (샘플)",
-        reviewCount: 38,
-        verifiedReviewCount: 35,
-        badges: [
-            { name: "첫 리뷰", icon: "⭐", earnedAt: "" },
-            { name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" },
-        ],
-    },
-];
 
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
@@ -233,7 +147,6 @@ const LeaderboardPage = () => {
         }
         return 0;
     });
-    const isDummyData = leaderboardData.length > 0 && leaderboardData[0].id.startsWith('dummy-');
 
     const getRankIcon = (rank: number, forTable: boolean = false) => {
         if (forTable) {
@@ -289,11 +202,6 @@ const LeaderboardPage = () => {
                                     <Trophy className="h-6 w-6 text-primary" />
                                     쯔양 팬 랭킹
                                 </h1>
-                                {isDummyData && (
-                                    <Badge variant="secondary" className="text-xs">
-                                        📊 샘플 데이터
-                                    </Badge>
-                                )}
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
                                 맛집 리뷰로 쌓은 랭킹

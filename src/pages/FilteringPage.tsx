@@ -55,7 +55,6 @@ interface FilteringPageProps {
 
 const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const { data: restaurants = [], isLoading } = useRestaurants({ enabled: true });
-    const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
     const { isAdmin } = useAuth();
 
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
@@ -278,11 +277,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 <Filter className="h-6 w-6 text-primary" />
                                 쯔동여지도 필터링
                             </h1>
-                            {isDummyData && (
-                                <Badge variant="secondary" className="text-xs">
-                                    📊 샘플 데이터
-                                </Badge>
-                            )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             총 {filteredAndSortedRestaurants.length}개의 맛집

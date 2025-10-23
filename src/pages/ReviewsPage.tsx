@@ -35,84 +35,6 @@ interface Review {
     category: string;
 }
 
-// 더미 리뷰 데이터
-const DUMMY_REVIEWS: Review[] = [
-    {
-        id: "dummy-review-1",
-        restaurantName: "홍대 떡볶이 (샘플)",
-        restaurantCategories: ["분식"],
-        userName: "쯔양팬123",
-        visitedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        content: "정말 맛있었어요! 쯔양이 추천한 그 메뉴 먹었는데 양도 많고 맛도 좋았습니다! 떡볶이 소스가 진짜 특별하고, 튀김도 바삭바삭해요. 다음에 또 방문하고 싶어요!",
-        isVerified: true,
-        isPinned: true,
-        isEditedByAdmin: false,
-        admin_note: null,
-        photos: [],
-        category: "분식",
-    },
-    {
-        id: "dummy-review-2",
-        restaurantName: "강남 삼겹살 (샘플)",
-        restaurantCategories: ["고기"],
-        userName: "맛집러버",
-        visitedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        submittedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-        content: "고기 질이 정말 좋았어요! 1인분 양이 다른 곳보다 훨씬 많고, 직원분들도 친절하세요. 쯔양이 방문했다는 사인도 벽에 걸려있더라고요.",
-        isVerified: true,
-        isPinned: false,
-        isEditedByAdmin: false,
-        admin_note: null,
-        photos: [],
-        category: "고기",
-    },
-    {
-        id: "dummy-review-3",
-        restaurantName: "종로 찜닭 (샘플)",
-        restaurantCategories: ["찜·탕"],
-        userName: "먹방마니아",
-        visitedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        submittedAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        content: "찜닭이 정말 커요! 2인분 시켰는데 3-4명이 먹어도 될 양이었어요. 당면도 쫄깃하고 양념이 달지 않고 딱 좋았습니다.",
-        isVerified: true,
-        isPinned: false,
-        isEditedByAdmin: false,
-        admin_note: null,
-        photos: [],
-        category: "찜·탕",
-    },
-    {
-        id: "dummy-review-4",
-        restaurantName: "명동 칼국수 (샘플)",
-        restaurantCategories: ["한식"],
-        userName: "칼국수조아",
-        visitedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        submittedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-        content: "국물이 진하고 시원해요. 면발도 쫄깃하고 좋았습니다. 칼제비도 같이 주문했는데 정말 맛있었어요!",
-        isVerified: false,
-        isPinned: false,
-        isEditedByAdmin: false,
-        admin_note: "거부: 영수증에 닉네임이 제대로 표시되지 않음. 재제출 요청 필요.",
-        photos: [],
-        category: "한식",
-    },
-    {
-        id: "dummy-review-5",
-        restaurantName: "신촌 치킨 (샘플)",
-        restaurantCategories: ["치킨"],
-        userName: "야식킹",
-        visitedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        submittedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        content: "24시간 영업해서 야식으로 딱이에요! 튀김옷이 바삭하고 양념도 맛있어요. 배달도 빨라요.",
-        isVerified: false,
-        isPinned: false,
-        isEditedByAdmin: false,
-        admin_note: null,
-        photos: [],
-        category: "치킨",
-    },
-];
 
 const ReviewsPage = () => {
     const { user, isAdmin } = useAuth();
@@ -217,7 +139,6 @@ const ReviewsPage = () => {
 
     // 실제 승인된 리뷰 데이터 사용
     const displayData = reviewsData;
-    const isDummyData = false; // 더미 데이터 사용하지 않음
 
     const filteredReviews = displayData.filter((review) => {
         const matchesSearch =
@@ -411,11 +332,6 @@ const ReviewsPage = () => {
                                 <MessageSquare className="h-6 w-6 text-primary" />
                                 쯔양 팬 맛집 리뷰
                             </h1>
-                            {isDummyData && (
-                                <Badge variant="secondary" className="text-xs">
-                                    📊 샘플 데이터
-                                </Badge>
-                            )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             {isLoggedIn

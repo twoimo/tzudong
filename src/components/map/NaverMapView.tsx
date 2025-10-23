@@ -34,7 +34,6 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
         enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
     });
 
-    const isDummyData = restaurants.length > 0 && restaurants[0].id.startsWith('dummy-');
 
     // refreshTrigger 변경 시 선택된 레스토랑 정보 업데이트
     useEffect(() => {
@@ -135,7 +134,7 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [restaurants, isDummyData, refreshTrigger]);
+    }, [restaurants, refreshTrigger]);
 
     // 로딩 에러 처리
     if (loadError) {
@@ -199,11 +198,6 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
                     <span className="text-sm font-medium">
                         🔥 {restaurants.length}개의 맛집 발견
                     </span>
-                    {isDummyData && (
-                        <Badge variant="secondary" className="text-xs">
-                            📊 샘플
-                        </Badge>
-                    )}
                 </div>
             )}
 

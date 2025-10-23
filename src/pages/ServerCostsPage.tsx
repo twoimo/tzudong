@@ -43,37 +43,6 @@ interface ServerCost {
     updated_at: string | null;
 }
 
-// 더미 서버 비용 데이터
-const DUMMY_SERVER_COSTS: ServerCost[] = [
-    {
-        id: "dummy-cost-1",
-        item_name: "Supabase Pro 플랜 (샘플)",
-        monthly_cost: 25000,
-        description: "데이터베이스, 인증, Storage 포함",
-        updated_at: new Date().toISOString(),
-    },
-    {
-        id: "dummy-cost-2",
-        item_name: "Google Maps API (샘플)",
-        monthly_cost: 15000,
-        description: "Maps JavaScript API, Geocoding API 사용료",
-        updated_at: new Date().toISOString(),
-    },
-    {
-        id: "dummy-cost-3",
-        item_name: "Vercel Pro 플랜 (샘플)",
-        monthly_cost: 20000,
-        description: "웹 호스팅 및 CDN",
-        updated_at: new Date().toISOString(),
-    },
-    {
-        id: "dummy-cost-4",
-        item_name: "도메인 비용 (샘플)",
-        monthly_cost: 2000,
-        description: "tzudong-map.com 연간 구독 (월 환산)",
-        updated_at: new Date().toISOString(),
-    },
-];
 
 const ServerCostsPage = () => {
     const { isAdmin } = useAuth();
@@ -204,7 +173,6 @@ const ServerCostsPage = () => {
     });
 
     const totalMonthlyCost = costs.reduce((sum, cost) => sum + cost.monthly_cost, 0);
-    const isDummyData = costs.length > 0 && costs[0].id.startsWith('dummy-');
 
     const handleEdit = (cost: ServerCost) => {
         setEditingCost({ ...cost });
@@ -305,11 +273,6 @@ const ServerCostsPage = () => {
                                 <DollarSign className="h-6 w-6 text-primary" />
                                 월 서버 운영 비용
                             </h1>
-                            {isDummyData && (
-                                <Badge variant="secondary" className="text-xs">
-                                    📊 샘플 데이터
-                                </Badge>
-                            )}
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             투명한 서비스 운영을 위한 비용 공개
