@@ -13,5 +13,76 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: localStorage,
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'supabase-js-web',
+    },
+  },
+  // API 요청 타임아웃 설정
+  db: {
+    schema: 'public',
+  },
+  rest: {
+    timeout: 10000, // 10초 타임아웃
+  },
+});
+
+// 토큰 만료 감지 및 자동 재시도 로직
+let isRefreshing = false;
+let refreshPromise: Promise<any> | null = null;
+
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'TOKEN_REFRESHED') {
+    console.log('Token refreshed successfully');
+  } else if (event === 'SIGNED_OUT') {
+    console.log('User signed out');
   }
 });
+
+// 글로벌 API 요청 인터셉터
+const originalFetch = globalThis.fetch;
+globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+  try {
+    const response = await originalFetch(input, init);
+
+    // 401 에러 감지 시 토큰 갱신 시도
+    if (response.status === 401) {
+      if (!isRefreshing) {
+        isRefreshing = true;
+        try {
+          console.log('Attempting to refresh token due to 401 error');
+          const { data, error } = await supabase.auth.refreshSession();
+
+          if (error) {
+            console.error('Token refresh failed:', error);
+            // 토큰 갱신 실패 시 로그아웃
+            await supabase.auth.signOut();
+            window.location.reload();
+            return response;
+          }
+
+          if (data.session) {
+            console.log('Token refreshed, retrying request');
+            // 토큰 갱신 성공 시 원래 요청 재시도
+            return originalFetch(input, {
+              ...init,
+              headers: {
+                ...init?.headers,
+                Authorization: `Bearer ${data.session.access_token}`,
+              },
+            });
+          }
+        } finally {
+          isRefreshing = false;
+        }
+      }
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Network error:', error);
+    throw error;
+  }
+};

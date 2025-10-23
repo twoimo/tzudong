@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface AuthContextType {
     user: User | null;
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
+    const queryClient = useQueryClient();
 
     useEffect(() => {
         // Get initial session
@@ -56,9 +58,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen for auth changes
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        } = supabase.auth.onAuthStateChange(async (event, session) => {
+            console.log('Auth state changed:', event, session ? 'session exists' : 'no session');
+
+            // 세션 만료 또는 인증 실패 감지
+            if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' || !session) {
+                if (event === 'SIGNED_OUT') {
+                    console.log('User signed out');
+                    setSession(null);
+                    setUser(null);
+                    setIsAdmin(false);
+                    // 캐시 초기화
+                    queryClient.clear();
+                } else if (event === 'TOKEN_REFRESHED') {
+                    console.log('Token refreshed successfully');
+                    setSession(session);
+                    setUser(session?.user ?? null);
+                    if (session?.user) {
+                        checkAdminRole(session.user.id);
+                    }
+                } else {
+                    // 세션 없음
+                    setSession(null);
+                    setUser(null);
+                    setIsAdmin(false);
+                }
+                return;
+            }
+
             setSession(session);
             setUser(session?.user ?? null);
+
             if (session?.user) {
                 // 프로필 존재 여부 확인 (탈퇴한 사용자 체크)
                 const { data: profile, error: profileError } = await supabase

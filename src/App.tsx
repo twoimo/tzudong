@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Suspense, lazy } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/integrations/supabase/client";
 
 // Lazy load pages for code splitting with preload
 const Index = lazy(() => import("./pages/Index"));
@@ -37,6 +38,23 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
 
+// 인증 에러 감지 및 자동 로그아웃 함수
+const handleAuthError = async (error: any) => {
+  // 401 에러 또는 인증 관련 에러 감지
+  if (error?.status === 401 || error?.code === 'PGRST301' || error?.message?.includes('JWT')) {
+    console.warn('Authentication error detected, signing out user');
+    try {
+      await supabase.auth.signOut();
+      // 페이지 리로드로 상태 초기화
+      window.location.reload();
+    } catch (signOutError) {
+      console.error('Error during sign out:', signOutError);
+      // 강제 리로드
+      window.location.reload();
+    }
+  }
+};
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -44,15 +62,34 @@ const queryClient = new QueryClient({
       staleTime: 5 * 60 * 1000,
       // 캐시 유지 시간 (10분)
       gcTime: 10 * 60 * 1000,
-      // 재시도 횟수 (2회)
-      retry: 2,
+      // 재시도 횟수 (2회) 및 지수 백오프
+      retry: (failureCount, error: any) => {
+        // 401 에러 (인증 실패)인 경우 재시도하지 않고 바로 에러 핸들러 호출
+        if (error?.status === 401 || error?.code === 'PGRST301' || error?.message?.includes('JWT')) {
+          handleAuthError(error);
+          return false;
+        }
+        // 다른 에러는 최대 2회 재시도
+        return failureCount < 2;
+      },
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
       // 백그라운드 리패치 비활성화 (성능 향상)
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
+      // 글로벌 에러 핸들러
+      onError: (error: any) => {
+        console.error('Query error:', error);
+        handleAuthError(error);
+      },
     },
     mutations: {
       // 뮤테이션 재시도 비활성화
       retry: false,
+      // 뮤테이션 에러 핸들러
+      onError: (error: any) => {
+        console.error('Mutation error:', error);
+        handleAuthError(error);
+      },
     },
   },
 });
