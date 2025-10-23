@@ -540,7 +540,40 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {filteredAndSortedRestaurants.length === 0 ? (
+                            {isLoading ? (
+                                // Loading skeleton
+                                Array.from({ length: 5 }).map((_, index) => (
+                                    <TableRow key={index}>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-5 h-5 bg-muted rounded animate-pulse"></div>
+                                                <div className="h-4 bg-muted rounded animate-pulse w-32"></div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex gap-1">
+                                                <div className="h-5 bg-muted rounded animate-pulse w-16"></div>
+                                                <div className="h-5 bg-muted rounded animate-pulse w-12"></div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="h-4 bg-muted rounded animate-pulse w-12 mx-auto"></div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="h-4 bg-muted rounded animate-pulse w-10 mx-auto"></div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="flex items-center justify-center gap-1">
+                                                <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
+                                                <div className="h-4 bg-muted rounded animate-pulse w-6"></div>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center">
+                                            <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : filteredAndSortedRestaurants.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center py-12">
                                         <p className="text-muted-foreground">필터 조건에 맞는 맛집이 없습니다.</p>

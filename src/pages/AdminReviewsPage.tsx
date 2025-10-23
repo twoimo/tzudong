@@ -328,7 +328,42 @@ export default function AdminReviewsPage() {
                     </TabsList>
 
                     <TabsContent value="pending" className="mt-6">
-                        {pendingReviews.length === 0 ? (
+                        {isLoading ? (
+                            // Loading skeleton
+                            <div className="grid gap-4">
+                                {Array.from({ length: 3 }).map((_, index) => (
+                                    <Card key={index} className="p-4">
+                                        <div className="flex items-start justify-between mb-3">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <div className="h-5 bg-muted rounded animate-pulse w-40"></div>
+                                                    <div className="h-5 bg-muted rounded animate-pulse w-16"></div>
+                                                </div>
+                                                <div className="flex items-center gap-4 text-sm mb-3">
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-5 h-5 bg-muted rounded-full animate-pulse"></div>
+                                                        <div className="h-3 bg-muted rounded animate-pulse w-12"></div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
+                                                        <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
+                                                    </div>
+                                                    <div className="flex items-center gap-1">
+                                                        <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
+                                                        <div className="h-3 bg-muted rounded animate-pulse w-20"></div>
+                                                    </div>
+                                                </div>
+                                                <div className="h-12 bg-muted rounded animate-pulse w-full"></div>
+                                            </div>
+                                            <div className="flex gap-1 ml-4">
+                                                <div className="h-8 bg-muted rounded animate-pulse w-16"></div>
+                                                <div className="h-8 bg-muted rounded animate-pulse w-20"></div>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : pendingReviews.length === 0 ? (
                             <Card className="p-12 text-center">
                                 <div className="text-6xl mb-4">📋</div>
                                 <h3 className="text-xl font-semibold mb-2">검토 대기 중인 리뷰가 없습니다</h3>

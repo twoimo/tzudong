@@ -373,8 +373,33 @@ export default function RestaurantSubmissionsPage() {
                         </p>
                     </Card>
                 ) : isLoading ? (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    // Loading skeleton
+                    <div className="grid gap-4">
+                        {Array.from({ length: 3 }).map((_, index) => (
+                            <Card key={index} className="p-4">
+                                <div className="flex items-start justify-between mb-3">
+                                    <div className="flex-1 space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-6 bg-muted rounded animate-pulse w-40"></div>
+                                            <div className="h-5 bg-muted rounded animate-pulse w-16"></div>
+                                            <div className="h-5 bg-muted rounded animate-pulse w-20"></div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="h-4 bg-muted rounded animate-pulse w-48"></div>
+                                            <div className="h-4 bg-muted rounded animate-pulse w-32"></div>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-sm">
+                                            <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
+                                            <div className="h-4 bg-muted rounded animate-pulse w-20"></div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <div className="h-8 bg-muted rounded animate-pulse w-16"></div>
+                                        <div className="h-8 bg-muted rounded animate-pulse w-16"></div>
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
                     </div>
                 ) : submissions.length === 0 ? (
                     <Card className="p-12 text-center">
