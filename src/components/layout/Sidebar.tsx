@@ -65,18 +65,21 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       )}
     >
       <div className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3 group">
+        <div className="flex items-center gap-3 group animate-fade-in cursor-pointer" onClick={() => navigate("/")}>
           {/* Enhanced Logo */}
           <div className="relative">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110">
-              <MapPin className="w-4 h-4 text-white drop-shadow-sm" />
+            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-12">
+              <MapPin className="w-4 h-4 text-white drop-shadow-sm group-hover:animate-pulse" />
             </div>
             {/* Subtle glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/30 to-pink-500/30 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/30 to-pink-500/30 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
+            {/* Floating particles effect */}
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full opacity-0 group-hover:opacity-100 animate-ping"></div>
+            <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-pink-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping" style={{ animationDelay: '0.2s' }}></div>
           </div>
 
           {/* Enhanced Title */}
-          <h1 className="text-xl font-bold bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-red-400 group-hover:to-pink-400 transition-all duration-300">
+          <h1 className="text-xl font-bold bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-red-400 group-hover:to-pink-400 transition-all duration-300 group-hover:scale-105 group-hover:tracking-wide">
             쯔동여지도
           </h1>
         </div>
