@@ -47,10 +47,3 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
 
     return { isLoaded, loadError };
 }
-
-declare global {
-    interface Window {
-        google: typeof google;
-    }
-}
-
