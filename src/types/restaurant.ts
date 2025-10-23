@@ -6,8 +6,8 @@ export type RestaurantCategory = Tables<"restaurants">["category"];
 
 export interface RestaurantWithDetails extends Restaurant {
     reviews?: Review[];
-    review_count: number;
-    visit_count: number;
+    review_count?: number;
+    visit_count?: number;
 }
 
 export interface MapMarker {

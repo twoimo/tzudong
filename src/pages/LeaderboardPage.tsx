@@ -308,7 +308,9 @@ const LeaderboardPage = () => {
                             Array.from({ length: 3 }).map((_, index) => (
                                 <Card key={index} className="p-4">
                                     <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-full bg-muted animate-pulse"></div>
+                                        <div className="w-12 h-12 rounded-full bg-muted animate-pulse flex items-center justify-center">
+                                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                        </div>
                                         <div className="flex-1">
                                             <div className="h-5 bg-muted rounded animate-pulse mb-1"></div>
                                             <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
