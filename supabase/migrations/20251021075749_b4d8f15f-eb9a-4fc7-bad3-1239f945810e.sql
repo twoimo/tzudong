@@ -1,7 +1,14 @@
 -- Create role enum
-CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'app_role') THEN
+        CREATE TYPE public.app_role AS ENUM ('admin', 'user');
+    END IF;
+END
+$$;
 
 -- Create user_roles table (separate from profiles for security)
+DROP TABLE IF EXISTS public.user_roles CASCADE;
 CREATE TABLE public.user_roles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -11,6 +18,7 @@ CREATE TABLE public.user_roles (
 );
 
 -- Create profiles table
+DROP TABLE IF EXISTS public.profiles CASCADE;
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
@@ -22,13 +30,20 @@ CREATE TABLE public.profiles (
 );
 
 -- Create categories enum
-CREATE TYPE public.restaurant_category AS ENUM (
-  '치킨', '중식', '돈까스·회', '피자', '패스트푸드', 
-  '찜·탕', '족발·보쌈', '분식', '카페·디저트', 
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'restaurant_category') THEN
+        CREATE TYPE public.restaurant_category AS ENUM (
+  '치킨', '중식', '돈까스·회', '피자', '패스트푸드',
+  '찜·탕', '족발·보쌈', '분식', '카페·디저트',
   '한식', '고기', '양식', '아시안', '야식', '도시락'
 );
+    END IF;
+END
+$$;
 
 -- Create restaurants table
+DROP TABLE IF EXISTS public.restaurants CASCADE;
 CREATE TABLE public.restaurants (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
@@ -48,6 +63,7 @@ CREATE TABLE public.restaurants (
 );
 
 -- Create reviews table
+DROP TABLE IF EXISTS public.reviews CASCADE;
 CREATE TABLE public.reviews (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
@@ -67,6 +83,7 @@ CREATE TABLE public.reviews (
 );
 
 -- Create server_costs table
+DROP TABLE IF EXISTS public.server_costs CASCADE;
 CREATE TABLE public.server_costs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   item_name TEXT NOT NULL,
@@ -77,6 +94,7 @@ CREATE TABLE public.server_costs (
 );
 
 -- Create user_stats table for leaderboard
+DROP TABLE IF EXISTS public.user_stats CASCADE;
 CREATE TABLE public.user_stats (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
@@ -232,6 +250,7 @@ END;
 $$;
 
 -- Trigger for new user
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
@@ -248,23 +267,40 @@ END;
 $$;
 
 -- Triggers for updated_at
+DROP TRIGGER IF EXISTS update_restaurants_updated_at ON public.restaurants;
 CREATE TRIGGER update_restaurants_updated_at
   BEFORE UPDATE ON public.restaurants
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_reviews_updated_at ON public.reviews;
 CREATE TRIGGER update_reviews_updated_at
   BEFORE UPDATE ON public.reviews
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_server_costs_updated_at ON public.server_costs;
 CREATE TRIGGER update_server_costs_updated_at
   BEFORE UPDATE ON public.server_costs
   FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Create indexes for performance
+DROP INDEX IF EXISTS idx_restaurants_lat_lng;
 CREATE INDEX idx_restaurants_lat_lng ON public.restaurants(lat, lng);
+DROP INDEX IF EXISTS idx_restaurants_category;
 CREATE INDEX idx_restaurants_category ON public.restaurants(category);
+DROP INDEX IF EXISTS idx_restaurants_ai_rating;
 CREATE INDEX idx_restaurants_ai_rating ON public.restaurants(ai_rating);
+DROP INDEX IF EXISTS idx_reviews_restaurant_id;
 CREATE INDEX idx_reviews_restaurant_id ON public.reviews(restaurant_id);
+DROP INDEX IF EXISTS idx_reviews_user_id;
 CREATE INDEX idx_reviews_user_id ON public.reviews(user_id);
+DROP INDEX IF EXISTS idx_reviews_created_at;
 CREATE INDEX idx_reviews_created_at ON public.reviews(created_at DESC);
+DROP INDEX IF EXISTS idx_user_stats_trust_score;
 CREATE INDEX idx_user_stats_trust_score ON public.user_stats(trust_score DESC);
+
+-- Grant admin role to twoimo@dgu.ac.kr
+INSERT INTO public.user_roles (user_id, role)
+SELECT id, 'admin'
+FROM auth.users
+WHERE email = 'twoimo@dgu.ac.kr'
+ON CONFLICT (user_id, role) DO NOTHING;
