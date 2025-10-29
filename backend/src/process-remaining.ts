@@ -330,6 +330,16 @@ async function processInParallel(youtubeLinks: string[], processor: JsonlProcess
   const allResults: { success: boolean; error?: string }[] = [];
 
   try {
+    // 세션 파일 존재 여부 확인
+    const fs = await import('fs');
+    const sessionExists = fs.existsSync('./perplexity-session.json');
+
+    if (sessionExists) {
+      console.log('📂 세션 파일 발견: 병렬 처리 시 세션 공유를 위해 각 브라우저가 세션을 복원합니다');
+    } else {
+      console.log('ℹ️ 세션 파일 없음: 각 브라우저가 수동 로그인을 필요로 할 수 있습니다');
+    }
+
     // 청크 단위로 나누기 (각 청크는 PARALLEL_WORKERS만큼의 URL들)
     const chunks = chunkArray(youtubeLinks, PARALLEL_WORKERS);
 
@@ -350,6 +360,17 @@ async function processInParallel(youtubeLinks: string[], processor: JsonlProcess
         try {
           const crawler = new PerplexityCrawler();
           await crawler.initialize();
+
+          // 병렬 처리 시 세션 상태 확인
+          if (sessionExists) {
+            const loginStatus = await crawler.checkLoginStatus();
+            if (loginStatus.isLoggedIn && !loginStatus.hasLoginModal) {
+              console.log(`🔐 브라우저 ${crawlers.length + 1} 세션 복원 성공`);
+            } else {
+              console.log(`⚠️ 브라우저 ${crawlers.length + 1} 세션 복원 필요`);
+            }
+          }
+
           crawlers.push(crawler);
           console.log(`🚀 브라우저 ${crawlers.length} 초기화 완료`);
         } catch (initError) {
@@ -377,6 +398,25 @@ async function processInParallel(youtubeLinks: string[], processor: JsonlProcess
       allResults.push(...chunkResults);
 
       console.log(`✅ 청크 ${chunkIndex + 1} 완료 (${chunkResults.filter(r => r.success).length}/${chunk.length} 성공)\n`);
+
+      // 병렬 처리 시 세션 관리: 마지막 크롤러의 세션을 전체 세션으로 갱신
+      if (sessionExists && crawlers.length > 0) {
+        const lastCrawler = crawlers[crawlers.length - 1];
+        if (lastCrawler) {
+          try {
+            const loginStatus = await lastCrawler.checkLoginStatus();
+            if (loginStatus.isLoggedIn && !loginStatus.hasLoginModal) {
+              console.log('🔄 병렬 처리용 세션 갱신 중...');
+              await lastCrawler.saveSession();
+              console.log('💾 세션 파일 업데이트됨 (병렬 처리용)');
+            } else {
+              console.log('⚠️ 세션이 만료되었을 수 있음 - 다음 청크에서 재로그인 필요');
+            }
+          } catch (sessionError) {
+            console.warn('세션 갱신 중 오류:', sessionError);
+          }
+        }
+      }
 
       // 현재 청크의 크롤러들 정리
       for (const crawler of crawlers) {

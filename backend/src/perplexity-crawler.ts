@@ -947,7 +947,7 @@ export class PerplexityCrawler {
   /**
    * 로그인 상태를 확인합니다.
    */
-  private async checkLoginStatus(): Promise<{
+  async checkLoginStatus(): Promise<{
     isLoggedIn: boolean;
     hasLoginModal: boolean;
     indicators: any;
