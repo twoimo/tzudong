@@ -12,20 +12,14 @@ function resetData() {
 
     console.log(`📊 Found ${lines.length} entries`);
 
-    // 각 항목 초기화
+    // 각 항목 초기화 (새로운 구조로 변환)
     const resetEntries = lines.map((line, index) => {
       const entry = JSON.parse(line.trim());
 
-      // youtube_link 유지, 나머지 필드 null로 설정, reasoning_basis는 빈 문자열
+      // 새로운 RestaurantData 구조로 초기화
       const resetEntry = {
-        name: null,
-        phone: null,
-        address: null,
-        lat: null,
-        lng: null,
-        category: null,
         youtube_link: entry.youtube_link, // 유지
-        reasoning_basis: "" // 빈 문자열로 설정
+        restaurants: [] // 빈 배열로 초기화
       };
 
       if ((index + 1) % 100 === 0) {
@@ -43,8 +37,7 @@ function resetData() {
     console.log('✅ Data reset completed!');
     console.log(`📊 ${resetEntries.length} entries have been reset`);
     console.log('   - youtube_link: 유지됨');
-    console.log('   - name, phone, address, lat, lng, category: null로 설정');
-    console.log('   - reasoning_basis: 빈 문자열로 설정');
+    console.log('   - restaurants: 빈 배열로 초기화 (다중 레스토랑 정보 저장용)');
 
   } catch (error) {
     console.error('❌ Error resetting data:', error.message);

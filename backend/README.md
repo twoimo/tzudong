@@ -27,7 +27,7 @@ npm run manual-start
 ```bash
 npm run reset
 ```
-**데이터 초기화**: youtube_link 유지하고 나머지 모든 필드를 null로 설정, reasoning_basis는 빈 문자열로 설정
+**데이터 초기화**: youtube_link 유지하고 restaurants 배열을 빈 배열로 초기화 (다중 레스토랑 정보 저장용)
 
 ### 2. 남은 항목만 배치 처리 (최대 10개씩)
 ```bash
@@ -71,6 +71,8 @@ backend/
 
 ## 개선사항 (최신)
 
+- **다중 레스토랑 추출**: 하나의 YouTube 영상에서 여러 개의 레스토랑 정보를 모두 저장
+- **JSON 구조 변경**: RestaurantData 구조로 다중 레스토랑 정보 저장 지원
 - **AI 모델 자동 선택**: Gemini 2.5 Pro 모델 세션당 한 번만 선택 (중복 방지)
 - **Shift+Enter 줄바꿈 입력**: Perplexity AI 방식대로 줄바꿈하여 정확한 입력
 - **정확한 필터링**: reasoning_basis 유무로만 처리 여부 결정 (name 등 다른 필드는 null 허용)
@@ -89,8 +91,8 @@ backend/
 5. **AI 모델 선택**: Gemini 2.5 Pro 모델 자동 선택 (첫 번째 항목에서만)
 6. **프롬프트 입력**: Shift+Enter로 줄바꿈하여 Perplexity AI 방식대로 입력
 7. **응답 대기**: JSON 응답이 나타날 때까지 최대 10분 대기
-8. **데이터 추출**: JSON 코드 블록에서 데이터를 파싱
-9. **파일 업데이트**: `tzuyang_restaurant_results.jsonl` 파일의 해당 항목 업데이트
+8. **데이터 추출**: JSON 코드 블록에서 다중 레스토랑 데이터를 파싱
+9. **파일 업데이트**: `tzuyang_restaurant_results.jsonl` 파일의 restaurants 배열에 데이터 추가
 10. **반복**: 다음 reasoning_basis 없는 항목을 찾아서 전체 처리 완료까지 반복
 
 ## 로그인 설정 (중요!)

@@ -9,7 +9,7 @@
     "start": "node dist/index.js",
     "dev": "tsx src/index.ts",
     "process": "tsx src/process-remaining.ts",
-    "test-process": "TEST_MODE=true tsx src/process-remaining.ts",
+    "test-process": "set TEST_MODE=true&& tsx src/process-remaining.ts",
     "manual-start": "MANUAL_MODE=true npm run start",
     "test-login": "tsx test-login-detection.ts",
     "test-input": "tsx test-input-method.ts",

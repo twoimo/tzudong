@@ -473,18 +473,39 @@ export class PerplexityCrawler {
           timeout: 10 * 60 * 1000 // 10분
         });
 
-        // JSON 내용이 완전히 로드될 때까지 추가 대기
+        // JSON 내용이 완전히 로드될 때까지 추가 대기 (여러 개의 JSON 객체 지원)
         await this.page.waitForFunction(() => {
           const codeElements = document.querySelectorAll('pre code');
+          let validJsonCount = 0;
+
           for (const code of codeElements) {
-            const text = code.textContent || '';
-            // 필수 필드들이 모두 포함되어 있는지 확인
-            if (text.includes('"name"') &&
-              text.includes('"youtube_link"') &&
-              text.includes('"phone"') &&
-              text.includes('"address"') &&
-              text.includes('"reasoning_basis"')) {
-              return true;
+            const text = code.textContent?.trim() || '';
+            if (!text) continue;
+
+            // 여러 줄의 JSON 객체들을 분리해서 처리
+            const jsonBlocks = text.split('\n').filter(line => line.trim());
+
+            for (const block of jsonBlocks) {
+              const trimmedBlock = block.trim();
+              if (trimmedBlock &&
+                trimmedBlock.includes('"name"') &&
+                trimmedBlock.includes('"youtube_link"') &&
+                trimmedBlock.includes('"phone"') &&
+                trimmedBlock.includes('"address"') &&
+                trimmedBlock.includes('"reasoning_basis"') &&
+                trimmedBlock.startsWith('{') &&
+                trimmedBlock.endsWith('}')) {
+                try {
+                  JSON.parse(trimmedBlock);
+                  validJsonCount++;
+                  // 최소 1개의 유효한 JSON이 있으면 충분
+                  if (validJsonCount >= 1) {
+                    return true;
+                  }
+                } catch {
+                  continue;
+                }
+              }
             }
           }
           return false;
@@ -500,38 +521,47 @@ export class PerplexityCrawler {
         throw new Error(`Failed to get response within timeout: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
 
-      // JSON 코드 블록 찾기 (Puppeteer locator 활용)
-      console.log('🔍 Extracting JSON response...');
+      // JSON 코드 블록 찾기 (Puppeteer locator 활용) - 여러 개의 JSON 객체 지원
+      console.log('🔍 Extracting JSON responses...');
 
-      const jsonText = await this.page.evaluate(() => {
-        // 가장 최근에 나타난 JSON 코드 블록 찾기
-        const codeElements = Array.from(document.querySelectorAll('pre code')).reverse(); // 최신순으로 뒤집기
+      const jsonResults = await this.page.evaluate(() => {
+        // 모든 JSON 코드 블록 찾기 (최신순으로 뒤집기)
+        const codeElements = Array.from(document.querySelectorAll('pre code')).reverse();
+        const validJsonObjects: any[] = [];
 
         for (const code of codeElements) {
           const text = code.textContent?.trim() || '';
-          if (text &&
-            text.includes('"name"') &&
-            text.includes('"youtube_link"') &&
-            text.includes('"phone"') &&
-            text.includes('"address"') &&
-            text.includes('"reasoning_basis"') &&
-            text.startsWith('{') &&
-            text.endsWith('}')) {
-            try {
-              // JSON 유효성 검증
-              JSON.parse(text);
-              return text;
-            } catch {
-              // 유효하지 않은 JSON은 건너뜀
-              continue;
+          if (!text) continue;
+
+          // 여러 줄의 JSON 객체들을 분리해서 처리
+          const jsonBlocks = text.split('\n').filter(line => line.trim());
+
+          for (const block of jsonBlocks) {
+            const trimmedBlock = block.trim();
+            if (trimmedBlock &&
+              trimmedBlock.includes('"name"') &&
+              trimmedBlock.includes('"youtube_link"') &&
+              trimmedBlock.includes('"phone"') &&
+              trimmedBlock.includes('"address"') &&
+              trimmedBlock.includes('"reasoning_basis"') &&
+              trimmedBlock.startsWith('{') &&
+              trimmedBlock.endsWith('}')) {
+              try {
+                // JSON 유효성 검증
+                const parsed = JSON.parse(trimmedBlock);
+                validJsonObjects.push(parsed);
+              } catch {
+                // 유효하지 않은 JSON은 건너뜀
+                continue;
+              }
             }
           }
         }
 
-        return null;
+        return validJsonObjects;
       });
 
-      if (!jsonText) {
+      if (!jsonResults || jsonResults.length === 0) {
         // 디버깅을 위해 현재 페이지 상태 확인
         const pageContent = await this.page.content();
         console.error('❌ Page content preview:', pageContent.substring(0, 1000));
@@ -542,22 +572,46 @@ export class PerplexityCrawler {
         );
         console.error('❌ Available code blocks:', codeBlocks);
 
-        throw new Error('JSON response not found. Check if the page loaded correctly.');
+        throw new Error('No valid JSON responses found. Check if the page loaded correctly.');
       }
 
-      console.log(`✅ Found JSON response for ${youtubeLink}`);
+      console.log(`✅ Found ${jsonResults.length} JSON response(s) for ${youtubeLink}`);
 
-      // JSON 파싱
-      const restaurantInfo: RestaurantInfo = JSON.parse(jsonText);
+      // 모든 유효한 JSON 객체들을 RestaurantInfo로 변환
+      const restaurantInfos: RestaurantInfo[] = [];
 
-      // 유효성 검증
-      if (restaurantInfo.youtube_link !== youtubeLink) {
-        throw new Error('YouTube link mismatch in response');
+      for (const jsonObj of jsonResults) {
+        // YouTube 링크가 일치하는지 검증 (가장 중요)
+        if (jsonObj.youtube_link !== youtubeLink) {
+          console.log(`⚠️ Skipping JSON with mismatched YouTube link: ${jsonObj.youtube_link}`);
+          continue;
+        }
+
+        // RestaurantInfo로 변환
+        const restaurantInfo: RestaurantInfo = {
+          name: jsonObj.name,
+          phone: jsonObj.phone,
+          address: jsonObj.address,
+          lat: jsonObj.lat,
+          lng: jsonObj.lng,
+          category: jsonObj.category,
+          youtube_link: jsonObj.youtube_link,
+          reasoning_basis: jsonObj.reasoning_basis || ''
+        };
+
+        restaurantInfos.push(restaurantInfo);
+        console.log(`✅ Added restaurant: ${restaurantInfo.name || 'Unknown'}`);
       }
+
+      if (restaurantInfos.length === 0) {
+        throw new Error('No valid JSON objects found with matching YouTube link.');
+      }
+
+      console.log(`🎯 Extracted ${restaurantInfos.length} restaurant(s) for ${youtubeLink}`);
 
       return {
         success: true,
-        data: restaurantInfo,
+        data: restaurantInfos,
         youtubeLink
       };
 

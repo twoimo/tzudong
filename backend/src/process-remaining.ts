@@ -143,24 +143,24 @@ async function processRemaining() {
 
             try {
                 const result: ProcessingResult = await crawler.processYouTubeLink(
-                    nextEntry.youtube_link,
-                    PROMPT_TEMPLATE
+                  nextEntry.youtube_link,
+                  PROMPT_TEMPLATE
                 );
 
-                if (result.success && result.data) {
-                    try {
-                        const updated = processor.updateEntry(nextEntry.youtube_link, result.data);
-                        if (updated) {
-                            successCount++;
-                            console.log(`✅ Successfully updated: ${result.data.name || 'Unknown'}`);
-                        } else {
-                            errorCount++;
-                            console.log('❌ Failed to update file');
-                        }
-                    } catch (fileError) {
-                        errorCount++;
-                        console.log(`❌ File update error: ${fileError instanceof Error ? fileError.message : 'Unknown file error'}`);
+                if (result.success && result.data && result.data.length > 0) {
+                  try {
+                    const updated = processor.updateEntry(nextEntry.youtube_link, result.data);
+                    if (updated) {
+                      successCount++;
+                      console.log(`✅ Successfully updated: ${result.data.length} restaurant(s) extracted`);
+                    } else {
+                      errorCount++;
+                      console.log('❌ Failed to update file');
                     }
+                  } catch (fileError) {
+                    errorCount++;
+                    console.log(`❌ File update error: ${fileError instanceof Error ? fileError.message : 'Unknown file error'}`);
+                  }
                 } else {
                     errorCount++;
                     console.log(`❌ Processing failed: ${result.error}`);

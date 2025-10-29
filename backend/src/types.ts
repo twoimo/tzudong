@@ -9,9 +9,14 @@ export interface RestaurantInfo {
   reasoning_basis: string;
 }
 
+export interface RestaurantData {
+  youtube_link: string;
+  restaurants: RestaurantInfo[];
+}
+
 export interface ProcessingResult {
   success: boolean;
-  data?: RestaurantInfo;
+  data?: RestaurantInfo[];
   error?: string;
   youtubeLink: string;
 }
