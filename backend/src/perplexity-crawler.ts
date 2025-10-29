@@ -184,26 +184,28 @@ export class PerplexityCrawler {
 
       // 로그인 필요 여부 확인 및 처리
       let needsLogin = false;
+      let loginType = '';
 
       if (loginStatus.hasLoginModal) {
         // Perplexity 로그인 모달 감지
         console.log('\n🚨 Perplexity 로그인 모달 감지됨!');
         needsLogin = true;
+        loginType = 'perplexity';
       } else {
-        // Google 로그인 페이지 확인 (이 메서드는 내부에서 사용자 입력을 처리)
-        needsLogin = await this.checkForGoogleLoginPage();
+        // Google 로그인 페이지 확인
+        const hasGoogleLoginPage = await this.checkForGoogleLoginPage();
+        if (hasGoogleLoginPage) {
+          needsLogin = true;
+          loginType = 'google';
+        }
       }
 
       if (needsLogin) {
         console.log('📋 브라우저에서 수동으로 로그인해주세요.');
         console.log('⌨️ 로그인 완료 후 터미널에서 아무 키나 눌러서 크롤링을 재개하세요...\n');
 
-        // 사용자 입력 대기 (Google 로그인 페이지에서 이미 처리된 경우 제외)
-        if (!loginStatus.hasLoginModal) {
-          // Google 로그인 페이지에서 이미 사용자 입력을 처리했으므로 추가 대기 불필요
-          console.log('✅ Google 로그인 페이지에서 이미 사용자 확인을 받았습니다.\n');
-        } else {
-          // Perplexity 로그인 모달의 경우 사용자 입력 대기
+        // 사용자 입력 대기 (Google 로그인 페이지에서는 이미 처리됨)
+        if (loginType === 'perplexity') {
           await new Promise<void>((resolve) => {
             const cleanup = () => {
               process.stdin.setRawMode(false);
@@ -228,26 +230,39 @@ export class PerplexityCrawler {
               resolve();
             }, 24 * 60 * 60 * 1000); // 24시간
           });
+        } else {
+          // Google 로그인 페이지에서는 이미 사용자 입력을 처리했음
+          console.log('✅ Google 로그인 페이지에서 이미 사용자 확인을 받았습니다.\n');
         }
 
-        // 로그인 상태 재확인
+        // 로그인 상태 재확인 및 세션 저장
+        console.log('🔄 로그인 상태 재확인 및 세션 업데이트 중...');
         const updatedLoginStatus = await this.checkLoginStatus();
+
         if (updatedLoginStatus.isLoggedIn && !updatedLoginStatus.hasLoginModal) {
           console.log('✅ 로그인 성공 확인됨');
 
-          // 로그인 성공 시 세션 저장
-          await this.saveSession();
-          console.log('💾 로그인 세션 업데이트됨');
+          // 로그인 성공 시 반드시 최신 세션 저장 (타임스탬프 업데이트)
+          try {
+            await this.saveSession();
+            console.log('💾 로그인 세션 최신 업데이트 완료 (타임스탬프 갱신)');
+          } catch (sessionError) {
+            console.error('❌ 세션 저장 실패:', sessionError instanceof Error ? sessionError.message : 'Unknown error');
+          }
         } else {
           console.log('⚠️  로그인 상태가 아직 확인되지 않음, 계속 진행합니다');
         }
       } else if (loginStatus.isLoggedIn) {
         console.log('✅ 로그인 상태 확인됨');
 
-        // 기존 세션이 없는 경우에만 세션 저장
+        // 기존 세션이 없는 경우에만 세션 저장 (최초 실행 시)
         if (!sessionRestored) {
-          await this.saveSession();
-          console.log('💾 로그인 세션 저장됨');
+          try {
+            await this.saveSession();
+            console.log('💾 초기 로그인 세션 저장됨');
+          } catch (sessionError) {
+            console.error('❌ 초기 세션 저장 실패:', sessionError instanceof Error ? sessionError.message : 'Unknown error');
+          }
         }
       } else {
         console.log('❓ 로그인 상태 불확실');
@@ -1115,7 +1130,7 @@ export class PerplexityCrawler {
   }
 
   /**
-   * Google 로그인 페이지 감지 및 사용자 대기
+   * Google 로그인 페이지 감지 (단순 감지만 수행)
    */
   private async checkForGoogleLoginPage(): Promise<boolean> {
     if (!this.page) {
@@ -1149,40 +1164,11 @@ export class PerplexityCrawler {
       });
 
       if (isGoogleLoginPage) {
-        console.log('\n🚨 Google 로그인 페이지가 감지되었습니다!');
-        console.log('📋 브라우저에서 수동으로 로그인해주세요.');
-        console.log('⌨️ 로그인 완료 후 터미널에서 아무 키나 눌러서 크롤링을 재개하세요...\n');
-
-        // 사용자 입력 대기
-        await new Promise<void>((resolve) => {
-          const cleanup = () => {
-            process.stdin.setRawMode(false);
-            process.stdin.pause();
-            process.stdin.removeAllListeners('data');
-          };
-
-          process.stdin.setRawMode(true);
-          process.stdin.resume();
-          process.stdin.setEncoding('utf8');
-
-          process.stdin.once('data', () => {
-            cleanup();
-            console.log('✅ 사용자가 로그인 완료를 확인했습니다. 크롤링을 재개합니다!\n');
-            resolve();
-          });
-
-          // 타임아웃 추가 (긴 대기 시간)
-          setTimeout(() => {
-            cleanup();
-            console.log('\n⏰ 로그인 대기 시간이 초과되었습니다. 자동으로 진행합니다...\n');
-            resolve();
-          }, 24 * 60 * 60 * 1000); // 24시간
-        });
-
-        return true; // 로그인 페이지가 있었음
+        console.log('🔍 Google 로그인 페이지 감지됨');
+        return true;
       }
 
-      return false; // 로그인 페이지가 아님
+      return false;
 
     } catch (error) {
       console.log('⚠️  Google 로그인 페이지 확인 중 오류:', error instanceof Error ? error.message : 'Unknown error');
