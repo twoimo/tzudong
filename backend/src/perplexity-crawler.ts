@@ -1156,22 +1156,31 @@ export class PerplexityCrawler {
     if (!text) return text;
 
     // 출처 인용구 패턴들 제거
-    // [attached_file:숫자], [web:숫자], [translate:텍스트], [숫자] 등의 패턴
+    // [attached_file:숫자], [web:숫자], [translate:텍스트], [숫자], {ts:숫자}, [attached-file:숫자] 등의 패턴
     const patterns = [
       /\[attached_file:\d+\]/g,
+      /\[attached-file:\d+\]/g,  // 하이픈 포함 패턴
       /\[web:\d+\]/g,
       /\[translate:[^\]]*\]/g,
       /\[attached_file:\d+,\s*web:\d+\]/g,
       /\[web:\d+,\s*web:\d+\]/g,
       /\[web:\d+,\s*web:\d+,\s*web:\d+\]/g,
       /\[web:\d+,\s*web:\d+,\s*web:\d+,\s*web:\d+\]/g,
-      /\[\d+\]/g  // [2], [3], [12], [14] 등의 숫자 패턴
+      /\[\d+\]/g,  // [2], [3], [12], [14] 등의 숫자 패턴
+      /\{ts:\d+\}/g  // {ts:670}, {ts:768} 등의 타임스탬프 패턴
     ];
 
     let cleanedText = text;
     for (const pattern of patterns) {
       cleanedText = cleanedText.replace(pattern, '');
     }
+
+    // 빈 괄호 패턴들 제거 (, , , ), (, ) 등
+    cleanedText = cleanedText.replace(/\(\s*,\s*\)/g, '');  // (,)
+    cleanedText = cleanedText.replace(/\(\s*,\s*,\s*\)/g, '');  // (,,)
+    cleanedText = cleanedText.replace(/\(\s*,\s*,\s*,\s*\)/g, '');  // (,,,)
+    cleanedText = cleanedText.replace(/\(\s*,\s*,\s*,\s*,\s*\)/g, '');  // (,,,,)
+    cleanedText = cleanedText.replace(/\(\s*\)/g, '');  // ()
 
     // 연속된 공백 정리
     cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
