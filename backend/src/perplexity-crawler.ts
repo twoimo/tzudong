@@ -539,27 +539,75 @@ export class PerplexityCrawler {
           const text = codeElement.textContent?.trim() || '';
           if (!text) continue;
 
-          // JSON 시작과 끝 찾기
-          const jsonStart = text.indexOf('{');
-          const jsonEnd = text.lastIndexOf('}');
+          // 하나의 code 태그 안에 여러 JSON 객체가 있을 수 있음
+          // "}\n\n{" 또는 "}\n{" 패턴으로 분리 시도
+          let jsonBlocks: string[] = [];
 
-          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
-            const jsonText = text.substring(jsonStart, jsonEnd + 1).trim();
+          if (text.includes('}\n\n{')) {
+            // 빈 줄로 구분된 경우
+            jsonBlocks = text.split('}\n\n{');
+            // 첫 번째와 마지막에 중괄호 추가
+            jsonBlocks = jsonBlocks.map((block, index) => {
+              if (index === 0) return block + '}';
+              if (index === jsonBlocks.length - 1) return '{' + block;
+              return '{' + block + '}';
+            });
+          } else if (text.includes('}\n{')) {
+            // 바로 이어지는 경우
+            jsonBlocks = text.split('}\n{');
+            jsonBlocks = jsonBlocks.map((block, index) => {
+              if (index === 0) return block + '}';
+              if (index === jsonBlocks.length - 1) return '{' + block;
+              return '{' + block + '}';
+            });
+          } else {
+            // 다른 방식으로 시도
+            jsonBlocks = [text];
+          }
 
-            if (jsonText.includes('"name"') &&
-              jsonText.includes('"youtube_link"') &&
-              jsonText.includes('"phone"') &&
-              jsonText.includes('"address"') &&
-              jsonText.includes('"reasoning_basis"') &&
-              jsonText.startsWith('{') &&
-              jsonText.endsWith('}')) {
+          // 각 블록 파싱
+          for (const block of jsonBlocks) {
+            const trimmedBlock = block.trim();
+            if (trimmedBlock.includes('"name"') &&
+                trimmedBlock.includes('"youtube_link"') &&
+                trimmedBlock.includes('"phone"') &&
+                trimmedBlock.includes('"address"') &&
+                trimmedBlock.includes('"reasoning_basis"') &&
+                trimmedBlock.startsWith('{') &&
+                trimmedBlock.endsWith('}')) {
               try {
-                // JSON 유효성 검증
-                const parsed = JSON.parse(jsonText);
+                const parsed = JSON.parse(trimmedBlock);
                 validJsonObjects.push(parsed);
+                console.log(`✅ JSON 객체 파싱 성공: ${parsed.name}`);
               } catch (error) {
-                console.log('JSON 파싱 실패:', error, '텍스트:', jsonText.substring(0, 100));
-                continue;
+                console.log('JSON 블록 파싱 실패:', error, '블록 길이:', trimmedBlock.length);
+              }
+            }
+          }
+
+          // 개행 분리로 찾지 못했으면 정규식으로 시도
+          if (validJsonObjects.length === 0) {
+            const jsonRegex = /\{[^{}]*"name"[^}]*"youtube_link"[^}]*"phone"[^}]*"address"[^}]*"reasoning_basis"[^}]*\}/g;
+            let match;
+
+            while ((match = jsonRegex.exec(text)) !== null) {
+              const jsonText = match[0].trim();
+
+              if (jsonText.includes('"name"') &&
+                  jsonText.includes('"youtube_link"') &&
+                  jsonText.includes('"phone"') &&
+                  jsonText.includes('"address"') &&
+                  jsonText.includes('"reasoning_basis"') &&
+                  jsonText.startsWith('{') &&
+                  jsonText.endsWith('}')) {
+                try {
+                  // JSON 유효성 검증
+                  const parsed = JSON.parse(jsonText);
+                  validJsonObjects.push(parsed);
+                } catch (error) {
+                  console.log('정규식 JSON 파싱 실패:', error, '텍스트:', jsonText.substring(0, 100));
+                  continue;
+                }
               }
             }
           }
