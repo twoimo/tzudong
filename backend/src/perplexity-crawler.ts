@@ -487,6 +487,7 @@ export class PerplexityCrawler {
 
             const lines = text.split('\n');
             let validJsonCount = 0;
+            let hasValidResponse = false;
 
             for (const line of lines) {
               const trimmedLine = line.trim();
@@ -494,21 +495,22 @@ export class PerplexityCrawler {
 
               if (trimmedLine.startsWith('{') &&
                 trimmedLine.endsWith('}') &&
-                trimmedLine.includes('"name"') &&
-                trimmedLine.includes('"youtube_link"') &&
-                trimmedLine.includes('"phone"') &&
-                trimmedLine.includes('"address"') &&
-                trimmedLine.includes('"reasoning_basis"')) {
+                trimmedLine.includes('"youtube_link"')) {
                 try {
-                  JSON.parse(trimmedLine);
-                  validJsonCount++;
+                  const parsed = JSON.parse(trimmedLine);
+                  // 유효한 JSON 객체인지 확인 (최소 youtube_link가 있고 name이 null이 아니거나 reasoning_basis가 있는 경우)
+                  if (parsed.youtube_link && (parsed.name !== null || parsed.reasoning_basis)) {
+                    validJsonCount++;
+                    hasValidResponse = true;
+                  }
                 } catch {
                   continue;
                 }
               }
             }
 
-            if (validJsonCount >= 3) {
+            // 최소 1개의 유효한 응답이 있으면 진행 (식당 정보가 없어도 정상 응답으로 처리)
+            if (hasValidResponse) {
               return true;
             }
           }
@@ -674,13 +676,13 @@ export class PerplexityCrawler {
           continue;
         }
 
-        // 필수 필드 검증
-        if (!jsonObj.name || !jsonObj.phone || !jsonObj.address || !jsonObj.reasoning_basis) {
-          console.log(`⚠️ 필수 필드 누락: ${jsonObj.name || '이름 없음'}`);
+        // 필수 필드 검증 (reasoning_basis가 있으면 유효한 응답으로 간주)
+        if (!jsonObj.reasoning_basis) {
+          console.log(`⚠️ reasoning_basis 누락`);
           continue;
         }
 
-        // RestaurantInfo로 변환
+        // 식당 정보가 없는 경우 (모두 null)도 유효한 응답으로 처리
         const restaurantInfo: RestaurantInfo = {
           name: jsonObj.name,
           phone: jsonObj.phone,
@@ -689,12 +691,18 @@ export class PerplexityCrawler {
           lng: jsonObj.lng,
           category: jsonObj.category,
           youtube_link: jsonObj.youtube_link,
-          reasoning_basis: jsonObj.reasoning_basis || '',
-          tzuyang_review: jsonObj.tzuyang_review || null
+          reasoning_basis: jsonObj.reasoning_basis,
+          tzuyang_review: jsonObj.tzuyang_review
         };
 
         restaurantInfos.push(restaurantInfo);
-        console.log(`✅ 레스토랑 추가: ${restaurantInfo.name}`);
+
+        // 식당 정보가 있는 경우와 없는 경우에 따라 다른 메시지 출력
+        if (jsonObj.name) {
+          console.log(`✅ 레스토랑 추가: ${restaurantInfo.name}`);
+        } else {
+          console.log(`ℹ️ 식당 정보 없음 처리: ${youtubeLink}`);
+        }
       }
 
       console.log(`📊 최종 결과: ${restaurantInfos.length}개 레스토랑 정보 생성`);
@@ -1113,7 +1121,8 @@ export class PerplexityCrawler {
     for (const restaurant of restaurants) {
       const enriched = { ...restaurant };
 
-      if (enriched.address && enriched.address.trim() !== '') {
+      // 주소가 있고 식당 이름도 있는 경우에만 좌표 조회
+      if (enriched.address && enriched.address.trim() !== '' && enriched.name) {
         let coordinates: { lat: number; lng: number } | null = null;
 
         if (this.isForeignAddress(enriched.address)) {
@@ -1131,6 +1140,9 @@ export class PerplexityCrawler {
         } else {
           console.log(`❌ 좌표 조회 실패: ${enriched.name}`);
         }
+      } else if (!enriched.name) {
+        // 식당 정보가 없는 경우
+        console.log(`ℹ️ 좌표 조회 건너뜀: 식당 정보 없음`);
       }
 
       enrichedRestaurants.push(enriched);
