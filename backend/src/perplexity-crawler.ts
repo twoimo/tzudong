@@ -174,12 +174,24 @@ export class PerplexityCrawler {
         console.log('🔍 로그인 모달이 있을 경우 정상임');
       }
 
+      // 사용자 확인 변수들 (로그인 상태 확인 전에 미리 계산)
+      const isFirstItem = !this.hasProcessedAnyItem;
+      const manualMode = process.env.MANUAL_MODE === 'true';
+      const sessionRestored = this.sessionRestored;
+
       // 로그인 상태 확인 (로그인 모달 유무로 판단)
       const loginStatus = await this.checkLoginStatus();
 
       // 로그인 상태 표시
       if (loginStatus.isLoggedIn && !loginStatus.hasLoginModal) {
         console.log('✅ 로그인 상태 확인됨');
+
+        // 첫 번째 항목에서 로그인 성공 시 세션 저장 (세션이 아직 복원되지 않은 경우)
+        if (isFirstItem && !sessionRestored) {
+          await this.saveSession();
+          console.log('💾 로그인 세션 저장됨');
+        }
+
       } else if (loginStatus.hasLoginModal) {
         console.log('⚠️  로그인 모달이 감지됨');
       } else {
@@ -192,11 +204,6 @@ export class PerplexityCrawler {
         const input = document.getElementById('ask-input');
         return !!(input && input.offsetParent !== null); // 보이는지 확인
       });
-
-      // 사용자 확인 (첫 번째 항목에서만 또는 수동 모드에서만)
-      const isFirstItem = !this.hasProcessedAnyItem;
-      const manualMode = process.env.MANUAL_MODE === 'true';
-      const sessionRestored = this.sessionRestored;
 
       if (isFirstItem || manualMode) {
         if (sessionRestored) {
@@ -1065,12 +1072,12 @@ export class PerplexityCrawler {
       const isGoogleLoginPage = await this.page.evaluate(() => {
         // Google 로그인 페이지의 특징적인 HTML 요소들 확인
         const hasGoogleLogo = document.querySelector('img[alt*="Google"]') ||
-                             document.querySelector('svg[aria-label*="Google"]') ||
-                             document.querySelector('[data-google-logo]');
+          document.querySelector('svg[aria-label*="Google"]') ||
+          document.querySelector('[data-google-logo]');
 
         const hasLoginForm = document.querySelector('form[action*="signin"]') ||
-                            document.querySelector('input[type="email"]') ||
-                            document.querySelector('input[name="identifier"]');
+          document.querySelector('input[type="email"]') ||
+          document.querySelector('input[name="identifier"]');
 
         const hasGoogleAuthText = Array.from(document.querySelectorAll('*')).some(el =>
           el.textContent?.includes('Google 계정으로 계속') ||
@@ -1081,7 +1088,7 @@ export class PerplexityCrawler {
         // URL로도 확인
         const currentUrl = window.location.href;
         const isGoogleAuthUrl = currentUrl.includes('accounts.google.com') ||
-                               currentUrl.includes('google.com/signin');
+          currentUrl.includes('google.com/signin');
 
         return !!(hasGoogleLogo || hasLoginForm || hasGoogleAuthText || isGoogleAuthUrl);
       });
