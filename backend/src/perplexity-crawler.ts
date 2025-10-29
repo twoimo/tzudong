@@ -525,34 +525,66 @@ export class PerplexityCrawler {
       console.log('🔍 Extracting JSON responses...');
 
       const jsonResults = await this.page.evaluate(() => {
-        // 모든 JSON 코드 블록 찾기 (최신순으로 뒤집기)
-        const codeElements = Array.from(document.querySelectorAll('pre code')).reverse();
+        // 모든 JSON 코드 블록 찾기 (HTML 구조에 맞게 수정)
         const validJsonObjects: any[] = [];
 
-        for (const code of codeElements) {
-          const text = code.textContent?.trim() || '';
+        // 방법 1: pre 태그 안의 code 태그 찾기
+        const preElements = Array.from(document.querySelectorAll('pre')).reverse();
+
+        for (const pre of preElements) {
+          // pre 태그 안에서 code 태그 찾기
+          const codeElement = pre.querySelector('code');
+          if (!codeElement) continue;
+
+          const text = codeElement.textContent?.trim() || '';
           if (!text) continue;
 
-          // 여러 줄의 JSON 객체들을 분리해서 처리
-          const jsonBlocks = text.split('\n').filter(line => line.trim());
+          // JSON 시작과 끝 찾기
+          const jsonStart = text.indexOf('{');
+          const jsonEnd = text.lastIndexOf('}');
 
-          for (const block of jsonBlocks) {
-            const trimmedBlock = block.trim();
-            if (trimmedBlock &&
-              trimmedBlock.includes('"name"') &&
-              trimmedBlock.includes('"youtube_link"') &&
-              trimmedBlock.includes('"phone"') &&
-              trimmedBlock.includes('"address"') &&
-              trimmedBlock.includes('"reasoning_basis"') &&
-              trimmedBlock.startsWith('{') &&
-              trimmedBlock.endsWith('}')) {
+          if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+            const jsonText = text.substring(jsonStart, jsonEnd + 1).trim();
+
+            if (jsonText.includes('"name"') &&
+              jsonText.includes('"youtube_link"') &&
+              jsonText.includes('"phone"') &&
+              jsonText.includes('"address"') &&
+              jsonText.includes('"reasoning_basis"') &&
+              jsonText.startsWith('{') &&
+              jsonText.endsWith('}')) {
               try {
                 // JSON 유효성 검증
-                const parsed = JSON.parse(trimmedBlock);
+                const parsed = JSON.parse(jsonText);
                 validJsonObjects.push(parsed);
-              } catch {
-                // 유효하지 않은 JSON은 건너뜀
+              } catch (error) {
+                console.log('JSON 파싱 실패:', error, '텍스트:', jsonText.substring(0, 100));
                 continue;
+              }
+            }
+          }
+        }
+
+        // 방법 2: 백업 - 모든 pre 태그의 텍스트에서 JSON 추출 시도
+        if (validJsonObjects.length === 0) {
+          console.log('첫 번째 방법으로 JSON을 찾지 못함, 백업 방법 시도');
+
+          for (const pre of preElements) {
+            const text = pre.textContent?.trim() || '';
+            if (!text) continue;
+
+            // JSON 객체들을 찾아서 분리
+            const jsonMatches = text.match(/\{[^}]*"name"[^}]*"youtube_link"[^}]*"phone"[^}]*"address"[^}]*"reasoning_basis"[^}]*\}/g);
+
+            if (jsonMatches) {
+              for (const jsonMatch of jsonMatches) {
+                try {
+                  const parsed = JSON.parse(jsonMatch);
+                  validJsonObjects.push(parsed);
+                } catch (error) {
+                  console.log('백업 방법 JSON 파싱 실패:', error);
+                  continue;
+                }
               }
             }
           }
@@ -1018,10 +1050,8 @@ export class PerplexityCrawler {
     for (const restaurant of restaurants) {
       const enriched = { ...restaurant };
 
-      // lat 또는 lng가 null이거나 undefined인 경우에만 API 호출
-      if ((enriched.lat === null || enriched.lat === undefined ||
-        enriched.lng === null || enriched.lng === undefined) &&
-        enriched.address && enriched.address.trim() !== '') {
+      // 주소가 있는 경우 항상 좌표 재확보 (기존 좌표가 있어도 덮어쓰기)
+      if (enriched.address && enriched.address.trim() !== '') {
 
         let coordinates: { lat: number; lng: number } | null = null;
 
