@@ -474,42 +474,54 @@ export class PerplexityCrawler {
         });
 
         // JSON 내용이 완전히 로드될 때까지 추가 대기 (여러 개의 JSON 객체 지원)
+        // 충분한 시간을 두고 모든 JSON 객체가 생성될 때까지 기다림
+        console.log('⏳ 응답이 완전히 생성될 때까지 대기...');
+
         await this.page.waitForFunction(() => {
           const codeElements = document.querySelectorAll('pre code');
-          let validJsonCount = 0;
 
           for (const code of codeElements) {
             const text = code.textContent?.trim() || '';
             if (!text) continue;
 
             // 여러 줄의 JSON 객체들을 분리해서 처리
-            const jsonBlocks = text.split('\n').filter(line => line.trim());
+            const lines = text.split('\n');
+            let validJsonCount = 0;
 
-            for (const block of jsonBlocks) {
-              const trimmedBlock = block.trim();
-              if (trimmedBlock &&
-                trimmedBlock.includes('"name"') &&
-                trimmedBlock.includes('"youtube_link"') &&
-                trimmedBlock.includes('"phone"') &&
-                trimmedBlock.includes('"address"') &&
-                trimmedBlock.includes('"reasoning_basis"') &&
-                trimmedBlock.startsWith('{') &&
-                trimmedBlock.endsWith('}')) {
+            for (const line of lines) {
+              const trimmedLine = line.trim();
+              if (!trimmedLine) continue;
+
+              // 각 줄이 완전한 JSON 객체인지 확인
+              if (trimmedLine.startsWith('{') &&
+                trimmedLine.endsWith('}') &&
+                trimmedLine.includes('"name"') &&
+                trimmedLine.includes('"youtube_link"') &&
+                trimmedLine.includes('"phone"') &&
+                trimmedLine.includes('"address"') &&
+                trimmedLine.includes('"reasoning_basis"')) {
                 try {
-                  JSON.parse(trimmedBlock);
+                  JSON.parse(trimmedLine);
                   validJsonCount++;
-                  // 최소 1개의 유효한 JSON이 있으면 충분
-                  if (validJsonCount >= 1) {
-                    return true;
-                  }
                 } catch {
                   continue;
                 }
               }
             }
+
+            // 최소 3개의 유효한 JSON이 있어야 함 (빈해원, 복성루, 지린성)
+            // 또는 응답이 더 이상 변경되지 않는 것을 감지
+            if (validJsonCount >= 3) {
+              console.log(`🎯 충분한 JSON 객체 발견: ${validJsonCount}개`);
+              return true;
+            }
           }
           return false;
-        }, { timeout: 30000 });
+        }, { timeout: 60000 }); // 타임아웃을 60초로 늘림
+
+        console.log('✅ 응답 생성 완료, 추가 안정화 대기...');
+        // 추가로 10초 더 기다려서 응답이 완전히 안정화되도록 함
+        await new Promise(resolve => setTimeout(resolve, 10000));
 
         console.log('✅ Response detected and loaded!');
 
@@ -657,13 +669,33 @@ export class PerplexityCrawler {
 
       console.log(`✅ Found ${jsonResults.length} JSON response(s) for ${youtubeLink}`);
 
+      // 각 JSON 객체의 상세 내용 로깅
+      jsonResults.forEach((jsonObj, index) => {
+        console.log(`📄 JSON 객체 ${index + 1}:`, {
+          name: jsonObj.name,
+          youtube_link: jsonObj.youtube_link,
+          address: jsonObj.address,
+          hasAllRequiredFields: !!(jsonObj.name && jsonObj.youtube_link && jsonObj.phone && jsonObj.address && jsonObj.reasoning_basis)
+        });
+      });
+
       // 모든 유효한 JSON 객체들을 RestaurantInfo로 변환
       const restaurantInfos: RestaurantInfo[] = [];
 
       for (const jsonObj of jsonResults) {
+        console.log(`🔍 검증 시작: ${jsonObj.name} - 링크: ${jsonObj.youtube_link}`);
+
         // YouTube 링크가 일치하는지 검증 (가장 중요)
         if (jsonObj.youtube_link !== youtubeLink) {
-          console.log(`⚠️ Skipping JSON with mismatched YouTube link: ${jsonObj.youtube_link}`);
+          console.log(`⚠️ YouTube 링크 불일치 - 예상: ${youtubeLink}, 실제: ${jsonObj.youtube_link}`);
+          continue;
+        }
+
+        console.log(`✅ YouTube 링크 검증 통과: ${jsonObj.name}`);
+
+        // 필수 필드 검증
+        if (!jsonObj.name || !jsonObj.phone || !jsonObj.address || !jsonObj.reasoning_basis) {
+          console.log(`⚠️ 필수 필드 누락: ${jsonObj.name} - name: ${!!jsonObj.name}, phone: ${!!jsonObj.phone}, address: ${!!jsonObj.address}, reasoning: ${!!jsonObj.reasoning_basis}`);
           continue;
         }
 
@@ -681,8 +713,13 @@ export class PerplexityCrawler {
         };
 
         restaurantInfos.push(restaurantInfo);
-        console.log(`✅ Added restaurant: ${restaurantInfo.name || 'Unknown'}`);
+        console.log(`✅ RestaurantInfo 변환 완료: ${restaurantInfo.name}`);
       }
+
+      console.log(`📊 최종 결과: ${restaurantInfos.length}개 레스토랑 정보 생성됨`);
+      restaurantInfos.forEach((restaurant, index) => {
+        console.log(`   ${index + 1}. ${restaurant.name} - ${restaurant.address}`);
+      });
 
       if (restaurantInfos.length === 0) {
         throw new Error('No valid JSON objects found with matching YouTube link.');
@@ -1045,7 +1082,7 @@ export class PerplexityCrawler {
       const encodedAddress = encodeURIComponent(address.trim());
       const apiUrl = `http://www.moamodu.com/develop/naver_map_new_proxy.php?query=${encodedAddress}`;
 
-      console.log(`🗺️  Naver Map API 호출: ${address}`);
+      console.log(`🗺️  Naver Map API 호출: ${address} → ${apiUrl}`);
 
       // AbortController로 타임아웃 구현
       const controller = new AbortController();
@@ -1057,22 +1094,34 @@ export class PerplexityCrawler {
 
       clearTimeout(timeoutId);
 
+      console.log(`📡 API 응답 상태: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
         console.warn(`⚠️  Naver Map API 실패 (${response.status}): ${address}`);
+        const responseText = await response.text();
+        console.warn(`📄 응답 내용: ${responseText.substring(0, 200)}...`);
         return null;
       }
 
       const data = await response.json() as any;
+      console.log(`📊 API 응답 데이터:`, JSON.stringify(data, null, 2));
 
       if (data.status === 'OK' && data.addresses && data.addresses.length > 0) {
         const firstResult = data.addresses[0];
         const lat = parseFloat(firstResult.y);
         const lng = parseFloat(firstResult.x);
 
+        console.log(`🔍 첫 번째 결과:`, JSON.stringify(firstResult, null, 2));
+        console.log(`📍 파싱된 좌표: lat=${lat}, lng=${lng}`);
+
         if (!isNaN(lat) && !isNaN(lng)) {
           console.log(`✅ 좌표 획득: ${address} → (${lat}, ${lng})`);
           return { lat, lng };
+        } else {
+          console.warn(`⚠️  좌표 파싱 실패: lat=${lat}, lng=${lng}`);
         }
+      } else {
+        console.warn(`⚠️  유효한 주소 데이터 없음: status=${data.status}, addresses=${data.addresses?.length || 0}`);
       }
 
       console.warn(`⚠️  유효한 좌표를 찾을 수 없음: ${address}`);
@@ -1093,13 +1142,16 @@ export class PerplexityCrawler {
    * 해외 주소: 구글 지도 사용, 국내 주소: 네이버 지도 사용
    */
   async enrichCoordinates(restaurants: RestaurantInfo[]): Promise<RestaurantInfo[]> {
+    console.log(`🗺️  좌표 정보 보완 시작: ${restaurants.length}개 레스토랑`);
     const enrichedRestaurants: RestaurantInfo[] = [];
 
     for (const restaurant of restaurants) {
       const enriched = { ...restaurant };
+      console.log(`🏪 레스토랑 처리: ${enriched.name} - 주소: ${enriched.address || '없음'}`);
 
       // 주소가 있는 경우 항상 좌표 재확보 (기존 좌표가 있어도 덮어쓰기)
       if (enriched.address && enriched.address.trim() !== '') {
+        console.log(`🔍 좌표 조회 시작: ${enriched.name} - ${enriched.address}`);
 
         let coordinates: { lat: number; lng: number } | null = null;
 
@@ -1115,13 +1167,18 @@ export class PerplexityCrawler {
         if (coordinates) {
           enriched.lat = coordinates.lat;
           enriched.lng = coordinates.lng;
-          console.log(`📍 좌표 보완: ${enriched.name || 'Unknown'} - ${enriched.address}`);
+          console.log(`📍 좌표 보완 완료: ${enriched.name} - (${enriched.lat}, ${enriched.lng})`);
+        } else {
+          console.log(`❌ 좌표 조회 실패: ${enriched.name} - 좌표를 찾을 수 없음`);
         }
+      } else {
+        console.log(`⚠️  주소 없음: ${enriched.name} - 좌표 조회 건너뜀`);
       }
 
       enrichedRestaurants.push(enriched);
     }
 
+    console.log(`✅ 좌표 보완 완료: ${enrichedRestaurants.length}개 레스토랑 처리됨`);
     return enrichedRestaurants;
   }
 
