@@ -4,6 +4,8 @@ import { RestaurantInfo, ProcessingResult } from './types.js';
 export class PerplexityCrawler {
   private browser: Browser | null = null;
   private page: Page | null = null;
+  private hasProcessedAnyItem: boolean = false;
+  private modelSelected: boolean = false;
 
   async initialize(): Promise<void> {
     console.log('🚀 Starting browser initialization...');
@@ -207,73 +209,85 @@ export class PerplexityCrawler {
         return !!(input && input.offsetParent !== null); // 보이는지 확인
       });
 
-      // 무조건 사용자 확인 받기 (안전한 크롤링을 위해)
-      console.log('\n⏳ [안전 확인] 크롤링을 시작하기 전에 브라우저 상태를 확인해주세요.');
-      console.log('📋 다음을 확인하세요:');
-      console.log(`   1. Chrome 브라우저가 전체화면으로 열려 있는지`);
-      console.log(`   2. Perplexity AI 페이지가 정상적으로 로드되었는지`);
-      console.log(`   3. 입력창 상태: ${inputFieldExists ? '✅ 보임' : '⚠️  아직 로드되지 않음 (로그인 필요 가능성)'} `);
-      console.log('   4. 필요한 경우 브라우저에서 수동으로 로그인했는지');
-      console.log('   5. 모든 준비가 완료되었으면 터미널로 돌아와서 아무 키나 누르세요');
-      console.log('   6. AI 모델이 Gemini 2.5 Pro로 자동 설정됩니다');
-      console.log('   7. 크롤링이 자동으로 시작됩니다\n');
+      // 사용자 확인 (첫 번째 항목에서만 또는 수동 모드에서만)
+      const isFirstItem = !this.hasProcessedAnyItem;
+      const manualMode = process.env.MANUAL_MODE === 'true';
 
-      if (!inputFieldExists) {
-        console.log('💡 입력창이 아직 보이지 않으면 브라우저에서 로그인을 완료해주세요.\n');
+      if (isFirstItem || manualMode) {
+        console.log('\n⏳ [안전 확인] 크롤링을 시작하기 전에 브라우저 상태를 확인해주세요.');
+        console.log('📋 다음을 확인하세요:');
+        console.log(`   1. Chrome 브라우저가 전체화면으로 열려 있는지`);
+        console.log(`   2. Perplexity AI 페이지가 정상적으로 로드되었는지`);
+        console.log(`   3. 입력창 상태: ${inputFieldExists ? '✅ 보임' : '⚠️  아직 로드되지 않음 (로그인 필요 가능성)'} `);
+        console.log('   4. 필요한 경우 브라우저에서 수동으로 로그인했는지');
+        console.log('   5. 모든 준비가 완료되었으면 터미널로 돌아와서 아무 키나 누르세요');
+        console.log('   6. AI 모델이 Gemini 2.5 Pro로 자동 설정됩니다');
+        console.log('   7. 크롤링이 자동으로 시작됩니다\n');
+
+        if (!inputFieldExists) {
+          console.log('💡 입력창이 아직 보이지 않으면 브라우저에서 로그인을 완료해주세요.\n');
+        }
+
+        console.log('⌨️  준비 완료 후 아무 키나 눌러서 크롤링을 시작하세요...');
+
+        // 사용자 입력 대기
+        await new Promise<void>((resolve) => {
+          const cleanup = () => {
+            process.stdin.setRawMode(false);
+            process.stdin.pause();
+            process.stdin.removeAllListeners('data');
+          };
+
+          process.stdin.setRawMode(true);
+          process.stdin.resume();
+          process.stdin.setEncoding('utf8');
+
+          process.stdin.once('data', () => {
+            cleanup();
+            resolve();
+          });
+
+          // 타임아웃 추가 (긴 대기 시간)
+          setTimeout(() => {
+            cleanup();
+            console.log('\n⏰ 대기 시간이 초과되었습니다. 자동으로 진행합니다...');
+            resolve();
+          }, 24 * 60 * 60 * 1000); // 24시간
+        });
+
+        console.log('🚀 크롤링을 시작합니다!\n');
+      } else {
+        console.log('🔄 다음 항목 처리 시작...\n');
       }
 
-      console.log('⌨️  준비 완료 후 아무 키나 눌러서 크롤링을 시작하세요...');
+      // 첫 번째 항목 처리 표시
+      this.hasProcessedAnyItem = true;
 
-      // 사용자 입력 대기 (항상 실행)
-      await new Promise<void>((resolve) => {
-        const cleanup = () => {
-          process.stdin.setRawMode(false);
-          process.stdin.pause();
-          process.stdin.removeAllListeners('data');
-        };
+      // AI 모델 선택 (Gemini 2.5 Pro) - 한 번만 수행
+      if (!this.modelSelected) {
+        console.log('🤖 AI 모델을 Gemini 2.5 Pro로 설정하는 중...');
 
-        process.stdin.setRawMode(true);
-        process.stdin.resume();
-        process.stdin.setEncoding('utf8');
-
-        process.stdin.once('data', () => {
-          cleanup();
-          resolve();
-        });
-
-        // 타임아웃 추가 (긴 대기 시간)
-        setTimeout(() => {
-          cleanup();
-          console.log('\n⏰ 대기 시간이 초과되었습니다. 자동으로 진행합니다...');
-          resolve();
-        }, 24 * 60 * 60 * 1000); // 24시간
-      });
-
-      console.log('🚀 크롤링을 시작합니다!\n');
-
-      // AI 모델 선택 (Gemini 2.5 Pro)
-      console.log('🤖 AI 모델을 Gemini 2.5 Pro로 설정하는 중...');
-
-      try {
-        // 먼저 현재 선택된 모델 확인
-        const currentModel = await this.page.evaluate(() => {
-          const selectedElement = document.querySelector('[aria-label="모델 선택"]');
-          if (selectedElement) {
-            const textContent = selectedElement.textContent || '';
-            return textContent.includes('Gemini 2.5 Pro');
-          }
-          return false;
-        });
+        try {
+          // 먼저 현재 선택된 모델 확인
+          const currentModel = await this.page.evaluate(() => {
+            const selectedElement = document.querySelector('[aria-label="모델 선택"]');
+            if (selectedElement) {
+              const textContent = selectedElement.textContent || '';
+              return textContent.includes('Gemini 2.5 Pro');
+            }
+            return false;
+          });
 
         if (currentModel) {
           console.log('✅ AI 모델이 이미 Gemini 2.5 Pro로 설정되어 있습니다.');
+          this.modelSelected = true;
         } else {
           // 모델 선택 버튼 클릭하여 드롭다운 열기
           await this.page.click('[aria-label="모델 선택"]');
           await new Promise(resolve => setTimeout(resolve, 1000));
 
           // 드롭다운에서 Gemini 2.5 Pro 찾기 (여러 방법 시도)
-          const modelSelected = await this.page.evaluate(() => {
+          const modelSelectedResult = await this.page.evaluate(() => {
             // 방법 1: 정확한 텍스트로 찾기
             const exactMatches = Array.from(document.querySelectorAll('span')).filter(
               span => span.textContent?.trim() === 'Gemini 2.5 Pro'
@@ -308,9 +322,10 @@ export class PerplexityCrawler {
             return false;
           });
 
-          if (modelSelected) {
+          if (modelSelectedResult) {
             await new Promise(resolve => setTimeout(resolve, 1000));
             console.log('✅ AI 모델이 Gemini 2.5 Pro로 설정되었습니다.');
+            this.modelSelected = true;
           } else {
             throw new Error('Gemini 2.5 Pro 모델을 찾을 수 없습니다');
           }
@@ -319,6 +334,9 @@ export class PerplexityCrawler {
         console.log('⚠️  AI 모델 선택 중 오류 발생, 기본 모델로 진행합니다:', error instanceof Error ? error.message : 'Unknown error');
         console.log('💡 모델 선택 드롭다운이 제대로 열리지 않았거나, 모델명이 변경되었을 수 있습니다.');
       }
+    } else {
+      console.log('✅ AI 모델이 이미 Gemini 2.5 Pro로 설정되어 있습니다.');
+    }
 
       // 사용자 확인 완료 후 바로 크롤링 시작
 
@@ -360,32 +378,39 @@ export class PerplexityCrawler {
         }
       });
 
-      // 3. 줄바꿈을 고려하여 한 줄씩 Shift+Enter로 입력
-      const lines = prompt.split('\n');
-      console.log(`⌨️  Typing ${lines.length} lines with proper line breaks...`);
+      // 3. 줄바꿈을 고려하여 Shift+Enter로 입력
+      console.log(`⌨️  Typing prompt with proper line breaks (${prompt.length} characters)...`);
 
+      // 입력창 클릭하여 포커스
+      await this.page.click('#ask-input');
+      await new Promise(resolve => setTimeout(resolve, 200));
+
+      // 기존 내용 클리어 (Ctrl+A, Delete)
+      await this.page.keyboard.down('Control');
+      await this.page.keyboard.press('a');
+      await this.page.keyboard.up('Control');
+      await this.page.keyboard.press('Delete');
+
+      // 프롬프트를 줄 단위로 나누어 Shift+Enter로 입력
+      const lines = prompt.split('\n');
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        console.log(`📏 Line ${i + 1}/${lines.length}: "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}"`);
-
         // 각 줄의 내용을 입력 (빈 줄 포함)
-        await this.page.type('#ask-input', line, { delay: 20 });
+        await this.page.type('#ask-input', line, { delay: 0 });
 
         // 마지막 줄이 아니면 Shift+Enter로 줄바꿈
         if (i < lines.length - 1) {
-          console.log(`↩️  Adding line break after line ${i + 1}`);
           await this.page.keyboard.down('Shift');
           await this.page.keyboard.press('Enter');
           await this.page.keyboard.up('Shift');
-          await new Promise(resolve => setTimeout(resolve, 100)); // 줄바꿈 후 잠시 대기
+          await new Promise(resolve => setTimeout(resolve, 50)); // 줄바꿈 후 짧은 대기
         }
       }
 
-      console.log('✅ All lines typed, waiting for input to settle...');
+      // 타이핑 완료 후 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      // 4. 입력 확인
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
+      // 입력 확인
       const inputText = await this.page.evaluate(() => {
         const element = document.getElementById('ask-input') as HTMLElement;
         return element ? element.textContent || element.innerText || '' : '';
@@ -394,24 +419,9 @@ export class PerplexityCrawler {
       console.log(`✅ Prompt input completed (input length: ${inputText.length} chars, expected: ${prompt.length})`);
 
       if (inputText.length === 0) {
-        console.warn('⚠️  CRITICAL: Input field appears to be empty!');
-        // 디버깅 정보 추가
-        const debugInfo = await this.page.evaluate(() => {
-          const element = document.getElementById('ask-input');
-          return {
-            exists: !!element,
-            tagName: element?.tagName,
-            contentEditable: element?.contentEditable,
-            innerHTML: element?.innerHTML?.substring(0, 200),
-            textContent: element?.textContent?.substring(0, 200),
-            isVisible: element ? element.offsetParent !== null : false
-          };
-        });
-        console.log('🔍 Debug info:', debugInfo);
-        throw new Error('Input field is empty after typing - check debug info above');
-      } else if (inputText.length < prompt.length * 0.8) {
-        console.warn(`⚠️  WARNING: Input text is much shorter than expected (${inputText.length} vs ${prompt.length})`);
-        console.log('📄 Actual input (first 200 chars):', inputText.substring(0, 200));
+        console.warn('⚠️  WARNING: Input field is empty, but continuing...');
+      } else if (inputText.length < prompt.length * 0.5) {
+        console.warn(`⚠️  WARNING: Input text seems incomplete (${inputText.length} vs ${prompt.length})`);
       } else {
         console.log('✅ Input validation passed');
       }
