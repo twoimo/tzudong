@@ -182,18 +182,73 @@ export class PerplexityCrawler {
       // 로그인 상태 확인 (로그인 모달 유무로 판단)
       const loginStatus = await this.checkLoginStatus();
 
-      // 로그인 상태 표시
-      if (loginStatus.isLoggedIn && !loginStatus.hasLoginModal) {
+      // 로그인 필요 여부 확인 및 처리
+      let needsLogin = false;
+
+      if (loginStatus.hasLoginModal) {
+        // Perplexity 로그인 모달 감지
+        console.log('\n🚨 Perplexity 로그인 모달 감지됨!');
+        needsLogin = true;
+      } else {
+        // Google 로그인 페이지 확인 (이 메서드는 내부에서 사용자 입력을 처리)
+        needsLogin = await this.checkForGoogleLoginPage();
+      }
+
+      if (needsLogin) {
+        console.log('📋 브라우저에서 수동으로 로그인해주세요.');
+        console.log('⌨️ 로그인 완료 후 터미널에서 아무 키나 눌러서 크롤링을 재개하세요...\n');
+
+        // 사용자 입력 대기 (Google 로그인 페이지에서 이미 처리된 경우 제외)
+        if (!loginStatus.hasLoginModal) {
+          // Google 로그인 페이지에서 이미 사용자 입력을 처리했으므로 추가 대기 불필요
+          console.log('✅ Google 로그인 페이지에서 이미 사용자 확인을 받았습니다.\n');
+        } else {
+          // Perplexity 로그인 모달의 경우 사용자 입력 대기
+          await new Promise<void>((resolve) => {
+            const cleanup = () => {
+              process.stdin.setRawMode(false);
+              process.stdin.pause();
+              process.stdin.removeAllListeners('data');
+            };
+
+            process.stdin.setRawMode(true);
+            process.stdin.resume();
+            process.stdin.setEncoding('utf8');
+
+            process.stdin.once('data', () => {
+              cleanup();
+              console.log('✅ 사용자가 로그인 완료를 확인했습니다.\n');
+              resolve();
+            });
+
+            // 타임아웃 추가 (긴 대기 시간)
+            setTimeout(() => {
+              cleanup();
+              console.log('\n⏰ 로그인 대기 시간이 초과되었습니다. 자동으로 진행합니다...\n');
+              resolve();
+            }, 24 * 60 * 60 * 1000); // 24시간
+          });
+        }
+
+        // 로그인 상태 재확인
+        const updatedLoginStatus = await this.checkLoginStatus();
+        if (updatedLoginStatus.isLoggedIn && !updatedLoginStatus.hasLoginModal) {
+          console.log('✅ 로그인 성공 확인됨');
+
+          // 로그인 성공 시 세션 저장
+          await this.saveSession();
+          console.log('💾 로그인 세션 업데이트됨');
+        } else {
+          console.log('⚠️  로그인 상태가 아직 확인되지 않음, 계속 진행합니다');
+        }
+      } else if (loginStatus.isLoggedIn) {
         console.log('✅ 로그인 상태 확인됨');
 
-        // 첫 번째 항목에서 로그인 성공 시 세션 저장 (세션이 아직 복원되지 않은 경우)
-        if (isFirstItem && !sessionRestored) {
+        // 기존 세션이 없는 경우에만 세션 저장
+        if (!sessionRestored) {
           await this.saveSession();
           console.log('💾 로그인 세션 저장됨');
         }
-
-      } else if (loginStatus.hasLoginModal) {
-        console.log('⚠️  로그인 모달이 감지됨');
       } else {
         console.log('❓ 로그인 상태 불확실');
       }
