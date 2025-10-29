@@ -7,11 +7,15 @@ export class PerplexityCrawler {
   private page: Page | null = null;
   private hasProcessedAnyItem: boolean = false;
   private modelSelected: boolean = false;
+  private sessionPath: string = './perplexity-session.json';
 
   async initialize(): Promise<void> {
     console.log('🚀 Starting browser initialization...');
 
     try {
+      // 저장된 세션 복원 시도
+      await this.restoreSession();
+
       // Chrome 실행 파일 경로 설정
       let executablePath: string | undefined;
 
@@ -74,6 +78,49 @@ export class PerplexityCrawler {
       this.page = await this.browser.newPage();
       console.log('✅ New page created');
 
+      // 저장된 세션이 있으면 복원
+      if (this.sessionData) {
+        try {
+          // 쿠키 복원
+          if (this.sessionData.cookies && Array.isArray(this.sessionData.cookies)) {
+            await this.page.setCookie(...this.sessionData.cookies);
+            console.log('🍪 쿠키 복원 완료');
+          }
+
+          // 저장된 URL로 이동 (선택사항)
+          if (this.sessionData.url && this.sessionData.url.includes('perplexity.ai')) {
+            await this.page.goto(this.sessionData.url, { waitUntil: 'networkidle0', timeout: 10000 });
+            console.log('🔗 저장된 페이지로 이동');
+
+            // 로컬 스토리지 복원
+            if (this.sessionData.localStorage) {
+              await this.page.evaluate((localData) => {
+                for (const [key, value] of Object.entries(localData)) {
+                  window.localStorage.setItem(key, value as string);
+                }
+              }, this.sessionData.localStorage);
+              console.log('💼 로컬 스토리지 복원 완료');
+            }
+
+            // 세션 스토리지 복원
+            if (this.sessionData.sessionStorage) {
+              await this.page.evaluate((sessionData) => {
+                for (const [key, value] of Object.entries(sessionData)) {
+                  window.sessionStorage.setItem(key, value as string);
+                }
+              }, this.sessionData.sessionStorage);
+              console.log('📋 세션 스토리지 복원 완료');
+            }
+
+            // 페이지 새로고침으로 세션 적용
+            await this.page.reload({ waitUntil: 'networkidle0' });
+            console.log('🔄 페이지 새로고침으로 세션 적용');
+          }
+        } catch (restoreError) {
+          console.log('⚠️  세션 복원 중 일부 오류:', restoreError instanceof Error ? restoreError.message : 'Unknown error');
+        }
+      }
+
       await this.page.setViewport({ width: 1920, height: 1080 }); // 전체화면 크기로 설정
       await this.page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
@@ -88,13 +135,6 @@ export class PerplexityCrawler {
     }
   }
 
-  async close(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
-      this.page = null;
-    }
-  }
 
   async processYouTubeLink(youtubeLink: string, promptTemplate: string): Promise<ProcessingResult> {
     if (!this.page || !this.browser) {
@@ -554,9 +594,13 @@ export class PerplexityCrawler {
       console.log('🗺️  Enriching coordinates with Map APIs...');
       const enrichedRestaurants = await this.enrichCoordinates(restaurantInfos);
 
+      // 출처 인용구 제거
+      console.log('🧹  Removing source citations...');
+      const cleanedRestaurants = this.cleanSourceCitations(enrichedRestaurants);
+
       return {
         success: true,
-        data: enrichedRestaurants,
+        data: cleanedRestaurants,
         youtubeLink
       };
 
@@ -988,5 +1032,161 @@ export class PerplexityCrawler {
    */
   async enrichCoordinatesWithNaverMap(restaurants: RestaurantInfo[]): Promise<RestaurantInfo[]> {
     return this.enrichCoordinates(restaurants);
+  }
+
+  /**
+   * 브라우저 세션을 파일로 저장합니다.
+   */
+  async saveSession(): Promise<void> {
+    if (!this.page || !this.browser) {
+      console.log('⚠️  브라우저가 초기화되지 않아 세션을 저장할 수 없음');
+      return;
+    }
+
+    try {
+      // 쿠키 저장
+      const cookies = await this.page.cookies();
+
+      // 로컬 스토리지 저장
+      const localStorageData = await this.page.evaluate(() => {
+        const items: { [key: string]: string } = {};
+        const ls = window.localStorage;
+        for (let i = 0; i < ls.length; i++) {
+          const key = ls.key(i);
+          if (key) {
+            items[key] = ls.getItem(key) || '';
+          }
+        }
+        return items;
+      });
+
+      // 세션 스토리지 저장
+      const sessionStorageData = await this.page.evaluate(() => {
+        const items: { [key: string]: string } = {};
+        const ss = window.sessionStorage;
+        for (let i = 0; i < ss.length; i++) {
+          const key = ss.key(i);
+          if (key) {
+            items[key] = ss.getItem(key) || '';
+          }
+        }
+        return items;
+      });
+
+      const sessionData = {
+        cookies,
+        localStorage: localStorageData,
+        sessionStorage: sessionStorageData,
+        url: this.page.url(),
+        timestamp: new Date().toISOString()
+      };
+
+      const fs = await import('fs');
+      await fs.promises.writeFile(this.sessionPath, JSON.stringify(sessionData, null, 2));
+      console.log('💾 브라우저 세션이 저장됨');
+
+    } catch (error) {
+      console.log('⚠️  세션 저장 실패:', error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+
+  /**
+   * 저장된 브라우저 세션을 복원합니다.
+   */
+  private async restoreSession(): Promise<void> {
+    try {
+      const fs = await import('fs');
+
+      if (!fs.existsSync(this.sessionPath)) {
+        console.log('ℹ️  저장된 세션이 없음, 새 세션으로 시작');
+        return;
+      }
+
+      const sessionDataText = await fs.promises.readFile(this.sessionPath, 'utf-8');
+      const sessionData = JSON.parse(sessionDataText);
+
+      console.log('📂 저장된 세션 발견, 복원 시도...');
+
+      // 세션 데이터 검증
+      if (!sessionData.cookies || !Array.isArray(sessionData.cookies)) {
+        console.log('⚠️  유효하지 않은 세션 데이터, 새 세션으로 시작');
+        return;
+      }
+
+      // 세션이 너무 오래된 경우 (24시간 이상) 사용하지 않음
+      const sessionAge = Date.now() - new Date(sessionData.timestamp).getTime();
+      const maxAge = 24 * 60 * 60 * 1000; // 24시간
+
+      if (sessionAge > maxAge) {
+        console.log('⚠️  세션이 24시간 이상 경과됨, 새 세션으로 시작');
+        return;
+      }
+
+      // 세션 복원 플래그 설정 (브라우저 초기화 시 사용)
+      this.sessionData = sessionData;
+      console.log('✅ 세션 복원 준비 완료');
+
+    } catch (error) {
+      console.log('⚠️  세션 복원 실패:', error instanceof Error ? error.message : 'Unknown error');
+    }
+  }
+
+  // 세션 데이터 저장용 프로퍼티
+  private sessionData: any = null;
+
+  /**
+   * 브라우저를 닫고 세션을 저장합니다.
+   */
+  async close(): Promise<void> {
+    if (this.page) {
+      await this.saveSession();
+    }
+
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = null;
+      this.page = null;
+    }
+  }
+
+  /**
+   * 출처 인용구를 제거합니다.
+   */
+  private removeSourceCitations(text: string): string {
+    if (!text) return text;
+
+    // 출처 인용구 패턴들 제거
+    // [attached_file:숫자], [web:숫자], [translate:텍스트], [숫자] 등의 패턴
+    const patterns = [
+      /\[attached_file:\d+\]/g,
+      /\[web:\d+\]/g,
+      /\[translate:[^\]]*\]/g,
+      /\[attached_file:\d+,\s*web:\d+\]/g,
+      /\[web:\d+,\s*web:\d+\]/g,
+      /\[web:\d+,\s*web:\d+,\s*web:\d+\]/g,
+      /\[web:\d+,\s*web:\d+,\s*web:\d+,\s*web:\d+\]/g,
+      /\[\d+\]/g  // [2], [3], [12], [14] 등의 숫자 패턴
+    ];
+
+    let cleanedText = text;
+    for (const pattern of patterns) {
+      cleanedText = cleanedText.replace(pattern, '');
+    }
+
+    // 연속된 공백 정리
+    cleanedText = cleanedText.replace(/\s+/g, ' ').trim();
+
+    return cleanedText;
+  }
+
+  /**
+   * RestaurantInfo에서 출처 인용구를 제거합니다.
+   */
+  cleanSourceCitations(restaurants: RestaurantInfo[]): RestaurantInfo[] {
+    return restaurants.map(restaurant => ({
+      ...restaurant,
+      reasoning_basis: this.removeSourceCitations(restaurant.reasoning_basis || ''),
+      tzuyang_review: this.removeSourceCitations(restaurant.tzuyang_review || '')
+    }));
   }
 }
