@@ -23,10 +23,8 @@ export class JsonlProcessor {
   findNullEntries(): RestaurantInfo[] {
     const entries = this.readAllEntries();
     return entries.filter(entry =>
-      entry.name === null ||
-      entry.phone === null ||
-      entry.address === null ||
-      entry.category === null
+      !entry.reasoning_basis || // reasoning_basis가 빈 문자열이거나 undefined인 경우
+      entry.reasoning_basis.trim() === '' // reasoning_basis가 공백만 있는 경우
     );
   }
 

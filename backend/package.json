@@ -13,7 +13,8 @@
     "manual-start": "MANUAL_MODE=true npm run start",
     "test-login": "tsx test-login-detection.ts",
     "test-input": "tsx test-input-method.ts",
-    "test-full": "tsx test-full-process.ts"
+    "test-full": "tsx test-full-process.ts",
+    "reset": "node reset-data.js"
   },
   "dependencies": {
     "puppeteer": "^23.6.0"
