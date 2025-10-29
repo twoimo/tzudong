@@ -159,6 +159,9 @@ export class PerplexityCrawler {
 
       console.log('✅ 페이지 로드 완료');
 
+      // Google 로그인 페이지 감지 및 대기
+      await this.checkForGoogleLoginPage();
+
       // 페이지 로드 대기 및 요소 확인
       console.log('⏳ 페이지 요소 대기 중...');
 
@@ -1007,6 +1010,14 @@ export class PerplexityCrawler {
           await popupPage.waitForNavigation({ timeout: 60000 }).catch(() => {
             console.log('⚠️  팝업 네비게이션 타임아웃');
           });
+
+          // 팝업 페이지에서 Google 로그인 페이지 감지
+          if (this.page) {
+            const originalPage = this.page;
+            this.page = popupPage; // 임시로 팝업 페이지를 현재 페이지로 설정
+            await this.checkForGoogleLoginPage();
+            this.page = originalPage; // 원래 페이지로 복원
+          }
         }
       } catch (popupError) {
         console.log('⚠️  팝업 처리 중 오류:', popupError instanceof Error ? popupError.message : 'Unknown error');
@@ -1037,6 +1048,82 @@ export class PerplexityCrawler {
 
     } catch (error) {
       console.log('❌ 자동 로그인 중 오류:', error instanceof Error ? error.message : 'Unknown error');
+      return false;
+    }
+  }
+
+  /**
+   * Google 로그인 페이지 감지 및 사용자 대기
+   */
+  private async checkForGoogleLoginPage(): Promise<boolean> {
+    if (!this.page) {
+      return false;
+    }
+
+    try {
+      // Google 로그인 페이지 패턴 감지
+      const isGoogleLoginPage = await this.page.evaluate(() => {
+        // Google 로그인 페이지의 특징적인 HTML 요소들 확인
+        const hasGoogleLogo = document.querySelector('img[alt*="Google"]') ||
+                             document.querySelector('svg[aria-label*="Google"]') ||
+                             document.querySelector('[data-google-logo]');
+
+        const hasLoginForm = document.querySelector('form[action*="signin"]') ||
+                            document.querySelector('input[type="email"]') ||
+                            document.querySelector('input[name="identifier"]');
+
+        const hasGoogleAuthText = Array.from(document.querySelectorAll('*')).some(el =>
+          el.textContent?.includes('Google 계정으로 계속') ||
+          el.textContent?.includes('Sign in with Google') ||
+          el.textContent?.includes('구글 계정으로 로그인')
+        );
+
+        // URL로도 확인
+        const currentUrl = window.location.href;
+        const isGoogleAuthUrl = currentUrl.includes('accounts.google.com') ||
+                               currentUrl.includes('google.com/signin');
+
+        return !!(hasGoogleLogo || hasLoginForm || hasGoogleAuthText || isGoogleAuthUrl);
+      });
+
+      if (isGoogleLoginPage) {
+        console.log('\n🚨 Google 로그인 페이지가 감지되었습니다!');
+        console.log('📋 브라우저에서 수동으로 로그인해주세요.');
+        console.log('⌨️ 로그인 완료 후 터미널에서 아무 키나 눌러서 크롤링을 재개하세요...\n');
+
+        // 사용자 입력 대기
+        await new Promise<void>((resolve) => {
+          const cleanup = () => {
+            process.stdin.setRawMode(false);
+            process.stdin.pause();
+            process.stdin.removeAllListeners('data');
+          };
+
+          process.stdin.setRawMode(true);
+          process.stdin.resume();
+          process.stdin.setEncoding('utf8');
+
+          process.stdin.once('data', () => {
+            cleanup();
+            console.log('✅ 사용자가 로그인 완료를 확인했습니다. 크롤링을 재개합니다!\n');
+            resolve();
+          });
+
+          // 타임아웃 추가 (긴 대기 시간)
+          setTimeout(() => {
+            cleanup();
+            console.log('\n⏰ 로그인 대기 시간이 초과되었습니다. 자동으로 진행합니다...\n');
+            resolve();
+          }, 24 * 60 * 60 * 1000); // 24시간
+        });
+
+        return true; // 로그인 페이지가 있었음
+      }
+
+      return false; // 로그인 페이지가 아님
+
+    } catch (error) {
+      console.log('⚠️  Google 로그인 페이지 확인 중 오류:', error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
   }
