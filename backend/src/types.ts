@@ -7,6 +7,7 @@ export interface RestaurantInfo {
   category: string | null;
   youtube_link: string;
   reasoning_basis: string;
+  tzuyang_review: string | null;
 }
 
 export interface RestaurantData {

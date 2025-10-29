@@ -27,7 +27,8 @@ export class JsonlProcessor {
               lng: parsed.lng,
               category: parsed.category,
               youtube_link: parsed.youtube_link,
-              reasoning_basis: parsed.reasoning_basis || ''
+              reasoning_basis: parsed.reasoning_basis || '',
+              tzuyang_review: parsed.tzuyang_review || null
             }]
           };
         }

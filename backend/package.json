@@ -14,10 +14,12 @@
     "test-login": "tsx test-login-detection.ts",
     "test-input": "tsx test-input-method.ts",
     "test-full": "tsx test-full-process.ts",
-    "reset": "node reset-data.js"
+    "reset": "node reset-data.js",
+    "enrich-coordinates": "node enrich-coordinates.js"
   },
   "dependencies": {
-    "puppeteer": "^23.6.0"
+    "puppeteer": "^23.6.0",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",

@@ -1,5 +1,6 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { RestaurantInfo, ProcessingResult } from './types.js';
+import fetch from 'node-fetch';
 
 export class PerplexityCrawler {
   private browser: Browser | null = null;
@@ -596,7 +597,8 @@ export class PerplexityCrawler {
           lng: jsonObj.lng,
           category: jsonObj.category,
           youtube_link: jsonObj.youtube_link,
-          reasoning_basis: jsonObj.reasoning_basis || ''
+          reasoning_basis: jsonObj.reasoning_basis || '',
+          tzuyang_review: jsonObj.tzuyang_review || null
         };
 
         restaurantInfos.push(restaurantInfo);
@@ -609,9 +611,13 @@ export class PerplexityCrawler {
 
       console.log(`🎯 Extracted ${restaurantInfos.length} restaurant(s) for ${youtubeLink}`);
 
+      // 네이버 지도 API로 좌표 정보 보완
+      console.log('🗺️  Enriching coordinates with Naver Map API...');
+      const enrichedRestaurants = await this.enrichCoordinatesWithNaverMap(restaurantInfos);
+
       return {
         success: true,
-        data: restaurantInfos,
+        data: enrichedRestaurants,
         youtubeLink
       };
 
@@ -644,5 +650,89 @@ export class PerplexityCrawler {
       () => document.readyState === 'complete',
       { timeout: 30000 }
     );
+  }
+
+  /**
+   * 네이버 지도 API를 통해 주소로 좌표를 조회합니다.
+   */
+  private async getCoordinatesFromNaverMap(address: string): Promise<{ lat: number; lng: number } | null> {
+    if (!address || address.trim() === '') {
+      return null;
+    }
+
+    try {
+      // 주소를 URL 인코딩
+      const encodedAddress = encodeURIComponent(address.trim());
+      const apiUrl = `http://www.moamodu.com/develop/naver_map_new_proxy.php?query=${encodedAddress}`;
+
+      console.log(`🗺️  Naver Map API 호출: ${address}`);
+
+      // AbortController로 타임아웃 구현
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      const response = await fetch(apiUrl, {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        console.warn(`⚠️  Naver Map API 실패 (${response.status}): ${address}`);
+        return null;
+      }
+
+      const data = await response.json() as any;
+
+      if (data.status === 'OK' && data.addresses && data.addresses.length > 0) {
+        const firstResult = data.addresses[0];
+        const lat = parseFloat(firstResult.y);
+        const lng = parseFloat(firstResult.x);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          console.log(`✅ 좌표 획득: ${address} → (${lat}, ${lng})`);
+          return { lat, lng };
+        }
+      }
+
+      console.warn(`⚠️  유효한 좌표를 찾을 수 없음: ${address}`);
+      return null;
+
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.warn(`⚠️  Naver Map API 타임아웃 (${address})`);
+      } else {
+        console.warn(`⚠️  Naver Map API 오류 (${address}):`, error instanceof Error ? error.message : 'Unknown error');
+      }
+      return null;
+    }
+  }
+
+  /**
+   * RestaurantInfo 배열의 좌표 정보를 네이버 지도 API로 보완합니다.
+   */
+  async enrichCoordinatesWithNaverMap(restaurants: RestaurantInfo[]): Promise<RestaurantInfo[]> {
+    const enrichedRestaurants: RestaurantInfo[] = [];
+
+    for (const restaurant of restaurants) {
+      const enriched = { ...restaurant };
+
+      // lat 또는 lng가 null이거나 undefined인 경우에만 API 호출
+      if ((enriched.lat === null || enriched.lat === undefined ||
+           enriched.lng === null || enriched.lng === undefined) &&
+          enriched.address && enriched.address.trim() !== '') {
+
+        const coordinates = await this.getCoordinatesFromNaverMap(enriched.address);
+        if (coordinates) {
+          enriched.lat = coordinates.lat;
+          enriched.lng = coordinates.lng;
+          console.log(`📍 좌표 보완: ${enriched.name || 'Unknown'} - ${enriched.address}`);
+        }
+      }
+
+      enrichedRestaurants.push(enriched);
+    }
+
+    return enrichedRestaurants;
   }
 }
