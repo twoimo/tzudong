@@ -11,7 +11,7 @@ export class PerplexityCrawler {
   private sessionRestored: boolean = false;
 
   async initialize(): Promise<void> {
-    console.log('🚀 Starting browser initialization...');
+    console.log('🚀 브라우저 초기화 시작...');
 
     try {
       // 저장된 세션 복원 시도
@@ -33,17 +33,17 @@ export class PerplexityCrawler {
           try {
             if (fs.existsSync(path)) {
               executablePath = path;
-              console.log(`✅ Found Chrome at: ${path}`);
+              console.log(`✅ Chrome 발견: ${path}`);
               break;
             }
           } catch (error) {
             // 경로 확인 실패
-            console.log(`⚠️  Checked path: ${path} - not found`);
+            console.log(`⚠️ 경로 확인 실패: ${path}`);
           }
         }
 
         if (!executablePath) {
-          console.log('⚠️  Chrome executable not found in standard locations, using system default');
+          console.log('⚠️ 표준 경로에서 Chrome을 찾을 수 없어 시스템 기본값 사용');
         }
       }
 
@@ -74,10 +74,10 @@ export class PerplexityCrawler {
         handleSIGINT: false
       });
 
-      console.log('✅ Browser launched successfully');
+      console.log('✅ 브라우저 실행 성공');
 
       this.page = await this.browser.newPage();
-      console.log('✅ New page created');
+      console.log('✅ 새 페이지 생성');
 
       // 저장된 세션이 있으면 복원
       if (this.sessionData) {
@@ -129,9 +129,9 @@ export class PerplexityCrawler {
       this.page.setDefaultTimeout(120000);
       this.page.setDefaultNavigationTimeout(120000);
 
-      console.log('✅ Browser initialization completed');
+      console.log('✅ 브라우저 초기화 완료');
     } catch (error) {
-      console.error('❌ Browser initialization failed:', error);
+      console.error('❌ 브라우저 초기화 실패:', error);
       throw error;
     }
   }
@@ -139,36 +139,36 @@ export class PerplexityCrawler {
 
   async processYouTubeLink(youtubeLink: string, promptTemplate: string): Promise<ProcessingResult> {
     if (!this.page || !this.browser) {
-      throw new Error('Browser not initialized');
+      throw new Error('브라우저가 초기화되지 않았습니다');
     }
 
     try {
-      console.log(`\n🎬 Processing: ${youtubeLink}`);
-      console.log(`📝 Using prompt template (length: ${promptTemplate.length} chars)`);
+      console.log(`\n🎬 처리 중: ${youtubeLink}`);
+      console.log(`📝 프롬프트 템플릿 사용 (${promptTemplate.length}자)`);
 
       // 퍼플렉시티 페이지로 이동
-      console.log('🌐 Navigating to Perplexity...');
+      console.log('🌐 퍼플렉시티로 이동 중...');
       const response = await this.page.goto('https://www.perplexity.ai/', {
         waitUntil: 'networkidle0',
         timeout: 60000
       });
 
       if (!response || !response.ok()) {
-        throw new Error(`Failed to load page: ${response?.status() || 'Unknown error'}`);
+        throw new Error(`페이지 로드 실패: ${response?.status() || '알 수 없는 오류'}`);
       }
 
-      console.log('✅ Page loaded successfully');
+      console.log('✅ 페이지 로드 완료');
 
       // 페이지 로드 대기 및 요소 확인
-      console.log('⏳ Waiting for page elements...');
+      console.log('⏳ 페이지 요소 대기 중...');
 
-      // 더 긴 시간 동안 input 요소가 나타날 때까지 대기 (로그인 중에도 대기)
+      // 더 긴 시간 동안 input 요소가 나타날 때까지 대기
       try {
         await this.page.waitForSelector('#ask-input', { timeout: 60000 });
-        console.log('✅ Page elements loaded');
+        console.log('✅ 페이지 요소 로드 완료');
       } catch (error) {
-        console.log('⚠️  Input field not found within timeout, but continuing...');
-        console.log('🔍 This might be normal if login modal is present');
+        console.log('⚠️ 입력 필드를 찾을 수 없지만 계속 진행...');
+        console.log('🔍 로그인 모달이 있을 경우 정상임');
       }
 
       // 로그인 상태 확인 (로그인 모달 유무로 판단)
@@ -342,10 +342,10 @@ export class PerplexityCrawler {
 
       // 프롬프트 생성
       const prompt = promptTemplate.replace('<유튜브 링크>', youtubeLink);
-      console.log(`🔗 Generated prompt for ${youtubeLink} (length: ${prompt.length} chars)`);
+      console.log(`🔗 ${youtubeLink} 프롬프트 생성 (${prompt.length}자)`);
 
-      // 입력창에 텍스트 입력 (실제 타이핑 방식)
-      console.log('📝 Inputting prompt to Perplexity...');
+      // 입력창에 텍스트 입력
+      console.log('📝 퍼플렉시티에 프롬프트 입력 중...');
 
       // 입력창이 확실히 있는지 다시 확인
       const inputReady = await this.page.evaluate(() => {
@@ -354,7 +354,7 @@ export class PerplexityCrawler {
       });
 
       if (!inputReady) {
-        throw new Error('Input field is not ready for typing. Please check if login is completed.');
+        throw new Error('입력 필드가 타이핑 준비가 되지 않았습니다. 로그인이 완료되었는지 확인해주세요.');
       }
 
       // 1. 입력창 클릭하여 포커스 확보
@@ -379,7 +379,7 @@ export class PerplexityCrawler {
       });
 
       // 3. 줄바꿈을 고려하여 Shift+Enter로 입력
-      console.log(`⌨️  Typing prompt with proper line breaks (${prompt.length} characters)...`);
+      console.log(`⌨️ 줄바꿈 포함하여 프롬프트 입력 (${prompt.length}자)...`);
 
       // 입력창 클릭하여 포커스
       await this.page.click('#ask-input');
@@ -416,18 +416,18 @@ export class PerplexityCrawler {
         return element ? element.textContent || element.innerText || '' : '';
       });
 
-      console.log(`✅ Prompt input completed (input length: ${inputText.length} chars, expected: ${prompt.length})`);
+      console.log(`✅ 프롬프트 입력 완료 (${inputText.length}/${prompt.length}자)`);
 
       if (inputText.length === 0) {
-        console.warn('⚠️  WARNING: Input field is empty, but continuing...');
+        console.warn('⚠️ 입력 필드가 비어있지만 계속 진행...');
       } else if (inputText.length < prompt.length * 0.5) {
-        console.warn(`⚠️  WARNING: Input text seems incomplete (${inputText.length} vs ${prompt.length})`);
+        console.warn(`⚠️ 입력 텍스트가 불완전함 (${inputText.length}/${prompt.length})`);
       } else {
-        console.log('✅ Input validation passed');
+        console.log('✅ 입력 검증 통과');
       }
 
-      // 제출 방법 1: Enter 키 시도
-      console.log('🚀 Submitting prompt with Enter key...');
+      // 제출
+      console.log('🚀 Enter 키로 제출...');
       await this.page.keyboard.press('Enter');
 
       // 잠시 대기 후 응답 확인
@@ -459,13 +459,13 @@ export class PerplexityCrawler {
       });
 
       if (submitButtonFound) {
-        console.log('✅ Found and clicked submit button');
+        console.log('✅ 제출 버튼 발견 및 클릭');
       } else {
-        console.log('ℹ️  Using Enter key submission');
+        console.log('ℹ️ Enter 키로 제출');
       }
 
-      // 응답이 나타날 때까지 대기 (Puppeteer 최신 방식)
-      console.log(`⏳ Waiting for response for ${youtubeLink}...`);
+      // 응답이 나타날 때까지 대기
+      console.log(`⏳ ${youtubeLink} 응답 대기 중...`);
 
       try {
         // JSON 코드 블록이 나타날 때까지 대기 (최대 10분)
@@ -474,8 +474,9 @@ export class PerplexityCrawler {
         });
 
         // JSON 내용이 완전히 로드될 때까지 추가 대기 (여러 개의 JSON 객체 지원)
+
         // 충분한 시간을 두고 모든 JSON 객체가 생성될 때까지 기다림
-        console.log('⏳ 응답이 완전히 생성될 때까지 대기...');
+        console.log('⏳ 응답 생성 대기 중...');
 
         await this.page.waitForFunction(() => {
           const codeElements = document.querySelectorAll('pre code');
@@ -484,7 +485,6 @@ export class PerplexityCrawler {
             const text = code.textContent?.trim() || '';
             if (!text) continue;
 
-            // 여러 줄의 JSON 객체들을 분리해서 처리
             const lines = text.split('\n');
             let validJsonCount = 0;
 
@@ -492,7 +492,6 @@ export class PerplexityCrawler {
               const trimmedLine = line.trim();
               if (!trimmedLine) continue;
 
-              // 각 줄이 완전한 JSON 객체인지 확인
               if (trimmedLine.startsWith('{') &&
                 trimmedLine.endsWith('}') &&
                 trimmedLine.includes('"name"') &&
@@ -509,32 +508,28 @@ export class PerplexityCrawler {
               }
             }
 
-            // 최소 3개의 유효한 JSON이 있어야 함 (빈해원, 복성루, 지린성)
-            // 또는 응답이 더 이상 변경되지 않는 것을 감지
             if (validJsonCount >= 3) {
-              console.log(`🎯 충분한 JSON 객체 발견: ${validJsonCount}개`);
               return true;
             }
           }
           return false;
-        }, { timeout: 60000 }); // 타임아웃을 60초로 늘림
+        }, { timeout: 60000 });
 
-        console.log('✅ 응답 생성 완료, 추가 안정화 대기...');
-        // 추가로 10초 더 기다려서 응답이 완전히 안정화되도록 함
+        console.log('✅ 응답 생성 완료, 안정화 대기...');
         await new Promise(resolve => setTimeout(resolve, 10000));
 
-        console.log('✅ Response detected and loaded!');
+        console.log('✅ 응답 로드 완료!');
 
         // 최종 안정화를 위해 잠시 대기
         await new Promise(resolve => setTimeout(resolve, 2000));
 
       } catch (error) {
-        console.error('❌ Response timeout or detection failed:', error);
-        throw new Error(`Failed to get response within timeout: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.error('❌ 응답 타임아웃 또는 감지 실패:', error);
+        throw new Error(`타임아웃 내에 응답을 받지 못함: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
       }
 
       // JSON 코드 블록 찾기 (Puppeteer locator 활용) - 여러 개의 JSON 객체 지원
-      console.log('🔍 Extracting JSON responses...');
+      console.log('🔍 JSON 응답 추출 중...');
 
       const jsonResults = await this.page.evaluate(() => {
         // 모든 JSON 코드 블록 찾기 (HTML 구조에 맞게 수정)
@@ -581,12 +576,12 @@ export class PerplexityCrawler {
           for (const block of jsonBlocks) {
             const trimmedBlock = block.trim();
             if (trimmedBlock.includes('"name"') &&
-                trimmedBlock.includes('"youtube_link"') &&
-                trimmedBlock.includes('"phone"') &&
-                trimmedBlock.includes('"address"') &&
-                trimmedBlock.includes('"reasoning_basis"') &&
-                trimmedBlock.startsWith('{') &&
-                trimmedBlock.endsWith('}')) {
+              trimmedBlock.includes('"youtube_link"') &&
+              trimmedBlock.includes('"phone"') &&
+              trimmedBlock.includes('"address"') &&
+              trimmedBlock.includes('"reasoning_basis"') &&
+              trimmedBlock.startsWith('{') &&
+              trimmedBlock.endsWith('}')) {
               try {
                 const parsed = JSON.parse(trimmedBlock);
                 validJsonObjects.push(parsed);
@@ -606,12 +601,12 @@ export class PerplexityCrawler {
               const jsonText = match[0].trim();
 
               if (jsonText.includes('"name"') &&
-                  jsonText.includes('"youtube_link"') &&
-                  jsonText.includes('"phone"') &&
-                  jsonText.includes('"address"') &&
-                  jsonText.includes('"reasoning_basis"') &&
-                  jsonText.startsWith('{') &&
-                  jsonText.endsWith('}')) {
+                jsonText.includes('"youtube_link"') &&
+                jsonText.includes('"phone"') &&
+                jsonText.includes('"address"') &&
+                jsonText.includes('"reasoning_basis"') &&
+                jsonText.startsWith('{') &&
+                jsonText.endsWith('}')) {
                 try {
                   // JSON 유효성 검증
                   const parsed = JSON.parse(jsonText);
@@ -656,46 +651,32 @@ export class PerplexityCrawler {
       if (!jsonResults || jsonResults.length === 0) {
         // 디버깅을 위해 현재 페이지 상태 확인
         const pageContent = await this.page.content();
-        console.error('❌ Page content preview:', pageContent.substring(0, 1000));
+        console.error('❌ 페이지 내용 미리보기:', pageContent.substring(0, 1000));
 
         // 현재 보이는 코드 블록들 확인
         const codeBlocks = await this.page.$$eval('pre code', codes =>
           codes.map(code => code.textContent?.substring(0, 200) + '...')
         );
-        console.error('❌ Available code blocks:', codeBlocks);
+        console.error('❌ 발견된 코드 블록들:', codeBlocks);
 
-        throw new Error('No valid JSON responses found. Check if the page loaded correctly.');
+        throw new Error('유효한 JSON 응답을 찾을 수 없습니다. 페이지 로드를 확인해주세요.');
       }
 
-      console.log(`✅ Found ${jsonResults.length} JSON response(s) for ${youtubeLink}`);
-
-      // 각 JSON 객체의 상세 내용 로깅
-      jsonResults.forEach((jsonObj, index) => {
-        console.log(`📄 JSON 객체 ${index + 1}:`, {
-          name: jsonObj.name,
-          youtube_link: jsonObj.youtube_link,
-          address: jsonObj.address,
-          hasAllRequiredFields: !!(jsonObj.name && jsonObj.youtube_link && jsonObj.phone && jsonObj.address && jsonObj.reasoning_basis)
-        });
-      });
+      console.log(`✅ ${jsonResults.length}개의 JSON 응답 발견`);
 
       // 모든 유효한 JSON 객체들을 RestaurantInfo로 변환
       const restaurantInfos: RestaurantInfo[] = [];
 
       for (const jsonObj of jsonResults) {
-        console.log(`🔍 검증 시작: ${jsonObj.name} - 링크: ${jsonObj.youtube_link}`);
-
-        // YouTube 링크가 일치하는지 검증 (가장 중요)
+        // YouTube 링크 검증
         if (jsonObj.youtube_link !== youtubeLink) {
-          console.log(`⚠️ YouTube 링크 불일치 - 예상: ${youtubeLink}, 실제: ${jsonObj.youtube_link}`);
+          console.log(`⚠️ 링크 불일치: ${jsonObj.youtube_link}`);
           continue;
         }
 
-        console.log(`✅ YouTube 링크 검증 통과: ${jsonObj.name}`);
-
         // 필수 필드 검증
         if (!jsonObj.name || !jsonObj.phone || !jsonObj.address || !jsonObj.reasoning_basis) {
-          console.log(`⚠️ 필수 필드 누락: ${jsonObj.name} - name: ${!!jsonObj.name}, phone: ${!!jsonObj.phone}, address: ${!!jsonObj.address}, reasoning: ${!!jsonObj.reasoning_basis}`);
+          console.log(`⚠️ 필수 필드 누락: ${jsonObj.name || '이름 없음'}`);
           continue;
         }
 
@@ -713,26 +694,23 @@ export class PerplexityCrawler {
         };
 
         restaurantInfos.push(restaurantInfo);
-        console.log(`✅ RestaurantInfo 변환 완료: ${restaurantInfo.name}`);
+        console.log(`✅ 레스토랑 추가: ${restaurantInfo.name}`);
       }
 
-      console.log(`📊 최종 결과: ${restaurantInfos.length}개 레스토랑 정보 생성됨`);
-      restaurantInfos.forEach((restaurant, index) => {
-        console.log(`   ${index + 1}. ${restaurant.name} - ${restaurant.address}`);
-      });
+      console.log(`📊 최종 결과: ${restaurantInfos.length}개 레스토랑 정보 생성`);
 
       if (restaurantInfos.length === 0) {
-        throw new Error('No valid JSON objects found with matching YouTube link.');
+        throw new Error('일치하는 YouTube 링크를 가진 유효한 JSON 객체를 찾을 수 없습니다.');
       }
 
-      console.log(`🎯 Extracted ${restaurantInfos.length} restaurant(s) for ${youtubeLink}`);
+      console.log(`🎯 ${youtubeLink}에서 ${restaurantInfos.length}개 레스토랑 추출 완료`);
 
-      // 지도 API로 좌표 정보 보완 (해외: 구글 지도, 국내: 네이버 지도)
-      console.log('🗺️  Enriching coordinates with Map APIs...');
+      // 지도 API로 좌표 정보 보완
+      console.log('🗺️ 지도 API로 좌표 보완 중...');
       const enrichedRestaurants = await this.enrichCoordinates(restaurantInfos);
 
       // 출처 인용구 제거
-      console.log('🧹  Removing source citations...');
+      console.log('🧹 출처 인용구 제거 중...');
       const cleanedRestaurants = this.cleanSourceCitations(enrichedRestaurants);
 
       return {
@@ -1082,9 +1060,8 @@ export class PerplexityCrawler {
       const encodedAddress = encodeURIComponent(address.trim());
       const apiUrl = `http://www.moamodu.com/develop/naver_map_new_proxy.php?query=${encodedAddress}`;
 
-      console.log(`🗺️  Naver Map API 호출: ${address} → ${apiUrl}`);
+      console.log(`🗺️ 네이버 지도 API 호출: ${address}`);
 
-      // AbortController로 타임아웃 구현
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
@@ -1094,44 +1071,32 @@ export class PerplexityCrawler {
 
       clearTimeout(timeoutId);
 
-      console.log(`📡 API 응답 상태: ${response.status} ${response.statusText}`);
-
       if (!response.ok) {
-        console.warn(`⚠️  Naver Map API 실패 (${response.status}): ${address}`);
-        const responseText = await response.text();
-        console.warn(`📄 응답 내용: ${responseText.substring(0, 200)}...`);
+        console.warn(`⚠️ 네이버 지도 API 실패 (${response.status}): ${address}`);
         return null;
       }
 
       const data = await response.json() as any;
-      console.log(`📊 API 응답 데이터:`, JSON.stringify(data, null, 2));
 
       if (data.status === 'OK' && data.addresses && data.addresses.length > 0) {
         const firstResult = data.addresses[0];
         const lat = parseFloat(firstResult.y);
         const lng = parseFloat(firstResult.x);
 
-        console.log(`🔍 첫 번째 결과:`, JSON.stringify(firstResult, null, 2));
-        console.log(`📍 파싱된 좌표: lat=${lat}, lng=${lng}`);
-
         if (!isNaN(lat) && !isNaN(lng)) {
           console.log(`✅ 좌표 획득: ${address} → (${lat}, ${lng})`);
           return { lat, lng };
-        } else {
-          console.warn(`⚠️  좌표 파싱 실패: lat=${lat}, lng=${lng}`);
         }
-      } else {
-        console.warn(`⚠️  유효한 주소 데이터 없음: status=${data.status}, addresses=${data.addresses?.length || 0}`);
       }
 
-      console.warn(`⚠️  유효한 좌표를 찾을 수 없음: ${address}`);
+      console.warn(`⚠️ 좌표를 찾을 수 없음: ${address}`);
       return null;
 
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        console.warn(`⚠️  Naver Map API 타임아웃 (${address})`);
+        console.warn(`⚠️ 네이버 지도 API 타임아웃: ${address}`);
       } else {
-        console.warn(`⚠️  Naver Map API 오류 (${address}):`, error instanceof Error ? error.message : 'Unknown error');
+        console.warn(`⚠️ 네이버 지도 API 오류: ${address}`);
       }
       return null;
     }
@@ -1142,22 +1107,17 @@ export class PerplexityCrawler {
    * 해외 주소: 구글 지도 사용, 국내 주소: 네이버 지도 사용
    */
   async enrichCoordinates(restaurants: RestaurantInfo[]): Promise<RestaurantInfo[]> {
-    console.log(`🗺️  좌표 정보 보완 시작: ${restaurants.length}개 레스토랑`);
+    console.log(`🗺️ 좌표 정보 보완 시작: ${restaurants.length}개 레스토랑`);
     const enrichedRestaurants: RestaurantInfo[] = [];
 
     for (const restaurant of restaurants) {
       const enriched = { ...restaurant };
-      console.log(`🏪 레스토랑 처리: ${enriched.name} - 주소: ${enriched.address || '없음'}`);
 
-      // 주소가 있는 경우 항상 좌표 재확보 (기존 좌표가 있어도 덮어쓰기)
       if (enriched.address && enriched.address.trim() !== '') {
-        console.log(`🔍 좌표 조회 시작: ${enriched.name} - ${enriched.address}`);
-
         let coordinates: { lat: number; lng: number } | null = null;
 
-        // 해외 주소인지 판별
         if (this.isForeignAddress(enriched.address)) {
-          console.log(`🌍 해외 주소 감지: ${enriched.address} - 구글 지도 사용`);
+          console.log(`🌍 해외 주소: ${enriched.address} - 구글 지도 사용`);
           coordinates = await this.getCoordinatesFromGoogleMaps(enriched.address);
         } else {
           console.log(`🇰🇷 국내 주소: ${enriched.address} - 네이버 지도 사용`);
@@ -1167,18 +1127,16 @@ export class PerplexityCrawler {
         if (coordinates) {
           enriched.lat = coordinates.lat;
           enriched.lng = coordinates.lng;
-          console.log(`📍 좌표 보완 완료: ${enriched.name} - (${enriched.lat}, ${enriched.lng})`);
+          console.log(`✅ 좌표 획득: ${enriched.name}`);
         } else {
-          console.log(`❌ 좌표 조회 실패: ${enriched.name} - 좌표를 찾을 수 없음`);
+          console.log(`❌ 좌표 조회 실패: ${enriched.name}`);
         }
-      } else {
-        console.log(`⚠️  주소 없음: ${enriched.name} - 좌표 조회 건너뜀`);
       }
 
       enrichedRestaurants.push(enriched);
     }
 
-    console.log(`✅ 좌표 보완 완료: ${enrichedRestaurants.length}개 레스토랑 처리됨`);
+    console.log(`✅ 좌표 보완 완료: ${enrichedRestaurants.length}개 레스토랑`);
     return enrichedRestaurants;
   }
 
