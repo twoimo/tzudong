@@ -279,65 +279,65 @@ export class PerplexityCrawler {
             return false;
           });
 
-        if (currentModel) {
-          console.log('✅ AI 모델이 이미 Gemini 2.5 Pro로 설정되어 있습니다.');
-          this.modelSelected = true;
-        } else {
-          // 모델 선택 버튼 클릭하여 드롭다운 열기
-          await this.page.click('[aria-label="모델 선택"]');
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          // 드롭다운에서 Gemini 2.5 Pro 찾기 (여러 방법 시도)
-          const modelSelectedResult = await this.page.evaluate(() => {
-            // 방법 1: 정확한 텍스트로 찾기
-            const exactMatches = Array.from(document.querySelectorAll('span')).filter(
-              span => span.textContent?.trim() === 'Gemini 2.5 Pro'
-            );
-
-            if (exactMatches.length > 0) {
-              (exactMatches[0] as HTMLElement).click();
-              return true;
-            }
-
-            // 방법 2: 포함된 텍스트로 찾기
-            const partialMatches = Array.from(document.querySelectorAll('span')).filter(
-              span => span.textContent?.includes('Gemini 2.5 Pro')
-            );
-
-            if (partialMatches.length > 0) {
-              (partialMatches[0] as HTMLElement).click();
-              return true;
-            }
-
-            // 방법 3: role="menuitem" 요소에서 찾기
-            const menuItems = Array.from(document.querySelectorAll('[role="menuitem"] span')).filter(
-              span => span.textContent?.includes('Gemini 2.5 Pro')
-            );
-
-            if (menuItems.length > 0) {
-              const menuItem = menuItems[0].closest('[role="menuitem"]') as HTMLElement;
-              menuItem?.click();
-              return true;
-            }
-
-            return false;
-          });
-
-          if (modelSelectedResult) {
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log('✅ AI 모델이 Gemini 2.5 Pro로 설정되었습니다.');
+          if (currentModel) {
+            console.log('✅ AI 모델이 이미 Gemini 2.5 Pro로 설정되어 있습니다.');
             this.modelSelected = true;
           } else {
-            throw new Error('Gemini 2.5 Pro 모델을 찾을 수 없습니다');
+            // 모델 선택 버튼 클릭하여 드롭다운 열기
+            await this.page.click('[aria-label="모델 선택"]');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // 드롭다운에서 Gemini 2.5 Pro 찾기 (여러 방법 시도)
+            const modelSelectedResult = await this.page.evaluate(() => {
+              // 방법 1: 정확한 텍스트로 찾기
+              const exactMatches = Array.from(document.querySelectorAll('span')).filter(
+                span => span.textContent?.trim() === 'Gemini 2.5 Pro'
+              );
+
+              if (exactMatches.length > 0) {
+                (exactMatches[0] as HTMLElement).click();
+                return true;
+              }
+
+              // 방법 2: 포함된 텍스트로 찾기
+              const partialMatches = Array.from(document.querySelectorAll('span')).filter(
+                span => span.textContent?.includes('Gemini 2.5 Pro')
+              );
+
+              if (partialMatches.length > 0) {
+                (partialMatches[0] as HTMLElement).click();
+                return true;
+              }
+
+              // 방법 3: role="menuitem" 요소에서 찾기
+              const menuItems = Array.from(document.querySelectorAll('[role="menuitem"] span')).filter(
+                span => span.textContent?.includes('Gemini 2.5 Pro')
+              );
+
+              if (menuItems.length > 0) {
+                const menuItem = menuItems[0].closest('[role="menuitem"]') as HTMLElement;
+                menuItem?.click();
+                return true;
+              }
+
+              return false;
+            });
+
+            if (modelSelectedResult) {
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              console.log('✅ AI 모델이 Gemini 2.5 Pro로 설정되었습니다.');
+              this.modelSelected = true;
+            } else {
+              throw new Error('Gemini 2.5 Pro 모델을 찾을 수 없습니다');
+            }
           }
+        } catch (error) {
+          console.log('⚠️  AI 모델 선택 중 오류 발생, 기본 모델로 진행합니다:', error instanceof Error ? error.message : 'Unknown error');
+          console.log('💡 모델 선택 드롭다운이 제대로 열리지 않았거나, 모델명이 변경되었을 수 있습니다.');
         }
-      } catch (error) {
-        console.log('⚠️  AI 모델 선택 중 오류 발생, 기본 모델로 진행합니다:', error instanceof Error ? error.message : 'Unknown error');
-        console.log('💡 모델 선택 드롭다운이 제대로 열리지 않았거나, 모델명이 변경되었을 수 있습니다.');
+      } else {
+        console.log('✅ AI 모델이 이미 Gemini 2.5 Pro로 설정되어 있습니다.');
       }
-    } else {
-      console.log('✅ AI 모델이 이미 Gemini 2.5 Pro로 설정되어 있습니다.');
-    }
 
       // 사용자 확인 완료 후 바로 크롤링 시작
 
@@ -611,9 +611,9 @@ export class PerplexityCrawler {
 
       console.log(`🎯 Extracted ${restaurantInfos.length} restaurant(s) for ${youtubeLink}`);
 
-      // 네이버 지도 API로 좌표 정보 보완
-      console.log('🗺️  Enriching coordinates with Naver Map API...');
-      const enrichedRestaurants = await this.enrichCoordinatesWithNaverMap(restaurantInfos);
+      // 지도 API로 좌표 정보 보완 (해외: 구글 지도, 국내: 네이버 지도)
+      console.log('🗺️  Enriching coordinates with Map APIs...');
+      const enrichedRestaurants = await this.enrichCoordinates(restaurantInfos);
 
       return {
         success: true,
@@ -650,6 +650,127 @@ export class PerplexityCrawler {
       () => document.readyState === 'complete',
       { timeout: 30000 }
     );
+  }
+
+  /**
+   * 해외 주소인지 판별합니다.
+   */
+  private isForeignAddress(address: string): boolean {
+    const foreignKeywords = [
+      '튀르키예', 'Türkiye', '터키', 'İstanbul', 'Istanbul',
+      '일본', 'Japan', 'Tokyo', '도쿄',
+      '중국', 'China', 'Beijing', '베이징', 'Shanghai', '상하이',
+      '미국', 'USA', 'United States', 'New York', '뉴욕', 'Los Angeles', 'LA',
+      '영국', 'UK', 'London', '런던',
+      '프랑스', 'France', 'Paris', '파리',
+      '독일', 'Germany', 'Berlin', '베를린',
+      '이탈리아', 'Italy', 'Rome', '로마',
+      '스페인', 'Spain', 'Madrid', '마드리드',
+      '캐나다', 'Canada', 'Toronto', '토론토',
+      '호주', 'Australia', 'Sydney', '시드니'
+    ];
+
+    return foreignKeywords.some(keyword => address.includes(keyword));
+  }
+
+  /**
+   * 구글 지도에서 주소로 검색하여 좌표를 추출합니다.
+   */
+  private async getCoordinatesFromGoogleMaps(address: string): Promise<{ lat: number; lng: number } | null> {
+    if (!address || address.trim() === '') {
+      return null;
+    }
+
+    try {
+      console.log(`🌍 Google Maps 검색: ${address}`);
+
+      // 구글 지도 검색 URL 생성
+      const searchQuery = encodeURIComponent(address.trim());
+      const searchUrl = `https://www.google.com/maps/search/${searchQuery}`;
+
+      // 페이지 이동
+      if (!this.page) {
+        throw new Error('Browser page not initialized');
+      }
+
+      await this.page.goto(searchUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+      // 잠시 대기하여 지도가 로드되도록 함
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // 현재 URL에서 좌표 추출 시도
+      const currentUrl = this.page.url();
+
+      // URL에서 @lat,lng,zoom 형식의 좌표 추출
+      const urlMatch = currentUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+),(\d+)z/);
+      if (urlMatch) {
+        const lat = parseFloat(urlMatch[1]);
+        const lng = parseFloat(urlMatch[2]);
+
+        if (!isNaN(lat) && !isNaN(lng)) {
+          console.log(`✅ 구글 지도 좌표 획득: ${address} → (${lat}, ${lng})`);
+          return { lat, lng };
+        }
+      }
+
+      // URL에서 좌표를 찾지 못한 경우, 페이지에서 직접 검색
+      try {
+        // 지도 컨테이너에서 data-lat, data-lng 속성 찾기
+        const coordinates = await this.page.evaluate(() => {
+          // 여러 가능한 셀렉터 시도
+          const selectors = [
+            '[data-lat][data-lng]',
+            '.place-result[data-lat][data-lng]',
+            '[jsinstance*="place-result"]'
+          ];
+
+          for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element) {
+              const lat = element.getAttribute('data-lat');
+              const lng = element.getAttribute('data-lng');
+              if (lat && lng) {
+                return {
+                  lat: parseFloat(lat),
+                  lng: parseFloat(lng)
+                };
+              }
+            }
+          }
+
+          // 다른 방법: URL 변경 감지
+          const links = Array.from(document.querySelectorAll('a[href*="maps/place"]'));
+          for (const link of links) {
+            const href = link.getAttribute('href');
+            if (href) {
+              const match = href.match(/@(-?\d+\.\d+),(-?\d+\.\d+),(\d+)z/);
+              if (match) {
+                return {
+                  lat: parseFloat(match[1]),
+                  lng: parseFloat(match[2])
+                };
+              }
+            }
+          }
+
+          return null;
+        });
+
+        if (coordinates && !isNaN(coordinates.lat) && !isNaN(coordinates.lng)) {
+          console.log(`✅ 구글 지도 좌표 획득 (페이지 파싱): ${address} → (${coordinates.lat}, ${coordinates.lng})`);
+          return coordinates;
+        }
+      } catch (evalError) {
+        console.warn(`⚠️  구글 지도 페이지 파싱 실패: ${evalError instanceof Error ? evalError.message : 'Unknown error'}`);
+      }
+
+      console.warn(`⚠️  구글 지도에서 좌표를 찾을 수 없음: ${address}`);
+      return null;
+
+    } catch (error) {
+      console.warn(`⚠️  구글 지도 검색 오류 (${address}):`, error instanceof Error ? error.message : 'Unknown error');
+      return null;
+    }
   }
 
   /**
@@ -709,9 +830,10 @@ export class PerplexityCrawler {
   }
 
   /**
-   * RestaurantInfo 배열의 좌표 정보를 네이버 지도 API로 보완합니다.
+   * RestaurantInfo 배열의 좌표 정보를 지도 API로 보완합니다.
+   * 해외 주소: 구글 지도 사용, 국내 주소: 네이버 지도 사용
    */
-  async enrichCoordinatesWithNaverMap(restaurants: RestaurantInfo[]): Promise<RestaurantInfo[]> {
+  async enrichCoordinates(restaurants: RestaurantInfo[]): Promise<RestaurantInfo[]> {
     const enrichedRestaurants: RestaurantInfo[] = [];
 
     for (const restaurant of restaurants) {
@@ -719,10 +841,20 @@ export class PerplexityCrawler {
 
       // lat 또는 lng가 null이거나 undefined인 경우에만 API 호출
       if ((enriched.lat === null || enriched.lat === undefined ||
-           enriched.lng === null || enriched.lng === undefined) &&
-          enriched.address && enriched.address.trim() !== '') {
+        enriched.lng === null || enriched.lng === undefined) &&
+        enriched.address && enriched.address.trim() !== '') {
 
-        const coordinates = await this.getCoordinatesFromNaverMap(enriched.address);
+        let coordinates: { lat: number; lng: number } | null = null;
+
+        // 해외 주소인지 판별
+        if (this.isForeignAddress(enriched.address)) {
+          console.log(`🌍 해외 주소 감지: ${enriched.address} - 구글 지도 사용`);
+          coordinates = await this.getCoordinatesFromGoogleMaps(enriched.address);
+        } else {
+          console.log(`🇰🇷 국내 주소: ${enriched.address} - 네이버 지도 사용`);
+          coordinates = await this.getCoordinatesFromNaverMap(enriched.address);
+        }
+
         if (coordinates) {
           enriched.lat = coordinates.lat;
           enriched.lng = coordinates.lng;
@@ -734,5 +866,12 @@ export class PerplexityCrawler {
     }
 
     return enrichedRestaurants;
+  }
+
+  /**
+   * RestaurantInfo 배열의 좌표 정보를 네이버 지도 API로 보완합니다. (하위 호환성 유지)
+   */
+  async enrichCoordinatesWithNaverMap(restaurants: RestaurantInfo[]): Promise<RestaurantInfo[]> {
+    return this.enrichCoordinates(restaurants);
   }
 }
