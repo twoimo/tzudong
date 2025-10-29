@@ -8,6 +8,7 @@ export class PerplexityCrawler {
   private hasProcessedAnyItem: boolean = false;
   private modelSelected: boolean = false;
   private sessionPath: string = './perplexity-session.json';
+  private sessionRestored: boolean = false;
 
   async initialize(): Promise<void> {
     console.log('🚀 Starting browser initialization...');
@@ -192,50 +193,55 @@ export class PerplexityCrawler {
       // 사용자 확인 (첫 번째 항목에서만 또는 수동 모드에서만)
       const isFirstItem = !this.hasProcessedAnyItem;
       const manualMode = process.env.MANUAL_MODE === 'true';
+      const sessionRestored = this.sessionRestored;
 
       if (isFirstItem || manualMode) {
-        console.log('\n⏳ [안전 확인] 크롤링을 시작하기 전에 브라우저 상태를 확인해주세요.');
-        console.log('📋 다음을 확인하세요:');
-        console.log(`   1. Chrome 브라우저가 전체화면으로 열려 있는지`);
-        console.log(`   2. Perplexity AI 페이지가 정상적으로 로드되었는지`);
-        console.log(`   3. 입력창 상태: ${inputFieldExists ? '✅ 보임' : '⚠️  아직 로드되지 않음 (로그인 필요 가능성)'} `);
-        console.log('   4. 필요한 경우 브라우저에서 수동으로 로그인했는지');
-        console.log('   5. 모든 준비가 완료되었으면 터미널로 돌아와서 아무 키나 누르세요');
-        console.log('   6. AI 모델이 Gemini 2.5 Pro로 자동 설정됩니다');
-        console.log('   7. 크롤링이 자동으로 시작됩니다\n');
+        if (sessionRestored) {
+          console.log('\n🔄 세션 복원이 성공하여 바로 크롤링을 시작합니다!\n');
+        } else {
+          console.log('\n⏳ [안전 확인] 크롤링을 시작하기 전에 브라우저 상태를 확인해주세요.');
+          console.log('📋 다음을 확인하세요:');
+          console.log(`   1. Chrome 브라우저가 전체화면으로 열려 있는지`);
+          console.log(`   2. Perplexity AI 페이지가 정상적으로 로드되었는지`);
+          console.log(`   3. 입력창 상태: ${inputFieldExists ? '✅ 보임' : '⚠️  아직 로드되지 않음 (로그인 필요 가능성)'} `);
+          console.log('   4. 필요한 경우 브라우저에서 수동으로 로그인했는지');
+          console.log('   5. 모든 준비가 완료되었으면 터미널로 돌아와서 아무 키나 누르세요');
+          console.log('   6. AI 모델이 Gemini 2.5 Pro로 자동 설정됩니다');
+          console.log('   7. 크롤링이 자동으로 시작됩니다\n');
 
-        if (!inputFieldExists) {
-          console.log('💡 입력창이 아직 보이지 않으면 브라우저에서 로그인을 완료해주세요.\n');
-        }
+          if (!inputFieldExists) {
+            console.log('💡 입력창이 아직 보이지 않으면 브라우저에서 로그인을 완료해주세요.\n');
+          }
 
-        console.log('⌨️  준비 완료 후 아무 키나 눌러서 크롤링을 시작하세요...');
+          console.log('⌨️  준비 완료 후 아무 키나 눌러서 크롤링을 시작하세요...');
 
-        // 사용자 입력 대기
-        await new Promise<void>((resolve) => {
-          const cleanup = () => {
-            process.stdin.setRawMode(false);
-            process.stdin.pause();
-            process.stdin.removeAllListeners('data');
-          };
+          // 사용자 입력 대기
+          await new Promise<void>((resolve) => {
+            const cleanup = () => {
+              process.stdin.setRawMode(false);
+              process.stdin.pause();
+              process.stdin.removeAllListeners('data');
+            };
 
-          process.stdin.setRawMode(true);
-          process.stdin.resume();
-          process.stdin.setEncoding('utf8');
+            process.stdin.setRawMode(true);
+            process.stdin.resume();
+            process.stdin.setEncoding('utf8');
 
-          process.stdin.once('data', () => {
-            cleanup();
-            resolve();
+            process.stdin.once('data', () => {
+              cleanup();
+              resolve();
+            });
+
+            // 타임아웃 추가 (긴 대기 시간)
+            setTimeout(() => {
+              cleanup();
+              console.log('\n⏰ 대기 시간이 초과되었습니다. 자동으로 진행합니다...');
+              resolve();
+            }, 24 * 60 * 60 * 1000); // 24시간
           });
 
-          // 타임아웃 추가 (긴 대기 시간)
-          setTimeout(() => {
-            cleanup();
-            console.log('\n⏰ 대기 시간이 초과되었습니다. 자동으로 진행합니다...');
-            resolve();
-          }, 24 * 60 * 60 * 1000); // 24시간
-        });
-
-        console.log('🚀 크롤링을 시작합니다!\n');
+          console.log('🚀 크롤링을 시작합니다!\n');
+        }
       } else {
         console.log('🔄 다음 항목 처리 시작...\n');
       }
@@ -248,13 +254,27 @@ export class PerplexityCrawler {
         console.log('🤖 AI 모델을 Gemini 2.5 Pro로 설정하는 중...');
 
         try {
-          // 먼저 현재 선택된 모델 확인
+          // 먼저 현재 선택된 모델 확인 (여러 방법 시도)
           const currentModel = await this.page.evaluate(() => {
-            const selectedElement = document.querySelector('[aria-label="모델 선택"]');
-            if (selectedElement) {
-              const textContent = selectedElement.textContent || '';
+            // 방법 1: aria-label="Gemini 2.5 Pro" 버튼이 있는지 확인
+            const geminiButton = document.querySelector('[aria-label="Gemini 2.5 Pro"]');
+            if (geminiButton) {
+              return true;
+            }
+
+            // 방법 2: 모델 선택 버튼의 텍스트 확인
+            const modelSelectButton = document.querySelector('[aria-label="모델 선택"]');
+            if (modelSelectButton) {
+              const textContent = modelSelectButton.textContent || '';
               return textContent.includes('Gemini 2.5 Pro');
             }
+
+            // 방법 3: 현재 활성화된 모델 표시 요소 확인
+            const activeModel = document.querySelector('[data-state="closed"][aria-label="Gemini 2.5 Pro"]');
+            if (activeModel) {
+              return true;
+            }
+
             return false;
           });
 
@@ -1126,8 +1146,11 @@ export class PerplexityCrawler {
       this.sessionData = sessionData;
       console.log('✅ 세션 복원 준비 완료');
 
+      this.sessionRestored = true;
+      console.log('✅ 세션 복원 성공!');
     } catch (error) {
       console.log('⚠️  세션 복원 실패:', error instanceof Error ? error.message : 'Unknown error');
+      this.sessionRestored = false;
     }
   }
 
