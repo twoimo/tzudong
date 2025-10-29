@@ -131,68 +131,7 @@ export class PerplexityCrawler {
       }
 
       // 로그인 상태 확인 (로그인 모달 유무로 판단)
-      const loginStatus = await this.page.evaluate(() => {
-        // 로그인 모달 요소들 확인 (로그아웃 상태 표시)
-        const loginModal = document.querySelector('[data-testid="login-modal"]');
-        const floatingSignupClose = document.querySelector('button[data-testid="floating-signup-close-button"]');
-
-        // 로그인 텍스트 확인
-        const loginTextElements = document.querySelectorAll('div.mb-xs.text-center.font-sans.text-base.font-medium.text-foreground');
-        let hasLoginText = false;
-        for (const element of loginTextElements) {
-          if (element.textContent?.includes('로그인하거나 계정 만들기')) {
-            hasLoginText = true;
-            break;
-          }
-        }
-
-        // Google/Apple 로그인 버튼 확인
-        const googleLoginButton = document.querySelector('button svg[xmlns*="google"]')?.closest('button');
-        const appleLoginButton = document.querySelector('button svg[xmlns*="apple"]')?.closest('button');
-
-        // 계정 관련 요소들 확인 (로그인 상태 표시)
-        const accountButton = document.querySelector('[data-testid="account-button"]') ||
-          document.querySelector('button[aria-label*="계정"]') ||
-          document.querySelector('.account-button');
-
-        const userMenu = document.querySelector('[data-testid="user-menu"]') ||
-          document.querySelector('.user-menu');
-
-        // 프로필 메뉴 또는 설정 메뉴 확인
-        const profileMenu = document.querySelector('[data-testid*="profile"]') ||
-          document.querySelector('[aria-label*="프로필"]') ||
-          document.querySelector('[aria-label*="설정"]');
-
-        // 입력 필드가 활성화되어 있는지 확인 (로그인 상태의 간접 지표)
-        const inputField = document.querySelector('#ask-input') as HTMLElement;
-        const isInputEnabled = inputField && !inputField.hasAttribute('disabled') && inputField.offsetParent !== null;
-
-        // 로그인 모달이 명확히 존재하는지 확인 (더 엄격하게)
-        const hasLoginModal = !!(loginModal && (hasLoginText || googleLoginButton || appleLoginButton));
-
-        // 로그인 상태 지표들
-        const loginIndicators = [accountButton, userMenu, profileMenu].filter(Boolean);
-        const hasAnyLoginIndicator = loginIndicators.length > 0;
-
-        // 로그인 상태 판단: 입력창이 활성화되어 있고, 로그인 모달이 명확히 없거나, 로그인 지표가 있으면 로그인된 것으로 판단
-        const isLoggedIn = isInputEnabled && (!hasLoginModal || hasAnyLoginIndicator);
-
-        return {
-          isLoggedIn,
-          hasLoginModal,
-          indicators: {
-            accountButton: !!accountButton,
-            userMenu: !!userMenu,
-            profileMenu: !!profileMenu,
-            inputEnabled: !!isInputEnabled,
-            loginModal: !!loginModal,
-            floatingSignup: !!floatingSignupClose,
-            loginText: hasLoginText,
-            googleButton: !!googleLoginButton,
-            appleButton: !!appleLoginButton
-          }
-        };
-      });
+      const loginStatus = await this.checkLoginStatus();
 
       // 로그인 상태 표시
       if (loginStatus.isLoggedIn && !loginStatus.hasLoginModal) {
@@ -771,6 +710,182 @@ export class PerplexityCrawler {
       console.warn(`⚠️  구글 지도 검색 오류 (${address}):`, error instanceof Error ? error.message : 'Unknown error');
       return null;
     }
+  }
+
+  /**
+   * 로그인 상태를 확인합니다.
+   */
+  private async checkLoginStatus(): Promise<{
+    isLoggedIn: boolean;
+    hasLoginModal: boolean;
+    indicators: any;
+  }> {
+    if (!this.page) {
+      throw new Error('Browser page not initialized');
+    }
+
+    return await this.page.evaluate(() => {
+      // 로그인 모달 요소들 확인 (로그아웃 상태 표시)
+      const loginModal = document.querySelector('[data-testid="login-modal"]');
+      const floatingSignupClose = document.querySelector('button[data-testid="floating-signup-close-button"]');
+
+      // 로그인 텍스트 확인
+      const loginTextElements = document.querySelectorAll('div.mb-xs.text-center.font-sans.text-base.font-medium.text-foreground');
+      let hasLoginText = false;
+      for (const element of loginTextElements) {
+        if (element.textContent?.includes('로그인하거나 계정 만들기')) {
+          hasLoginText = true;
+          break;
+        }
+      }
+
+      // Google/Apple 로그인 버튼 확인
+      const googleLoginButton = document.querySelector('button svg[xmlns*="google"]')?.closest('button');
+      const appleLoginButton = document.querySelector('button svg[xmlns*="apple"]')?.closest('button');
+
+      // 계정 관련 요소들 확인 (로그인 상태 표시)
+      const accountButton = document.querySelector('[data-testid="account-button"]') ||
+        document.querySelector('button[aria-label*="계정"]') ||
+        document.querySelector('.account-button');
+
+      const userMenu = document.querySelector('[data-testid="user-menu"]') ||
+        document.querySelector('.user-menu');
+
+      // 프로필 메뉴 또는 설정 메뉴 확인
+      const profileMenu = document.querySelector('[data-testid*="profile"]') ||
+        document.querySelector('[aria-label*="프로필"]') ||
+        document.querySelector('[aria-label*="설정"]');
+
+      // 입력 필드가 활성화되어 있는지 확인 (로그인 상태의 간접 지표)
+      const inputField = document.querySelector('#ask-input') as HTMLElement;
+      const isInputEnabled = inputField && !inputField.hasAttribute('disabled') && inputField.offsetParent !== null;
+
+      // 로그인 모달이 명확히 존재하는지 확인 (더 엄격하게)
+      const hasLoginModal = !!(loginModal && (hasLoginText || googleLoginButton || appleLoginButton));
+
+      // 로그인 상태 지표들
+      const loginIndicators = [accountButton, userMenu, profileMenu].filter(Boolean);
+      const hasAnyLoginIndicator = loginIndicators.length > 0;
+
+      // 로그인 상태 판단: 입력창이 활성화되어 있고, 로그인 모달이 명확히 없거나, 로그인 지표가 있으면 로그인된 것으로 판단
+      const isLoggedIn = isInputEnabled && (!hasLoginModal || hasAnyLoginIndicator);
+
+      return {
+        isLoggedIn,
+        hasLoginModal,
+        indicators: {
+          accountButton: !!accountButton,
+          userMenu: !!userMenu,
+          profileMenu: !!profileMenu,
+          inputEnabled: !!isInputEnabled,
+          loginModal: !!loginModal,
+          floatingSignup: !!floatingSignupClose,
+          loginText: hasLoginText,
+          googleButton: !!googleLoginButton,
+          appleButton: !!appleLoginButton
+        }
+      };
+    });
+  }
+
+  /**
+   * 자동 로그인을 수행합니다.
+   */
+  private async performAutoLogin(): Promise<boolean> {
+    try {
+      console.log('🔄 자동 로그인 시도 중...');
+
+      if (!this.page) {
+        throw new Error('Browser page not initialized');
+      }
+
+      // 로그인 모달이 있는지 확인
+      const loginStatus = await this.checkLoginStatus();
+
+      if (!loginStatus.hasLoginModal) {
+        console.log('✅ 로그인 모달이 없어 자동 로그인 불필요');
+        return true;
+      }
+
+      console.log('🔍 로그인 모달 감지됨, Google 로그인 버튼 클릭 시도');
+
+      // Google 로그인 버튼 찾기 및 클릭
+      const googleButtonClicked = await this.page.evaluate(() => {
+        const googleButton = document.querySelector('button svg[xmlns*="google"]')?.closest('button') as HTMLButtonElement;
+        if (googleButton) {
+          googleButton.click();
+          return true;
+        }
+        return false;
+      });
+
+      if (!googleButtonClicked) {
+        console.log('❌ Google 로그인 버튼을 찾을 수 없음');
+        return false;
+      }
+
+      console.log('✅ Google 로그인 버튼 클릭됨');
+
+      // 잠시 대기 후 로그인 완료 대기
+      await new Promise(resolve => setTimeout(resolve, 3000));
+
+      // 팝업 창 처리 (Google 로그인 팝업)
+      try {
+        const pages = await this.browser?.pages();
+        if (pages && pages.length > 1) {
+          const popupPage = pages[pages.length - 1];
+          console.log('🔍 Google 로그인 팝업 감지됨');
+
+          // 팝업에서 로그인 완료 대기 (실제로는 수동 로그인 필요)
+          await popupPage.waitForNavigation({ timeout: 60000 }).catch(() => {
+            console.log('⚠️  팝업 네비게이션 타임아웃');
+          });
+        }
+      } catch (popupError) {
+        console.log('⚠️  팝업 처리 중 오류:', popupError instanceof Error ? popupError.message : 'Unknown error');
+      }
+
+      // 로그인 완료 확인
+      let retryCount = 0;
+      const maxRetries = 30; // 30회 * 2초 = 최대 60초 대기
+
+      while (retryCount < maxRetries) {
+        const currentStatus = await this.checkLoginStatus();
+
+        if (currentStatus.isLoggedIn && !currentStatus.hasLoginModal) {
+          console.log('✅ 자동 로그인 성공!');
+          return true;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        retryCount++;
+
+        if (retryCount % 10 === 0) {
+          console.log(`⏳ 로그인 대기 중... (${retryCount}/${maxRetries})`);
+        }
+      }
+
+      console.log('❌ 자동 로그인 실패 - 수동 로그인 필요');
+      return false;
+
+    } catch (error) {
+      console.log('❌ 자동 로그인 중 오류:', error instanceof Error ? error.message : 'Unknown error');
+      return false;
+    }
+  }
+
+  /**
+   * 로그인 상태를 확인하고 필요시 자동 재로그인합니다.
+   */
+  async ensureLoggedIn(): Promise<boolean> {
+    const loginStatus = await this.checkLoginStatus();
+
+    if (loginStatus.isLoggedIn && !loginStatus.hasLoginModal) {
+      return true; // 이미 로그인됨
+    }
+
+    console.log('⚠️  로그인 상태 확인 실패, 자동 재로그인 시도');
+    return await this.performAutoLogin();
   }
 
   /**

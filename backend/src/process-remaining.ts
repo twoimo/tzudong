@@ -139,6 +139,17 @@ async function processRemaining() {
             const nextEntry = processor.getNextNullEntry();
             if (!nextEntry) break;
 
+            // 3개 항목마다 또는 첫 번째 항목에서 로그인 상태 확인 (더 빈번한 체크)
+            if (i === 0 || i % 3 === 0) {
+                console.log(`🔐 Checking login status (item ${i + 1}/${maxToProcess})...`);
+                const isLoggedIn = await crawler.ensureLoggedIn();
+                if (!isLoggedIn) {
+                    console.log('❌ Login check failed. Please check browser and try again.');
+                    break;
+                }
+                console.log('✅ Login status confirmed\n');
+            }
+
             console.log(`\n🔄 Processing ${processed + 1}/${remainingCount}: ${nextEntry.youtube_link}`);
 
             try {
