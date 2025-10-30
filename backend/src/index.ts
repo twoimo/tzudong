@@ -191,6 +191,18 @@ async function processWithCrawler(crawler: PerplexityCrawler, youtubeLink: strin
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : '알 수 없는 오류';
     console.error(`❌ 처리 중 오류: ${youtubeLink} - ${errorMsg}`);
+
+    // 크롤링 실패 시 세션 상태 확인 (구글 로그인 만료 가능성)
+    try {
+      console.log('🔍 크롤링 실패로 인한 세션 검증 중...');
+      const sessionValid = await crawler.ensureSession();
+      if (!sessionValid) {
+        console.log('⚠️  세션 만료가 의심됩니다. 다음 크롤링에서 재로그인이 필요할 수 있습니다.');
+      }
+    } catch (sessionError) {
+      console.warn('세션 검증 실패:', sessionError instanceof Error ? sessionError.message : 'Unknown error');
+    }
+
     return { success: false, error: errorMsg };
   }
 }

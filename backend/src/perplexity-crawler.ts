@@ -64,6 +64,13 @@ export class PerplexityCrawler {
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
+          '--disable-background-networking', // 배경 네트워킹 비활성화로 세션 유지 개선
+          '--disable-default-apps',
+          '--disable-sync', // 동기화 비활성화
+          '--disable-translate', // 번역 비활성화
+          '--disable-component-update', // 컴포넌트 업데이트 비활성화
+          '--disable-background-timer-throttling', // 백그라운드 타이머 스로틀링 비활성화
+          '--disable-low-end-device-mode', // 저사양 장치 모드 비활성화
           '--start-maximized' // 전체화면으로 브라우저 시작
         ],
         ignoreDefaultArgs: ['--disable-extensions'],
@@ -116,9 +123,29 @@ export class PerplexityCrawler {
             // 페이지 새로고침으로 세션 적용
             await this.page.reload({ waitUntil: 'networkidle0' });
             console.log('🔄 페이지 새로고침으로 세션 적용');
+
+            // 세션 복원 후 실제 로그인 상태 검증
+            console.log('🔍 세션 복원 후 로그인 상태 검증 중...');
+            await new Promise(resolve => setTimeout(resolve, 2000)); // 세션 적용 대기
+
+            const loginStatus = await this.checkLoginStatus();
+            if (loginStatus.isLoggedIn && !loginStatus.hasLoginModal) {
+              console.log('✅ 세션 복원 성공! 로그인 상태 확인됨');
+            } else {
+              console.log('⚠️  세션 복원은 완료되었으나 로그인 상태가 유효하지 않습니다');
+              console.log('🔍 로그인 상태 세부 정보:', JSON.stringify(loginStatus.indicators, null, 2));
+
+              // 로그인 상태가 유효하지 않으면 세션 데이터 초기화
+              this.sessionData = null;
+              console.log('🗑️  유효하지 않은 세션 데이터를 초기화했습니다');
+            }
+          } else {
+            console.log('ℹ️  세션 데이터에 유효한 URL이 없어 기본 페이지로 이동');
           }
         } catch (restoreError) {
           console.log('⚠️  세션 복원 중 일부 오류:', restoreError instanceof Error ? restoreError.message : 'Unknown error');
+          // 복원 실패 시 세션 데이터 초기화
+          this.sessionData = null;
         }
       }
 
@@ -146,6 +173,16 @@ export class PerplexityCrawler {
       console.log(`\n🎬 처리 중: ${youtubeLink}`);
       console.log(`📝 프롬프트 템플릿 사용 (${promptTemplate.length}자)`);
 
+      // 크롤링 시작 전 세션 상태 확인 및 자동 복구
+      console.log('🔐 크롤링 전 세션 검증 중...');
+      const sessionValid = await this.ensureSession();
+
+      if (!sessionValid) {
+        console.log('⚠️  세션이 유효하지 않아 수동 개입이 필요할 수 있습니다.');
+        // Google 로그인 페이지 감지 및 대기
+        await this.checkForGoogleLoginPage();
+      }
+
       // 퍼플렉시티 페이지로 이동
       console.log('🌐 퍼플렉시티로 이동 중...');
       const response = await this.page.goto('https://www.perplexity.ai/', {
@@ -158,9 +195,6 @@ export class PerplexityCrawler {
       }
 
       console.log('✅ 페이지 로드 완료');
-
-      // Google 로그인 페이지 감지 및 대기
-      await this.checkForGoogleLoginPage();
 
       // 페이지 로드 대기 및 요소 확인
       console.log('⏳ 페이지 요소 대기 중...');
@@ -1084,24 +1118,39 @@ export class PerplexityCrawler {
           const popupPage = pages[pages.length - 1];
           console.log('🔍 Google 로그인 팝업 감지됨');
 
-          // 팝업에서 로그인 완료 대기 (실제로는 수동 로그인 필요)
-          await popupPage.waitForNavigation({ timeout: 60000 }).catch(() => {
-            console.log('⚠️  팝업 네비게이션 타임아웃');
+          // 팝업에서 Google 로그인 페이지 감지 및 자동 처리
+          const originalPage = this.page;
+          this.page = popupPage; // 팝업을 현재 페이지로 설정
+
+          // 팝업에서 Google 로그인 페이지인지 확인
+          const isGoogleLogin = await this.page.evaluate(() => {
+            const hasGoogleLogo = document.querySelector('img[alt*="Google"]') ||
+              document.querySelector('svg[aria-label*="Google"]') ||
+              document.querySelector('[data-google-logo]');
+            const hasLoginForm = document.querySelector('form[action*="signin"]') ||
+              document.querySelector('input[type="email"]') ||
+              document.querySelector('input[name="identifier"]');
+            const currentUrl = window.location.href;
+            const isGoogleAuthUrl = currentUrl.includes('accounts.google.com') ||
+              currentUrl.includes('google.com/signin');
+
+            return !!(hasGoogleLogo || hasLoginForm || isGoogleAuthUrl);
           });
 
-          // 팝업 페이지에서 Google 로그인 페이지 감지
-          if (this.page) {
-            const originalPage = this.page;
-            this.page = popupPage; // 임시로 팝업 페이지를 현재 페이지로 설정
-            await this.checkForGoogleLoginPage();
-            this.page = originalPage; // 원래 페이지로 복원
+          if (isGoogleLogin) {
+            console.log('🚨 팝업에서 Google 로그인 페이지 감지됨 - 수동 로그인 필요');
+            // Google 로그인 팝업에서는 수동 개입이 필요하므로 false 반환
+            this.page = originalPage;
+            return false;
           }
+
+          this.page = originalPage; // 원래 페이지로 복원
         }
       } catch (popupError) {
         console.log('⚠️  팝업 처리 중 오류:', popupError instanceof Error ? popupError.message : 'Unknown error');
       }
 
-      // 로그인 완료 확인
+      // 로그인 완료 확인 (최대 60초 대기)
       let retryCount = 0;
       const maxRetries = 30; // 30회 * 2초 = 최대 60초 대기
 
@@ -1110,6 +1159,15 @@ export class PerplexityCrawler {
 
         if (currentStatus.isLoggedIn && !currentStatus.hasLoginModal) {
           console.log('✅ 자동 로그인 성공!');
+
+          // 로그인 성공 시 세션 즉시 저장
+          try {
+            await this.saveSession();
+            console.log('💾 자동 로그인 후 세션 저장됨');
+          } catch (sessionError) {
+            console.warn('세션 저장 실패:', sessionError instanceof Error ? sessionError.message : 'Unknown error');
+          }
+
           return true;
         }
 
@@ -1173,6 +1231,44 @@ export class PerplexityCrawler {
 
     } catch (error) {
       console.log('⚠️  Google 로그인 페이지 확인 중 오류:', error instanceof Error ? error.message : 'Unknown error');
+      return false;
+    }
+  }
+
+  /**
+   * 세션 상태를 확인하고 필요시 자동 복구합니다.
+   * 크롤링 중간에 세션이 만료되었을 때 호출됩니다.
+   */
+  async ensureSession(): Promise<boolean> {
+    try {
+      console.log('🔍 세션 상태 확인 중...');
+
+      // 현재 페이지가 Google 로그인 페이지인지 확인
+      const hasGoogleLoginPage = await this.checkForGoogleLoginPage();
+      if (hasGoogleLoginPage) {
+        console.log('🚨 크롤링 중 구글 로그인 페이지 감지됨');
+        return false; // 수동 개입 필요
+      }
+
+      // Perplexity 로그인 모달 확인
+      const loginStatus = await this.checkLoginStatus();
+
+      if (loginStatus.isLoggedIn && !loginStatus.hasLoginModal) {
+        console.log('✅ 세션 정상 유지됨');
+        return true;
+      }
+
+      if (loginStatus.hasLoginModal) {
+        console.log('⚠️  로그인 모달 감지됨, 자동 재로그인 시도');
+        return await this.performAutoLogin();
+      }
+
+      // 로그인 상태가 불확실한 경우
+      console.log('❓ 세션 상태 불확실, 재확인 필요');
+      return false;
+
+    } catch (error) {
+      console.error('❌ 세션 확인 중 오류:', error instanceof Error ? error.message : 'Unknown error');
       return false;
     }
   }
@@ -1374,12 +1470,28 @@ export class PerplexityCrawler {
         return;
       }
 
-      // 세션이 너무 오래된 경우 (24시간 이상) 사용하지 않음
+      // 세션이 너무 오래된 경우 (8시간 이상) 사용하지 않음
       const sessionAge = Date.now() - new Date(sessionData.timestamp).getTime();
-      const maxAge = 24 * 60 * 60 * 1000; // 24시간
+      const maxAge = 8 * 60 * 60 * 1000; // 8시간 (더 엄격하게)
 
       if (sessionAge > maxAge) {
-        console.log('⚠️  세션이 24시간 이상 경과됨, 새 세션으로 시작');
+        console.log(`⚠️  세션이 ${Math.round(sessionAge / (60 * 60 * 1000))}시간 경과됨, 새 세션으로 시작`);
+        return;
+      }
+
+      // 쿠키 유효성 기본 검증
+      if (!sessionData.cookies || !Array.isArray(sessionData.cookies) || sessionData.cookies.length === 0) {
+        console.log('⚠️  유효한 쿠키 데이터가 없음, 새 세션으로 시작');
+        return;
+      }
+
+      // Perplexity 관련 쿠키 존재 확인
+      const hasPerplexityCookies = sessionData.cookies.some((cookie: any) =>
+        cookie.domain && (cookie.domain.includes('perplexity.ai') || cookie.domain.includes('google.com'))
+      );
+
+      if (!hasPerplexityCookies) {
+        console.log('⚠️  Perplexity 관련 쿠키가 없음, 새 세션으로 시작');
         return;
       }
 
