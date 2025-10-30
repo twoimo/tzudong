@@ -688,6 +688,28 @@ export class PerplexityCrawler {
       const extractJsonFromHtml = () => {
         const validJsonObjects: any[] = [];
 
+        // 코드 요소에서 JSON 텍스트 추출 헬퍼 함수
+        const extractJsonFromCodeElement = (element: Element): string => {
+          let jsonText = '';
+
+          // 재귀적으로 모든 텍스트 노드 찾기
+          const walkTextNodes = (node: Node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              // 텍스트 노드의 내용 추가
+              jsonText += node.textContent || '';
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+              // 요소 노드인 경우 자식 노드들 순회
+              const childNodes = node.childNodes;
+              for (let i = 0; i < childNodes.length; i++) {
+                walkTextNodes(childNodes[i]);
+              }
+            }
+          };
+
+          walkTextNodes(element);
+          return jsonText.trim();
+        };
+
         try {
           // 방법 1: prose 클래스에서 JSON 텍스트 찾기
           const proseElements = document.querySelectorAll('.prose, [class*="prose"]');
@@ -733,7 +755,26 @@ export class PerplexityCrawler {
             }
           }
 
-          // 방법 3: 특정 클래스나 ID를 가진 요소에서 찾기
+          // 방법 3: 코드 하이라이팅된 JSON 추출 (새로운 형식)
+          if (validJsonObjects.length === 0) {
+            const codeElements = document.querySelectorAll('code, [class*="code"], pre code');
+            for (const codeElement of codeElements) {
+              // 코드 요소의 모든 텍스트 노드에서 JSON 재구성
+              const jsonText = extractJsonFromCodeElement(codeElement);
+              if (jsonText && jsonText.includes('"youtube_link"')) {
+                try {
+                  const parsed = JSON.parse(jsonText);
+                  if (parsed && typeof parsed === 'object' && parsed.youtube_link) {
+                    validJsonObjects.push(parsed);
+                  }
+                } catch (parseError) {
+                  continue;
+                }
+              }
+            }
+          }
+
+          // 방법 4: 특정 클래스나 ID를 가진 요소에서 찾기
           if (validJsonObjects.length === 0) {
             const targetSelectors = [
               '[id*="markdown"]',
@@ -778,7 +819,7 @@ export class PerplexityCrawler {
         // 모든 JSON 코드 블록 찾기 (HTML 구조에 맞게 수정)
         const validJsonObjects: any[] = [];
 
-        // 방법 1: pre 태그 안의 code 태그 찾기
+        // 방법 1: pre 태그 안의 code 태그 찾기 (코드 하이라이팅 포함)
         const preElements = Array.from(document.querySelectorAll('pre')).reverse();
 
         for (const pre of preElements) {
@@ -786,7 +827,12 @@ export class PerplexityCrawler {
           const codeElement = pre.querySelector('code');
           if (!codeElement) continue;
 
-          const text = codeElement.textContent?.trim() || '';
+          // 코드 하이라이팅된 경우 텍스트 노드만 추출
+          let text = codeElement.textContent?.trim() || '';
+          if (!text || text.length < 10) {
+            // textContent가 제대로 추출되지 않은 경우 (하이라이팅된 경우)
+            text = extractJsonFromCodeElement(codeElement);
+          }
           if (!text) continue;
 
           // 하나의 code 태그 안에 여러 JSON 객체가 있을 수 있음
