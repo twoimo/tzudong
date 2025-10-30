@@ -853,7 +853,8 @@ export class PerplexityCrawler {
       '이탈리아', 'Italy', 'Rome', '로마',
       '스페인', 'Spain', 'Madrid', '마드리드',
       '캐나다', 'Canada', 'Toronto', '토론토',
-      '호주', 'Australia', 'Sydney', '시드니'
+      '호주', 'Australia', 'Sydney', '시드니',
+      '헝가리', 'Hungary', 'Budapest', '부다페스트'
     ];
 
     return foreignKeywords.some(keyword => address.includes(keyword));
