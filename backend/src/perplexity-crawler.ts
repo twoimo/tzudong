@@ -684,6 +684,96 @@ export class PerplexityCrawler {
       // JSON 코드 블록 찾기 (Puppeteer locator 활용) - 여러 개의 JSON 객체 지원
       console.log('🔍 JSON 응답 추출 중...');
 
+      // HTML 응답에서 JSON 추출을 시도하는 함수
+      const extractJsonFromHtml = () => {
+        const validJsonObjects: any[] = [];
+
+        try {
+          // 방법 1: prose 클래스에서 JSON 텍스트 찾기
+          const proseElements = document.querySelectorAll('.prose, [class*="prose"]');
+          for (const prose of proseElements) {
+            const text = prose.textContent?.trim() || '';
+            if (!text) continue;
+
+            // JSON 패턴 찾기 (중괄호로 시작하고 끝나는 텍스트)
+            const jsonMatches = text.match(/\{[^}]*"youtube_link"[^}]*\}/g);
+            if (jsonMatches) {
+              for (const jsonMatch of jsonMatches) {
+                try {
+                  const parsed = JSON.parse(jsonMatch);
+                  // 유효한 JSON 객체인지 확인
+                  if (parsed && typeof parsed === 'object' && parsed.youtube_link) {
+                    validJsonObjects.push(parsed);
+                  }
+                } catch (parseError) {
+                  // JSON 파싱 실패 시 다음으로
+                  continue;
+                }
+              }
+            }
+          }
+
+          // 방법 2: 모든 텍스트 노드에서 JSON 패턴 찾기
+          if (validJsonObjects.length === 0) {
+            const allText = document.body.textContent || '';
+            const jsonPattern = /\{[^{}]*(?:"youtube_link":[^{}]*"https?:\/\/[^"]*")[^{}]*\}/g;
+            const matches = allText.match(jsonPattern);
+
+            if (matches) {
+              for (const match of matches) {
+                try {
+                  const parsed = JSON.parse(match);
+                  if (parsed && typeof parsed === 'object' && parsed.youtube_link) {
+                    validJsonObjects.push(parsed);
+                  }
+                } catch (parseError) {
+                  continue;
+                }
+              }
+            }
+          }
+
+          // 방법 3: 특정 클래스나 ID를 가진 요소에서 찾기
+          if (validJsonObjects.length === 0) {
+            const targetSelectors = [
+              '[id*="markdown"]',
+              '[class*="content"]',
+              'p',
+              'div'
+            ];
+
+            for (const selector of targetSelectors) {
+              const elements = document.querySelectorAll(selector);
+              for (const element of elements) {
+                const text = element.textContent?.trim() || '';
+                if (text.includes('"youtube_link"') && text.includes('{') && text.includes('}')) {
+                  // JSON 시작과 끝 찾기
+                  const startIndex = text.indexOf('{');
+                  const endIndex = text.lastIndexOf('}');
+
+                  if (startIndex !== -1 && endIndex !== -1 && endIndex > startIndex) {
+                    const jsonText = text.substring(startIndex, endIndex + 1);
+                    try {
+                      const parsed = JSON.parse(jsonText);
+                      if (parsed && typeof parsed === 'object' && parsed.youtube_link) {
+                        validJsonObjects.push(parsed);
+                      }
+                    } catch (parseError) {
+                      continue;
+                    }
+                  }
+                }
+              }
+            }
+          }
+
+        } catch (error) {
+          console.log('HTML에서 JSON 추출 중 오류:', error);
+        }
+
+        return validJsonObjects;
+      };
+
       const jsonResults = await this.page.evaluate(() => {
         // 모든 JSON 코드 블록 찾기 (HTML 구조에 맞게 수정)
         const validJsonObjects: any[] = [];
@@ -801,7 +891,18 @@ export class PerplexityCrawler {
         return validJsonObjects;
       });
 
+      // HTML 응답에서 JSON 추출 시도 (기존 방법으로 못 찾았을 경우)
+      let htmlJsonResults: any[] = [];
       if (!jsonResults || jsonResults.length === 0) {
+        console.log('📄 기존 방법으로 JSON을 찾지 못함, HTML에서 추출 시도...');
+        htmlJsonResults = await this.page.evaluate(extractJsonFromHtml);
+        console.log(`📄 HTML에서 ${htmlJsonResults.length}개의 JSON 객체 발견`);
+      }
+
+      // 두 가지 방법의 결과를 통합
+      const allJsonResults = [...(jsonResults || []), ...htmlJsonResults];
+
+      if (!allJsonResults || allJsonResults.length === 0) {
         // 디버깅을 위해 현재 페이지 상태 확인
         const pageContent = await this.page.content();
         console.error('❌ 페이지 내용 미리보기:', pageContent.substring(0, 1000));
@@ -815,12 +916,12 @@ export class PerplexityCrawler {
         throw new Error('유효한 JSON 응답을 찾을 수 없습니다. 페이지 로드를 확인해주세요.');
       }
 
-      console.log(`✅ ${jsonResults.length}개의 JSON 응답 발견`);
+      console.log(`✅ ${allJsonResults.length}개의 JSON 응답 발견`);
 
       // 모든 유효한 JSON 객체들을 RestaurantInfo로 변환
       const restaurantInfos: RestaurantInfo[] = [];
 
-      for (const jsonObj of jsonResults) {
+      for (const jsonObj of allJsonResults) {
         // YouTube 링크 검증
         if (jsonObj.youtube_link !== youtubeLink) {
           console.log(`⚠️ 링크 불일치: ${jsonObj.youtube_link}`);
