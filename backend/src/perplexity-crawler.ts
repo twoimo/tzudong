@@ -1450,6 +1450,17 @@ export class PerplexityCrawler {
       /\{attached_file:\d+\([^)]*\)\}/g,  // {attached_file:1(ts:176, ts:514, ts:579)}
       /\{ts:\d+(?:,\s*\d+)+\}/g,  // {ts:613, 643}
       /\(ts:\d+\)/g,  // (ts:59)
+
+      // 새로 추가된 패턴들
+      /\(\s*at\s*,\s*\)/g,  // ( at , )
+      /\(ts:\d+\.\d+\)/g,  // (ts:64.001), (ts:80.84)
+      /\(ts:\d+(?:,\s*ts:\d+)+\)/g,  // (ts:96, ts:104), (ts:453, ts:473, ts:430)
+      /\[attached_file:\d+:\s*\d+(?:,\s*\d+)*\]/g,  // [attached_file:1: 300, 797], [attached_file:1: 54]
+      /\[attached_file:\d+(?:,\s*(?:ts:\d+|(?:\d+,\s*)+\d+))+\]/g,  // [attached_file:1, ts:57, 66, 114], [attached_file:1, ts:323, ts:634, ts:694]
+      /\(attached_file:\d+/g,  // (attached_file:1 (괄호 시작 부분)
+      /\(web:\d+(?:,\s*\d+)+\)/g,  // (web:2, 36, 45)
+      /\{attached_file:\d+\}/g,  // {attached_file:1}
+      /\{ts:\d+(?:,\s*attached_file:\d+)+\}/g,  // {ts:67, attached_file:1}
     ];
 
     let cleanedText = text;
