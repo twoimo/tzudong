@@ -75,6 +75,7 @@ export class PerplexityCrawler {
         ],
         ignoreDefaultArgs: ['--disable-extensions'],
         timeout: 120000, // 2분으로 증가
+        protocolTimeout: 300000, // 5분으로 CDP 프로토콜 타임아웃 증가
         // 브라우저 프로세스 유지 설정
         handleSIGHUP: false,
         handleSIGTERM: false,
@@ -120,8 +121,8 @@ export class PerplexityCrawler {
               console.log('📋 세션 스토리지 복원 완료');
             }
 
-            // 페이지 새로고침으로 세션 적용
-            await this.page.reload({ waitUntil: 'networkidle0' });
+            // 페이지 새로고침으로 세션 적용 (타임아웃 증가)
+            await this.page.reload({ waitUntil: 'networkidle0', timeout: 60000 });
             console.log('🔄 페이지 새로고침으로 세션 적용');
 
             // 세션 복원 후 실제 로그인 상태 검증
@@ -183,11 +184,11 @@ export class PerplexityCrawler {
         await this.checkForGoogleLoginPage();
       }
 
-      // 퍼플렉시티 페이지로 이동
+      // 퍼플렉시티 페이지로 이동 (타임아웃 증가)
       console.log('🌐 퍼플렉시티로 이동 중...');
       const response = await this.page.goto('https://www.perplexity.ai/', {
         waitUntil: 'networkidle0',
-        timeout: 60000
+        timeout: 120000 // 2분으로 증가
       });
 
       if (!response || !response.ok()) {
@@ -578,70 +579,106 @@ export class PerplexityCrawler {
         console.log('ℹ️ Enter 키로 제출');
       }
 
-      // 응답이 나타날 때까지 대기
+      // 응답이 나타날 때까지 대기 (재시도 로직 포함)
       console.log(`⏳ ${youtubeLink} 응답 대기 중...`);
 
-      try {
-        // JSON 코드 블록이 나타날 때까지 대기 (최대 10분)
-        await this.page.waitForSelector('pre code', {
-          timeout: 10 * 60 * 1000 // 10분
-        });
+      const maxRetries = 2; // 최대 2번 재시도
+      let currentRetry = 0;
 
-        // JSON 내용이 완전히 로드될 때까지 추가 대기 (여러 개의 JSON 객체 지원)
+      while (currentRetry <= maxRetries) {
+        try {
+          if (currentRetry > 0) {
+            console.log(`🔄 응답 대기 재시도 ${currentRetry}/${maxRetries}...`);
+            // 재시도 전 페이지 새로고침 (타임아웃 증가)
+            await this.page.reload({ waitUntil: 'networkidle0', timeout: 60000 });
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+          // JSON 코드 블록이 나타날 때까지 대기 (최대 15분으로 증가)
+          console.log('🎯 JSON 코드 블록 대기 시작...');
+          await this.page.waitForSelector('pre code', {
+            timeout: 15 * 60 * 1000 // 15분으로 증가
+          });
+          console.log('✅ JSON 코드 블록 발견!');
 
-        // 충분한 시간을 두고 모든 JSON 객체가 생성될 때까지 기다림
-        console.log('⏳ 응답 생성 대기 중...');
+          // JSON 내용이 완전히 로드될 때까지 추가 대기 (여러 개의 JSON 객체 지원)
 
-        await this.page.waitForFunction(() => {
-          const codeElements = document.querySelectorAll('pre code');
+          // 충분한 시간을 두고 모든 JSON 객체가 생성될 때까지 기다림
+          console.log('⏳ 응답 생성 대기 중...');
 
-          for (const code of codeElements) {
-            const text = code.textContent?.trim() || '';
-            if (!text) continue;
+          // JSON 내용 검증 함수
+          const checkJsonContent = () => {
+            try {
+              const codeElements = document.querySelectorAll('pre code');
 
-            const lines = text.split('\n');
-            let validJsonCount = 0;
-            let hasValidResponse = false;
+              for (const code of codeElements) {
+                const text = code.textContent?.trim() || '';
+                if (!text) continue;
 
-            for (const line of lines) {
-              const trimmedLine = line.trim();
-              if (!trimmedLine) continue;
+                const lines = text.split('\n');
+                let validJsonCount = 0;
+                let hasValidResponse = false;
 
-              if (trimmedLine.startsWith('{') &&
-                trimmedLine.endsWith('}') &&
-                trimmedLine.includes('"youtube_link"')) {
-                try {
-                  const parsed = JSON.parse(trimmedLine);
-                  // 유효한 JSON 객체인지 확인 (최소 youtube_link가 있고 name이 null이 아니거나 reasoning_basis가 있는 경우)
-                  if (parsed.youtube_link && (parsed.name !== null || parsed.reasoning_basis)) {
-                    validJsonCount++;
-                    hasValidResponse = true;
+                for (const line of lines) {
+                  const trimmedLine = line.trim();
+                  if (!trimmedLine) continue;
+
+                  if (trimmedLine.startsWith('{') &&
+                    trimmedLine.endsWith('}') &&
+                    trimmedLine.includes('"youtube_link"')) {
+                    try {
+                      const parsed = JSON.parse(trimmedLine);
+                      // 유효한 JSON 객체인지 확인 (최소 youtube_link가 있고 name이 null이 아니거나 reasoning_basis가 있는 경우)
+                      if (parsed.youtube_link && (parsed.name !== null || parsed.reasoning_basis)) {
+                        validJsonCount++;
+                        hasValidResponse = true;
+                      }
+                    } catch {
+                      continue;
+                    }
                   }
-                } catch {
-                  continue;
+                }
+
+                // 최소 1개의 유효한 응답이 있으면 진행 (식당 정보가 없어도 정상 응답으로 처리)
+                if (hasValidResponse) {
+                  return true;
                 }
               }
+              return false;
+            } catch (error) {
+              console.log('JSON 검증 중 오류:', error);
+              return false;
             }
+          };
 
-            // 최소 1개의 유효한 응답이 있으면 진행 (식당 정보가 없어도 정상 응답으로 처리)
-            if (hasValidResponse) {
-              return true;
-            }
+          // JSON 내용 검증 대기 (타임아웃 5분으로 증가)
+          await this.page.waitForFunction(checkJsonContent, {
+            timeout: 5 * 60 * 1000 // 5분으로 증가
+          });
+
+          console.log('✅ 응답 생성 완료, 안정화 대기...');
+          await new Promise(resolve => setTimeout(resolve, 10000));
+
+          console.log('✅ 응답 로드 완료!');
+
+          // 최종 안정화를 위해 잠시 대기
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          break; // 성공했으므로 루프 탈출
+
+        } catch (error) {
+          console.error(`❌ 응답 대기 ${currentRetry + 1}번째 시도 실패:`, error);
+
+          if (currentRetry >= maxRetries) {
+            // 최대 재시도 횟수 초과
+            throw new Error(`타임아웃 내에 응답을 받지 못함 (재시도 ${maxRetries}회 실패): ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
           }
-          return false;
-        }, { timeout: 60000 });
 
-        console.log('✅ 응답 생성 완료, 안정화 대기...');
-        await new Promise(resolve => setTimeout(resolve, 10000));
+          currentRetry++;
+          console.log(`⏳ ${currentRetry}번째 재시도 준비 중...`);
 
-        console.log('✅ 응답 로드 완료!');
-
-        // 최종 안정화를 위해 잠시 대기
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-      } catch (error) {
-        console.error('❌ 응답 타임아웃 또는 감지 실패:', error);
-        throw new Error(`타임아웃 내에 응답을 받지 못함: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+          // 재시도 전 대기
+          await new Promise(resolve => setTimeout(resolve, 10000));
+        }
       }
 
       // JSON 코드 블록 찾기 (Puppeteer locator 활용) - 여러 개의 JSON 객체 지원
