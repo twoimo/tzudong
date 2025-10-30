@@ -688,8 +688,8 @@ export class PerplexityCrawler {
       const extractJsonFromHtml = () => {
         const validJsonObjects: any[] = [];
 
-        // 코드 요소에서 JSON 텍스트 추출 헬퍼 함수
-        const extractJsonFromCodeElement = (element: Element): string => {
+        // 코드 요소에서 JSON 텍스트 추출 헬퍼 함수 (중복 정의)
+        const extractJsonFromCodeElementLocal = (element: Element): string => {
           let jsonText = '';
 
           // 재귀적으로 모든 텍스트 노드 찾기
@@ -760,7 +760,7 @@ export class PerplexityCrawler {
             const codeElements = document.querySelectorAll('code, [class*="code"], pre code');
             for (const codeElement of codeElements) {
               // 코드 요소의 모든 텍스트 노드에서 JSON 재구성
-              const jsonText = extractJsonFromCodeElement(codeElement);
+              const jsonText = extractJsonFromCodeElementLocal(codeElement);
               if (jsonText && jsonText.includes('"youtube_link"')) {
                 try {
                   const parsed = JSON.parse(jsonText);
@@ -818,6 +818,28 @@ export class PerplexityCrawler {
       const jsonResults = await this.page.evaluate(() => {
         // 모든 JSON 코드 블록 찾기 (HTML 구조에 맞게 수정)
         const validJsonObjects: any[] = [];
+
+        // 코드 요소에서 JSON 텍스트 추출 헬퍼 함수
+        const extractJsonFromCodeElement = (element: Element): string => {
+          let jsonText = '';
+
+          // 재귀적으로 모든 텍스트 노드 찾기
+          const walkTextNodes = (node: Node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              // 텍스트 노드의 내용 추가
+              jsonText += node.textContent || '';
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+              // 요소 노드인 경우 자식 노드들 순회
+              const childNodes = node.childNodes;
+              for (let i = 0; i < childNodes.length; i++) {
+                walkTextNodes(childNodes[i]);
+              }
+            }
+          };
+
+          walkTextNodes(element);
+          return jsonText.trim();
+        };
 
         // 방법 1: pre 태그 안의 code 태그 찾기 (코드 하이라이팅 포함)
         const preElements = Array.from(document.querySelectorAll('pre')).reverse();
