@@ -10,9 +10,17 @@ const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Grid3X3, Map, MapPin, Star, Users, ChefHat } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant, Region } from "@/types/restaurant";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface IndexProps {
   refreshTrigger: number;
@@ -26,6 +34,8 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
   const [isGridMode, setIsGridMode] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
     minRating: 1,
@@ -36,6 +46,11 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
+  };
+
+  const handleRequestEditRestaurant = (restaurant: Restaurant) => {
+    setRestaurantToEdit(restaurant);
+    setIsEditModalOpen(true);
   };
 
   const handleRegionChange = (region: Region | null) => {
@@ -253,6 +268,7 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
               selectedRestaurant={selectedRestaurant}
               refreshTrigger={refreshTrigger}
               onAdminEditRestaurant={onAdminEditRestaurant}
+              onRequestEditRestaurant={handleRequestEditRestaurant}
               isGridMode={false}
               onRestaurantSelect={setSelectedRestaurant} // 단일 모드에서도 선택 상태 관리
             />
@@ -270,6 +286,175 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
           </SheetContent>
         </Sheet>
       </Suspense>
+
+      {/* 맛집 수정 요청 모달 */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+              맛집 수정 요청
+            </DialogTitle>
+            <DialogDescription>
+              잘못된 정보나 오타가 있는 맛집 정보를 수정해주세요
+            </DialogDescription>
+          </DialogHeader>
+
+          {restaurantToEdit && (
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              try {
+                const formData = new FormData(e.target as HTMLFormElement);
+                const updatedData = {
+                  name: formData.get('name') as string,
+                  address: formData.get('address') as string,
+                  phone: formData.get('phone') as string,
+                  category: formData.get('category') as string,
+                  youtube_link: formData.get('youtube_link') as string,
+                  description: formData.get('description') as string,
+                };
+
+                // restaurant_submissions 테이블에 수정 요청 저장
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) {
+                  throw new Error('로그인이 필요합니다.');
+                }
+
+                const { error } = await supabase
+                  .from('restaurant_submissions')
+                  .insert({
+                    user_id: user.id,
+                    submission_type: 'update',
+                    restaurant_name: updatedData.name,
+                    address: updatedData.address,
+                    phone: updatedData.phone || null,
+                    category: [updatedData.category], // TEXT[] 타입이므로 배열로
+                    youtube_link: updatedData.youtube_link || null,
+                    description: updatedData.description || null,
+                    original_restaurant_id: restaurantToEdit.id,
+                    status: 'pending'
+                  });
+
+                if (error) throw error;
+
+                toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
+                setIsEditModalOpen(false);
+                setRestaurantToEdit(null);
+              } catch (error) {
+                console.error('제출 실패:', error);
+                toast.error('제출에 실패했습니다. 다시 시도해주세요.');
+              }
+            }} className="space-y-4 mt-4">
+              {/* 기존 정보 표시 */}
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h3 className="font-semibold mb-2">현재 정보</h3>
+                <div className="text-sm space-y-1">
+                  <p><strong>이름:</strong> {restaurantToEdit.name}</p>
+                  <p><strong>주소:</strong> {restaurantToEdit.address}</p>
+                  <p><strong>전화번호:</strong> {restaurantToEdit.phone}</p>
+                  <p><strong>카테고리:</strong> {Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category.join(', ') : restaurantToEdit.category}</p>
+                  <p><strong>유튜브:</strong> {restaurantToEdit.youtube_link || '없음'}</p>
+                  <p><strong>쯔양 리뷰:</strong> {restaurantToEdit.description ? '있음' : '없음'}</p>
+                </div>
+              </div>
+
+              {/* 수정할 정보 입력 */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">
+                    맛집 이름 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    defaultValue={restaurantToEdit.name}
+                    placeholder="맛집 이름을 입력해주세요"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address">
+                    주소 <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    defaultValue={restaurantToEdit.address}
+                    placeholder="주소를 입력해주세요"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phone">전화번호</Label>
+                  <Input
+                    id="phone"
+                    name="phone"
+                    defaultValue={restaurantToEdit.phone}
+                    placeholder="전화번호를 입력해주세요"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">
+                    카테고리 <span className="text-red-500">*</span>
+                  </Label>
+                  <Select name="category" defaultValue={Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : (restaurantToEdit.category as string)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="카테고리를 선택해주세요" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="한식">한식</SelectItem>
+                      <SelectItem value="중식">중식</SelectItem>
+                      <SelectItem value="일식">일식</SelectItem>
+                      <SelectItem value="양식">양식</SelectItem>
+                      <SelectItem value="분식">분식</SelectItem>
+                      <SelectItem value="치킨·피자">치킨·피자</SelectItem>
+                      <SelectItem value="고기">고기</SelectItem>
+                      <SelectItem value="족발·보쌈">족발·보쌈</SelectItem>
+                      <SelectItem value="돈까스·회">돈까스·회</SelectItem>
+                      <SelectItem value="아시안">아시안</SelectItem>
+                      <SelectItem value="패스트푸드">패스트푸드</SelectItem>
+                      <SelectItem value="카페·디저트">카페·디저트</SelectItem>
+                      <SelectItem value="기타">기타</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="youtube_link">쯔양 유튜브 영상 링크</Label>
+                  <Input
+                    id="youtube_link"
+                    name="youtube_link"
+                    defaultValue={restaurantToEdit.youtube_link}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">쯔양의 리뷰</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    defaultValue={restaurantToEdit.description}
+                    placeholder="쯔양의 리뷰 내용을 입력해주세요"
+                    rows={4}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">
+                  취소
+                </Button>
+                <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90">
+                  수정 요청 제출
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 });

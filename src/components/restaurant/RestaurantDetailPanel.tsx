@@ -82,7 +82,7 @@ export function RestaurantDetailPanel({
 
     const getYouTubeThumbnailUrl = (url: string) => {
         const videoId = extractYouTubeVideoId(url);
-        return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+        return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
     };
 
     const handleGetDirections = () => {

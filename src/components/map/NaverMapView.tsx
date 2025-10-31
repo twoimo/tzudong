@@ -29,12 +29,13 @@ interface NaverMapViewProps {
     refreshTrigger: number;
     onAdminAddRestaurant?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+    onRequestEditRestaurant?: (restaurant: Restaurant) => void;
     isGridMode?: boolean;
     gridSelectedRestaurant?: Restaurant | null; // 그리드 모드에서 각 그리드별 선택된 맛집
     onRestaurantSelect?: (restaurant: Restaurant) => void;
 }
 
-const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminEditRestaurant, isGridMode = false, gridSelectedRestaurant, onRestaurantSelect }: NaverMapViewProps) => {
+const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminEditRestaurant, onRequestEditRestaurant, isGridMode = false, gridSelectedRestaurant, onRestaurantSelect }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
@@ -381,6 +382,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         }}
                         onEditRestaurant={onAdminEditRestaurant ? () => {
                             onAdminEditRestaurant(selectedRestaurant);
+                        } : undefined}
+                        onRequestEditRestaurant={onRequestEditRestaurant ? () => {
+                            onRequestEditRestaurant(selectedRestaurant);
                         } : undefined}
                     />
                 </div>
