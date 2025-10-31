@@ -12,25 +12,22 @@ interface UseRestaurantsOptions {
     };
     category?: string[];
     region?: Region;
-    minRating?: number;
     minReviews?: number;
-    minUserVisits?: number;
-    minJjyangVisits?: number;
     enabled?: boolean;
 }
 
 export function useRestaurants(options: UseRestaurantsOptions = {}) {
-    const { bounds, category, region, minRating, minReviews, minUserVisits, minJjyangVisits, enabled = true } = options;
+    const { bounds, category, region, minReviews, enabled = true } = options;
 
     return useQuery({
-        queryKey: ["restaurants", bounds, category, region, minRating, minReviews, minUserVisits, minJjyangVisits],
+        queryKey: ["restaurants", bounds, category, region, minReviews],
         staleTime: 5 * 60 * 1000, // 5분 동안 fresh 상태 유지
         gcTime: 10 * 60 * 1000, // 10분 동안 캐시 유지
         queryFn: async () => {
             let query = supabase
                 .from("restaurants")
                 .select("*")
-                .order("ai_rating", { ascending: false });
+                .order("name"); // 이름순으로 정렬
 
             // Apply bounds filter if provided
             if (bounds) {
@@ -62,24 +59,9 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 }
             }
 
-            // Apply rating filter
-            if (minRating && minRating > 1) {
-                query = query.gte("ai_rating", minRating);
-            }
-
             // Apply review count filter
             if (minReviews && minReviews > 0) {
                 query = query.gte("review_count", minReviews);
-            }
-
-            // Apply user visit count filter
-            if (minUserVisits && minUserVisits > 0) {
-                query = query.gte("visit_count", minUserVisits);
-            }
-
-            // Apply jjyang visit count filter
-            if (minJjyangVisits && minJjyangVisits > 0) {
-                query = query.gte("jjyang_visit_count", minJjyangVisits);
             }
 
             const { data, error } = await query;

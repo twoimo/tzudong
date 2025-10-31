@@ -63,10 +63,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
         region: selectedRegion || undefined,
-        minRating: filters.minRating,
         minReviews: filters.minReviews,
-        minUserVisits: filters.minUserVisits,
-        minJjyangVisits: filters.minJjyangVisits,
         enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
     });
 
@@ -250,11 +247,32 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
             // 모든 마커를 한 번에 생성 (DOM 조작 최소화)
             markersToCreate.forEach((restaurant) => {
-                const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
                 // 그리드 모드에서는 gridSelectedRestaurant, 단일 모드에서는 props의 selectedRestaurant 사용
                 const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
                 const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
-                const icon = isHotPlace ? '🔥' : '⭐';
+                // 카테고리별 적절한 이모티콘으로 변경
+                const getCategoryIcon = (category: string) => {
+                    const iconMap: { [key: string]: string } = {
+                        '고기': '🥩',
+                        '치킨': '🍗',
+                        '한식': '🍚',
+                        '중식': '🥢',
+                        '일식': '🍣',
+                        '양식': '🍝',
+                        '분식': '🥟',
+                        '카페·디저트': '☕',
+                        '아시안': '🍜',
+                        '패스트푸드': '🍔',
+                        '족발·보쌈': '🍖',
+                        '돈까스·회': '🍱',
+                        '찜·탕': '🥘',
+                        '야식': '🌙',
+                        '도시락': '🍱'
+                    };
+                    return iconMap[category] || '⭐'; // 기본값은 별표
+                };
+
+                const icon = getCategoryIcon(restaurant.category);
 
                 // 선택된 맛집은 더 큰 크기와 강조 효과
                 const size = isSelected ? 36 : 28;

@@ -36,8 +36,6 @@ export function AdminRestaurantModal({
         description: "",
         lat: "",
         lng: "",
-        rating_ai: "",
-        jjyang_visit_count: "",
     });
 
     useEffect(() => {
@@ -51,8 +49,6 @@ export function AdminRestaurantModal({
                 description: restaurant.description || "",
                 lat: String(restaurant.lat || ""),
                 lng: String(restaurant.lng || ""),
-                rating_ai: String(restaurant.ai_rating || ""),
-                jjyang_visit_count: String(restaurant.jjyang_visit_count || ""),
             });
         } else {
             resetForm();
@@ -69,8 +65,6 @@ export function AdminRestaurantModal({
             description: "",
             lat: "",
             lng: "",
-            rating_ai: "",
-            jjyang_visit_count: "",
         });
     };
 
@@ -140,8 +134,6 @@ export function AdminRestaurantModal({
                 description: formData.description.trim() || null,
                 lat,
                 lng,
-                ai_rating: formData.rating_ai ? parseFloat(formData.rating_ai) : null,
-                jjyang_visit_count: formData.jjyang_visit_count ? parseInt(formData.jjyang_visit_count) : 0,
             };
 
             let error;
@@ -358,36 +350,6 @@ export function AdminRestaurantModal({
                                 placeholder="126.9780"
                             />
                         </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="rating_ai">AI 별점 (1-10)</Label>
-                            <Input
-                                id="rating_ai"
-                                type="number"
-                                step="0.1"
-                                min="1"
-                                max="10"
-                                value={formData.rating_ai}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, rating_ai: e.target.value })
-                                }
-                                placeholder="8.5"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="space-y-2">
-                        <Label htmlFor="jjyang_visit_count">쯔양 방문횟수</Label>
-                        <Input
-                            id="jjyang_visit_count"
-                            type="number"
-                            min="0"
-                            value={formData.jjyang_visit_count}
-                            onChange={(e) =>
-                                setFormData({ ...formData, jjyang_visit_count: e.target.value })
-                            }
-                            placeholder="쯔양이 방문한 횟수"
-                        />
                     </div>
 
                     <div className="space-y-2">

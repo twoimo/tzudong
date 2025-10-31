@@ -47,10 +47,7 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
   });
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
-    minRating: 1,
     minReviews: 0,
-    minUserVisits: 0,
-    minJjyangVisits: 0,
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
