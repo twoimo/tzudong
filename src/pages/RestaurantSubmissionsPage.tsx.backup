@@ -1,4 +1,5 @@
-﻿import { useState } from "react";
+﻿import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,10 +37,21 @@ interface RestaurantSubmission {
 export default function RestaurantSubmissionsPage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const location = useLocation();
     const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
     const [submissionMode, setSubmissionMode] = useState<'new' | 'update'>('new');
     const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
     const [originalData, setOriginalData] = useState<any>(null);
+
+    // URL state에서 수정 모드 확인
+    useEffect(() => {
+        if (location.state?.mode === 'update' && location.state?.restaurant) {
+            setSubmissionMode('update');
+            setSelectedRestaurant(location.state.restaurant);
+            setOriginalData(location.state.restaurant);
+            setIsSubmitModalOpen(true); // 수정 모달 자동 열기
+        }
+    }, [location.state]);
     const [formData, setFormData] = useState({
         restaurant_name: "",
         address: "",
@@ -501,34 +513,9 @@ export default function RestaurantSubmissionsPage() {
                 )}
             </div>
 
-            {/* 제보 모달 */}
-            <Dialog open={isSubmitModalOpen} onOpenChange={setIsSubmitModalOpen}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                            {submissionMode === 'new' ? '쯔양 맛집 제보하기' : '맛집 수정 요청'}
-                        </DialogTitle>
-                        <DialogDescription>
-                            {submissionMode === 'new'
-                                ? '쯔양이 방문한 맛집 정보와 유튜브 영상 링크를 알려주세요'
-                                : '잘못된 정보나 오타가 있는 맛집 정보를 수정해주세요'
-                            }
-                        </DialogDescription>
-                    </DialogHeader>
-
-                    <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                        {/* 기존 맛집 선택 (수정 요청 모드일 때만) */}
-                        {submissionMode === 'update' && (
-                            <div className="space-y-2">
-                                <Label>
-                                    수정할 맛집 선택 <span className="text-red-500">*</span>
-                                </Label>
-                                <Select
-                                    value={selectedRestaurant?.id || ""}
-                                    onValueChange={(value) => {
-                                        const restaurant = allRestaurants.find(r => r.id === value);
-                                        if (restaurant) {
-                                            handleRestaurantSelect(restaurant);
+        </div>
+    );
+}
                                         }
                                     }}
                                 >
