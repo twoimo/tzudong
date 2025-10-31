@@ -129,3 +129,63 @@ All colors MUST be HSL.
 .marker-icon {
   transform: translateZ(0);
 }
+
+/* 선택된 마커 애니메이션 */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.9);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.6), 0 0 0 5px rgba(255,255,255,1);
+  }
+}
+
+.selected-marker {
+  animation: pulse 2s infinite !important;
+}
+
+/* 네이버 지도 로고 숨기기 - 깜빡임 방지 */
+[class*="logo" i],
+[class*="Logo" i],
+img[alt*="naver" i],
+img[alt*="네이버" i],
+a[href*="naver.com"],
+a[href*="navercorp.com"],
+.naver-logo,
+#naver-logo,
+.logo-naver,
+[title*="NAVER"],
+[title*="네이버"],
+[data-naver-logo],
+[aria-label*="naver" i],
+[aria-label*="네이버" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+}
+
+/* Naver Maps iframe 내 로고 숨기기 */
+iframe[src*="naver.com"] ~ *,
+iframe[src*="navermaps"] ~ * {
+  [class*="logo" i],
+  [class*="Logo" i] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}
+
+/* 우측 하단 영역 로고 강제 숨김 */
+body > div:last-child [class*="logo" i],
+body > div:last-child [class*="Logo" i] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
