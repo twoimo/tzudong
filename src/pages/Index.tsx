@@ -119,9 +119,14 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                   isGridMode={true}
                   onRestaurantSelect={(restaurant) => handleGridRestaurantSelect(region, restaurant)}
                 />
-                <div className="absolute top-2 left-2 bg-background/90 backdrop-blur-sm rounded px-2 py-1 text-sm font-semibold shadow z-10">
-                  {region}
-                </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm hover:bg-background text-sm font-semibold shadow z-10 h-auto py-1 px-2 text-foreground"
+                onClick={() => switchToSingleMap(region)}
+              >
+                {region}
+              </Button>
 
                 {/* 각 그리드별 맛집 모달 - 그리드 안에서 표시 */}
                 {selectedRestaurant && (
