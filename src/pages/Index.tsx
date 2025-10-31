@@ -218,7 +218,6 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
             className="flex items-center gap-2"
           >
             {isGridMode ? <Map className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
-            {isGridMode ? "단일 지도" : "그리드 지도"}
           </Button>
         </div>
       </div>
