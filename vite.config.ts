@@ -33,4 +33,22 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React 관련 라이브러리 분리
+          'react-vendor': ['react', 'react-dom'],
+          // UI 라이브러리 분리
+          'ui-vendor': ['lucide-react', '@radix-ui/react-dialog', '@radix-ui/react-select'],
+          // 데이터 페칭 라이브러리 분리
+          'query-vendor': ['@tanstack/react-query', '@supabase/supabase-js'],
+          // 유틸리티 라이브러리 분리
+          'utils-vendor': ['clsx', 'tailwind-merge', 'class-variance-authority'],
+        },
+      },
+    },
+    // 청크 사이즈 경고 임계값 조정
+    chunkSizeWarningLimit: 600,
+  },
 }));
