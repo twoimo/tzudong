@@ -68,7 +68,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 zoom: regionConfig.zoom,
                 minZoom: 6,
                 maxZoom: 18,
-                zoomControl: true,
+                zoomControl: false,
                 zoomControlOptions: {
                     position: naver.maps.Position.TOP_RIGHT,
                 },
