@@ -20,6 +20,7 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<Region | null>("서울특별시");
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+  const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
   const [isGridMode, setIsGridMode] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -35,10 +36,18 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
 
   const handleRegionChange = (region: Region | null) => {
     setSelectedRegion(region);
+    // 지역 변경 시 검색 결과 초기화
+    setSearchedRestaurant(null);
   };
 
   const handleRestaurantSelect = (restaurant: Restaurant) => {
     // 선택된 맛집을 NaverMapView에 전달하기 위해 상태 업데이트
+    setSelectedRestaurant(restaurant);
+  };
+
+  const handleRestaurantSearch = (restaurant: Restaurant) => {
+    // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
+    setSearchedRestaurant(restaurant);
     setSelectedRestaurant(restaurant);
   };
 
@@ -74,6 +83,7 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
       setSelectedRegion(region);
       // 지역 필터링 시 검색된 맛집 초기화 (지역 우선 적용)
       setSelectedRestaurant(null);
+      setSearchedRestaurant(null);
     }
   };
 
@@ -89,6 +99,7 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
           />
           <RestaurantSearch
             onRestaurantSelect={handleRestaurantSelect}
+            onRestaurantSearch={handleRestaurantSearch}
             onSearchExecute={switchToSingleMap}
           />
           <Button
@@ -113,10 +124,12 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                 <NaverMapView
                   filters={filters}
                   selectedRegion={region}
-                  searchedRestaurant={null}
+                  searchedRestaurant={null} // 그리드 모드에서는 검색 기능 없음
+                  selectedRestaurant={null} // 그리드 모드에서는 단일 지도 selectedRestaurant 사용 안 함
                   refreshTrigger={refreshTrigger}
                   onAdminEditRestaurant={onAdminEditRestaurant}
                   isGridMode={true}
+                  gridSelectedRestaurant={selectedRestaurant} // 각 그리드별 선택된 맛집
                   onRestaurantSelect={(restaurant) => handleGridRestaurantSelect(region, restaurant)}
                 />
               <Button
@@ -222,17 +235,19 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
             );
           })}
         </div>
-      ) : (
-        // 단일 지도 모드
-        <NaverMapView
-          filters={filters}
-          selectedRegion={selectedRegion}
-          searchedRestaurant={selectedRestaurant}
-          refreshTrigger={refreshTrigger}
-          onAdminEditRestaurant={onAdminEditRestaurant}
-          isGridMode={false}
-        />
-      )}
+        ) : (
+          // 단일 지도 모드
+          <NaverMapView
+            filters={filters}
+            selectedRegion={selectedRegion}
+            searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
+            selectedRestaurant={selectedRestaurant}
+            refreshTrigger={refreshTrigger}
+            onAdminEditRestaurant={onAdminEditRestaurant}
+            isGridMode={false}
+            onRestaurantSelect={setSelectedRestaurant} // 단일 모드에서도 선택 상태 관리
+          />
+        )}
 
       <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
         <SheetContent side="left" className="w-80 p-0">

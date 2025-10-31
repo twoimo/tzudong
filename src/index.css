@@ -130,6 +130,22 @@ All colors MUST be HSL.
   transform: translateZ(0);
 }
 
+/* 선택된 마커 애니메이션 */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.9);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.6), 0 0 0 5px rgba(255,255,255,1);
+  }
+}
+
+.selected-marker {
+  animation: pulse 2s infinite !important;
+}
+
 /* 네이버 지도 로고 숨기기 - 깜빡임 방지 */
 [class*="logo" i],
 [class*="Logo" i],

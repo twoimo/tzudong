@@ -25,20 +25,21 @@ interface NaverMapViewProps {
     filters: FilterState;
     selectedRegion: Region | null;
     searchedRestaurant: Restaurant | null;
+    selectedRestaurant: Restaurant | null;
     refreshTrigger: number;
     onAdminAddRestaurant?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     isGridMode?: boolean;
+    gridSelectedRestaurant?: Restaurant | null; // 그리드 모드에서 각 그리드별 선택된 맛집
     onRestaurantSelect?: (restaurant: Restaurant) => void;
 }
 
-const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refreshTrigger, onAdminEditRestaurant, isGridMode = false, onRestaurantSelect }: NaverMapViewProps) => {
+const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminEditRestaurant, isGridMode = false, gridSelectedRestaurant, onRestaurantSelect }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
     const { isLoaded, loadError } = useNaverMaps();
 
-    const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
@@ -52,19 +53,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
     });
 
 
-    // refreshTrigger 변경 시 선택된 레스토랑 정보 업데이트
-    useEffect(() => {
-        if (selectedRestaurant) {
-            // 업데이트된 레스토랑 정보 찾기
-            const updatedRestaurant = restaurants.find(r => r.id === selectedRestaurant.id);
-            if (updatedRestaurant) {
-                setSelectedRestaurant(updatedRestaurant);
-            } else {
-                // 삭제된 경우에만 패널 닫기
-                setSelectedRestaurant(null);
-            }
-        }
-    }, [restaurants, refreshTrigger]);
 
     // 지도 초기화
     useEffect(() => {
@@ -80,7 +68,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
                 zoom: regionConfig.zoom,
                 minZoom: 6,
                 maxZoom: 18,
-                zoomControl: false,
+                zoomControl: true,
                 zoomControlOptions: {
                     position: naver.maps.Position.TOP_RIGHT,
                 },
@@ -197,8 +185,10 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
         mapInstanceRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
 
-        // 검색된 맛집을 컴포넌트 상태에 설정 (상세 패널 표시용)
-        setSelectedRestaurant(searchedRestaurant);
+        // 검색된 맛집을 부모 컴포넌트 상태에 설정
+        if (onRestaurantSelect) {
+            onRestaurantSelect(searchedRestaurant);
+        }
 
         // 토스트 메시지 표시
         toast.success(`"${searchedRestaurant.name}" 맛집을 찾았습니다!`);
@@ -241,20 +231,35 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
             // 모든 마커를 한 번에 생성 (DOM 조작 최소화)
             markersToCreate.forEach((restaurant) => {
                 const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
+                // 그리드 모드에서는 gridSelectedRestaurant, 단일 모드에서는 props의 selectedRestaurant 사용
+                const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
+                const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
                 const icon = isHotPlace ? '🔥' : '⭐';
                 const bgColor = isHotPlace ? '#ff4757' : '#3742fa';
-                const markerContent = `<div class="marker-icon" style="
+
+                // 선택된 맛집은 더 큰 크기와 강조 효과
+                const size = isSelected ? 36 : 28;
+                const borderWidth = isSelected ? 3 : 2;
+                const boxShadow = isSelected
+                    ? '0 4px 12px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.9)'
+                    : '0 2px 4px rgba(0,0,0,0.2)';
+                const animation = isSelected ? 'pulse 2s infinite' : 'none';
+
+                const markerContent = `<div class="marker-icon ${isSelected ? 'selected-marker' : ''}" style="
                     background: ${bgColor};
                     color: white;
                     border-radius: 50%;
-                    width: 28px;
-                    height: 28px;
+                    width: ${size}px;
+                    height: ${size}px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 13px;
-                    border: 2px solid white;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                    font-size: ${isSelected ? 15 : 13}px;
+                    border: ${borderWidth}px solid white;
+                    box-shadow: ${boxShadow};
+                    animation: ${animation};
+                    transform: ${isSelected ? 'scale(1.1)' : 'scale(1)'};
+                    transition: all 0.3s ease;
                 ">${icon}</div>`;
 
                 const marker = new naver.maps.Marker({
@@ -269,27 +274,22 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
                 // 마커 클릭 이벤트
                 naver.maps.Event.addListener(marker, "click", () => {
-                    // 그리드 모드에서는 부모 컴포넌트로 맛집 선택 전달
-                    if (isGridMode && onRestaurantSelect) {
+                    // 모든 모드에서 부모 컴포넌트로 맛집 선택 전달 (단일 모드에서도 상태 일관성 유지)
+                    if (onRestaurantSelect) {
                         onRestaurantSelect(restaurant);
-                        return;
                     }
 
-                    // 단일 지도 모드: 기존 동작 유지
-                    // 상세 패널이 이미 열려있는 경우 중심을 오른쪽으로 조정 (패널이 지도를 가리지 않도록)
-                    if (selectedRestaurant && selectedRestaurant.id !== restaurant.id) {
-                        // 다른 맛집의 상세 패널이 열려있을 때는 중심을 오른쪽으로 0.008도 이동 (약 800m)
-                        const adjustedLng = restaurant.lng + 0.008;
-                        mapInstanceRef.current.setCenter(new naver.maps.LatLng(restaurant.lat, adjustedLng));
-                    } else {
-                        // 상세 패널이 닫혀있거나 같은 맛집을 다시 선택한 경우 그대로 중심 설정
-                        mapInstanceRef.current.setCenter(new naver.maps.LatLng(restaurant.lat, restaurant.lng));
+                    // 단일 모드에서만 자연스러운 애니메이션으로 지도 재조정
+                    if (!isGridMode) {
+                        // 상세 패널이 오른쪽에 있으므로 마커를 약간 왼쪽으로 이동하여 중앙에 배치
+                        const offsetLng = restaurant.lng - 0.004; // 약 350m 왼쪽 오프셋 (더 자연스러운 위치)
+                        const targetLatLng = new naver.maps.LatLng(restaurant.lat, offsetLng);
+
+                        // 줌 레벨은 유지하고 중심만 부드럽게 이동
+                        mapInstanceRef.current.panTo(targetLatLng, {
+                            duration: 400 // 400ms 자연스러운 애니메이션
+                        });
                     }
-
-                    mapInstanceRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
-
-                    // 선택된 맛집을 컴포넌트 상태에 설정 (상세 패널 표시용)
-                    setSelectedRestaurant(restaurant);
                 });
 
                 newMarkers.push(marker);
@@ -301,7 +301,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant]);
 
     // 로딩 에러 처리
     if (loadError) {
@@ -373,7 +373,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
                 <div className="absolute right-0 top-0 h-full w-96 z-20 shadow-xl">
                     <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
-                        onClose={() => setSelectedRestaurant(null)}
+                        onClose={() => onRestaurantSelect && onRestaurantSelect(null)}
                         onWriteReview={() => {
                             setIsReviewModalOpen(true);
                         }}

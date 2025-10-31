@@ -13,7 +13,7 @@ export const NAVER_MAPS_CONFIG = {
 export const REGION_MAP_CONFIG = {
     "전국": { center: [36.5, 127.5], zoom: 7 }, // 한반도 전체가 보이도록 설정
     "서울특별시": { center: [37.5512, 126.9882], zoom: 12 },
-    "부산광역시": { center: [35.1152, 129.0415], zoom: 12 },
+    "부산광역시": { center: [35.1152, 129.0000], zoom: 12 },
     "대구광역시": { center: [35.8714, 128.6014], zoom: 12 },
     "인천광역시": { center: [37.4496, 126.6231], zoom: 12 },
     "광주광역시": { center: [35.1595, 126.8526], zoom: 12 },

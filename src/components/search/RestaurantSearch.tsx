@@ -9,10 +9,11 @@ import { cn } from "@/lib/utils";
 interface RestaurantSearchProps {
   onRestaurantSelect: (restaurant: Restaurant) => void;
   onSearchExecute?: () => void; // 그리드 모드에서 검색 실행 시 호출
+  onRestaurantSearch?: (restaurant: Restaurant) => void; // 검색 시 별도 처리
   className?: string;
 }
 
-const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, className }: RestaurantSearchProps) => {
+const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSearch, className }: RestaurantSearchProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -48,7 +49,12 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, className }: Re
   }, []);
 
   const handleSelect = (restaurant: Restaurant) => {
-    onRestaurantSelect(restaurant);
+    // 검색 시에는 별도 콜백 호출 (지도 재조정용)
+    if (onRestaurantSearch) {
+      onRestaurantSearch(restaurant);
+    } else {
+      onRestaurantSelect(restaurant);
+    }
     // 그리드 모드에서 검색 실행 시 콜백 호출
     onSearchExecute?.();
     setSearchQuery("");
