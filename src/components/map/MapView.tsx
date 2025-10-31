@@ -126,8 +126,7 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
 
     // Create new markers
     restaurants.forEach((restaurant) => {
-      const markerType = (restaurant.ai_rating ?? 0) >= 4 ? "fire" : "star";
-      const icon = markerType === "fire" ? "🔥" : "⭐";
+      const icon = "🔥"; // 모든 마커를 불꽃으로 통일
 
       const markerElement = document.createElement("div");
       markerElement.className = "custom-marker";

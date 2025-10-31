@@ -19,6 +19,7 @@ import { Card } from "@/components/ui/card";
 import { Grid3X3, Map, MapPin, Star, Users, ChefHat } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant, Region } from "@/types/restaurant";
+import { FilterState } from "@/components/filters/FilterPanel";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -38,6 +39,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
   const [isGridMode, setIsGridMode] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     name: '',
     address: '',
@@ -123,7 +125,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
   const gridRegions = ["서울특별시", "부산광역시", "대구광역시", "인천광역시"] as Region[];
 
   // 각 그리드별 선택된 맛집 상태
-  const [gridSelectedRestaurants, setGridSelectedRestaurants] = useState<{[key: string]: Restaurant | null}>({
+  const [gridSelectedRestaurants, setGridSelectedRestaurants] = useState<{ [key: string]: Restaurant | null }>({
     "서울특별시": null,
     "부산광역시": null,
     "대구광역시": null,
@@ -157,58 +159,58 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   return (
     <>
-        {/* 지역 선택 및 검색 컴포넌트 */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-          <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
-            <Suspense fallback={<div className="w-40 h-10 bg-muted animate-pulse rounded" />}>
-              <RegionSelector
-                selectedRegion={selectedRegion}
-                onRegionChange={setSelectedRegion}
-                onRegionSelect={switchToSingleMap}
-              />
-            </Suspense>
+      {/* 지역 선택 및 검색 컴포넌트 */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
+          <Suspense fallback={<div className="w-40 h-10 bg-muted animate-pulse rounded" />}>
+            <RegionSelector
+              selectedRegion={selectedRegion}
+              onRegionChange={setSelectedRegion}
+              onRegionSelect={switchToSingleMap}
+            />
+          </Suspense>
 
-            {/* 카테고리 필터링 */}
-            <Select
-              value={selectedCategories.length > 0 ? selectedCategories.join(',') : 'all'}
-              onValueChange={(value) => {
-                if (value === 'all') {
-                  handleCategoryChange([]);
-                } else {
-                  handleCategoryChange(value.split(',').filter(Boolean));
-                }
-              }}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="카테고리 필터" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체</SelectItem>
-                <SelectItem value="한식">한식</SelectItem>
-                <SelectItem value="중식">중식</SelectItem>
-                <SelectItem value="양식">양식</SelectItem>
-                <SelectItem value="분식">분식</SelectItem>
-                <SelectItem value="치킨">치킨</SelectItem>
-                <SelectItem value="피자">피자</SelectItem>
-                <SelectItem value="고기">고기</SelectItem>
-                <SelectItem value="족발·보쌈">족발·보쌈</SelectItem>
-                <SelectItem value="돈까스·회">돈까스·회</SelectItem>
-                <SelectItem value="아시안">아시안</SelectItem>
-                <SelectItem value="패스트푸드">패스트푸드</SelectItem>
-                <SelectItem value="카페·디저트">카페·디저트</SelectItem>
-                <SelectItem value="찜·탕">찜·탕</SelectItem>
-                <SelectItem value="야식">야식</SelectItem>
-                <SelectItem value="도시락">도시락</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* 카테고리 필터링 */}
+          <Select
+            value={selectedCategories.length > 0 ? selectedCategories.join(',') : 'all'}
+            onValueChange={(value) => {
+              if (value === 'all') {
+                handleCategoryChange([]);
+              } else {
+                handleCategoryChange(value.split(',').filter(Boolean));
+              }
+            }}
+          >
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="카테고리 필터" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">전체</SelectItem>
+              <SelectItem value="한식">한식</SelectItem>
+              <SelectItem value="중식">중식</SelectItem>
+              <SelectItem value="양식">양식</SelectItem>
+              <SelectItem value="분식">분식</SelectItem>
+              <SelectItem value="치킨">치킨</SelectItem>
+              <SelectItem value="피자">피자</SelectItem>
+              <SelectItem value="고기">고기</SelectItem>
+              <SelectItem value="족발·보쌈">족발·보쌈</SelectItem>
+              <SelectItem value="돈까스·회">돈까스·회</SelectItem>
+              <SelectItem value="아시안">아시안</SelectItem>
+              <SelectItem value="패스트푸드">패스트푸드</SelectItem>
+              <SelectItem value="카페·디저트">카페·디저트</SelectItem>
+              <SelectItem value="찜·탕">찜·탕</SelectItem>
+              <SelectItem value="야식">야식</SelectItem>
+              <SelectItem value="도시락">도시락</SelectItem>
+            </SelectContent>
+          </Select>
 
-            <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
-              <RestaurantSearch
-                onRestaurantSelect={handleRestaurantSelect}
-                onRestaurantSearch={handleRestaurantSearch}
-                onSearchExecute={switchToSingleMap}
-              />
-            </Suspense>
+          <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
+            <RestaurantSearch
+              onRestaurantSelect={handleRestaurantSelect}
+              onRestaurantSearch={handleRestaurantSearch}
+              onSearchExecute={switchToSingleMap}
+            />
+          </Suspense>
           <Button
             variant="outline"
             size="sm"
@@ -238,14 +240,14 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   gridSelectedRestaurant={selectedRestaurant} // 각 그리드별 선택된 맛집
                   onRestaurantSelect={(restaurant) => handleGridRestaurantSelect(region, restaurant)}
                 />
-              <Button
-                variant="secondary"
-                size="sm"
-                className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm hover:bg-background text-sm font-semibold shadow z-10 h-auto py-1 px-2 text-foreground"
-                onClick={() => switchToSingleMap(region)}
-              >
-                {region}
-              </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute top-2 left-2 bg-background/95 backdrop-blur-sm hover:bg-background text-sm font-semibold shadow z-10 h-auto py-1 px-2 text-foreground"
+                  onClick={() => switchToSingleMap(region)}
+                >
+                  {region}
+                </Button>
 
                 {/* 각 그리드별 맛집 모달 - 그리드 안에서 표시 */}
                 {selectedRestaurant && (
@@ -272,20 +274,12 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                             {selectedRestaurant.address}
                           </div>
 
-                          {/* 평점 및 방문 정보 */}
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4 text-yellow-500" />
-                              <span className="text-sm">
-                                평점: {selectedRestaurant.ai_rating?.toFixed(1) || 'N/A'}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Users className="h-4 w-4 text-blue-500" />
-                              <span className="text-sm">
-                                방문: {selectedRestaurant.visit_count || 0}회
-                              </span>
-                            </div>
+                          {/* 방문 정보 */}
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm">
+                              방문: {selectedRestaurant.visit_count || 0}회
+                            </span>
                           </div>
 
                           {/* 카테고리 */}
@@ -341,22 +335,22 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
             );
           })}
         </div>
-        ) : (
-          // 단일 지도 모드
-          <Suspense fallback={<div className="flex items-center justify-center h-full">지도 로딩 중...</div>}>
-            <NaverMapView
-              filters={filters}
-              selectedRegion={selectedRegion}
-              searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
-              selectedRestaurant={selectedRestaurant}
-              refreshTrigger={refreshTrigger}
-              onAdminEditRestaurant={onAdminEditRestaurant}
-              onRequestEditRestaurant={handleRequestEditRestaurant}
-              isGridMode={false}
-              onRestaurantSelect={setSelectedRestaurant} // 단일 모드에서도 선택 상태 관리
-            />
-          </Suspense>
-        )}
+      ) : (
+        // 단일 지도 모드
+        <Suspense fallback={<div className="flex items-center justify-center h-full">지도 로딩 중...</div>}>
+          <NaverMapView
+            filters={filters}
+            selectedRegion={selectedRegion}
+            searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
+            selectedRestaurant={selectedRestaurant}
+            refreshTrigger={refreshTrigger}
+            onAdminEditRestaurant={onAdminEditRestaurant}
+            onRequestEditRestaurant={handleRequestEditRestaurant}
+            isGridMode={false}
+            onRestaurantSelect={setSelectedRestaurant} // 단일 모드에서도 선택 상태 관리
+          />
+        </Suspense>
+      )}
 
       <Suspense fallback={null}>
         <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
