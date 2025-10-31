@@ -174,12 +174,12 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
                     background: ${bgColor};
                     color: white;
                     border-radius: 50%;
-                    width: 24px;
-                    height: 24px;
+                    width: 28px;
+                    height: 28px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    font-size: 12px;
+                    font-size: 13px;
                     border: 2px solid white;
                     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
                 ">${icon}</div>`;
