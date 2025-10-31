@@ -59,7 +59,8 @@ export const REGIONS = [
     "경상남도",
     "전북특별자치도",
     "제주특별자치도",
-    "경상북도 울릉군"
+    "울릉도",
+    "욕지도"
 ] as const;
 
 export type Region = typeof REGIONS[number];

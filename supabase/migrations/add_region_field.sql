@@ -70,14 +70,17 @@ SET region = CASE
   WHEN address LIKE '전남 %' THEN '전라남도'
   WHEN address = '전남' THEN '전라남도'
 
-  -- 경상북도 울릉군 (먼저 처리해야 함)
-  WHEN address LIKE '경상북도 울릉군%' THEN '경상북도 울릉군'
-  WHEN address LIKE '경북 울릉군%' THEN '경상북도 울릉군'
+  -- 울릉도 (먼저 처리해야 함)
+  WHEN address LIKE '경상북도 울릉군%' THEN '울릉도'
+  WHEN address LIKE '경북 울릉군%' THEN '울릉도'
 
   -- 경상북도
   WHEN address LIKE '경상북도%' THEN '경상북도'
   WHEN address LIKE '경북 %' THEN '경상북도'
   WHEN address = '경북' THEN '경상북도'
+
+  -- 욕지도 (먼저 처리해야 함)
+  WHEN address LIKE '%욕지%' THEN '욕지도'
 
   -- 경상남도
   WHEN address LIKE '경상남도%' THEN '경상남도'

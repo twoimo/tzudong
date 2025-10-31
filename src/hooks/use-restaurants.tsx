@@ -46,7 +46,16 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             // Apply region filter
             if (region) {
-                query = query.eq("region", region);
+                if (region === "울릉도") {
+                    // 울릉도는 주소에 '울릉'이 포함된 데이터 필터링
+                    query = query.ilike("address", "%울릉%");
+                } else if (region === "욕지도") {
+                    // 욕지도는 주소에 '욕지'가 포함된 데이터 필터링
+                    query = query.ilike("address", "%욕지%");
+                } else {
+                    // 일반 지역은 region 필드로 필터링
+                    query = query.eq("region", region);
+                }
             }
 
             // Apply rating filter
