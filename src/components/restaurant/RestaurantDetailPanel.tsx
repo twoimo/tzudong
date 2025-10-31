@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -92,13 +92,9 @@ export function RestaurantDetailPanel({
         <div className="h-full flex flex-col bg-background border-l border-border">
             {/* Header */}
             <div className="p-4 border-b border-border">
-                <div className="flex items-start justify-between gap-2 mb-3">
+                <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-2xl">🔥</span>
-                            <h2 className="text-xl font-bold line-clamp-2">{restaurant.name}</h2>
-                        </div>
-                        <div className="flex flex-wrap gap-1 mt-1">
+                        <div className="flex flex-wrap gap-1 mb-1">
                             {(() => {
                                 // 카테고리 타입 처리: TEXT[] 배열 또는 단일 값
                                 let categories: string[] = [];
@@ -118,6 +114,10 @@ export function RestaurantDetailPanel({
                                     </Badge>
                                 ));
                             })()}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-2xl">🔥</span>
+                            <h2 className="text-xl font-bold line-clamp-2">{restaurant.name}</h2>
                         </div>
                     </div>
                     <div className="flex gap-1">
@@ -145,7 +145,10 @@ export function RestaurantDetailPanel({
 
                     {/* Contact Info */}
                     <div className="space-y-3">
-                        <h3 className="font-semibold text-sm">매장 정보</h3>
+                        <h3 className="font-semibold text-sm flex items-center gap-2">
+                            <Store className="h-4 w-4 text-muted-foreground" />
+                            매장 정보
+                        </h3>
 
                         {restaurant.address && (
                             <div className="flex gap-3">
@@ -214,7 +217,10 @@ export function RestaurantDetailPanel({
                         <>
                             <Separator />
                             <div className="space-y-2">
-                                <h3 className="font-semibold text-sm">쯔양의 리뷰</h3>
+                                <h3 className="font-semibold text-sm flex items-center gap-2">
+                                    <Quote className="h-4 w-4 text-muted-foreground" />
+                                    쯔양의 리뷰
+                                </h3>
                                 <div className="p-4 bg-muted/50 rounded-lg">
                                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                                         {restaurant.description}
@@ -228,7 +234,10 @@ export function RestaurantDetailPanel({
                     <Separator />
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-semibold text-sm">최근 리뷰</h3>
+                            <h3 className="font-semibold text-sm flex items-center gap-2">
+                                <Star className="h-4 w-4 text-muted-foreground" />
+                                최근 리뷰
+                            </h3>
                             <Button variant="link" size="sm" className="h-auto p-0 text-xs">
                                 전체보기 →
                             </Button>
