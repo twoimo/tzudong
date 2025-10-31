@@ -43,6 +43,23 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
+    // 선택된 맛집이 변경될 때 지도 중앙 재조정
+    useEffect(() => {
+        if (selectedRestaurant && mapInstanceRef.current && !isGridMode) {
+            // 현재 줌 레벨에 따라 적절한 오프셋 계산
+            const currentZoom = mapInstanceRef.current.getZoom();
+            const zoomFactor = Math.pow(2, 15 - currentZoom);
+            const offsetLng = 0.004 * zoomFactor;
+
+            const targetLatLng = new naver.maps.LatLng(selectedRestaurant.lat, selectedRestaurant.lng - offsetLng);
+
+            // 부드러운 애니메이션으로 지도 중앙 이동
+            mapInstanceRef.current.panTo(targetLatLng, {
+                duration: 300
+            });
+        }
+    }, [selectedRestaurant, isGridMode]);
+
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
         region: selectedRegion || undefined,
@@ -270,20 +287,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         onRestaurantSelect(restaurant);
                     }
 
-                    // 단일 모드에서만 지도 중앙 재조정
-                    if (!isGridMode) {
-                        // 현재 줌 레벨에 따라 적절한 오프셋 계산
-                        const currentZoom = mapInstanceRef.current.getZoom();
-                        // 줌 레벨이 높을수록 오프셋을 줄임 (줌 레벨 15 기준으로 계산)
-                        const zoomFactor = Math.pow(2, 15 - currentZoom);
-                        const offsetLng = 0.004 * zoomFactor; // 줌 레벨에 따라 동적으로 조정
-
-                        // 상세 패널이 오른쪽에 있으므로 마커를 왼쪽으로 이동하여 중앙에 배치
-                        const targetLatLng = new naver.maps.LatLng(restaurant.lat, restaurant.lng - offsetLng);
-
-                        // panTo 대신 setCenter 사용으로 즉시 중앙 배치
-                        mapInstanceRef.current.setCenter(targetLatLng);
-                    }
+                    // 마커 클릭 시 지도 이동 제거 - 상세 패널 열릴 때 이동 수행
                 });
 
                 newMarkers.push(marker);
