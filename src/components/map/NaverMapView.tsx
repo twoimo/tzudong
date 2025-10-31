@@ -17,6 +17,7 @@ declare global {
     }
 }
 
+
 interface NaverMapViewProps {
     filters: FilterState;
     selectedRegion: Region | null;
@@ -158,16 +159,30 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
                 return;
             }
 
+            // 마커 생성 대상
+            const markersToCreate = restaurantsToShow;
+
             // 새 마커 배열 준비
             const newMarkers: any[] = [];
 
             // 모든 마커를 한 번에 생성 (DOM 조작 최소화)
-            restaurantsToShow.forEach((restaurant) => {
+            markersToCreate.forEach((restaurant) => {
                 const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
                 const icon = isHotPlace ? '🔥' : '⭐';
-
-                // 간단한 HTML 마커 (인라인 스타일 최소화)
-                const markerContent = `<div class="marker-icon">${icon}</div>`;
+                const bgColor = isHotPlace ? '#ff4757' : '#3742fa';
+                const markerContent = `<div class="marker-icon" style="
+                    background: ${bgColor};
+                    color: white;
+                    border-radius: 50%;
+                    width: 24px;
+                    height: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 12px;
+                    border: 2px solid white;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+                ">${icon}</div>`;
 
                 const marker = new naver.maps.Marker({
                     position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
