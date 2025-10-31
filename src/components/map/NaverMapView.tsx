@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+// Naver Maps 타입 선언
+declare global {
+    interface Window {
+        naver: any;
+    }
+}
+
 interface NaverMapViewProps {
     filters: FilterState;
     selectedRegion: Region | null;
@@ -85,7 +92,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
             console.error("네이버 지도 초기화 오류:", error);
             toast.error("지도를 초기화하는 중 오류가 발생했습니다.");
         }
-    }, [isLoaded]);
+    }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 지역 변경 시 지도 중심 이동
     useEffect(() => {
@@ -96,7 +103,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
         mapInstanceRef.current.setCenter(new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]));
         mapInstanceRef.current.setZoom(regionConfig.zoom);
-    }, [selectedRegion]);
+    }, [selectedRegion]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
@@ -104,8 +111,16 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
         const { naver } = window;
 
-        // 지도 중심을 검색된 맛집으로 이동
-        mapInstanceRef.current.setCenter(new naver.maps.LatLng(searchedRestaurant.lat, searchedRestaurant.lng));
+        // 상세 패널이 이미 열려있는 경우 중심을 오른쪽으로 조정 (패널이 지도를 가리지 않도록)
+        if (selectedRestaurant && selectedRestaurant.id !== searchedRestaurant.id) {
+            // 다른 맛집의 상세 패널이 열려있을 때는 중심을 오른쪽으로 0.008도 이동 (약 800m)
+            const adjustedLng = searchedRestaurant.lng + 0.008;
+            mapInstanceRef.current.setCenter(new naver.maps.LatLng(searchedRestaurant.lat, adjustedLng));
+        } else {
+            // 상세 패널이 닫혀있거나 같은 맛집을 다시 선택한 경우 그대로 중심 설정
+            mapInstanceRef.current.setCenter(new naver.maps.LatLng(searchedRestaurant.lat, searchedRestaurant.lng));
+        }
+
         mapInstanceRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
 
         // 검색된 맛집을 컴포넌트 상태에 설정 (상세 패널 표시용)
@@ -113,7 +128,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
         // 토스트 메시지 표시
         toast.success(`"${searchedRestaurant.name}" 맛집을 찾았습니다!`);
-    }, [searchedRestaurant]);
+    }, [searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 마커 업데이트 (최적화됨)
     useEffect(() => {
@@ -131,7 +146,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
             markersRef.current = [];
 
             // 마커를 표시할 맛집 목록 생성 (기존 restaurants + 검색된 맛집)
-            let restaurantsToShow = [...restaurants];
+            const restaurantsToShow = [...restaurants];
 
             // 검색된 맛집이 기존 목록에 없는 경우 추가
             if (searchedRestaurant && !restaurants.find(r => r.id === searchedRestaurant.id)) {
@@ -166,6 +181,19 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
                 // 마커 클릭 이벤트
                 naver.maps.Event.addListener(marker, "click", () => {
+                    // 상세 패널이 이미 열려있는 경우 중심을 오른쪽으로 조정 (패널이 지도를 가리지 않도록)
+                    if (selectedRestaurant && selectedRestaurant.id !== restaurant.id) {
+                        // 다른 맛집의 상세 패널이 열려있을 때는 중심을 오른쪽으로 0.008도 이동 (약 800m)
+                        const adjustedLng = restaurant.lng + 0.008;
+                        mapInstanceRef.current.setCenter(new naver.maps.LatLng(restaurant.lat, adjustedLng));
+                    } else {
+                        // 상세 패널이 닫혀있거나 같은 맛집을 다시 선택한 경우 그대로 중심 설정
+                        mapInstanceRef.current.setCenter(new naver.maps.LatLng(restaurant.lat, restaurant.lng));
+                    }
+
+                    mapInstanceRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
+
+                    // 선택된 맛집을 컴포넌트 상태에 설정 (상세 패널 표시용)
                     setSelectedRestaurant(restaurant);
                 });
 
@@ -178,7 +206,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant]);
+    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 로딩 에러 처리
     if (loadError) {
