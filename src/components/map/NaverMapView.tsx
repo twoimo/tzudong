@@ -238,18 +238,11 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
                 const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
                 const icon = isHotPlace ? '🔥' : '⭐';
-                const bgColor = isHotPlace ? '#ff4757' : '#3742fa';
 
                 // 선택된 맛집은 더 큰 크기와 강조 효과
                 const size = isSelected ? 36 : 28;
-                const borderWidth = isSelected ? 3 : 2;
-                const boxShadow = isSelected
-                    ? '0 4px 12px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.9)'
-                    : '0 2px 4px rgba(0,0,0,0.2)';
-                const animation = isSelected ? 'pulse 2s infinite' : 'none';
 
                 const markerContent = `<div class="marker-icon ${isSelected ? 'selected-marker' : ''}" style="
-                    background: ${bgColor};
                     color: white;
                     border-radius: 50%;
                     width: ${size}px;
@@ -258,11 +251,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     align-items: center;
                     justify-content: center;
                     font-size: ${isSelected ? 15 : 13}px;
-                    border: ${borderWidth}px solid white;
-                    box-shadow: ${boxShadow};
-                    animation: ${animation};
-                    transform: ${isSelected ? 'scale(1.1)' : 'scale(1)'};
-                    transition: all 0.3s ease;
                 ">${icon}</div>`;
 
                 const marker = new naver.maps.Marker({
