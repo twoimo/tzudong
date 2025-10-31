@@ -326,7 +326,7 @@ export function AdminRestaurantModal({
                         />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="lat">위도 *</Label>
                             <Input
@@ -350,6 +350,33 @@ export function AdminRestaurantModal({
                                 placeholder="126.9780"
                             />
                         </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={async () => {
+                                if (!formData.address.trim()) {
+                                    toast.error('주소를 먼저 입력해주세요');
+                                    return;
+                                }
+                                try {
+                                    const coords = await geocodeAddress(formData.address);
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        lat: coords.lat.toString(),
+                                        lng: coords.lng.toString()
+                                    }));
+                                    toast.success('좌표가 자동으로 입력되었습니다');
+                                } catch (error) {
+                                    toast.error('좌표 변환에 실패했습니다');
+                                }
+                            }}
+                            className="flex-1"
+                        >
+                            📍 주소로 좌표 자동 입력
+                        </Button>
                     </div>
 
                     <div className="space-y-2">
