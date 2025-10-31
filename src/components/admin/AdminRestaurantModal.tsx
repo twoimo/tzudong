@@ -17,7 +17,7 @@ interface AdminRestaurantModalProps {
     isOpen: boolean;
     onClose: () => void;
     restaurant?: Restaurant | null;
-    onSuccess: () => void;
+    onSuccess: (updatedRestaurant?: Restaurant) => void;
 }
 
 export function AdminRestaurantModal({
@@ -138,12 +138,25 @@ export function AdminRestaurantModal({
 
             let error;
 
+            let updatedRestaurant: Restaurant | undefined;
+
             if (restaurant) {
                 // Update existing restaurant
                 ({ error } = await supabase
                     .from("restaurants")
                     .update(restaurantData)
                     .eq("id", restaurant.id));
+
+                if (!error) {
+                    // 데이터베이스에서 업데이트된 데이터를 다시 가져옴
+                    const { data: fetchedRestaurant } = await supabase
+                        .from("restaurants")
+                        .select("*")
+                        .eq("id", restaurant.id)
+                        .single();
+
+                    updatedRestaurant = fetchedRestaurant || undefined;
+                }
             } else {
                 // Create new restaurant
                 ({ error } = await supabase.from("restaurants").insert(restaurantData));
@@ -154,7 +167,7 @@ export function AdminRestaurantModal({
             toast.success(
                 restaurant ? "맛집이 수정되었습니다" : "맛집이 등록되었습니다"
             );
-            onSuccess();
+            onSuccess(updatedRestaurant);
             resetForm();
             onClose();
         } catch (error: any) {

@@ -44,11 +44,15 @@ function AppLayout() {
     }
   };
 
-  const handleAdminSuccess = () => {
+  const handleAdminSuccess = (updatedRestaurant?: Restaurant) => {
     // React Query 캐시 무효화 - 모든 restaurants 쿼리 다시 불러오기
     queryClient.invalidateQueries({ queryKey: ['restaurants'] });
     setRefreshTrigger(prev => prev + 1);
-    // selectedRestaurant는 초기화하지 않음 - 맵 컴포넌트에서 업데이트됨
+
+    // 수정된 맛집이 있으면 selectedRestaurant 업데이트
+    if (updatedRestaurant) {
+      setSelectedRestaurant(updatedRestaurant);
+    }
   };
 
   const handleAdminEditRestaurant = (restaurant: Restaurant) => {
@@ -74,7 +78,7 @@ function AppLayout() {
 
         <main className="flex-1 relative overflow-hidden">
           <Routes>
-            <Route path="/" element={<Index refreshTrigger={refreshTrigger} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
+            <Route path="/" element={<Index refreshTrigger={refreshTrigger} selectedRestaurant={selectedRestaurant} setSelectedRestaurant={setSelectedRestaurant} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/filtering" element={<FilteringPage onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/reviews" element={<ReviewsPage />} />

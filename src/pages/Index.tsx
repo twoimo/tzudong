@@ -25,14 +25,15 @@ import { toast } from "sonner";
 
 interface IndexProps {
   refreshTrigger: number;
+  selectedRestaurant: Restaurant | null;
+  setSelectedRestaurant: (restaurant: Restaurant | null) => void;
   onAdminEditRestaurant?: (restaurant: Restaurant) => void;
 }
 
-const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
+const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: IndexProps) => {
   const { isAdmin } = useAuth();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<Region | null>("서울특별시");
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
   const [isGridMode, setIsGridMode] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
