@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card } from "@/components/ui/card";
 import { Grid3X3, Map, MapPin, Star, Users, ChefHat } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant, Region } from "@/types/restaurant";
@@ -36,6 +37,14 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
   const [isGridMode, setIsGridMode] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    address: '',
+    phone: '',
+    category: '',
+    youtube_link: '',
+    description: ''
+  });
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
     minRating: 1,
@@ -50,7 +59,40 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
 
   const handleRequestEditRestaurant = (restaurant: Restaurant) => {
     setRestaurantToEdit(restaurant);
+    setEditFormData({
+      name: restaurant.name,
+      address: restaurant.address,
+      phone: restaurant.phone || '',
+      category: Array.isArray(restaurant.category) ? restaurant.category[0] : restaurant.category,
+      youtube_link: restaurant.youtube_link || '',
+      description: restaurant.description || ''
+    });
     setIsEditModalOpen(true);
+  };
+
+  const handleEditFormChange = (field: string, value: string) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const getEditChanges = () => {
+    if (!restaurantToEdit) return [];
+
+    const originalData = {
+      name: restaurantToEdit.name,
+      address: restaurantToEdit.address,
+      phone: restaurantToEdit.phone || '',
+      category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+      youtube_link: restaurantToEdit.youtube_link || '',
+      description: restaurantToEdit.description || ''
+    };
+
+    return Object.entries(editFormData).filter(([key, value]) => {
+      const originalValue = originalData[key as keyof typeof originalData];
+      return originalValue !== value;
+    });
   };
 
   const handleRegionChange = (region: Region | null) => {
@@ -305,12 +347,12 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
               try {
                 const formData = new FormData(e.target as HTMLFormElement);
                 const updatedData = {
-                  name: formData.get('name') as string,
-                  address: formData.get('address') as string,
-                  phone: formData.get('phone') as string,
-                  category: formData.get('category') as string,
-                  youtube_link: formData.get('youtube_link') as string,
-                  description: formData.get('description') as string,
+                  name: editFormData.name,
+                  address: editFormData.address,
+                  phone: editFormData.phone,
+                  category: editFormData.category,
+                  youtube_link: editFormData.youtube_link,
+                  description: editFormData.description,
                 };
 
                 // restaurant_submissions 테이블에 수정 요청 저장
@@ -344,18 +386,63 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                 toast.error('제출에 실패했습니다. 다시 시도해주세요.');
               }
             }} className="space-y-4 mt-4">
-              {/* 기존 정보 표시 */}
-              <div className="p-4 bg-muted/50 rounded-lg">
-                <h3 className="font-semibold mb-2">현재 정보</h3>
-                <div className="text-sm space-y-1">
-                  <p><strong>이름:</strong> {restaurantToEdit.name}</p>
-                  <p><strong>주소:</strong> {restaurantToEdit.address}</p>
-                  <p><strong>전화번호:</strong> {restaurantToEdit.phone}</p>
-                  <p><strong>카테고리:</strong> {Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category.join(', ') : restaurantToEdit.category}</p>
-                  <p><strong>유튜브:</strong> {restaurantToEdit.youtube_link || '없음'}</p>
-                  <p><strong>쯔양 리뷰:</strong> {restaurantToEdit.description ? '있음' : '없음'}</p>
-                </div>
-              </div>
+              {/* 변경사항 표시 */}
+              {getEditChanges().length > 0 && (
+                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="text-blue-600">📋</div>
+                      <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                        수정 요청 내용
+                      </Label>
+                    </div>
+
+                    <div className="space-y-3">
+                      {getEditChanges().map(([key, value]) => {
+                        const originalValue = restaurantToEdit ? {
+                          name: restaurantToEdit.name,
+                          address: restaurantToEdit.address,
+                          phone: restaurantToEdit.phone || '',
+                          category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                          youtube_link: restaurantToEdit.youtube_link || '',
+                          description: restaurantToEdit.description || ''
+                        }[key as keyof typeof restaurantToEdit] || '' : '';
+
+                        const fieldName = {
+                          name: '맛집 이름',
+                          address: '주소',
+                          phone: '전화번호',
+                          category: '카테고리',
+                          youtube_link: '유튜브 링크',
+                          description: '쯔양의 리뷰'
+                        }[key] || key;
+
+                        return (
+                          <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {fieldName}
+                              </span>
+                              <div className="flex items-center gap-1 text-xs text-orange-600">
+                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                변경됨
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="text-xs text-red-600 line-through">
+                                기존: {originalValue || '없음'}
+                              </div>
+                              <div className="text-xs text-green-600 font-medium">
+                                변경: {value || '없음'}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              )}
 
               {/* 수정할 정보 입력 */}
               <div className="space-y-4">
@@ -366,7 +453,8 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                   <Input
                     id="name"
                     name="name"
-                    defaultValue={restaurantToEdit.name}
+                    value={editFormData.name}
+                    onChange={(e) => handleEditFormChange('name', e.target.value)}
                     placeholder="맛집 이름을 입력해주세요"
                     required
                   />
@@ -379,7 +467,8 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                   <Input
                     id="address"
                     name="address"
-                    defaultValue={restaurantToEdit.address}
+                    value={editFormData.address}
+                    onChange={(e) => handleEditFormChange('address', e.target.value)}
                     placeholder="주소를 입력해주세요"
                     required
                   />
@@ -390,7 +479,8 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                   <Input
                     id="phone"
                     name="phone"
-                    defaultValue={restaurantToEdit.phone}
+                    value={editFormData.phone}
+                    onChange={(e) => handleEditFormChange('phone', e.target.value)}
                     placeholder="전화번호를 입력해주세요"
                   />
                 </div>
@@ -399,7 +489,7 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                   <Label htmlFor="category">
                     카테고리 <span className="text-red-500">*</span>
                   </Label>
-                  <Select name="category" defaultValue={Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : (restaurantToEdit.category as string)}>
+                  <Select name="category" value={editFormData.category} onValueChange={(value) => handleEditFormChange('category', value)}>
                     <SelectTrigger>
                       <SelectValue placeholder="카테고리를 선택해주세요" />
                     </SelectTrigger>
@@ -426,7 +516,8 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                   <Input
                     id="youtube_link"
                     name="youtube_link"
-                    defaultValue={restaurantToEdit.youtube_link}
+                    value={editFormData.youtube_link}
+                    onChange={(e) => handleEditFormChange('youtube_link', e.target.value)}
                     placeholder="https://www.youtube.com/watch?v=..."
                   />
                 </div>
@@ -436,7 +527,8 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                   <Textarea
                     id="description"
                     name="description"
-                    defaultValue={restaurantToEdit.description}
+                    value={editFormData.description}
+                    onChange={(e) => handleEditFormChange('description', e.target.value)}
                     placeholder="쯔양의 리뷰 내용을 입력해주세요"
                     rows={4}
                   />
