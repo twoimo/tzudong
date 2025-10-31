@@ -53,7 +53,7 @@ restaurants = uniqueRestaurants;
 // Generate SQL
 let sql = '-- Insert restaurant data from 쯔양 YouTube analysis\n';
 sql += '-- This migration should run after category column has been converted to TEXT[]\n';
-sql += 'INSERT INTO public.restaurants (name, address, phone, category, youtube_link, lat, lng, ai_rating, visit_count, jjyang_visit_count) VALUES\n';
+sql += 'INSERT INTO public.restaurants (name, address, phone, category, youtube_link, lat, lng, ai_rating, visit_count, jjyang_visit_count, description) VALUES\n';
 
 restaurants.forEach((restaurant, index) => {
   const name = restaurant.name.replace(/'/g, "''");
@@ -63,8 +63,9 @@ restaurants.forEach((restaurant, index) => {
   const youtube_link = restaurant.youtube_link;
   const lat = restaurant.lat;
   const lng = restaurant.lng;
+  const description = restaurant.tzuyang_review ? restaurant.tzuyang_review.replace(/'/g, "''") : '';
 
-  sql += `('${name}', '${address}', '${phone}', ${category}, '${youtube_link}', ${lat}, ${lng}, 10.0, 0, 1)`;
+  sql += `('${name}', '${address}', '${phone}', ${category}, '${youtube_link}', ${lat}, ${lng}, 10.0, 0, 1, '${description}')`;
   sql += index < restaurants.length - 1 ? ',\n' : ';\n';
 });
 
