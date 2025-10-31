@@ -13,15 +13,19 @@ import { MapPin } from "lucide-react";
 interface RegionSelectorProps {
   selectedRegion: Region | null;
   onRegionChange: (region: Region | null) => void;
+  onRegionSelect?: (region: Region | null) => void; // 그리드 모드에서 지역 선택 시 호출
   className?: string;
 }
 
-const RegionSelector = ({ selectedRegion, onRegionChange, className }: RegionSelectorProps) => {
+const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, className }: RegionSelectorProps) => {
   const handleRegionChange = (value: string) => {
-    if (value === "all") {
-      onRegionChange(null);
+    const newRegion = value === "all" ? null : (value as Region);
+
+    // 그리드 모드에서 지역 선택 시 단일 지도로 전환하고 지역 변경
+    if (onRegionSelect) {
+      onRegionSelect(newRegion);
     } else {
-      onRegionChange(value as Region);
+      onRegionChange(newRegion);
     }
   };
 

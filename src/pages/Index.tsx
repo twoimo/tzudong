@@ -33,6 +33,10 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
     setFilters(newFilters);
   };
 
+  const handleRegionChange = (region: Region | null) => {
+    setSelectedRegion(region);
+  };
+
   const handleRestaurantSelect = (restaurant: Restaurant) => {
     // 선택된 맛집을 NaverMapView에 전달하기 위해 상태 업데이트
     setSelectedRestaurant(restaurant);
@@ -63,6 +67,16 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
     }));
   };
 
+  // 그리드 모드에서 단일 지도로 전환하는 함수
+  const switchToSingleMap = (region?: Region | null) => {
+    setIsGridMode(false);
+    if (region !== undefined) {
+      setSelectedRegion(region);
+      // 지역 필터링 시 검색된 맛집 초기화 (지역 우선 적용)
+      setSelectedRestaurant(null);
+    }
+  };
+
   return (
     <>
       {/* 지역 선택 및 검색 컴포넌트 */}
@@ -71,9 +85,11 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
           <RegionSelector
             selectedRegion={selectedRegion}
             onRegionChange={setSelectedRegion}
+            onRegionSelect={switchToSingleMap}
           />
           <RestaurantSearch
             onRestaurantSelect={handleRestaurantSelect}
+            onSearchExecute={switchToSingleMap}
           />
           <Button
             variant="outline"
