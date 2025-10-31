@@ -270,16 +270,19 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         onRestaurantSelect(restaurant);
                     }
 
-                    // 단일 모드에서만 자연스러운 애니메이션으로 지도 재조정
+                    // 단일 모드에서만 지도 중앙 재조정
                     if (!isGridMode) {
-                        // 상세 패널이 오른쪽에 있으므로 마커를 약간 왼쪽으로 이동하여 중앙에 배치
-                        const offsetLng = restaurant.lng - 0.004; // 약 350m 왼쪽 오프셋 (더 자연스러운 위치)
-                        const targetLatLng = new naver.maps.LatLng(restaurant.lat, offsetLng);
+                        // 현재 줌 레벨에 따라 적절한 오프셋 계산
+                        const currentZoom = mapInstanceRef.current.getZoom();
+                        // 줌 레벨이 높을수록 오프셋을 줄임 (줌 레벨 15 기준으로 계산)
+                        const zoomFactor = Math.pow(2, 15 - currentZoom);
+                        const offsetLng = 0.004 * zoomFactor; // 줌 레벨에 따라 동적으로 조정
 
-                        // 줌 레벨은 유지하고 중심만 부드럽게 이동
-                        mapInstanceRef.current.panTo(targetLatLng, {
-                            duration: 400 // 400ms 자연스러운 애니메이션
-                        });
+                        // 상세 패널이 오른쪽에 있으므로 마커를 왼쪽으로 이동하여 중앙에 배치
+                        const targetLatLng = new naver.maps.LatLng(restaurant.lat, restaurant.lng - offsetLng);
+
+                        // panTo 대신 setCenter 사용으로 즉시 중앙 배치
+                        mapInstanceRef.current.setCenter(targetLatLng);
                     }
                 });
 
