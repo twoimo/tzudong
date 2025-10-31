@@ -82,6 +82,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     position: naver.maps.Position.BOTTOM_RIGHT,
                 },
                 mapDataControl: false,
+                // 성능 최적화 옵션들
+                background: 'white', // 배경색 명시로 렌더링 최적화
             });
 
             mapInstanceRef.current = map;

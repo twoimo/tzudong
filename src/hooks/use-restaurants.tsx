@@ -24,6 +24,8 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
     return useQuery({
         queryKey: ["restaurants", bounds, category, region, minRating, minReviews, minUserVisits, minJjyangVisits],
+        staleTime: 5 * 60 * 1000, // 5분 동안 fresh 상태 유지
+        gcTime: 10 * 60 * 1000, // 10분 동안 캐시 유지
         queryFn: async () => {
             let query = supabase
                 .from("restaurants")
@@ -88,8 +90,6 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             return (data || []) as Restaurant[];
         },
         enabled,
-        staleTime: 5 * 60 * 1000, // 5 minutes - 데이터를 신선하게 유지
-        gcTime: 10 * 60 * 1000, // 10 minutes - 캐시 유지
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함
         refetchOnReconnect: false, // 재연결 시 재요청 안 함
     });
