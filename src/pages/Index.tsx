@@ -1,8 +1,12 @@
-import { useState, memo } from "react";
-import NaverMapView from "@/components/map/NaverMapView";
-import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
-import RegionSelector from "@/components/region/RegionSelector";
-import RestaurantSearch from "@/components/search/RestaurantSearch";
+import { useState, memo, Suspense, lazy } from "react";
+
+// 코드 스플리팅으로 성능 최적화
+const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
+const FilterPanel = lazy(() =>
+  import("@/components/filters/FilterPanel").then(module => ({ default: module.FilterPanel }))
+);
+const RegionSelector = lazy(() => import("@/components/region/RegionSelector"));
+const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,19 +93,23 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
 
   return (
     <>
-      {/* 지역 선택 및 검색 컴포넌트 */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-        <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
-          <RegionSelector
-            selectedRegion={selectedRegion}
-            onRegionChange={setSelectedRegion}
-            onRegionSelect={switchToSingleMap}
-          />
-          <RestaurantSearch
-            onRestaurantSelect={handleRestaurantSelect}
-            onRestaurantSearch={handleRestaurantSearch}
-            onSearchExecute={switchToSingleMap}
-          />
+        {/* 지역 선택 및 검색 컴포넌트 */}
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
+          <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
+            <Suspense fallback={<div className="w-40 h-10 bg-muted animate-pulse rounded" />}>
+              <RegionSelector
+                selectedRegion={selectedRegion}
+                onRegionChange={setSelectedRegion}
+                onRegionSelect={switchToSingleMap}
+              />
+            </Suspense>
+            <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
+              <RestaurantSearch
+                onRestaurantSelect={handleRestaurantSelect}
+                onRestaurantSearch={handleRestaurantSearch}
+                onSearchExecute={switchToSingleMap}
+              />
+            </Suspense>
           <Button
             variant="outline"
             size="sm"
@@ -237,27 +245,31 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
         </div>
         ) : (
           // 단일 지도 모드
-          <NaverMapView
-            filters={filters}
-            selectedRegion={selectedRegion}
-            searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
-            selectedRestaurant={selectedRestaurant}
-            refreshTrigger={refreshTrigger}
-            onAdminEditRestaurant={onAdminEditRestaurant}
-            isGridMode={false}
-            onRestaurantSelect={setSelectedRestaurant} // 단일 모드에서도 선택 상태 관리
-          />
+          <Suspense fallback={<div className="flex items-center justify-center h-full">지도 로딩 중...</div>}>
+            <NaverMapView
+              filters={filters}
+              selectedRegion={selectedRegion}
+              searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
+              selectedRestaurant={selectedRestaurant}
+              refreshTrigger={refreshTrigger}
+              onAdminEditRestaurant={onAdminEditRestaurant}
+              isGridMode={false}
+              onRestaurantSelect={setSelectedRestaurant} // 단일 모드에서도 선택 상태 관리
+            />
+          </Suspense>
         )}
 
-      <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
-        <SheetContent side="left" className="w-80 p-0">
-          <FilterPanel
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onClose={() => setIsFilterOpen(false)}
-          />
-        </SheetContent>
-      </Sheet>
+      <Suspense fallback={null}>
+        <Sheet open={isFilterOpen} onOpenChange={setIsFilterOpen}>
+          <SheetContent side="left" className="w-80 p-0">
+            <FilterPanel
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              onClose={() => setIsFilterOpen(false)}
+            />
+          </SheetContent>
+        </Sheet>
+      </Suspense>
     </>
   );
 });

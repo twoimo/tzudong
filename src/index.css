@@ -2,9 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
+
+/* 성능 최적화: 폰트 로딩 최적화 */
+@font-face {
+  font-display: swap;
+}
+
+/* GPU 가속화 및 성능 최적화 */
 
 @layer base {
   :root {
