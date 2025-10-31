@@ -333,7 +333,7 @@ export default function RestaurantSubmissionsPage() {
                             className="gap-2"
                         >
                             <Youtube className="h-4 w-4" />
-                            기존 맛집 수정 요청
+                            맛집 수정 요청
                         </Button>
                     </div>
                 </div>
@@ -506,7 +506,7 @@ export default function RestaurantSubmissionsPage() {
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                            {submissionMode === 'new' ? '쯔양 맛집 제보하기' : '기존 맛집 수정 요청'}
+                            {submissionMode === 'new' ? '쯔양 맛집 제보하기' : '맛집 수정 요청'}
                         </DialogTitle>
                         <DialogDescription>
                             {submissionMode === 'new'

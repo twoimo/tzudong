@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -13,6 +13,7 @@ interface RestaurantDetailPanelProps {
     onClose: () => void;
     onWriteReview?: () => void;
     onEditRestaurant?: () => void;
+    onRequestEditRestaurant?: () => void;
 }
 
 interface Review {
@@ -29,6 +30,7 @@ export function RestaurantDetailPanel({
     onClose,
     onWriteReview,
     onEditRestaurant,
+    onRequestEditRestaurant,
 }: RestaurantDetailPanelProps) {
     const { isAdmin } = useAuth();
 
@@ -299,6 +301,15 @@ export function RestaurantDetailPanel({
                 >
                     <Navigation className="h-4 w-4" />
                     길찾기
+                </Button>
+
+                <Button
+                    onClick={onRequestEditRestaurant}
+                    variant="outline"
+                    className="w-full gap-2"
+                >
+                    <Edit className="h-4 w-4" />
+                    맛집 수정 요청
                 </Button>
 
                 <Button
