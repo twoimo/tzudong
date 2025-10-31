@@ -1,0 +1,48 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { REGIONS, Region } from "@/types/restaurant";
+import { MapPin } from "lucide-react";
+
+interface RegionSelectorProps {
+  selectedRegion: Region | null;
+  onRegionChange: (region: Region | null) => void;
+  className?: string;
+}
+
+const RegionSelector = ({ selectedRegion, onRegionChange, className }: RegionSelectorProps) => {
+  const handleRegionChange = (value: string) => {
+    if (value === "all") {
+      onRegionChange(null);
+    } else {
+      onRegionChange(value as Region);
+    }
+  };
+
+  return (
+    <div className={`flex items-center gap-2 ${className}`}>
+      <MapPin className="h-4 w-4 text-muted-foreground" />
+      <Select value={selectedRegion || "all"} onValueChange={handleRegionChange}>
+        <SelectTrigger className="w-[200px]">
+          <SelectValue placeholder="지역을 선택하세요" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">전국</SelectItem>
+          {REGIONS.map((region) => (
+            <SelectItem key={region} value={region}>
+              {region}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+};
+
+export default RegionSelector;

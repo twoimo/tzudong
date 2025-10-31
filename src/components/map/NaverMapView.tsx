@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, memo } from "react";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { FilterState } from "@/components/filters/FilterPanel";
-import { Restaurant } from "@/types/restaurant";
+import { Restaurant, Region } from "@/types/restaurant";
+import { REGION_MAP_CONFIG } from "@/config/maps";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +12,14 @@ import { Loader2 } from "lucide-react";
 
 interface NaverMapViewProps {
     filters: FilterState;
+    selectedRegion: Region | null;
+    searchedRestaurant: Restaurant | null;
     refreshTrigger: number;
     onAdminAddRestaurant?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
 }
 
-const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: NaverMapViewProps) => {
+const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refreshTrigger, onAdminEditRestaurant }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
@@ -27,6 +30,7 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
+        region: selectedRegion || undefined,
         minRating: filters.minRating,
         minReviews: filters.minReviews,
         minUserVisits: filters.minUserVisits,
@@ -56,10 +60,11 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
         try {
             const { naver } = window;
 
-            // 한반도 전체(제주도 포함)가 보이도록 지도 생성
+            // 선택된 지역에 따라 지도 중심과 줌 레벨 설정
+            const regionConfig = selectedRegion ? REGION_MAP_CONFIG[selectedRegion] : REGION_MAP_CONFIG["전국"];
             const map = new naver.maps.Map(mapRef.current, {
-                center: new naver.maps.LatLng(36.5, 127.5), // 한반도 중앙
-                zoom: 7, // 제주도까지 포함되는 줌 레벨
+                center: new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]),
+                zoom: regionConfig.zoom,
                 minZoom: 6,
                 maxZoom: 18,
                 zoomControl: true,
@@ -79,6 +84,34 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
         }
     }, [isLoaded]);
 
+    // 지역 변경 시 지도 중심 이동
+    useEffect(() => {
+        if (!mapInstanceRef.current) return;
+
+        const regionConfig = selectedRegion ? REGION_MAP_CONFIG[selectedRegion] : REGION_MAP_CONFIG["전국"];
+        const { naver } = window;
+
+        mapInstanceRef.current.setCenter(new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]));
+        mapInstanceRef.current.setZoom(regionConfig.zoom);
+    }, [selectedRegion]);
+
+    // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
+    useEffect(() => {
+        if (!searchedRestaurant || !mapInstanceRef.current) return;
+
+        const { naver } = window;
+
+        // 지도 중심을 검색된 맛집으로 이동
+        mapInstanceRef.current.setCenter(new naver.maps.LatLng(searchedRestaurant.lat, searchedRestaurant.lng));
+        mapInstanceRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
+
+        // 검색된 맛집을 컴포넌트 상태에 설정 (상세 패널 표시용)
+        setSelectedRestaurant(searchedRestaurant);
+
+        // 토스트 메시지 표시
+        toast.success(`"${searchedRestaurant.name}" 맛집을 찾았습니다!`);
+    }, [searchedRestaurant]);
+
     // 마커 업데이트 (최적화됨)
     useEffect(() => {
         if (!mapInstanceRef.current || !window.naver) {
@@ -94,8 +127,16 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
             oldMarkers.forEach(marker => marker.setMap(null));
             markersRef.current = [];
 
+            // 마커를 표시할 맛집 목록 생성 (기존 restaurants + 검색된 맛집)
+            let restaurantsToShow = [...restaurants];
+
+            // 검색된 맛집이 기존 목록에 없는 경우 추가
+            if (searchedRestaurant && !restaurants.find(r => r.id === searchedRestaurant.id)) {
+                restaurantsToShow.push(searchedRestaurant);
+            }
+
             // restaurants가 없으면 마커만 제거하고 종료
-            if (restaurants.length === 0) {
+            if (restaurantsToShow.length === 0) {
                 return;
             }
 
@@ -103,7 +144,7 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
             const newMarkers: any[] = [];
 
             // 모든 마커를 한 번에 생성 (DOM 조작 최소화)
-            restaurants.forEach((restaurant) => {
+            restaurantsToShow.forEach((restaurant) => {
                 const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
                 const icon = isHotPlace ? '🔥' : '⭐';
 
@@ -134,7 +175,7 @@ const NaverMapView = memo(({ filters, refreshTrigger, onAdminEditRestaurant }: N
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [restaurants, refreshTrigger]);
+    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant]);
 
     // 로딩 에러 처리
     if (loadError) {
