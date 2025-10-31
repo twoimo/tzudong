@@ -40,9 +40,8 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
 
             // Apply category filter
             if (category && category.length > 0) {
-                // restaurants 테이블의 category 필드는 restaurant_category 타입이므로
-                // 일단 첫 번째 카테고리만 사용하여 필터링
-                query = query.eq("category", category[0]);
+                // 실제 데이터베이스에서 category는 TEXT[] 타입으로 저장됨
+                query = query.overlaps("category", category);
             }
 
             // Apply region filter
