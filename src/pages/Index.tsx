@@ -355,6 +355,27 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                   description: editFormData.description,
                 };
 
+                // 변경사항 계산
+                const originalData = {
+                  restaurant_name: restaurantToEdit.name,
+                  address: restaurantToEdit.address,
+                  phone: restaurantToEdit.phone || '',
+                  category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                  youtube_link: restaurantToEdit.youtube_link || '',
+                  description: restaurantToEdit.description || ''
+                };
+
+                const changes_requested: Record<string, { from: any; to: any }> = {};
+                Object.entries(updatedData).forEach(([key, value]) => {
+                  const originalValue = originalData[key === 'name' ? 'restaurant_name' : key as keyof typeof originalData];
+                  if (originalValue !== value) {
+                    changes_requested[key === 'name' ? 'restaurant_name' : key] = {
+                      from: originalValue,
+                      to: value
+                    };
+                  }
+                });
+
                 // restaurant_submissions 테이블에 수정 요청 저장
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
@@ -373,6 +394,7 @@ const Index = memo(({ refreshTrigger, onAdminEditRestaurant }: IndexProps) => {
                     youtube_link: updatedData.youtube_link || null,
                     description: updatedData.description || null,
                     original_restaurant_id: restaurantToEdit.id,
+                    changes_requested: changes_requested,
                     status: 'pending'
                   });
 
