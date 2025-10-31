@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Star, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, AlertCircle, Settings } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -6,8 +6,6 @@ import { Separator } from "@/components/ui/separator";
 import { Restaurant } from "@/types/restaurant";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface RestaurantDetailPanelProps {
@@ -36,8 +34,6 @@ export function RestaurantDetailPanel({
 
     if (!restaurant) return null;
 
-    // 쯔양 방문 여부 확인
-    const isJjyangVisited = (restaurant.jjyang_visit_count ?? 0) > 0;
 
     // Mock recent reviews - 실제로는 Supabase에서 가져와야 함
     const recentReviews: Review[] = [
@@ -75,7 +71,17 @@ export function RestaurantDetailPanel({
         return '방금 전';
     };
 
-    const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
+
+    const extractYouTubeVideoId = (url: string) => {
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const match = url.match(regExp);
+        return (match && match[2].length === 11) ? match[2] : null;
+    };
+
+    const getYouTubeThumbnailUrl = (url: string) => {
+        const videoId = extractYouTubeVideoId(url);
+        return videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+    };
 
     const handleGetDirections = () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
@@ -89,7 +95,7 @@ export function RestaurantDetailPanel({
                 <div className="flex items-start justify-between gap-2 mb-3">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="text-2xl">{isHotPlace ? "🔥" : "⭐"}</span>
+                            <span className="text-2xl">🔥</span>
                             <h2 className="text-xl font-bold line-clamp-2">{restaurant.name}</h2>
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1">
@@ -105,7 +111,7 @@ export function RestaurantDetailPanel({
                                 return categories.map((cat, index) => (
                                     <Badge
                                         key={index}
-                                        variant={isHotPlace && index === 0 ? "default" : "secondary"}
+                                        variant={index === 0 ? "default" : "secondary"}
                                         className="text-xs"
                                     >
                                         {cat}
@@ -131,59 +137,11 @@ export function RestaurantDetailPanel({
                     </div>
                 </div>
 
-                {/* AI Rating */}
-                <div className="flex items-center justify-between gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gradient-primary">
-                            <span className="text-2xl">⭐</span>
-                        </div>
-                        <div>
-                            <p className="text-xs text-muted-foreground mb-0.5">AI 별점</p>
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-2xl font-bold text-primary">
-                                    {(restaurant.ai_rating ?? 0).toFixed(1)}
-                                </span>
-                                <span className="text-sm text-muted-foreground">/ 10.0</span>
-                            </div>
-                        </div>
-                    </div>
-                    {isHotPlace && (
-                        <Badge variant="default" className="bg-gradient-primary shrink-0">
-                            인기 맛집
-                        </Badge>
-                    )}
-                </div>
             </div>
 
             {/* Content */}
             <ScrollArea className="flex-1">
                 <div className="p-4 space-y-4">
-                    {/* Stats */}
-                    <div className="grid grid-cols-3 gap-2">
-                        <Card className="p-3 text-center">
-                            <Star className="h-4 w-4 mx-auto mb-1 text-yellow-500" />
-                            <p className="text-xs text-muted-foreground">쯔양 방문</p>
-                            <p className="text-lg font-bold text-primary">
-                                {restaurant.jjyang_visit_count ?? 0}회
-                            </p>
-                        </Card>
-                        <Card className="p-3 text-center">
-                            <Users className="h-4 w-4 mx-auto mb-1 text-blue-500" />
-                            <p className="text-xs text-muted-foreground">쯔양 팬 방문</p>
-                            <p className="text-lg font-bold">
-                                {restaurant.visit_count ?? 0}회
-                            </p>
-                        </Card>
-                        <Card className="p-3 text-center">
-                            <MessageSquare className="h-4 w-4 mx-auto mb-1 text-green-500" />
-                            <p className="text-xs text-muted-foreground">리뷰</p>
-                            <p className="text-lg font-bold">
-                                {restaurant.review_count ?? 0}개
-                            </p>
-                        </Card>
-                    </div>
-
-                    <Separator />
 
                     {/* Contact Info */}
                     <div className="space-y-3">
@@ -227,33 +185,37 @@ export function RestaurantDetailPanel({
                     {restaurant.youtube_link && (
                         <>
                             <Separator />
-                            <div className="space-y-2">
+                            <div className="space-y-3">
                                 <h3 className="font-semibold text-sm flex items-center gap-2">
                                     <Youtube className="h-4 w-4 text-red-500" />
                                     쯔양 유튜브 영상
                                 </h3>
-                                <a
-                                    href={restaurant.youtube_link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block"
+                                <div
+                                    className="relative cursor-pointer rounded-lg overflow-hidden group"
+                                    onClick={() => window.open(restaurant.youtube_link, '_blank')}
                                 >
-                                    <Button variant="outline" className="w-full justify-start gap-2">
-                                        <Youtube className="h-4 w-4 text-red-500" />
-                                        영상 보러가기
-                                    </Button>
-                                </a>
+                                    {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
+                                        <img
+                                            src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
+                                            alt="YouTube Thumbnail"
+                                            className="w-full h-48 object-cover"
+                                        />
+                                    )}
+                                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                                        <Youtube className="h-12 w-12 text-white" />
+                                    </div>
+                                </div>
                             </div>
                         </>
                     )}
 
-                    {/* Description (쯔양 리뷰) */}
+                    {/* 쯔양 리뷰 */}
                     {restaurant.description && (
                         <>
                             <Separator />
                             <div className="space-y-2">
                                 <h3 className="font-semibold text-sm">쯔양의 리뷰</h3>
-                                <div className="p-3 bg-muted/50 rounded-lg">
+                                <div className="p-4 bg-muted/50 rounded-lg">
                                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                                         {restaurant.description}
                                     </p>
@@ -330,38 +292,13 @@ export function RestaurantDetailPanel({
                     길찾기
                 </Button>
 
-                {/* 쯔양 미방문 경고 메시지 */}
-                {!isJjyangVisited && (
-                    <Alert className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800">
-                        <AlertCircle className="h-4 w-4 text-amber-600" />
-                        <AlertDescription className="text-xs text-amber-800 dark:text-amber-200">
-                            이 맛집은 쯔양이 아직 방문하지 않은 곳입니다. <br />
-                            쯔양이 방문한 맛집에만 리뷰를 작성할 수 있습니다.
-                        </AlertDescription>
-                    </Alert>
-                )}
-
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <div className="w-full">
-                                <Button
-                                    onClick={onWriteReview}
-                                    disabled={!isJjyangVisited}
-                                    className="w-full bg-gradient-primary hover:opacity-90 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <MessageSquare className="h-4 w-4" />
-                                    리뷰 작성하기
-                                </Button>
-                            </div>
-                        </TooltipTrigger>
-                        {!isJjyangVisited && (
-                            <TooltipContent>
-                                <p className="text-xs">쯔양이 방문한 맛집에만 리뷰를 작성할 수 있습니다</p>
-                            </TooltipContent>
-                        )}
-                    </Tooltip>
-                </TooltipProvider>
+                <Button
+                    onClick={onWriteReview}
+                    className="w-full bg-gradient-primary hover:opacity-90 gap-2"
+                >
+                    <MessageSquare className="h-4 w-4" />
+                    리뷰 작성하기
+                </Button>
             </div>
         </div>
     );
