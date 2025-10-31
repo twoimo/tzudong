@@ -7,6 +7,9 @@ import { REGION_MAP_CONFIG } from "@/config/maps";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { MapPin, Star, Users, ChefHat } from "lucide-react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -25,9 +28,11 @@ interface NaverMapViewProps {
     refreshTrigger: number;
     onAdminAddRestaurant?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+    isGridMode?: boolean;
+    onRestaurantSelect?: (restaurant: Restaurant) => void;
 }
 
-const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refreshTrigger, onAdminEditRestaurant }: NaverMapViewProps) => {
+const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refreshTrigger, onAdminEditRestaurant, isGridMode = false, onRestaurantSelect }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
@@ -79,7 +84,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
                 zoomControlOptions: {
                     position: naver.maps.Position.TOP_RIGHT,
                 },
-                mapTypeControl: true,
+                mapTypeControl: false,
                 mapTypeControlOptions: {
                     position: naver.maps.Position.TOP_LEFT,
                 },
@@ -196,6 +201,13 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
 
                 // 마커 클릭 이벤트
                 naver.maps.Event.addListener(marker, "click", () => {
+                    // 그리드 모드에서는 부모 컴포넌트로 맛집 선택 전달
+                    if (isGridMode && onRestaurantSelect) {
+                        onRestaurantSelect(restaurant);
+                        return;
+                    }
+
+                    // 단일 지도 모드: 기존 동작 유지
                     // 상세 패널이 이미 열려있는 경우 중심을 오른쪽으로 조정 (패널이 지도를 가리지 않도록)
                     if (selectedRestaurant && selectedRestaurant.id !== restaurant.id) {
                         // 다른 맛집의 상세 패널이 열려있을 때는 중심을 오른쪽으로 0.008도 이동 (약 800m)
@@ -288,8 +300,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
                 </div>
             )}
 
-            {/* 레스토랑 상세 패널 */}
-            {selectedRestaurant && (
+            {/* 레스토랑 상세 패널 - 그리드 모드에서는 간소화된 모달로 표시 */}
+            {!isGridMode && selectedRestaurant && (
                 <div className="absolute right-0 top-0 h-full w-96 z-20 shadow-xl">
                     <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
@@ -303,6 +315,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, refres
                     />
                 </div>
             )}
+
 
             {/* 리뷰 작성 모달 */}
             <ReviewModal
