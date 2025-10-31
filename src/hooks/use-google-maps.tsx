@@ -5,7 +5,7 @@ interface UseGoogleMapsOptions {
     libraries?: string[];
 }
 
-export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseGoogleMapsOptions) {
+export function useGoogleMaps({ apiKey, libraries = ["maps", "places", "marker"] }: UseGoogleMapsOptions) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [loadError, setLoadError] = useState<Error | null>(null);
 
@@ -25,7 +25,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
 
         // Load Google Maps script
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(",")}`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(",")}&loading=async`;
         script.async = true;
         script.defer = true;
 

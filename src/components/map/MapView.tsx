@@ -32,6 +32,25 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
+  // API 키가 없으면 에러 표시
+  if (!apiKey) {
+    return (
+      <div className="flex items-center justify-center h-full bg-muted">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">🔑</div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-destructive">
+              Google Maps API 키 필요
+            </h2>
+            <p className="text-muted-foreground">
+              .env 파일에 VITE_GOOGLE_MAPS_API_KEY를 설정해주세요.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
     bounds: mapBounds ? {
       south: mapBounds.getSouthWest().lat(),
@@ -44,7 +63,7 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
     minReviews: filters.minReviews,
     minUserVisits: filters.minUserVisits,
     minJjyangVisits: filters.minJjyangVisits,
-    enabled: isLoaded && !!mapBounds,
+    enabled: isLoaded, // 초기 로딩 시에도 활성화
   });
 
 
@@ -147,14 +166,18 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
           <div className="text-6xl">❌</div>
           <div className="space-y-2">
             <h2 className="text-2xl font-bold text-destructive">
-              지도 로딩 실패
+              구글 지도 로딩 실패
             </h2>
             <p className="text-muted-foreground">
               Google Maps API를 불러오는데 실패했습니다.
             </p>
-            <p className="text-sm text-muted-foreground">
-              .env.local 파일에 VITE_GOOGLE_MAPS_API_KEY를 설정해주세요.
-            </p>
+            <div className="text-sm text-muted-foreground space-y-1">
+              <p>🔧 해결 방법:</p>
+              <p>1. Google Cloud Console에서 API 키 확인</p>
+              <p>2. Application restrictions → HTTP referrers 설정</p>
+              <p>3. 다음 도메인 추가: <code className="bg-muted px-1 rounded">localhost:8080/*</code></p>
+              <p>4. Maps JavaScript API 활성화 확인</p>
+            </div>
           </div>
         </div>
       </div>
