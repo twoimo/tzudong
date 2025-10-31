@@ -215,7 +215,7 @@ export function RestaurantDetailPanel({
                     )}
 
                     {/* 쯔양 리뷰 */}
-                    {restaurant.description && (
+                    {restaurant.tzuyang_review && (
                         <>
                             <Separator />
                             <div className="space-y-2">
@@ -225,7 +225,7 @@ export function RestaurantDetailPanel({
                                 </h3>
                                 <div className="p-4 bg-muted/50 rounded-lg">
                                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                        {restaurant.description}
+                                        {restaurant.tzuyang_review}
                                     </p>
                                 </div>
                             </div>
