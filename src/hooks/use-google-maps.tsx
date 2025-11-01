@@ -5,7 +5,7 @@ interface UseGoogleMapsOptions {
     libraries?: string[];
 }
 
-export function useGoogleMaps({ apiKey, libraries = ["maps", "places", "marker"] }: UseGoogleMapsOptions) {
+export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseGoogleMapsOptions) {
     const [isLoaded, setIsLoaded] = useState(false);
     const [loadError, setLoadError] = useState<Error | null>(null);
 

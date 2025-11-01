@@ -10,22 +10,37 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 };
+const USA_CENTER = { lat: 39.8283, lng: -98.5795 }; // 미국 중심
 const INITIAL_ZOOM = 12;
+const USA_ZOOM = 4; // 미국 줌 레벨
+
+// 국가별 지도 중심 좌표
+const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
+  "미국": { lat: 39.8283, lng: -98.5795, zoom: 4 },
+  "일본": { lat: 36.2048, lng: 138.2529, zoom: 5 },
+  "태국": { lat: 15.8700, lng: 100.9925, zoom: 6 },
+  "인도네시아": { lat: -0.7893, lng: 113.9213, zoom: 5 },
+  "튀르키예": { lat: 38.9637, lng: 35.2433, zoom: 6 },
+  "헝가리": { lat: 47.1625, lng: 19.5033, zoom: 7 },
+  "오스트레일리아": { lat: -25.2744, lng: 133.7751, zoom: 4 },
+};
 
 interface MapViewProps {
   filters: FilterState;
+  selectedCountry?: string | null;
+  selectedRestaurant?: Restaurant | null;
   refreshTrigger?: number;
   onAdminAddRestaurant?: () => void;
   onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+  onRestaurantSelect?: (restaurant: Restaurant | null) => void;
 }
 
-const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant }: MapViewProps) => {
+const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect }: MapViewProps) => {
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
 
-  const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
@@ -59,6 +74,7 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
       east: mapBounds.getNorthEast().lng(),
     } : undefined,
     category: filters.categories.length > 0 ? filters.categories : undefined,
+    region: selectedCountry || undefined,
     minRating: filters.minRating,
     minReviews: filters.minReviews,
     minUserVisits: filters.minUserVisits,
@@ -90,11 +106,20 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
 
   // Initialize map
   useEffect(() => {
-    if (!isLoaded || !mapRef.current) return;
+    if (!isLoaded || !mapRef.current || !window.google || !window.google.maps || !window.google.maps.Map) {
+      console.log("Google Maps not fully loaded yet", { isLoaded, google: !!window.google, maps: !!(window.google?.maps), Map: !!(window.google?.maps?.Map) });
+      return;
+    }
 
-    const map = new google.maps.Map(mapRef.current, {
-      center: SEOUL_CENTER,
-      zoom: INITIAL_ZOOM,
+    // 선택된 국가에 따라 중심점과 줌 설정 (기본값: 미국)
+    const countryConfig = selectedCountry && COUNTRY_CENTERS[selectedCountry];
+    const center = countryConfig ? { lat: countryConfig.lat, lng: countryConfig.lng } : USA_CENTER;
+    const zoom = countryConfig ? countryConfig.zoom : USA_ZOOM;
+
+    try {
+      const map = new google.maps.Map(mapRef.current, {
+      center: center,
+      zoom: zoom,
       mapId: "tzudong-map",
       disableDefaultUI: false,
       zoomControl: true,
@@ -112,7 +137,10 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
         setMapBounds(bounds);
       }
     });
-  }, [isLoaded]);
+    } catch (error) {
+      console.error("Error creating Google Map:", error);
+    }
+  }, [isLoaded, selectedCountry]);
 
   // Update markers when restaurants change
   useEffect(() => {
@@ -126,7 +154,29 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
 
     // Create new markers
     restaurants.forEach((restaurant) => {
-      const icon = "🔥"; // 모든 마커를 불꽃으로 통일
+      // 카테고리별 적절한 이모티콘으로 변경
+      const getCategoryIcon = (category: string) => {
+        const iconMap: { [key: string]: string } = {
+          '고기': '🥩',
+          '치킨': '🍗',
+          '한식': '🍚',
+          '중식': '🥢',
+          '일식': '🍣',
+          '양식': '🍝',
+          '분식': '🥟',
+          '카페·디저트': '☕',
+          '아시안': '🍜',
+          '패스트푸드': '🍔',
+          '족발·보쌈': '🍖',
+          '돈까스·회': '🍱',
+          '찜·탕': '🥘',
+          '야식': '🌙',
+          '도시락': '🍱'
+        };
+        return iconMap[category] || '⭐'; // 기본값은 별표
+      };
+
+      const icon = getCategoryIcon(restaurant.category);
 
       const markerElement = document.createElement("div");
       markerElement.className = "custom-marker";
@@ -150,7 +200,7 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
       });
 
       markerElement.addEventListener("click", () => {
-        setSelectedRestaurant(restaurant);
+        onRestaurantSelect?.(restaurant);
         // 지도 이동 제거 - 현재 위치 유지
       });
 
@@ -211,7 +261,7 @@ const MapView = memo(({ filters, refreshTrigger, onAdminAddRestaurant, onAdminEd
         <div className="w-96 h-full">
           <RestaurantDetailPanel
             restaurant={selectedRestaurant}
-            onClose={() => setSelectedRestaurant(null)}
+            onClose={() => onRestaurantSelect?.(null)}
             onWriteReview={() => {
               setIsReviewModalOpen(true);
             }}
