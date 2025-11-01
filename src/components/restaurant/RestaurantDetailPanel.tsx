@@ -7,6 +7,8 @@ import { Restaurant } from "@/types/restaurant";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import AuthModal from "@/components/auth/AuthModal";
+import { useState } from "react";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -32,9 +34,15 @@ export function RestaurantDetailPanel({
     onEditRestaurant,
     onRequestEditRestaurant,
 }: RestaurantDetailPanelProps) {
-    const { isAdmin } = useAuth();
+    const { user, isAdmin } = useAuth();
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
     if (!restaurant) return null;
+
+    // 카테고리 타입 처리: TEXT[] 배열 또는 단일 값
+    const categories: string[] = Array.isArray(restaurant.category)
+        ? restaurant.category
+        : [String(restaurant.category)].filter(Boolean);
 
 
     // Mock recent reviews - 실제로는 Supabase에서 가져와야 함
@@ -90,35 +98,63 @@ export function RestaurantDetailPanel({
         window.open(url, '_blank');
     };
 
+    const handleRequestEditRestaurant = () => {
+        if (!user) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+        onRequestEditRestaurant?.(restaurant);
+    };
+
+    const handleWriteReview = () => {
+        if (!user) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+        onWriteReview?.();
+    };
+
+    const getCategoryEmoji = (category: string) => {
+        const emojiMap: { [key: string]: string } = {
+            '고기': '🥩',
+            '한식': '🍚',
+            '분식': '🍜',
+            '족발·보쌈': '🦵',
+            '돈까스·회': '🍣',
+            '치킨': '🍗',
+            '피자': '🍕',
+            '중식': '🥢',
+            '일식': '🍱',
+            '양식': '🍝',
+            '카페': '☕',
+            '디저트': '🍰',
+            '패스트푸드': '🍔',
+            '기타': '🍽️'
+        };
+
+        return emojiMap[category] || '🔥'; // 기본값으로 불꽃 이모티콘
+    };
+
     return (
-        <div className="h-full flex flex-col bg-background border-l border-border">
+        <>
+            <div className="h-full flex flex-col bg-background border-l border-border">
             {/* Header */}
             <div className="p-4 border-b border-border">
                 <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
-                            {(() => {
-                                // 카테고리 타입 처리: TEXT[] 배열 또는 단일 값
-                                let categories: string[] = [];
-                                if (Array.isArray(restaurant.category)) {
-                                    categories = restaurant.category;
-                                } else {
-                                    categories = [String(restaurant.category)].filter(Boolean);
-                                }
-
-                                return categories.map((cat, index) => (
-                                    <Badge
-                                        key={index}
-                                        variant={index === 0 ? "default" : "secondary"}
-                                        className="text-xs"
-                                    >
-                                        {cat}
-                                    </Badge>
-                                ));
-                            })()}
+                            {categories.map((cat, index) => (
+                                <Badge
+                                    key={index}
+                                    variant={index === 0 ? "default" : "secondary"}
+                                    className="text-xs"
+                                >
+                                    {cat}
+                                </Badge>
+                            ))}
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-2xl">🔥</span>
+                            <span className="text-2xl">{getCategoryEmoji(categories[0] || '')}</span>
                             <h2 className="text-xl font-bold line-clamp-2">{restaurant.name}</h2>
                         </div>
                     </div>
@@ -304,7 +340,7 @@ export function RestaurantDetailPanel({
                 </Button>
 
                 <Button
-                    onClick={() => onRequestEditRestaurant?.(restaurant)}
+                    onClick={handleRequestEditRestaurant}
                     variant="outline"
                     className="w-full gap-2"
                 >
@@ -313,14 +349,20 @@ export function RestaurantDetailPanel({
                 </Button>
 
                 <Button
-                    onClick={onWriteReview}
+                    onClick={handleWriteReview}
                     className="w-full bg-gradient-primary hover:opacity-90 gap-2"
                 >
                     <MessageSquare className="h-4 w-4" />
                     리뷰 작성하기
                 </Button>
             </div>
-        </div>
+            </div>
+
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+            />
+        </>
     );
 }
 
