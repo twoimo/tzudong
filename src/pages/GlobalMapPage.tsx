@@ -154,6 +154,28 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         }));
     };
 
+    const getEditChanges = () => {
+        if (!restaurantToEdit) return [];
+
+        const originalData = {
+            name: restaurantToEdit.name,
+            address: restaurantToEdit.address,
+            phone: restaurantToEdit.phone || '',
+            category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
+            youtube_link: restaurantToEdit.youtube_link || '',
+            tzuyang_review: restaurantToEdit.tzuyang_review || ''
+        };
+
+        return Object.entries(editFormData).filter(([key, value]) => {
+            const originalValue = originalData[key as keyof typeof originalData];
+            if (key === 'category') {
+                // 카테고리는 배열 비교
+                return JSON.stringify(originalValue) !== JSON.stringify(value);
+            }
+            return originalValue !== value;
+        });
+    };
+
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!restaurantToEdit) return;
@@ -420,13 +442,13 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     {restaurantToEdit && (
                         <form onSubmit={handleEditSubmit} className="space-y-4 mt-4">
                             {/* 수정할 정보 입력 */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-name">
+                                    <Label htmlFor="name">
                                         맛집 이름 <span className="text-red-500">*</span>
                                     </Label>
                                     <Input
-                                        id="edit-name"
+                                        id="name"
                                         name="name"
                                         value={editFormData.name}
                                         onChange={(e) => handleEditFormChange('name', e.target.value)}
@@ -436,7 +458,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-category">카테고리 *</Label>
+                                    <Label htmlFor="category">
+                                        카테고리 <span className="text-red-500">*</span>
+                                    </Label>
                                     <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
                                         <PopoverTrigger asChild>
                                             <Button
@@ -508,12 +532,12 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     )}
                                 </div>
 
-                                <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="edit-address">
+                                <div className="space-y-2">
+                                    <Label htmlFor="address">
                                         주소 <span className="text-red-500">*</span>
                                     </Label>
                                     <Input
-                                        id="edit-address"
+                                        id="address"
                                         name="address"
                                         value={editFormData.address}
                                         onChange={(e) => handleEditFormChange('address', e.target.value)}
@@ -523,9 +547,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-phone">전화번호</Label>
+                                    <Label htmlFor="phone">전화번호</Label>
                                     <Input
-                                        id="edit-phone"
+                                        id="phone"
                                         name="phone"
                                         value={editFormData.phone}
                                         onChange={(e) => handleEditFormChange('phone', e.target.value)}
@@ -534,9 +558,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-youtube">유튜브 링크</Label>
+                                    <Label htmlFor="youtube_link">쯔양 유튜브 영상 링크</Label>
                                     <Input
-                                        id="edit-youtube"
+                                        id="youtube_link"
                                         name="youtube_link"
                                         value={editFormData.youtube_link}
                                         onChange={(e) => handleEditFormChange('youtube_link', e.target.value)}
@@ -544,10 +568,10 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     />
                                 </div>
 
-                                <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="edit-tzuyang_review">쯔양의 리뷰</Label>
+                                <div className="space-y-2">
+                                    <Label htmlFor="tzuyang_review">쯔양의 리뷰</Label>
                                     <Textarea
-                                        id="edit-tzuyang_review"
+                                        id="tzuyang_review"
                                         name="tzuyang_review"
                                         value={editFormData.tzuyang_review}
                                         onChange={(e) => handleEditFormChange('tzuyang_review', e.target.value)}
@@ -558,84 +582,62 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                             </div>
 
                             {/* 변경사항 표시 */}
-                            {(() => {
-                                const changes: Array<[string, string | string[]]> = [];
-                                Object.entries(editFormData).forEach(([key, value]) => {
-                                    const originalValue = restaurantToEdit ? {
-                                        name: restaurantToEdit.name,
-                                        address: restaurantToEdit.address,
-                                        phone: restaurantToEdit.phone || '',
-                                        category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
-                                        youtube_link: restaurantToEdit.youtube_link || '',
-                                        tzuyang_review: restaurantToEdit.tzuyang_review || ''
-                                    }[key as keyof typeof restaurantToEdit] || '' : '';
+                            {getEditChanges().length > 0 && (
+                                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-blue-600">📋</div>
+                                            <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                                수정 요청 내용
+                                            </Label>
+                                        </div>
 
-                                    const hasChanged = key === 'category'
-                                        ? JSON.stringify(originalValue) !== JSON.stringify(value)
-                                        : originalValue !== value;
-
-                                    if (hasChanged) {
-                                        changes.push([key, value]);
-                                    }
-                                });
-
-                                return changes.length > 0 && (
-                                    <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
                                         <div className="space-y-3">
-                                            <div className="flex items-center gap-2">
-                                                <div className="text-blue-600">📋</div>
-                                                <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                                                    수정 요청 내용
-                                                </Label>
-                                            </div>
+                                            {getEditChanges().map(([key, value]) => {
+                                                const originalValue = restaurantToEdit ? {
+                                                    name: restaurantToEdit.name,
+                                                    address: restaurantToEdit.address,
+                                                    phone: restaurantToEdit.phone || '',
+                                                    category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
+                                                    youtube_link: restaurantToEdit.youtube_link || '',
+                                                    tzuyang_review: restaurantToEdit.tzuyang_review || ''
+                                                }[key as keyof typeof restaurantToEdit] || '' : '';
 
-                                            <div className="space-y-3">
-                                                {changes.map(([key, value]) => {
-                                                    const originalValue = restaurantToEdit ? {
-                                                        name: restaurantToEdit.name,
-                                                        address: restaurantToEdit.address,
-                                                        phone: restaurantToEdit.phone || '',
-                                                        category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
-                                                        youtube_link: restaurantToEdit.youtube_link || '',
-                                                        tzuyang_review: restaurantToEdit.tzuyang_review || ''
-                                                    }[key as keyof typeof restaurantToEdit] || '' : '';
+                                                const fieldName = {
+                                                    name: '맛집 이름',
+                                                    address: '주소',
+                                                    phone: '전화번호',
+                                                    category: '카테고리',
+                                                    youtube_link: '유튜브 링크',
+                                                    tzuyang_review: '쯔양의 리뷰'
+                                                }[key] || key;
 
-                                                    const fieldName = {
-                                                        name: '맛집 이름',
-                                                        address: '주소',
-                                                        phone: '전화번호',
-                                                        category: '카테고리',
-                                                        youtube_link: '유튜브 링크',
-                                                        tzuyang_review: '쯔양의 리뷰'
-                                                    }[key] || key;
-
-                                                    return (
-                                                        <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                                                            <div className="flex items-center justify-between mb-2">
-                                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                    {fieldName}
-                                                                </span>
-                                                                <div className="flex items-center gap-1 text-xs text-orange-600">
-                                                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                                                    변경됨
-                                                                </div>
-                                                            </div>
-                                                            <div className="space-y-1">
-                                                                <div className="text-xs text-red-600 line-through">
-                                                                    기존: {key === 'category' ? (Array.isArray(originalValue) ? originalValue.join(', ') : originalValue) : (originalValue || '없음')}
-                                                                </div>
-                                                                <div className="text-xs text-green-600 font-medium">
-                                                                    변경: {key === 'category' ? (Array.isArray(value) ? value.join(', ') : value) : (value || '없음')}
-                                                                </div>
+                                                return (
+                                                    <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                                        <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                {fieldName}
+                                                            </span>
+                                                            <div className="flex items-center gap-1 text-xs text-orange-600">
+                                                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                                                변경됨
                                                             </div>
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                        <div className="space-y-1">
+                                                            <div className="text-xs text-red-600 line-through">
+                                                                기존: {key === 'category' ? (Array.isArray(originalValue) ? originalValue.join(', ') : originalValue) : (originalValue || '없음')}
+                                                            </div>
+                                                            <div className="text-xs text-green-600 font-medium">
+                                                                변경: {key === 'category' ? (Array.isArray(value) ? value.join(', ') : value) : (value || '없음')}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
-                                    </Card>
-                                );
-                            })()}
+                                    </div>
+                                </Card>
+                            )}
 
                             <div className="flex gap-2 pt-4">
                                 <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">
