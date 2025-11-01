@@ -45,6 +45,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
   // 맛집으로 지도 이동하는 함수
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
@@ -231,6 +232,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       markerElement.addEventListener("click", () => {
         onRestaurantSelect?.(restaurant);
+        // 패널 열기
+        setIsPanelOpen(true);
         // 지도 이동 제거 - 현재 위치 유지
       });
 
@@ -309,11 +312,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       <div ref={mapRef} className="flex-1 h-full" />
 
       {/* Restaurant Detail Panel */}
-      {selectedRestaurant && (
+      {selectedRestaurant && isPanelOpen && (
         <div className="w-96 h-full">
           <RestaurantDetailPanel
             restaurant={selectedRestaurant}
-            onClose={() => onRestaurantSelect?.(null)}
+            onClose={() => setIsPanelOpen(false)}
             onWriteReview={() => {
               setIsReviewModalOpen(true);
             }}
