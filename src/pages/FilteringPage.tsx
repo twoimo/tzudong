@@ -36,17 +36,14 @@ const REGIONS = [
     "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"
 ];
 
-type SortColumn = "name" | "category" | "jjyangVisits" | "fanVisits" | "rating";
+type SortColumn = "name" | "category" | "fanVisits";
 type SortDirection = "asc" | "desc" | null;
 
 interface FilterState {
     searchQuery: string;
     categories: string[];
     regions: string[];
-    jjyangVisitsMin: number;
     fanVisitsMin: number;
-    ratingMin: number;
-    ratingMax: number;
 }
 
 interface FilteringPageProps {
@@ -64,10 +61,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         searchQuery: "",
         categories: [],
         regions: [],
-        jjyangVisitsMin: 0,
         fanVisitsMin: 0,
-        ratingMin: 0,
-        ratingMax: 10,
     });
 
     const handleSort = (column: SortColumn) => {
@@ -116,10 +110,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             searchQuery: "",
             categories: [],
             regions: [],
-            jjyangVisitsMin: 0,
             fanVisitsMin: 0,
-            ratingMin: 0,
-            ratingMax: 10,
         });
         setSortColumn(null);
         setSortDirection(null);
@@ -194,10 +185,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             });
         }
 
-        // 쯔양 방문횟수 필터
-        if (filters.jjyangVisitsMin > 0) {
-            result = result.filter(r => (r.jjyang_visit_count || 0) >= filters.jjyangVisitsMin);
-        }
 
         // 쯔양 팬 방문 (리뷰) 횟수 필터
         if (filters.fanVisitsMin > 0) {
@@ -205,11 +192,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         }
 
 
-        // AI 별점 필터
-        result = result.filter(r => {
-            const rating = r.ai_rating || 0;
-            return rating >= filters.ratingMin && rating <= filters.ratingMax;
-        });
 
         // 정렬
         if (sortColumn && sortDirection) {
@@ -226,17 +208,9 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         aValue = a.category || "";
                         bValue = b.category || "";
                         break;
-                    case "jjyangVisits":
-                        aValue = a.jjyang_visit_count || 0;
-                        bValue = b.jjyang_visit_count || 0;
-                        break;
                     case "fanVisits":
                         aValue = a.visit_count || 0;
                         bValue = b.visit_count || 0;
-                        break;
-                    case "rating":
-                        aValue = a.ai_rating || 0;
-                        bValue = b.ai_rating || 0;
                         break;
                 }
 
@@ -262,9 +236,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         (filters.searchQuery ? 1 : 0) +
         filters.categories.length +
         filters.regions.length +
-        (filters.jjyangVisitsMin > 0 ? 1 : 0) +
-        (filters.fanVisitsMin > 0 ? 1 : 0) +
-        (filters.ratingMin > 0 || filters.ratingMax < 10 ? 1 : 0);
+        (filters.fanVisitsMin > 0 ? 1 : 0);
 
     return (
         <div className="flex flex-col h-full bg-background">
@@ -379,22 +351,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         </PopoverContent>
                     </Popover>
 
-                    {/* 쯔양 방문횟수 */}
-                    <Select
-                        value={filters.jjyangVisitsMin.toString()}
-                        onValueChange={(v) => setFilters({ ...filters, jjyangVisitsMin: parseInt(v) })}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="쯔양 방문" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="0">쯔양 방문 (전체)</SelectItem>
-                            <SelectItem value="1">1회 이상</SelectItem>
-                            <SelectItem value="2">2회 이상</SelectItem>
-                            <SelectItem value="3">3회 이상</SelectItem>
-                            <SelectItem value="5">5회 이상</SelectItem>
-                        </SelectContent>
-                    </Select>
 
                     {/* 쯔양 팬 방문횟수 */}
                     <Select
@@ -415,27 +371,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
 
                 </div>
 
-                {/* AI 별점 슬라이더 */}
-                <div className="mt-4 p-4 bg-muted/50 rounded-lg">
-                    <div className="flex items-center justify-between mb-2">
-                        <label className="text-sm font-medium">AI 별점</label>
-                        <span className="text-sm text-primary font-semibold">
-                            {filters.ratingMin.toFixed(1)}⭐ ~ {filters.ratingMax.toFixed(1)}⭐
-                        </span>
-                    </div>
-                    <Slider
-                        value={[filters.ratingMin, filters.ratingMax]}
-                        onValueChange={([min, max]) => setFilters({ ...filters, ratingMin: min, ratingMax: max })}
-                        min={0}
-                        max={10}
-                        step={0.1}
-                        className="w-full"
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                        <span>0.0⭐ (맛집X)</span>
-                        <span>10.0⭐ (맛집O)</span>
-                    </div>
-                </div>
 
                 {/* 선택된 필터 태그 */}
                 {activeFilterCount > 0 && (
@@ -455,11 +390,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 {cat}
                             </Badge>
                         ))}
-                        {filters.jjyangVisitsMin > 0 && (
-                            <Badge variant="secondary">
-                                쯔양 {filters.jjyangVisitsMin}회+
-                            </Badge>
-                        )}
                         {filters.fanVisitsMin > 0 && (
                             <Badge variant="secondary">
                                 쯔양 팬 {filters.fanVisitsMin}회+
@@ -501,33 +431,11 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => handleSort("jjyangVisits")}
-                                        className="hover:bg-accent w-full justify-center"
-                                    >
-                                        쯔양 방문
-                                        {getSortIcon("jjyangVisits")}
-                                    </Button>
-                                </TableHead>
-                                <TableHead className="w-[120px] text-center">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
                                         onClick={() => handleSort("fanVisits")}
                                         className="hover:bg-accent w-full justify-center"
                                     >
                                         쯔양 팬 방문 (리뷰)
                                         {getSortIcon("fanVisits")}
-                                    </Button>
-                                </TableHead>
-                                <TableHead className="w-[200px] text-center">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleSort("rating")}
-                                        className="hover:bg-accent w-full justify-center"
-                                    >
-                                        AI 별점
-                                        {getSortIcon("rating")}
                                     </Button>
                                 </TableHead>
                                 <TableHead className="w-[250px]">주소</TableHead>
@@ -554,22 +462,13 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             <div className="h-4 bg-muted rounded animate-pulse w-12 mx-auto"></div>
                                         </TableCell>
                                         <TableCell className="text-center">
-                                            <div className="h-4 bg-muted rounded animate-pulse w-10 mx-auto"></div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex items-center justify-center gap-1">
-                                                <div className="w-4 h-4 bg-muted rounded animate-pulse"></div>
-                                                <div className="h-4 bg-muted rounded animate-pulse w-6"></div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell className="text-center">
                                             <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
                                         </TableCell>
                                     </TableRow>
                                 ))
                             ) : filteredAndSortedRestaurants.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-12">
+                                    <TableCell colSpan={4} className="text-center py-12">
                                         <p className="text-muted-foreground">필터 조건에 맞는 맛집이 없습니다.</p>
                                     </TableCell>
                                 </TableRow>
@@ -601,24 +500,9 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-center">
-                                            <span className="font-semibold text-primary">
-                                                {restaurant.jjyang_visit_count || 0}회
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-center">
                                             <span className="font-semibold">
                                                 {restaurant.visit_count || 0}회
                                             </span>
-                                        </TableCell>
-                                        <TableCell className="text-center">
-                                            <div className="flex flex-col items-center gap-1">
-                                                <span className="text-lg">
-                                                    {getStarEmoji(restaurant.ai_rating || 0)}
-                                                </span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {restaurant.ai_rating?.toFixed(1) || "0.0"}점
-                                                </span>
-                                            </div>
                                         </TableCell>
                                         <TableCell>
                                             <span className="text-sm text-muted-foreground truncate block">

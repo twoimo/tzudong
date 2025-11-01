@@ -74,7 +74,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             const { data, error } = await supabase
                 .from('restaurants')
                 .select('id, name')
-                .gt('jjyang_visit_count', 0)
                 .order('name');
 
             if (error) throw error;
