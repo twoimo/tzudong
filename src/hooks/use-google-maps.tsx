@@ -19,16 +19,20 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
     useEffect(() => {
         // 이미 로드된 경우
         if (globalLoadState.isLoaded) {
+            console.log('useGoogleMaps: Already loaded globally');
             setIsLoaded(true);
             return;
         }
 
         // 로딩 중인 경우
         if (globalLoadState.isLoading) {
+            console.log('useGoogleMaps: Loading in progress, waiting...');
             const checkLoaded = () => {
                 if (globalLoadState.isLoaded) {
+                    console.log('useGoogleMaps: Loading completed');
                     setIsLoaded(true);
                 } else if (globalLoadState.error) {
+                    console.log('useGoogleMaps: Loading failed');
                     setLoadError(globalLoadState.error);
                 } else {
                     setTimeout(checkLoaded, 100);
@@ -39,7 +43,8 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
         }
 
         // 이미 전역적으로 로드된 경우
-        if (window.google && window.google.maps) {
+        if (window.google && window.google.maps && window.google.maps.Map) {
+            console.log('useGoogleMaps: Google Maps already available in window');
             globalLoadState.isLoaded = true;
             setIsLoaded(true);
             return;
@@ -62,41 +67,56 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             return;
         }
 
-        // Load Google Maps script
+        console.log('useGoogleMaps: Creating new script element');
+
+        // Load Google Maps script - 더 빠른 로딩을 위해 최적화된 URL 사용
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(",")}&loading=async&v=weekly`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(",")}&loading=async&v=weekly&callback=googleMapsCallback`;
         script.async = true;
-        script.defer = false; // defer를 false로 해서 더 빠르게 로드
 
-        // Add to head for faster loading (before other scripts)
-        const firstScript = document.head.querySelector('script');
-        if (firstScript) {
-            document.head.insertBefore(script, firstScript);
-        } else {
-            document.head.appendChild(script);
-        }
-
-        globalLoadState.isLoading = true;
-        script.addEventListener("load", () => {
-            // Double check if Google Maps is fully loaded
+        // Google Maps 콜백 함수 설정 (더 빠른 로딩 감지)
+        window.googleMapsCallback = () => {
+            console.log('useGoogleMaps: Google Maps callback fired');
             if (window.google && window.google.maps && window.google.maps.Map) {
                 globalLoadState.isLoaded = true;
                 globalLoadState.isLoading = false;
                 setIsLoaded(true);
-            } else {
-                // Retry after a short delay
-                setTimeout(() => {
-                    if (window.google && window.google.maps && window.google.maps.Map) {
-                        globalLoadState.isLoaded = true;
-                        globalLoadState.isLoading = false;
-                        setIsLoaded(true);
-                    }
-                }, 100);
             }
+        };
+
+        // 로딩 타임아웃 설정 (5초로 단축)
+        const timeoutId = setTimeout(() => {
+            if (!globalLoadState.isLoaded) {
+                console.log('useGoogleMaps: Loading timeout reached');
+                globalLoadState.error = new Error("Google Maps 로딩 시간 초과 (네트워크 연결을 확인해주세요)");
+                globalLoadState.isLoading = false;
+                setLoadError(globalLoadState.error);
+            }
+        }, 5000);
+
+        // 스크립트를 head의 맨 위에 추가해서 가장 먼저 로드되도록 함
+        const head = document.head;
+        const firstChild = head.firstChild;
+        head.insertBefore(script, firstChild);
+
+        globalLoadState.isLoading = true;
+
+        script.addEventListener("load", () => {
+            console.log('useGoogleMaps: Script load event fired');
+            // 콜백이 아직 호출되지 않았을 수 있으므로 확인
+            setTimeout(() => {
+                if (window.google && window.google.maps && window.google.maps.Map && !globalLoadState.isLoaded) {
+                    console.log('useGoogleMaps: Google Maps loaded via load event');
+                    globalLoadState.isLoaded = true;
+                    globalLoadState.isLoading = false;
+                    setIsLoaded(true);
+                }
+            }, 100);
         });
 
         script.addEventListener("error", (e) => {
-            globalLoadState.error = new Error("Failed to load Google Maps");
+            console.error('useGoogleMaps: Script failed to load', e);
+            globalLoadState.error = new Error(`Google Maps 로딩 실패: ${e.message || '알 수 없는 오류'}`);
             globalLoadState.isLoading = false;
             setLoadError(globalLoadState.error);
         });
@@ -114,6 +134,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
 declare global {
     interface Window {
         google: typeof google;
+        googleMapsCallback?: () => void;
     }
 }
 

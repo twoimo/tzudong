@@ -105,6 +105,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }, [onMapReady, moveToRestaurant]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  // App 레벨에서 이미 로드되고 있으므로 로드 상태만 확인
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
   // useRestaurants 옵션 메모이제이션
@@ -156,6 +157,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   // Initialize map
   useEffect(() => {
     if (!isLoaded || !mapRef.current) {
+      console.log('MapView: Not ready to initialize map', { isLoaded, hasMapRef: !!mapRef.current });
       return;
     }
 
@@ -170,12 +172,15 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       return;
     }
 
+    console.log('MapView: Initializing Google Map');
+
     // 선택된 국가에 따라 중심점과 줌 설정 (기본값: 미국)
     const countryConfig = selectedCountry && COUNTRY_CENTERS[selectedCountry];
     const center = countryConfig ? { lat: countryConfig.lat, lng: countryConfig.lng } : USA_CENTER;
     const zoom = countryConfig ? countryConfig.zoom : USA_ZOOM;
 
     try {
+      console.log('MapView: Creating Google Map with center:', center, 'zoom:', zoom);
       const map = new google.maps.Map(mapRef.current, {
         center: center,
         zoom: zoom,
@@ -188,6 +193,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
 
       googleMapRef.current = map;
+      console.log('MapView: Google Map created successfully');
 
       // Update bounds when map moves
       map.addListener("idle", () => {
@@ -323,21 +329,40 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-background to-muted">
         <div className="text-center space-y-6">
           <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-r-secondary animate-spin mx-auto h-16 w-16" style={{ animationDuration: '1.5s' }}></div>
+            {/* 더 빠르게 느껴지도록 더 큰 스피너 */}
+            <div className="animate-spin rounded-full h-20 w-20 border-4 border-primary/20 border-t-primary mx-auto"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-r-secondary animate-spin mx-auto h-20 w-20" style={{ animationDuration: '1s' }}></div>
           </div>
           <div className="space-y-3">
-            <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              구글 지도 로딩 중...
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              지도 불러오는 중...
             </h2>
-            <p className="text-muted-foreground">
-              전 세계 맛집을 불러오고 있습니다
+            <p className="text-muted-foreground text-sm">
+              잠시만 기다려주세요
             </p>
-            <div className="flex justify-center space-x-1">
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            <div className="flex justify-center space-x-2">
+              <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+              <div className="w-3 h-3 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+              <div className="w-3 h-3 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
             </div>
+            {loadError && (
+              <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <p className="text-xs text-destructive">
+                  로딩 중 오류 발생: {loadError.message}
+                </p>
+                <button
+                  onClick={() => window.location.reload()}
+                  className="mt-2 px-3 py-1 bg-destructive text-destructive-foreground text-xs rounded hover:bg-destructive/90"
+                >
+                  새로고침
+                </button>
+              </div>
+            )}
+            {!loadError && (
+              <p className="text-xs text-muted-foreground mt-4">
+                네트워크 상태에 따라 3-5초 소요될 수 있습니다
+              </p>
+            )}
           </div>
         </div>
       </div>
