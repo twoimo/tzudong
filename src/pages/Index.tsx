@@ -46,7 +46,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     phone: '',
     category: '',
     youtube_link: '',
-    description: ''
+    tzuyang_review: ''
   });
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -74,7 +74,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
       phone: restaurant.phone || '',
       category: Array.isArray(restaurant.category) ? restaurant.category[0] : restaurant.category,
       youtube_link: restaurant.youtube_link || '',
-      description: restaurant.description || ''
+      tzuyang_review: restaurant.tzuyang_review || ''
     });
     setIsEditModalOpen(true);
   };
@@ -95,7 +95,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
       phone: restaurantToEdit.phone || '',
       category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
       youtube_link: restaurantToEdit.youtube_link || '',
-      description: restaurantToEdit.description || ''
+      tzuyang_review: restaurantToEdit.tzuyang_review || ''
     };
 
     return Object.entries(editFormData).filter(([key, value]) => {
@@ -387,7 +387,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   phone: editFormData.phone,
                   category: editFormData.category,
                   youtube_link: editFormData.youtube_link,
-                  description: editFormData.description,
+                  tzuyang_review: editFormData.tzuyang_review,
                 };
 
                 // 변경사항 계산
@@ -397,7 +397,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   phone: restaurantToEdit.phone || '',
                   category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
                   youtube_link: restaurantToEdit.youtube_link || '',
-                  description: restaurantToEdit.description || ''
+                  tzuyang_review: restaurantToEdit.tzuyang_review || ''
                 };
 
                 const changes_requested: Record<string, { from: any; to: any }> = {};
@@ -427,7 +427,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                     phone: updatedData.phone || null,
                     category: [updatedData.category], // TEXT[] 타입이므로 배열로
                     youtube_link: updatedData.youtube_link || null,
-                    description: updatedData.description || null,
+                    tzuyang_review: updatedData.tzuyang_review || null,
                     original_restaurant_id: restaurantToEdit.id,
                     changes_requested: changes_requested,
                     status: 'pending'
@@ -521,17 +521,17 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">쯔양의 리뷰</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={editFormData.description}
-                    onChange={(e) => handleEditFormChange('description', e.target.value)}
-                    placeholder="쯔양의 리뷰 내용을 입력해주세요"
-                    rows={4}
-                  />
-                </div>
+                 <div className="space-y-2">
+                   <Label htmlFor="tzuyang_review">쯔양의 리뷰</Label>
+                   <Textarea
+                     id="tzuyang_review"
+                     name="tzuyang_review"
+                     value={editFormData.tzuyang_review}
+                     onChange={(e) => handleEditFormChange('tzuyang_review', e.target.value)}
+                     placeholder="쯔양의 리뷰 내용을 입력해주세요"
+                     rows={4}
+                   />
+                 </div>
               </div>
 
               {/* 변경사항 표시 */}
@@ -553,7 +553,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                           phone: restaurantToEdit.phone || '',
                           category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
                           youtube_link: restaurantToEdit.youtube_link || '',
-                          description: restaurantToEdit.description || ''
+                          tzuyang_review: restaurantToEdit.tzuyang_review || ''
                         }[key as keyof typeof restaurantToEdit] || '' : '';
 
                         const fieldName = {
