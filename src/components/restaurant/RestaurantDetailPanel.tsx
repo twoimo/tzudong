@@ -7,6 +7,8 @@ import { Restaurant } from "@/types/restaurant";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
+import AuthModal from "@/components/auth/AuthModal";
+import { useState } from "react";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -32,7 +34,8 @@ export function RestaurantDetailPanel({
     onEditRestaurant,
     onRequestEditRestaurant,
 }: RestaurantDetailPanelProps) {
-    const { isAdmin } = useAuth();
+    const { user, isAdmin } = useAuth();
+    const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
     if (!restaurant) return null;
 
@@ -90,8 +93,25 @@ export function RestaurantDetailPanel({
         window.open(url, '_blank');
     };
 
+    const handleRequestEditRestaurant = () => {
+        if (!user) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+        onRequestEditRestaurant?.(restaurant);
+    };
+
+    const handleWriteReview = () => {
+        if (!user) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+        onWriteReview?.();
+    };
+
     return (
-        <div className="h-full flex flex-col bg-background border-l border-border">
+        <>
+            <div className="h-full flex flex-col bg-background border-l border-border">
             {/* Header */}
             <div className="p-4 border-b border-border">
                 <div className="flex items-start justify-between gap-2 mb-2">
@@ -304,7 +324,7 @@ export function RestaurantDetailPanel({
                 </Button>
 
                 <Button
-                    onClick={() => onRequestEditRestaurant?.(restaurant)}
+                    onClick={handleRequestEditRestaurant}
                     variant="outline"
                     className="w-full gap-2"
                 >
@@ -313,14 +333,20 @@ export function RestaurantDetailPanel({
                 </Button>
 
                 <Button
-                    onClick={onWriteReview}
+                    onClick={handleWriteReview}
                     className="w-full bg-gradient-primary hover:opacity-90 gap-2"
                 >
                     <MessageSquare className="h-4 w-4" />
                     리뷰 작성하기
                 </Button>
             </div>
-        </div>
+            </div>
+
+            <AuthModal
+                isOpen={isAuthModalOpen}
+                onClose={() => setIsAuthModalOpen(false)}
+            />
+        </>
     );
 }
 
