@@ -278,26 +278,33 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
                 const icon = getCategoryIcon(restaurant.category);
 
-                // 선택된 맛집은 더 큰 크기와 강조 효과
-                const size = isSelected ? 36 : 28;
+                // 선택된 맛집은 더 큰 크기와 강조 효과 (조금 더 작게)
+                const markerSize = isSelected ? 32 : 24;
 
-                const markerContent = `<div class="marker-icon ${isSelected ? 'selected-marker' : ''}" style="
-                    color: white;
-                    border-radius: 50%;
-                    width: ${size}px;
-                    height: ${size}px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: ${isSelected ? 15 : 13}px;
-                ">${icon}</div>`;
+                // HTML 요소를 직접 생성해서 마커로 사용 (MapView 방식과 동일)
+                const markerElement = document.createElement("div");
+                markerElement.className = `custom-marker ${isSelected ? 'selected-marker' : ''}`;
+                markerElement.innerHTML = `
+                    <div style="
+                        position: relative;
+                        font-size: ${markerSize}px;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        filter: ${isSelected
+                            ? 'drop-shadow(0 4px 8px rgba(255,165,0,0.6)) drop-shadow(0 0 20px rgba(255,165,0,0.4))'
+                            : 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+                        };
+                    " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
+                        ${icon}
+                    </div>
+                `;
 
                 const marker = new naver.maps.Marker({
                     position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
                     map: mapInstanceRef.current,
                     icon: {
-                        content: markerContent,
-                        anchor: new naver.maps.Point(12, 12),
+                        content: markerElement,
+                        anchor: new naver.maps.Point(markerSize / 2, markerSize / 2),
                     },
                     title: restaurant.name,
                 });

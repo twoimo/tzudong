@@ -229,6 +229,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
     // Create new markers
     restaurants.forEach((restaurant) => {
+      const isSelected = selectedRestaurant?.id === restaurant.id;
+
       // 카테고리별 적절한 이모티콘으로 변경
       const getCategoryIcon = (category: string) => {
         const iconMap: { [key: string]: string } = {
@@ -253,16 +255,22 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       const icon = getCategoryIcon(restaurant.category);
 
+      // 선택된 마커는 더 큰 크기와 강조 효과 (조금 더 작게)
+      const markerSize = isSelected ? 32 : 24;
+
       const markerElement = document.createElement("div");
-      markerElement.className = "custom-marker";
+      markerElement.className = `custom-marker ${isSelected ? 'selected-marker' : ''}`;
       markerElement.innerHTML = `
         <div style="
           position: relative;
-          font-size: 24px;
+          font-size: ${markerSize}px;
           cursor: pointer;
-          transition: transform 0.2s;
-          filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-        " class="hover:scale-125">
+          transition: all 0.3s ease;
+          filter: ${isSelected
+          ? 'drop-shadow(0 4px 8px rgba(255,165,0,0.6)) drop-shadow(0 0 20px rgba(255,165,0,0.4))'
+          : 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
+        };
+        " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
           ${icon}
         </div>
       `;
@@ -286,7 +294,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       markersRef.current.push(marker);
     });
-  }, [restaurants, isLoaded, onRestaurantSelect, onMarkerClick]);
+  }, [restaurants, isLoaded, onRestaurantSelect, onMarkerClick, selectedRestaurant?.id]);
 
   if (loadError) {
     return (

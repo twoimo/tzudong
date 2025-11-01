@@ -42,6 +42,13 @@ const GRID_COUNTRIES: GlobalCountry[] = ["미국", "일본", "태국", "인도�
 
 const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: GlobalMapPageProps) => {
     const { isAdmin } = useAuth();
+
+    // 관리자 수정 콜백 래핑 - 수정 후 패널 즉각 반영
+    const handleAdminEditRestaurant = useCallback((restaurant: Restaurant) => {
+        if (onAdminEditRestaurant) {
+            onAdminEditRestaurant(restaurant);
+        }
+    }, [onAdminEditRestaurant]);
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedCountry, setSelectedCountry] = useState<GlobalCountry | null>("튀르키예");
     const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
@@ -52,6 +59,13 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     // 패널 상태를 GlobalMapPage 레벨로 완전 이동 (MapView와 완전 분리)
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [panelRestaurant, setPanelRestaurant] = useState<Restaurant | null>(null);
+
+    // selectedRestaurant 변경 시 panelRestaurant도 업데이트 (관리자 수정 즉각 반영)
+    useEffect(() => {
+        if (selectedRestaurant && isPanelOpen) {
+            setPanelRestaurant(selectedRestaurant);
+        }
+    }, [selectedRestaurant, isPanelOpen]);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
     const [editFormData, setEditFormData] = useState({
@@ -276,15 +290,6 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                         </SelectContent>
                     </Select>
 
-                    {/* 맛집 검색 */}
-                    <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
-                        <RestaurantSearch
-                            onRestaurantSelect={handleRestaurantSelect}
-                            onRestaurantSearch={handleRestaurantSearch}
-                            onSearchExecute={switchToSingleMap}
-                        />
-                    </Suspense>
-
                     {/* 카테고리 필터링 */}
                     <Select
                         value={filters.categories.length > 0 ? filters.categories.join(',') : 'all'}
@@ -318,6 +323,15 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                             <SelectItem value="도시락">도시락</SelectItem>
                         </SelectContent>
                     </Select>
+
+                    {/* 맛집 검색 */}
+                    <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
+                        <RestaurantSearch
+                            onRestaurantSelect={handleRestaurantSelect}
+                            onRestaurantSearch={handleRestaurantSearch}
+                            onSearchExecute={switchToSingleMap}
+                        />
+                    </Suspense>
 
                     <Button
                         variant="outline"
@@ -406,8 +420,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     onWriteReview={() => {
                                         setIsReviewModalOpen(true);
                                     }}
-                                    onEditRestaurant={onAdminEditRestaurant && panelRestaurant ? (() => {
-                                        onAdminEditRestaurant!(panelRestaurant);
+                                    onEditRestaurant={handleAdminEditRestaurant && panelRestaurant ? (() => {
+                                        handleAdminEditRestaurant(panelRestaurant);
                                     }) : undefined}
                                     onRequestEditRestaurant={handleRequestEditRestaurant}
                                 />
