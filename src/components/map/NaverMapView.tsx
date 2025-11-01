@@ -331,6 +331,34 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         // 마커 표시 후 자동 이동하지 않음
     }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant]);
 
+    // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
+    useEffect(() => {
+      if (!isLoaded || markersRef.current.length === 0) return;
+
+      markersRef.current.forEach((marker, index) => {
+        const restaurant = restaurants[index];
+        if (!restaurant) return;
+
+        const isSelected = selectedRestaurant?.id === restaurant.id;
+        const markerElement = marker.getIcon().content as HTMLElement;
+        if (!markerElement) return;
+
+        const innerDiv = markerElement.querySelector('div');
+        if (!innerDiv) return;
+
+        // 크기 업데이트
+        const markerSize = isSelected ? 32 : 24;
+        innerDiv.style.fontSize = `${markerSize}px`;
+
+        // 애니메이션 클래스 업데이트
+        if (isSelected) {
+          innerDiv.classList.add('animate-bounce');
+        } else {
+          innerDiv.classList.remove('animate-bounce');
+        }
+      });
+    }, [selectedRestaurant?.id, restaurants, isLoaded]);
+
     // 로딩 에러 처리
     if (loadError) {
         return (
