@@ -114,6 +114,13 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [restaurants, refreshTrigger, selectedRestaurant, onRestaurantSelect]);
 
+  // selectedRestaurant 변경 시 패널 자동 열기 (깜빡임 방지)
+  useEffect(() => {
+    if (selectedRestaurant && !isPanelOpen) {
+      setIsPanelOpen(true);
+    }
+  }, [selectedRestaurant, isPanelOpen]);
+
 
   // Initialize map
   useEffect(() => {
@@ -247,8 +254,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       markerElement.addEventListener("click", () => {
         onRestaurantSelect?.(restaurant);
-        // 패널 열기
-        setIsPanelOpen(true);
+        // 패널 열기는 selectedRestaurant 변경 시 자동으로 처리됨
         // 지도 이동 제거 - 현재 위치 유지
       });
 

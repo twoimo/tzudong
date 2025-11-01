@@ -304,7 +304,7 @@ export function RestaurantDetailPanel({
                 </Button>
 
                 <Button
-                    onClick={onRequestEditRestaurant}
+                    onClick={() => onRequestEditRestaurant?.(restaurant)}
                     variant="outline"
                     className="w-full gap-2"
                 >
