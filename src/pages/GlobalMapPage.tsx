@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Grid3X3, Map } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant } from "@/types/restaurant";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -34,7 +41,17 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const [selectedCountry, setSelectedCountry] = useState<GlobalCountry | null>("튀르키예");
     const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
     const [isGridMode, setIsGridMode] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
     const [moveToRestaurant, setMoveToRestaurant] = useState<((restaurant: Restaurant) => void) | null>(null);
+    const [editFormData, setEditFormData] = useState({
+        name: '',
+        address: '',
+        phone: '',
+        category: '',
+        youtube_link: '',
+        description: ''
+    });
     const [filters, setFilters] = useState<FilterState>({
         categories: [],
         minRating: 1,
@@ -84,6 +101,95 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const handleMapReady = (moveFunction: (restaurant: Restaurant) => void) => {
         console.log('GlobalMapPage: Map ready, storing move function');
         setMoveToRestaurant(() => moveFunction);
+    };
+
+    const handleRequestEditRestaurant = (restaurant: Restaurant) => {
+        setRestaurantToEdit(restaurant);
+        setEditFormData({
+            name: restaurant.name,
+            address: restaurant.address,
+            phone: restaurant.phone || '',
+            category: Array.isArray(restaurant.category) ? restaurant.category[0] : restaurant.category,
+            youtube_link: restaurant.youtube_link || '',
+            description: restaurant.description || ''
+        });
+        setIsEditModalOpen(true);
+    };
+
+    const handleEditFormChange = (field: string, value: string) => {
+        setEditFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleEditSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!restaurantToEdit) return;
+
+        try {
+            const formData = new FormData(e.target as HTMLFormElement);
+            const updatedData = {
+                name: editFormData.name,
+                address: editFormData.address,
+                phone: editFormData.phone,
+                category: editFormData.category,
+                youtube_link: editFormData.youtube_link,
+                description: editFormData.description,
+            };
+
+            // 변경사항 계산
+            const originalData = {
+                restaurant_name: restaurantToEdit.name,
+                address: restaurantToEdit.address,
+                phone: restaurantToEdit.phone || '',
+                category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                youtube_link: restaurantToEdit.youtube_link || '',
+                description: restaurantToEdit.description || ''
+            };
+
+            const changes_requested: Record<string, { from: any; to: any }> = {};
+            Object.entries(updatedData).forEach(([key, value]) => {
+                const originalValue = originalData[key === 'name' ? 'restaurant_name' : key as keyof typeof originalData];
+                if (originalValue !== value) {
+                    changes_requested[key === 'name' ? 'restaurant_name' : key] = {
+                        from: originalValue,
+                        to: value
+                    };
+                }
+            });
+
+            // restaurant_submissions 테이블에 수정 요청 저장
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                toast.error("로그인이 필요합니다.");
+                return;
+            }
+
+            const { error } = await supabase
+                .from('restaurant_submissions')
+                .insert({
+                    original_restaurant_id: restaurantToEdit.id,
+                    restaurant_name: updatedData.name,
+                    address: updatedData.address,
+                    phone: updatedData.phone,
+                    category: [updatedData.category],
+                    youtube_link: updatedData.youtube_link,
+                    description: updatedData.description,
+                    changes_requested,
+                    user_id: user.id,
+                    submission_type: 'edit'
+                });
+
+            if (error) throw error;
+
+            toast.success("맛집 수정 요청이 성공적으로 제출되었습니다!");
+            setIsEditModalOpen(false);
+            setRestaurantToEdit(null);
+        } catch (error) {
+            console.error('맛집 수정 요청 제출 실패:', error);
+            toast.error("맛집 수정 요청 제출에 실패했습니다. 다시 시도해주세요.");
+        }
     };
 
     return (
@@ -221,6 +327,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                         onAdminEditRestaurant={onAdminEditRestaurant}
                         onRestaurantSelect={setSelectedRestaurant}
                         onMapReady={handleMapReady}
+                        onRequestEditRestaurant={handleRequestEditRestaurant}
                     />
                 </Suspense>
             )}
@@ -234,6 +341,190 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     />
                 </SheetContent>
             </Sheet>
+
+            {/* 맛집 수정 요청 모달 */}
+            <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                            맛집 수정 요청
+                        </DialogTitle>
+                        <DialogDescription>
+                            잘못된 정보나 오타가 있는 맛집 정보를 수정해주세요
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {restaurantToEdit && (
+                        <form onSubmit={handleEditSubmit} className="space-y-6">
+                            {/* 현재 정보 표시 */}
+                            <div className="p-4 bg-muted/50 rounded-lg">
+                                <h3 className="font-semibold mb-2">현재 정보</h3>
+                                <div className="text-sm space-y-1">
+                                    <p><strong>이름:</strong> {restaurantToEdit.name}</p>
+                                    <p><strong>주소:</strong> {restaurantToEdit.address}</p>
+                                    <p><strong>전화번호:</strong> {restaurantToEdit.phone || '-'}</p>
+                                    <p><strong>카테고리:</strong> {Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category.join(', ') : restaurantToEdit.category}</p>
+                                    <p><strong>유튜브:</strong> {restaurantToEdit.youtube_link || '-'}</p>
+                                    <p><strong>쯔양 리뷰:</strong> {restaurantToEdit.description ? '있음' : '없음'}</p>
+                                </div>
+                            </div>
+
+                            {/* 수정 폼 */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-name">맛집 이름 *</Label>
+                                    <Input
+                                        id="edit-name"
+                                        name="name"
+                                        value={editFormData.name}
+                                        onChange={(e) => handleEditFormChange('name', e.target.value)}
+                                        placeholder="맛집 이름을 입력하세요"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-category">카테고리 *</Label>
+                                    <Select
+                                        value={editFormData.category}
+                                        onValueChange={(value) => handleEditFormChange('category', value)}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="카테고리를 선택해주세요" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="한식">한식</SelectItem>
+                                            <SelectItem value="중식">중식</SelectItem>
+                                            <SelectItem value="일식">일식</SelectItem>
+                                            <SelectItem value="양식">양식</SelectItem>
+                                            <SelectItem value="분식">분식</SelectItem>
+                                            <SelectItem value="치킨">치킨</SelectItem>
+                                            <SelectItem value="피자">피자</SelectItem>
+                                            <SelectItem value="고기">고기</SelectItem>
+                                            <SelectItem value="족발·보쌈">족발·보쌈</SelectItem>
+                                            <SelectItem value="돈까스·회">돈까스·회</SelectItem>
+                                            <SelectItem value="아시안">아시안</SelectItem>
+                                            <SelectItem value="패스트푸드">패스트푸드</SelectItem>
+                                            <SelectItem value="카페·디저트">카페·디저트</SelectItem>
+                                            <SelectItem value="기타">기타</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="edit-address">주소 *</Label>
+                                    <Input
+                                        id="edit-address"
+                                        name="address"
+                                        value={editFormData.address}
+                                        onChange={(e) => handleEditFormChange('address', e.target.value)}
+                                        placeholder="맛집 주소를 입력하세요"
+                                        required
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-phone">전화번호</Label>
+                                    <Input
+                                        id="edit-phone"
+                                        name="phone"
+                                        value={editFormData.phone}
+                                        onChange={(e) => handleEditFormChange('phone', e.target.value)}
+                                        placeholder="전화번호를 입력하세요"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="edit-youtube">쯔양 유튜브 영상 링크</Label>
+                                    <Input
+                                        id="edit-youtube"
+                                        name="youtube_link"
+                                        value={editFormData.youtube_link}
+                                        onChange={(e) => handleEditFormChange('youtube_link', e.target.value)}
+                                        placeholder="https://www.youtube.com/watch?v=..."
+                                    />
+                                </div>
+
+                                <div className="space-y-2 md:col-span-2">
+                                    <Label htmlFor="edit-description">쯔양 리뷰</Label>
+                                    <Textarea
+                                        id="edit-description"
+                                        name="description"
+                                        value={editFormData.description}
+                                        onChange={(e) => handleEditFormChange('description', e.target.value)}
+                                        placeholder="쯔양의 리뷰 내용을 입력하세요"
+                                        rows={4}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 변경사항 미리보기 */}
+                            {(() => {
+                                const changes: Array<{ field: string; from: any; to: any }> = [];
+                                const originalData = {
+                                    restaurant_name: restaurantToEdit.name,
+                                    address: restaurantToEdit.address,
+                                    phone: restaurantToEdit.phone || '',
+                                    category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                                    youtube_link: restaurantToEdit.youtube_link || '',
+                                    description: restaurantToEdit.description || ''
+                                };
+
+                                Object.entries(editFormData).forEach(([key, value]) => {
+                                    const fieldName = key === 'name' ? 'restaurant_name' : key;
+                                    const originalValue = originalData[fieldName as keyof typeof originalData];
+                                    if (originalValue !== value) {
+                                        const fieldLabels: Record<string, string> = {
+                                            name: '이름',
+                                            address: '주소',
+                                            phone: '전화번호',
+                                            category: '카테고리',
+                                            youtube_link: '유튜브 링크',
+                                            description: '리뷰'
+                                        };
+                                        changes.push({
+                                            field: fieldLabels[key] || key,
+                                            from: originalValue,
+                                            to: value
+                                        });
+                                    }
+                                });
+
+                                return changes.length > 0 && (
+                                    <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">🔄 요청된 변경사항:</p>
+                                        <div className="space-y-1">
+                                            {changes.map((change, index) => (
+                                                <div key={index} className="text-xs">
+                                                    <span className="font-medium text-blue-700 dark:text-blue-300">{change.field}:</span>
+                                                    <span className="text-muted-foreground ml-1">{change.from || '(없음)'} → {change.to || '(없음)'}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
+                            <div className="flex gap-3 pt-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsEditModalOpen(false)}
+                                    className="flex-1"
+                                >
+                                    취소
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    className="flex-1 bg-gradient-primary hover:opacity-90"
+                                >
+                                    수정 요청 제출
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+                </DialogContent>
+            </Dialog>
         </>
     );
 });

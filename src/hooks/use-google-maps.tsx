@@ -5,13 +5,42 @@ interface UseGoogleMapsOptions {
     libraries?: string[];
 }
 
+// 전역 로드 상태 캐시 (여러 컴포넌트에서 중복 로드 방지)
+let globalLoadState: { isLoaded: boolean; error: Error | null; isLoading: boolean } = {
+    isLoaded: false,
+    error: null,
+    isLoading: false
+};
+
 export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseGoogleMapsOptions) {
-    const [isLoaded, setIsLoaded] = useState(false);
-    const [loadError, setLoadError] = useState<Error | null>(null);
+    const [isLoaded, setIsLoaded] = useState(globalLoadState.isLoaded);
+    const [loadError, setLoadError] = useState<Error | null>(globalLoadState.error);
 
     useEffect(() => {
-        // Check if already loaded
+        // 이미 로드된 경우 즉시 반환
+        if (globalLoadState.isLoaded) {
+            setIsLoaded(true);
+            return;
+        }
+
+        // 로딩 중인 경우 기다림
+        if (globalLoadState.isLoading) {
+            const checkLoaded = () => {
+                if (globalLoadState.isLoaded) {
+                    setIsLoaded(true);
+                } else if (globalLoadState.error) {
+                    setLoadError(globalLoadState.error);
+                } else {
+                    setTimeout(checkLoaded, 100);
+                }
+            };
+            checkLoaded();
+            return;
+        }
+
+        // Check if already loaded globally
         if (window.google && window.google.maps) {
+            globalLoadState.isLoaded = true;
             setIsLoaded(true);
             return;
         }
@@ -19,7 +48,17 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
         // Check if script is already loading
         const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
         if (existingScript) {
-            existingScript.addEventListener("load", () => setIsLoaded(true));
+            globalLoadState.isLoading = true;
+            existingScript.addEventListener("load", () => {
+                globalLoadState.isLoaded = true;
+                globalLoadState.isLoading = false;
+                setIsLoaded(true);
+            });
+            existingScript.addEventListener("error", (e) => {
+                globalLoadState.error = new Error("Failed to load Google Maps");
+                globalLoadState.isLoading = false;
+                setLoadError(globalLoadState.error);
+            });
             return;
         }
 
@@ -37,14 +76,19 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             document.head.appendChild(script);
         }
 
+        globalLoadState.isLoading = true;
         script.addEventListener("load", () => {
             // Double check if Google Maps is fully loaded
             if (window.google && window.google.maps && window.google.maps.Map) {
+                globalLoadState.isLoaded = true;
+                globalLoadState.isLoading = false;
                 setIsLoaded(true);
             } else {
                 // Retry after a short delay
                 setTimeout(() => {
                     if (window.google && window.google.maps && window.google.maps.Map) {
+                        globalLoadState.isLoaded = true;
+                        globalLoadState.isLoading = false;
                         setIsLoaded(true);
                     }
                 }, 100);
@@ -52,7 +96,9 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
         });
 
         script.addEventListener("error", (e) => {
-            setLoadError(new Error("Failed to load Google Maps"));
+            globalLoadState.error = new Error("Failed to load Google Maps");
+            globalLoadState.isLoading = false;
+            setLoadError(globalLoadState.error);
             console.error("Error loading Google Maps:", e);
         });
 

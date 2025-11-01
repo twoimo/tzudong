@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, memo, useCallback } from "react";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
-import { Restaurant } from "@/types/restaurant";
+import { Restaurant, Region } from "@/types/restaurant";
 import { FilterState } from "@/components/filters/FilterPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -35,9 +35,10 @@ interface MapViewProps {
   onAdminEditRestaurant?: (restaurant: Restaurant) => void;
   onRestaurantSelect?: (restaurant: Restaurant | null) => void;
   onMapReady?: (moveToRestaurant: (restaurant: Restaurant) => void) => void;
+  onRequestEditRestaurant?: (restaurant: Restaurant) => void;
 }
 
-const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady }: MapViewProps) => {
+const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant }: MapViewProps) => {
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -46,6 +47,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
 
   // 맛집으로 지도 이동하는 함수
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
@@ -74,6 +76,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }, [onMapReady, moveToRestaurant]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  // App 레벨에서 미리 로드되므로 여기서는 빠르게 로드 상태 확인
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
@@ -84,7 +87,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       east: mapBounds.getNorthEast().lng(),
     } : undefined,
     category: filters.categories.length > 0 ? filters.categories : undefined,
-    region: selectedCountry ? (selectedCountry as any) : undefined, // 선택된 국가가 있을 때만 필터링
+    region: selectedCountry as Region || undefined, // 선택된 국가가 있을 때만 필터링
     minReviews: filters.minReviews,
     enabled: isLoaded && !!selectedCountry, // 선택된 국가가 있을 때만 활성화
   });
@@ -160,7 +163,19 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     } catch (error) {
       console.error("Error creating Google Map:", error);
     }
-  }, [isLoaded, selectedCountry]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded]);
+
+  // Update map center and zoom when selectedCountry changes
+  useEffect(() => {
+    if (!googleMapRef.current || !selectedCountry) return;
+
+    const countryConfig = COUNTRY_CENTERS[selectedCountry];
+    if (countryConfig) {
+      googleMapRef.current.setCenter({ lat: countryConfig.lat, lng: countryConfig.lng });
+      googleMapRef.current.setZoom(countryConfig.zoom);
+    }
+  }, [selectedCountry]);
 
   // Retry map initialization if Google Maps becomes available later
   useEffect(() => {
@@ -322,6 +337,9 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
             }}
             onEditRestaurant={onAdminEditRestaurant ? () => {
               onAdminEditRestaurant(selectedRestaurant);
+            } : undefined}
+            onRequestEditRestaurant={onRequestEditRestaurant ? () => {
+              onRequestEditRestaurant(selectedRestaurant);
             } : undefined}
           />
         </div>

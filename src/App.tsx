@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useGoogleMaps } from "@/hooks/use-google-maps";
 import Index from "./pages/Index";
 import GlobalMapPage from "./pages/GlobalMapPage";
 import FilteringPage from "./pages/FilteringPage";
@@ -35,6 +36,10 @@ function AppLayout() {
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Google Maps를 앱 시작 시 미리 로드 (성능 최적화)
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  useGoogleMaps({ apiKey });
 
   const handleLogout = async () => {
     try {
