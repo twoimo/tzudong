@@ -246,6 +246,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           '패스트푸드': '🍔',
           '족발·보쌈': '🍖',
           '돈까스·회': '🍱',
+          '피자': '🍕',
           '찜·탕': '🥘',
           '야식': '🌙',
           '도시락': '🍱'
