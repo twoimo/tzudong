@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, memo } from "react";
+import { useEffect, useRef, useState, memo, useCallback } from "react";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { Restaurant } from "@/types/restaurant";
@@ -28,14 +28,16 @@ const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }
 interface MapViewProps {
   filters: FilterState;
   selectedCountry?: string | null;
+  searchedRestaurant?: Restaurant | null;
   selectedRestaurant?: Restaurant | null;
   refreshTrigger?: number;
   onAdminAddRestaurant?: () => void;
   onAdminEditRestaurant?: (restaurant: Restaurant) => void;
   onRestaurantSelect?: (restaurant: Restaurant | null) => void;
+  onMapReady?: (moveToRestaurant: (restaurant: Restaurant) => void) => void;
 }
 
-const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect }: MapViewProps) => {
+const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady }: MapViewProps) => {
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -43,6 +45,32 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
 
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+
+  // 맛집으로 지도 이동하는 함수
+  const moveToRestaurant = useCallback((restaurant: Restaurant) => {
+    if (googleMapRef.current) {
+      console.log('MapView: Moving to restaurant:', restaurant.name);
+      const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
+
+      try {
+        googleMapRef.current.setCenter(position);
+        googleMapRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
+        console.log('MapView: Successfully moved to restaurant position');
+      } catch (error) {
+        console.error('MapView: Error moving to restaurant position:', error);
+      }
+    } else {
+      console.warn('MapView: Map not ready for moving to restaurant');
+    }
+  }, []);
+
+  // 외부 콜백에 지도 이동 함수 전달
+  useEffect(() => {
+    if (onMapReady) {
+      // 부모 컴포넌트에 지도 이동 함수를 전달
+      onMapReady(moveToRestaurant);
+    }
+  }, [onMapReady, moveToRestaurant]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
@@ -55,9 +83,9 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
       east: mapBounds.getNorthEast().lng(),
     } : undefined,
     category: filters.categories.length > 0 ? filters.categories : undefined,
-    region: undefined, // 글로벌 맵에서는 지역 필터링하지 않음
+    region: selectedCountry ? (selectedCountry as any) : undefined, // 선택된 국가가 있을 때만 필터링
     minReviews: filters.minReviews,
-    enabled: isLoaded, // 초기 로딩 시에도 활성화
+    enabled: isLoaded && !!selectedCountry, // 선택된 국가가 있을 때만 활성화
   });
 
 
@@ -81,6 +109,7 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
       }
     }
   }, [restaurants, refreshTrigger, selectedRestaurant, onRestaurantSelect]);
+
 
   // Initialize map
   useEffect(() => {
@@ -123,6 +152,8 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
         const bounds = map.getBounds();
         if (bounds) {
           setMapBounds(bounds);
+          // 첫 번째 idle 이벤트에서 사용자 상호작용으로 간주
+          setHasUserInteracted(true);
         }
       });
     } catch (error) {

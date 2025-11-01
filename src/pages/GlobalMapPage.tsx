@@ -31,9 +31,10 @@ const GRID_COUNTRIES: GlobalCountry[] = ["미국", "일본", "태국", "인도�
 const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: GlobalMapPageProps) => {
     const { isAdmin } = useAuth();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [selectedCountry, setSelectedCountry] = useState<GlobalCountry | null>("미국");
+    const [selectedCountry, setSelectedCountry] = useState<GlobalCountry | null>("튀르키예");
     const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
     const [isGridMode, setIsGridMode] = useState(false);
+    const [moveToRestaurant, setMoveToRestaurant] = useState<((restaurant: Restaurant) => void) | null>(null);
     const [filters, setFilters] = useState<FilterState>({
         categories: [],
         minRating: 1,
@@ -52,9 +53,19 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     };
 
     const handleRestaurantSearch = (restaurant: Restaurant) => {
+        console.log('GlobalMapPage: Restaurant searched:', restaurant.name);
         // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
         setSearchedRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
+
+        // 지도 이동 함수가 준비되었다면 즉시 이동
+        if (moveToRestaurant) {
+            console.log('GlobalMapPage: Moving to restaurant immediately');
+            moveToRestaurant(restaurant);
+        } else {
+            console.log('GlobalMapPage: Map move function not ready yet');
+        }
+
         // 그리드 모드에서 검색 시 단일 모드로 전환
         if (isGridMode) {
             setIsGridMode(false);
@@ -70,6 +81,11 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         }
     };
 
+    const handleMapReady = (moveFunction: (restaurant: Restaurant) => void) => {
+        console.log('GlobalMapPage: Map ready, storing move function');
+        setMoveToRestaurant(() => moveFunction);
+    };
+
     return (
         <>
             {/* 하단 컨트롤 패널 */}
@@ -77,10 +93,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
                     {/* 국가 선택 */}
                     <Select
-                        value={selectedCountry || "all"}
+                        value={selectedCountry || "튀르키예"}
                         onValueChange={(value) => {
-                            const newCountry = value === "all" ? null : (value as GlobalCountry);
-                            setSelectedCountry(newCountry);
+                            setSelectedCountry(value as GlobalCountry);
                         }}
                     >
                         <SelectTrigger className="w-40">
@@ -90,7 +105,6 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                             </div>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">전체</SelectItem>
                             {GLOBAL_COUNTRIES.map((country) => (
                                 <SelectItem key={country} value={country}>
                                     {country}
@@ -206,6 +220,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                         refreshTrigger={refreshTrigger}
                         onAdminEditRestaurant={onAdminEditRestaurant}
                         onRestaurantSelect={setSelectedRestaurant}
+                        onMapReady={handleMapReady}
                     />
                 </Suspense>
             )}
