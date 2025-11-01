@@ -1,4 +1,4 @@
-import { useState, memo, Suspense } from "react";
+import { useState, memo, Suspense, lazy } from "react";
 import MapView from "@/components/map/MapView";
 import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Grid3X3, Map } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant } from "@/types/restaurant";
+
+// 코드 스플리팅으로 성능 최적화
+const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
 
 // 글로벌 페이지용 국가 목록
 const GLOBAL_COUNTRIES = [
@@ -29,6 +32,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const { isAdmin } = useAuth();
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedCountry, setSelectedCountry] = useState<GlobalCountry | null>("미국");
+    const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
     const [isGridMode, setIsGridMode] = useState(false);
     const [filters, setFilters] = useState<FilterState>({
         categories: [],
@@ -40,6 +44,30 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
 
     const handleFilterChange = (newFilters: FilterState) => {
         setFilters(newFilters);
+    };
+
+    const handleRestaurantSelect = (restaurant: Restaurant) => {
+        // 선택된 맛집을 MapView에 전달하기 위해 상태 업데이트
+        setSelectedRestaurant(restaurant);
+    };
+
+    const handleRestaurantSearch = (restaurant: Restaurant) => {
+        // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
+        setSearchedRestaurant(restaurant);
+        setSelectedRestaurant(restaurant);
+        // 그리드 모드에서 검색 시 단일 모드로 전환
+        if (isGridMode) {
+            setIsGridMode(false);
+            // 검색된 맛집의 국가로 전환 (가능하다면)
+            // TODO: 맛집의 국가 정보를 기반으로 selectedCountry 설정
+        }
+    };
+
+    const switchToSingleMap = () => {
+        // 그리드 모드에서 검색 시 단일 모드로 전환
+        if (isGridMode) {
+            setIsGridMode(false);
+        }
     };
 
     return (
@@ -70,6 +98,15 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                             ))}
                         </SelectContent>
                     </Select>
+
+                    {/* 맛집 검색 */}
+                    <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
+                        <RestaurantSearch
+                            onRestaurantSelect={handleRestaurantSelect}
+                            onRestaurantSearch={handleRestaurantSearch}
+                            onSearchExecute={switchToSingleMap}
+                        />
+                    </Suspense>
 
                     {/* 카테고리 필터링 */}
                     <Select
@@ -164,6 +201,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     <MapView
                         filters={filters}
                         selectedCountry={selectedCountry}
+                        searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
                         selectedRestaurant={selectedRestaurant}
                         refreshTrigger={refreshTrigger}
                         onAdminEditRestaurant={onAdminEditRestaurant}
