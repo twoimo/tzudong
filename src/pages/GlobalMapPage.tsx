@@ -4,7 +4,9 @@ import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { MapPin, Grid3X3, Map } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { MapPin, Grid3X3, Map, ChevronsUpDown, Check, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant } from "@/types/restaurant";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -51,13 +53,14 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [panelRestaurant, setPanelRestaurant] = useState<Restaurant | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
     const [editFormData, setEditFormData] = useState({
         name: '',
         address: '',
         phone: '',
-        category: '',
+        category: [] as string[],
         youtube_link: '',
-        description: ''
+        tzuyang_review: ''
     });
     const [filters, setFilters] = useState<FilterState>({
         categories: [],
@@ -96,7 +99,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             // 검색된 맛집의 국가로 전환 (가능하다면)
             // TODO: 맛집의 국가 정보를 기반으로 selectedCountry 설정
         }
-    }, [moveToRestaurant, isGridMode]);
+    }, [moveToRestaurant, isGridMode, setSelectedRestaurant]);
 
     const switchToSingleMap = useCallback(() => {
         // 그리드 모드에서 검색 시 단일 모드로 전환
@@ -137,14 +140,14 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             name: restaurant.name,
             address: restaurant.address,
             phone: restaurant.phone || '',
-            category: Array.isArray(restaurant.category) ? restaurant.category[0] : restaurant.category,
+            category: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category],
             youtube_link: restaurant.youtube_link || '',
-            description: restaurant.description || ''
+            tzuyang_review: restaurant.tzuyang_review || ''
         });
         setIsEditModalOpen(true);
     }, []);
 
-    const handleEditFormChange = (field: string, value: string) => {
+    const handleEditFormChange = (field: string, value: string | string[]) => {
         setEditFormData(prev => ({
             ...prev,
             [field]: value
@@ -163,7 +166,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 phone: editFormData.phone,
                 category: editFormData.category,
                 youtube_link: editFormData.youtube_link,
-                description: editFormData.description,
+                tzuyang_review: editFormData.tzuyang_review,
             };
 
             // 변경사항 계산
@@ -171,15 +174,19 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 restaurant_name: restaurantToEdit.name,
                 address: restaurantToEdit.address,
                 phone: restaurantToEdit.phone || '',
-                category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
                 youtube_link: restaurantToEdit.youtube_link || '',
-                description: restaurantToEdit.description || ''
+                tzuyang_review: restaurantToEdit.tzuyang_review || ''
             };
 
-            const changes_requested: Record<string, { from: any; to: any }> = {};
+            const changes_requested: Record<string, { from: string | string[]; to: string | string[] }> = {};
             Object.entries(updatedData).forEach(([key, value]) => {
                 const originalValue = originalData[key === 'name' ? 'restaurant_name' : key as keyof typeof originalData];
-                if (originalValue !== value) {
+                const hasChanged = key === 'category'
+                    ? JSON.stringify(originalValue) !== JSON.stringify(value)
+                    : originalValue !== value;
+
+                if (hasChanged) {
                     changes_requested[key === 'name' ? 'restaurant_name' : key] = {
                         from: originalValue,
                         to: value
@@ -201,9 +208,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     restaurant_name: updatedData.name,
                     address: updatedData.address,
                     phone: updatedData.phone,
-                    category: [updatedData.category],
+                    category: updatedData.category,
                     youtube_link: updatedData.youtube_link,
-                    description: updatedData.description,
+                    tzuyang_review: updatedData.tzuyang_review,
                     changes_requested,
                     user_id: user.id,
                     submission_type: 'edit'
@@ -377,9 +384,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     onWriteReview={() => {
                                         setIsReviewModalOpen(true);
                                     }}
-                                    onEditRestaurant={onAdminEditRestaurant ? () => {
-                                        onAdminEditRestaurant(panelRestaurant);
-                                    } : undefined}
+                                    onEditRestaurant={onAdminEditRestaurant && panelRestaurant ? (() => {
+                                        onAdminEditRestaurant!(panelRestaurant);
+                                    }) : undefined}
                                     onRequestEditRestaurant={handleRequestEditRestaurant}
                                 />
                             </div>
@@ -430,30 +437,75 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
 
                                 <div className="space-y-2">
                                     <Label htmlFor="edit-category">카테고리 *</Label>
-                                    <Select
-                                        value={editFormData.category}
-                                        onValueChange={(value) => handleEditFormChange('category', value)}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="카테고리를 선택해주세요" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="한식">한식</SelectItem>
-                                            <SelectItem value="중식">중식</SelectItem>
-                                            <SelectItem value="일식">일식</SelectItem>
-                                            <SelectItem value="양식">양식</SelectItem>
-                                            <SelectItem value="분식">분식</SelectItem>
-                                            <SelectItem value="치킨">치킨</SelectItem>
-                                            <SelectItem value="피자">피자</SelectItem>
-                                            <SelectItem value="고기">고기</SelectItem>
-                                            <SelectItem value="족발·보쌈">족발·보쌈</SelectItem>
-                                            <SelectItem value="돈까스·회">돈까스·회</SelectItem>
-                                            <SelectItem value="아시안">아시안</SelectItem>
-                                            <SelectItem value="패스트푸드">패스트푸드</SelectItem>
-                                            <SelectItem value="카페·디저트">카페·디저트</SelectItem>
-                                            <SelectItem value="기타">기타</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Popover open={isCategoryPopoverOpen} onOpenChange={setIsCategoryPopoverOpen}>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                role="combobox"
+                                                aria-expanded={isCategoryPopoverOpen}
+                                                className="w-full justify-between"
+                                            >
+                                                {editFormData.category.length > 0
+                                                    ? `${editFormData.category.length}개 선택됨`
+                                                    : "카테고리를 선택해주세요"
+                                                }
+                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-full p-0" align="start">
+                                            <Command>
+                                                <CommandInput placeholder="카테고리 검색..." />
+                                                <CommandList>
+                                                    <CommandEmpty>카테고리를 찾을 수 없습니다.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {[
+                                                            "한식", "중식", "일식", "양식", "분식", "치킨", "피자",
+                                                            "고기", "족발·보쌈", "돈까스·회", "아시안",
+                                                            "패스트푸드", "카페·디저트", "기타"
+                                                        ].map((category) => {
+                                                            const isSelected = editFormData.category.includes(category);
+                                                            return (
+                                                                <CommandItem
+                                                                    key={category}
+                                                                    onSelect={() => {
+                                                                        const newCategories = isSelected
+                                                                            ? editFormData.category.filter(c => c !== category)
+                                                                            : [...editFormData.category, category];
+                                                                        handleEditFormChange('category', newCategories);
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"
+                                                                            }`}
+                                                                    />
+                                                                    {category}
+                                                                </CommandItem>
+                                                            );
+                                                        })}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    {editFormData.category.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                            {editFormData.category.map((category) => (
+                                                <Badge key={category} variant="secondary" className="text-xs">
+                                                    {category}
+                                                    <button
+                                                        type="button"
+                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
+                                                        onClick={() => {
+                                                            const newCategories = editFormData.category.filter(c => c !== category);
+                                                            handleEditFormChange('category', newCategories);
+                                                        }}
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-2 md:col-span-2">
@@ -493,12 +545,12 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 </div>
 
                                 <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="edit-description">쯔양의 리뷰</Label>
+                                    <Label htmlFor="edit-tzuyang_review">쯔양의 리뷰</Label>
                                     <Textarea
-                                        id="edit-description"
-                                        name="description"
-                                        value={editFormData.description}
-                                        onChange={(e) => handleEditFormChange('description', e.target.value)}
+                                        id="edit-tzuyang_review"
+                                        name="tzuyang_review"
+                                        value={editFormData.tzuyang_review}
+                                        onChange={(e) => handleEditFormChange('tzuyang_review', e.target.value)}
                                         placeholder="쯔양의 리뷰 내용을 입력해주세요"
                                         rows={4}
                                     />
@@ -507,18 +559,22 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
 
                             {/* 변경사항 표시 */}
                             {(() => {
-                                const changes: Array<[string, string]> = [];
+                                const changes: Array<[string, string | string[]]> = [];
                                 Object.entries(editFormData).forEach(([key, value]) => {
                                     const originalValue = restaurantToEdit ? {
                                         name: restaurantToEdit.name,
                                         address: restaurantToEdit.address,
                                         phone: restaurantToEdit.phone || '',
-                                        category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                                        category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
                                         youtube_link: restaurantToEdit.youtube_link || '',
-                                        description: restaurantToEdit.description || ''
+                                        tzuyang_review: restaurantToEdit.tzuyang_review || ''
                                     }[key as keyof typeof restaurantToEdit] || '' : '';
 
-                                    if (originalValue !== value) {
+                                    const hasChanged = key === 'category'
+                                        ? JSON.stringify(originalValue) !== JSON.stringify(value)
+                                        : originalValue !== value;
+
+                                    if (hasChanged) {
                                         changes.push([key, value]);
                                     }
                                 });
@@ -539,9 +595,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                                         name: restaurantToEdit.name,
                                                         address: restaurantToEdit.address,
                                                         phone: restaurantToEdit.phone || '',
-                                                        category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                                                        category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
                                                         youtube_link: restaurantToEdit.youtube_link || '',
-                                                        description: restaurantToEdit.description || ''
+                                                        tzuyang_review: restaurantToEdit.tzuyang_review || ''
                                                     }[key as keyof typeof restaurantToEdit] || '' : '';
 
                                                     const fieldName = {
@@ -550,7 +606,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                                         phone: '전화번호',
                                                         category: '카테고리',
                                                         youtube_link: '유튜브 링크',
-                                                        description: '쯔양의 리뷰'
+                                                        tzuyang_review: '쯔양의 리뷰'
                                                     }[key] || key;
 
                                                     return (
@@ -566,10 +622,10 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                                             </div>
                                                             <div className="space-y-1">
                                                                 <div className="text-xs text-red-600 line-through">
-                                                                    기존: {originalValue || '없음'}
+                                                                    기존: {key === 'category' ? (Array.isArray(originalValue) ? originalValue.join(', ') : originalValue) : (originalValue || '없음')}
                                                                 </div>
                                                                 <div className="text-xs text-green-600 font-medium">
-                                                                    변경: {value || '없음'}
+                                                                    변경: {key === 'category' ? (Array.isArray(value) ? value.join(', ') : value) : (value || '없음')}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -601,7 +657,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 restaurant={panelRestaurant ? { id: panelRestaurant.id, name: panelRestaurant.name } : null}
                 onSuccess={() => {
                     // refreshTrigger를 업데이트해서 데이터 새로고침
-                    setRefreshTrigger(prev => prev + 1);
+                    // 부모 컴포넌트에서 refreshTrigger를 관리하므로 여기서는 사용하지 않음
                     toast.success("리뷰가 성공적으로 등록되었습니다!");
                 }}
             />
