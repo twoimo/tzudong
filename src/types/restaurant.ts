@@ -63,5 +63,15 @@ export const REGIONS = [
     "욕지도"
 ] as const;
 
-export type Region = typeof REGIONS[number];
+export const GLOBAL_REGIONS = [
+    "미국",
+    "일본",
+    "태국",
+    "인도네시아",
+    "튀르키예",
+    "헝가리",
+    "오스트레일리아"
+] as const;
+
+export type Region = typeof REGIONS[number] | typeof GLOBAL_REGIONS[number];
 

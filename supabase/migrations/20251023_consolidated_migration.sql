@@ -64,13 +64,11 @@ CREATE TABLE public.restaurants (
   tzuyang_review TEXT,
   lat DECIMAL(10, 8) NOT NULL,
   lng DECIMAL(11, 8) NOT NULL,
-  ai_rating DECIMAL(3, 1) CHECK (ai_rating >= 1 AND ai_rating <= 10),
   visit_count INTEGER DEFAULT 0,
   review_count INTEGER DEFAULT 0,
   created_by UUID REFERENCES auth.users(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  jjyang_visit_count INTEGER DEFAULT 0,
   updated_by_admin_id UUID REFERENCES auth.users(id),
   description TEXT,
   region TEXT
@@ -524,12 +522,8 @@ DROP INDEX IF EXISTS idx_restaurants_lat_lng;
 CREATE INDEX idx_restaurants_lat_lng ON public.restaurants(lat, lng);
 DROP INDEX IF EXISTS idx_restaurants_category;
 CREATE INDEX idx_restaurants_category ON public.restaurants(category);
-DROP INDEX IF EXISTS idx_restaurants_ai_rating;
-CREATE INDEX idx_restaurants_ai_rating ON public.restaurants(ai_rating);
 DROP INDEX IF EXISTS idx_restaurants_region;
 CREATE INDEX idx_restaurants_region ON public.restaurants(region);
-DROP INDEX IF EXISTS idx_restaurants_jjyang_visit_count;
-CREATE INDEX idx_restaurants_jjyang_visit_count ON public.restaurants(jjyang_visit_count);
 
 DROP INDEX IF EXISTS idx_reviews_restaurant_id;
 CREATE INDEX idx_reviews_restaurant_id ON public.reviews(restaurant_id);
