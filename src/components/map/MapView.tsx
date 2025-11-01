@@ -17,12 +17,12 @@ const USA_ZOOM = 4; // 미국 줌 레벨
 // 국가별 지도 중심 좌표
 const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
   "미국": { lat: 39.8283, lng: -98.5795, zoom: 4 },
-  "일본": { lat: 36.2048, lng: 138.2529, zoom: 5 },
-  "태국": { lat: 15.8700, lng: 100.9925, zoom: 6 },
-  "인도네시아": { lat: -0.7893, lng: 113.9213, zoom: 5 },
-  "튀르키예": { lat: 38.9637, lng: 35.2433, zoom: 6 },
-  "헝가리": { lat: 47.1625, lng: 19.5033, zoom: 7 },
-  "오스트레일리아": { lat: -25.2744, lng: 133.7751, zoom: 4 },
+  "일본": { lat: 35.1815, lng: 136.9066, zoom: 10 }, // 나고야시 중심으로 변경
+  "태국": { lat: 13.7563, lng: 100.5018, zoom: 10 }, // 방콕 중심으로 확대
+  "인도네시아": { lat: -6.9667, lng: 110.4167, zoom: 7 }, // 줌아웃 -3
+  "튀르키예": { lat: 41.0082, lng: 28.9784, zoom: 10 }, // 이스탄불 더 확대
+  "헝가리": { lat: 47.4979, lng: 19.0402, zoom: 10 }, // 줌인 +3
+  "오스트레일리아": { lat: -33.8688, lng: 151.2093, zoom: 10 }, // 시드니 중심으로 변경
 };
 
 interface MapViewProps {
@@ -47,25 +47,6 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
-  // API 키가 없으면 에러 표시
-  if (!apiKey) {
-    return (
-      <div className="flex items-center justify-center h-full bg-muted">
-        <div className="text-center space-y-4">
-          <div className="text-6xl">🔑</div>
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-destructive">
-              Google Maps API 키 필요
-            </h2>
-            <p className="text-muted-foreground">
-              .env 파일에 VITE_GOOGLE_MAPS_API_KEY를 설정해주세요.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
     bounds: mapBounds ? {
       south: mapBounds.getSouthWest().lat(),
@@ -74,11 +55,8 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
       east: mapBounds.getNorthEast().lng(),
     } : undefined,
     category: filters.categories.length > 0 ? filters.categories : undefined,
-    region: selectedCountry || undefined,
-    minRating: filters.minRating,
+    region: undefined, // 글로벌 맵에서는 지역 필터링하지 않음
     minReviews: filters.minReviews,
-    minUserVisits: filters.minUserVisits,
-    minJjyangVisits: filters.minJjyangVisits,
     enabled: isLoaded, // 초기 로딩 시에도 활성화
   });
 
@@ -95,14 +73,14 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
     if (selectedRestaurant) {
       // 업데이트된 레스토랑 정보 찾기
       const updatedRestaurant = restaurants.find(r => r.id === selectedRestaurant.id);
-      if (updatedRestaurant) {
-        setSelectedRestaurant(updatedRestaurant);
-      } else {
+      if (updatedRestaurant && onRestaurantSelect) {
+        onRestaurantSelect(updatedRestaurant);
+      } else if (!updatedRestaurant && onRestaurantSelect) {
         // 삭제된 경우에만 패널 닫기
-        setSelectedRestaurant(null);
+        onRestaurantSelect(null);
       }
     }
-  }, [restaurants, refreshTrigger]);
+  }, [restaurants, refreshTrigger, selectedRestaurant, onRestaurantSelect]);
 
   // Initialize map
   useEffect(() => {
@@ -128,25 +106,25 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
 
     try {
       const map = new google.maps.Map(mapRef.current, {
-      center: center,
-      zoom: zoom,
-      mapId: "tzudong-map",
-      disableDefaultUI: false,
-      zoomControl: true,
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-    });
+        center: center,
+        zoom: zoom,
+        mapId: "tzudong-map",
+        disableDefaultUI: false,
+        zoomControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false,
+      });
 
-    googleMapRef.current = map;
+      googleMapRef.current = map;
 
-    // Update bounds when map moves
-    map.addListener("idle", () => {
-      const bounds = map.getBounds();
-      if (bounds) {
-        setMapBounds(bounds);
-      }
-    });
+      // Update bounds when map moves
+      map.addListener("idle", () => {
+        const bounds = map.getBounds();
+        if (bounds) {
+          setMapBounds(bounds);
+        }
+      });
     } catch (error) {
       console.error("Error creating Google Map:", error);
     }
@@ -227,7 +205,7 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
 
       markersRef.current.push(marker);
     });
-  }, [restaurants, isLoaded]);
+  }, [restaurants, isLoaded, onRestaurantSelect]);
 
   if (loadError) {
     return (
@@ -268,6 +246,25 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
             </p>
             <p className="text-xs text-muted-foreground">
               잠시만 기다려주세요
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // API 키가 없으면 에러 표시
+  if (!apiKey) {
+    return (
+      <div className="flex items-center justify-center h-full bg-muted">
+        <div className="text-center space-y-4">
+          <div className="text-6xl">🔑</div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-destructive">
+              Google Maps API 키 필요
+            </h2>
+            <p className="text-muted-foreground">
+              .env 파일에 VITE_GOOGLE_MAPS_API_KEY를 설정해주세요.
             </p>
           </div>
         </div>
