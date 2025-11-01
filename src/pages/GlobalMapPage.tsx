@@ -23,7 +23,7 @@ const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch
 
 // 글로벌 페이지용 국가 목록
 const GLOBAL_COUNTRIES = [
-  "미국", "일본", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
+    "미국", "일본", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
 ] as const;
 
 type GlobalCountry = typeof GLOBAL_COUNTRIES[number];
