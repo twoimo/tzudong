@@ -24,7 +24,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         const { data, error } = await supabase
           .from("restaurants")
           .select("*")
-          .order("ai_rating", { ascending: false });
+          .order("name", { ascending: true });
 
         if (error) throw error;
         return data || [];

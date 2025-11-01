@@ -5,8 +5,8 @@ export const GOOGLE_MAPS_CONFIG = {
 
 // Naver Maps Configuration (한국 버전)
 export const NAVER_MAPS_CONFIG = {
-    clientId: import.meta.env.VITE_NAVER_CLIENT_ID || 'asta9mer4x',
-    clientSecret: import.meta.env.VITE_NAVER_CLIENT_SECRET || 'ihPIhd3xHq7Wz3m2rmbGfR4KmsOQEjrCaLOULnp6',
+    clientId: import.meta.env.VITE_NAVER_CLIENT_ID || '',
+    clientSecret: import.meta.env.VITE_NAVER_CLIENT_SECRET || '',
 };
 
 // 지역별 지도 중심 좌표 및 줌 레벨

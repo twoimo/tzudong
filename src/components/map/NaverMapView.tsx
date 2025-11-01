@@ -29,26 +29,42 @@ interface NaverMapViewProps {
     refreshTrigger: number;
     onAdminAddRestaurant?: () => void;
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
+    onRequestEditRestaurant?: (restaurant: Restaurant) => void;
     isGridMode?: boolean;
     gridSelectedRestaurant?: Restaurant | null; // 그리드 모드에서 각 그리드별 선택된 맛집
     onRestaurantSelect?: (restaurant: Restaurant) => void;
 }
 
-const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminEditRestaurant, isGridMode = false, gridSelectedRestaurant, onRestaurantSelect }: NaverMapViewProps) => {
+const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminEditRestaurant, onRequestEditRestaurant, isGridMode = false, gridSelectedRestaurant, onRestaurantSelect }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
     const { isLoaded, loadError } = useNaverMaps();
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+    // 선택된 맛집이 변경될 때 지도 중앙 재조정
+    useEffect(() => {
+        if (selectedRestaurant && mapInstanceRef.current && !isGridMode) {
+            // 현재 줌 레벨에 따라 적절한 오프셋 계산
+            const currentZoom = mapInstanceRef.current.getZoom();
+            const zoomFactor = Math.pow(2, 15 - currentZoom);
+            const offsetLng = 0.004 * zoomFactor;
+
+            const targetLatLng = new naver.maps.LatLng(selectedRestaurant.lat, selectedRestaurant.lng - offsetLng);
+
+            // 부드러운 애니메이션으로 지도 중앙 이동
+            mapInstanceRef.current.panTo(targetLatLng, {
+                duration: 300
+            });
+        }
+    }, [selectedRestaurant, isGridMode]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
         region: selectedRegion || undefined,
-        minRating: filters.minRating,
         minReviews: filters.minReviews,
-        minUserVisits: filters.minUserVisits,
-        minJjyangVisits: filters.minJjyangVisits,
         enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
     });
 
@@ -68,7 +84,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 zoom: regionConfig.zoom,
                 minZoom: 6,
                 maxZoom: 18,
-                zoomControl: true,
+                zoomControl: false,
                 zoomControlOptions: {
                     position: naver.maps.Position.TOP_RIGHT,
                 },
@@ -192,6 +208,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             onRestaurantSelect(searchedRestaurant);
         }
 
+        // 패널 열기 (검색 시에만)
+        setIsPanelOpen(true);
+
         // 토스트 메시지 표시
         toast.success(`"${searchedRestaurant.name}" 맛집을 찾았습니다!`);
     }, [searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -232,44 +251,58 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
             // 모든 마커를 한 번에 생성 (DOM 조작 최소화)
             markersToCreate.forEach((restaurant) => {
-                const isHotPlace = (restaurant.ai_rating ?? 0) >= 4;
                 // 그리드 모드에서는 gridSelectedRestaurant, 단일 모드에서는 props의 selectedRestaurant 사용
                 const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
                 const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
-                const icon = isHotPlace ? '🔥' : '⭐';
-                const bgColor = isHotPlace ? '#ff4757' : '#3742fa';
+                // 카테고리별 적절한 이모티콘으로 변경
+                const getCategoryIcon = (category: string) => {
+                    const iconMap: { [key: string]: string } = {
+                        '고기': '🥩',
+                        '치킨': '🍗',
+                        '한식': '🍚',
+                        '중식': '🥢',
+                        '일식': '🍣',
+                        '양식': '🍝',
+                        '분식': '🥟',
+                        '카페·디저트': '☕',
+                        '아시안': '🍜',
+                        '패스트푸드': '🍔',
+                        '족발·보쌈': '🍖',
+                        '돈까스·회': '🍱',
+                        '피자': '🍕',
+                        '찜·탕': '🥘',
+                        '야식': '🌙',
+                        '도시락': '🍱'
+                    };
+                    return iconMap[category] || '⭐'; // 기본값은 별표
+                };
 
-                // 선택된 맛집은 더 큰 크기와 강조 효과
-                const size = isSelected ? 36 : 28;
-                const borderWidth = isSelected ? 3 : 2;
-                const boxShadow = isSelected
-                    ? '0 4px 12px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.9)'
-                    : '0 2px 4px rgba(0,0,0,0.2)';
-                const animation = isSelected ? 'pulse 2s infinite' : 'none';
+                const icon = getCategoryIcon(restaurant.category);
 
-                const markerContent = `<div class="marker-icon ${isSelected ? 'selected-marker' : ''}" style="
-                    background: ${bgColor};
-                    color: white;
-                    border-radius: 50%;
-                    width: ${size}px;
-                    height: ${size}px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: ${isSelected ? 15 : 13}px;
-                    border: ${borderWidth}px solid white;
-                    box-shadow: ${boxShadow};
-                    animation: ${animation};
-                    transform: ${isSelected ? 'scale(1.1)' : 'scale(1)'};
-                    transition: all 0.3s ease;
-                ">${icon}</div>`;
+                // 선택된 맛집은 더 큰 크기와 강조 효과 (조금 더 작게)
+                const markerSize = isSelected ? 32 : 24;
+
+                // HTML 요소를 직접 생성해서 마커로 사용 (MapView 방식과 동일)
+                const markerElement = document.createElement("div");
+                markerElement.className = `custom-marker ${isSelected ? 'selected-marker' : ''}`;
+                markerElement.innerHTML = `
+                    <div style="
+                        position: relative;
+                        font-size: ${markerSize}px;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+                    " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
+                        ${icon}
+                    </div>
+                `;
 
                 const marker = new naver.maps.Marker({
                     position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
                     map: mapInstanceRef.current,
                     icon: {
-                        content: markerContent,
-                        anchor: new naver.maps.Point(12, 12),
+                        content: markerElement,
+                        anchor: new naver.maps.Point(markerSize / 2, markerSize / 2),
                     },
                     title: restaurant.name,
                 });
@@ -281,17 +314,10 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         onRestaurantSelect(restaurant);
                     }
 
-                    // 단일 모드에서만 자연스러운 애니메이션으로 지도 재조정
-                    if (!isGridMode) {
-                        // 상세 패널이 오른쪽에 있으므로 마커를 약간 왼쪽으로 이동하여 중앙에 배치
-                        const offsetLng = restaurant.lng - 0.004; // 약 350m 왼쪽 오프셋 (더 자연스러운 위치)
-                        const targetLatLng = new naver.maps.LatLng(restaurant.lat, offsetLng);
+                    // 패널 열기 (마커 클릭 시에만)
+                    setIsPanelOpen(true);
 
-                        // 줌 레벨은 유지하고 중심만 부드럽게 이동
-                        mapInstanceRef.current.panTo(targetLatLng, {
-                            duration: 400 // 400ms 자연스러운 애니메이션
-                        });
-                    }
+                    // 마커 클릭 시 지도 이동 제거 - 상세 패널 열릴 때 이동 수행
                 });
 
                 newMarkers.push(marker);
@@ -305,7 +331,77 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         // 마커 표시 후 자동 이동하지 않음
     }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant]);
 
-    // 로딩 에러 처리
+    // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
+    useEffect(() => {
+      if (!isLoaded || markersRef.current.length === 0) return;
+
+      markersRef.current.forEach((marker, index) => {
+        const restaurant = restaurants[index];
+        if (!restaurant) return;
+
+        const isSelected = selectedRestaurant?.id === restaurant.id;
+        const markerElement = marker.getIcon().content as HTMLElement;
+        if (!markerElement) return;
+
+        const innerDiv = markerElement.querySelector('div');
+        if (!innerDiv) return;
+
+        // 크기 업데이트
+        const markerSize = isSelected ? 32 : 24;
+        innerDiv.style.fontSize = `${markerSize}px`;
+
+        // 애니메이션 클래스 업데이트
+        if (isSelected) {
+          innerDiv.classList.add('animate-bounce');
+        } else {
+          innerDiv.classList.remove('animate-bounce');
+        }
+      });
+  }, [selectedRestaurant?.id, restaurants, isLoaded]);
+
+  // 줌 이벤트 시 마커 스타일 유지
+  useEffect(() => {
+    if (!mapInstanceRef.current || !isLoaded) return;
+
+    const handleZoomChange = () => {
+      // 줌 변경 후 약간의 지연을 주어 마커 스타일 재적용
+      setTimeout(() => {
+        if (!isLoaded || markersRef.current.length === 0) return;
+
+        markersRef.current.forEach((marker, index) => {
+          const restaurant = restaurants[index];
+          if (!restaurant) return;
+
+          const isSelected = selectedRestaurant?.id === restaurant.id;
+          const markerElement = marker.getIcon().content as HTMLElement;
+          if (!markerElement) return;
+
+          const innerDiv = markerElement.querySelector('div');
+          if (!innerDiv) return;
+
+          // 크기 업데이트
+          const markerSize = isSelected ? 32 : 24;
+          innerDiv.style.fontSize = `${markerSize}px`;
+
+          // 애니메이션 클래스 업데이트
+          if (isSelected) {
+            innerDiv.classList.add('animate-bounce');
+          } else {
+            innerDiv.classList.remove('animate-bounce');
+          }
+        });
+      }, 100);
+    };
+
+    // 줌 변경 이벤트 리스너 추가
+    naver.maps.Event.addListener(mapInstanceRef.current, 'zoom_changed', handleZoomChange);
+
+    return () => {
+      // Naver Maps에서는 이벤트 리스너가 자동으로 정리됨
+    };
+  }, [isLoaded, selectedRestaurant?.id, restaurants]);
+
+  // 로딩 에러 처리
     if (loadError) {
         return (
             <div className="flex items-center justify-center h-full bg-muted">
@@ -371,16 +467,19 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             )}
 
             {/* 레스토랑 상세 패널 - 그리드 모드에서는 간소화된 모달로 표시 */}
-            {!isGridMode && selectedRestaurant && (
+            {!isGridMode && selectedRestaurant && isPanelOpen && (
                 <div className="absolute right-0 top-0 h-full w-96 z-20 shadow-xl">
                     <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
-                        onClose={() => onRestaurantSelect && onRestaurantSelect(null)}
+                        onClose={() => setIsPanelOpen(false)}
                         onWriteReview={() => {
                             setIsReviewModalOpen(true);
                         }}
                         onEditRestaurant={onAdminEditRestaurant ? () => {
                             onAdminEditRestaurant(selectedRestaurant);
+                        } : undefined}
+                        onRequestEditRestaurant={onRequestEditRestaurant ? () => {
+                            onRequestEditRestaurant(selectedRestaurant);
                         } : undefined}
                     />
                 </div>

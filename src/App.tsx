@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { useGoogleMaps } from "@/hooks/use-google-maps";
+import { useEffect } from "react";
 import Index from "./pages/Index";
 import GlobalMapPage from "./pages/GlobalMapPage";
 import FilteringPage from "./pages/FilteringPage";
@@ -36,6 +38,10 @@ function AppLayout() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Google Maps를 앱 시작 시 미리 로드 (빠른 지도 표시를 위해)
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  useGoogleMaps({ apiKey }); // 백그라운드에서 로드되므로 결과 사용하지 않음
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -44,11 +50,15 @@ function AppLayout() {
     }
   };
 
-  const handleAdminSuccess = () => {
+  const handleAdminSuccess = (updatedRestaurant?: Restaurant) => {
     // React Query 캐시 무효화 - 모든 restaurants 쿼리 다시 불러오기
     queryClient.invalidateQueries({ queryKey: ['restaurants'] });
     setRefreshTrigger(prev => prev + 1);
-    // selectedRestaurant는 초기화하지 않음 - 맵 컴포넌트에서 업데이트됨
+
+    // 수정된 맛집이 있으면 selectedRestaurant 업데이트
+    if (updatedRestaurant) {
+      setSelectedRestaurant(updatedRestaurant);
+    }
   };
 
   const handleAdminEditRestaurant = (restaurant: Restaurant) => {
@@ -74,8 +84,8 @@ function AppLayout() {
 
         <main className="flex-1 relative overflow-hidden">
           <Routes>
-            <Route path="/" element={<Index refreshTrigger={refreshTrigger} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
-            <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
+            <Route path="/" element={<Index refreshTrigger={refreshTrigger} selectedRestaurant={selectedRestaurant} setSelectedRestaurant={setSelectedRestaurant} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
+            <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} selectedRestaurant={selectedRestaurant} setSelectedRestaurant={setSelectedRestaurant} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/filtering" element={<FilteringPage onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />

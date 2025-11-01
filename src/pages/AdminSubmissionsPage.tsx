@@ -59,8 +59,6 @@ export default function AdminSubmissionsPage() {
     const [approvalData, setApprovalData] = useState({
         lat: "",
         lng: "",
-        ai_rating: "",
-        jjyang_visit_count: "1",
     });
 
     // 모든 제보 조회 (관리자만)
@@ -143,8 +141,6 @@ export default function AdminSubmissionsPage() {
                         description: submission.description,
                         lat,
                         lng,
-                        ai_rating: approvalData.ai_rating ? parseFloat(approvalData.ai_rating) : null,
-                        jjyang_visit_count: parseInt(approvalData.jjyang_visit_count) || 1,
                         updated_at: new Date().toISOString(),
                     })
                     .eq('id', submission.original_restaurant_id);
@@ -171,8 +167,6 @@ export default function AdminSubmissionsPage() {
                         description: submission.description,
                         lat,
                         lng,
-                        ai_rating: approvalData.ai_rating ? parseFloat(approvalData.ai_rating) : null,
-                        jjyang_visit_count: parseInt(approvalData.jjyang_visit_count) || 1,
                     })
                     .select()
                     .single();
@@ -258,8 +252,6 @@ export default function AdminSubmissionsPage() {
         setApprovalData({
             lat: "",
             lng: "",
-            ai_rating: "",
-            jjyang_visit_count: "1",
         });
     };
 
@@ -628,33 +620,6 @@ export default function AdminSubmissionsPage() {
                                         </p>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2">
-                                            <Label htmlFor="ai_rating">AI 별점 (1-10)</Label>
-                                            <Input
-                                                id="ai_rating"
-                                                type="number"
-                                                step="0.1"
-                                                min="1"
-                                                max="10"
-                                                value={approvalData.ai_rating}
-                                                onChange={(e) => setApprovalData({ ...approvalData, ai_rating: e.target.value })}
-                                                placeholder="8.5"
-                                            />
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <Label htmlFor="jjyang_visit_count">쯔양 방문횟수</Label>
-                                            <Input
-                                                id="jjyang_visit_count"
-                                                type="number"
-                                                min="1"
-                                                value={approvalData.jjyang_visit_count}
-                                                onChange={(e) => setApprovalData({ ...approvalData, jjyang_visit_count: e.target.value })}
-                                                placeholder="1"
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
                             ) : (
                                 <div className="space-y-2">

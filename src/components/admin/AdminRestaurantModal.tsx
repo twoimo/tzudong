@@ -17,7 +17,7 @@ interface AdminRestaurantModalProps {
     isOpen: boolean;
     onClose: () => void;
     restaurant?: Restaurant | null;
-    onSuccess: () => void;
+    onSuccess: (updatedRestaurant?: Restaurant) => void;
 }
 
 export function AdminRestaurantModal({
@@ -33,11 +33,9 @@ export function AdminRestaurantModal({
         phone: "",
         categories: [] as string[],
         youtube_link: "",
-        description: "",
+        tzuyang_review: "",
         lat: "",
         lng: "",
-        rating_ai: "",
-        jjyang_visit_count: "",
     });
 
     useEffect(() => {
@@ -48,11 +46,9 @@ export function AdminRestaurantModal({
                 phone: restaurant.phone || "",
                 categories: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category].filter(Boolean),
                 youtube_link: restaurant.youtube_link || "",
-                description: restaurant.description || "",
+                tzuyang_review: restaurant.tzuyang_review || "",
                 lat: String(restaurant.lat || ""),
                 lng: String(restaurant.lng || ""),
-                rating_ai: String(restaurant.ai_rating || ""),
-                jjyang_visit_count: String(restaurant.jjyang_visit_count || ""),
             });
         } else {
             resetForm();
@@ -66,11 +62,9 @@ export function AdminRestaurantModal({
             phone: "",
             categories: [],
             youtube_link: "",
-            description: "",
+            tzuyang_review: "",
             lat: "",
             lng: "",
-            rating_ai: "",
-            jjyang_visit_count: "",
         });
     };
 
@@ -137,14 +131,14 @@ export function AdminRestaurantModal({
                 phone: formData.phone.trim() || null,
                 category: formData.categories, // TEXT[] 배열로 저장
                 youtube_link: formData.youtube_link.trim() || null,
-                description: formData.description.trim() || null,
+                tzuyang_review: formData.tzuyang_review.trim() || null,
                 lat,
                 lng,
-                ai_rating: formData.rating_ai ? parseFloat(formData.rating_ai) : null,
-                jjyang_visit_count: formData.jjyang_visit_count ? parseInt(formData.jjyang_visit_count) : 0,
             };
 
             let error;
+
+            let updatedRestaurant: Restaurant | undefined;
 
             if (restaurant) {
                 // Update existing restaurant
@@ -152,6 +146,17 @@ export function AdminRestaurantModal({
                     .from("restaurants")
                     .update(restaurantData)
                     .eq("id", restaurant.id));
+
+                if (!error) {
+                    // 데이터베이스에서 업데이트된 데이터를 다시 가져옴
+                    const { data: fetchedRestaurant } = await supabase
+                        .from("restaurants")
+                        .select("*")
+                        .eq("id", restaurant.id)
+                        .single();
+
+                    updatedRestaurant = fetchedRestaurant || undefined;
+                }
             } else {
                 // Create new restaurant
                 ({ error } = await supabase.from("restaurants").insert(restaurantData));
@@ -162,7 +167,7 @@ export function AdminRestaurantModal({
             toast.success(
                 restaurant ? "맛집이 수정되었습니다" : "맛집이 등록되었습니다"
             );
-            onSuccess();
+            onSuccess(updatedRestaurant);
             resetForm();
             onClose();
         } catch (error: any) {
@@ -334,7 +339,7 @@ export function AdminRestaurantModal({
                         />
                     </div>
 
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="lat">위도 *</Label>
                             <Input
@@ -358,36 +363,33 @@ export function AdminRestaurantModal({
                                 placeholder="126.9780"
                             />
                         </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="rating_ai">AI 별점 (1-10)</Label>
-                            <Input
-                                id="rating_ai"
-                                type="number"
-                                step="0.1"
-                                min="1"
-                                max="10"
-                                value={formData.rating_ai}
-                                onChange={(e) =>
-                                    setFormData({ ...formData, rating_ai: e.target.value })
-                                }
-                                placeholder="8.5"
-                            />
-                        </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="jjyang_visit_count">쯔양 방문횟수</Label>
-                        <Input
-                            id="jjyang_visit_count"
-                            type="number"
-                            min="0"
-                            value={formData.jjyang_visit_count}
-                            onChange={(e) =>
-                                setFormData({ ...formData, jjyang_visit_count: e.target.value })
-                            }
-                            placeholder="쯔양이 방문한 횟수"
-                        />
+                    <div className="flex gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={async () => {
+                                if (!formData.address.trim()) {
+                                    toast.error('주소를 먼저 입력해주세요');
+                                    return;
+                                }
+                                try {
+                                    const coords = await geocodeAddress(formData.address);
+                                    setFormData(prev => ({
+                                        ...prev,
+                                        lat: coords.lat.toString(),
+                                        lng: coords.lng.toString()
+                                    }));
+                                    toast.success('좌표가 자동으로 입력되었습니다');
+                                } catch (error) {
+                                    toast.error('좌표 변환에 실패했습니다');
+                                }
+                            }}
+                            className="flex-1"
+                        >
+                            📍 주소로 좌표 자동 입력
+                        </Button>
                     </div>
 
                     <div className="space-y-2">
@@ -413,12 +415,12 @@ export function AdminRestaurantModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">쯔양의 리뷰</Label>
+                        <Label htmlFor="tzuyang_review">쯔양의 리뷰</Label>
                         <Textarea
-                            id="description"
-                            value={formData.description}
+                            id="tzuyang_review"
+                            value={formData.tzuyang_review}
                             onChange={(e) =>
-                                setFormData({ ...formData, description: e.target.value })
+                                setFormData({ ...formData, tzuyang_review: e.target.value })
                             }
                             placeholder="쯔양이 어떤 리뷰를 남겼는지 입력해주세요..."
                             rows={4}
