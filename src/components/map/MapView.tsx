@@ -37,6 +37,8 @@ interface MapViewProps {
   onRestaurantSelect?: (restaurant: Restaurant | null) => void;
   onMapReady?: (moveToRestaurant: (restaurant: Restaurant) => void) => void;
   onRequestEditRestaurant?: (restaurant: Restaurant) => void;
+  // 패널 관리를 위한 콜백 추가
+  onMarkerClick?: (restaurant: Restaurant) => void;
 }
 
 // 에러 바운더리용 폴백 컴포넌트
@@ -65,7 +67,7 @@ const MapErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetEr
   </div>
 );
 
-const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant }: MapViewProps) => {
+const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant, onMarkerClick }: MapViewProps) => {
   // 필터 객체 메모이제이션
   const memoizedFilters = useMemo(() => filters, [filters]);
   const { user } = useAuth();
@@ -76,15 +78,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
-  // 패널 상태를 useRef로 관리해서 리렌더링 방지
-  const isPanelOpenRef = useRef(false);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
 
-  // 컴포넌트 초기화 시 패널 상태를 명확히 false로 설정 (깜빡임 방지)
-  useEffect(() => {
-    isPanelOpenRef.current = false;
-    setIsPanelOpen(false);
-  }, []);
 
   // 맛집으로 지도 이동하는 함수
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
@@ -131,11 +125,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantsOptions);
 
-  // 컴포넌트 초기화 시 패널 상태를 명확히 false로 설정 (깜빡임 방지)
-  useEffect(() => {
-    isPanelOpenRef.current = false;
-    setIsPanelOpen(false);
-  }, []);
 
   // Refetch when refreshTrigger changes
   useEffect(() => {
@@ -144,55 +133,21 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [refreshTrigger, refetch]);
 
-  // Google Maps 로딩 전에는 패널이 나타나지 않도록 보장
-  useEffect(() => {
-    if (!isLoaded) {
-      isPanelOpenRef.current = false;
-      setIsPanelOpen(false);
-    }
-  }, [isLoaded]);
 
   // refreshTrigger 변경 시 선택된 레스토랑 정보 업데이트
   useEffect(() => {
     if (selectedRestaurant) {
       // 업데이트된 레스토랑 정보 찾기
       const updatedRestaurant = restaurants.find(r => r.id === selectedRestaurant.id);
-      if (updatedRestaurant && onRestaurantSelect) {
-        onRestaurantSelect(updatedRestaurant);
-      } else if (!updatedRestaurant && onRestaurantSelect) {
+      if (updatedRestaurant) {
+        // selectedRestaurant 업데이트 (외부 상태 동기화)
+        onRestaurantSelect?.(updatedRestaurant);
+      } else if (!updatedRestaurant) {
         // 삭제된 경우에만 패널 닫기
-        onRestaurantSelect(null);
+        onRestaurantSelect?.(null);
       }
     }
   }, [restaurants, refreshTrigger, selectedRestaurant, onRestaurantSelect]);
-
-  // selectedRestaurant 변경 시 패널 자동 열기 (깜빡임 방지)
-  // Google Maps가 완전히 로드되고 초기화된 후에만 패널 상태 변경
-  useEffect(() => {
-    if (selectedRestaurant && isLoaded && googleMapRef.current) {
-      // Google Maps가 완전히 준비되었는지 추가 확인
-      // 약간의 지연을 주어 깜빡임 방지 및 안정성 확보
-      const timer = setTimeout(() => {
-        // 추가 안전 확인: 맵이 실제로 존재하고 사용 가능한 상태인지
-        if (googleMapRef.current && !googleMapRef.current.getBounds) {
-          // 맵이 아직 완전히 초기화되지 않은 경우 재시도
-          setTimeout(() => {
-            if (googleMapRef.current && googleMapRef.current.getBounds) {
-              setIsPanelOpen(true);
-              isPanelOpenRef.current = true;
-            }
-          }, 100);
-        } else {
-          setIsPanelOpen(true);
-          isPanelOpenRef.current = true;
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    } else if (!selectedRestaurant) {
-      setIsPanelOpen(false);
-      isPanelOpenRef.current = false;
-    }
-  }, [selectedRestaurant, isLoaded]);
 
 
   // Initialize map
@@ -224,11 +179,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
 
       googleMapRef.current = map;
-
-      // Google Maps 로드 완료 후 패널 상태 초기화 보장
-      // 초기 로딩 시점에는 패널이 나타나지 않도록 명확히 설정
-      isPanelOpenRef.current = false;
-      setIsPanelOpen(false);
 
       // Update bounds when map moves
       map.addListener("idle", () => {
@@ -325,14 +275,18 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
 
       markerElement.addEventListener("click", () => {
+        // selectedRestaurant 업데이트 (외부 상태 관리용)
         onRestaurantSelect?.(restaurant);
-        // 패널 열기는 selectedRestaurant 변경 시 자동으로 처리됨
+
+        // 패널 관리는 부모 컴포넌트에서 처리 (완전 분리)
+        onMarkerClick?.(restaurant);
+
         // 지도 이동 제거 - 현재 위치 유지
       });
 
       markersRef.current.push(marker);
     });
-  }, [restaurants, isLoaded, onRestaurantSelect]);
+  }, [restaurants, isLoaded, onRestaurantSelect, onMarkerClick]);
 
   if (loadError) {
     return (
@@ -423,27 +377,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         {/* Map container */}
         <div ref={mapRef} className="flex-1 h-full" />
 
-        {/* Restaurant Detail Panel */}
-        {selectedRestaurant && isLoaded && googleMapRef.current && (
-          <div className="w-96 h-full">
-            <RestaurantDetailPanel
-              restaurant={selectedRestaurant}
-              onClose={() => {
-                setIsPanelOpen(false);
-                isPanelOpenRef.current = false;
-              }}
-              onWriteReview={() => {
-                setIsReviewModalOpen(true);
-              }}
-              onEditRestaurant={onAdminEditRestaurant ? () => {
-                onAdminEditRestaurant(selectedRestaurant);
-              } : undefined}
-              onRequestEditRestaurant={onRequestEditRestaurant ? () => {
-                onRequestEditRestaurant(selectedRestaurant);
-              } : undefined}
-            />
-          </div>
-        )}
 
         {/* Loading indicator */}
         {isLoadingRestaurants && (

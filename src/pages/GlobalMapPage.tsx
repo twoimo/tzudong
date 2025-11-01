@@ -1,4 +1,4 @@
-import { useState, memo, Suspense, lazy, useCallback, useMemo } from "react";
+import { useState, memo, Suspense, lazy, useCallback, useMemo, useEffect } from "react";
 import MapView from "@/components/map/MapView";
 import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
+import { ReviewModal } from "@/components/reviews/ReviewModal";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -44,6 +46,10 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
     const [moveToRestaurant, setMoveToRestaurant] = useState<((restaurant: Restaurant) => void) | null>(null);
+    // 패널 상태를 GlobalMapPage 레벨로 완전 이동 (MapView와 완전 분리)
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [panelRestaurant, setPanelRestaurant] = useState<Restaurant | null>(null);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [editFormData, setEditFormData] = useState({
         name: '',
         address: '',
@@ -102,6 +108,27 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         console.log('GlobalMapPage: Map ready, storing move function');
         setMoveToRestaurant(() => moveFunction);
     }, []);
+
+    // 패널 관리를 GlobalMapPage 레벨로 완전 이동
+    const handleMarkerClick = useCallback((restaurant: Restaurant) => {
+        setSelectedRestaurant(restaurant); // 외부 상태 관리
+        setPanelRestaurant(restaurant); // 패널 전용 상태
+        setIsPanelOpen(true); // 패널 열기
+    }, [setSelectedRestaurant]);
+
+    const handlePanelClose = useCallback(() => {
+        setIsPanelOpen(false);
+        setPanelRestaurant(null);
+    }, []);
+
+    // refreshTrigger 변경 시 패널 레스토랑 정보 업데이트
+    useEffect(() => {
+        if (panelRestaurant) {
+            // 패널에 표시된 레스토랑이 업데이트되었는지 확인
+            // 여기서는 간단히 refreshTrigger로 인한 업데이트만 처리
+            // 실제 데이터 업데이트는 MapView에서 처리됨
+        }
+    }, [refreshTrigger, panelRestaurant]);
 
     const handleRequestEditRestaurant = useCallback((restaurant: Restaurant) => {
         setRestaurantToEdit(restaurant);
@@ -326,17 +353,37 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                         </div>
                     </div>
                 }>
-                    <MapView
-                        filters={filters}
-                        selectedCountry={selectedCountry}
-                        searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
-                        selectedRestaurant={selectedRestaurant}
-                        refreshTrigger={refreshTrigger}
-                        onAdminEditRestaurant={onAdminEditRestaurant}
-                        onRestaurantSelect={setSelectedRestaurant}
-                        onMapReady={handleMapReady}
-                        onRequestEditRestaurant={handleRequestEditRestaurant}
-                    />
+                    <div className="relative w-full h-full flex">
+                        <MapView
+                            filters={filters}
+                            selectedCountry={selectedCountry}
+                            searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
+                            selectedRestaurant={selectedRestaurant}
+                            refreshTrigger={refreshTrigger}
+                            onAdminEditRestaurant={onAdminEditRestaurant}
+                            onRestaurantSelect={setSelectedRestaurant}
+                            onMapReady={handleMapReady}
+                            onRequestEditRestaurant={handleRequestEditRestaurant}
+                            onMarkerClick={handleMarkerClick}
+                        />
+
+                        {/* Restaurant Detail Panel - GlobalMapPage 레벨에서 완전 관리 */}
+                        {panelRestaurant && isPanelOpen && (
+                            <div className="absolute right-0 top-0 h-full w-96 z-20 shadow-xl">
+                                <RestaurantDetailPanel
+                                    restaurant={panelRestaurant}
+                                    onClose={handlePanelClose}
+                                    onWriteReview={() => {
+                                        setIsReviewModalOpen(true);
+                                    }}
+                                    onEditRestaurant={onAdminEditRestaurant ? () => {
+                                        onAdminEditRestaurant(panelRestaurant);
+                                    } : undefined}
+                                    onRequestEditRestaurant={handleRequestEditRestaurant}
+                                />
+                            </div>
+                        )}
+                    </div>
                 </Suspense>
             )}
 
@@ -533,6 +580,18 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* 리뷰 작성 모달 */}
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                restaurant={panelRestaurant ? { id: panelRestaurant.id, name: panelRestaurant.name } : null}
+                onSuccess={() => {
+                    // refreshTrigger를 업데이트해서 데이터 새로고침
+                    setRefreshTrigger(prev => prev + 1);
+                    toast.success("리뷰가 성공적으로 등록되었습니다!");
+                }}
+            />
         </>
     );
 });
