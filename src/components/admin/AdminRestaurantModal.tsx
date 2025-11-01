@@ -33,7 +33,7 @@ export function AdminRestaurantModal({
         phone: "",
         categories: [] as string[],
         youtube_link: "",
-        description: "",
+        tzuyang_review: "",
         lat: "",
         lng: "",
     });
@@ -46,7 +46,7 @@ export function AdminRestaurantModal({
                 phone: restaurant.phone || "",
                 categories: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category].filter(Boolean),
                 youtube_link: restaurant.youtube_link || "",
-                description: restaurant.description || "",
+                tzuyang_review: restaurant.tzuyang_review || "",
                 lat: String(restaurant.lat || ""),
                 lng: String(restaurant.lng || ""),
             });
@@ -62,7 +62,7 @@ export function AdminRestaurantModal({
             phone: "",
             categories: [],
             youtube_link: "",
-            description: "",
+            tzuyang_review: "",
             lat: "",
             lng: "",
         });
@@ -131,7 +131,7 @@ export function AdminRestaurantModal({
                 phone: formData.phone.trim() || null,
                 category: formData.categories, // TEXT[] 배열로 저장
                 youtube_link: formData.youtube_link.trim() || null,
-                description: formData.description.trim() || null,
+                tzuyang_review: formData.tzuyang_review.trim() || null,
                 lat,
                 lng,
             };
@@ -415,12 +415,12 @@ export function AdminRestaurantModal({
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="description">쯔양의 리뷰</Label>
+                        <Label htmlFor="tzuyang_review">쯔양의 리뷰</Label>
                         <Textarea
-                            id="description"
-                            value={formData.description}
+                            id="tzuyang_review"
+                            value={formData.tzuyang_review}
                             onChange={(e) =>
-                                setFormData({ ...formData, description: e.target.value })
+                                setFormData({ ...formData, tzuyang_review: e.target.value })
                             }
                             placeholder="쯔양이 어떤 리뷰를 남겼는지 입력해주세요..."
                             rows={4}
