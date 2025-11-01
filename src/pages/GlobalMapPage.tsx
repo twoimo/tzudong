@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -410,30 +411,19 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     </DialogHeader>
 
                     {restaurantToEdit && (
-                        <form onSubmit={handleEditSubmit} className="space-y-6">
-                            {/* 현재 정보 표시 */}
-                            <div className="p-4 bg-muted/50 rounded-lg">
-                                <h3 className="font-semibold mb-2">현재 정보</h3>
-                                <div className="text-sm space-y-1">
-                                    <p><strong>이름:</strong> {restaurantToEdit.name}</p>
-                                    <p><strong>주소:</strong> {restaurantToEdit.address}</p>
-                                    <p><strong>전화번호:</strong> {restaurantToEdit.phone || '-'}</p>
-                                    <p><strong>카테고리:</strong> {Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category.join(', ') : restaurantToEdit.category}</p>
-                                    <p><strong>유튜브:</strong> {restaurantToEdit.youtube_link || '-'}</p>
-                                    <p><strong>쯔양 리뷰:</strong> {restaurantToEdit.description ? '있음' : '없음'}</p>
-                                </div>
-                            </div>
-
-                            {/* 수정 폼 */}
+                        <form onSubmit={handleEditSubmit} className="space-y-4 mt-4">
+                            {/* 수정할 정보 입력 */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-name">맛집 이름 *</Label>
+                                    <Label htmlFor="edit-name">
+                                        맛집 이름 <span className="text-red-500">*</span>
+                                    </Label>
                                     <Input
                                         id="edit-name"
                                         name="name"
                                         value={editFormData.name}
                                         onChange={(e) => handleEditFormChange('name', e.target.value)}
-                                        placeholder="맛집 이름을 입력하세요"
+                                        placeholder="맛집 이름을 입력해주세요"
                                         required
                                     />
                                 </div>
@@ -467,13 +457,15 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 </div>
 
                                 <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="edit-address">주소 *</Label>
+                                    <Label htmlFor="edit-address">
+                                        주소 <span className="text-red-500">*</span>
+                                    </Label>
                                     <Input
                                         id="edit-address"
                                         name="address"
                                         value={editFormData.address}
                                         onChange={(e) => handleEditFormChange('address', e.target.value)}
-                                        placeholder="맛집 주소를 입력하세요"
+                                        placeholder="주소를 입력해주세요"
                                         required
                                     />
                                 </div>
@@ -485,12 +477,12 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                         name="phone"
                                         value={editFormData.phone}
                                         onChange={(e) => handleEditFormChange('phone', e.target.value)}
-                                        placeholder="전화번호를 입력하세요"
+                                        placeholder="전화번호를 입력해주세요"
                                     />
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label htmlFor="edit-youtube">쯔양 유튜브 영상 링크</Label>
+                                    <Label htmlFor="edit-youtube">유튜브 링크</Label>
                                     <Input
                                         id="edit-youtube"
                                         name="youtube_link"
@@ -501,78 +493,99 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 </div>
 
                                 <div className="space-y-2 md:col-span-2">
-                                    <Label htmlFor="edit-description">쯔양 리뷰</Label>
+                                    <Label htmlFor="edit-description">쯔양의 리뷰</Label>
                                     <Textarea
                                         id="edit-description"
                                         name="description"
                                         value={editFormData.description}
                                         onChange={(e) => handleEditFormChange('description', e.target.value)}
-                                        placeholder="쯔양의 리뷰 내용을 입력하세요"
+                                        placeholder="쯔양의 리뷰 내용을 입력해주세요"
                                         rows={4}
                                     />
                                 </div>
                             </div>
 
-                            {/* 변경사항 미리보기 */}
+                            {/* 변경사항 표시 */}
                             {(() => {
-                                const changes: Array<{ field: string; from: any; to: any }> = [];
-                                const originalData = {
-                                    restaurant_name: restaurantToEdit.name,
-                                    address: restaurantToEdit.address,
-                                    phone: restaurantToEdit.phone || '',
-                                    category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
-                                    youtube_link: restaurantToEdit.youtube_link || '',
-                                    description: restaurantToEdit.description || ''
-                                };
-
+                                const changes: Array<[string, string]> = [];
                                 Object.entries(editFormData).forEach(([key, value]) => {
-                                    const fieldName = key === 'name' ? 'restaurant_name' : key;
-                                    const originalValue = originalData[fieldName as keyof typeof originalData];
+                                    const originalValue = restaurantToEdit ? {
+                                        name: restaurantToEdit.name,
+                                        address: restaurantToEdit.address,
+                                        phone: restaurantToEdit.phone || '',
+                                        category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                                        youtube_link: restaurantToEdit.youtube_link || '',
+                                        description: restaurantToEdit.description || ''
+                                    }[key as keyof typeof restaurantToEdit] || '' : '';
+
                                     if (originalValue !== value) {
-                                        const fieldLabels: Record<string, string> = {
-                                            name: '이름',
-                                            address: '주소',
-                                            phone: '전화번호',
-                                            category: '카테고리',
-                                            youtube_link: '유튜브 링크',
-                                            description: '리뷰'
-                                        };
-                                        changes.push({
-                                            field: fieldLabels[key] || key,
-                                            from: originalValue,
-                                            to: value
-                                        });
+                                        changes.push([key, value]);
                                     }
                                 });
 
                                 return changes.length > 0 && (
-                                    <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200 mb-2">🔄 요청된 변경사항:</p>
-                                        <div className="space-y-1">
-                                            {changes.map((change, index) => (
-                                                <div key={index} className="text-xs">
-                                                    <span className="font-medium text-blue-700 dark:text-blue-300">{change.field}:</span>
-                                                    <span className="text-muted-foreground ml-1">{change.from || '(없음)'} → {change.to || '(없음)'}</span>
-                                                </div>
-                                            ))}
+                                    <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <div className="text-blue-600">📋</div>
+                                                <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                                    수정 요청 내용
+                                                </Label>
+                                            </div>
+
+                                            <div className="space-y-3">
+                                                {changes.map(([key, value]) => {
+                                                    const originalValue = restaurantToEdit ? {
+                                                        name: restaurantToEdit.name,
+                                                        address: restaurantToEdit.address,
+                                                        phone: restaurantToEdit.phone || '',
+                                                        category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                                                        youtube_link: restaurantToEdit.youtube_link || '',
+                                                        description: restaurantToEdit.description || ''
+                                                    }[key as keyof typeof restaurantToEdit] || '' : '';
+
+                                                    const fieldName = {
+                                                        name: '맛집 이름',
+                                                        address: '주소',
+                                                        phone: '전화번호',
+                                                        category: '카테고리',
+                                                        youtube_link: '유튜브 링크',
+                                                        description: '쯔양의 리뷰'
+                                                    }[key] || key;
+
+                                                    return (
+                                                        <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                                    {fieldName}
+                                                                </span>
+                                                                <div className="flex items-center gap-1 text-xs text-orange-600">
+                                                                    <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                                                    변경됨
+                                                                </div>
+                                                            </div>
+                                                            <div className="space-y-1">
+                                                                <div className="text-xs text-red-600 line-through">
+                                                                    기존: {originalValue || '없음'}
+                                                                </div>
+                                                                <div className="text-xs text-green-600 font-medium">
+                                                                    변경: {value || '없음'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
-                                    </div>
+                                    </Card>
                                 );
                             })()}
 
-                            <div className="flex gap-3 pt-4">
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    onClick={() => setIsEditModalOpen(false)}
-                                    className="flex-1"
-                                >
+                            <div className="flex gap-2 pt-4">
+                                <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">
                                     취소
                                 </Button>
-                                <Button
-                                    type="submit"
-                                    className="flex-1 bg-gradient-primary hover:opacity-90"
-                                >
+                                <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90">
                                     수정 요청 제출
                                 </Button>
                             </div>

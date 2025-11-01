@@ -443,64 +443,6 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                 toast.error('제출에 실패했습니다. 다시 시도해주세요.');
               }
             }} className="space-y-4 mt-4">
-              {/* 변경사항 표시 */}
-              {getEditChanges().length > 0 && (
-                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="text-blue-600">📋</div>
-                      <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                        수정 요청 내용
-                      </Label>
-                    </div>
-
-                    <div className="space-y-3">
-                      {getEditChanges().map(([key, value]) => {
-                        const originalValue = restaurantToEdit ? {
-                          name: restaurantToEdit.name,
-                          address: restaurantToEdit.address,
-                          phone: restaurantToEdit.phone || '',
-                          category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
-                          youtube_link: restaurantToEdit.youtube_link || '',
-                          description: restaurantToEdit.description || ''
-                        }[key as keyof typeof restaurantToEdit] || '' : '';
-
-                        const fieldName = {
-                          name: '맛집 이름',
-                          address: '주소',
-                          phone: '전화번호',
-                          category: '카테고리',
-                          youtube_link: '유튜브 링크',
-                          description: '쯔양의 리뷰'
-                        }[key] || key;
-
-                        return (
-                          <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {fieldName}
-                              </span>
-                              <div className="flex items-center gap-1 text-xs text-orange-600">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                변경됨
-                              </div>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="text-xs text-red-600 line-through">
-                                기존: {originalValue || '없음'}
-                              </div>
-                              <div className="text-xs text-green-600 font-medium">
-                                변경: {value || '없음'}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </Card>
-              )}
-
               {/* 수정할 정보 입력 */}
               <div className="space-y-4">
                 <div className="space-y-2">
@@ -591,6 +533,64 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   />
                 </div>
               </div>
+
+              {/* 변경사항 표시 */}
+              {getEditChanges().length > 0 && (
+                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="text-blue-600">📋</div>
+                      <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                        수정 요청 내용
+                      </Label>
+                    </div>
+
+                    <div className="space-y-3">
+                      {getEditChanges().map(([key, value]) => {
+                        const originalValue = restaurantToEdit ? {
+                          name: restaurantToEdit.name,
+                          address: restaurantToEdit.address,
+                          phone: restaurantToEdit.phone || '',
+                          category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category[0] : restaurantToEdit.category,
+                          youtube_link: restaurantToEdit.youtube_link || '',
+                          description: restaurantToEdit.description || ''
+                        }[key as keyof typeof restaurantToEdit] || '' : '';
+
+                        const fieldName = {
+                          name: '맛집 이름',
+                          address: '주소',
+                          phone: '전화번호',
+                          category: '카테고리',
+                          youtube_link: '유튜브 링크',
+                          description: '쯔양의 리뷰'
+                        }[key] || key;
+
+                        return (
+                          <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                {fieldName}
+                              </span>
+                              <div className="flex items-center gap-1 text-xs text-orange-600">
+                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                                변경됨
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              <div className="text-xs text-red-600 line-through">
+                                기존: {originalValue || '없음'}
+                              </div>
+                              <div className="text-xs text-green-600 font-medium">
+                                변경: {value || '없음'}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </Card>
+              )}
 
               <div className="flex gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">
