@@ -357,9 +357,51 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
           innerDiv.classList.remove('animate-bounce');
         }
       });
-    }, [selectedRestaurant?.id, restaurants, isLoaded]);
+  }, [selectedRestaurant?.id, restaurants, isLoaded]);
 
-    // 로딩 에러 처리
+  // 줌 이벤트 시 마커 스타일 유지
+  useEffect(() => {
+    if (!mapInstanceRef.current || !isLoaded) return;
+
+    const handleZoomChange = () => {
+      // 줌 변경 후 약간의 지연을 주어 마커 스타일 재적용
+      setTimeout(() => {
+        if (!isLoaded || markersRef.current.length === 0) return;
+
+        markersRef.current.forEach((marker, index) => {
+          const restaurant = restaurants[index];
+          if (!restaurant) return;
+
+          const isSelected = selectedRestaurant?.id === restaurant.id;
+          const markerElement = marker.getIcon().content as HTMLElement;
+          if (!markerElement) return;
+
+          const innerDiv = markerElement.querySelector('div');
+          if (!innerDiv) return;
+
+          // 크기 업데이트
+          const markerSize = isSelected ? 32 : 24;
+          innerDiv.style.fontSize = `${markerSize}px`;
+
+          // 애니메이션 클래스 업데이트
+          if (isSelected) {
+            innerDiv.classList.add('animate-bounce');
+          } else {
+            innerDiv.classList.remove('animate-bounce');
+          }
+        });
+      }, 100);
+    };
+
+    // 줌 변경 이벤트 리스너 추가
+    naver.maps.Event.addListener(mapInstanceRef.current, 'zoom_changed', handleZoomChange);
+
+    return () => {
+      // Naver Maps에서는 이벤트 리스너가 자동으로 정리됨
+    };
+  }, [isLoaded, selectedRestaurant?.id, restaurants]);
+
+  // 로딩 에러 처리
     if (loadError) {
         return (
             <div className="flex items-center justify-center h-full bg-muted">
