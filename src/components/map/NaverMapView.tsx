@@ -42,6 +42,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     const { isLoaded, loadError } = useNaverMaps();
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
 
     // 선택된 맛집이 변경될 때 지도 중앙 재조정
     useEffect(() => {
@@ -207,6 +208,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             onRestaurantSelect(searchedRestaurant);
         }
 
+        // 패널 열기 (검색 시에만)
+        setIsPanelOpen(true);
+
         // 토스트 메시지 표시
         toast.success(`"${searchedRestaurant.name}" 맛집을 찾았습니다!`);
     }, [searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -305,6 +309,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         onRestaurantSelect(restaurant);
                     }
 
+                    // 패널 열기 (마커 클릭 시에만)
+                    setIsPanelOpen(true);
+
                     // 마커 클릭 시 지도 이동 제거 - 상세 패널 열릴 때 이동 수행
                 });
 
@@ -385,11 +392,11 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             )}
 
             {/* 레스토랑 상세 패널 - 그리드 모드에서는 간소화된 모달로 표시 */}
-            {!isGridMode && selectedRestaurant && (
+            {!isGridMode && selectedRestaurant && isPanelOpen && (
                 <div className="absolute right-0 top-0 h-full w-96 z-20 shadow-xl">
                     <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
-                        onClose={() => onRestaurantSelect && onRestaurantSelect(null)}
+                        onClose={() => setIsPanelOpen(false)}
                         onWriteReview={() => {
                             setIsReviewModalOpen(true);
                         }}
