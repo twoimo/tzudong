@@ -76,7 +76,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }, [onMapReady, moveToRestaurant]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
-  // App 레벨에서 미리 로드되므로 여기서는 빠르게 로드 상태 확인
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
@@ -116,10 +115,10 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   // selectedRestaurant 변경 시 패널 자동 열기 (깜빡임 방지)
   useEffect(() => {
-    if (selectedRestaurant && !isPanelOpen) {
+    if (selectedRestaurant) {
       setIsPanelOpen(true);
     }
-  }, [selectedRestaurant, isPanelOpen]);
+  }, [selectedRestaurant]);
 
 
   // Initialize map
@@ -333,7 +332,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       <div ref={mapRef} className="flex-1 h-full" />
 
       {/* Restaurant Detail Panel */}
-      {selectedRestaurant && isPanelOpen && (
+      {selectedRestaurant && (
         <div className="w-96 h-full">
           <RestaurantDetailPanel
             restaurant={selectedRestaurant}

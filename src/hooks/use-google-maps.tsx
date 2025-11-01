@@ -5,7 +5,7 @@ interface UseGoogleMapsOptions {
     libraries?: string[];
 }
 
-// 전역 로드 상태 캐시 (여러 컴포넌트에서 중복 로드 방지)
+// 전역 로드 상태 캐시 (중복 로드 방지)
 let globalLoadState: { isLoaded: boolean; error: Error | null; isLoading: boolean } = {
     isLoaded: false,
     error: null,
@@ -13,17 +13,17 @@ let globalLoadState: { isLoaded: boolean; error: Error | null; isLoading: boolea
 };
 
 export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseGoogleMapsOptions) {
-    const [isLoaded, setIsLoaded] = useState(globalLoadState.isLoaded);
-    const [loadError, setLoadError] = useState<Error | null>(globalLoadState.error);
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [loadError, setLoadError] = useState<Error | null>(null);
 
     useEffect(() => {
-        // 이미 로드된 경우 즉시 반환
+        // 이미 로드된 경우
         if (globalLoadState.isLoaded) {
             setIsLoaded(true);
             return;
         }
 
-        // 로딩 중인 경우 기다림
+        // 로딩 중인 경우
         if (globalLoadState.isLoading) {
             const checkLoaded = () => {
                 if (globalLoadState.isLoaded) {
@@ -38,14 +38,14 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             return;
         }
 
-        // Check if already loaded globally
+        // 이미 전역적으로 로드된 경우
         if (window.google && window.google.maps) {
             globalLoadState.isLoaded = true;
             setIsLoaded(true);
             return;
         }
 
-        // Check if script is already loading
+        // 스크립트가 이미 존재하는 경우
         const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
         if (existingScript) {
             globalLoadState.isLoading = true;
