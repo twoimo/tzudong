@@ -39,6 +39,11 @@ export function RestaurantDetailPanel({
 
     if (!restaurant) return null;
 
+    // 카테고리 타입 처리: TEXT[] 배열 또는 단일 값
+    const categories: string[] = Array.isArray(restaurant.category)
+        ? restaurant.category
+        : [String(restaurant.category)].filter(Boolean);
+
 
     // Mock recent reviews - 실제로는 Supabase에서 가져와야 함
     const recentReviews: Review[] = [
@@ -109,6 +114,27 @@ export function RestaurantDetailPanel({
         onWriteReview?.();
     };
 
+    const getCategoryEmoji = (category: string) => {
+        const emojiMap: { [key: string]: string } = {
+            '고기': '🥩',
+            '한식': '🍚',
+            '분식': '🍜',
+            '족발·보쌈': '🦵',
+            '돈까스·회': '🍣',
+            '치킨': '🍗',
+            '피자': '🍕',
+            '중식': '🥢',
+            '일식': '🍱',
+            '양식': '🍝',
+            '카페': '☕',
+            '디저트': '🍰',
+            '패스트푸드': '🍔',
+            '기타': '🍽️'
+        };
+
+        return emojiMap[category] || '🔥'; // 기본값으로 불꽃 이모티콘
+    };
+
     return (
         <>
             <div className="h-full flex flex-col bg-background border-l border-border">
@@ -117,28 +143,18 @@ export function RestaurantDetailPanel({
                 <div className="flex items-start justify-between gap-2 mb-2">
                     <div className="flex-1">
                         <div className="flex flex-wrap gap-1 mb-1">
-                            {(() => {
-                                // 카테고리 타입 처리: TEXT[] 배열 또는 단일 값
-                                let categories: string[] = [];
-                                if (Array.isArray(restaurant.category)) {
-                                    categories = restaurant.category;
-                                } else {
-                                    categories = [String(restaurant.category)].filter(Boolean);
-                                }
-
-                                return categories.map((cat, index) => (
-                                    <Badge
-                                        key={index}
-                                        variant={index === 0 ? "default" : "secondary"}
-                                        className="text-xs"
-                                    >
-                                        {cat}
-                                    </Badge>
-                                ));
-                            })()}
+                            {categories.map((cat, index) => (
+                                <Badge
+                                    key={index}
+                                    variant={index === 0 ? "default" : "secondary"}
+                                    className="text-xs"
+                                >
+                                    {cat}
+                                </Badge>
+                            ))}
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className="text-2xl">🔥</span>
+                            <span className="text-2xl">{getCategoryEmoji(categories[0] || '')}</span>
                             <h2 className="text-xl font-bold line-clamp-2">{restaurant.name}</h2>
                         </div>
                     </div>
