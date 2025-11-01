@@ -290,10 +290,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         font-size: ${markerSize}px;
                         cursor: pointer;
                         transition: all 0.3s ease;
-                        filter: ${isSelected
-                            ? 'drop-shadow(0 4px 8px rgba(255,165,0,0.6)) drop-shadow(0 0 20px rgba(255,165,0,0.4))'
-                            : 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))'
-                        };
+                        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
                     " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
                         ${icon}
                     </div>
