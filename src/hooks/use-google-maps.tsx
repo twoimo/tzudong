@@ -99,7 +99,6 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             globalLoadState.error = new Error("Failed to load Google Maps");
             globalLoadState.isLoading = false;
             setLoadError(globalLoadState.error);
-            console.error("Error loading Google Maps:", e);
         });
 
         document.head.appendChild(script);

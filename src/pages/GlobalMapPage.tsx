@@ -1,4 +1,4 @@
-import { useState, memo, Suspense, lazy } from "react";
+import { useState, memo, Suspense, lazy, useCallback, useMemo } from "react";
 import MapView from "@/components/map/MapView";
 import { FilterPanel, FilterState } from "@/components/filters/FilterPanel";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
@@ -60,16 +60,16 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         minJjyangVisits: 0,
     });
 
-    const handleFilterChange = (newFilters: FilterState) => {
+    const handleFilterChange = useCallback((newFilters: FilterState) => {
         setFilters(newFilters);
-    };
+    }, []);
 
-    const handleRestaurantSelect = (restaurant: Restaurant) => {
+    const handleRestaurantSelect = useCallback((restaurant: Restaurant) => {
         // 선택된 맛집을 MapView에 전달하기 위해 상태 업데이트
         setSelectedRestaurant(restaurant);
-    };
+    }, [setSelectedRestaurant]);
 
-    const handleRestaurantSearch = (restaurant: Restaurant) => {
+    const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
         console.log('GlobalMapPage: Restaurant searched:', restaurant.name);
         // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
         setSearchedRestaurant(restaurant);
@@ -89,21 +89,21 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             // 검색된 맛집의 국가로 전환 (가능하다면)
             // TODO: 맛집의 국가 정보를 기반으로 selectedCountry 설정
         }
-    };
+    }, [moveToRestaurant, isGridMode]);
 
-    const switchToSingleMap = () => {
+    const switchToSingleMap = useCallback(() => {
         // 그리드 모드에서 검색 시 단일 모드로 전환
         if (isGridMode) {
             setIsGridMode(false);
         }
-    };
+    }, [isGridMode]);
 
-    const handleMapReady = (moveFunction: (restaurant: Restaurant) => void) => {
+    const handleMapReady = useCallback((moveFunction: (restaurant: Restaurant) => void) => {
         console.log('GlobalMapPage: Map ready, storing move function');
         setMoveToRestaurant(() => moveFunction);
-    };
+    }, []);
 
-    const handleRequestEditRestaurant = (restaurant: Restaurant) => {
+    const handleRequestEditRestaurant = useCallback((restaurant: Restaurant) => {
         setRestaurantToEdit(restaurant);
         setEditFormData({
             name: restaurant.name,
@@ -114,7 +114,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             description: restaurant.description || ''
         });
         setIsEditModalOpen(true);
-    };
+    }, []);
 
     const handleEditFormChange = (field: string, value: string) => {
         setEditFormData(prev => ({
@@ -304,16 +304,24 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             ) : (
                 // 단일 지도 모드
                 <Suspense fallback={
-                    <div className="flex items-center justify-center h-full bg-muted">
-                        <div className="text-center space-y-4">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                            <div className="space-y-2">
-                                <h2 className="text-lg font-semibold bg-gradient-primary bg-clip-text text-transparent">
-                                    지도 준비 중...
+                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-background to-muted">
+                        <div className="text-center space-y-6">
+                            <div className="relative">
+                                <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto"></div>
+                                <div className="absolute inset-0 rounded-full border-4 border-transparent border-r-secondary animate-spin mx-auto h-16 w-16" style={{ animationDuration: '1.5s' }}></div>
+                            </div>
+                            <div className="space-y-3">
+                                <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                                    쯔동여지도 로딩 중...
                                 </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    잠시만 기다려주세요
+                                <p className="text-muted-foreground">
+                                    맛있는 발견을 준비하고 있습니다
                                 </p>
+                                <div className="flex justify-center space-x-1">
+                                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+                                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                </div>
                             </div>
                         </div>
                     </div>

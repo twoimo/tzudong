@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, memo, useCallback } from "react";
+import { useEffect, useRef, useState, memo, useCallback, useMemo } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { Restaurant, Region } from "@/types/restaurant";
@@ -38,7 +39,35 @@ interface MapViewProps {
   onRequestEditRestaurant?: (restaurant: Restaurant) => void;
 }
 
+// 에러 바운더리용 폴백 컴포넌트
+const MapErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) => (
+  <div className="flex items-center justify-center h-full bg-muted">
+    <div className="text-center space-y-4">
+      <div className="text-6xl">🚨</div>
+      <div className="space-y-2">
+        <h2 className="text-2xl font-bold text-destructive">
+          지도 로딩 실패
+        </h2>
+        <p className="text-muted-foreground">
+          지도를 불러오는데 문제가 발생했습니다.
+        </p>
+        <div className="text-sm text-muted-foreground space-y-1">
+          <p>🔧 오류: {error.message}</p>
+        </div>
+        <button
+          onClick={resetErrorBoundary}
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+        >
+          다시 시도
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant }: MapViewProps) => {
+  // 필터 객체 메모이제이션
+  const memoizedFilters = useMemo(() => filters, [filters]);
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
@@ -78,18 +107,21 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
-  const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
+  // useRestaurants 옵션 메모이제이션
+  const restaurantsOptions = useMemo(() => ({
     bounds: mapBounds ? {
       south: mapBounds.getSouthWest().lat(),
       west: mapBounds.getSouthWest().lng(),
       north: mapBounds.getNorthEast().lat(),
       east: mapBounds.getNorthEast().lng(),
     } : undefined,
-    category: filters.categories.length > 0 ? filters.categories : undefined,
+    category: memoizedFilters.categories.length > 0 ? memoizedFilters.categories : undefined,
     region: selectedCountry as Region || undefined, // 선택된 국가가 있을 때만 필터링
-    minReviews: filters.minReviews,
+    minReviews: memoizedFilters.minReviews,
     enabled: isLoaded && !!selectedCountry, // 선택된 국가가 있을 때만 활성화
-  });
+  }), [mapBounds, memoizedFilters, selectedCountry, isLoaded]);
+
+  const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantsOptions);
 
 
   // Refetch when refreshTrigger changes
@@ -288,19 +320,24 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   if (!isLoaded) {
     return (
-      <div className="flex items-center justify-center h-full bg-muted">
-        <div className="text-center space-y-4">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+      <div className="flex items-center justify-center h-full bg-gradient-to-br from-background to-muted">
+        <div className="text-center space-y-6">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-r-secondary animate-spin mx-auto h-16 w-16" style={{ animationDuration: '1.5s' }}></div>
+          </div>
+          <div className="space-y-3">
+            <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
               구글 지도 로딩 중...
             </h2>
-            <p className="text-muted-foreground text-sm">
-              지도 API를 불러오고 있습니다
+            <p className="text-muted-foreground">
+              전 세계 맛집을 불러오고 있습니다
             </p>
-            <p className="text-xs text-muted-foreground">
-              잠시만 기다려주세요
-            </p>
+            <div className="flex justify-center space-x-1">
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            </div>
           </div>
         </div>
       </div>
@@ -327,68 +364,70 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }
 
   return (
-    <div className="relative w-full h-full flex">
-      {/* Map container */}
-      <div ref={mapRef} className="flex-1 h-full" />
+    <ErrorBoundary FallbackComponent={MapErrorFallback}>
+      <div className="relative w-full h-full flex">
+        {/* Map container */}
+        <div ref={mapRef} className="flex-1 h-full" />
 
-      {/* Restaurant Detail Panel */}
-      {selectedRestaurant && (
-        <div className="w-96 h-full">
-          <RestaurantDetailPanel
+        {/* Restaurant Detail Panel */}
+        {selectedRestaurant && (
+          <div className="w-96 h-full">
+            <RestaurantDetailPanel
+              restaurant={selectedRestaurant}
+              onClose={() => setIsPanelOpen(false)}
+              onWriteReview={() => {
+                setIsReviewModalOpen(true);
+              }}
+              onEditRestaurant={onAdminEditRestaurant ? () => {
+                onAdminEditRestaurant(selectedRestaurant);
+              } : undefined}
+              onRequestEditRestaurant={onRequestEditRestaurant ? () => {
+                onRequestEditRestaurant(selectedRestaurant);
+              } : undefined}
+            />
+          </div>
+        )}
+
+        {/* Loading indicator */}
+        {isLoadingRestaurants && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 z-10">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-sm font-medium">맛집 로딩 중...</span>
+          </div>
+        )}
+
+        {/* Restaurant count */}
+        {!isLoadingRestaurants && restaurants.length > 0 && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+            <span className="text-sm font-medium">
+              🔥 {restaurants.length}개의 맛집 발견
+            </span>
+          </div>
+        )}
+
+        {/* Admin Add Button */}
+        {onAdminAddRestaurant && (
+          <button
+            onClick={onAdminAddRestaurant}
+            className="absolute bottom-8 right-8 bg-gradient-primary text-primary-foreground px-6 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity font-semibold flex items-center gap-2 z-10"
+          >
+            <span className="text-xl">+</span>
+            맛집 등록
+          </button>
+        )}
+
+
+        {/* Review Modal */}
+        {selectedRestaurant && isReviewModalOpen && (
+          <ReviewModal
+            isOpen={isReviewModalOpen}
+            onClose={() => setIsReviewModalOpen(false)}
             restaurant={selectedRestaurant}
-            onClose={() => setIsPanelOpen(false)}
-            onWriteReview={() => {
-              setIsReviewModalOpen(true);
-            }}
-            onEditRestaurant={onAdminEditRestaurant ? () => {
-              onAdminEditRestaurant(selectedRestaurant);
-            } : undefined}
-            onRequestEditRestaurant={onRequestEditRestaurant ? () => {
-              onRequestEditRestaurant(selectedRestaurant);
-            } : undefined}
+            onSuccess={refetch}
           />
-        </div>
-      )}
-
-      {/* Loading indicator */}
-      {isLoadingRestaurants && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg flex items-center gap-2 z-10">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <span className="text-sm font-medium">맛집 로딩 중...</span>
-        </div>
-      )}
-
-      {/* Restaurant count */}
-      {!isLoadingRestaurants && restaurants.length > 0 && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
-          <span className="text-sm font-medium">
-            🔥 {restaurants.length}개의 맛집 발견
-          </span>
-        </div>
-      )}
-
-      {/* Admin Add Button */}
-      {onAdminAddRestaurant && (
-        <button
-          onClick={onAdminAddRestaurant}
-          className="absolute bottom-8 right-8 bg-gradient-primary text-primary-foreground px-6 py-3 rounded-full shadow-lg hover:opacity-90 transition-opacity font-semibold flex items-center gap-2 z-10"
-        >
-          <span className="text-xl">+</span>
-          맛집 등록
-        </button>
-      )}
-
-
-      {/* Review Modal */}
-      {selectedRestaurant && isReviewModalOpen && (
-        <ReviewModal
-          isOpen={isReviewModalOpen}
-          onClose={() => setIsReviewModalOpen(false)}
-          restaurant={selectedRestaurant}
-          onSuccess={refetch}
-        />
-      )}
-    </div>
+        )}
+      </div>
+    </ErrorBoundary>
   );
 });
 
