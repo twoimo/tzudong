@@ -25,12 +25,30 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
 
         // Load Google Maps script
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(",")}&loading=async`;
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(",")}&loading=async&v=weekly`;
         script.async = true;
-        script.defer = true;
+        script.defer = false; // defer를 false로 해서 더 빠르게 로드
+
+        // Add to head for faster loading (before other scripts)
+        const firstScript = document.head.querySelector('script');
+        if (firstScript) {
+            document.head.insertBefore(script, firstScript);
+        } else {
+            document.head.appendChild(script);
+        }
 
         script.addEventListener("load", () => {
-            setIsLoaded(true);
+            // Double check if Google Maps is fully loaded
+            if (window.google && window.google.maps && window.google.maps.Map) {
+                setIsLoaded(true);
+            } else {
+                // Retry after a short delay
+                setTimeout(() => {
+                    if (window.google && window.google.maps && window.google.maps.Map) {
+                        setIsLoaded(true);
+                    }
+                }, 100);
+            }
         });
 
         script.addEventListener("error", (e) => {

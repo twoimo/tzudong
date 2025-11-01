@@ -146,7 +146,21 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 </div>
             ) : (
                 // 단일 지도 모드
-                <Suspense fallback={<div className="flex items-center justify-center h-full">지도 로딩 중...</div>}>
+                <Suspense fallback={
+                    <div className="flex items-center justify-center h-full bg-muted">
+                        <div className="text-center space-y-4">
+                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                            <div className="space-y-2">
+                                <h2 className="text-lg font-semibold bg-gradient-primary bg-clip-text text-transparent">
+                                    지도 준비 중...
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    잠시만 기다려주세요
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                }>
                     <MapView
                         filters={filters}
                         selectedCountry={selectedCountry}

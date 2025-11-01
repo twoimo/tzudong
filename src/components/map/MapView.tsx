@@ -106,8 +106,18 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
 
   // Initialize map
   useEffect(() => {
-    if (!isLoaded || !mapRef.current || !window.google || !window.google.maps || !window.google.maps.Map) {
-      console.log("Google Maps not fully loaded yet", { isLoaded, google: !!window.google, maps: !!(window.google?.maps), Map: !!(window.google?.maps?.Map) });
+    if (!isLoaded || !mapRef.current) {
+      return;
+    }
+
+    // Additional check for Google Maps API
+    if (!window.google || !window.google.maps || !window.google.maps.Map) {
+      console.log("Google Maps API not fully loaded, retrying...", {
+        isLoaded,
+        google: !!window.google,
+        maps: !!(window.google?.maps),
+        Map: !!(window.google?.maps?.Map)
+      });
       return;
     }
 
@@ -141,6 +151,17 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
       console.error("Error creating Google Map:", error);
     }
   }, [isLoaded, selectedCountry]);
+
+  // Retry map initialization if Google Maps becomes available later
+  useEffect(() => {
+    if (!isLoaded && window.google && window.google.maps && window.google.maps.Map && mapRef.current && !googleMapRef.current) {
+      console.log("Google Maps became available, initializing map...");
+      // Force re-run of map initialization
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    }
+  }, [isLoaded]);
 
   // Update markers when restaurants change
   useEffect(() => {
@@ -240,10 +261,13 @@ const MapView = memo(({ filters, selectedCountry, selectedRestaurant, refreshTri
           <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
           <div className="space-y-2">
             <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              지도 로딩 중...
+              구글 지도 로딩 중...
             </h2>
-            <p className="text-muted-foreground">
-              쯔양의 맛집을 불러오고 있습니다
+            <p className="text-muted-foreground text-sm">
+              지도 API를 불러오고 있습니다
+            </p>
+            <p className="text-xs text-muted-foreground">
+              잠시만 기다려주세요
             </p>
           </div>
         </div>
