@@ -75,8 +75,16 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-  const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  // 패널 상태를 useRef로 관리해서 리렌더링 방지
+  const isPanelOpenRef = useRef(false);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+  // 컴포넌트 초기화 시 패널 상태를 명확히 false로 설정 (깜빡임 방지)
+  useEffect(() => {
+    isPanelOpenRef.current = false;
+    setIsPanelOpen(false);
+  }, []);
 
   // 맛집으로 지도 이동하는 함수
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
@@ -105,7 +113,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }, [onMapReady, moveToRestaurant]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
-  // App 레벨에서 이미 로드되고 있으므로 로드 상태만 확인
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
   // useRestaurants 옵션 메모이제이션
@@ -124,6 +131,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantsOptions);
 
+  // 컴포넌트 초기화 시 패널 상태를 명확히 false로 설정 (깜빡임 방지)
+  useEffect(() => {
+    isPanelOpenRef.current = false;
+    setIsPanelOpen(false);
+  }, []);
 
   // Refetch when refreshTrigger changes
   useEffect(() => {
@@ -131,6 +143,14 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       refetch();
     }
   }, [refreshTrigger, refetch]);
+
+  // Google Maps 로딩 전에는 패널이 나타나지 않도록 보장
+  useEffect(() => {
+    if (!isLoaded) {
+      isPanelOpenRef.current = false;
+      setIsPanelOpen(false);
+    }
+  }, [isLoaded]);
 
   // refreshTrigger 변경 시 선택된 레스토랑 정보 업데이트
   useEffect(() => {
@@ -147,32 +167,44 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }, [restaurants, refreshTrigger, selectedRestaurant, onRestaurantSelect]);
 
   // selectedRestaurant 변경 시 패널 자동 열기 (깜빡임 방지)
+  // Google Maps가 완전히 로드되고 초기화된 후에만 패널 상태 변경
   useEffect(() => {
-    if (selectedRestaurant) {
-      setIsPanelOpen(true);
+    if (selectedRestaurant && isLoaded && googleMapRef.current) {
+      // Google Maps가 완전히 준비되었는지 추가 확인
+      // 약간의 지연을 주어 깜빡임 방지 및 안정성 확보
+      const timer = setTimeout(() => {
+        // 추가 안전 확인: 맵이 실제로 존재하고 사용 가능한 상태인지
+        if (googleMapRef.current && !googleMapRef.current.getBounds) {
+          // 맵이 아직 완전히 초기화되지 않은 경우 재시도
+          setTimeout(() => {
+            if (googleMapRef.current && googleMapRef.current.getBounds) {
+              setIsPanelOpen(true);
+              isPanelOpenRef.current = true;
+            }
+          }, 100);
+        } else {
+          setIsPanelOpen(true);
+          isPanelOpenRef.current = true;
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    } else if (!selectedRestaurant) {
+      setIsPanelOpen(false);
+      isPanelOpenRef.current = false;
     }
-  }, [selectedRestaurant]);
+  }, [selectedRestaurant, isLoaded]);
 
 
   // Initialize map
   useEffect(() => {
     if (!isLoaded || !mapRef.current) {
-      console.log('MapView: Not ready to initialize map', { isLoaded, hasMapRef: !!mapRef.current });
       return;
     }
 
     // Additional check for Google Maps API
     if (!window.google || !window.google.maps || !window.google.maps.Map) {
-      console.log("Google Maps API not fully loaded, retrying...", {
-        isLoaded,
-        google: !!window.google,
-        maps: !!(window.google?.maps),
-        Map: !!(window.google?.maps?.Map)
-      });
       return;
     }
-
-    console.log('MapView: Initializing Google Map');
 
     // 선택된 국가에 따라 중심점과 줌 설정 (기본값: 미국)
     const countryConfig = selectedCountry && COUNTRY_CENTERS[selectedCountry];
@@ -180,7 +212,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     const zoom = countryConfig ? countryConfig.zoom : USA_ZOOM;
 
     try {
-      console.log('MapView: Creating Google Map with center:', center, 'zoom:', zoom);
       const map = new google.maps.Map(mapRef.current, {
         center: center,
         zoom: zoom,
@@ -193,7 +224,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
 
       googleMapRef.current = map;
-      console.log('MapView: Google Map created successfully');
+
+      // Google Maps 로드 완료 후 패널 상태 초기화 보장
+      // 초기 로딩 시점에는 패널이 나타나지 않도록 명확히 설정
+      isPanelOpenRef.current = false;
+      setIsPanelOpen(false);
 
       // Update bounds when map moves
       map.addListener("idle", () => {
@@ -329,21 +364,20 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       <div className="flex items-center justify-center h-full bg-gradient-to-br from-background to-muted">
         <div className="text-center space-y-6">
           <div className="relative">
-            {/* 더 빠르게 느껴지도록 더 큰 스피너 */}
-            <div className="animate-spin rounded-full h-20 w-20 border-4 border-primary/20 border-t-primary mx-auto"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-r-secondary animate-spin mx-auto h-20 w-20" style={{ animationDuration: '1s' }}></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-transparent border-r-secondary animate-spin mx-auto h-16 w-16" style={{ animationDuration: '1.5s' }}></div>
           </div>
           <div className="space-y-3">
-            <h2 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              지도 불러오는 중...
+            <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              쯔동여지도 로딩 중...
             </h2>
-            <p className="text-muted-foreground text-sm">
-              잠시만 기다려주세요
+            <p className="text-muted-foreground">
+              맛있는 발견을 준비하고 있습니다
             </p>
-            <div className="flex justify-center space-x-2">
-              <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
-              <div className="w-3 h-3 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-              <div className="w-3 h-3 bg-primary rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            <div className="flex justify-center space-x-1">
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
             </div>
             {loadError && (
               <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -357,11 +391,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
                   새로고침
                 </button>
               </div>
-            )}
-            {!loadError && (
-              <p className="text-xs text-muted-foreground mt-4">
-                네트워크 상태에 따라 3-5초 소요될 수 있습니다
-              </p>
             )}
           </div>
         </div>
@@ -395,11 +424,14 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         <div ref={mapRef} className="flex-1 h-full" />
 
         {/* Restaurant Detail Panel */}
-        {selectedRestaurant && (
+        {selectedRestaurant && isLoaded && googleMapRef.current && (
           <div className="w-96 h-full">
             <RestaurantDetailPanel
               restaurant={selectedRestaurant}
-              onClose={() => setIsPanelOpen(false)}
+              onClose={() => {
+                setIsPanelOpen(false);
+                isPanelOpenRef.current = false;
+              }}
               onWriteReview={() => {
                 setIsReviewModalOpen(true);
               }}
