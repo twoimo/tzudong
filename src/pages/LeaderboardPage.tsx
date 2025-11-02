@@ -200,7 +200,7 @@ const LeaderboardPage = () => {
                             <div className="flex items-center gap-3">
                                 <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                                     <Trophy className="h-6 w-6 text-primary" />
-                                    쯔양 팬 랭킹
+                                    쯔동여지도 랭킹
                                 </h1>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">

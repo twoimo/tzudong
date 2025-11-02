@@ -330,7 +330,7 @@ const ReviewsPage = () => {
                         <div className="flex items-center gap-3">
                             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                                 <MessageSquare className="h-6 w-6 text-primary" />
-                                쯔양 팬 맛집 리뷰
+                                쯔동여지도 리뷰
                             </h1>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
