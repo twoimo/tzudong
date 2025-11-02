@@ -377,7 +377,7 @@ export default function AdminSubmissionsPage() {
                 <div className="mb-4">
                     <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                         <Shield className="h-6 w-6 text-primary" />
-                        맛집 제보 관리
+                        관리자 제보 관리
                     </h1>
                     <p className="text-muted-foreground text-sm mt-1">
                         쯔양 팬들이 제보한 맛집을 검토하고 승인/거부할 수 있습니다

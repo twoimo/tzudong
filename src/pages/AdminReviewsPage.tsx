@@ -334,7 +334,7 @@ export default function AdminReviewsPage() {
                     <div>
                         <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                             <Shield className="h-6 w-6 text-primary" />
-                            리뷰 관리
+                            관리자 리뷰 관리
                         </h1>
                         <p className="text-muted-foreground text-sm mt-1">
                             쯔양 팬들이 작성한 리뷰를 검토하고 승인/거부할 수 있습니다
