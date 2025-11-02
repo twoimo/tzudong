@@ -258,7 +258,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 <div className="flex flex-col h-full max-h-[90vh]">
                     <DialogHeader className="px-6 pt-6 pb-4 border-b">
                         <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                            쯔양 팬 맛집 리뷰 작성
+                            쯔동여지도 리뷰 작성
                         </DialogTitle>
                         <DialogDescription>
                             쯔양이 방문한 맛집에 대한 방문 후기를 공유해주세요
