@@ -188,7 +188,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
 
         // 쯔양 팬 방문 (리뷰) 횟수 필터
         if (filters.fanVisitsMin > 0) {
-            result = result.filter(r => (r.visit_count || 0) >= filters.fanVisitsMin);
+            result = result.filter(r => (r.review_count || 0) >= filters.fanVisitsMin);
         }
 
 
@@ -209,8 +209,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         bValue = b.category || "";
                         break;
                     case "fanVisits":
-                        aValue = a.visit_count || 0;
-                        bValue = b.visit_count || 0;
+                        aValue = a.review_count || 0;
+                        bValue = b.review_count || 0;
                         break;
                 }
 
@@ -501,7 +501,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                         </TableCell>
                                         <TableCell className="text-center">
                                             <span className="font-semibold">
-                                                {restaurant.visit_count || 0}회
+                                                {restaurant.review_count || 0}회
                                             </span>
                                         </TableCell>
                                         <TableCell>

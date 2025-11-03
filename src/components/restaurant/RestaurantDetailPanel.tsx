@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -8,7 +8,9 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -20,11 +22,18 @@ interface RestaurantDetailPanelProps {
 
 interface Review {
     id: string;
+    restaurantName: string;
+    restaurantCategories: string[];
     userName: string;
+    visitedAt: string;
+    submittedAt: string;
     content: string;
     isVerified: boolean;
-    createdAt: string;
-    rating: number;
+    isPinned: boolean;
+    isEditedByAdmin: boolean;
+    admin_note: string | null;
+    photos: { url: string; type: string }[];
+    category: string;
 }
 
 export function RestaurantDetailPanel({
@@ -36,6 +45,7 @@ export function RestaurantDetailPanel({
 }: RestaurantDetailPanelProps) {
     const { user, isAdmin } = useAuth();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+    const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
 
     if (!restaurant) return null;
 
@@ -44,41 +54,109 @@ export function RestaurantDetailPanel({
         ? [restaurant.category].filter(Boolean)
         : [];
 
+    // 실제 리뷰 데이터 가져오기
+    const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
+        queryKey: ['restaurant-reviews', restaurant.id],
+        queryFn: async () => {
+            try {
+                console.log('🔍 맛집 리뷰 데이터 가져오는 중...', restaurant.id);
 
-    // Mock recent reviews - 실제로는 Supabase에서 가져와야 함
-    const recentReviews: Review[] = [
-        {
-            id: "1",
-            userName: "쯔양팬123",
-            content: "정말 맛있었어요! 쯔양이 추천한 메뉴 먹었는데 양도 많고 너무 좋았습니다.",
-            isVerified: true,
-            createdAt: "2025-01-20T18:30:00",
-            rating: 5,
-        },
-        {
-            id: "2",
-            userName: "맛집러버",
-            content: "분위기도 좋고 음식도 맛있어요. 재방문 의사 있습니다!",
-            isVerified: true,
-            createdAt: "2025-01-19T12:00:00",
-            rating: 4,
-        },
-    ];
+                // 1. 해당 맛집의 승인된 리뷰 조회
+                const { data: reviewsData, error: reviewsError } = await supabase
+                    .from('reviews')
+                    .select('*')
+                    .eq('restaurant_id', restaurant.id)
+                    .eq('is_verified', true)
+                    .order('is_pinned', { ascending: false })
+                    .order('created_at', { ascending: false });
 
-    const getStarEmoji = (rating: number) => {
-        return "⭐".repeat(Math.min(rating, 5));
+                if (reviewsError) {
+                    console.error('❌ 리뷰 조회 실패:', reviewsError);
+                    return [];
+                }
+
+                if (!reviewsData || reviewsData.length === 0) {
+                    console.log('⚠️ 해당 맛집의 리뷰가 없음');
+                    return [];
+                }
+
+                // 2. 필요한 user_id 수집
+                const userIds = [...new Set(reviewsData.map(r => r.user_id))];
+                console.log('👥 User IDs:', userIds);
+
+                // 3. Profiles 가져오기
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('user_id, nickname')
+                    .in('user_id', userIds);
+
+                console.log('👥 Profiles:', profilesData);
+
+                // 4. Map으로 변환 (빠른 조회)
+                const profilesMap = new Map(
+                    (profilesData || []).map(p => [p.user_id, p.nickname])
+                );
+
+                // 5. 리뷰 데이터 매핑
+                const reviews = reviewsData.map(review => ({
+                    id: review.id,
+                    restaurantName: restaurant.name,
+                    restaurantCategories: categories,
+                    userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                    visitedAt: review.visited_at,
+                    submittedAt: review.created_at || '',
+                    content: review.content,
+                    isVerified: review.is_verified || false,
+                    isPinned: review.is_pinned || false,
+                    isEditedByAdmin: review.is_edited_by_admin || false,
+                    admin_note: review.admin_note || null,
+                    photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+                    category: review.categories?.[0] || review.category,
+                })) as Review[];
+
+                console.log(`✅ 총 ${reviews.length}개 리뷰 매핑 완료`);
+                return reviews;
+            } catch (error) {
+                console.error('❌ 리뷰 데이터 조회 중 오류:', error);
+                return [];
+            }
+        },
+        enabled: !!restaurant.id
+    });
+
+    // 쯔양 구독자 리뷰 우선 표시 (닉네임에 '쯔양' 또는 'tzuyang'이 포함된 사용자)
+    const tzuyangReviews = reviewsData.filter(review =>
+        review.isVerified &&
+        (review.userName.toLowerCase().includes('쯔양') ||
+            review.userName.toLowerCase().includes('tzuyang'))
+    );
+    const otherReviews = reviewsData.filter(review =>
+        review.isVerified &&
+        !(review.userName.toLowerCase().includes('쯔양') ||
+            review.userName.toLowerCase().includes('tzuyang'))
+    );
+
+    // 우선순위: 쯔양 구독자 리뷰 3개, 그 다음 일반 리뷰
+    const priorityReviews = [...tzuyangReviews, ...otherReviews];
+    const recentReviews = priorityReviews.slice(0, 3);
+
+    const formatDateTime = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleString('ko-KR', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
     };
 
-    const formatTimeAgo = (dateString: string) => {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diff = now.getTime() - date.getTime();
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const days = Math.floor(hours / 24);
+    const handleViewAllReviews = () => {
+        setViewMode('reviews');
+    };
 
-        if (days > 0) return `${days}일 전`;
-        if (hours > 0) return `${hours}시간 전`;
-        return '방금 전';
+    const handleBackToDetail = () => {
+        setViewMode('detail');
     };
 
 
@@ -141,26 +219,49 @@ export function RestaurantDetailPanel({
             <div className="h-full flex flex-col bg-background border-l border-border">
                 {/* Header */}
                 <div className="p-4 border-b border-border">
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                        <div className="flex-1">
-                            <div className="flex flex-wrap gap-1 mb-1">
-                                {categories.map((cat, index) => (
-                                    <Badge
-                                        key={index}
-                                        variant={index === 0 ? "default" : "secondary"}
-                                        className="text-xs"
+                    <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1">
+                            {viewMode === 'reviews' && (
+                                <>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={handleBackToDetail}
+                                        className="mr-2"
                                     >
-                                        {cat}
-                                    </Badge>
-                                ))}
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="text-2xl">{getCategoryEmoji(categories[0] || '')}</span>
-                                <h2 className="text-xl font-bold line-clamp-2">{restaurant.name}</h2>
-                            </div>
+                                        <ArrowLeft className="h-4 w-4" />
+                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-xl font-bold">
+                                            전체 리뷰 ({reviewsData.length})
+                                        </h3>
+                                    </div>
+                                </>
+                            )}
+                            {viewMode === 'detail' && (
+                                <div className="flex-1">
+                                    <div className="flex flex-wrap gap-1 mb-1">
+                                        {categories.map((cat, index) => (
+                                            <Badge
+                                                key={index}
+                                                variant={index === 0 ? "default" : "secondary"}
+                                                className="text-xs"
+                                            >
+                                                {cat}
+                                            </Badge>
+                                        ))}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-2xl">{getCategoryEmoji(categories[0] || '')}</span>
+                                        <h2 className="text-xl font-bold line-clamp-2">
+                                            {restaurant.name}
+                                        </h2>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                         <div className="flex gap-1">
-                            {isAdmin && onEditRestaurant && (
+                            {isAdmin && onEditRestaurant && viewMode === 'detail' && (
                                 <Button
                                     variant="outline"
                                     size="icon"
@@ -181,182 +282,293 @@ export function RestaurantDetailPanel({
                 {/* Content */}
                 <ScrollArea className="flex-1">
                     <div className="p-4 space-y-4">
-
-                        {/* Contact Info */}
-                        <div className="space-y-3">
-                            <h3 className="font-semibold text-sm flex items-center gap-2">
-                                <Store className="h-4 w-4 text-muted-foreground" />
-                                매장 정보
-                            </h3>
-
-                            {restaurant.address && (
-                                <div className="flex gap-3">
-                                    <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                    <div className="flex-1">
-                                        <p className="text-sm">{restaurant.address}</p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {restaurant.phone && (
-                                <div className="flex gap-3">
-                                    <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                    <a
-                                        href={`tel:${restaurant.phone}`}
-                                        className="text-sm text-primary hover:underline"
-                                    >
-                                        {restaurant.phone}
-                                    </a>
-                                </div>
-                            )}
-
-                            <div className="flex gap-3">
-                                <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                <div className="flex-1">
-                                    <p className="text-xs text-muted-foreground">등록일</p>
-                                    <p className="text-sm">
-                                        {restaurant.created_at
-                                            ? new Date(restaurant.created_at).toLocaleDateString('ko-KR')
-                                            : '-'}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* YouTube Link */}
-                        {restaurant.youtube_link && (
+                        {viewMode === 'detail' ? (
                             <>
-                                <Separator />
+                                {/* Contact Info */}
                                 <div className="space-y-3">
                                     <h3 className="font-semibold text-sm flex items-center gap-2">
-                                        <Youtube className="h-4 w-4 text-red-500" />
-                                        쯔양 유튜브 영상
+                                        <Store className="h-4 w-4 text-muted-foreground" />
+                                        매장 정보
                                     </h3>
-                                    <div
-                                        className="relative cursor-pointer rounded-lg overflow-hidden group"
-                                        onClick={() => window.open(restaurant.youtube_link, '_blank')}
-                                    >
-                                        {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
-                                            <img
-                                                src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
-                                                alt="YouTube Thumbnail"
-                                                className="w-full h-48 object-cover"
-                                            />
-                                        )}
-                                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                            <Youtube className="h-12 w-12 text-white" />
+
+                                    {restaurant.address && (
+                                        <div className="flex gap-3">
+                                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="text-sm">{restaurant.address}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {restaurant.phone && (
+                                        <div className="flex gap-3">
+                                            <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                            <a
+                                                href={`tel:${restaurant.phone}`}
+                                                className="text-sm text-primary hover:underline"
+                                            >
+                                                {restaurant.phone}
+                                            </a>
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-3">
+                                        <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                        <div className="flex-1">
+                                            <p className="text-xs text-muted-foreground">등록일</p>
+                                            <p className="text-sm">
+                                                {restaurant.created_at
+                                                    ? new Date(restaurant.created_at).toLocaleDateString('ko-KR')
+                                                    : '-'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
-                            </>
-                        )}
 
-                        {/* 쯔양 리뷰 */}
-                        {restaurant.tzuyang_review && (
-                            <>
+                                {/* YouTube Link */}
+                                {restaurant.youtube_link && (
+                                    <>
+                                        <Separator />
+                                        <div className="space-y-3">
+                                            <h3 className="font-semibold text-sm flex items-center gap-2">
+                                                <Youtube className="h-4 w-4 text-red-500" />
+                                                쯔양 유튜브 영상
+                                            </h3>
+                                            <div
+                                                className="relative cursor-pointer rounded-lg overflow-hidden group"
+                                                onClick={() => window.open(restaurant.youtube_link, '_blank')}
+                                            >
+                                                {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
+                                                    <img
+                                                        src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
+                                                        alt="YouTube Thumbnail"
+                                                        className="w-full h-48 object-cover"
+                                                    />
+                                                )}
+                                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                                                    <Youtube className="h-12 w-12 text-white" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* 쯔양 리뷰 */}
+                                {restaurant.tzuyang_review && (
+                                    <>
+                                        <Separator />
+                                        <div className="space-y-2">
+                                            <h3 className="font-semibold text-sm flex items-center gap-2">
+                                                <Quote className="h-4 w-4 text-muted-foreground" />
+                                                쯔양의 리뷰
+                                            </h3>
+                                            <div className="p-4 bg-muted/50 rounded-lg">
+                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                    {restaurant.tzuyang_review}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Recent Reviews Preview */}
                                 <Separator />
-                                <div className="space-y-2">
-                                    <h3 className="font-semibold text-sm flex items-center gap-2">
-                                        <Quote className="h-4 w-4 text-muted-foreground" />
-                                        쯔양의 리뷰
-                                    </h3>
-                                    <div className="p-4 bg-muted/50 rounded-lg">
-                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                            {restaurant.tzuyang_review}
-                                        </p>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold text-sm flex items-center gap-2">
+                                            <Star className="h-4 w-4 text-muted-foreground" />
+                                            최근 리뷰 ({reviewsData.length})
+                                        </h3>
+                                        {reviewsData.length > 0 && (
+                                            <Button
+                                                variant="link"
+                                                size="sm"
+                                                className="h-auto p-0 text-xs"
+                                                onClick={handleViewAllReviews}
+                                            >
+                                                전체 보기 →
+                                            </Button>
+                                        )}
                                     </div>
+
+                                    {reviewsLoading ? (
+                                        <div className="text-sm text-muted-foreground text-center py-4">
+                                            리뷰를 불러오는 중...
+                                        </div>
+                                    ) : recentReviews.length === 0 ? (
+                                        <div className="text-sm text-muted-foreground text-center py-4">
+                                            리뷰가 없습니다
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {recentReviews.map((review) => (
+                                                <Card key={review.id} className="p-3">
+                                                    <div className="mb-2">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-xs font-medium truncate">
+                                                                {review.userName}
+                                                            </span>
+                                                            {review.isVerified && (
+                                                                <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
+                                                                    <CheckCircle className="h-2 w-2 mr-0.5" />
+                                                                    인증
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <Clock className="h-3 w-3 text-muted-foreground" />
+                                                            <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                                                                {formatDateTime(review.submittedAt)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground line-clamp-2">
+                                                        {review.content}
+                                                    </p>
+                                                    {/* Photos */}
+                                                    {review.photos.length > 0 && (
+                                                        <div className="mt-2">
+                                                            <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                                <img
+                                                                    src={review.photos[0].url}
+                                                                    alt={`음식 사진`}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </Card>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </>
-                        )}
-
-                        {/* Recent Reviews Preview */}
-                        <Separator />
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <h3 className="font-semibold text-sm flex items-center gap-2">
-                                    <Star className="h-4 w-4 text-muted-foreground" />
-                                    최근 리뷰
-                                </h3>
-                                <Button variant="link" size="sm" className="h-auto p-0 text-xs">
-                                    전체보기 →
-                                </Button>
-                            </div>
-
-                            {recentReviews.length === 0 ? (
-                                <div className="text-sm text-muted-foreground text-center py-4">
-                                    리뷰가 없습니다
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    {recentReviews.slice(0, 2).map((review) => (
-                                        <Card key={review.id} className="p-3">
-                                            <div className="flex items-start gap-2 mb-2">
-                                                <Avatar className="h-7 w-7">
-                                                    <AvatarFallback className="text-xs">
-                                                        {review.userName[0]}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1 min-w-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-xs font-medium truncate">
-                                                            {review.userName}
-                                                        </span>
-                                                        {review.isVerified && (
-                                                            <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
-                                                                <CheckCircle className="h-2 w-2 mr-0.5" />
-                                                                인증
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-1 mb-1">
-                                                        <span className="text-xs">
-                                                            {getStarEmoji(review.rating)}
-                                                        </span>
+                        ) : (
+                            /* Reviews View - 모든 리뷰 표시 */
+                            <div className="space-y-4">
+                                {reviewsLoading ? (
+                                    <div className="text-sm text-muted-foreground text-center py-8">
+                                        리뷰를 불러오는 중...
+                                    </div>
+                                ) : reviewsData.length === 0 ? (
+                                    <div className="text-sm text-muted-foreground text-center py-8">
+                                        리뷰가 없습니다
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {reviewsData.map((review) => (
+                                            <Card key={review.id} className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}>
+                                                {/* Header */}
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            {review.isPinned && (
+                                                                <Pin className="h-4 w-4 text-primary fill-primary" />
+                                                            )}
+                                                            <span className="text-sm font-semibold">{review.userName}</span>
+                                                            {review.isVerified && (
+                                                                <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
+                                                                    <CheckCircle className="h-2 w-2 mr-0.5" />
+                                                                    승인됨
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                            <Clock className="h-3 w-3" />
+                                                            <span>{formatDateTime(review.submittedAt)}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <span className="text-[10px] text-muted-foreground whitespace-nowrap">
-                                                    {formatTimeAgo(review.createdAt)}
-                                                </span>
-                                            </div>
-                                            <p className="text-xs text-muted-foreground line-clamp-2">
-                                                {review.content}
-                                            </p>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+
+                                                {review.isEditedByAdmin && (
+                                                    <Badge variant="outline" className="mb-2 border-orange-500 text-orange-500 text-xs">
+                                                        ⚠️ 관리자가 수정함
+                                                    </Badge>
+                                                )}
+
+                                                {/* Content */}
+                                                <div className="mb-3">
+                                                    <p className="text-sm whitespace-pre-wrap">{review.content}</p>
+                                                </div>
+
+                                                {/* 거부 사유 (거부된 리뷰인 경우) */}
+                                                {review.admin_note && review.admin_note.includes('거부') && (
+                                                    <div className="mb-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
+                                                        <div className="flex items-center gap-2 mb-2">
+                                                            <XCircle className="h-4 w-4 text-red-600" />
+                                                            <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                                                                거부 사유
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm text-red-600 dark:text-red-400">
+                                                            {review.admin_note.startsWith('거부: ') ? review.admin_note.substring(4) : review.admin_note}
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {/* Photos */}
+                                                {review.photos.length > 0 && (
+                                                    <div className="mb-3">
+                                                        <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                            <img
+                                                                src={review.photos[0].url}
+                                                                alt={`음식 사진`}
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </Card>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </ScrollArea>
 
                 {/* Footer Actions */}
-                <div className="p-4 border-t border-border space-y-2">
-                    <Button
-                        onClick={handleGetDirections}
-                        variant="outline"
-                        className="w-full gap-2"
-                    >
-                        <Navigation className="h-4 w-4" />
-                        길찾기
-                    </Button>
+                {viewMode === 'detail' && (
+                    <div className="p-4 border-t border-border space-y-2">
+                        <Button
+                            onClick={handleGetDirections}
+                            variant="outline"
+                            className="w-full gap-2"
+                        >
+                            <Navigation className="h-4 w-4" />
+                            길찾기
+                        </Button>
 
-                    <Button
-                        onClick={handleRequestEditRestaurant}
-                        variant="outline"
-                        className="w-full gap-2"
-                    >
-                        <Edit className="h-4 w-4" />
-                        맛집 수정 요청
-                    </Button>
+                        <Button
+                            onClick={handleRequestEditRestaurant}
+                            variant="outline"
+                            className="w-full gap-2"
+                        >
+                            <Edit className="h-4 w-4" />
+                            맛집 수정 요청
+                        </Button>
 
-                    <Button
-                        onClick={handleWriteReview}
-                        className="w-full bg-gradient-primary hover:opacity-90 gap-2"
-                    >
-                        <MessageSquare className="h-4 w-4" />
-                        리뷰 작성하기
-                    </Button>
-                </div>
+                        <Button
+                            onClick={handleWriteReview}
+                            className="w-full bg-gradient-primary hover:opacity-90 gap-2"
+                        >
+                            <MessageSquare className="h-4 w-4" />
+                            리뷰 작성하기
+                        </Button>
+                    </div>
+                )}
+
+                {viewMode === 'reviews' && (
+                    <div className="p-4 border-t border-border">
+                        <Button
+                            onClick={handleWriteReview}
+                            className="w-full bg-gradient-primary hover:opacity-90 gap-2"
+                        >
+                            <MessageSquare className="h-4 w-4" />
+                            리뷰 작성하기
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <AuthModal

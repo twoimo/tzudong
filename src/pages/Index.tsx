@@ -286,7 +286,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                           <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-blue-500" />
                             <span className="text-sm">
-                              방문: {selectedRestaurant.visit_count || 0}회
+                              방문: {selectedRestaurant.review_count || 0}회
                             </span>
                           </div>
 
@@ -538,9 +538,8 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                                   }}
                                 >
                                   <Check
-                                    className={`mr-2 h-4 w-4 ${
-                                      isSelected ? "opacity-100" : "opacity-0"
-                                    }`}
+                                    className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"
+                                      }`}
                                   />
                                   {category}
                                 </CommandItem>
@@ -583,17 +582,17 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   />
                 </div>
 
-                 <div className="space-y-2">
-                   <Label htmlFor="tzuyang_review">쯔양의 리뷰</Label>
-                   <Textarea
-                     id="tzuyang_review"
-                     name="tzuyang_review"
-                     value={editFormData.tzuyang_review}
-                     onChange={(e) => handleEditFormChange('tzuyang_review', e.target.value)}
-                     placeholder="쯔양의 리뷰 내용을 입력해주세요"
-                     rows={4}
-                   />
-                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="tzuyang_review">쯔양의 리뷰</Label>
+                  <Textarea
+                    id="tzuyang_review"
+                    name="tzuyang_review"
+                    value={editFormData.tzuyang_review}
+                    onChange={(e) => handleEditFormChange('tzuyang_review', e.target.value)}
+                    placeholder="쯔양의 리뷰 내용을 입력해주세요"
+                    rows={4}
+                  />
+                </div>
               </div>
 
               {/* 변경사항 표시 */}
