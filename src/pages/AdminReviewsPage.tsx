@@ -158,7 +158,7 @@ export default function AdminReviewsPage() {
             // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
             const { data: restaurant, error: fetchError } = await supabase
                 .from('restaurants')
-                .select('visit_count, review_count')
+                .select('review_count')
                 .eq('id', review.restaurant_id)
                 .single();
 
@@ -168,7 +168,6 @@ export default function AdminReviewsPage() {
             const { error: visitError } = await supabase
                 .from('restaurants')
                 .update({
-                    visit_count: (restaurant.visit_count ?? 0) + 1,
                     review_count: (restaurant.review_count ?? 0) + 1,
                     updated_at: new Date().toISOString(),
                 })
@@ -219,7 +218,7 @@ export default function AdminReviewsPage() {
                 // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
                 const { data: restaurant, error: fetchError } = await supabase
                     .from('restaurants')
-                    .select('visit_count, review_count')
+                    .select('review_count')
                     .eq('id', review.restaurant_id)
                     .single();
 
@@ -229,7 +228,6 @@ export default function AdminReviewsPage() {
                 const { error: visitError } = await supabase
                     .from('restaurants')
                     .update({
-                        visit_count: Math.max((restaurant.visit_count ?? 0) - 1, 0),
                         review_count: Math.max((restaurant.review_count ?? 0) - 1, 0),
                         updated_at: new Date().toISOString(),
                     })
