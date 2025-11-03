@@ -403,24 +403,17 @@ export function RestaurantDetailPanel({
                                         <div className="space-y-2">
                                             {recentReviews.map((review) => (
                                                 <Card key={review.id} className="p-3">
-                                                    <div className="flex items-start gap-2 mb-2">
-                                                        <Avatar className="h-7 w-7">
-                                                            <AvatarFallback className="text-xs">
-                                                                {review.userName[0]}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="text-xs font-medium truncate">
-                                                                    {review.userName}
-                                                                </span>
-                                                                {review.isVerified && (
-                                                                    <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
-                                                                        <CheckCircle className="h-2 w-2 mr-0.5" />
-                                                                        인증
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
+                                                    <div className="mb-2">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="text-xs font-medium truncate">
+                                                                {review.userName}
+                                                            </span>
+                                                            {review.isVerified && (
+                                                                <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
+                                                                    <CheckCircle className="h-2 w-2 mr-0.5" />
+                                                                    인증
+                                                                </Badge>
+                                                            )}
                                                         </div>
                                                         <div className="flex items-center gap-1">
                                                             <Clock className="h-3 w-3 text-muted-foreground" />
