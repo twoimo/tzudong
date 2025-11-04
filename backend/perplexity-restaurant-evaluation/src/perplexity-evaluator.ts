@@ -12,8 +12,10 @@ export class PerplexityEvaluator {
   private sessionPath: string;
   private sessionRestored: boolean = false;
   private sessionData: any = null;
+  private browserId: number;
 
-  constructor() {
+  constructor(browserId: number = 0) {
+    this.browserId = browserId;
     this.sessionPath = join(process.cwd(), 'perplexity-session.json');
   }
 
@@ -54,9 +56,15 @@ export class PerplexityEvaluator {
         }
       }
 
+      // 임시 디렉토리 설정 (macOS /private/tmp 오류 방지)
+      // 각 브라우저마다 고유한 디렉토리 사용
+      const os = await import('os');
+      const userDataDir = join(os.tmpdir(), `puppeteer_dev_profile_${this.browserId}`);
+
       this.browser = await puppeteer.launch({
         headless: false, // 구글 로그인 등 상호작용을 위해 헤드리스 모드 해제
         executablePath, // 찾은 Chrome 경로 사용
+        userDataDir, // 브라우저별 고유 데이터 디렉토리
         defaultViewport: null, // 기본 뷰포트 설정 해제
         args: [
           '--no-sandbox',
@@ -88,8 +96,6 @@ export class PerplexityEvaluator {
           '--disable-features=VizDisplayCompositor',
           '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           '--accept-lang=en-US,en',
-          '--disable-extensions-except=/tmp',
-          '--load-extension=/tmp',
           '--disable-plugins',
           '--disable-images', // 이미지 로딩 비활성화로 속도 향상
           '--disable-javascript-harmony-shipping',
@@ -1520,19 +1526,15 @@ export class PerplexityEvaluator {
       console.log(`✅ "Assistant steps" 발견! 응답 완료 대기 중 (${Math.floor(waitTime/1000)}초)...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       
-      // code 블록 찾기 및 span 수집
-      console.log('🔍 code 블록 찾는 중...');
+      // JSON 추출 시도 (방법 1: code 블록, 방법 2: Answer 내 일반 텍스트)
+      console.log('🔍 JSON 데이터 추출 시도...');
       
       const extractResult = await this.page!.evaluate(() => {
-        // code 태그 찾기 (markdown-content 내부)
+        // 방법 1: code 블록에서 찾기
+        console.log('📦 방법 1: code 블록에서 JSON 찾기...');
         const codeElements = Array.from(document.querySelectorAll('code'));
-        
         console.log(`발견된 code 요소: ${codeElements.length}개`);
         
-        // code 블록 필터링: 
-        // 1. white-space: pre 스타일 (인라인 또는 computed)
-        // 2. span이 10개 이상
-        // 3. JSON 형태로 보이는지 확인 ({ 로 시작)
         const validCodeBlocks = codeElements.filter(code => {
           const inlineStyle = code.getAttribute('style') || '';
           const computedStyle = window.getComputedStyle(code);
@@ -1543,52 +1545,73 @@ export class PerplexityEvaluator {
           const spanCount = code.querySelectorAll('span').length;
           const hasEnoughSpans = spanCount > 10;
           
-          // 첫 번째 span의 텍스트가 { 로 시작하는지 확인 (JSON)
           const firstSpan = code.querySelector('span');
           const looksLikeJSON = firstSpan?.textContent?.trim().startsWith('{');
-          
-          console.log(`code 블록 검사: preStyle=${hasPreStyle}, spans=${spanCount}, JSON=${looksLikeJSON}`);
           
           return hasPreStyle && hasEnoughSpans && looksLikeJSON;
         });
         
         console.log(`유효한 code 블록: ${validCodeBlocks.length}개`);
         
-        if (validCodeBlocks.length === 0) {
-          // 디버깅: 모든 code 요소 정보 출력
-          codeElements.forEach((code, idx) => {
-            const style = code.getAttribute('style') || '';
-            const spanCount = code.querySelectorAll('span').length;
-            const preview = code.textContent?.substring(0, 50) || '';
-            console.log(`code[${idx}]: style="${style}", spans=${spanCount}, preview="${preview}"`);
-          });
-          return { success: false, error: 'code 블록을 찾을 수 없음', codeCount: codeElements.length };
+        if (validCodeBlocks.length === 1) {
+          // code 블록에서 JSON 추출 (전체 textContent를 한 번에 가져옴)
+          const codeBlock = validCodeBlocks[0];
+          const jsonText = codeBlock.textContent || '';
+          
+          console.log(`✅ code 블록에서 JSON 추출 성공 (${jsonText.length}자)`);
+          return { success: true, jsonText, method: 'code_block' };
         }
         
-        if (validCodeBlocks.length > 1) {
-          return { success: false, error: `code 블록이 ${validCodeBlocks.length}개로 2개 이상 발견됨`, codeCount: validCodeBlocks.length };
+        // 방법 2: Answer 영역에서 일반 텍스트로 JSON 찾기
+        console.log('📄 방법 2: Answer 영역에서 일반 텍스트 JSON 찾기...');
+        
+        // 전체 페이지 텍스트에서 JSON 패턴 찾기
+        const bodyText = document.body.textContent || '';
+        
+        // visit_authenticity를 포함하는 JSON 객체 추출 (중첩 객체 고려)
+        // { 부터 시작해서 마지막 } 까지 찾되, visit_authenticity 포함 확인
+        let braceCount = 0;
+        let jsonStart = -1;
+        let jsonEnd = -1;
+        
+        for (let i = 0; i < bodyText.length; i++) {
+          const char = bodyText[i];
+          
+          if (char === '{') {
+            if (braceCount === 0) {
+              jsonStart = i;
+            }
+            braceCount++;
+          } else if (char === '}') {
+            braceCount--;
+            if (braceCount === 0 && jsonStart >= 0) {
+              jsonEnd = i + 1;
+              // visit_authenticity 포함 여부 확인
+              const candidate = bodyText.substring(jsonStart, jsonEnd);
+              if (candidate.includes('visit_authenticity') && 
+                  candidate.includes('rb_inference_score') &&
+                  candidate.includes('category_TF')) {
+                console.log(`✅ Answer 영역에서 JSON 추출 성공 (${candidate.length}자)`);
+                return { success: true, jsonText: candidate, method: 'answer_text' };
+              }
+              // 일치하지 않으면 계속 탐색
+              jsonStart = -1;
+            }
+          }
         }
         
-        // 유일한 code 블록에서 모든 span 수집
-        const codeBlock = validCodeBlocks[0];
-        const spans = Array.from(codeBlock.querySelectorAll('span'));
-        
-        console.log(`span 개수: ${spans.length}개`);
-        
-        // 모든 span의 textContent를 수집 (빈 문자열 포함)
-        const spanTexts = spans.map(span => span.textContent || '');
-        
-        // \n으로 연결하지 않고 그대로 join (span이 줄바꿈을 포함하고 있음)
-        const jsonText = spanTexts.join('');
-        
-        console.log(`추출된 JSON 텍스트 길이: ${jsonText.length}자`);
-        console.log(`JSON 미리보기: ${jsonText.substring(0, 200)}...`);
-        
-        return { success: true, jsonText, codeCount: validCodeBlocks.length };
+        // 모든 방법 실패
+        console.log('❌ 모든 방법으로 JSON을 찾지 못함');
+        return { 
+          success: false, 
+          error: 'JSON을 찾을 수 없음 (code 블록 및 Answer 텍스트 모두 실패)', 
+          codeCount: codeElements.length
+        };
       });
 
       if (!extractResult.success) {
         console.log(`❌ ${extractResult.error}`);
+        console.log(`📊 디버깅 정보: code=${extractResult.codeCount}`);
         return null;
       }
 
@@ -1597,7 +1620,7 @@ export class PerplexityEvaluator {
         return null;
       }
 
-      console.log(`✅ code 블록에서 텍스트 추출 완료 (${extractResult.jsonText.length}자)`);
+      console.log(`✅ JSON 추출 완료 (방법: ${extractResult.method}, ${extractResult.jsonText.length}자)`);
       
       // JSON 파싱 시도
       console.log('🔄 JSON 파싱 중...');

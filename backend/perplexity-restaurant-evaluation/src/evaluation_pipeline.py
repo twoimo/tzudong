@@ -175,25 +175,26 @@ def step2_rule_evaluation(src_dir: Path) -> bool:
         cwd=str(src_dir)
     )
 
-def step3_ai_evaluation(project_root: Path) -> bool:
+def step3_ai_evaluation(project_root: Path, parallel_choice: str) -> bool:
     """Step 3: AI 평가 (TypeScript/Node.js)"""
     print_step(3, "AI 평가 - LAAJ (Perplexity AI via TypeScript)")
     
     print_info("Node.js로 AI 평가를 실행합니다.")
-    print_info("병렬 브라우저 수를 선택하는 프롬프트가 표시됩니다.")
+    print_info(f"병렬 브라우저 수: {parallel_choice}개")
     print_warning("이 단계는 시간이 오래 걸릴 수 있습니다. (수분~수십분)")
     print_warning("수동 로그인이 필요한 경우 브라우저에서 직접 로그인해주세요.\n")
     
-    # Node.js 실행 (인터랙티브)
+    # Node.js 실행 (병렬 처리 선택값을 stdin으로 전달)
     try:
-        print(f"{Colors.OKBLUE}$ node dist/index.js{Colors.ENDC}\n")
+        print(f"{Colors.OKBLUE}$ echo '{parallel_choice}' | node dist/index.js{Colors.ENDC}\n")
         
+        # 선택값을 stdin으로 전달
         result = subprocess.run(
             ["node", "dist/index.js"],
             cwd=str(project_root),
-            check=True,
-            text=True
-            # capture_output=False로 실시간 상호작용 가능
+            input=f"{parallel_choice}\n",
+            text=True,
+            check=True
         )
         
         print_success("AI 평가 완료")
@@ -206,7 +207,7 @@ def step3_ai_evaluation(project_root: Path) -> bool:
         print_warning("\n사용자가 평가를 중단했습니다.")
         return False
     except Exception as e:
-        print_error(f"AI 평가 중 예외 발생: {str(e)}")
+        print_error(f"AI 평가 중 예류 발생: {str(e)}")
         return False
 
 def main():
@@ -230,6 +231,31 @@ def main():
         src_dir = current_dir / "src"
         project_root = current_dir
     
+    # AI 평가 병렬 처리 브라우저 수 선택 (미리 받기)
+    print(f"\n{Colors.BOLD}{Colors.OKCYAN}{'='*80}{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.OKCYAN}Step 3 (AI 평가) 설정 - 병렬 처리 브라우저 개수 선택{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.OKCYAN}{'='*80}{Colors.ENDC}\n")
+    print(f"  {Colors.OKGREEN}1{Colors.ENDC} - 1개 (순차 처리, 안정적)")
+    print(f"  {Colors.OKGREEN}3{Colors.ENDC} - 3개 (병렬 처리, 권장)")
+    print(f"  {Colors.OKGREEN}5{Colors.ENDC} - 5개 (병렬 처리, 빠름)")
+    
+    parallel_choice = None
+    while True:
+        try:
+            choice = input(f"{Colors.OKBLUE}선택 (1/3/5): {Colors.ENDC}").strip()
+            if choice in ['1', '3', '5']:
+                parallel_choice = choice
+                print(f"{Colors.OKGREEN}✅ {choice}개 브라우저로 병렬 처리 설정 완료{Colors.ENDC}\n")
+                break
+            else:
+                print(f"{Colors.WARNING}⚠️  1, 3, 5 중 하나를 선택해주세요.{Colors.ENDC}")
+        except KeyboardInterrupt:
+            print(f"\n{Colors.WARNING}⚠️  사용자가 선택을 취소했습니다.{Colors.ENDC}")
+            sys.exit(130)
+    
+    print(f"{Colors.BOLD}{Colors.HEADER}{'='*80}{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.HEADER}평가 파이프라인 시작{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.HEADER}{'='*80}{Colors.ENDC}\n")
     # Step 1: 평가 대상 선정
     if not step1_target_selection(src_dir):
         print_error("\nStep 1 실패로 인해 파이프라인을 중단합니다.")
@@ -243,7 +269,7 @@ def main():
         sys.exit(1)
     
     # Step 3: AI 평가
-    if not step3_ai_evaluation(project_root):
+    if not step3_ai_evaluation(project_root, parallel_choice):
         print_error("\nStep 3 실패로 인해 파이프라인을 중단합니다.")
         sys.exit(1)
     

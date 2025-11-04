@@ -63,17 +63,18 @@ npm run build
 
 ### 🔥 전체 파이프라인 자동 실행 (권장)
 ```bash
-# TypeScript 빌드 (최초 1회 또는 코드 변경 시)
-npm run build
-
 # 전체 평가 파이프라인 실행 (1→2→3 순차 실행)
 python3 src/evaluation_pipeline.py
 ```
 
 파이프라인은 다음을 자동으로 수행합니다:
-1. ✅ 평가 대상 선정
-2. ✅ 규칙 기반 평가 (RULE)
-3. ✅ AI 평가 (LAAJ) - 병렬 브라우저 수 선택 프롬프트
+1. ✅ **빌드 확인 및 자동 빌드** - TypeScript 컴파일 필요 시 자동 실행
+2. ✅ **병렬 브라우저 수 선택** - 시작 시 1/3/5개 선택 (전체 파이프라인에 적용)
+3. ✅ **평가 대상 선정** (Step 1)
+4. ✅ **규칙 기반 평가** (Step 2)
+5. ✅ **AI 평가 LAAJ** (Step 3) - 선택한 병렬 브라우저 수로 실행
+
+**💡 중복 처리 방지**: 모든 단계에서 이미 처리된 레코드는 자동으로 건너뜁니다.
 
 ---
 
@@ -84,26 +85,57 @@ python3 src/evaluation_pipeline.py
 cd src
 python3 evaluation-target-selection.py
 ```
+- ✅ **중복 처리 방지**: 기존 출력 파일에 이미 있는 youtube_link는 자동으로 건너뜁니다.
 
 #### 2. 규칙 기반 평가 (RULE)
 ```bash
 cd src
 python3 evaluation-rule.py
 ```
+- ✅ **중복 처리 방지**: 이미 평가된 youtube_link는 자동으로 건너뜁니다.
 
 #### 3. AI 평가 (LAAJ)
 ```bash
+# TypeScript 빌드 (최초 1회 또는 코드 변경 시)
+npm run build
+
 # 개발 모드
 npm run dev
 
 # 또는
 node dist/index.js
 ```
+- ✅ **중복 처리 방지**: 성공/실패 파일에 이미 있는 youtube_link는 자동으로 건너뜁니다.
 
 **실행 시 선택사항:**
 - **병렬 처리 브라우저 수**: 1개 / 3개 / 5개 선택
 - 병렬 처리 시 여러 브라우저가 동시에 평가를 수행하여 속도 향상
+- 각 브라우저는 독립적인 프로필 디렉토리 사용 (충돌 방지)
 - 각 배치는 모두 완료된 후 다음 배치로 진행
+- **전체 레코드 처리**: 모든 미처리 레코드를 순차적으로 평가
+
+---
+
+### 🔄 에러 레코드 재평가 (선택사항)
+
+AI 평가 중 실패한 레코드들을 다시 평가하려면:
+
+```bash
+# TypeScript 빌드 (필요 시)
+npm run build
+
+# 에러 레코드 재평가 실행
+node dist/index_retry_for_errors.js
+```
+
+**동작 방식:**
+1. `tzuyang_restaurant_evaluation_errors.jsonl`의 에러 레코드 읽기
+2. 각 레코드를 **새로운 프롬프트로 다시 평가** (재시도가 아닌 새 평가)
+3. 성공 시 → `tzuyang_restaurant_evaluation_results.jsonl`에 append
+4. 성공 시 → `errors.jsonl`에서 해당 레코드 자동 제거
+5. 실패 시 → `errors.jsonl`에 그대로 유지
+
+**💡 Tip**: 파이프라인과 별도로 실행되며, 병렬 처리 옵션 선택 가능
 
 ## 🎯 AI 평가 상세
 
@@ -144,11 +176,14 @@ npm run dev
 # 또는
 node dist/index.js
 ```
+- ✅ **중복 처리 방지**: 성공/실패 파일에 이미 있는 youtube_link는 자동으로 건너뜁니다.
 
 **실행 시 선택사항:**
 - **병렬 처리 브라우저 수**: 1개 / 3개 / 5개 선택
 - 병렬 처리 시 여러 브라우저가 동시에 평가를 수행하여 속도 향상
+- 각 브라우저는 독립적인 프로필 디렉토리 사용 (충돌 방지)
 - 각 배치는 모두 완료된 후 다음 배치로 진행
+- **전체 레코드 처리**: 모든 미처리 레코드를 순차적으로 평가
 
 ## 🎯 AI 평가 상세
 
@@ -181,8 +216,10 @@ node dist/index.js
 - **1개**: 순차 처리 (안정적)
 - **3개**: 병렬 처리 (권장, 속도 3배)
 - **5개**: 병렬 처리 (속도 5배, 서버 부하 주의)
+- **각 브라우저 독립 프로필**: `puppeteer_dev_profile_0`, `_1`, `_2` 등 고유 디렉토리 사용 (충돌 방지)
 - **Thread 정리**: 배치 시작 시 첫 번째 브라우저에서만 수행 (효율성 향상)
 - **모델 선택**: 첫 평가 시 또는 페이지 오류 복구 후에만 수행
+- **stdin 입력 지원**: TTY 모드와 파이프 입력 모두 지원 (파이프라인 호환)
 - Promise.all()로 배치 단위 완료 보장
 
 ## 📁 파일 구조 및 워크플로우
@@ -195,12 +232,14 @@ node dist/index.js
 ├── 📄 tzuyang_restaurant_evaluation_errors.jsonl             # AI 평가 실패 기록
 ├── 📄 tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl  # 제외된 데이터
 ├── 📂 src/
-│   ├── � evaluation_pipeline.py           # 🔥 전체 파이프라인 실행 스크립트
-│   ├── �🔧 evaluation-target-selection.py   # Step 1: 평가 대상 선정
+│   ├── 🔥 evaluation_pipeline.py           # 전체 파이프라인 실행 스크립트
+│   ├──  evaluation-target-selection.py   # Step 1: 평가 대상 선정
 │   ├── 🔧 evaluation-rule.py              # Step 2: 규칙 평가 (2단계 매칭)
 │   ├── 🤖 perplexity-evaluator.ts         # Step 3: Perplexity 제어 모듈
 │   ├── 📄 jsonl-processor.ts              # JSONL 파일 처리 모듈
 │   ├── ⚙️ index.ts                        # AI 평가 메인 파일 (병렬 처리)
+│   ├── 🔄 index_retry_for_errors.ts       # 에러 레코드 재평가 (별도 실행)
+```
 │   └── 📋 types.ts                         # 타입 정의
 └── ⚙️ .env                                  # 환경 변수 설정
 ```
@@ -271,13 +310,16 @@ node dist/index.js
 - **JSONL 포맷**: 대용량 데이터 효율적 처리
 
 ### 주요 기능
+- ✅ **중복 처리 방지**: 모든 단계에서 이미 처리된 youtube_link 자동 건너뛰기
+- ✅ **긴 JSON 안정적 파싱**: code 블록 전체 textContent 추출로 대용량 응답 완벽 처리
 - ✅ 자동 쓰레드 삭제 (배치 시작 시 첫 브라우저에서만 - 효율성)
 - ✅ Gemini Pro 2.5 모델 자동 선택 (첫 평가/오류 복구 시에만)
 - ✅ 인간처럼 타이핑 (10-20ms/문자)
 - ✅ Assistant steps 감지 후 충분한 대기 (5-8초, 응답 완전 생성)
-- ✅ 병렬 처리 (1/3/5 브라우저)
+- ✅ 병렬 처리 (1/3/5 브라우저, 각각 독립 프로필)
 - ✅ 오류 자동 재시도 및 복구 (페이지 오류 감지)
 - ✅ 랜덤 대기로 서버 부하 분산
+- ✅ TTY/파이프 입력 모두 지원 (파이프라인 자동화 호환)
 
 ### 확장
 시스템은 모듈화되어 있어 새로운 평가 규칙이나 AI 모델로 쉽게 확장할 수 있습니다.
