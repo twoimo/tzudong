@@ -116,7 +116,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { restaurants: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
     });
 
@@ -248,7 +248,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
     });
 
@@ -391,7 +391,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
         enabled: !!selectedRestaurant?.id,
     });
@@ -632,26 +632,26 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 {/* Header */}
                 <div className="border-b border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-                                <Filter className="h-6 w-6 text-primary" />
-                                쯔동여지도 필터링
-                            </h1>
+                        <div>
+                            <div className="flex items-center gap-3">
+                                <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                                    <Filter className="h-6 w-6 text-primary" />
+                                    쯔동여지도 필터링
+                                </h1>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                총 {filteredAndSortedRestaurants.length}개의 맛집
+                                {activeFilterCount > 0 && (
+                                    <span className="ml-2 text-primary font-medium">
+                                        ({activeFilterCount}개 필터 적용 중)
+                                    </span>
+                                )}
+                            </p>
                         </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            총 {filteredAndSortedRestaurants.length}개의 맛집
-                            {activeFilterCount > 0 && (
-                                <span className="ml-2 text-primary font-medium">
-                                    ({activeFilterCount}개 필터 적용 중)
-                                </span>
-                            )}
-                        </p>
+                        <Button variant="outline" onClick={handleResetFilters}>
+                            필터 초기화
+                        </Button>
                     </div>
-                    <Button variant="outline" onClick={handleResetFilters}>
-                        필터 초기화
-                    </Button>
-                </div>
 
                     {/* Filter Controls */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
@@ -668,17 +668,17 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             </div>
                         </div>
 
-                    {/* 지역 */}
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" className="justify-between">
-                                <span className="truncate">
-                                    지역 {filters.regions.length > 0 && `(${filters.regions.length})`}
-                                </span>
-                                <Filter className="h-4 w-4 ml-2" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80" align="start">
+                        {/* 지역 */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" className="justify-between">
+                                    <span className="truncate">
+                                        지역 {filters.regions.length > 0 && `(${filters.regions.length})`}
+                                    </span>
+                                    <Filter className="h-4 w-4 ml-2" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-80" align="start">
                                 <div className="space-y-2">
                                     <h4 className="font-semibold text-sm mb-3">지역 선택</h4>
                                     <ScrollArea className="h-64">
@@ -864,7 +864,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 ) : (
                                     filteredAndSortedRestaurants.map((restaurant, index) => (
                                         <TableRow
-                                            key={restaurant.id}
+                                            key={`${restaurant.id}-${index}`}
                                             ref={index === filteredAndSortedRestaurants.length - 1 ? loadMoreTableRef : null}
                                             className={`hover:bg-muted/50 cursor-pointer transition-colors ${selectedRestaurant?.id === restaurant.id ? "bg-primary/10 border-l-4 border-primary" : ""
                                                 }`}
@@ -914,9 +914,9 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     </TableRow>
                                 )}
                             </TableBody>
-                    </Table>
-                </ScrollArea>
-            </div>
+                        </Table>
+                    </ScrollArea>
+                </div>
 
             </Panel>
 
@@ -926,7 +926,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             </PanelResizeHandle>
 
             {/* Right Panel - Reviews */}
-            <Panel defaultSize={40} minSize={20} maxSize={70} className="flex flex-col bg-card">
+            <Panel defaultSize={20} minSize={20} maxSize={70} className="flex flex-col bg-card">
                 <div className="border-b border-border p-6">
                     <div className="flex items-center gap-3">
                         <MessageSquare className="h-6 w-6 text-primary" />
@@ -967,7 +967,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 <div className="p-6 space-y-4">
                                     {sortedTopLikedReviews.map((review, index) => (
                                         <Card
-                                            key={review.id}
+                                            key={`${review.id}-${index}`}
                                             ref={index === sortedTopLikedReviews.length - 1 ? loadMoreRef : null}
                                             className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}
                                         >

@@ -54,7 +54,7 @@ const StampPage = () => {
                 nextCursor,
             };
         },
-        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
     });
 
@@ -203,7 +203,7 @@ const StampPage = () => {
 
                         return (
                             <Card
-                                key={restaurant.id}
+                                key={`${restaurant.id}-${index}`}
                                 ref={index === restaurants.length - 1 ? loadMoreGridRef : null}
                                 className={cn(
                                     "relative overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer group",
