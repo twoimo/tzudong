@@ -178,8 +178,8 @@ const StampPage = () => {
                                             />
                                             {/* Visit Overlay */}
                                             {visited && (
-                                                <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                                    <div className="bg-red-500 text-white font-bold text-lg px-2 py-1 rounded transform -rotate-45 shadow-lg">
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="text-red-500 font-bold text-8xl transform -rotate-45">
                                                         OK
                                                     </div>
                                                 </div>
