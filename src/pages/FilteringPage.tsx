@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,8 @@ interface Review {
     admin_note: string | null;
     photos: { url: string; type: string }[];
     category: string;
+    likeCount: number;
+    isLikedByUser: boolean;
 }
 
 const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
@@ -120,24 +122,55 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     (profilesData || []).map(p => [p.user_id, p.nickname])
                 );
 
+                // 리뷰 좋아요 데이터 조회
+                const reviewIds = reviewsData.map(r => r.id);
+                let likesData: any[] = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('review_likes')
+                        .select('review_id, user_id')
+                        .in('review_id', reviewIds);
+
+                    if (!error && data) {
+                        likesData = data;
+                    }
+                } catch (error) {
+                    console.warn('review_likes 테이블이 존재하지 않음, 좋아요 수를 0으로 설정합니다:', error);
+                }
+
+                // 좋아요 수와 사용자 좋아요 상태 계산
+                const likesMap = new Map<string, { count: number; isLiked: boolean }>();
+                reviewIds.forEach(reviewId => {
+                    const likesForReview = likesData?.filter(like => like.review_id === reviewId) || [];
+                    likesMap.set(reviewId, {
+                        count: likesForReview.length,
+                        isLiked: false // FilteringPage에서는 사용자 상태를 확인하지 않음
+                    });
+                });
+
                 // 리뷰 데이터 매핑
-                const reviews = reviewsData.map(review => ({
-                    id: review.id,
-                    restaurantName: selectedRestaurant.name || '알 수 없음',
-                    restaurantCategories: Array.isArray(selectedRestaurant.category)
-                        ? selectedRestaurant.category
-                        : [selectedRestaurant.category || '기타'],
-                    userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
-                    visitedAt: review.visited_at,
-                    submittedAt: review.created_at || '',
-                    content: review.content,
-                    isVerified: review.is_verified || false,
-                    isPinned: review.is_pinned || false,
-                    isEditedByAdmin: review.is_edited_by_admin || false,
-                    admin_note: review.admin_note || null,
-                    photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                    category: review.categories?.[0] || review.category,
-                })) as Review[];
+                const reviews = reviewsData.map(review => {
+                    const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
+                    return {
+                        id: review.id,
+                        restaurantName: selectedRestaurant.name || '알 수 없음',
+                        restaurantCategories: Array.isArray(selectedRestaurant.category)
+                            ? selectedRestaurant.category
+                            : [selectedRestaurant.category || '기타'],
+                        userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                        visitedAt: review.visited_at,
+                        submittedAt: review.created_at || '',
+                        content: review.content,
+                        isVerified: review.is_verified || false,
+                        isPinned: review.is_pinned || false,
+                        isEditedByAdmin: review.is_edited_by_admin || false,
+                        admin_note: review.admin_note || null,
+                        photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+                        category: review.categories?.[0] || review.category,
+                        likeCount: likesInfo.count,
+                        isLikedByUser: likesInfo.isLiked,
+                    };
+                }) as Review[];
 
                 return reviews;
             } catch (error) {
@@ -727,6 +760,12 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                         방문: {formatDateTime(review.visitedAt)}
                                                     </div>
                                                 </div>
+                                            </div>
+                                            <div className="flex items-center gap-2 shrink-0">
+                                                <span className="text-sm text-muted-foreground">
+                                                    {review.likeCount}
+                                                </span>
+                                                <Heart className="h-4 w-4 text-gray-400" />
                                             </div>
                                         </div>
 
