@@ -151,12 +151,13 @@ export function RestaurantDetailPanel({
     });
 
     // 쯔양 구독자 리뷰 우선 표시 (닉네임에 '쯔양' 또는 'tzuyang'이 포함된 사용자)
-    const tzuyangReviews = reviewsData.filter(review =>
+    const safeReviewsData = Array.isArray(reviewsData) ? reviewsData : [];
+    const tzuyangReviews = safeReviewsData.filter(review =>
         review.isVerified &&
         (review.userName.toLowerCase().includes('쯔양') ||
             review.userName.toLowerCase().includes('tzuyang'))
     );
-    const otherReviews = reviewsData.filter(review =>
+    const otherReviews = safeReviewsData.filter(review =>
         review.isVerified &&
         !(review.userName.toLowerCase().includes('쯔양') ||
             review.userName.toLowerCase().includes('tzuyang'))
@@ -168,8 +169,9 @@ export function RestaurantDetailPanel({
 
     // 초기 로드 시 likedReviews 상태 초기화
     useEffect(() => {
-        if (reviewsData.length > 0) {
-            const likedReviewIds = reviewsData
+        const safeData = Array.isArray(reviewsData) ? reviewsData : [];
+        if (safeData.length > 0) {
+            const likedReviewIds = safeData
                 .filter(review => review.isLikedByUser)
                 .map(review => review.id);
             setLikedReviews(new Set(likedReviewIds));
@@ -338,7 +340,7 @@ export function RestaurantDetailPanel({
                                     </Button>
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-xl font-bold">
-                                            전체 리뷰 ({reviewsData.length})
+                                            전체 리뷰 ({safeReviewsData.length})
                                         </h3>
                                     </div>
                                 </>
@@ -482,9 +484,9 @@ export function RestaurantDetailPanel({
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-semibold text-sm flex items-center gap-2">
                                             <Star className="h-4 w-4 text-muted-foreground" />
-                                            최근 리뷰 ({reviewsData.length})
+                                            최근 리뷰 ({safeReviewsData.length})
                                         </h3>
-                                        {reviewsData.length > 0 && (
+                                        {safeReviewsData.length > 0 && (
                                             <Button
                                                 variant="link"
                                                 size="sm"
@@ -573,13 +575,13 @@ export function RestaurantDetailPanel({
                                     <div className="text-sm text-muted-foreground text-center py-8">
                                         리뷰를 불러오는 중...
                                     </div>
-                                ) : reviewsData.length === 0 ? (
+                                ) : safeReviewsData.length === 0 ? (
                                     <div className="text-sm text-muted-foreground text-center py-8">
                                         리뷰가 없습니다
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {reviewsData.map((review) => (
+                                        {safeReviewsData.map((review) => (
                                             <Card key={review.id} className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}>
                                                 {/* Header */}
                                                 <div className="flex items-start justify-between mb-3">
