@@ -352,8 +352,17 @@ async function main() {
     let currentRecordIndex = 0;
     const activePromises: Promise<void>[] = [];
     let isFirstBatch = true;
+    let processedCount = 0; // 처리된 레코드 수 (30개마다 휴식용)
 
     while (currentRecordIndex < finalRecords.length) {
+      // 30개 처리마다 휴식 (처음 제외)
+      if (processedCount > 0 && processedCount % 30 === 0) {
+        const restTime = Math.floor(Math.random() * 120000) + 120000; // 2-4분 (120000-240000ms)
+        console.log(`\n� 30개 처리 완료 - ${(restTime/60000).toFixed(1)}분 휴식 중... (과부하 방지)`);
+        await new Promise(resolve => setTimeout(resolve, restTime));
+        console.log(`✅ 휴식 완료 - 처리 재개\n`);
+      }
+
       // 배치 시작 시 첫 번째 브라우저에서만 Delete All 수행
       if (isFirstBatch || currentRecordIndex % parallelCount === 0) {
         const firstEvaluator = evaluators[0];
@@ -379,6 +388,7 @@ async function main() {
 
       // 현재 배치의 모든 작업이 완료될 때까지 대기
       await Promise.all(activePromises);
+      processedCount += activePromises.length; // 처리된 개수 누적
       activePromises.length = 0; // 배열 초기화
 
       // 다음 배치 전 잠시 대기

@@ -182,10 +182,55 @@ async function main() {
     const errorContent = readFileSync(errorFilePath, 'utf-8');
     const errorLines = errorContent.trim().split('\n').filter(line => line.trim());
 
-    console.log(`📋 총 ${errorLines.length}개의 에러 레코드를 발견했습니다.\n`);
+    console.log(`📋 총 ${errorLines.length}개의 에러 레코드를 발견했습니다.`);
 
     if (errorLines.length === 0) {
       console.log('✅ 재평가할 에러 레코드가 없습니다!');
+      process.exit(0);
+    }
+
+    // 이미 성공한 youtube_link 수집 (아웃풋 파일에서)
+    const alreadySuccessful = new Set<string>();
+    if (existsSync(outputFilePath)) {
+      console.log(`📂 기존 성공 파일 발견 - 이미 처리된 youtube_link 확인 중...`);
+      const outputContent = readFileSync(outputFilePath, 'utf-8');
+      const outputLines = outputContent.trim().split('\n').filter(line => line.trim());
+      for (const line of outputLines) {
+        try {
+          const data = JSON.parse(line);
+          if (data.youtube_link) {
+            alreadySuccessful.add(data.youtube_link);
+          }
+        } catch (e) {
+          // 파싱 실패 무시
+        }
+      }
+      console.log(`✅ 이미 성공한 레코드: ${alreadySuccessful.size}개`);
+    }
+
+    // 에러 파일에서 이미 성공한 것들 제거
+    const linesToProcess = errorLines.filter(line => {
+      try {
+        const record = JSON.parse(line.trim());
+        return !alreadySuccessful.has(record.youtube_link);
+      } catch {
+        return true; // 파싱 실패한 라인은 유지
+      }
+    });
+
+    const skippedCount = errorLines.length - linesToProcess.length;
+    if (skippedCount > 0) {
+      console.log(`⏭️  이미 성공한 레코드 ${skippedCount}개 스킵 (에러 파일에서 자동 제거됨)`);
+      // 에러 파일 업데이트 (이미 성공한 것 제거)
+      const newErrorContent = linesToProcess.join('\n') + (linesToProcess.length > 0 ? '\n' : '');
+      writeFileSync(errorFilePath, newErrorContent, 'utf-8');
+      console.log(`✅ 에러 파일 업데이트 완료 (남은 에러: ${linesToProcess.length}개)`);
+    }
+
+    console.log(`📋 실제 재평가할 레코드: ${linesToProcess.length}개\n`);
+
+    if (linesToProcess.length === 0) {
+      console.log('🎉 모든 에러가 이미 처리되었습니다!');
       process.exit(0);
     }
 
@@ -205,13 +250,13 @@ async function main() {
 
     // 병렬 처리 함수
     const processErrorRecord = async (evaluator: PerplexityEvaluator, recordIndex: number) => {
-      const line = errorLines[recordIndex];
+      const line = linesToProcess[recordIndex];
       
       try {
         const record = JSON.parse(line.trim());
         const youtubeLink = record.youtube_link;
 
-        console.log(`\n🏪 레코드 ${recordIndex + 1}/${errorLines.length} 재평가 시작`);
+        console.log(`\n🏪 레코드 ${recordIndex + 1}/${linesToProcess.length} 재평가 시작`);
         console.log(`📝 유튜브 링크: ${youtubeLink}`);
 
         // evaluation_target에서 평가할 음식점 필터링
@@ -276,8 +321,17 @@ async function main() {
     let currentRecordIndex = 0;
     const activePromises: Promise<void>[] = [];
     let isFirstBatch = true;
+    let processedCount = 0; // 처리된 레코드 수 (30개마다 휴식용)
 
-    while (currentRecordIndex < errorLines.length) {
+    while (currentRecordIndex < linesToProcess.length) {
+      // 30개 처리마다 휴식 (처음 제외)
+      if (processedCount > 0 && processedCount % 30 === 0) {
+        const restTime = Math.floor(Math.random() * 120000) + 120000; // 2-4분 (120000-240000ms)
+        console.log(`\n� 30개 처리 완료 - ${(restTime/60000).toFixed(1)}분 휴식 중... (과부하 방지)`);
+        await new Promise(resolve => setTimeout(resolve, restTime));
+        console.log(`✅ 휴식 완료 - 처리 재개\n`);
+      }
+
       // 배치 시작 시 첫 번째 브라우저에서만 Delete All 수행
       if (isFirstBatch || currentRecordIndex % parallelCount === 0) {
         const firstEvaluator = evaluators[0];
@@ -291,7 +345,7 @@ async function main() {
       }
 
       // 각 브라우저에 작업 할당
-      for (let i = 0; i < parallelCount && currentRecordIndex < errorLines.length; i++) {
+      for (let i = 0; i < parallelCount && currentRecordIndex < linesToProcess.length; i++) {
         const evaluator = evaluators[i];
         const recordIndex = currentRecordIndex;
         
@@ -303,21 +357,65 @@ async function main() {
 
       // 현재 배치의 모든 작업이 완료될 때까지 대기
       await Promise.all(activePromises);
+      processedCount += activePromises.length; // 처리된 개수 누적
       activePromises.length = 0; // 배열 초기화
 
       // 다음 배치 전 대기
-      if (currentRecordIndex < errorLines.length) {
+      if (currentRecordIndex < linesToProcess.length) {
         console.log('\n⏳ 다음 배치를 위해 3초 대기...');
         await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 
+    // 통계 출력
     console.log('\n' + '='.repeat(80));
     console.log('📊 재평가 완료 통계');
     console.log('='.repeat(80));
-    console.log(`✅ 성공: ${successCount}개`);
-    console.log(`❌ 실패: ${failCount}개`);
-    console.log(`📋 총 처리: ${errorLines.length}개`);
+    
+    // 입력 파일 통계
+    const totalErrors = linesToProcess.length;
+    const successRate = totalErrors > 0 ? ((successCount / totalErrors) * 100).toFixed(1) : '0.0';
+    const failRate = totalErrors > 0 ? ((failCount / totalErrors) * 100).toFixed(1) : '0.0';
+    
+    console.log(`\n📥 입력 (에러 파일)`);
+    console.log(`   총 에러 레코드: ${totalErrors}개`);    console.log(`   총 에러 레코드: ${totalErrors}개`);
+    
+    console.log(`\n📊 재평가 결과`);
+    console.log(`   ✅ 성공: ${successCount}개 (${successRate}%)`);
+    console.log(`   ❌ 실패: ${failCount}개 (${failRate}%)`);
+    console.log(`   📋 총 처리: ${successCount + failCount}개`);
+    
+    // 최종 파일 상태
+    console.log(`\n📁 최종 파일 상태`);
+    
+    // results.jsonl 파일 라인 수 확인
+    let totalSuccessRecords = 0;
+    try {
+      const resultsContent = readFileSync(outputFilePath, 'utf-8');
+      totalSuccessRecords = resultsContent.trim().split('\n').filter(line => line.trim()).length;
+    } catch {
+      totalSuccessRecords = successCount; // 파일 없으면 현재 성공 개수
+    }
+    
+    // errors.jsonl 파일 라인 수 확인 (업데이트 후)
+    let remainingErrors = 0;
+    try {
+      const errorsContent = readFileSync(errorFilePath, 'utf-8');
+      remainingErrors = errorsContent.trim().split('\n').filter(line => line.trim()).length;
+    } catch {
+      remainingErrors = 0;
+    }
+    
+    console.log(`   📄 tzuyang_restaurant_evaluation_results.jsonl: ${totalSuccessRecords}개`);
+    console.log(`   📄 tzuyang_restaurant_evaluation_errors.jsonl: ${remainingErrors}개`);
+    
+    if (remainingErrors > 0) {
+      console.log(`\n⚠️  아직 ${remainingErrors}개의 에러가 남아있습니다.`);
+      console.log(`   다시 실행하려면: npm run retry-errors -- <병렬처리개수>`);
+    } else {
+      console.log(`\n🎉 모든 에러가 성공적으로 처리되었습니다!`);
+    }
+    
     console.log('='.repeat(80) + '\n');
 
     // 성공한 레코드를 errors.jsonl에서 제거
