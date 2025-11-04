@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, User, Calendar, CheckCircle, XCircle, Clock, Pin } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -38,7 +38,8 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 // 지역 목록
 const REGIONS = [
     "서울", "경기", "인천", "부산", "대구", "광주", "대전", "울산",
-    "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주"
+    "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
+    "미국", "일본", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
 ];
 
 type SortColumn = "name" | "category" | "fanVisits";
@@ -229,6 +230,14 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             { pattern: /^경상북도|^경북/, region: "경북" },
             { pattern: /^경상남도|^경남/, region: "경남" },
             { pattern: /^제주/, region: "제주" },
+            // 해외 지역 패턴
+            { pattern: /미국|USA|United States/i, region: "미국" },
+            { pattern: /일본|Japan/i, region: "일본" },
+            { pattern: /태국|Thailand/i, region: "태국" },
+            { pattern: /인도네시아|Indonesia/i, region: "인도네시아" },
+            { pattern: /튀르키예|Turkey|Türkiye/i, region: "튀르키예" },
+            { pattern: /헝가리|Hungary/i, region: "헝가리" },
+            { pattern: /오스트레일리아|Australia/i, region: "오스트레일리아" },
         ];
 
         for (const { pattern, region } of regionPatterns) {
@@ -382,17 +391,17 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             </div>
                         </div>
 
-                        {/* 지역 */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between">
-                                    <span className="truncate">
-                                        지역 {filters.regions.length > 0 && `(${filters.regions.length})`}
-                                    </span>
-                                    <Filter className="h-4 w-4 ml-2" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64" align="start">
+                    {/* 지역 */}
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" className="justify-between">
+                                <span className="truncate">
+                                    지역 {filters.regions.length > 0 && `(${filters.regions.length})`}
+                                </span>
+                                <Filter className="h-4 w-4 ml-2" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80" align="start">
                                 <div className="space-y-2">
                                     <h4 className="font-semibold text-sm mb-3">지역 선택</h4>
                                     <ScrollArea className="h-64">
@@ -406,7 +415,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                     />
                                                     <label
                                                         htmlFor={`region-${region}`}
-                                                        className="text-sm cursor-pointer flex-1"
+                                                        className="text-sm cursor-pointer flex-1 whitespace-nowrap"
                                                     >
                                                         {region}
                                                     </label>
@@ -630,6 +639,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             <Panel defaultSize={40} minSize={20} maxSize={70} className="flex flex-col bg-card">
                 <div className="border-b border-border p-6">
                     <div className="flex items-center gap-3">
+                        <MessageSquare className="h-6 w-6 text-primary" />
                         <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                             {selectedRestaurant ? `${selectedRestaurant.name}` : "맛집 리뷰"}
                         </h2>
