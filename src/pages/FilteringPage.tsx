@@ -987,7 +987,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                         {review.isVerified && (
                                                             <Badge variant="default" className="gap-1 bg-green-600 text-xs">
                                                                 <CheckCircle className="h-3 w-3" />
-                                                                승인됨
+                                                                인증
                                                             </Badge>
                                                         )}
                                                     </div>
@@ -1095,17 +1095,17 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                     {review.isVerified ? (
                                                         <Badge variant="default" className="gap-1 bg-green-600 text-xs">
                                                             <CheckCircle className="h-3 w-3" />
-                                                            승인됨
+                                                            인증
                                                         </Badge>
                                                     ) : review.admin_note ? (
                                                         <Badge variant="destructive" className="gap-1 text-xs">
                                                             <XCircle className="h-3 w-3" />
-                                                            거부됨
+                                                            거부
                                                         </Badge>
                                                     ) : (
                                                         <Badge variant="secondary" className="gap-1 text-xs">
                                                             <Clock className="h-3 w-3" />
-                                                            검토중
+                                                            검토
                                                         </Badge>
                                                     )}
                                                 </div>

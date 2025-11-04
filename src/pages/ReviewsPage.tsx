@@ -385,9 +385,9 @@ const ReviewsPage = () => {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">전체</SelectItem>
-                            <SelectItem value="approved">✅ 승인됨</SelectItem>
-                            <SelectItem value="rejected">❌ 거부됨</SelectItem>
-                            <SelectItem value="pending">⏳ 검토중</SelectItem>
+                            <SelectItem value="approved">✅ 승인</SelectItem>
+                            <SelectItem value="rejected">❌ 거부</SelectItem>
+                            <SelectItem value="pending">⏳ 검토</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
@@ -432,17 +432,17 @@ const ReviewsPage = () => {
                                             {review.isVerified ? (
                                                 <Badge variant="default" className="gap-1 bg-green-600">
                                                     <CheckCircle className="h-3 w-3" />
-                                                    승인됨
+                                                    인증
                                                 </Badge>
                                             ) : review.admin_note ? (
                                                 <Badge variant="destructive" className="gap-1">
                                                     <XCircle className="h-3 w-3" />
-                                                    거부됨
+                                                    거부
                                                 </Badge>
                                             ) : (
                                                 <Badge variant="secondary" className="gap-1">
                                                     <Clock className="h-3 w-3" />
-                                                    검토중
+                                                    검토
                                                 </Badge>
                                             )}
                                         </div>

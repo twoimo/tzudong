@@ -519,11 +519,10 @@ export function RestaurantDetailPanel({
                                                             onClick={() => handleLikeReview(review.id)}
                                                         >
                                                             <Heart
-                                                                className={`h-3 w-3 ${
-                                                                    likedReviews.has(review.id)
+                                                                className={`h-3 w-3 ${likedReviews.has(review.id)
                                                                         ? 'fill-red-500 text-red-500'
                                                                         : 'text-gray-400'
-                                                                }`}
+                                                                    }`}
                                                             />
                                                         </Button>
                                                     </div>
@@ -613,11 +612,10 @@ export function RestaurantDetailPanel({
                                                             onClick={() => handleLikeReview(review.id)}
                                                         >
                                                             <Heart
-                                                                className={`h-4 w-4 ${
-                                                                    likedReviews.has(review.id)
+                                                                className={`h-4 w-4 ${likedReviews.has(review.id)
                                                                         ? 'fill-red-500 text-red-500'
                                                                         : 'text-gray-400'
-                                                                }`}
+                                                                    }`}
                                                             />
                                                         </Button>
                                                     </div>
