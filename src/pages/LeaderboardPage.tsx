@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trophy, Medal, Award, TrendingUp, Star, CheckCircle, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -29,25 +29,32 @@ interface LeaderboardUser {
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
 
-    // Fetch leaderboard data from Supabase - reviews와 profiles 별도 조회 후 조인
-    const { data: leaderboardData = [], isLoading } = useQuery({
+    // Fetch leaderboard data from Supabase - 무한 스크롤 방식
+    const {
+        data: leaderboardPages,
+        fetchNextPage,
+        hasNextPage,
+        isLoading,
+        isFetchingNextPage,
+    } = useInfiniteQuery({
         queryKey: ['leaderboard', sortBy],
-        queryFn: async () => {
+        queryFn: async ({ pageParam = 0 }) => {
             try {
-                // Get all verified reviews
+                // Get verified reviews with pagination
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
                     .select('user_id, is_verified')
-                    .eq('is_verified', true); // Only verified reviews
+                    .eq('is_verified', true)
+                    .range(pageParam, pageParam + 199) // 한 페이지당 200개 리뷰씩
+                    .order('created_at', { ascending: false });
 
                 if (reviewsError) {
                     console.warn('리뷰 데이터 조회 실패:', reviewsError.message);
-                    return [];
+                    return { users: [], nextCursor: null };
                 }
 
                 if (!reviewsData || reviewsData.length === 0) {
-                    console.warn('승인된 리뷰 데이터가 없음');
-                    return [];
+                    return { users: [], nextCursor: null };
                 }
 
                 // Get unique user IDs
@@ -100,11 +107,10 @@ const LeaderboardPage = () => {
                     userStats.set(userId, current);
                 });
 
-                // Convert to leaderboard format and sort
-                const leaderboard = Array.from(userStats.values())
+                // Convert to leaderboard format
+                const users = Array.from(userStats.values())
                     .filter(user => user.totalReviews > 0)
-                    .sort((a, b) => b.totalReviews - a.totalReviews)
-                    .map((user, index) => {
+                    .map((user) => {
                         const badges = [];
 
                         // Award badges based on achievements
@@ -123,22 +129,48 @@ const LeaderboardPage = () => {
 
                         return {
                             id: user.userId,
-                            rank: index + 1,
                             username: user.nickname,
                             reviewCount: user.totalReviews,
                             verifiedReviewCount: user.verifiedReviews,
                             badges,
-                        } as LeaderboardUser;
+                        };
                     });
 
-                console.log(`🏆 리더보드 데이터 로드 완료: ${leaderboard.length}명의 사용자`);
-                return leaderboard;
+                // 다음 페이지 커서 계산
+                const nextCursor = reviewsData.length === 200 ? pageParam + 200 : null;
+
+                return {
+                    users,
+                    nextCursor,
+                };
             } catch (error) {
                 console.warn('리더보드 데이터 조회 중 오류 발생:', error);
-                return [];
+                return { users: [], nextCursor: null };
             }
         },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        initialPageParam: 0,
     });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const allLeaderboardUsers = leaderboardPages?.pages.flatMap(page => page.users) || [];
+
+    // 유저별로 데이터를 합치기 (중복 제거)
+    const userStats = new Map<string, typeof allLeaderboardUsers[0]>();
+    allLeaderboardUsers.forEach(user => {
+        const existing = userStats.get(user.id);
+        if (!existing || user.reviewCount > existing.reviewCount) {
+            userStats.set(user.id, user);
+        }
+    });
+
+    // 실시간 정렬 및 순위 부여
+    const leaderboardData = Array.from(userStats.values())
+        .sort((a, b) => b.reviewCount - a.reviewCount)
+        .map((user, index) => ({
+            ...user,
+            rank: index + 1,
+        }));
 
     // Apply sorting
     const sortedLeaderboard = [...leaderboardData].sort((a, b) => {
@@ -147,6 +179,32 @@ const LeaderboardPage = () => {
         }
         return 0;
     });
+
+    // 테이블 무한 스크롤을 위한 Intersection Observer
+    const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
+
+    const loadMoreLeaderboard = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreLeaderboard();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreTableRef.current) {
+            observer.observe(loadMoreTableRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreLeaderboard]);
 
     const getRankIcon = (rank: number, forTable: boolean = false) => {
         if (forTable) {
@@ -236,9 +294,9 @@ const LeaderboardPage = () => {
                                     </div>
                                 </Card>
                             ))
-                        ) : sortedLeaderboard.slice(0, 3).map((user) => (
+                        ) : sortedLeaderboard.slice(0, 3).map((user, index) => (
                             <Card
-                                key={user.id}
+                                key={`${user.id}-${index}`}
                                 className={`p-4 ${user.rank === 1 ? "border-2 border-primary shadow-lg" : ""
                                     }`}
                             >
@@ -367,8 +425,12 @@ const LeaderboardPage = () => {
                                                 </TableCell>
                                             </TableRow>
                                         ))
-                                    ) : sortedLeaderboard.map((user) => (
-                                        <TableRow key={user.id} className="hover:bg-muted/50">
+                                    ) : sortedLeaderboard.map((user, index) => (
+                                        <TableRow
+                                            key={`${user.id}-${index}`}
+                                            ref={index === sortedLeaderboard.length - 1 ? loadMoreTableRef : null}
+                                            className="hover:bg-muted/50"
+                                        >
                                             <TableCell>
                                                 <div className="flex items-center justify-center">
                                                     {getRankIcon(user.rank, true)}
@@ -438,6 +500,18 @@ const LeaderboardPage = () => {
                                             </TableCell>
                                         </TableRow>
                                     ))}
+
+                                    {/* 추가 로딩 표시 */}
+                                    {isFetchingNextPage && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-4">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                                    <span className="text-sm text-muted-foreground">더 많은 랭킹을 불러오는 중...</span>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
                                 </TableBody>
                             </Table>
                         </ScrollArea>
