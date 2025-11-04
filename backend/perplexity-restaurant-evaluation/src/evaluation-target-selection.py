@@ -27,17 +27,42 @@ def create_evaluation_targets():
     if not input_file.exists():
         raise FileNotFoundError(f"입력 파일이 존재하지 않습니다: {input_file}")
 
+    # 이미 처리된 youtube_link 수집
+    processed_links = set()
+    if output_file.exists():
+        print(f"📂 기존 출력 파일 발견 - 이미 처리된 youtube_link 확인 중...")
+        with open(output_file, 'r', encoding='utf-8') as f_existing:
+            for line in f_existing:
+                try:
+                    existing_data = json.loads(line.strip())
+                    youtube_link = existing_data.get('youtube_link')
+                    if youtube_link:
+                        processed_links.add(youtube_link)
+                except:
+                    continue
+        print(f"✅ 이미 처리된 레코드: {len(processed_links)}개")
+
     processed_count = 0
+    skipped_count = 0
     address_null_count = 0
 
     with open(input_file, 'r', encoding='utf-8') as f_in, \
-         open(output_file, 'w', encoding='utf-8') as f_out, \
-         open(address_null_file, 'w', encoding='utf-8') as f_null:
+         open(output_file, 'a', encoding='utf-8') as f_out, \
+         open(address_null_file, 'a', encoding='utf-8') as f_null:
 
         for line_num, line in enumerate(f_in, 1):
             try:
                 # JSON 라인 파싱
                 data = json.loads(line.strip())
+                
+                youtube_link = data.get('youtube_link')
+                
+                # 이미 처리된 youtube_link인지 확인
+                if youtube_link in processed_links:
+                    skipped_count += 1
+                    if skipped_count % 10 == 1:  # 10개마다 한 번씩만 로그
+                        print(f"⏭️  라인 {line_num} 건너뛰기 (이미 처리됨): {youtube_link}")
+                    continue
 
                 # evaluation_target 생성
                 evaluation_target = {}
@@ -71,6 +96,7 @@ def create_evaluation_targets():
                     address_null_count += 1
 
                 processed_count += 1
+                processed_links.add(youtube_link)  # 처리 완료 후 추가
                 print(f"✓ 라인 {line_num} 처리 완료 - {len(restaurants)}개 음식점")
 
             except json.JSONDecodeError as e:
@@ -80,9 +106,13 @@ def create_evaluation_targets():
                 print(f"❌ 라인 {line_num} 처리 중 오류: {e}")
                 continue
 
-    print(f"\n✅ 총 {processed_count}개 레코드 처리 완료")
+    print(f"\n{'='*50}")
+    print(f"✅ 처리 완료!")
+    print(f"📊 새로 처리된 레코드 수: {processed_count}")
+    print(f"📊 건너뛴 레코드 수: {skipped_count}")
+    print(f"📊 Address Null 레코드 수: {address_null_count}")
     print(f"📁 결과 파일 저장됨: {output_file}")
-    print(f"📁 Address Null 파일 저장됨: {address_null_file} ({address_null_count}개)")
+    print(f"📁 Address Null 파일 저장됨: {address_null_file}")
 
     return output_file, address_null_file
 

@@ -27,7 +27,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 .limit(50); // 최근 50개만 로드
 
             if (error) {
-                console.error('알림 로드 실패:', error);
+                // 알림 테이블이 존재하지 않는 경우 조용히 무시
+                if (error.code === 'PGRST205' || error.message?.includes('notifications')) {
+                    console.warn('알림 시스템이 아직 설정되지 않았습니다. 관리자에게 문의하세요.');
+                } else {
+                    console.error('알림 로드 실패:', error);
+                }
                 setNotifications([]);
             } else {
                 const formattedNotifications: Notification[] = (data || []).map(n => ({
@@ -82,7 +87,14 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     setNotifications(prev => [newNotification, ...prev]);
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                // 알림 테이블이 존재하지 않는 경우 경고 로그만 출력
+                if (status === 'SUBSCRIBED' && channel.state === 'joined') {
+                    console.log('알림 실시간 구독 활성화됨');
+                } else if (status === 'CHANNEL_ERROR') {
+                    console.warn('알림 실시간 구독 실패 - 테이블이 존재하지 않을 수 있습니다.');
+                }
+            });
 
         return () => {
             supabase.removeChannel(channel);
@@ -101,6 +113,10 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             );
         } catch (error) {
             console.error('알림 읽음 처리 실패:', error);
+            // 로컬 상태에서만 업데이트 (서버 함수가 없는 경우)
+            setNotifications(prev =>
+                prev.map(n => n.id === id ? { ...n, isRead: true } : n)
+            );
         }
     };
 
@@ -114,6 +130,10 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             );
         } catch (error) {
             console.error('모든 알림 읽음 처리 실패:', error);
+            // 로컬 상태에서만 업데이트 (서버 함수가 없는 경우)
+            setNotifications(prev =>
+                prev.map(n => ({ ...n, isRead: true }))
+            );
         }
     };
 
@@ -135,6 +155,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             console.log('알림 생성됨:', data);
         } catch (error) {
             console.error('알림 생성 실패:', error);
+            // 서버 함수가 없는 경우 로컬에서만 처리
+            console.warn('알림 서버 함수가 아직 설정되지 않았습니다.');
         }
     };
 
@@ -146,6 +168,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             setNotifications(prev => prev.filter(n => n.id !== id));
         } catch (error) {
             console.error('알림 삭제 실패:', error);
+            // 서버 함수가 없는 경우 로컬에서만 처리
+            setNotifications(prev => prev.filter(n => n.id !== id));
         }
     };
 
@@ -185,6 +209,7 @@ export const createAdminAnnouncement = async (title: string, message: string, cu
         console.log('관리자 공지사항 알림 생성 완료');
     } catch (error) {
         console.error('관리자 공지사항 알림 생성 실패:', error);
+        console.warn('알림 시스템이 아직 설정되지 않았습니다.');
     }
 };
 
@@ -207,6 +232,7 @@ export const createNewRestaurantNotification = async (restaurantName: string, ad
         console.log('신규 맛집 알림 생성 완료');
     } catch (error) {
         console.error('신규 맛집 알림 생성 실패:', error);
+        console.warn('알림 시스템이 아직 설정되지 않았습니다.');
     }
 };
 
@@ -222,6 +248,7 @@ export const createUserRankingNotification = async (userId: string, ranking: num
         console.log('사용자 랭킹 알림 생성 완료');
     } catch (error) {
         console.error('사용자 랭킹 알림 생성 실패:', error);
+        console.warn('알림 시스템이 아직 설정되지 않았습니다.');
     }
 };
 
@@ -245,5 +272,6 @@ export const createUserNotification = async (
         console.log('사용자 알림 생성 완료');
     } catch (error) {
         console.error('사용자 알림 생성 실패:', error);
+        console.warn('알림 시스템이 아직 설정되지 않았습니다.');
     }
 };

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, forwardRef } from "react";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -747,17 +747,17 @@ export default function AdminSubmissionsPage() {
 }
 
 // 제보 카드 컴포넌트
-function SubmissionCard({
-    submission,
-    onApprove,
-    onReject,
-    onDelete,
-}: {
+const SubmissionCard = forwardRef<HTMLDivElement, {
     submission: SubmissionWithUser;
     onApprove?: () => void;
     onReject?: () => void;
     onDelete: () => void;
-}) {
+}>(({
+    submission,
+    onApprove,
+    onReject,
+    onDelete,
+}, ref) => {
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'pending':
@@ -787,7 +787,7 @@ function SubmissionCard({
     };
 
     return (
-        <Card className="p-4">
+        <Card ref={ref} className="p-4">
             <div className="space-y-3">
                 <div className="flex items-start justify-between">
                     <div className="flex-1 space-y-2">
@@ -925,5 +925,7 @@ function SubmissionCard({
             </div>
         </Card>
     );
-}
+});
+
+SubmissionCard.displayName = 'SubmissionCard';
 
