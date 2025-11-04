@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -61,22 +61,34 @@ export default function AdminReviewsPage() {
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'edit' | null>(null);
     const [adminNote, setAdminNote] = useState("");
 
-    // 모든 리뷰 조회 (관리자만)
-    const { data: reviews = [], isLoading, error: queryError } = useQuery({
+    // 모든 리뷰 조회 (관리자만) - 무한 스크롤 방식
+    const {
+        data: reviewsPages,
+        fetchNextPage,
+        hasNextPage,
+        isLoading,
+        isFetchingNextPage,
+        error: queryError
+    } = useInfiniteQuery({
         queryKey: ['admin-reviews'],
-        queryFn: async () => {
-            console.log('🔍 리뷰 데이터 조회 시작...');
+        queryFn: async ({ pageParam = 0 }) => {
+            console.log('🔍 리뷰 데이터 조회 시작... 페이지:', pageParam);
 
-            // 1. 리뷰 데이터 가져오기 (수동 조인으로 변경)
+            // 1. 리뷰 데이터 가져오기 (페이지별)
             const { data: reviewsData, error: reviewsError } = await supabase
                 .from('reviews')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .range(pageParam, pageParam + 19); // 한 페이지당 20개씩
 
-            if (reviewsError) throw reviewsError;
+            if (reviewsError) {
+                console.error('❌ 리뷰 조회 실패:', reviewsError);
+                throw reviewsError;
+            }
 
             if (!reviewsData || reviewsData.length === 0) {
-                return [];
+                console.log('✅ 리뷰 데이터 없음');
+                return { reviews: [], nextCursor: null };
             }
 
             // 2. 필요한 user_id와 restaurant_id 수집
@@ -112,23 +124,48 @@ export default function AdminReviewsPage() {
                 restaurants: restaurantsMap.get(review.restaurant_id) || { name: '알 수 없음', address: '' }
             })) as Review[];
 
-            if (reviewsError) {
-                console.error('❌ 리뷰 조회 실패:', reviewsError);
-                throw reviewsError;
-            }
+            // 다음 페이지 커서 계산
+            const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
 
-            if (!reviewsData || reviewsData.length === 0) {
-                console.log('✅ 리뷰 데이터 없음');
-                return [];
-            }
-
-            console.log(`📊 ${reviewsData.length}개 리뷰 조회됨`);
-
-            // 필요한 user_id와 restaurant_id 수집 (이미 조인으로 가져옴)
-            return reviewsData as Review[];
+            console.log('✅ 리뷰 데이터 조회 성공:', reviews.length, '개 (다음 커서:', nextCursor, ')');
+            return {
+                reviews,
+                nextCursor,
+            };
         },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        initialPageParam: 0,
         enabled: !!user && !!isAdmin,
     });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const reviews = reviewsPages?.pages.flatMap(page => page.reviews) || [];
+
+    // 리뷰 무한 스크롤을 위한 Intersection Observer
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    const loadMoreReviews = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreReviews();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreReviews]);
 
     // 리뷰 승인
     const approveMutation = useMutation({
@@ -437,9 +474,14 @@ export default function AdminReviewsPage() {
                                 </p>
                             </Card>
                         ) : (
-                            <div className="grid gap-4">
-                                {pendingReviews.map((review) => (
-                                    <Card key={review.id} className="p-4">
+                            <>
+                                <div className="grid gap-4">
+                                    {pendingReviews.map((review, index) => (
+                                        <Card
+                                            key={`${review.id}-${index}`}
+                                            ref={index === pendingReviews.length - 1 ? loadMoreRef : null}
+                                            className="p-4"
+                                        >
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-2">
@@ -534,7 +576,18 @@ export default function AdminReviewsPage() {
                                         </div>
                                     </Card>
                                 ))}
-                            </div>
+                                </div>
+
+                                {/* 추가 로딩 표시 */}
+                                {isFetchingNextPage && (
+                                    <div className="text-center py-8">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                            <span className="text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </TabsContent>
 

@@ -1,5 +1,5 @@
-﻿import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useState, useRef, useCallback, useEffect } from "react";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -63,23 +63,71 @@ export default function RestaurantSubmissionsPage() {
         },
     });
 
-    // 내 제보 내역 조회
-    const { data: submissions = [], isLoading } = useQuery({
+    // 내 제보 내역 조회 - 무한 스크롤 방식
+    const {
+        data: submissionsPages,
+        fetchNextPage,
+        hasNextPage,
+        isLoading,
+        isFetchingNextPage,
+        refetch
+    } = useInfiniteQuery({
         queryKey: ['my-submissions', user?.id],
-        queryFn: async () => {
-            if (!user) return [];
-
+        queryFn: async ({ pageParam = 0 }) => {
             const { data, error } = await supabase
                 .from('restaurant_submissions')
                 .select('*')
-                .eq('user_id', user.id)
-                .order('created_at', { ascending: false });
+                .eq('user_id', user!.id)
+                .order('created_at', { ascending: false })
+                .range(pageParam, pageParam + 19); // 한 페이지당 20개씩
 
             if (error) throw error;
-            return data as RestaurantSubmission[];
+
+            if (!data || data.length === 0) {
+                return { submissions: [], nextCursor: null };
+            }
+
+            // 다음 페이지 커서 계산
+            const nextCursor = data.length === 20 ? pageParam + 20 : null;
+
+            return {
+                submissions: data as RestaurantSubmission[],
+                nextCursor,
+            };
         },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        initialPageParam: 0,
         enabled: !!user,
     });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const submissions = submissionsPages?.pages.flatMap(page => page.submissions) || [];
+
+    // 제보 내역 무한 스크롤을 위한 Intersection Observer
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    const loadMoreSubmissions = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreSubmissions();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreSubmissions]);
 
     // 제보 제출
     const submitMutation = useMutation({
@@ -416,9 +464,13 @@ export default function RestaurantSubmissionsPage() {
                         </Button>
                     </Card>
                 ) : (
-                    <div className="grid gap-4">
-                        {submissions.map((submission) => (
-                            <Card key={submission.id} className="p-4">
+                    <>
+                        {submissions.map((submission, index) => (
+                            <Card
+                                key={`${submission.id}-${index}`}
+                                ref={index === submissions.length - 1 ? loadMoreRef : null}
+                                className="p-4"
+                            >
                                 <div className="flex items-start justify-between">
                                     <div className="flex-1 space-y-2">
                                         <div className="flex items-center gap-2">
@@ -497,7 +549,17 @@ export default function RestaurantSubmissionsPage() {
                                 </div>
                             </Card>
                         ))}
-                    </div>
+
+                        {/* 추가 로딩 표시 */}
+                        {isFetchingNextPage && (
+                            <div className="text-center py-8">
+                                <div className="flex items-center justify-center gap-2">
+                                    <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                    <span className="text-sm text-muted-foreground">더 많은 제보를 불러오는 중...</span>
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 

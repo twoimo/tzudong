@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ import { Search, Plus, Pin, CheckCircle, Clock, MapPin, Calendar, MessageSquare,
 import { useAuth } from "@/contexts/AuthContext";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -48,32 +48,40 @@ const ReviewsPage = () => {
     // 로그인하지 않은 경우 더미 데이터 표시
     const isLoggedIn = !!user;
 
-    // Fetch reviews from Supabase - 모든 승인된 리뷰 조회
-    const { data: reviewsData = [], isLoading, refetch } = useQuery({
+    // Fetch reviews from Supabase - 무한 스크롤 방식
+    const {
+        data: reviewsPages,
+        fetchNextPage,
+        hasNextPage,
+        isLoading,
+        isFetchingNextPage,
+        refetch
+    } = useInfiniteQuery({
         queryKey: ['reviews', filterCategory, filterStatus],
-        queryFn: async () => {
+        queryFn: async ({ pageParam = 0 }) => {
             try {
-                console.log('🔍 리뷰 데이터 가져오는 중...');
+                console.log('🔍 리뷰 데이터 가져오는 중... 페이지:', pageParam);
 
-                // 1. 모든 승인된 리뷰 조회 (공개 리뷰)
+                // 1. 승인된 리뷰 페이지별 조회 (공개 리뷰)
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
                     .select('*')
                     .eq('is_verified', true)  // 승인된 리뷰만 조회
                     .order('is_pinned', { ascending: false })
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false })
+                    .range(pageParam, pageParam + 49); // 한 페이지당 50개씩
 
                 if (reviewsError) {
                     console.error('❌ 리뷰 조회 실패:', reviewsError);
-                    return [];
+                    return { reviews: [], nextCursor: null };
                 }
 
                 if (!reviewsData || reviewsData.length === 0) {
                     console.warn('⚠️ 승인된 리뷰 데이터가 없음');
-                    return [];
+                    return { reviews: [], nextCursor: null };
                 }
 
-                console.log(`📊 ${reviewsData.length}개 리뷰 조회됨`);
+                console.log(`📊 ${reviewsData.length}개 리뷰 조회됨 (페이지: ${pageParam})`);
 
                 // 2. 필요한 user_id와 restaurant_id 수집
                 const userIds = [...new Set(reviewsData.map(r => r.user_id))];
@@ -127,18 +135,55 @@ const ReviewsPage = () => {
                     };
                 }) as Review[];
 
-                console.log(`✅ 총 ${reviews.length}개 리뷰 매핑 완료`);
+                // 다음 페이지 커서 계산
+                const nextCursor = reviewsData.length === 50 ? pageParam + 50 : null;
 
-                return reviews;
+                console.log(`✅ 총 ${reviews.length}개 리뷰 매핑 완료 (다음 커서: ${nextCursor})`);
+
+                return {
+                    reviews,
+                    nextCursor,
+                };
             } catch (error) {
                 console.error('❌ 리뷰 데이터 조회 중 오류:', error);
-                return [];
+                return { reviews: [], nextCursor: null };
             }
         },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        initialPageParam: 0,
     });
 
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const allReviews = reviewsPages?.pages.flatMap(page => page.reviews) || [];
+
+    // 리뷰 무한 스크롤을 위한 Intersection Observer
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    const loadMoreReviews = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreReviews();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreReviews]);
+
     // 실제 승인된 리뷰 데이터 사용
-    const displayData = reviewsData;
+    const displayData = allReviews;
 
     const filteredReviews = displayData.filter((review) => {
         const matchesSearch =
@@ -401,159 +446,172 @@ const ReviewsPage = () => {
                             <p className="text-muted-foreground">검색 결과가 없습니다.</p>
                         </div>
                     ) : (
-                        sortedReviews.map((review) => (
-                            <Card
-                                key={review.id}
-                                className={`p-6 hover:shadow-md transition-shadow ${review.isPinned ? "border-primary border-2" : ""
-                                    }`}
-                            >
-                                {/* Header */}
-                                <div className="flex items-start justify-between mb-4">
-                                    <div className="flex-1">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            {review.isPinned && (
-                                                <Pin className="h-4 w-4 text-primary fill-primary" />
-                                            )}
-                                            <h3 className="text-lg font-bold flex items-center gap-2 flex-wrap">
-                                                {review.userName === "관리자" && (
-                                                    <Badge variant="default" className="bg-gradient-primary">
-                                                        관리자
+                        <>
+                            {sortedReviews.map((review, index) => (
+                                <Card
+                                    key={`${review.id}-${index}`}
+                                    ref={index === sortedReviews.length - 1 ? loadMoreRef : null}
+                                    className={`p-6 hover:shadow-md transition-shadow ${review.isPinned ? "border-primary border-2" : ""
+                                        }`}
+                                >
+                                    {/* Header */}
+                                    <div className="flex items-start justify-between mb-4">
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                {review.isPinned && (
+                                                    <Pin className="h-4 w-4 text-primary fill-primary" />
+                                                )}
+                                                <h3 className="text-lg font-bold flex items-center gap-2 flex-wrap">
+                                                    {review.userName === "관리자" && (
+                                                        <Badge variant="default" className="bg-gradient-primary">
+                                                            관리자
+                                                        </Badge>
+                                                    )}
+                                                    <span>{review.restaurantName}</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {review.restaurantCategories.map((category, index) => (
+                                                            <Badge key={index} variant="secondary" className="text-xs">
+                                                                {category}
+                                                            </Badge>
+                                                        ))}
+                                                    </div>
+                                                </h3>
+                                                {review.isVerified ? (
+                                                    <Badge variant="default" className="gap-1 bg-green-600">
+                                                        <CheckCircle className="h-3 w-3" />
+                                                        인증
+                                                    </Badge>
+                                                ) : review.admin_note ? (
+                                                    <Badge variant="destructive" className="gap-1">
+                                                        <XCircle className="h-3 w-3" />
+                                                        거부
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="secondary" className="gap-1">
+                                                        <Clock className="h-3 w-3" />
+                                                        검토
                                                     </Badge>
                                                 )}
-                                                <span>{review.restaurantName}</span>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {review.restaurantCategories.map((category, index) => (
-                                                        <Badge key={index} variant="secondary" className="text-xs">
-                                                            {category}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
-                                            </h3>
-                                            {review.isVerified ? (
-                                                <Badge variant="default" className="gap-1 bg-green-600">
-                                                    <CheckCircle className="h-3 w-3" />
-                                                    인증
-                                                </Badge>
-                                            ) : review.admin_note ? (
-                                                <Badge variant="destructive" className="gap-1">
-                                                    <XCircle className="h-3 w-3" />
-                                                    거부
-                                                </Badge>
-                                            ) : (
-                                                <Badge variant="secondary" className="gap-1">
-                                                    <Clock className="h-3 w-3" />
-                                                    검토
+                                            </div>
+
+                                            {review.isEditedByAdmin && (
+                                                <Badge variant="outline" className="mb-2 border-orange-500 text-orange-500">
+                                                    ⚠️ 관리자가 수정함
                                                 </Badge>
                                             )}
-                                        </div>
 
-                                        {review.isEditedByAdmin && (
-                                            <Badge variant="outline" className="mb-2 border-orange-500 text-orange-500">
-                                                ⚠️ 관리자가 수정함
-                                            </Badge>
-                                        )}
-
-                                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                                            <div className="flex items-center gap-1">
-                                                <User className="h-3 w-3" />
-                                                <span className="font-medium">{review.userName}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1">
-                                                <Calendar className="h-3 w-3" />
-                                                방문: {formatDateTime(review.visitedAt)}
+                                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                                <div className="flex items-center gap-1">
+                                                    <User className="h-3 w-3" />
+                                                    <span className="font-medium">{review.userName}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1">
+                                                    <Calendar className="h-3 w-3" />
+                                                    방문: {formatDateTime(review.visitedAt)}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Content */}
-                                <div className="mb-4">
-                                    <p className="text-sm whitespace-pre-wrap">{review.content}</p>
-                                </div>
-
-                                {/* 거부 사유 (거부된 리뷰인 경우) */}
-                                {review.admin_note && review.admin_note.includes('거부') && (
-                                    <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <XCircle className="h-4 w-4 text-red-600" />
-                                            <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                                                거부 사유
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-red-600 dark:text-red-400">
-                                            {review.admin_note.startsWith('거부: ') ? review.admin_note.substring(4) : review.admin_note}
-                                        </p>
+                                    {/* Content */}
+                                    <div className="mb-4">
+                                        <p className="text-sm whitespace-pre-wrap">{review.content}</p>
                                     </div>
-                                )}
 
-                                {/* Photos placeholder */}
-                                {review.photos.length > 0 && (
-                                    <div className="flex gap-2 mb-4">
-                                        {review.photos.map((photo, idx) => (
-                                            <div
-                                                key={idx}
-                                                className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center"
-                                            >
-                                                📷
+                                    {/* 거부 사유 (거부된 리뷰인 경우) */}
+                                    {review.admin_note && review.admin_note.includes('거부') && (
+                                        <div className="mb-4 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <XCircle className="h-4 w-4 text-red-600" />
+                                                <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                                                    거부 사유
+                                                </span>
                                             </div>
-                                        ))}
-                                    </div>
-                                )}
+                                            <p className="text-sm text-red-600 dark:text-red-400">
+                                                {review.admin_note.startsWith('거부: ') ? review.admin_note.substring(4) : review.admin_note}
+                                            </p>
+                                        </div>
+                                    )}
 
-                                {/* Footer */}
-                                <div className="flex items-center justify-between pt-4 border-t border-border">
-                                    <div className="text-xs text-muted-foreground">
-                                        작성: {formatDateTime(review.submittedAt)}
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                        {(isAdmin || review.userName === user?.email) && (
-                                            <>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleEditReview(review)}
+                                    {/* Photos placeholder */}
+                                    {review.photos.length > 0 && (
+                                        <div className="flex gap-2 mb-4">
+                                            {review.photos.map((photo, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center"
                                                 >
-                                                    수정
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleDeleteReview(review)}
-                                                >
-                                                    삭제
-                                                </Button>
-                                            </>
-                                        )}
-                                        {isAdmin && (
-                                            <>
-                                                {review.isPinned ? (
+                                                    📷
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Footer */}
+                                    <div className="flex items-center justify-between pt-4 border-t border-border">
+                                        <div className="text-xs text-muted-foreground">
+                                            작성: {formatDateTime(review.submittedAt)}
+                                        </div>
+
+                                        <div className="flex gap-2">
+                                            {(isAdmin || review.userName === user?.email) && (
+                                                <>
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="gap-1"
-                                                        onClick={() => handleUnpinReview(review.id)}
+                                                        onClick={() => handleEditReview(review)}
                                                     >
-                                                        <Pin className="h-3 w-3" />
-                                                        고정 해제
+                                                        수정
                                                     </Button>
-                                                ) : (
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        className="gap-1"
-                                                        onClick={() => handlePinReview(review.id)}
+                                                        onClick={() => handleDeleteReview(review)}
                                                     >
-                                                        <Pin className="h-3 w-3" />
-                                                        상단 고정
+                                                        삭제
                                                     </Button>
-                                                )}
-                                            </>
-                                        )}
+                                                </>
+                                            )}
+                                            {isAdmin && (
+                                                <>
+                                                    {review.isPinned ? (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="gap-1"
+                                                            onClick={() => handleUnpinReview(review.id)}
+                                                        >
+                                                            <Pin className="h-3 w-3" />
+                                                            고정 해제
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="gap-1"
+                                                            onClick={() => handlePinReview(review.id)}
+                                                        >
+                                                            <Pin className="h-3 w-3" />
+                                                            상단 고정
+                                                        </Button>
+                                                    )}
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </Card>
+                            ))}
+
+                            {/* 추가 로딩 표시 */}
+                            {isFetchingNextPage && (
+                                <div className="text-center py-8">
+                                    <div className="flex items-center justify-center gap-2">
+                                        <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                        <span className="text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
                                     </div>
                                 </div>
-                            </Card>
-                        ))
+                            )}
+                        </>
                     )}
                 </div>
             </ScrollArea>
