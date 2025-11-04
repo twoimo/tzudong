@@ -23,6 +23,20 @@ const StampPage = () => {
     const { user } = useAuth();
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
 
+    // 전체 맛집 개수 조회
+    const { data: totalRestaurantsCount = 0 } = useQuery({
+        queryKey: ['stamp-restaurants-total-count'],
+        queryFn: async () => {
+            const { count, error } = await supabase
+                .from('restaurants')
+                .select('*', { count: 'exact', head: true })
+                .not('youtube_link', 'is', null);
+
+            if (error) throw error;
+            return count || 0;
+        },
+    });
+
     // 쯔양이 방문한 모든 맛집 조회 (무한 스크롤)
     const {
         data: restaurantsData,
@@ -150,9 +164,9 @@ const StampPage = () => {
         return userReviews.has(restaurantId);
     };
 
-    // 방문한 맛집 수 계산
-    const visitedCount = restaurants.filter(restaurant => isVisited(restaurant.id)).length;
-    const totalCount = restaurants.length;
+    // 방문한 맛집 수 계산 (실제 방문한 리뷰 개수로 계산)
+    const visitedCount = userReviewData.length;
+    const totalCount = totalRestaurantsCount;
 
     if (isLoading) {
         return (
