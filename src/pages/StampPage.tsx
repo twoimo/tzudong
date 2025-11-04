@@ -147,7 +147,7 @@ const StampPage = () => {
 
             {/* Stamp Grid */}
             <div className="flex-1 overflow-auto p-6">
-                <div className="grid grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 gap-4">
+                <div className="grid grid-cols-5 gap-4">
                     {restaurants.map((restaurant, index) => {
                         const thumbnailUrl = getYouTubeThumbnailUrl(restaurant.youtube_link);
                         const visited = isVisited(restaurant.id);
