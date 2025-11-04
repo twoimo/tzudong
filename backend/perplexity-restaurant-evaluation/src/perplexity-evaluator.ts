@@ -329,6 +329,371 @@ export class PerplexityEvaluator {
     }
   }
 
+  /**
+   * 랜덤 대기 (1-3초)
+   */
+  private async randomDelay(min: number = 1000, max: number = 3000): Promise<void> {
+    const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+
+  /**
+   * 페이지 오류 감지 (ERR_FAILED 등)
+   */
+  private async checkPageError(): Promise<boolean> {
+    try {
+      const errorDetected = await this.page!.evaluate(() => {
+        const bodyText = document.body.textContent || '';
+        // ERR_FAILED, ERR_CONNECTION 등의 오류 메시지 감지
+        return bodyText.includes('ERR_FAILED') || 
+               bodyText.includes('사이트에 연결할 수 없음') ||
+               bodyText.includes('연결이 재설정') ||
+               bodyText.includes('서버를 찾을 수 없음');
+      });
+      return errorDetected;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async deleteAllThreads(): Promise<void> {
+    try {
+      console.log('🗑️ 모든 쓰레드 삭제 시작...');
+
+      // 1. 왼쪽 사이드바의 Home 버튼 직접 클릭
+      console.log('🏠 Home 버튼 찾아서 클릭 중...');
+      
+      const homeClicked = await this.page!.evaluate(() => {
+        // 모든 <a> 태그 찾기
+        const allLinks = Array.from(document.querySelectorAll('a'));
+        
+        for (const link of allLinks) {
+          const text = link.textContent?.trim() || '';
+          const rect = link.getBoundingClientRect();
+          
+          // 왼쪽 사이드바 (x < 200)에서 "Home" 텍스트만 정확히 있는 링크
+          // 첫 번째 자식으로 나오는 Home 버튼 (nth-child(1))
+          if (text === 'Home' && rect.x < 200 && rect.width > 0 && rect.height > 0) {
+            console.log('Home 버튼 <a> 발견:', {
+              tag: link.tagName,
+              href: link.getAttribute('href'),
+              x: Math.round(rect.x),
+              y: Math.round(rect.y),
+              width: Math.round(rect.width),
+              height: Math.round(rect.height)
+            });
+            
+            link.click();
+            return true;
+          }
+        }
+        
+        // fallback: SVG를 포함한 부모 요소 찾기
+        const allSvgs = Array.from(document.querySelectorAll('svg'));
+        for (const svg of allSvgs) {
+          // 부모 <a> 태그 찾기
+          let parent = svg.parentElement;
+          while (parent && parent.tagName !== 'A') {
+            parent = parent.parentElement;
+          }
+          
+          if (parent && parent.tagName === 'A') {
+            const text = parent.textContent?.trim() || '';
+            const rect = parent.getBoundingClientRect();
+            
+            if (text === 'Home' && rect.x < 200) {
+              console.log('Home 버튼 SVG 부모로부터 발견');
+              (parent as HTMLElement).click();
+              return true;
+            }
+          }
+        }
+        
+        return false;
+      });
+
+      if (!homeClicked) {
+        console.log('❌ Home 버튼을 찾을 수 없음');
+        return;
+      }
+      
+      console.log('✅ Home 버튼 클릭 완료');
+      console.log('⏳ 페이지 로딩 대기 중...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // 2. Library 버튼 직접 클릭
+      console.log('📚 Library 버튼 찾아서 클릭 중...');
+      
+      // 모든 Library 요소 찾아서 디버깅
+      const libraryDebug = await this.page!.evaluate(() => {
+        const allLinks = Array.from(document.querySelectorAll('a'));
+        const libraries: any[] = [];
+        
+        for (const link of allLinks) {
+          const text = link.textContent?.trim() || '';
+          if (text.includes('Library')) {
+            const rect = link.getBoundingClientRect();
+            const isVisible = link.offsetParent !== null;
+            
+            libraries.push({
+              tagName: link.tagName,
+              exactText: text,
+              href: link.getAttribute('href'),
+              visible: isVisible,
+              x: Math.round(rect.x),
+              y: Math.round(rect.y),
+              width: Math.round(rect.width),
+              height: Math.round(rect.height)
+            });
+          }
+        }
+        
+        return libraries;
+      });
+
+      console.log(`🔍 발견된 Library <a> 링크: ${libraryDebug.length}개`);
+      libraryDebug.forEach((lib, idx) => {
+        console.log(`  [${idx}] ${lib.tagName} "${lib.exactText}" href:"${lib.href}" visible:${lib.visible} pos:(${lib.x},${lib.y}) size:${lib.width}x${lib.height}`);
+      });
+
+      // Library 클릭 시도 (왼쪽 사이드바에 있는 <a> 태그)
+      const libraryClicked = await this.page!.evaluate(() => {
+        const allLinks = Array.from(document.querySelectorAll('a'));
+        
+        for (const link of allLinks) {
+          const text = link.textContent?.trim() || '';
+          const rect = link.getBoundingClientRect();
+          const isVisible = link.offsetParent !== null;
+          
+          // 왼쪽 사이드바 (x < 200)에 위치하고, "Library" 텍스트만 정확히 있는 링크
+          if (text === 'Library' && rect.x < 200 && isVisible && rect.width > 0) {
+            console.log('Library 버튼 <a> 클릭:', {
+              tag: link.tagName,
+              href: link.getAttribute('href'),
+              x: Math.round(rect.x),
+              y: Math.round(rect.y)
+            });
+            
+            link.click();
+            return true;
+          }
+        }
+        
+        return false;
+      });
+
+      console.log('Library 클릭 결과:', libraryClicked);
+
+      if (!libraryClicked) {
+        console.log('❌ Library 버튼 클릭 실패 - 쓰레드 삭제 중단');
+        return;
+      }
+      
+      console.log('✅ Library 클릭 성공, 페이지 로딩 대기 중...');
+      await new Promise(resolve => setTimeout(resolve, 2500));
+
+      // 3. Library 페이지 상단의 ... 버튼 클릭 (span > button)
+      console.log('🎯 ... 메뉴 버튼 클릭 중...');
+      
+      const dotsClicked = await this.page!.evaluate(() => {
+        // Library 페이지의 첫 번째 버튼 찾기 (div:nth-child(1) > div > span > button)
+        const allButtons = Array.from(document.querySelectorAll('button'));
+        
+        for (const btn of allButtons) {
+          // span 태그의 자식이고, SVG 아이콘이 있는 버튼
+          const parentIsSpan = btn.parentElement?.tagName === 'SPAN';
+          const hasSvg = btn.querySelector('svg') !== null;
+          const rect = btn.getBoundingClientRect();
+          
+          // Library 페이지 상단에 있는 버튼 (y < 200, 작은 버튼)
+          if (parentIsSpan && hasSvg && rect.y < 200 && rect.width < 50 && rect.height < 50) {
+            console.log('... 메뉴 버튼 발견:', {
+              parentTag: btn.parentElement?.tagName,
+              x: Math.round(rect.x),
+              y: Math.round(rect.y),
+              width: Math.round(rect.width),
+              height: Math.round(rect.height)
+            });
+            
+            btn.click();
+            return true;
+          }
+        }
+        
+        return false;
+      });
+
+      if (!dotsClicked) {
+        console.log('❌ ... 버튼을 찾을 수 없음');
+        return;
+      }
+      
+      console.log('✅ ... 버튼 클릭 완료');
+      console.log('⏳ 메뉴 팝업 대기 중...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // 4. 팝업 메뉴에서 "Delete All..." 옵션 클릭
+      console.log('🗑️ Delete All... 옵션 클릭 중...');
+      
+      const deleteAllClicked = await this.page!.evaluate(() => {
+        // 팝업 메뉴에서 role="menuitem" 찾기
+        const menuItems = Array.from(document.querySelectorAll('div[role="menuitem"]'));
+        
+        console.log(`메뉴 아이템 개수: ${menuItems.length}`);
+        
+        for (const item of menuItems) {
+          const text = item.textContent?.trim() || '';
+          
+          // "Delete All..." 텍스트가 있는지 확인
+          const hasDeleteText = text.includes('Delete All');
+          
+          // trash 아이콘 SVG가 있는지 확인 (use 태그의 href 속성)
+          const svgUse = item.querySelector('svg use');
+          const href = svgUse?.getAttribute('xlink:href') || svgUse?.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || '';
+          const hasTrashIcon = href.includes('trash');
+          
+          console.log(`메뉴 아이템: "${text}", trash아이콘: ${hasTrashIcon}, href: ${href}`);
+          
+          if (hasDeleteText && hasTrashIcon) {
+            console.log('✅ Delete All... 옵션 발견! 클릭합니다.');
+            (item as HTMLElement).click();
+            return true;
+          }
+        }
+        
+        // fallback: "Delete All" 텍스트만으로 찾기
+        for (const item of menuItems) {
+          const text = item.textContent?.trim() || '';
+          if (text.includes('Delete All')) {
+            console.log('⚠️ trash 아이콘 없이 텍스트만으로 클릭');
+            (item as HTMLElement).click();
+            return true;
+          }
+        }
+        
+        return false;
+      });
+
+      if (!deleteAllClicked) {
+        console.log('❌ Delete All 옵션을 찾을 수 없음');
+        return;
+      }
+      
+      console.log('✅ Delete All 옵션 클릭 완료');
+      console.log('⏳ 확인 다이얼로그 대기 중...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 5. 첫 번째 확인 버튼 클릭 (빨간색 bg-caution 버튼)
+      console.log('� 첫 번째 확인 버튼 클릭 중...');
+      
+      const firstConfirmClicked = await this.page!.evaluate(() => {
+        // bg-caution 클래스를 가진 버튼 찾기 (빨간색 경고 버튼)
+        const buttons = Array.from(document.querySelectorAll('button'));
+        
+        for (const btn of buttons) {
+          const className = btn.className || '';
+          const isVisible = btn.offsetParent !== null;
+          
+          // bg-caution 클래스가 있고, 보이는 버튼
+          if (className.includes('bg-caution') && isVisible) {
+            const rect = btn.getBoundingClientRect();
+            console.log('첫 번째 확인 버튼 발견:', {
+              text: btn.textContent?.trim(),
+              x: Math.round(rect.x),
+              y: Math.round(rect.y)
+            });
+            
+            btn.click();
+            return true;
+          }
+        }
+        
+        return false;
+      });
+
+      if (!firstConfirmClicked) {
+        console.log('❌ 첫 번째 확인 버튼을 찾을 수 없음');
+        return;
+      }
+      
+      console.log('✅ 첫 번째 확인 버튼 클릭 완료');
+      console.log('⏳ 두 번째 확인 다이얼로그 대기 중...');
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // 6. 두 번째 확인 버튼 클릭 (빨간색 bg-caution 버튼)
+      console.log('🔴 두 번째 확인 버튼 클릭 중...');
+      
+      const secondConfirmClicked = await this.page!.evaluate(() => {
+        // bg-caution 클래스를 가진 버튼 찾기
+        const buttons = Array.from(document.querySelectorAll('button'));
+        
+        for (const btn of buttons) {
+          const className = btn.className || '';
+          const isVisible = btn.offsetParent !== null;
+          
+          if (className.includes('bg-caution') && isVisible) {
+            const rect = btn.getBoundingClientRect();
+            console.log('두 번째 확인 버튼 발견:', {
+              text: btn.textContent?.trim(),
+              x: Math.round(rect.x),
+              y: Math.round(rect.y)
+            });
+            
+            btn.click();
+            return true;
+          }
+        }
+        
+        return false;
+      });
+
+      if (!secondConfirmClicked) {
+        console.log('⚠️ 두 번째 확인 버튼을 찾을 수 없음 (한 번만 클릭하면 되는 경우일 수 있음)');
+      } else {
+        console.log('✅ 두 번째 확인 버튼 클릭 완료');
+      }
+      
+      console.log('⏳ 삭제 완료 대기 중...');
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // 7. Home으로 돌아가기 (새 쓰레드 시작)
+      console.log('🏠 Home 버튼 클릭해서 새 쓰레드 시작...');
+      
+      const homeClickedAgain = await this.page!.evaluate(() => {
+        // 왼쪽 사이드바의 Home 링크 찾기
+        const allLinks = Array.from(document.querySelectorAll('a'));
+        
+        for (const link of allLinks) {
+          const text = link.textContent?.trim() || '';
+          const rect = link.getBoundingClientRect();
+          
+          // 왼쪽 사이드바 (x < 200)에서 "Home" 텍스트
+          if (text === 'Home' && rect.x < 200 && rect.width > 0) {
+            console.log('Home 버튼 클릭');
+            link.click();
+            return true;
+          }
+        }
+        
+        return false;
+      });
+
+      if (!homeClickedAgain) {
+        console.log('⚠️ Home 버튼을 찾을 수 없음 - URL로 이동');
+        await this.page!.goto('https://www.perplexity.ai/');
+      } else {
+        console.log('✅ Home 버튼 클릭 완료');
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      console.log('✅ 모든 쓰레드 삭제 완료');
+    } catch (error) {
+      console.error('쓰레드 삭제 실패:', error);
+      console.log('⚠️ 쓰레드 삭제 중 오류 발생 - 다음 단계 진행');
+    }
+  }
+
   private async selectGeminiProModel(): Promise<void> {
     try {
       console.log('🤖 Gemini Pro 2.5 모델 선택 시작...');
@@ -741,6 +1106,79 @@ export class PerplexityEvaluator {
   }
 
   async processEvaluation(restaurantData: string, promptTemplate: string): Promise<ProcessingResult> {
+    const maxRetries = 2; // 최초 1번 + 재시도 1번 = 총 2번
+    let lastError: any = null;
+    let needsModelSelection = true; // 첫 번째 실행 시에만 모델 선택
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 1) {
+          const waitTime = Math.floor(Math.random() * 10000) + 5000; // 5-15초 랜덤 대기
+          console.log(`🔄 재시도 ${attempt}/${maxRetries} - ${Math.floor(waitTime/1000)}초 대기 중...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+        }
+
+        // 각 단계마다 짧은 랜덤 대기
+        await this.randomDelay(1000, 3000);
+
+        const result = await this._processEvaluationInternal(restaurantData, promptTemplate, needsModelSelection);
+        
+        // 성공하면 바로 반환
+        if (result.success) {
+          return result;
+        }
+        
+        lastError = result.error;
+        
+        // JSON 파싱 실패는 재시도하지 않음 (Perplexity 응답 문제)
+        if (result.error && result.error.includes('평가 결과를 추출할 수 없습니다')) {
+          console.log('⚠️ JSON 파싱 실패 - 재시도하지 않고 오류 기록');
+          break;
+        }
+        
+        // 마지막 시도가 아니면 계속
+        if (attempt < maxRetries) {
+          console.log(`⚠️ 시도 ${attempt} 실패: ${result.error}`);
+        }
+        
+      } catch (error) {
+        lastError = error;
+        console.error(`❌ 시도 ${attempt} 중 오류:`, error);
+        
+        // 페이지 오류 감지
+        const hasPageError = await this.checkPageError();
+        if (hasPageError) {
+          console.log('🚨 페이지 오류 감지 - 메인 페이지로 이동 후 모델 재선택 필요');
+          needsModelSelection = true; // 페이지 오류 복구 후 모델 선택 필요
+          try {
+            await this.page!.goto('https://www.perplexity.ai', { 
+              waitUntil: 'networkidle0',
+              timeout: 60000 
+            });
+            await this.randomDelay(2000, 4000);
+          } catch (gotoError) {
+            console.error('❌ 메인 페이지 이동 실패:', gotoError);
+          }
+        } else {
+          // 페이지 오류가 아니면 모델 선택 건너뜀
+          needsModelSelection = false;
+        }
+        
+        // 마지막 시도면 종료
+        if (attempt === maxRetries) {
+          break;
+        }
+      }
+    }
+
+    return {
+      success: false,
+      error: lastError?.message || String(lastError) || '평가 실패',
+      youtubeLink: 'failed'
+    };
+  }
+
+  private async _processEvaluationInternal(restaurantData: string, promptTemplate: string, needsModelSelection: boolean = true): Promise<ProcessingResult> {
     if (!this.page || !this.browser) {
       throw new Error('브라우저가 초기화되지 않았습니다');
     }
@@ -757,6 +1195,9 @@ export class PerplexityEvaluator {
         throw new Error('로그인을 완료할 수 없습니다. 수동으로 로그인해주세요.');
       }
 
+      // 랜덤 대기
+      await this.randomDelay(1000, 2000);
+
       // 퍼플렉시티 페이지로 이동
       console.log('🌐 퍼플렉시티로 이동 중...');
       const response = await this.page.goto('https://www.perplexity.ai/', {
@@ -769,6 +1210,15 @@ export class PerplexityEvaluator {
       }
 
       console.log('✅ 페이지 로드 완료');
+
+      // 페이지 오류 감지
+      const hasError = await this.checkPageError();
+      if (hasError) {
+        throw new Error('페이지 로드 중 오류 발생 (ERR_FAILED)');
+      }
+
+      // 랜덤 대기
+      await this.randomDelay(1000, 2000);
 
       // 최종 로그인 상태 확인 (프롬프트 입력 전 필수)
       console.log('🔍 최종 로그인 상태 확인 중...');
@@ -863,13 +1313,25 @@ export class PerplexityEvaluator {
 
       console.log('✅ 준비 완료 - 평가 시작');
 
-      // Gemini Pro 2.5 모델 선택
-      console.log('🤖 Gemini Pro 2.5 모델 선택 중...');
-      await this.selectGeminiProModel();
+      // 랜덤 대기
+      await this.randomDelay(500, 1500);
+
+      // Gemini Pro 2.5 모델 선택 (필요한 경우에만)
+      if (needsModelSelection) {
+        console.log('🤖 Gemini Pro 2.5 모델 선택 중...');
+        await this.selectGeminiProModel();
+        // 랜덤 대기
+        await this.randomDelay(1000, 2000);
+      } else {
+        console.log('⏩ 모델 선택 건너뜀 (이미 선택됨)');
+      }
 
       // 입력 필드 찾기 및 프롬프트 입력
       console.log('⌨️ 프롬프트 입력 중...');
       await this.typePromptLikeHuman(promptTemplate);
+
+      // 랜덤 대기
+      await this.randomDelay(1000, 2000);
 
       // 결과 대기 및 추출
       console.log('⏳ 결과 대기 중...');
@@ -941,30 +1403,28 @@ export class PerplexityEvaluator {
 
       // 프롬프트를 줄 단위로 나누기
       const lines = prompt.split('\n');
-      console.log(`📄 총 ${lines.length}줄 입력 예정`);
 
       // 각 줄을 Shift+Enter로 입력 (첫 줄 제외)
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
-        console.log(`📝 줄 ${i + 1}/${lines.length} 입력 중: "${line.substring(0, 50)}${line.length > 50 ? '...' : ''}"`);
 
         // 첫 줄이 아니면 Shift+Enter로 줄바꿈
         if (i > 0) {
           await this.page!.keyboard.down('Shift');
           await this.page!.keyboard.press('Enter');
           await this.page!.keyboard.up('Shift');
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 50)); // 200ms → 50ms
         }
 
-        // 현재 줄 입력 (사람처럼 타이핑)
+        // 현재 줄 입력 (빠르게 타이핑)
         for (let j = 0; j < line.length; j++) {
           await this.page!.type(inputSelector, line[j]);
-          // 30-80ms 랜덤 간격 (더 빠르게)
-          await new Promise(resolve => setTimeout(resolve, Math.random() * 50 + 30));
+          // 10-20ms 랜덤 간격 (훨씬 빠르게)
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 10 + 10));
         }
 
         // 줄 입력 완료 후 잠시 대기
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, 50)); // 200ms → 50ms
       }
 
       // 입력 완료 후 값 확인
@@ -974,12 +1434,12 @@ export class PerplexityEvaluator {
 
       // 전송 방법 1: Enter 키
       console.log('🚀 Enter 키로 전송 시도...');
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300)); // 500ms → 300ms
       await this.page!.keyboard.press('Enter');
 
       // 전송 확인 대기 (결과가 나타날 때까지)
       console.log('⏳ 전송 결과 대기 중...');
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 2000ms → 1000ms
 
       // 전송 버튼 찾기 및 클릭 (Enter가 안 먹힐 경우)
       console.log('🔍 전송 버튼 찾는 중...');
@@ -1017,90 +1477,186 @@ export class PerplexityEvaluator {
     }
   }
 
-  private async waitForAndExtractResult(): Promise<RestaurantEvaluation[] | null> {
+  private async waitForAndExtractResult(): Promise<any | null> {
     try {
-      // 결과가 나타날 때까지 대기 - 여러 selector 시도
-      const resultSelectors = [
-        '.prose',
-        '[data-testid="response"]',
-        '.response',
-        '.message',
-        '.answer',
-        '[class*="response"]',
-        '[class*="answer"]'
-      ];
-
-      let foundSelector = '';
-      for (const selector of resultSelectors) {
-        try {
-          await this.page!.waitForSelector(selector, { timeout: 5000 });
-          foundSelector = selector;
-          console.log(`✅ 결과 영역 발견: ${selector}`);
-          break;
-        } catch (e) {
-          // 다음 selector 시도
-        }
-      }
-
-      if (!foundSelector) {
-        console.log('⚠️ 결과 영역을 찾을 수 없어 일반적인 텍스트 추출 시도');
-        // 페이지가 로드될 때까지 잠시 대기
-        await new Promise(resolve => setTimeout(resolve, 3000));
-      }
-
-      // 결과 텍스트 추출
-      const resultText = await this.page!.evaluate(() => {
-        // 다양한 방법으로 텍스트 추출 시도
-        const selectors = [
-          '.prose',
-          '[data-testid="response"]',
-          '.response',
-          '.message',
-          '.answer',
-          '[class*="response"]',
-          '[class*="answer"]',
-          'article',
-          'main',
-          'body'
-        ];
-
-        for (const selector of selectors) {
-          const elements = document.querySelectorAll(selector);
-          if (elements.length > 0) {
-            let text = '';
-            elements.forEach(element => {
-              text += element.textContent + '\n';
-            });
-            if (text.trim().length > 50) { // 의미 있는 텍스트가 있는 경우
-              return text.trim();
+      console.log('⏳ "Assistant steps" 텍스트가 나타날 때까지 대기 중...');
+      
+      // "Assistant steps" 텍스트 대기 (최대 6분 = 360초)
+      let assistantStepsFound = false;
+      let attempts = 0;
+      const maxAttempts = 360; // 6분 동안 1초마다 확인
+      
+      while (!assistantStepsFound && attempts < maxAttempts) {
+        attempts++;
+        
+        assistantStepsFound = await this.page!.evaluate(() => {
+          const allElements = Array.from(document.querySelectorAll('*'));
+          for (const el of allElements) {
+            const text = el.textContent?.trim() || '';
+            if (text === 'Assistant steps' || text.includes('Assistant steps')) {
+              console.log('✅ "Assistant steps" 텍스트 발견!');
+              return true;
             }
           }
+          return false;
+        });
+        
+        if (!assistantStepsFound) {
+          // 1분마다 진행 상황 로그
+          if (attempts % 60 === 0) {
+            console.log(`⏳ ${attempts / 60}분 경과... "Assistant steps" 대기 중...`);
+          }
+          await new Promise(resolve => setTimeout(resolve, 1000)); // 1초 대기 후 재시도
         }
-
-        // fallback: body 텍스트
-        return document.body.textContent || '';
+      }
+      
+      if (!assistantStepsFound) {
+        console.log('❌ 6분 동안 "Assistant steps" 텍스트를 찾을 수 없음 - 타임아웃');
+        return null; // 타임아웃 시 null 반환 (에러로 처리됨)
+      }
+      
+      // 응답이 완전히 생성될 때까지 충분히 대기 (5-8초 랜덤)
+      const waitTime = Math.floor(Math.random() * 3000) + 5000; // 5000-8000ms
+      console.log(`✅ "Assistant steps" 발견! 응답 완료 대기 중 (${Math.floor(waitTime/1000)}초)...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+      
+      // code 블록 찾기 및 span 수집
+      console.log('🔍 code 블록 찾는 중...');
+      
+      const extractResult = await this.page!.evaluate(() => {
+        // code 태그 찾기 (markdown-content 내부)
+        const codeElements = Array.from(document.querySelectorAll('code'));
+        
+        console.log(`발견된 code 요소: ${codeElements.length}개`);
+        
+        // code 블록 필터링: 
+        // 1. white-space: pre 스타일 (인라인 또는 computed)
+        // 2. span이 10개 이상
+        // 3. JSON 형태로 보이는지 확인 ({ 로 시작)
+        const validCodeBlocks = codeElements.filter(code => {
+          const inlineStyle = code.getAttribute('style') || '';
+          const computedStyle = window.getComputedStyle(code);
+          const hasPreStyle = inlineStyle.includes('white-space: pre') || 
+                             inlineStyle.includes('white-space:pre') ||
+                             computedStyle.whiteSpace === 'pre';
+          
+          const spanCount = code.querySelectorAll('span').length;
+          const hasEnoughSpans = spanCount > 10;
+          
+          // 첫 번째 span의 텍스트가 { 로 시작하는지 확인 (JSON)
+          const firstSpan = code.querySelector('span');
+          const looksLikeJSON = firstSpan?.textContent?.trim().startsWith('{');
+          
+          console.log(`code 블록 검사: preStyle=${hasPreStyle}, spans=${spanCount}, JSON=${looksLikeJSON}`);
+          
+          return hasPreStyle && hasEnoughSpans && looksLikeJSON;
+        });
+        
+        console.log(`유효한 code 블록: ${validCodeBlocks.length}개`);
+        
+        if (validCodeBlocks.length === 0) {
+          // 디버깅: 모든 code 요소 정보 출력
+          codeElements.forEach((code, idx) => {
+            const style = code.getAttribute('style') || '';
+            const spanCount = code.querySelectorAll('span').length;
+            const preview = code.textContent?.substring(0, 50) || '';
+            console.log(`code[${idx}]: style="${style}", spans=${spanCount}, preview="${preview}"`);
+          });
+          return { success: false, error: 'code 블록을 찾을 수 없음', codeCount: codeElements.length };
+        }
+        
+        if (validCodeBlocks.length > 1) {
+          return { success: false, error: `code 블록이 ${validCodeBlocks.length}개로 2개 이상 발견됨`, codeCount: validCodeBlocks.length };
+        }
+        
+        // 유일한 code 블록에서 모든 span 수집
+        const codeBlock = validCodeBlocks[0];
+        const spans = Array.from(codeBlock.querySelectorAll('span'));
+        
+        console.log(`span 개수: ${spans.length}개`);
+        
+        // 모든 span의 textContent를 수집 (빈 문자열 포함)
+        const spanTexts = spans.map(span => span.textContent || '');
+        
+        // \n으로 연결하지 않고 그대로 join (span이 줄바꿈을 포함하고 있음)
+        const jsonText = spanTexts.join('');
+        
+        console.log(`추출된 JSON 텍스트 길이: ${jsonText.length}자`);
+        console.log(`JSON 미리보기: ${jsonText.substring(0, 200)}...`);
+        
+        return { success: true, jsonText, codeCount: validCodeBlocks.length };
       });
 
-      if (!resultText || resultText.length < 10) {
-        console.log('⚠️ 추출된 텍스트가 너무 짧거나 없음');
+      if (!extractResult.success) {
+        console.log(`❌ ${extractResult.error}`);
         return null;
       }
 
-      console.log(`📝 추출된 텍스트 길이: ${resultText.length}자`);
+      if (!extractResult.jsonText) {
+        console.log('❌ JSON 텍스트가 비어있음');
+        return null;
+      }
 
-      // 결과를 파싱해서 RestaurantEvaluation 형식으로 변환
-      const evaluation: RestaurantEvaluation = {
-        restaurant_name: '평가 대상 식당', // 실제로는 결과에서 추출
-        evaluation_score: this.extractScoreFromText(resultText),
-        evaluation_reason: resultText,
-        evaluation_date: new Date().toISOString(),
-        evaluator: 'Perplexity AI'
-      };
-
-      return [evaluation];
+      console.log(`✅ code 블록에서 텍스트 추출 완료 (${extractResult.jsonText.length}자)`);
+      
+      // JSON 파싱 시도
+      console.log('🔄 JSON 파싱 중...');
+      let parsedData: any;
+      
+      try {
+        parsedData = JSON.parse(extractResult.jsonText);
+        console.log('✅ JSON 파싱 성공');
+      } catch (parseError) {
+        console.log(`❌ JSON 파싱 실패: ${parseError}`);
+        console.log(`📄 추출된 텍스트:\n${extractResult.jsonText}`);
+        return null;
+      }
+      
+      // 필수 키 5개 존재 확인
+      const requiredKeys = [
+        'visit_authenticity',
+        'rb_inference_score',
+        'rb_grounding_TF',
+        'review_faithfulness_score',
+        'category_TF'
+      ];
+      
+      const missingKeys = requiredKeys.filter(key => !(key in parsedData));
+      
+      if (missingKeys.length > 0) {
+        console.log(`❌ 필수 키 누락: ${missingKeys.join(', ')}`);
+        return null;
+      }
+      
+      console.log('✅ 모든 필수 키 존재 확인');
+      
+      // visit_authenticity 구조 검증 (values, missing 필드 필요)
+      if (!parsedData.visit_authenticity || 
+          typeof parsedData.visit_authenticity !== 'object' ||
+          !Array.isArray(parsedData.visit_authenticity.values) ||
+          !Array.isArray(parsedData.visit_authenticity.missing)) {
+        console.log('❌ visit_authenticity 구조 오류: {values: [], missing: []} 형식이 필요합니다');
+        console.log(`📄 실제 데이터: ${JSON.stringify(parsedData.visit_authenticity)}`);
+        return null;
+      }
+      
+      // 나머지 4개는 배열 구조 검증
+      const arrayKeys = ['rb_inference_score', 'rb_grounding_TF', 'review_faithfulness_score', 'category_TF'];
+      for (const key of arrayKeys) {
+        if (!Array.isArray(parsedData[key])) {
+          console.log(`❌ ${key} 구조 오류: 배열이 아닙니다`);
+          console.log(`📄 실제 데이터: ${JSON.stringify(parsedData[key])}`);
+          return null;
+        }
+      }
+      
+      console.log('✅ 데이터 구조 검증 완료');
+      
+      // 파싱된 데이터 반환
+      return parsedData;
 
     } catch (error) {
-      console.error('결과 추출 실패:', error);
+      console.error('❌ 결과 추출 실패:', error);
       return null;
     }
   }

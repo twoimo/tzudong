@@ -7,8 +7,7 @@ import { config } from 'dotenv';
 config();
 
 // 평가 프롬프트 템플릿
-const EVALUATION_PROMPT_TEMPLATE = `
-당신은 유튜브 음식 리뷰 데이터를 평가하는 전문가입니다.  
+const EVALUATION_PROMPT_TEMPLATE = `당신은 유튜브 음식 리뷰 데이터를 평가하는 전문가입니다.  
 입력으로 주어지는 <평가할 데이터>는 한 유튜브 영상에서 유튜버가 방문한 음식점 데이터(restaurant 리스트 포함)입니다.  
 영상 내용, reasoning_basis, tzuyang_review, category를 종합적으로 검토하여 아래의 5개 평가 항목에 대해 판단하세요.(검색 시도 금지)
 **추측이나 새로운 정보 추가는 절대 금지하며, 반드시 아래 <평가 루브릭>의 평가기준·평가대상·출력형식을 그대로 따르세요.**
@@ -105,7 +104,7 @@ const EVALUATION_PROMPT_TEMPLATE = `
 - 최종 출력은 **반드시 5개의 평가 항목(visit_authenticity, rb_inference_score, rb_grounding_TF, review_faithfulness_score, category_TF)를 key로 하고, 그 평가 결과를 값으로 하는 단일 JSON 객체만 반환(다른 설명/언급 절대 금지).**
 - 출력 예시:
 {
-  "visit_authenticity": {"빈해원":1, "복성루":1, "지린성":1, "missing":[]},
+  "visit_authenticity": {"values": [{"name": "빈해원", "eval_value": 1, "eval_basis": "간판+내부 확인"}, {"name": "복성루", "eval_value": 1, "eval_basis": "착석 장면 존재"}, {"name": "지린성", "eval_value": 1, "eval_basis": "주문 장면 확인"}], "missing": []}},
   "rb_inference_score": [...],
   "rb_grounding_TF": [...],
   "review_faithfulness_score": [...],
@@ -140,9 +139,32 @@ function askUser(question: string): Promise<string> {
 async function main() {
   console.log('🍽️ Perplexity 식당 평가 시스템 시작\n');
 
-  let evaluator: PerplexityEvaluator | null = null;
+  let evaluators: PerplexityEvaluator[] = [];
 
   try {
+    // 병렬 처리 개수 선택
+    console.log('\n병렬 처리할 브라우저 개수를 선택하세요:');
+    console.log('  1 - 1개 (순차 처리)');
+    console.log('  3 - 3개 (병렬 처리)');
+    console.log('  5 - 5개 (병렬 처리)');
+    const parallelChoice = await askUser('선택 (1/3/5): ');
+    
+    let parallelCount = 1; // 기본값
+    const choiceNum = parseInt(parallelChoice.trim());
+    
+    if (choiceNum === 1) {
+      parallelCount = 1;
+    } else if (choiceNum === 3) {
+      parallelCount = 3;
+    } else if (choiceNum === 5) {
+      parallelCount = 5;
+    } else {
+      console.log(`⚠️ 잘못된 선택: "${parallelChoice}" - 기본값 1개로 진행합니다.`);
+      parallelCount = 1;
+    }
+    
+    console.log(`\n✅ ${parallelCount}개 브라우저로 병렬 처리 시작\n`);
+
     // 입력 파일에서 데이터 읽기
     const inputFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_rule_results.jsonl');
     console.log(`📂 입력 파일 읽기: ${inputFilePath}`);
@@ -152,17 +174,25 @@ async function main() {
 
     console.log(`📋 총 ${lines.length}개의 레코드를 발견했습니다.\n`);
 
-    // 브라우저 초기화
-    console.log('🚀 브라우저 초기화 중...');
-    evaluator = new PerplexityEvaluator();
-    await evaluator.initialize();
+    // 여러 브라우저 초기화
+    console.log(`🚀 ${parallelCount}개의 브라우저 초기화 중...`);
+    for (let i = 0; i < parallelCount; i++) {
+      const evaluator = new PerplexityEvaluator();
+      await evaluator.initialize();
+      evaluators.push(evaluator);
+      console.log(`✅ 브라우저 ${i + 1}/${parallelCount} 초기화 완료`);
+    }
 
-    // JSONL 프로세서 초기화 (더 이상 사용하지 않음)
+    // 평가할 레코드 (테스트용으로 6개)
+    const maxRecords = 6;
+    const recordsToProcess = lines.slice(0, Math.min(lines.length, maxRecords));
+    
+    console.log(`\n🎯 ${recordsToProcess.length}개의 레코드를 ${parallelCount}개 브라우저로 처리합니다.\n`);
 
-    // 각 레코드에 대해 평가 수행 (테스트를 위해 첫 2개만)
-    const maxRecords = 2; // 테스트용으로 2개만 처리
-    for (let i = 0; i < Math.min(lines.length, maxRecords); i++) {
-      const line = lines[i];
+    // 병렬 처리 함수
+    const processRecord = async (evaluator: PerplexityEvaluator, recordIndex: number) => {
+      const line = recordsToProcess[recordIndex];
+      
       try {
         const record = JSON.parse(line.trim());
 
@@ -176,15 +206,15 @@ async function main() {
         );
 
         if (restaurantsToEvaluate.length === 0) {
-          console.log(`⏭️ 레코드 ${i + 1}/${lines.length} 건너뜀 - 평가 대상 음식점 없음`);
-          continue;
+          console.log(`⏭️ 레코드 ${recordIndex + 1} 건너뜀 - 평가 대상 음식점 없음`);
+          return;
         }
 
-        console.log(`\n🏪 레코드 ${i + 1}/${lines.length} 평가 시작`);
+        console.log(`\n🏪 레코드 ${recordIndex + 1}/${recordsToProcess.length} 평가 시작`);
         console.log(`📝 유튜브 링크: ${record.youtube_link}`);
         console.log(`🍽️ 평가 대상 음식점: ${restaurantsToEvaluate.map((r: any) => r.name).join(', ')}`);
 
-        // 평가용 데이터 구조 생성
+        // 평가용 데이터 구조 생성 (Thread 정리는 배치 시작 시에만 수행됨)
         const evaluationData = {
           youtube_link: record.youtube_link,
           restaurants: restaurantsToEvaluate
@@ -199,13 +229,17 @@ async function main() {
         const result = await evaluator.processEvaluation(record.youtube_link, prompt);
 
         if (result.success && result.data) {
+          // 기존 레코드에 evaluation_results 병합
+          const updatedRecord = {
+            ...record,
+            evaluation_results: {
+              ...(record.evaluation_results || {}),
+              ...result.data
+            }
+          };
+
           // 결과를 JSONL 파일에 한 줄씩 저장
-          const resultLine = JSON.stringify({
-            youtube_link: record.youtube_link,
-            evaluation_target: record.evaluation_target,
-            restaurants: restaurantsToEvaluate,
-            evaluations: result.data
-          }) + '\n';
+          const resultLine = JSON.stringify(updatedRecord) + '\n';
 
           // 결과 파일에 추가
           const { writeFileSync, appendFileSync, existsSync } = await import('fs');
@@ -216,18 +250,68 @@ async function main() {
           }
           appendFileSync(resultFilePath, resultLine, 'utf-8');
 
-          console.log(`✅ 레코드 ${i + 1} 평가 완료 및 저장됨`);
-        } else {
-          console.log(`❌ 레코드 ${i + 1} 평가 실패: ${result.error}`);
+          console.log(`✅ 레코드 ${recordIndex + 1} 평가 완료 및 저장됨`);
+        } else if (result.error) {
+          console.log(`❌ 레코드 ${recordIndex + 1} 평가 실패: ${result.error}`);
+          
+          // 에러 발생 시 에러 로그 파일에 저장
+          const { appendFileSync, existsSync, writeFileSync } = await import('fs');
+          const errorFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_errors.jsonl');
+          
+          if (!existsSync(errorFilePath)) {
+            writeFileSync(errorFilePath, '', 'utf-8');
+          }
+          
+          const errorLine = JSON.stringify({
+            ...record,
+            error: result.error
+          }) + '\n';
+          
+          appendFileSync(errorFilePath, errorLine, 'utf-8');
         }
 
-        // 다음 요청 전 잠시 대기 (API 호출 제한 방지)
-        console.log('⏳ 다음 평가를 위해 5초 대기...');
-        await new Promise(resolve => setTimeout(resolve, 5000));
-
       } catch (parseError) {
-        console.error(`❌ 레코드 ${i + 1} JSON 파싱 실패:`, parseError);
-        continue;
+        console.error(`❌ 레코드 ${recordIndex + 1} JSON 파싱 실패:`, parseError);
+      }
+    };
+
+    // 병렬 처리 실행
+    let currentRecordIndex = 0;
+    const activePromises: Promise<void>[] = [];
+    let isFirstBatch = true;
+
+    while (currentRecordIndex < recordsToProcess.length) {
+      // 배치 시작 시 첫 번째 브라우저에서만 Delete All 수행
+      if (isFirstBatch || currentRecordIndex % parallelCount === 0) {
+        const firstEvaluator = evaluators[0];
+        console.log('\n🧹 [배치 시작] 첫 번째 브라우저에서 쓰레드 정리 중...');
+        try {
+          await firstEvaluator.deleteAllThreads();
+        } catch (deleteError) {
+          console.error('⚠️ 쓰레드 삭제 실패 (계속 진행):', deleteError);
+        }
+        isFirstBatch = false;
+      }
+
+      // 각 브라우저에 작업 할당
+      for (let i = 0; i < parallelCount && currentRecordIndex < recordsToProcess.length; i++) {
+        const evaluator = evaluators[i];
+        const recordIndex = currentRecordIndex;
+        
+        const promise = processRecord(evaluator, recordIndex);
+        activePromises.push(promise);
+        
+        currentRecordIndex++;
+      }
+
+      // 현재 배치의 모든 작업이 완료될 때까지 대기
+      await Promise.all(activePromises);
+      activePromises.length = 0; // 배열 초기화
+
+      // 다음 배치 전 잠시 대기
+      if (currentRecordIndex < recordsToProcess.length) {
+        console.log('⏳ 다음 배치를 위해 3초 대기...');
+        await new Promise(resolve => setTimeout(resolve, 3000));
       }
     }
 
@@ -236,9 +320,15 @@ async function main() {
   } catch (error) {
     console.error('❌ 오류 발생:', error);
   } finally {
-    // 브라우저 종료
-    if (evaluator) {
-      await evaluator.close();
+    // 모든 브라우저 종료
+    console.log('\n🔄 브라우저 종료 중...');
+    for (let i = 0; i < evaluators.length; i++) {
+      try {
+        await evaluators[i].close();
+        console.log(`✅ 브라우저 ${i + 1}/${evaluators.length} 종료 완료`);
+      } catch (e) {
+        console.error(`❌ 브라우저 ${i + 1} 종료 실패:`, e);
+      }
     }
 
     // 프로그램 종료 대기
