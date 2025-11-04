@@ -11,6 +11,7 @@ import GlobalMapPage from "./pages/GlobalMapPage";
 import FilteringPage from "./pages/FilteringPage";
 import ReviewsPage from "./pages/ReviewsPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
+import StampPage from "./pages/StampPage";
 import ServerCostsPage from "./pages/ServerCostsPage";
 import RestaurantSubmissionsPage from "./pages/RestaurantSubmissionsPage";
 import AdminSubmissionsPage from "./pages/AdminSubmissionsPage";
@@ -87,6 +88,7 @@ function AppLayout() {
             <Route path="/" element={<Index refreshTrigger={refreshTrigger} selectedRestaurant={selectedRestaurant} setSelectedRestaurant={setSelectedRestaurant} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} selectedRestaurant={selectedRestaurant} setSelectedRestaurant={setSelectedRestaurant} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/filtering" element={<FilteringPage onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
+            <Route path="/stamp" element={<StampPage />} />
             <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/submissions" element={<RestaurantSubmissionsPage />} />
