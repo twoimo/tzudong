@@ -33,6 +33,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 // 지역 목록
 const REGIONS = [
@@ -339,32 +340,32 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         (filters.fanVisitsMin > 0 ? 1 : 0);
 
     return (
-        <div className="flex h-full bg-background">
+        <PanelGroup direction="horizontal" className="h-full bg-background">
             {/* Left Panel - Filtering */}
-            <div className="flex-1 flex flex-col min-w-0 border-r border-border">
+            <Panel defaultSize={60} minSize={30} maxSize={80} className="flex flex-col min-w-0">
                 {/* Header */}
                 <div className="border-b border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-                                    <Filter className="h-6 w-6 text-primary" />
-                                    쯔동여지도 필터링
-                                </h1>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                총 {filteredAndSortedRestaurants.length}개의 맛집
-                                {activeFilterCount > 0 && (
-                                    <span className="ml-2 text-primary font-medium">
-                                        ({activeFilterCount}개 필터 적용 중)
-                                    </span>
-                                )}
-                            </p>
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                                <Filter className="h-6 w-6 text-primary" />
+                                쯔동여지도 필터링
+                            </h1>
                         </div>
-                        <Button variant="outline" onClick={handleResetFilters}>
-                            필터 초기화
-                        </Button>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            총 {filteredAndSortedRestaurants.length}개의 맛집
+                            {activeFilterCount > 0 && (
+                                <span className="ml-2 text-primary font-medium">
+                                    ({activeFilterCount}개 필터 적용 중)
+                                </span>
+                            )}
+                        </p>
                     </div>
+                    <Button variant="outline" onClick={handleResetFilters}>
+                        필터 초기화
+                    </Button>
+                </div>
 
                     {/* Filter Controls */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
@@ -614,13 +615,19 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     ))
                                 )}
                             </TableBody>
-                        </Table>
-                    </ScrollArea>
-                </div>
+                    </Table>
+                </ScrollArea>
             </div>
 
+            </Panel>
+
+            {/* Resize Handle */}
+            <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
+                <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
+            </PanelResizeHandle>
+
             {/* Right Panel - Reviews */}
-            <div className="w-96 flex flex-col bg-card border-l border-border">
+            <Panel defaultSize={40} minSize={20} maxSize={70} className="flex flex-col bg-card">
                 <div className="border-b border-border p-6">
                     <div className="flex items-center gap-3">
                         <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
@@ -764,7 +771,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         </ScrollArea>
                     )}
                 </div>
-            </div>
+            </Panel>
 
             {/* Review Modal */}
             <ReviewModal
@@ -776,7 +783,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
                 }}
             />
-        </div>
+        </PanelGroup>
     );
 };
 
