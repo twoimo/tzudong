@@ -275,7 +275,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         }
 
 
-        // 쯔양 팬 방문 (리뷰) 횟수 필터
+        // 리뷰 횟수 필터
         if (filters.fanVisitsMin > 0) {
             result = result.filter(r => (r.review_count || 0) >= filters.fanVisitsMin);
         }
@@ -454,16 +454,16 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         </Popover>
 
 
-                        {/* 쯔양 팬 방문횟수 */}
+                        {/* 리뷰 횟수 */}
                         <Select
                             value={filters.fanVisitsMin.toString()}
                             onValueChange={(v) => setFilters({ ...filters, fanVisitsMin: parseInt(v) })}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="쯔양 팬 방문" />
+                                <SelectValue placeholder="리뷰" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="0">쯔양 팬 방문 (전체)</SelectItem>
+                                <SelectItem value="0">리뷰 (전체)</SelectItem>
                                 <SelectItem value="10">10회 이상</SelectItem>
                                 <SelectItem value="50">50회 이상</SelectItem>
                                 <SelectItem value="100">100회 이상</SelectItem>
@@ -494,7 +494,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             ))}
                             {filters.fanVisitsMin > 0 && (
                                 <Badge variant="secondary">
-                                    쯔양 팬 {filters.fanVisitsMin}회+
+                                    리뷰 {filters.fanVisitsMin}회+
                                 </Badge>
                             )}
                         </div>
@@ -536,7 +536,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             onClick={() => handleSort("fanVisits")}
                                             className="hover:bg-accent w-full justify-center"
                                         >
-                                            쯔양 팬 방문 (리뷰)
+                                            리뷰
                                             {getSortIcon("fanVisits")}
                                         </Button>
                                     </TableHead>
