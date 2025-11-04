@@ -164,8 +164,8 @@ const StampPage = () => {
         return userReviews.has(restaurantId);
     };
 
-    // 방문한 맛집 수 계산 (실제 방문한 리뷰 개수로 계산)
-    const visitedCount = userReviewData.length;
+    // 방문한 맛집 수 계산 (고유한 맛집 개수로 계산 - 중복 방문은 1개로 계산)
+    const visitedCount = userReviewData.length > 0 ? new Set(userReviewData.map(review => review.restaurant_id)).size : 0;
     const totalCount = totalRestaurantsCount;
 
     if (isLoading) {
