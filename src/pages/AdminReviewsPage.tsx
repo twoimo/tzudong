@@ -70,8 +70,10 @@ export default function AdminReviewsPage() {
         isFetchingNextPage,
         error: queryError
     } = useInfiniteQuery({
-        queryKey: ['admin-reviews'],
+        queryKey: ['admin-reviews', isAdmin],
         queryFn: async ({ pageParam = 0 }) => {
+            if (!user || !isAdmin) return { reviews: [], nextCursor: null };
+
             console.log('🔍 리뷰 데이터 조회 시작... 페이지:', pageParam);
 
             // 1. 리뷰 데이터 가져오기 (페이지별)
@@ -133,9 +135,12 @@ export default function AdminReviewsPage() {
                 nextCursor,
             };
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage) => {
+            if (!lastPage) return undefined;
+            return lastPage.nextCursor ?? undefined;
+        },
         initialPageParam: 0,
-        enabled: !!user && !!isAdmin,
+        enabled: !!user,
     });
 
     // 모든 페이지를 평탄화하여 하나의 배열로 만들기

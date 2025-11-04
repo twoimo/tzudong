@@ -70,8 +70,10 @@ export default function AdminSubmissionsPage() {
         isFetchingNextPage,
         error: queryError
     } = useInfiniteQuery({
-        queryKey: ['admin-submissions'],
+        queryKey: ['admin-submissions', isAdmin],
         queryFn: async ({ pageParam = 0 }) => {
+            if (!user || !isAdmin) return { submissions: [], nextCursor: null };
+
             console.log('🔍 제보 데이터 조회 시작... 페이지:', pageParam);
 
             // 1. 제보 데이터 가져오기 (페이지별)
@@ -122,9 +124,12 @@ export default function AdminSubmissionsPage() {
                 nextCursor,
             };
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage) => {
+            if (!lastPage) return undefined;
+            return lastPage.nextCursor ?? undefined;
+        },
         initialPageParam: 0,
-        enabled: !!user && !!isAdmin,
+        enabled: !!user,
     });
 
     // 모든 페이지를 평탄화하여 하나의 배열로 만들기
