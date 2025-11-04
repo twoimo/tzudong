@@ -6,6 +6,7 @@ import { Restaurant, Region } from "@/types/restaurant";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -442,33 +443,73 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         );
     }
 
+    // 그리드 모드에서는 기존 레이아웃 유지
+    if (isGridMode) {
+        return (
+            <div className="relative h-full">
+                {/* 지도 컨테이너 */}
+                <div ref={mapRef} className="w-full h-full" />
+
+                {/* 로딩 상태 표시 */}
+                {(isLoadingRestaurants || !isLoaded) && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <span className="text-sm font-medium">
+                            {!isLoaded ? '지도 로딩 중...' : '맛집 검색 중...'}
+                        </span>
+                    </div>
+                )}
+
+                {/* 레스토랑 개수 표시 */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                            🔥 {restaurants.length}개의 맛집 발견
+                        </span>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    // 단일 지도 모드에서는 resizable 패널 적용
     return (
-        <div className="relative h-full">
-            {/* 지도 컨테이너 */}
-            <div ref={mapRef} className="w-full h-full" />
+        <PanelGroup direction="horizontal" className="h-full">
+            {/* 지도 패널 */}
+            <Panel defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80} className="relative">
+                {/* 지도 컨테이너 */}
+                <div ref={mapRef} className="w-full h-full" />
 
-            {/* 로딩 상태 표시 */}
-            {(isLoadingRestaurants || !isLoaded) && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    <span className="text-sm font-medium">
-                        {!isLoaded ? '지도 로딩 중...' : '맛집 검색 중...'}
-                    </span>
-                </div>
+                {/* 로딩 상태 표시 */}
+                {(isLoadingRestaurants || !isLoaded) && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        <span className="text-sm font-medium">
+                            {!isLoaded ? '지도 로딩 중...' : '맛집 검색 중...'}
+                        </span>
+                    </div>
+                )}
+
+                {/* 레스토랑 개수 표시 */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                            🔥 {restaurants.length}개의 맛집 발견
+                        </span>
+                    </div>
+                )}
+            </Panel>
+
+            {/* Resize Handle */}
+            {selectedRestaurant && isPanelOpen && (
+                <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
+                    <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
+                </PanelResizeHandle>
             )}
 
-            {/* 레스토랑 개수 표시 */}
-            {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
-                    <span className="text-sm font-medium">
-                        🔥 {restaurants.length}개의 맛집 발견
-                    </span>
-                </div>
-            )}
-
-            {/* 레스토랑 상세 패널 - 그리드 모드에서는 간소화된 모달로 표시 */}
-            {!isGridMode && selectedRestaurant && isPanelOpen && (
-                <div className="absolute right-0 top-0 h-full w-96 z-20 shadow-xl">
+            {/* 레스토랑 상세 패널 */}
+            {selectedRestaurant && isPanelOpen && (
+                <Panel defaultSize={25} minSize={20} maxSize={60}>
                     <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
                         onClose={() => setIsPanelOpen(false)}
@@ -482,7 +523,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                             onRequestEditRestaurant(selectedRestaurant);
                         } : undefined}
                     />
-                </div>
+                </Panel>
             )}
 
 
@@ -496,7 +537,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     toast.success("리뷰가 성공적으로 등록되었습니다!");
                 }}
             />
-        </div>
+        </PanelGroup>
     );
 });
 
