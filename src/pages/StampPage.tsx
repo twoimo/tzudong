@@ -165,7 +165,7 @@ const StampPage = () => {
                                 }}
                             >
                                 {/* YouTube Thumbnail */}
-                                <div className="aspect-[4/3] relative">
+                                <div className="aspect-video relative">
                                     {thumbnailUrl ? (
                                         <>
                                             <img
@@ -194,21 +194,9 @@ const StampPage = () => {
 
                                 {/* Restaurant Info */}
                                 <div className="p-3">
-                                    <h3 className="text-xs font-medium line-clamp-2 mb-1" title={restaurant.name}>
+                                    <h3 className="text-xs font-medium line-clamp-2" title={restaurant.name}>
                                         {restaurant.name}
                                     </h3>
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                        <span className="flex items-center gap-1">
-                                            <CheckCircle className="h-3 w-3" />
-                                            {restaurant.review_count}
-                                        </span>
-                                        {visited && (
-                                            <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
-                                                <CheckCircle className="h-2 w-2 mr-0.5" />
-                                                방문
-                                            </Badge>
-                                        )}
-                                    </div>
                                 </div>
                             </Card>
                         );
