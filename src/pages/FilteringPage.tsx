@@ -84,6 +84,93 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
+    // 전체 리뷰 중 좋아요가 가장 많은 리뷰들 조회 (초기 화면용)
+    const { data: topLikedReviews = [], isLoading: topReviewsLoading } = useQuery({
+        queryKey: ['top-liked-reviews'],
+        queryFn: async () => {
+            try {
+                // 1. 승인된 모든 리뷰 조회
+                const { data: allReviews, error: reviewsError } = await supabase
+                    .from('reviews')
+                    .select('*')
+                    .eq('is_verified', true)
+                    .order('is_pinned', { ascending: false })
+                    .order('created_at', { ascending: false })
+                    .limit(50); // 최대 50개 리뷰 조회
+
+                if (reviewsError) {
+                    console.error('전체 리뷰 조회 실패:', reviewsError);
+                    return [];
+                }
+
+                if (!allReviews || allReviews.length === 0) {
+                    return [];
+                }
+
+                // 2. 필요한 user_id 수집
+                const userIds = [...new Set(allReviews.map(r => r.user_id))];
+
+                // 3. Profiles 가져오기
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('user_id, nickname')
+                    .in('user_id', userIds);
+
+                // 4. Map으로 변환
+                const profilesMap = new Map(
+                    (profilesData || []).map(p => [p.user_id, p.nickname])
+                );
+
+                // 5. 리뷰 좋아요 데이터 조회
+                const reviewIds = allReviews.map(r => r.id);
+                let likesData: any[] = [];
+                try {
+                    const { data, error } = await supabase
+                        .from('review_likes')
+                        .select('review_id, user_id')
+                        .in('review_id', reviewIds);
+
+                    if (!error && data) {
+                        likesData = data;
+                    }
+                } catch (error) {
+                    console.warn('review_likes 테이블이 존재하지 않음, 좋아요 수를 0으로 설정합니다:', error);
+                }
+
+                // 6. 좋아요 수 계산 및 정렬
+                const reviewsWithLikes = allReviews.map(review => {
+                    const likesForReview = likesData?.filter(like => like.review_id === review.id) || [];
+                    return {
+                        ...review,
+                        likeCount: likesForReview.length,
+                        userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                        restaurantName: '알 수 없음', // 전체 리뷰에서는 맛집 이름 표시 안 함
+                        restaurantCategories: [],
+                        visitedAt: review.visited_at,
+                        submittedAt: review.created_at || '',
+                        content: review.content,
+                        isVerified: review.is_verified || false,
+                        isPinned: review.is_pinned || false,
+                        isEditedByAdmin: review.is_edited_by_admin || false,
+                        admin_note: review.admin_note || null,
+                        photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+                        category: review.categories?.[0] || review.category,
+                        isLikedByUser: false,
+                    } as Review;
+                });
+
+                // 7. 좋아요 수로 내림차순 정렬 후 상위 10개 반환
+                return reviewsWithLikes
+                    .sort((a, b) => b.likeCount - a.likeCount)
+                    .slice(0, 10);
+
+            } catch (error) {
+                console.error('인기 리뷰 조회 중 오류:', error);
+                return [];
+            }
+        },
+    });
+
     // 선택된 맛집의 리뷰 조회
     const { data: restaurantReviews = [], isLoading: reviewsLoading } = useQuery({
         queryKey: ['restaurant-reviews', selectedRestaurant?.id],
@@ -674,24 +761,113 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     <div className="flex items-center gap-3">
                         <MessageSquare className="h-6 w-6 text-primary" />
                         <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                            {selectedRestaurant ? `${selectedRestaurant.name}` : "맛집 리뷰"}
+                            {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
                         </h2>
                     </div>
-                    {selectedRestaurant && (
+                    {selectedRestaurant ? (
                         <p className="text-sm text-muted-foreground mt-1">
                             {restaurantReviews.length}개의 리뷰
+                        </p>
+                    ) : (
+                        <p className="text-sm text-muted-foreground mt-1">
+                            좋아요가 가장 많은 리뷰들
                         </p>
                     )}
                 </div>
 
                 <div className="flex-1 overflow-hidden">
                     {!selectedRestaurant ? (
-                        <div className="flex items-center justify-center h-full p-8">
-                            <div className="text-center">
-                                <p className="text-muted-foreground">왼쪽에서 맛집을 선택해주세요</p>
-                                <p className="text-sm text-muted-foreground mt-2">리뷰를 확인할 수 있습니다</p>
+                        // 인기 리뷰 표시
+                        topReviewsLoading ? (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center">
+                                    <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                                    <p className="text-muted-foreground">인기 리뷰를 불러오는 중...</p>
+                                </div>
                             </div>
-                        </div>
+                        ) : topLikedReviews.length === 0 ? (
+                            <div className="flex items-center justify-center h-full p-8">
+                                <div className="text-center">
+                                    <p className="text-muted-foreground mb-4">아직 리뷰가 없습니다</p>
+                                    <p className="text-sm text-muted-foreground">첫 번째 리뷰를 작성해보세요!</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <ScrollArea className="h-full">
+                                <div className="p-6 space-y-4">
+                                    {topLikedReviews.map((review) => (
+                                        <Card key={review.id} className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}>
+                                            {/* Header */}
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        {review.isPinned && (
+                                                            <Pin className="h-4 w-4 text-primary fill-primary" />
+                                                        )}
+                                                        {review.userName === "관리자" && (
+                                                            <Badge variant="default" className="bg-gradient-primary text-xs">
+                                                                관리자
+                                                            </Badge>
+                                                        )}
+                                                        <span className="font-semibold text-sm">{review.userName}</span>
+                                                        {review.isVerified && (
+                                                            <Badge variant="default" className="gap-1 bg-green-600 text-xs">
+                                                                <CheckCircle className="h-3 w-3" />
+                                                                승인됨
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+
+                                                    {review.isEditedByAdmin && (
+                                                        <Badge variant="outline" className="mb-2 border-orange-500 text-orange-500 text-xs">
+                                                            ⚠️ 관리자가 수정함
+                                                        </Badge>
+                                                    )}
+
+                                                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                        <div className="flex items-center gap-1">
+                                                            <Calendar className="h-3 w-3" />
+                                                            방문: {formatDateTime(review.visitedAt)}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 shrink-0">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {review.likeCount}
+                                                    </span>
+                                                    <Heart className="h-4 w-4 text-gray-400" />
+                                                </div>
+                                            </div>
+
+                                            {/* Content */}
+                                            <div className="mb-3">
+                                                <p className="text-sm whitespace-pre-wrap">{review.content}</p>
+                                            </div>
+
+                                            {/* Photos */}
+                                            {review.photos.length > 0 && (
+                                                <div className="mb-3">
+                                                    <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                        <img
+                                                            src={review.photos[0].url}
+                                                            alt={`음식 사진`}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Footer */}
+                                            <div className="pt-2 border-t border-border">
+                                                <div className="text-xs text-muted-foreground">
+                                                    작성: {formatDateTime(review.submittedAt)}
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                </div>
+                            </ScrollArea>
+                        )
                     ) : reviewsLoading ? (
                         <div className="flex items-center justify-center h-full">
                             <div className="text-center">
