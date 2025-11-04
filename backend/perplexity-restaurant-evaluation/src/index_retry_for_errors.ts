@@ -3,17 +3,18 @@ import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
 // 평가 프롬프트 템플릿 (index.ts와 동일)
-const EVALUATION_PROMPT_TEMPLATE = `당신은 유튜브 음식 리뷰 데이터를 평가하는 전문가입니다.  
+const EVALUATION_PROMPT_TEMPLATE = `당신은 유튜버의 음식점 방문 관련 AI 기반 생성 데이터를 평가하는 전문가입니다.  
 입력으로 주어지는 <평가할 데이터>는 한 유튜브 영상에서 유튜버가 방문한 음식점 데이터(restaurant 리스트 포함)입니다.  
-영상 내용, reasoning_basis, tzuyang_review, category를 종합적으로 검토하여 아래의 5개 평가 항목에 대해 판단하세요.(검색 시도 금지)
+영상 내용, reasoning_basis, tzuyang_review, category를 종합적으로 검토하여 아래의 5개 평가 항목에 대해 판단하세요.
 **추측이나 새로운 정보 추가는 절대 금지하며, 반드시 아래 <평가 루브릭>의 평가기준·평가대상·출력형식을 그대로 따르세요.**
 <평가할 데이터>
 {restaurant_data}
 </평가할 데이터>
 
 <평가 루브릭>
-**평가는 새로운 항목이나 근거를 추가하지 말고, 평가할 데이터와 실제 영상 근거를 기반으로만 판단하세요.**
-모든 평가항목에서 eval_basis는 **구체적으로** 작성합니다.
+- **평가는 새로운 항목이나 근거를 추가하지 말고, <평가할 데이터>와 '실제 영상' 근거를 기반으로만 판단하세요.**
+- **다른 게시물/블로그 등에서 절대로 검색하지 않습니다.(오로지 해당 유튜브 영상 url 방문과 <평가할 데이터>만 이용)**
+- 모든 평가항목에서 eval_basis는 **구체적으로** 작성합니다.
 
 [평가 항목 1] 방문 여부 정확성 (visit_authenticity)
 - 평가 목적: **실제 영상**에서 유튜버가 실제로 해당 음식점을 방문했는지, 지점명까지 명확히 식별 가능한지, 누락된 음식점이 있는지 평가
