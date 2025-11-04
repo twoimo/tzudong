@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { createNewRestaurantNotification } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,17 +62,27 @@ export default function AdminSubmissionsPage() {
         lng: "",
     });
 
-    // 모든 제보 조회 (관리자만)
-    const { data: submissions = [], isLoading, error: queryError } = useQuery({
-        queryKey: ['admin-submissions'],
-        queryFn: async () => {
-            console.log('🔍 제보 데이터 조회 시작...');
+    // 모든 제보 조회 (관리자만) - 무한 스크롤 방식
+    const {
+        data: submissionsPages,
+        fetchNextPage,
+        hasNextPage,
+        isLoading,
+        isFetchingNextPage,
+        error: queryError
+    } = useInfiniteQuery({
+        queryKey: ['admin-submissions', isAdmin],
+        queryFn: async ({ pageParam = 0 }) => {
+            if (!user || !isAdmin) return { submissions: [], nextCursor: null };
 
-            // 1. 제보 데이터 가져오기
+            console.log('🔍 제보 데이터 조회 시작... 페이지:', pageParam);
+
+            // 1. 제보 데이터 가져오기 (페이지별)
             const { data: submissionsData, error: submissionsError } = await supabase
                 .from('restaurant_submissions')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .range(pageParam, pageParam + 19); // 한 페이지당 20개씩
 
             if (submissionsError) {
                 console.error('❌ 제보 조회 실패:', submissionsError);
@@ -80,7 +91,7 @@ export default function AdminSubmissionsPage() {
 
             if (!submissionsData || submissionsData.length === 0) {
                 console.log('✅ 제보 데이터 없음');
-                return [];
+                return { submissions: [], nextCursor: null };
             }
 
             // 2. user_id 목록 추출
@@ -98,18 +109,58 @@ export default function AdminSubmissionsPage() {
             );
 
             // 5. 데이터 매핑
-            const result = submissionsData.map(submission => ({
+            const submissions = submissionsData.map(submission => ({
                 ...submission,
                 profiles: {
                     nickname: profilesMap.get(submission.user_id) || '탈퇴한 사용자'
                 }
             })) as SubmissionWithUser[];
 
-            console.log('✅ 제보 데이터 조회 성공:', result.length, '개');
-            return result;
+            // 다음 페이지 커서 계산
+            const nextCursor = submissionsData.length === 20 ? pageParam + 20 : null;
+
+            console.log('✅ 제보 데이터 조회 성공:', submissions.length, '개 (다음 커서:', nextCursor, ')');
+            return {
+                submissions,
+                nextCursor,
+            };
         },
-        enabled: !!user && !!isAdmin,
+        getNextPageParam: (lastPage) => {
+            if (!lastPage) return undefined;
+            return lastPage.nextCursor ?? undefined;
+        },
+        initialPageParam: 0,
+        enabled: !!user,
     });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const submissions = submissionsPages?.pages.flatMap(page => page.submissions) || [];
+
+    // 제보 무한 스크롤을 위한 Intersection Observer
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    const loadMoreSubmissions = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreSubmissions();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreSubmissions]);
 
     // 제보 승인 (레스토랑 테이블에 추가)
     const approveMutation = useMutation({
@@ -188,8 +239,15 @@ export default function AdminSubmissionsPage() {
 
             if (updateError) throw updateError;
         },
-        onSuccess: () => {
+        onSuccess: (_, { submission }) => {
             toast.success('제보가 승인되었습니다!');
+
+            // 신규 맛집 등록 알림 생성 (모든 사용자에게)
+            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
+                category: submission.category,
+                submissionId: submission.id
+            });
+
             queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
             queryClient.invalidateQueries({ queryKey: ['restaurants'] });
             setIsReviewModalOpen(false);
@@ -476,15 +534,28 @@ export default function AdminSubmissionsPage() {
                                 <p className="text-muted-foreground">모든 제보를 처리했습니다!</p>
                             </Card>
                         ) : (
-                            pendingSubmissions.map((submission) => (
-                                <SubmissionCard
-                                    key={submission.id}
-                                    submission={submission}
-                                    onApprove={() => openReviewModal(submission, 'approve')}
-                                    onReject={() => openReviewModal(submission, 'reject')}
-                                    onDelete={() => handleDelete(submission.id)}
-                                />
-                            ))
+                            <>
+                                {pendingSubmissions.map((submission, index) => (
+                                    <SubmissionCard
+                                        key={`${submission.id}-${index}`}
+                                        ref={index === pendingSubmissions.length - 1 ? loadMoreRef : null}
+                                        submission={submission}
+                                        onApprove={() => openReviewModal(submission, 'approve')}
+                                        onReject={() => openReviewModal(submission, 'reject')}
+                                        onDelete={() => handleDelete(submission.id)}
+                                    />
+                                ))}
+
+                                {/* 추가 로딩 표시 */}
+                                {isFetchingNextPage && (
+                                    <div className="text-center py-8">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                            <span className="text-sm text-muted-foreground">더 많은 제보를 불러오는 중...</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </TabsContent>
 

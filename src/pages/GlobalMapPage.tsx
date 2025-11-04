@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -397,23 +398,32 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                         </div>
                     </div>
                 }>
-                    <div className="relative w-full h-full flex">
-                        <MapView
-                            filters={filters}
-                            selectedCountry={selectedCountry}
-                            searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
-                            selectedRestaurant={selectedRestaurant}
-                            refreshTrigger={refreshTrigger}
-                            onAdminEditRestaurant={onAdminEditRestaurant}
-                            onRestaurantSelect={setSelectedRestaurant}
-                            onMapReady={handleMapReady}
-                            onRequestEditRestaurant={handleRequestEditRestaurant}
-                            onMarkerClick={handleMarkerClick}
-                        />
+                    <PanelGroup direction="horizontal" className="w-full h-full">
+                        <Panel defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>
+                            <MapView
+                                filters={filters}
+                                selectedCountry={selectedCountry}
+                                searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
+                                selectedRestaurant={selectedRestaurant}
+                                refreshTrigger={refreshTrigger}
+                                onAdminEditRestaurant={onAdminEditRestaurant}
+                                onRestaurantSelect={setSelectedRestaurant}
+                                onMapReady={handleMapReady}
+                                onRequestEditRestaurant={handleRequestEditRestaurant}
+                                onMarkerClick={handleMarkerClick}
+                            />
+                        </Panel>
 
-                        {/* Restaurant Detail Panel - GlobalMapPage 레벨에서 완전 관리 */}
+                        {/* Resize Handle */}
                         {panelRestaurant && isPanelOpen && (
-                            <div className="absolute right-0 top-0 h-full w-96 z-20 shadow-xl">
+                            <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
+                                <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
+                            </PanelResizeHandle>
+                        )}
+
+                        {/* Restaurant Detail Panel */}
+                        {panelRestaurant && isPanelOpen && (
+                            <Panel defaultSize={25} minSize={20} maxSize={60}>
                                 <RestaurantDetailPanel
                                     restaurant={panelRestaurant}
                                     onClose={handlePanelClose}
@@ -425,9 +435,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     }) : undefined}
                                     onRequestEditRestaurant={handleRequestEditRestaurant}
                                 />
-                            </div>
+                            </Panel>
                         )}
-                    </div>
+                    </PanelGroup>
                 </Suspense>
             )}
 
