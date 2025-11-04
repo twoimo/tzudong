@@ -8,8 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
-import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface RestaurantDetailPanelProps {
@@ -46,6 +46,7 @@ export function RestaurantDetailPanel({
     onRequestEditRestaurant,
 }: RestaurantDetailPanelProps) {
     const { user, isAdmin } = useAuth();
+    const queryClient = useQueryClient();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
@@ -175,6 +176,20 @@ export function RestaurantDetailPanel({
         }
     }, [reviewsData]);
 
+    // 실시간 좋아요 수 계산 (서버 데이터 + 로컬 변경사항)
+    const getRealtimeLikeCount = (review: Review) => {
+        const serverLikeCount = review.likeCount;
+        const isLikedOnServer = review.isLikedByUser;
+        const isLikedLocally = likedReviews.has(review.id);
+
+        // 서버 상태와 로컬 상태가 다르면 조정
+        if (isLikedOnServer !== isLikedLocally) {
+            return isLikedLocally ? serverLikeCount + 1 : Math.max(0, serverLikeCount - 1);
+        }
+
+        return serverLikeCount;
+    };
+
     const formatDateTime = (dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleString('ko-KR', {
@@ -233,9 +248,21 @@ export function RestaurantDetailPanel({
             return;
         }
 
-        try {
-            const isCurrentlyLiked = likedReviews.has(reviewId);
+        const isCurrentlyLiked = likedReviews.has(reviewId);
+        const previousState = new Set(likedReviews);
 
+        // Optimistic update: 즉시 UI 업데이트
+        setLikedReviews(prev => {
+            const newSet = new Set(prev);
+            if (isCurrentlyLiked) {
+                newSet.delete(reviewId);
+            } else {
+                newSet.add(reviewId);
+            }
+            return newSet;
+        });
+
+        try {
             if (isCurrentlyLiked) {
                 // 좋아요 취소
                 const { error } = await supabase
@@ -245,12 +272,6 @@ export function RestaurantDetailPanel({
                     .eq('user_id', user.id);
 
                 if (error) throw error;
-
-                setLikedReviews(prev => {
-                    const newSet = new Set(prev);
-                    newSet.delete(reviewId);
-                    return newSet;
-                });
             } else {
                 // 좋아요 추가
                 const { error } = await supabase
@@ -261,22 +282,18 @@ export function RestaurantDetailPanel({
                     });
 
                 if (error) throw error;
-
-                setLikedReviews(prev => {
-                    const newSet = new Set(prev);
-                    newSet.add(reviewId);
-                    return newSet;
-                });
             }
 
-            // 리뷰 데이터 리프레시 (좋아요 수 업데이트를 위해)
-            // TODO: 더 효율적인 방법으로 업데이트하도록 개선 필요
-            if (restaurant?.id) {
-                // 현재 쿼리를 무효화하여 다시 가져오도록 함
-                await supabase.from('reviews').select('*').eq('restaurant_id', restaurant.id).single();
-            }
+            // 성공 시 쿼리 캐시 무효화하여 좋아요 수 업데이트
+            await queryClient.invalidateQueries({
+                queryKey: ['restaurant-reviews', restaurant?.id]
+            });
+
         } catch (error) {
             console.error('좋아요 처리 중 오류:', error);
+
+            // 실패 시 원래 상태로 롤백
+            setLikedReviews(previousState);
         }
     };
 
@@ -493,7 +510,7 @@ export function RestaurantDetailPanel({
                                                 <Card key={review.id} className="p-3 relative">
                                                     <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
                                                         <span className="text-xs text-gray-600 bg-white/80 px-1 py-0.5 rounded backdrop-blur-sm">
-                                                            {review.likeCount}
+                                                            {getRealtimeLikeCount(review)}
                                                         </span>
                                                         <Button
                                                             variant="ghost"
@@ -587,7 +604,7 @@ export function RestaurantDetailPanel({
                                                     </div>
                                                     <div className="flex items-center gap-2 shrink-0">
                                                         <span className="text-sm text-muted-foreground">
-                                                            {review.likeCount}
+                                                            {getRealtimeLikeCount(review)}
                                                         </span>
                                                         <Button
                                                             variant="ghost"
