@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNotifications } from "@/contexts/NotificationContext";
+import { createNewRestaurantNotification } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +53,6 @@ interface SubmissionWithUser extends RestaurantSubmission {
 export default function AdminSubmissionsPage() {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
-    const { addNotification } = useNotifications();
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithUser | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
@@ -244,15 +243,9 @@ export default function AdminSubmissionsPage() {
             toast.success('제보가 승인되었습니다!');
 
             // 신규 맛집 등록 알림 생성 (모든 사용자에게)
-            addNotification({
-                type: 'new_restaurant',
-                title: '새로운 맛집 등록',
-                message: `"${submission.restaurant_name}" 맛집이 쯔동여지도에 새로 등록되었습니다!`,
-                data: {
-                    restaurantName: submission.restaurant_name,
-                    address: submission.address,
-                    category: submission.category
-                }
+            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
+                category: submission.category,
+                submissionId: submission.id
             });
 
             queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
