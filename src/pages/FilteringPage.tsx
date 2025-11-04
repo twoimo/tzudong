@@ -188,10 +188,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     // 좋아요 수로 정렬 (실시간 정렬)
     const sortedTopLikedReviews = [...topLikedReviews].sort((a, b) => b.likeCount - a.likeCount);
 
-    // 무한 스크롤을 위한 Intersection Observer
+    // 인기 리뷰 무한 스크롤을 위한 Intersection Observer
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
-    const loadMore = useCallback(() => {
+    const loadMoreTopReviews = useCallback(() => {
         if (hasNextPage && !isFetchingNextPage) {
             fetchNextPage();
         }
@@ -201,7 +201,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting) {
-                    loadMore();
+                    loadMoreTopReviews();
                 }
             },
             { threshold: 0.1 }
@@ -212,13 +212,19 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         }
 
         return () => observer.disconnect();
-    }, [loadMore]);
+    }, [loadMoreTopReviews]);
 
-    // 선택된 맛집의 리뷰 조회
-    const { data: restaurantReviews = [], isLoading: reviewsLoading } = useQuery({
+    // 선택된 맛집의 리뷰 조회 (무한 스크롤)
+    const {
+        data: restaurantReviewsData,
+        fetchNextPage: fetchNextRestaurantReviews,
+        hasNextPage: hasNextRestaurantPage,
+        isLoading: reviewsLoading,
+        isFetchingNextPage: isFetchingNextRestaurantPage,
+    } = useInfiniteQuery({
         queryKey: ['restaurant-reviews', selectedRestaurant?.id],
-        queryFn: async () => {
-            if (!selectedRestaurant?.id) return [];
+        queryFn: async ({ pageParam = 0 }) => {
+            if (!selectedRestaurant?.id) return { reviews: [], nextCursor: null };
 
             try {
                 const { data: reviewsData, error } = await supabase
@@ -227,15 +233,16 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     .eq('restaurant_id', selectedRestaurant.id)
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false })
+                    .range(pageParam, pageParam + 19); // 한 페이지당 20개씩
 
                 if (error) {
                     console.error('리뷰 조회 실패:', error);
-                    return [];
+                    return { reviews: [], nextCursor: null };
                 }
 
                 if (!reviewsData || reviewsData.length === 0) {
-                    return [];
+                    return { reviews: [], nextCursor: null };
                 }
 
                 // 필요한 user_id 수집
@@ -302,14 +309,51 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     };
                 }) as Review[];
 
-                return reviews;
+                // 다음 페이지 커서 계산
+                const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
+
+                return {
+                    reviews,
+                    nextCursor,
+                };
             } catch (error) {
                 console.error('리뷰 데이터 조회 중 오류:', error);
-                return [];
+                return { reviews: [], nextCursor: null };
             }
         },
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        initialPageParam: 0,
         enabled: !!selectedRestaurant?.id,
     });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const restaurantReviews = restaurantReviewsData?.pages.flatMap(page => page.reviews) || [];
+
+    // 선택된 맛집 리뷰 무한 스크롤을 위한 Intersection Observer
+    const loadMoreRestaurantRef = useRef<HTMLDivElement>(null);
+
+    const loadMoreRestaurantReviews = useCallback(() => {
+        if (hasNextRestaurantPage && !isFetchingNextRestaurantPage) {
+            fetchNextRestaurantReviews();
+        }
+    }, [hasNextRestaurantPage, isFetchingNextRestaurantPage, fetchNextRestaurantReviews]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreRestaurantReviews();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRestaurantRef.current) {
+            observer.observe(loadMoreRestaurantRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreRestaurantReviews]);
 
     const [filters, setFilters] = useState<FilterState>({
         searchQuery: "",
@@ -946,8 +990,12 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     ) : (
                         <ScrollArea className="h-full">
                             <div className="p-6 space-y-4">
-                                {restaurantReviews.map((review) => (
-                                    <Card key={review.id} className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}>
+                                {restaurantReviews.map((review, index) => (
+                                    <Card
+                                        key={review.id}
+                                        ref={index === restaurantReviews.length - 1 ? loadMoreRestaurantRef : null}
+                                        className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}
+                                    >
                                         {/* Header */}
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex-1">
@@ -1041,6 +1089,14 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                         </div>
                                     </Card>
                                 ))}
+
+                                {/* 추가 로딩 표시 */}
+                                {isFetchingNextRestaurantPage && (
+                                    <div className="flex items-center justify-center py-4">
+                                        <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                        <span className="ml-2 text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
+                                    </div>
+                                )}
                             </div>
                         </ScrollArea>
                     )}
