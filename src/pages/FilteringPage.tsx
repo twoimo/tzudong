@@ -78,7 +78,37 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const { isAdmin } = useAuth();
     const queryClient = useQueryClient();
 
-    // 맛집 데이터 무한 스크롤 조회
+    // 검색어 상태를 별도로 관리 (의존성 순환 방지)
+    const [searchQuery, setSearchQuery] = useState("");
+
+    // 검색 시 사용할 전체 맛집 데이터 조회
+    const { data: allRestaurants = [], isLoading: isLoadingAllRestaurants } = useQuery({
+        queryKey: ['all-restaurants', searchQuery],
+        queryFn: async () => {
+            if (!searchQuery.trim()) return [];
+
+            try {
+                const { data: restaurants, error } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .ilike('name', `%${searchQuery}%`) // 데이터베이스 레벨에서 검색
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('전체 맛집 조회 실패:', error);
+                    return [];
+                }
+
+                return restaurants || [];
+            } catch (error) {
+                console.error('전체 맛집 데이터 조회 중 오류:', error);
+                return [];
+            }
+        },
+        enabled: !!searchQuery.trim(), // 검색어가 있을 때만 실행
+    });
+
+    // 기본 맛집 데이터 무한 스크롤 조회 (검색어가 없을 때만)
     const {
         data: restaurantsData,
         fetchNextPage: fetchNextRestaurants,
@@ -118,6 +148,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         },
         getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
+        enabled: !searchQuery.trim(), // 검색어가 없을 때만 실행
     });
 
     // 모든 페이지를 평탄화하여 하나의 배열로 만들기
@@ -432,6 +463,11 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         fanVisitsMin: 0,
     });
 
+    // filters의 searchQuery가 변경될 때 searchQuery state도 동기화
+    useEffect(() => {
+        setSearchQuery(filters.searchQuery);
+    }, [filters.searchQuery]);
+
     const handleSort = (column: SortColumn) => {
         if (sortColumn === column) {
             if (sortDirection === "asc") {
@@ -527,16 +563,13 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     };
 
     const filteredAndSortedRestaurants = useMemo(() => {
-        if (!restaurants) return [];
+        // 검색어가 있을 때는 전체 데이터를 사용, 없으면 페이징된 데이터를 사용
+        const sourceData = searchQuery.trim() ? allRestaurants : restaurants;
+        if (!sourceData || sourceData.length === 0) return [];
 
-        let result = [...restaurants];
+        let result = [...sourceData];
 
-        // 검색 필터
-        if (filters.searchQuery) {
-            result = result.filter(r =>
-                r.name?.toLowerCase().includes(filters.searchQuery.toLowerCase())
-            );
-        }
+        // 검색 필터는 전체 데이터 조회 시 이미 적용됨
 
         // 카테고리 필터
         if (filters.categories.length > 0) {
@@ -601,7 +634,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         }
 
         return result;
-    }, [restaurants, filters, sortColumn, sortDirection]);
+    }, [restaurants, allRestaurants, searchQuery, filters, sortColumn, sortDirection]);
 
     const getStarEmoji = (rating: number) => {
         const count = Math.round(rating);
@@ -831,7 +864,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoading ? (
+                                {isLoading || (searchQuery.trim() && isLoadingAllRestaurants) ? (
                                     // Loading skeleton
                                     Array.from({ length: 5 }).map((_, index) => (
                                         <TableRow key={index}>
@@ -855,7 +888,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             </TableCell>
                                         </TableRow>
                                     ))
-                                ) : filteredAndSortedRestaurants.length === 0 ? (
+                                ) : (!isLoading && !isLoadingAllRestaurants && filteredAndSortedRestaurants.length === 0) ? (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-12">
                                             <p className="text-muted-foreground">필터 조건에 맞는 맛집이 없습니다.</p>
@@ -902,8 +935,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     ))
                                 )}
 
-                                {/* 추가 로딩 표시 */}
-                                {isFetchingNextRestaurantPage && (
+                                {/* 추가 로딩 표시 (검색 시에는 표시하지 않음) */}
+                                {isFetchingNextRestaurantPage && !searchQuery.trim() && (
                                     <TableRow>
                                         <TableCell colSpan={4} className="text-center py-4">
                                             <div className="flex items-center justify-center gap-2">
