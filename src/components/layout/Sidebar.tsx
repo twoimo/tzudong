@@ -40,7 +40,6 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
     { icon: Trophy, label: "쯔동여지도 도장", path: "/stamp", onClick: () => navigate("/stamp") },
     { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
-    { icon: MessageSquare, label: "쯔동여지도 리뷰", path: "/reviews", onClick: () => navigate("/reviews") },
     { icon: Send, label: "쯔동여지도 제보", path: "/submissions", onClick: () => navigate("/submissions") },
   ];
 

@@ -9,7 +9,6 @@ import { useEffect } from "react";
 import Index from "./pages/Index";
 import GlobalMapPage from "./pages/GlobalMapPage";
 import FilteringPage from "./pages/FilteringPage";
-import ReviewsPage from "./pages/ReviewsPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import StampPage from "./pages/StampPage";
 import ServerCostsPage from "./pages/ServerCostsPage";
@@ -89,7 +88,6 @@ function AppLayout() {
             <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} selectedRestaurant={selectedRestaurant} setSelectedRestaurant={setSelectedRestaurant} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/filtering" element={<FilteringPage onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
             <Route path="/stamp" element={<StampPage />} />
-            <Route path="/reviews" element={<ReviewsPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/submissions" element={<RestaurantSubmissionsPage />} />
             <Route path="/admin/submissions" element={<AdminSubmissionsPage />} />
