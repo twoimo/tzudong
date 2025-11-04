@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +57,7 @@ interface Review {
 export default function AdminReviewsPage() {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
+    const { addNotification } = useNotifications();
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'edit' | null>(null);
@@ -219,6 +221,20 @@ export default function AdminReviewsPage() {
         },
         onSuccess: () => {
             toast.success('리뷰가 승인되었습니다');
+
+            // 승인 알림 생성
+            if (selectedReview) {
+                addNotification({
+                    type: 'review_approved',
+                    title: '리뷰 승인됨',
+                    message: `귀하의 리뷰 "${selectedReview.title}"이(가) 관리자 승인을 받았습니다.`,
+                    data: {
+                        reviewId: selectedReview.id,
+                        restaurantName: selectedReview.restaurants?.name
+                    }
+                });
+            }
+
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
             queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
             queryClient.invalidateQueries({ queryKey: ['restaurants'] }); // 맛집 데이터도 갱신
@@ -280,6 +296,21 @@ export default function AdminReviewsPage() {
         },
         onSuccess: () => {
             toast.success('리뷰가 거부되었습니다');
+
+            // 거부 알림 생성
+            if (selectedReview) {
+                addNotification({
+                    type: 'review_rejected',
+                    title: '리뷰 거부됨',
+                    message: `귀하의 리뷰 "${selectedReview.title}"이(가) 관리자 검토 후 거부되었습니다.`,
+                    data: {
+                        reviewId: selectedReview.id,
+                        restaurantName: selectedReview.restaurants?.name,
+                        adminNote: adminNote
+                    }
+                });
+            }
+
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
             queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
             queryClient.invalidateQueries({ queryKey: ['restaurants'] }); // 맛집 데이터도 갱신
