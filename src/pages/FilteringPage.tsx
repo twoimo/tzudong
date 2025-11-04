@@ -791,20 +791,14 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
 
                                         {/* Photos */}
                                         {review.photos.length > 0 && (
-                                            <div className="flex gap-2 mb-3">
-                                                {review.photos.slice(0, 3).map((photo, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs"
-                                                    >
-                                                        📷
-                                                    </div>
-                                                ))}
-                                                {review.photos.length > 3 && (
-                                                    <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center text-xs text-muted-foreground">
-                                                        +{review.photos.length - 3}
-                                                    </div>
-                                                )}
+                                            <div className="mb-3">
+                                                <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                    <img
+                                                        src={review.photos[0].url}
+                                                        alt={`음식 사진`}
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                </div>
                                             </div>
                                         )}
 
