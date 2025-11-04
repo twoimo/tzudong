@@ -29,9 +29,10 @@ import {
 import { RESTAURANT_CATEGORIES, Restaurant } from "@/types/restaurant";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { ReviewModal } from "@/components/reviews/ReviewModal";
 
 // 지역 목록
 const REGIONS = [
@@ -72,10 +73,12 @@ interface Review {
 const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const { data: restaurants = [], isLoading } = useRestaurants({ enabled: true });
     const { isAdmin } = useAuth();
+    const queryClient = useQueryClient();
 
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     // 선택된 맛집의 리뷰 조회
     const { data: restaurantReviews = [], isLoading: reviewsLoading } = useQuery({
@@ -649,8 +652,14 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     ) : restaurantReviews.length === 0 ? (
                         <div className="flex items-center justify-center h-full p-8">
                             <div className="text-center">
-                                <p className="text-muted-foreground">아직 리뷰가 없습니다</p>
-                                <p className="text-sm text-muted-foreground mt-2">첫 번째 리뷰를 작성해보세요!</p>
+                                <p className="text-muted-foreground mb-4">아직 리뷰가 없습니다</p>
+                                <p className="text-sm text-muted-foreground mb-6">첫 번째 리뷰를 작성해보세요!</p>
+                                <Button
+                                    onClick={() => setIsReviewModalOpen(true)}
+                                    className="bg-gradient-primary hover:opacity-90"
+                                >
+                                    리뷰 작성하기
+                                </Button>
                             </div>
                         </div>
                     ) : (
@@ -756,6 +765,17 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     )}
                 </div>
             </div>
+
+            {/* Review Modal */}
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
+                onSuccess={() => {
+                    // 리뷰 작성 성공 시 리뷰 데이터를 다시 가져옴
+                    queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
+                }}
+            />
         </div>
     );
 };
