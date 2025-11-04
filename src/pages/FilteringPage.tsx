@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,7 +29,7 @@ import {
 import { RESTAURANT_CATEGORIES, Restaurant } from "@/types/restaurant";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { useAuth } from "@/contexts/AuthContext";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
@@ -84,27 +84,33 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
-    // 전체 리뷰 중 좋아요가 가장 많은 리뷰들 조회 (초기 화면용)
-    const { data: topLikedReviews = [], isLoading: topReviewsLoading } = useQuery({
+    // 전체 리뷰 중 좋아요가 가장 많은 리뷰들 조회 (무한 스크롤)
+    const {
+        data: topLikedReviewsData,
+        fetchNextPage,
+        hasNextPage,
+        isLoading: topReviewsLoading,
+        isFetchingNextPage,
+    } = useInfiniteQuery({
         queryKey: ['top-liked-reviews'],
-        queryFn: async () => {
+        queryFn: async ({ pageParam = 0 }) => {
             try {
-                // 1. 승인된 모든 리뷰 조회
+                // 1. 승인된 모든 리뷰 조회 (페이지네이션 적용)
                 const { data: allReviews, error: reviewsError } = await supabase
                     .from('reviews')
                     .select('*')
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false })
-                    .limit(50); // 최대 50개 리뷰 조회
+                    .range(pageParam, pageParam + 19); // 한 페이지당 20개씩
 
                 if (reviewsError) {
                     console.error('전체 리뷰 조회 실패:', reviewsError);
-                    return [];
+                    return { reviews: [], nextCursor: null };
                 }
 
                 if (!allReviews || allReviews.length === 0) {
-                    return [];
+                    return { reviews: [], nextCursor: null };
                 }
 
                 // 2. 필요한 user_id 수집
@@ -137,7 +143,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     console.warn('review_likes 테이블이 존재하지 않음, 좋아요 수를 0으로 설정합니다:', error);
                 }
 
-                // 6. 좋아요 수 계산 및 정렬
+                // 6. 좋아요 수 계산
                 const reviewsWithLikes = allReviews.map(review => {
                     const likesForReview = likesData?.filter(like => like.review_id === review.id) || [];
                     return {
@@ -159,17 +165,54 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     } as Review;
                 });
 
-                // 7. 좋아요 수로 내림차순 정렬 후 상위 10개 반환
-                return reviewsWithLikes
-                    .sort((a, b) => b.likeCount - a.likeCount)
-                    .slice(0, 10);
+                // 7. 다음 페이지 커서 계산 (20개씩 가져왔으므로 다음은 pageParam + 20)
+                const nextCursor = allReviews.length === 20 ? pageParam + 20 : null;
+
+                return {
+                    reviews: reviewsWithLikes,
+                    nextCursor,
+                };
 
             } catch (error) {
                 console.error('인기 리뷰 조회 중 오류:', error);
-                return [];
+                return { reviews: [], nextCursor: null };
             }
         },
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        initialPageParam: 0,
     });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const topLikedReviews = topLikedReviewsData?.pages.flatMap(page => page.reviews) || [];
+
+    // 좋아요 수로 정렬 (실시간 정렬)
+    const sortedTopLikedReviews = [...topLikedReviews].sort((a, b) => b.likeCount - a.likeCount);
+
+    // 무한 스크롤을 위한 Intersection Observer
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    const loadMore = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMore]);
 
     // 선택된 맛집의 리뷰 조회
     const { data: restaurantReviews = [], isLoading: reviewsLoading } = useQuery({
@@ -785,7 +828,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     <p className="text-muted-foreground">인기 리뷰를 불러오는 중...</p>
                                 </div>
                             </div>
-                        ) : topLikedReviews.length === 0 ? (
+                        ) : sortedTopLikedReviews.length === 0 ? (
                             <div className="flex items-center justify-center h-full p-8">
                                 <div className="text-center">
                                     <p className="text-muted-foreground mb-4">아직 리뷰가 없습니다</p>
@@ -795,8 +838,12 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         ) : (
                             <ScrollArea className="h-full">
                                 <div className="p-6 space-y-4">
-                                    {topLikedReviews.map((review) => (
-                                        <Card key={review.id} className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}>
+                                    {sortedTopLikedReviews.map((review, index) => (
+                                        <Card
+                                            key={review.id}
+                                            ref={index === sortedTopLikedReviews.length - 1 ? loadMoreRef : null}
+                                            className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}
+                                        >
                                             {/* Header */}
                                             <div className="flex items-start justify-between mb-3">
                                                 <div className="flex-1">
@@ -865,6 +912,14 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             </div>
                                         </Card>
                                     ))}
+
+                                    {/* 추가 로딩 표시 */}
+                                    {isFetchingNextPage && (
+                                        <div className="flex items-center justify-center py-4">
+                                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                            <span className="ml-2 text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
+                                        </div>
+                                    )}
                                 </div>
                             </ScrollArea>
                         )
