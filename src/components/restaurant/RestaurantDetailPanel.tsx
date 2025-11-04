@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,6 +34,8 @@ interface Review {
     admin_note: string | null;
     photos: { url: string; type: string }[];
     category: string;
+    likeCount: number;
+    isLikedByUser: boolean;
 }
 
 export function RestaurantDetailPanel({
@@ -46,6 +48,7 @@ export function RestaurantDetailPanel({
     const { user, isAdmin } = useAuth();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
+    const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
 
     if (!restaurant) return null;
 
@@ -97,22 +100,44 @@ export function RestaurantDetailPanel({
                     (profilesData || []).map(p => [p.user_id, p.nickname])
                 );
 
-                // 5. 리뷰 데이터 매핑
-                const reviews = reviewsData.map(review => ({
-                    id: review.id,
-                    restaurantName: restaurant.name,
-                    restaurantCategories: categories,
-                    userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
-                    visitedAt: review.visited_at,
-                    submittedAt: review.created_at || '',
-                    content: review.content,
-                    isVerified: review.is_verified || false,
-                    isPinned: review.is_pinned || false,
-                    isEditedByAdmin: review.is_edited_by_admin || false,
-                    admin_note: review.admin_note || null,
-                    photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                    category: review.categories?.[0] || review.category,
-                })) as Review[];
+                // 6. 리뷰 좋아요 데이터 조회
+                const reviewIds = reviewsData.map(r => r.id);
+                const { data: likesData } = await supabase
+                    .from('review_likes')
+                    .select('review_id, user_id')
+                    .in('review_id', reviewIds);
+
+                // 좋아요 수와 사용자 좋아요 상태 계산
+                const likesMap = new Map<string, { count: number; isLiked: boolean }>();
+                reviewIds.forEach(reviewId => {
+                    const likesForReview = likesData?.filter(like => like.review_id === reviewId) || [];
+                    likesMap.set(reviewId, {
+                        count: likesForReview.length,
+                        isLiked: user ? likesForReview.some(like => like.user_id === user.id) : false
+                    });
+                });
+
+                // 7. 리뷰 데이터 매핑
+                const reviews = reviewsData.map(review => {
+                    const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
+                    return {
+                        id: review.id,
+                        restaurantName: restaurant.name,
+                        restaurantCategories: categories,
+                        userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                        visitedAt: review.visited_at,
+                        submittedAt: review.created_at || '',
+                        content: review.content,
+                        isVerified: review.is_verified || false,
+                        isPinned: review.is_pinned || false,
+                        isEditedByAdmin: review.is_edited_by_admin || false,
+                        admin_note: review.admin_note || null,
+                        photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+                        category: review.categories?.[0] || review.category,
+                        likeCount: likesInfo.count,
+                        isLikedByUser: likesInfo.isLiked,
+                    };
+                }) as Review[];
 
                 console.log(`✅ 총 ${reviews.length}개 리뷰 매핑 완료`);
                 return reviews;
@@ -139,6 +164,16 @@ export function RestaurantDetailPanel({
     // 우선순위: 쯔양 구독자 리뷰 3개, 그 다음 일반 리뷰
     const priorityReviews = [...tzuyangReviews, ...otherReviews];
     const recentReviews = priorityReviews.slice(0, 3);
+
+    // 초기 로드 시 likedReviews 상태 초기화
+    useEffect(() => {
+        if (reviewsData.length > 0) {
+            const likedReviewIds = reviewsData
+                .filter(review => review.isLikedByUser)
+                .map(review => review.id);
+            setLikedReviews(new Set(likedReviewIds));
+        }
+    }, [reviewsData]);
 
     const formatDateTime = (dateString: string) => {
         const date = new Date(dateString);
@@ -190,6 +225,59 @@ export function RestaurantDetailPanel({
             return;
         }
         onWriteReview?.();
+    };
+
+    const handleLikeReview = async (reviewId: string) => {
+        if (!user) {
+            setIsAuthModalOpen(true);
+            return;
+        }
+
+        try {
+            const isCurrentlyLiked = likedReviews.has(reviewId);
+
+            if (isCurrentlyLiked) {
+                // 좋아요 취소
+                const { error } = await supabase
+                    .from('review_likes')
+                    .delete()
+                    .eq('review_id', reviewId)
+                    .eq('user_id', user.id);
+
+                if (error) throw error;
+
+                setLikedReviews(prev => {
+                    const newSet = new Set(prev);
+                    newSet.delete(reviewId);
+                    return newSet;
+                });
+            } else {
+                // 좋아요 추가
+                const { error } = await supabase
+                    .from('review_likes')
+                    .insert({
+                        review_id: reviewId,
+                        user_id: user.id
+                    });
+
+                if (error) throw error;
+
+                setLikedReviews(prev => {
+                    const newSet = new Set(prev);
+                    newSet.add(reviewId);
+                    return newSet;
+                });
+            }
+
+            // 리뷰 데이터 리프레시 (좋아요 수 업데이트를 위해)
+            // TODO: 더 효율적인 방법으로 업데이트하도록 개선 필요
+            if (restaurant?.id) {
+                // 현재 쿼리를 무효화하여 다시 가져오도록 함
+                await supabase.from('reviews').select('*').eq('restaurant_id', restaurant.id).single();
+            }
+        } catch (error) {
+            console.error('좋아요 처리 중 오류:', error);
+        }
     };
 
     const getCategoryEmoji = (category: string) => {
@@ -402,7 +490,26 @@ export function RestaurantDetailPanel({
                                     ) : (
                                         <div className="space-y-2">
                                             {recentReviews.map((review) => (
-                                                <Card key={review.id} className="p-3">
+                                                <Card key={review.id} className="p-3 relative">
+                                                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
+                                                        <span className="text-xs text-gray-600 bg-white/80 px-1 py-0.5 rounded backdrop-blur-sm">
+                                                            {review.likeCount}
+                                                        </span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-6 w-6 bg-white/80 hover:bg-white/90 backdrop-blur-sm"
+                                                            onClick={() => handleLikeReview(review.id)}
+                                                        >
+                                                            <Heart
+                                                                className={`h-3 w-3 ${
+                                                                    likedReviews.has(review.id)
+                                                                        ? 'fill-red-500 text-red-500'
+                                                                        : 'text-gray-400'
+                                                                }`}
+                                                            />
+                                                        </Button>
+                                                    </div>
                                                     <div className="mb-2">
                                                         <div className="flex items-center gap-2 mb-1">
                                                             <span className="text-xs font-medium truncate">
@@ -477,6 +584,25 @@ export function RestaurantDetailPanel({
                                                             <Clock className="h-3 w-3" />
                                                             <span>{formatDateTime(review.submittedAt)}</span>
                                                         </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
+                                                        <span className="text-sm text-muted-foreground">
+                                                            {review.likeCount}
+                                                        </span>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8"
+                                                            onClick={() => handleLikeReview(review.id)}
+                                                        >
+                                                            <Heart
+                                                                className={`h-4 w-4 ${
+                                                                    likedReviews.has(review.id)
+                                                                        ? 'fill-red-500 text-red-500'
+                                                                        : 'text-gray-400'
+                                                                }`}
+                                                            />
+                                                        </Button>
                                                     </div>
                                                 </div>
 
