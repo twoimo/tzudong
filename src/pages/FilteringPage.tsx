@@ -146,10 +146,16 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { restaurants: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage) => {
+            if (lastPage?.restaurants?.length === 50) {
+                return lastPage.pageParam + 50;
+            }
+            return undefined;
+        },
         initialPageParam: 0,
         enabled: !searchQuery.trim(), // 검색어가 없을 때만 실행
     });
+
 
     // 모든 페이지를 평탄화하여 하나의 배열로 만들기
     const restaurants = restaurantsData?.pages.flatMap(page => page.restaurants) || [];
@@ -279,9 +285,15 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage) => {
+            if (lastPage?.reviews?.length === 20) {
+                return lastPage.pageParam + 20;
+            }
+            return undefined;
+        },
         initialPageParam: 0,
     });
+
 
     // 모든 페이지를 평탄화하여 하나의 배열로 만들기
     const topLikedReviews = topLikedReviewsData?.pages.flatMap(page => page.reviews) || [];
@@ -422,10 +434,16 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage) => {
+            if (lastPage?.reviews?.length === 20) {
+                return lastPage.pageParam + 20;
+            }
+            return undefined;
+        },
         initialPageParam: 0,
         enabled: !!selectedRestaurant?.id,
     });
+
 
     // 모든 페이지를 평탄화하여 하나의 배열로 만들기
     const restaurantReviews = restaurantReviewsData?.pages.flatMap(page => page.reviews) || [];
