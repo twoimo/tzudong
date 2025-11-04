@@ -75,9 +75,79 @@ interface Review {
 }
 
 const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
-    const { data: restaurants = [], isLoading } = useRestaurants({ enabled: true });
     const { isAdmin } = useAuth();
     const queryClient = useQueryClient();
+
+    // 맛집 데이터 무한 스크롤 조회
+    const {
+        data: restaurantsData,
+        fetchNextPage: fetchNextRestaurants,
+        hasNextPage: hasNextRestaurantPage,
+        isLoading,
+        isFetchingNextPage: isFetchingNextRestaurantPage,
+    } = useInfiniteQuery({
+        queryKey: ['restaurants'],
+        queryFn: async ({ pageParam = 0 }) => {
+            try {
+                const { data: restaurants, error } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .range(pageParam, pageParam + 49); // 한 페이지당 50개씩
+
+                if (error) {
+                    console.error('맛집 조회 실패:', error);
+                    return { restaurants: [], nextCursor: null };
+                }
+
+                if (!restaurants || restaurants.length === 0) {
+                    return { restaurants: [], nextCursor: null };
+                }
+
+                // 다음 페이지 커서 계산
+                const nextCursor = restaurants.length === 50 ? pageParam + 50 : null;
+
+                return {
+                    restaurants,
+                    nextCursor,
+                };
+            } catch (error) {
+                console.error('맛집 데이터 조회 중 오류:', error);
+                return { restaurants: [], nextCursor: null };
+            }
+        },
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        initialPageParam: 0,
+    });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const restaurants = restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+
+    // 테이블 무한 스크롤을 위한 Intersection Observer
+    const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
+
+    const loadMoreRestaurants = useCallback(() => {
+        if (hasNextRestaurantPage && !isFetchingNextRestaurantPage) {
+            fetchNextRestaurants();
+        }
+    }, [hasNextRestaurantPage, isFetchingNextRestaurantPage, fetchNextRestaurants]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreRestaurants();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreTableRef.current) {
+            observer.observe(loadMoreTableRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreRestaurants]);
 
     const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
@@ -88,9 +158,9 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const {
         data: topLikedReviewsData,
         fetchNextPage,
-        hasNextPage,
+        hasNextPage: hasNextTopReviewPage,
         isLoading: topReviewsLoading,
-        isFetchingNextPage,
+        isFetchingNextPage: isFetchingNextTopReviewPage,
     } = useInfiniteQuery({
         queryKey: ['top-liked-reviews'],
         queryFn: async ({ pageParam = 0 }) => {
@@ -192,10 +262,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const loadMoreRef = useRef<HTMLDivElement>(null);
 
     const loadMoreTopReviews = useCallback(() => {
-        if (hasNextPage && !isFetchingNextPage) {
+        if (hasNextTopReviewPage && !isFetchingNextTopReviewPage) {
             fetchNextPage();
         }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    }, [hasNextTopReviewPage, isFetchingNextTopReviewPage, fetchNextPage]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -218,9 +288,9 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const {
         data: restaurantReviewsData,
         fetchNextPage: fetchNextRestaurantReviews,
-        hasNextPage: hasNextRestaurantPage,
+        hasNextPage: hasNextRestaurantReviewPage,
         isLoading: reviewsLoading,
-        isFetchingNextPage: isFetchingNextRestaurantPage,
+        isFetchingNextPage: isFetchingNextRestaurantReviewPage,
     } = useInfiniteQuery({
         queryKey: ['restaurant-reviews', selectedRestaurant?.id],
         queryFn: async ({ pageParam = 0 }) => {
@@ -333,10 +403,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const loadMoreRestaurantRef = useRef<HTMLDivElement>(null);
 
     const loadMoreRestaurantReviews = useCallback(() => {
-        if (hasNextRestaurantPage && !isFetchingNextRestaurantPage) {
+        if (hasNextRestaurantReviewPage && !isFetchingNextRestaurantReviewPage) {
             fetchNextRestaurantReviews();
         }
-    }, [hasNextRestaurantPage, isFetchingNextRestaurantPage, fetchNextRestaurantReviews]);
+    }, [hasNextRestaurantReviewPage, isFetchingNextRestaurantReviewPage, fetchNextRestaurantReviews]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -792,9 +862,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                         </TableCell>
                                     </TableRow>
                                 ) : (
-                                    filteredAndSortedRestaurants.map((restaurant) => (
+                                    filteredAndSortedRestaurants.map((restaurant, index) => (
                                         <TableRow
                                             key={restaurant.id}
+                                            ref={index === filteredAndSortedRestaurants.length - 1 ? loadMoreTableRef : null}
                                             className={`hover:bg-muted/50 cursor-pointer transition-colors ${selectedRestaurant?.id === restaurant.id ? "bg-primary/10 border-l-4 border-primary" : ""
                                                 }`}
                                             onClick={() => {
@@ -829,6 +900,18 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             </TableCell>
                                         </TableRow>
                                     ))
+                                )}
+
+                                {/* 추가 로딩 표시 */}
+                                {isFetchingNextRestaurantPage && (
+                                    <TableRow>
+                                        <TableCell colSpan={4} className="text-center py-4">
+                                            <div className="flex items-center justify-center gap-2">
+                                                <div className="animate-spin h-4 w-4 border-4 border-primary border-t-transparent rounded-full"></div>
+                                                <span className="text-sm text-muted-foreground">더 많은 맛집을 불러오는 중...</span>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
                                 )}
                             </TableBody>
                     </Table>
@@ -958,7 +1041,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     ))}
 
                                     {/* 추가 로딩 표시 */}
-                                    {isFetchingNextPage && (
+                                    {isFetchingNextTopReviewPage && (
                                         <div className="flex items-center justify-center py-4">
                                             <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
                                             <span className="ml-2 text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
@@ -1091,7 +1174,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 ))}
 
                                 {/* 추가 로딩 표시 */}
-                                {isFetchingNextRestaurantPage && (
+                                {isFetchingNextRestaurantReviewPage && (
                                     <div className="flex items-center justify-center py-4">
                                         <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
                                         <span className="ml-2 text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>

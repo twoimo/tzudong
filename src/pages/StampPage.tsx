@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { CheckCircle, Trophy, MapPin } from "lucide-react";
@@ -23,20 +23,69 @@ const StampPage = () => {
     const { user } = useAuth();
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
 
-    // 쯔양이 방문한 모든 맛집 조회
-    const { data: restaurants = [], isLoading } = useQuery({
+    // 쯔양이 방문한 모든 맛집 조회 (무한 스크롤)
+    const {
+        data: restaurantsData,
+        fetchNextPage: fetchNextRestaurants,
+        hasNextPage,
+        isLoading,
+        isFetchingNextPage,
+    } = useInfiniteQuery({
         queryKey: ['stamp-restaurants'],
-        queryFn: async () => {
+        queryFn: async ({ pageParam = 0 }) => {
             const { data, error } = await supabase
                 .from('restaurants')
                 .select('id, name, youtube_link, review_count')
                 .not('youtube_link', 'is', null)
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: true })
+                .range(pageParam, pageParam + 49); // 한 페이지당 50개씩
 
             if (error) throw error;
-            return data as Restaurant[];
+
+            if (!data || data.length === 0) {
+                return { restaurants: [], nextCursor: null };
+            }
+
+            // 다음 페이지 커서 계산
+            const nextCursor = data.length === 50 ? pageParam + 50 : null;
+
+            return {
+                restaurants: data as Restaurant[],
+                nextCursor,
+            };
         },
+        getNextPageParam: (lastPage) => lastPage.nextCursor,
+        initialPageParam: 0,
     });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const restaurants = restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+
+    // 그리드 무한 스크롤을 위한 Intersection Observer
+    const loadMoreGridRef = useRef<HTMLDivElement>(null);
+
+    const loadMoreGrid = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextRestaurants();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextRestaurants]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreGrid();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreGridRef.current) {
+            observer.observe(loadMoreGridRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreGrid]);
 
     // 사용자 프로필 정보 조회 (로그인한 경우)
     const { data: userProfile } = useQuery({
@@ -155,6 +204,7 @@ const StampPage = () => {
                         return (
                             <Card
                                 key={restaurant.id}
+                                ref={index === restaurants.length - 1 ? loadMoreGridRef : null}
                                 className={cn(
                                     "relative overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer group",
                                     visited ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg"
@@ -201,6 +251,16 @@ const StampPage = () => {
                             </Card>
                         );
                     })}
+
+                    {/* 추가 로딩 표시 */}
+                    {isFetchingNextPage && (
+                        <div className="col-span-5 flex items-center justify-center py-8">
+                            <div className="flex items-center gap-2">
+                                <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                <span className="text-sm text-muted-foreground">더 많은 맛집을 불러오는 중...</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {restaurants.length === 0 && (
