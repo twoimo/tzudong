@@ -1529,6 +1529,57 @@ export class PerplexityEvaluator {
       console.log(`✅ "Assistant steps" 발견! 응답 완료 대기 중 (${Math.floor(waitTime/1000)}초)...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       
+      // 사람처럼 여러 번 스크롤하여 동적 로딩 콘텐츠까지 모두 로드
+      console.log('📜 답변 영역 스크롤하여 전체 내용 로드 중 (최대 10회 반복)...');
+      await this.page!.evaluate(async () => {
+        // 답변이 표시되는 스크롤 가능한 컨테이너 찾기
+        const mainContainer = document.querySelector('.scrollable-container') || 
+                             document.querySelector('main') || 
+                             document.querySelector('[role="main"]') ||
+                             document.body;
+        
+        console.log(`📍 스크롤 대상 컨테이너: ${mainContainer.tagName}${mainContainer.className ? '.' + mainContainer.className.split(' ')[0] : ''}`);
+        const startScrollTop = mainContainer.scrollTop;
+        
+        // 최대 10번 반복하여 스크롤 (각 스크롤 후 새 콘텐츠가 로드될 수 있음)
+        for (let round = 1; round <= 10; round++) {
+          console.log(`📜 스크롤 라운드 ${round}/10`);
+          
+          const previousScrollHeight = mainContainer.scrollHeight;
+          const targetScroll = mainContainer.scrollHeight;
+          const currentScroll = mainContainer.scrollTop;
+          
+          // 사람처럼 부드럽게 스크롤 (150px씩 10ms 간격)
+          const scrollStep = 150;
+          const scrollDelay = 10;
+          
+          for (let pos = currentScroll; pos < targetScroll; pos += scrollStep) {
+            mainContainer.scrollTop = pos;
+            await new Promise(r => setTimeout(r, scrollDelay));
+          }
+          
+          // 최종적으로 끝까지 확실히
+          mainContainer.scrollTop = targetScroll;
+          console.log(`  → 스크롤 완료: ${currentScroll} → ${mainContainer.scrollTop} (높이: ${mainContainer.scrollHeight})`);
+          
+          // 새 콘텐츠 로딩 대기 (9-12초 랜덤)
+          const waitTime = Math.floor(Math.random() * 3000) + 9000; // 9000-12000ms
+          console.log(`  ⏱️ 콘텐츠 로딩 대기 중 (${Math.floor(waitTime/1000)}초)...`);
+          await new Promise(r => setTimeout(r, waitTime));
+          
+          // 높이가 더 이상 변하지 않으면 조기 종료
+          if (mainContainer.scrollHeight === previousScrollHeight) {
+            console.log(`  ✅ 더 이상 새 콘텐츠 없음 (라운드 ${round}에서 완료)`);
+            break;
+          }
+        }
+        
+        console.log(`✅ 전체 스크롤 완료 (${startScrollTop} → ${mainContainer.scrollHeight})`);
+      });
+      
+      console.log('⏱️ 스크롤 후 콘텐츠 안정화 대기 (1초)...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       // JSON 추출 시도 (방법 1: code 블록, 방법 2: Answer 내 일반 텍스트)
       console.log('🔍 JSON 데이터 추출 시도...');
       
