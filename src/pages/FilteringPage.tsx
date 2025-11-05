@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -185,6 +185,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [isRightPanelVisible, setIsRightPanelVisible] = useState(true);
 
     // 좋아요 토글 함수
     const toggleLike = async (reviewId: string, currentIsLiked: boolean, currentLikeCount: number) => {
@@ -724,9 +725,18 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 )}
                             </p>
                         </div>
-                        <Button variant="outline" onClick={handleResetFilters}>
-                            필터 초기화
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            {!isRightPanelVisible && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setIsRightPanelVisible(true)}
+                                    className="hover:text-accent-foreground hover:bg-accent"
+                                >
+                                    <MessageSquare className="h-5 w-5" />
+                                </Button>
+                            )}
+                        </div>
                     </div>
 
                     {/* Filter Controls */}
@@ -833,6 +843,11 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 <SelectItem value="500">500회 이상</SelectItem>
                             </SelectContent>
                         </Select>
+
+                        {/* 필터 초기화 */}
+                        <Button variant="outline" onClick={handleResetFilters}>
+                            필터 초기화
+                        </Button>
 
                     </div>
 
@@ -997,18 +1012,31 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             </Panel>
 
             {/* Resize Handle */}
-            <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
-                <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
-            </PanelResizeHandle>
+            {isRightPanelVisible && (
+                <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
+                    <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
+                </PanelResizeHandle>
+            )}
 
             {/* Right Panel - Reviews */}
-            <Panel defaultSize={20} minSize={20} maxSize={70} className="flex flex-col bg-card">
+            {isRightPanelVisible && (
+                <Panel defaultSize={20} minSize={20} maxSize={70} className="flex flex-col bg-card">
                 <div className="border-b border-border p-6">
-                    <div className="flex items-center gap-3">
-                        <MessageSquare className="h-6 w-6 text-primary" />
-                        <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                            {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
-                        </h2>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <MessageSquare className="h-6 w-6 text-primary" />
+                            <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                                {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
+                            </h2>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsRightPanelVisible(false)}
+                            className="hover:text-accent-foreground hover:bg-accent"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </Button>
                     </div>
                     {selectedRestaurant ? (
                         <p className="text-sm text-muted-foreground mt-1">
@@ -1280,7 +1308,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         </ScrollArea>
                     )}
                 </div>
-            </Panel>
+                </Panel>
+            )}
 
             {/* Review Modal */}
             <ReviewModal
