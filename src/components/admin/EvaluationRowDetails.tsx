@@ -122,11 +122,11 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
             </div>
           )}
 
-          {/* 2. rb 추론 합리성 */}
+          {/* 2. 추론 합리성 */}
           {evaluation_results.rb_inference_score && (
             <div className="border-l-4 border-purple-500 pl-4">
               <h4 className="font-semibold mb-1">
-                2️⃣ rb 추론 합리성: {evaluation_results.rb_inference_score.eval_value}점
+                2️⃣ 추론 합리성 (reasoning_basis): {evaluation_results.rb_inference_score.eval_value}점
               </h4>
               <p className="text-sm text-muted-foreground">
                 {evaluation_results.rb_inference_score.eval_basis}
@@ -134,11 +134,11 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
             </div>
           )}
 
-          {/* 3. rb 근거 일치도 */}
+          {/* 3. 실제 근거 일치도 */}
           {evaluation_results.rb_grounding_TF && (
             <div className="border-l-4 border-green-500 pl-4">
               <h4 className="font-semibold mb-1 flex items-center gap-2">
-                3️⃣ rb 근거 일치도: 
+                3️⃣ 실제 근거 일치도 (reasoning_basis): 
                 {evaluation_results.rb_grounding_TF.eval_value ? (
                   <Badge variant="default" className="gap-1">
                     <Check className="w-3 h-3" />
@@ -157,11 +157,11 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
             </div>
           )}
 
-          {/* 4. 음식 리뷰 충실도 */}
+          {/* 4. 리뷰 충실도 */}
           {evaluation_results.review_faithfulness_score && (
             <div className="border-l-4 border-orange-500 pl-4">
               <h4 className="font-semibold mb-1">
-                4️⃣ 음식 리뷰 충실도: {evaluation_results.review_faithfulness_score.eval_value}점
+                4️⃣ 리뷰 충실도 (음식 리뷰): {evaluation_results.review_faithfulness_score.eval_value}점
               </h4>
               <p className="text-sm text-muted-foreground">
                 {evaluation_results.review_faithfulness_score.eval_basis}
@@ -169,37 +169,11 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
             </div>
           )}
 
-          {/* 5. 카테고리 정합성 */}
-          {evaluation_results.category_TF && (
-            <div className="border-l-4 border-yellow-500 pl-4">
-              <h4 className="font-semibold mb-1 flex items-center gap-2">
-                5️⃣ 카테고리 정합성: 
-                {evaluation_results.category_TF.eval_value ? (
-                  <Badge variant="default" className="gap-1">
-                    <Check className="w-3 h-3" />
-                    True
-                  </Badge>
-                ) : (
-                  <Badge variant="destructive" className="gap-1">
-                    <X className="w-3 h-3" />
-                    False (수정됨)
-                  </Badge>
-                )}
-              </h4>
-              {!evaluation_results.category_TF.eval_value && evaluation_results.category_TF.category_revision && (
-                <p className="text-sm">
-                  <strong>원본 카테고리:</strong> {restaurant_info.category} → 
-                  <strong className="ml-2">수정 카테고리:</strong> {evaluation_results.category_TF.category_revision}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* 6. 주소 정합성 */}
+          {/* 5. 주소 정합성 */}
           {evaluation_results.location_match_TF && (
             <div className={`border-l-4 ${evaluation_results.location_match_TF.eval_value ? 'border-green-500' : 'border-red-500'} pl-4`}>
               <h4 className="font-semibold mb-1 flex items-center gap-2">
-                6️⃣ 주소 정합성: 
+                5️⃣ 주소 정합성: 
                 {evaluation_results.location_match_TF.eval_value ? (
                   <Badge variant="default" className="gap-1">
                     <Check className="w-3 h-3" />
@@ -223,11 +197,11 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
             </div>
           )}
 
-          {/* 7. 카테고리 파싱 문제 */}
+          {/* 6. 카테고리 유효성 */}
           {evaluation_results.category_validity_TF && (
             <div className="border-l-4 border-gray-500 pl-4">
               <h4 className="font-semibold mb-1 flex items-center gap-2">
-                7️⃣ 카테고리 파싱 문제: 
+                6️⃣ 카테고리 유효성 (파싱 문제): 
                 {evaluation_results.category_validity_TF.eval_value ? (
                   <Badge variant="default" className="gap-1">
                     <Check className="w-3 h-3" />
@@ -240,6 +214,32 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
                   </Badge>
                 )}
               </h4>
+            </div>
+          )}
+
+          {/* 7. 카테고리 정합성 */}
+          {evaluation_results.category_TF && (
+            <div className="border-l-4 border-yellow-500 pl-4">
+              <h4 className="font-semibold mb-1 flex items-center gap-2">
+                7️⃣ 카테고리 정합성: 
+                {evaluation_results.category_TF.eval_value ? (
+                  <Badge variant="default" className="gap-1">
+                    <Check className="w-3 h-3" />
+                    True
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="gap-1">
+                    <X className="w-3 h-3" />
+                    False (수정됨)
+                  </Badge>
+                )}
+              </h4>
+              {!evaluation_results.category_TF.eval_value && evaluation_results.category_TF.category_revision && (
+                <p className="text-sm">
+                  <strong>원본 카테고리:</strong> {restaurant_info.category} → 
+                  <strong className="ml-2">수정 카테고리:</strong> {evaluation_results.category_TF.category_revision}
+                </p>
+              )}
             </div>
           )}
         </CardContent>

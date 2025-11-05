@@ -1,5 +1,5 @@
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { CategoryStats, EvaluationRecordStatus } from '@/types/evaluation';
 import { cn } from '@/lib/utils';
 
@@ -20,20 +20,17 @@ export function CategorySidebar({
     { label: '승인됨', status: ['approved'] as EvaluationRecordStatus[], count: stats.approved },
     { label: '보류', status: ['hold'] as EvaluationRecordStatus[], count: stats.hold },
     { 
-      label: 'Missing 음식점', 
+      label: 'Missing', 
       status: ['missing'] as EvaluationRecordStatus[], 
       count: stats.missing,
-      badge: stats.missing > 0 
     },
     {
-      label: 'DB 등록 오류',
+      label: 'DB충돌',
       status: ['db_conflict'] as EvaluationRecordStatus[],
       count: stats.db_conflict,
-      badge: stats.db_conflict > 0,
-      badgeVariant: 'destructive' as const,
     },
     {
-      label: '지오코딩 실패',
+      label: '지오코딩실패',
       status: ['geocoding_failed'] as EvaluationRecordStatus[],
       count: stats.geocoding_failed,
     },
@@ -51,43 +48,23 @@ export function CategorySidebar({
   };
 
   return (
-    <Card className="w-64 p-4 h-fit sticky top-6">
-      <h2 className="font-bold text-lg mb-4">카테고리</h2>
-      
-      <div className="space-y-2">
-        {categories.map((category, index) => (
-          <button
-            key={index}
-            onClick={() => handleClick(category.status)}
-            className={cn(
-              'w-full flex items-center justify-between p-3 rounded-lg transition-colors',
-              'hover:bg-accent',
-              isSelected(category.status) && 'bg-accent font-medium'
-            )}
+    <div className="flex flex-wrap gap-2">
+      {categories.map((category, index) => (
+        <Button
+          key={index}
+          variant={isSelected(category.status) ? 'default' : 'outline'}
+          onClick={() => handleClick(category.status)}
+          className="h-auto py-2 px-4"
+        >
+          <span className="font-medium">{category.label}</span>
+          <Badge 
+            variant={isSelected(category.status) ? 'secondary' : 'outline'}
+            className="ml-2"
           >
-            <div className="flex items-center gap-2">
-              <div
-                className={cn(
-                  'w-2 h-2 rounded-full',
-                  isSelected(category.status) ? 'bg-primary' : 'bg-muted-foreground'
-                )}
-              />
-              <span>{category.label}</span>
-              {category.badge && (
-                <Badge 
-                  variant={category.badgeVariant || 'default'}
-                  className="ml-1"
-                >
-                  {category.count}
-                </Badge>
-              )}
-            </div>
-            <span className="text-sm text-muted-foreground">
-              {category.count}
-            </span>
-          </button>
-        ))}
-      </div>
-    </Card>
+            {category.count}
+          </Badge>
+        </Button>
+      ))}
+    </div>
   );
 }

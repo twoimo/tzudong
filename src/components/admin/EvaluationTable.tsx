@@ -60,9 +60,20 @@ export function EvaluationTable({
     
     const va = record.evaluation_results.visit_authenticity?.eval_value ?? '-';
     const rb = record.evaluation_results.rb_grounding_TF?.eval_value ? 'T' : 'F';
-    const lm = record.evaluation_results.location_match_TF?.eval_value ? 'T' : 'F';
+    const rf = record.evaluation_results.review_faithfulness_score?.eval_value === 1 ? 'T' : 'F';
     
-    return `${va}/${rb}/${lm}`;
+    return `${va}/${rb}/${rf}`;
+  };
+
+  const getYoutubeVideoId = (url: string) => {
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const match = url.match(regex);
+    return match ? match[1] : null;
+  };
+
+  const getThumbnailUrl = (youtubeLink: string) => {
+    const videoId = getYoutubeVideoId(youtubeLink);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
   };
 
   const canApprove = (record: EvaluationRecord) => {
@@ -80,22 +91,24 @@ export function EvaluationTable({
   }
 
   return (
-    <div className="border rounded-lg">
+    <div className="border rounded-lg overflow-auto max-h-[calc(100vh-300px)]">
       <Table>
-        <TableHeader>
+        <TableHeader className="sticky top-0 bg-background z-10">
           <TableRow>
             <TableHead className="w-12"></TableHead>
-            <TableHead className="w-[300px]">영상 제목</TableHead>
-            <TableHead>음식점명</TableHead>
-            <TableHead>주소</TableHead>
-            <TableHead>카테고리</TableHead>
-            <TableHead className="text-center">평가</TableHead>
-            <TableHead className="text-center">상태</TableHead>
-            <TableHead className="text-center w-[200px]">액션</TableHead>
+            <TableHead className="min-w-[400px]">영상 정보</TableHead>
+            <TableHead className="min-w-[150px]">음식점명</TableHead>
+            <TableHead className="min-w-[250px]">주소</TableHead>
+            <TableHead className="min-w-[120px]">카테고리</TableHead>
+            <TableHead className="text-center min-w-[100px]">상태</TableHead>
+            <TableHead className="text-center min-w-[250px]">액션</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {records.map((record) => (
+          {records.map((record) => {
+            const thumbnailUrl = getThumbnailUrl(record.youtube_link);
+            
+            return (
             <>
               {/* 메인 행 */}
               <TableRow key={record.id} className="hover:bg-muted/50">
@@ -113,21 +126,41 @@ export function EvaluationTable({
                   </Button>
                 </TableCell>
                 
-                <TableCell className="max-w-[300px]">
-                  <div className="truncate text-sm">
-                    {record.youtube_meta?.title || record.youtube_link}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR')}
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    {thumbnailUrl && (
+                      <a 
+                        href={record.youtube_link} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex-shrink-0"
+                      >
+                        <img 
+                          src={thumbnailUrl} 
+                          alt="유튜브 썸네일"
+                          className="w-32 h-20 object-cover rounded hover:opacity-80 transition-opacity"
+                        />
+                      </a>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium line-clamp-2">
+                        {record.youtube_meta?.title || record.youtube_link}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR')}
+                      </div>
+                    </div>
                   </div>
                 </TableCell>
                 
                 <TableCell className="font-medium">
-                  {record.restaurant_name}
+                  <div className="whitespace-normal">
+                    {record.restaurant_name}
+                  </div>
                 </TableCell>
                 
-                <TableCell className="max-w-[200px]">
-                  <div className="truncate text-sm">
+                <TableCell>
+                  <div className="whitespace-normal text-sm">
                     {record.restaurant_info?.naver_address_info?.jibun_address ||
                      record.restaurant_info?.origin_address ||
                      '-'}
@@ -135,11 +168,9 @@ export function EvaluationTable({
                 </TableCell>
                 
                 <TableCell>
-                  {record.restaurant_info?.category || '-'}
-                </TableCell>
-                
-                <TableCell className="text-center text-sm">
-                  {getEvaluationSummary(record)}
+                  <div className="whitespace-normal">
+                    {record.restaurant_info?.category || '-'}
+                  </div>
                 </TableCell>
                 
                 <TableCell className="text-center">
@@ -255,13 +286,14 @@ export function EvaluationTable({
               {/* 확장된 상세 정보 */}
               {expandedId === record.id && (
                 <TableRow>
-                  <TableCell colSpan={8} className="bg-muted/30">
+                  <TableCell colSpan={7} className="bg-muted/30">
                     <EvaluationRowDetails record={record} />
                   </TableCell>
                 </TableRow>
               )}
             </>
-          ))}
+          );
+          })}
         </TableBody>
       </Table>
     </div>

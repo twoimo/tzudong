@@ -3,8 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
-import { EvaluationFilters } from '@/components/admin/EvaluationFilters';
-import { EvaluationTable } from '@/components/admin/EvaluationTable';
+import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
@@ -23,12 +22,15 @@ export default function AdminEvaluationPage() {
     db_conflict: 0,
     geocoding_failed: 0,
   });
-  const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>(['pending']);
+  const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
   const [evalFilters, setEvalFilters] = useState<{
     visit_authenticity?: string;
+    rb_inference_score?: string;
     rb_grounding_TF?: string;
+    review_faithfulness_score?: string;
     location_match_TF?: string;
-    category?: string;
+    category_validity_TF?: string;
+    category_TF?: string;
   }>({});
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
@@ -44,9 +46,11 @@ export default function AdminEvaluationPage() {
 
   // 필터링된 레코드
   const filteredRecords = useMemo(() => {
-    let filtered = records.filter(r => selectedStatuses.includes(r.status));
+    let filtered = selectedStatuses.length === 0 
+      ? records 
+      : records.filter(r => selectedStatuses.includes(r.status));
 
-    // Visit Authenticity 필터
+    // 1. Visit Authenticity 필터 (0-3점)
     if (evalFilters.visit_authenticity) {
       const targetScore = parseInt(evalFilters.visit_authenticity);
       filtered = filtered.filter(r => 
@@ -54,32 +58,56 @@ export default function AdminEvaluationPage() {
       );
     }
 
-    // RB Grounding 필터
+    // 2. RB Inference Score 필터 (0-2점)
+    if (evalFilters.rb_inference_score) {
+      const targetScore = parseInt(evalFilters.rb_inference_score);
+      filtered = filtered.filter(r => 
+        r.evaluation_results?.rb_inference_score?.eval_value === targetScore
+      );
+    }
+
+    // 3. RB Grounding TF 필터 (T/F)
     if (evalFilters.rb_grounding_TF) {
-      const targetValue = evalFilters.rb_grounding_TF === 'true';
+      const targetValue = evalFilters.rb_grounding_TF === 'True';
       filtered = filtered.filter(r => 
         r.evaluation_results?.rb_grounding_TF?.eval_value === targetValue
       );
     }
 
-    // Location Match 필터
+    // 4. Review Faithfulness Score 필터 (0-1점)
+    if (evalFilters.review_faithfulness_score) {
+      const targetScore = parseFloat(evalFilters.review_faithfulness_score);
+      filtered = filtered.filter(r => 
+        r.evaluation_results?.review_faithfulness_score?.eval_value === targetScore
+      );
+    }
+
+    // 5. Location Match TF 필터 (T/F/geocoding_failed)
     if (evalFilters.location_match_TF) {
       if (evalFilters.location_match_TF === 'geocoding_failed') {
         filtered = filtered.filter(r => !r.geocoding_success);
       } else {
-        const targetValue = evalFilters.location_match_TF === 'true';
+        const targetValue = evalFilters.location_match_TF === 'True';
         filtered = filtered.filter(r => 
           r.evaluation_results?.location_match_TF?.eval_value === targetValue
         );
       }
     }
 
-    // Category 필터
-    if (evalFilters.category && evalFilters.category !== 'all') {
-      filtered = filtered.filter(r => {
-        const categories = r.restaurant_info?.category || '';
-        return categories.includes(evalFilters.category!);
-      });
+    // 6. Category Validity TF 필터 (T/F)
+    if (evalFilters.category_validity_TF) {
+      const targetValue = evalFilters.category_validity_TF === 'True';
+      filtered = filtered.filter(r => 
+        r.evaluation_results?.category_validity_TF?.eval_value === targetValue
+      );
+    }
+
+    // 7. Category TF 필터 (T/F)
+    if (evalFilters.category_TF) {
+      const targetValue = evalFilters.category_TF === 'True';
+      filtered = filtered.filter(r => 
+        r.evaluation_results?.category_TF?.eval_value === targetValue
+      );
     }
 
     return filtered;
@@ -94,7 +122,25 @@ export default function AdminEvaluationPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.warn('No data returned from evaluation_records');
+        setRecords([]);
+        setStats({
+          total: 0,
+          pending: 0,
+          approved: 0,
+          hold: 0,
+          missing: 0,
+          db_conflict: 0,
+          geocoding_failed: 0,
+        });
+        return;
+      }
 
       setRecords(data as EvaluationRecord[]);
       
@@ -116,7 +162,18 @@ export default function AdminEvaluationPage() {
       toast({
         variant: 'destructive',
         title: '데이터 로드 실패',
-        description: error.message,
+        description: error.message || '알 수 없는 오류가 발생했습니다.',
+      });
+      // 에러 발생 시에도 빈 배열로 설정하여 UI가 렌더링되도록
+      setRecords([]);
+      setStats({
+        total: 0,
+        pending: 0,
+        approved: 0,
+        hold: 0,
+        missing: 0,
+        db_conflict: 0,
+        geocoding_failed: 0,
       });
     } finally {
       setLoading(false);
@@ -385,7 +442,7 @@ export default function AdminEvaluationPage() {
     setEditModalOpen(true);
   };
 
-  if (loading) {
+  if (loading && records.length === 0) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -394,41 +451,50 @@ export default function AdminEvaluationPage() {
   }
 
   return (
-    <div className="container mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">음식점 방문 데이터 평가 결과</h1>
+    <div className="flex flex-col h-screen">
+      <div className="p-6 border-b">
+        <h1 className="text-3xl font-bold">음식점 방문 데이터 평가 결과</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          총 {stats.total}개 레코드 | 필터링: {filteredRecords.length}개
+        </p>
+      </div>
 
-      <div className="flex gap-6">
-        {/* 카테고리 사이드바 */}
-        <CategorySidebar
-          stats={stats}
-          selectedStatuses={selectedStatuses}
-          onSelectStatuses={setSelectedStatuses}
-        />
-
-        {/* 메인 컨텐츠 */}
-        <div className="flex-1">
-          {/* 필터 바 */}
-          <EvaluationFilters
-            filters={evalFilters}
-            onFilterChange={(key, value) => {
-              setEvalFilters(prev => ({
-                ...prev,
-                [key]: value === '' ? undefined : value
-              }));
-            }}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* 상단: 카테고리 탭 */}
+        <div className="p-4 border-b bg-background">
+          <CategorySidebar
+            stats={stats}
+            selectedStatuses={selectedStatuses}
+            onSelectStatuses={setSelectedStatuses}
           />
+        </div>
 
-          {/* 테이블 */}
-          <EvaluationTable
-            records={filteredRecords}
-            onApprove={handleApprove}
-            onHold={handleHold}
-            onDelete={handleDelete}
-            onRegisterMissing={handleRegisterMissing}
-            onResolveConflict={handleResolveConflict}
-            onEdit={handleEdit}
-            loading={loading}
-          />
+        {/* 테이블 영역 (스크롤 가능) */}
+        <div className="flex-1 p-4 overflow-hidden">
+          {loading ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+          ) : (
+            <EvaluationTable
+              records={filteredRecords}
+              onApprove={handleApprove}
+              onHold={handleHold}
+              onDelete={handleDelete}
+              onRegisterMissing={handleRegisterMissing}
+              onResolveConflict={handleResolveConflict}
+              onEdit={handleEdit}
+              loading={loading}
+              evalFilters={evalFilters}
+              onFilterChange={(key, value) => {
+                setEvalFilters(prev => ({
+                  ...prev,
+                  [key]: value === '' ? undefined : value
+                }));
+              }}
+              onResetFilters={() => setEvalFilters({})}
+            />
+          )}
         </div>
       </div>
 
