@@ -533,15 +533,23 @@ const ReviewsPage = () => {
                                         </div>
                                     )}
 
-                                    {/* Photos placeholder */}
+                                    {/* Photos */}
                                     {review.photos.length > 0 && (
                                         <div className="flex gap-2 mb-4">
                                             {review.photos.map((photo, idx) => (
                                                 <div
                                                     key={idx}
-                                                    className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center"
+                                                    className="w-24 h-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden"
                                                 >
-                                                    📷
+                                                    <img
+                                                        src={supabase.storage.from('review-photos').getPublicUrl(photo.url).data.publicUrl}
+                                                        alt={`음식 사진 ${idx + 1}`}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            console.error('이미지 로딩 실패:', photo.url);
+                                                            e.currentTarget.style.display = 'none';
+                                                        }}
+                                                    />
                                                 </div>
                                             ))}
                                         </div>

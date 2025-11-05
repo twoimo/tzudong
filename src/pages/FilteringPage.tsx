@@ -1105,9 +1105,13 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                 <div className="mb-3">
                                                     <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                                                         <img
-                                                            src={review.photos[0].url}
+                                                            src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
                                                             alt={`음식 사진`}
                                                             className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                console.error('이미지 로딩 실패:', review.photos[0].url);
+                                                                e.currentTarget.style.display = 'none';
+                                                            }}
                                                         />
                                                     </div>
                                                 </div>
@@ -1244,9 +1248,13 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             <div className="mb-3">
                                                 <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                                                     <img
-                                                        src={review.photos[0].url}
+                                                        src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
                                                         alt={`음식 사진`}
                                                         className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            console.error('이미지 로딩 실패:', review.photos[0].url);
+                                                            e.currentTarget.style.display = 'none';
+                                                        }}
                                                     />
                                                 </div>
                                             </div>
