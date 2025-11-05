@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { CheckCircle, Trophy, MapPin } from "lucide-react";
@@ -23,6 +23,11 @@ const StampPage = () => {
     const { user } = useAuth();
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
 
+    // 방문한 맛집인지 확인
+    const isVisited = (restaurantId: string) => {
+        return userReviews.has(restaurantId);
+    };
+
     // 전체 맛집 개수 조회
     const { data: totalRestaurantsCount = 0 } = useQuery({
         queryKey: ['stamp-restaurants-total-count'],
@@ -37,69 +42,31 @@ const StampPage = () => {
         },
     });
 
-    // 쯔양이 방문한 모든 맛집 조회 (무한 스크롤)
-    const {
-        data: restaurantsData,
-        fetchNextPage: fetchNextRestaurants,
-        hasNextPage,
-        isLoading,
-        isFetchingNextPage,
-    } = useInfiniteQuery({
-        queryKey: ['stamp-restaurants'],
-        queryFn: async ({ pageParam = 0 }) => {
+    // 쯔양이 방문한 모든 맛집 조회 (전체 데이터 한 번에 가져오기)
+    const { data: restaurantsData, isLoading } = useQuery({
+        queryKey: ['stamp-restaurants-all'],
+        queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
                 .select('id, name, youtube_link, review_count')
                 .not('youtube_link', 'is', null)
-                .order('created_at', { ascending: true })
-                .range(pageParam, pageParam + 49); // 한 페이지당 50개씩
+                .order('created_at', { ascending: true });
 
             if (error) throw error;
-
-            if (!data || data.length === 0) {
-                return { restaurants: [], nextCursor: null };
-            }
-
-            // 다음 페이지 커서 계산
-            const nextCursor = data.length === 50 ? pageParam + 50 : null;
-
-            return {
-                restaurants: data as Restaurant[],
-                nextCursor,
-            };
+            return data as Restaurant[];
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
-        initialPageParam: 0,
     });
 
-    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
-    const restaurants = restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+    // 방문한 맛집을 먼저 표시하기 위해 정렬
+    const restaurants = (restaurantsData || []).sort((a, b) => {
+        const aVisited = isVisited(a.id);
+        const bVisited = isVisited(b.id);
 
-    // 그리드 무한 스크롤을 위한 Intersection Observer
-    const loadMoreGridRef = useRef<HTMLDivElement>(null);
+        if (aVisited && !bVisited) return -1; // a가 방문했고 b가 방문하지 않았으면 a를 먼저
+        if (!aVisited && bVisited) return 1;  // b가 방문했고 a가 방문하지 않았으면 b를 먼저
+        return 0; // 둘 다 방문했거나 둘 다 방문하지 않았으면 기존 순서 유지
+    });
 
-    const loadMoreGrid = useCallback(() => {
-        if (hasNextPage && !isFetchingNextPage) {
-            fetchNextRestaurants();
-        }
-    }, [hasNextPage, isFetchingNextPage, fetchNextRestaurants]);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting) {
-                    loadMoreGrid();
-                }
-            },
-            { threshold: 0.1 }
-        );
-
-        if (loadMoreGridRef.current) {
-            observer.observe(loadMoreGridRef.current);
-        }
-
-        return () => observer.disconnect();
-    }, [loadMoreGrid]);
 
     // 사용자 프로필 정보 조회 (로그인한 경우)
     const { data: userProfile } = useQuery({
@@ -159,11 +126,6 @@ const StampPage = () => {
         return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
     };
 
-    // 방문한 맛집인지 확인
-    const isVisited = (restaurantId: string) => {
-        return userReviews.has(restaurantId);
-    };
-
     // 방문한 맛집 수 계산 (고유한 맛집 개수로 계산 - 중복 방문은 1개로 계산)
     const visitedCount = userReviewData.length > 0 ? new Set(userReviewData.map(review => review.restaurant_id)).size : 0;
     const totalCount = totalRestaurantsCount;
@@ -218,7 +180,6 @@ const StampPage = () => {
                         return (
                             <Card
                                 key={`${restaurant.id}-${index}`}
-                                ref={index === restaurants.length - 1 ? loadMoreGridRef : null}
                                 className={cn(
                                     "relative overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer group",
                                     visited ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg"
@@ -265,16 +226,6 @@ const StampPage = () => {
                             </Card>
                         );
                     })}
-
-                    {/* 추가 로딩 표시 */}
-                    {isFetchingNextPage && (
-                        <div className="col-span-5 flex items-center justify-center py-8">
-                            <div className="flex items-center gap-2">
-                                <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                                <span className="text-sm text-muted-foreground">더 많은 맛집을 불러오는 중...</span>
-                            </div>
-                        </div>
-                    )}
                 </div>
 
                 {restaurants.length === 0 && (
