@@ -705,7 +705,12 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     return (
         <PanelGroup direction="horizontal" className="h-full bg-background">
             {/* Left Panel - Filtering */}
-            <Panel defaultSize={60} minSize={30} maxSize={80} className="flex flex-col min-w-0">
+            <Panel
+                defaultSize={isRightPanelVisible ? 60 : 100}
+                minSize={30}
+                maxSize={80}
+                className="flex flex-col min-w-0"
+            >
                 {/* Header */}
                 <div className="border-b border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -726,16 +731,16 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
-                            {!isRightPanelVisible && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setIsRightPanelVisible(true)}
-                                    className="hover:text-accent-foreground hover:bg-accent"
-                                >
-                                    <MessageSquare className="h-5 w-5" />
-                                </Button>
-                            )}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsRightPanelVisible(true)}
+                                className={`hover:text-accent-foreground hover:bg-accent transition-transform duration-300 ease-in-out ${
+                                    isRightPanelVisible ? '-translate-x-full pointer-events-none' : 'translate-x-0'
+                                }`}
+                            >
+                                <MessageSquare className="h-5 w-5" />
+                            </Button>
                         </div>
                     </div>
 
@@ -1020,7 +1025,12 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
 
             {/* Right Panel - Reviews */}
             {isRightPanelVisible && (
-                <Panel defaultSize={20} minSize={20} maxSize={70} className="flex flex-col bg-card">
+                <Panel
+                    defaultSize={20}
+                    minSize={20}
+                    maxSize={70}
+                    className="flex flex-col bg-card"
+                >
                 <div className="border-b border-border p-6">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
