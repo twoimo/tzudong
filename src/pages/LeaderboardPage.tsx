@@ -315,106 +315,16 @@ const LeaderboardPage = () => {
                                 맛집 리뷰로 쌓은 랭킹
                             </p>
                         </div>
+                        <div className="text-right">
+                            <div className="text-sm font-medium text-muted-foreground">
+                                총 참가자
+                            </div>
+                            <div className="text-2xl font-bold text-primary">
+                                {sortedLeaderboard.length}
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Top 3 Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                        {isLoading ? (
-                            // Loading skeleton for top 3
-                            Array.from({ length: 3 }).map((_, index) => (
-                                <Card key={index} className="p-4">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-full bg-muted animate-pulse flex items-center justify-center">
-                                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="h-5 bg-muted rounded animate-pulse mb-1"></div>
-                                            <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="h-3 bg-muted rounded animate-pulse w-12"></div>
-                                            <div className="h-3 bg-muted rounded animate-pulse w-8"></div>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <div className="h-3 bg-muted rounded animate-pulse w-20"></div>
-                                            <div className="h-3 bg-muted rounded animate-pulse w-8"></div>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))
-                        ) : sortedLeaderboard.slice(0, 3).map((user, index) => (
-                            <Card
-                                key={`${user.id}-${index}`}
-                                className={`p-4 relative ${user.rank === 1 ? "border-2 border-primary shadow-lg" : ""
-                                    }`}
-                            >
-                                {/* 티어 배지 - 우측 상단 */}
-                                <div className="absolute top-2 right-2">
-                                    <Badge variant="outline" className={`${getUserTier(user.reviewCount).bgColor} ${getUserTier(user.reviewCount).color} border-current text-xs px-2 py-0.5`}>
-                                        {getUserTier(user.reviewCount).name}
-                                    </Badge>
-                                </div>
-
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className={`w-12 h-12 rounded-full ${getRankBadgeColor(user.rank)} flex items-center justify-center`}>
-                                        {getRankIcon(user.rank)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-lg">{user.username}</h3>
-                                        <p className="text-xs text-muted-foreground">#{user.rank} 랭킹</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">리뷰 수</span>
-                                        <span className="font-semibold">{user.reviewCount}개</span>
-                                    </div>
-                                </div>
-
-                                <div className="mt-3 pt-3 border-t border-border">
-                                    <p className="text-xs text-muted-foreground mb-2">배지</p>
-                                    <div className="flex gap-1 flex-wrap">
-                                        {user.badges.map((badge, idx) => {
-                                            const getBadgeDescription = (badgeName: string) => {
-                                                switch (badgeName) {
-                                                    case "첫 리뷰":
-                                                        return "⭐ 첫 리뷰 작성 시 획득\n1개 이상의 리뷰를 작성하세요";
-                                                    case "열정적인 리뷰어":
-                                                        return "🔥 열정적인 리뷰어\n10개 이상의 리뷰를 작성하세요";
-                                                    case "리뷰 마스터":
-                                                        return "👑 리뷰 마스터\n50개 이상의 리뷰를 작성하세요";
-                                                    case "신뢰의 아이콘":
-                                                        return "💎 신뢰의 아이콘\n10개 이상의 리뷰가 승인되면 획득";
-                                                    default:
-                                                        return badgeName;
-                                                }
-                                            };
-
-                                            return (
-                                                <Tooltip key={idx}>
-                                                    <TooltipTrigger asChild>
-                                                        <div className="inline-block">
-                                                            <Badge variant="outline" className="text-xs cursor-help">
-                                                                {badge.icon} {badge.name}
-                                                            </Badge>
-                                                        </div>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p className="whitespace-pre-line text-sm">
-                                                            {getBadgeDescription(badge.name)}
-                                                        </p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
                 </div>
 
                 {/* Full Rankings Table */}
@@ -525,15 +435,19 @@ const LeaderboardPage = () => {
                                                             <Tooltip key={idx}>
                                                                 <TooltipTrigger asChild>
                                                                     <div className="inline-block">
-                                                                        <span className="text-lg cursor-help">
+                                                                        <span className="text-lg cursor-help hover:scale-110 transition-transform duration-200 p-1 rounded-md hover:bg-muted/30">
                                                                             {badge.icon}
                                                                         </span>
                                                                     </div>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
-                                                                    <p className="text-sm">
-                                                                        {getBadgeDescription(badge.name)}
-                                                                    </p>
+                                                                    <div className="text-center">
+                                                                        <div className="text-lg mb-1">{badge.icon}</div>
+                                                                        <p className="font-semibold text-sm">{badge.name}</p>
+                                                                        <p className="text-xs text-muted-foreground whitespace-pre-line">
+                                                                            {getBadgeDescription(badge.name)}
+                                                                        </p>
+                                                                    </div>
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         );
