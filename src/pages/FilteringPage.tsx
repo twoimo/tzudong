@@ -146,12 +146,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { restaurants: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => {
-            if (lastPage?.restaurants?.length === 50) {
-                return lastPage.pageParam + 50;
-            }
-            return undefined;
-        },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
         enabled: !searchQuery.trim(), // 검색어가 없을 때만 실행
     });
@@ -285,12 +280,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => {
-            if (lastPage?.reviews?.length === 20) {
-                return lastPage.pageParam + 20;
-            }
-            return undefined;
-        },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
     });
 
@@ -434,12 +424,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => {
-            if (lastPage?.reviews?.length === 20) {
-                return lastPage.pageParam + 20;
-            }
-            return undefined;
-        },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
         enabled: !!selectedRestaurant?.id,
     });
