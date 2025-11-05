@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart, Menu } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -716,7 +716,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                                <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                                    <Filter className="h-6 w-6 text-primary" />
                                     쯔동여지도 필터링
                                 </h1>
                             </div>
@@ -1029,12 +1030,11 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     className="flex flex-col bg-card"
                 >
                     <div className="border-b border-border p-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                                    {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
-                                </h2>
-                            </div>
+                        <div className="flex items-center gap-3">
+                            <MessageSquare className="h-6 w-6 text-primary" />
+                            <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                                {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
+                            </h2>
                         </div>
                         {selectedRestaurant ? (
                             <p className="text-sm text-muted-foreground mt-1">
@@ -1304,8 +1304,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     )}
                                 </div>
                             </ScrollArea>
-                    )}
-                </div>
+                        )}
+                    </div>
                 </Panel>
             )}
 
