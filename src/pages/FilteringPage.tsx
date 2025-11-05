@@ -82,23 +82,82 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const [searchQuery, setSearchQuery] = useState("");
 
     // 리뷰수가 가장 많은 맛집 조회 (우측 패널 기본 표시용)
+    // 리뷰수가 같으면 좋아요 총합이 가장 많은 맛집 선택
     const { data: topReviewedRestaurant } = useQuery({
         queryKey: ['top-reviewed-restaurant'],
         queryFn: async () => {
             try {
-                const { data: restaurant, error } = await supabase
+                // 1. 최대 리뷰수 값을 먼저 찾음
+                const { data: maxReviewCountData, error: maxError } = await supabase
                     .from('restaurants')
-                    .select('*')
+                    .select('review_count')
                     .order('review_count', { ascending: false })
                     .limit(1)
                     .single();
 
-                if (error) {
-                    console.error('리뷰수 가장 많은 맛집 조회 실패:', error);
+                if (maxError || !maxReviewCountData) {
+                    console.error('최대 리뷰수 조회 실패:', maxError);
                     return null;
                 }
 
-                return restaurant;
+                const maxReviewCount = maxReviewCountData.review_count || 0;
+
+                // 2. 최대 리뷰수와 같은 모든 맛집들을 가져옴
+                const { data: topRestaurants, error: restaurantsError } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .eq('review_count', maxReviewCount);
+
+                if (restaurantsError || !topRestaurants || topRestaurants.length === 0) {
+                    console.error('최대 리뷰수 맛집 조회 실패:', restaurantsError);
+                    return null;
+                }
+
+                // 3. 각 맛집의 리뷰 좋아요 총합을 계산
+                const likeCounts = new Map();
+
+                for (const restaurant of topRestaurants) {
+                    // 해당 맛집의 모든 리뷰 조회
+                    const { data: reviews, error: reviewsError } = await supabase
+                        .from('reviews')
+                        .select('id')
+                        .eq('restaurant_id', restaurant.id)
+                        .eq('is_verified', true);
+
+                    if (reviewsError || !reviews) {
+                        likeCounts.set(restaurant.id, 0);
+                        continue;
+                    }
+
+                    const reviewIds = reviews.map(r => r.id);
+
+                    // 해당 리뷰들의 좋아요 총합 계산
+                    const { data: likes, error: likesError } = await supabase
+                        .from('review_likes')
+                        .select('review_id')
+                        .in('review_id', reviewIds);
+
+                    const totalLikes = likes ? likes.length : 0;
+                    likeCounts.set(restaurant.id, totalLikes);
+                }
+
+                // 4. 좋아요 총합이 가장 많은 맛집 선택
+                const sortedRestaurants = topRestaurants.sort((a, b) => {
+                    const aLikes = likeCounts.get(a.id) || 0;
+                    const bLikes = likeCounts.get(b.id) || 0;
+                    return bLikes - aLikes; // 내림차순 정렬
+                });
+
+                // 디버깅 정보 출력
+                console.log('최대 리뷰수:', maxReviewCount);
+                console.log('후보 맛집들:', topRestaurants.map(r => ({
+                    name: r.name,
+                    reviewCount: r.review_count,
+                    totalLikes: likeCounts.get(r.id) || 0
+                })));
+                console.log('선택된 맛집:', sortedRestaurants[0]?.name, '좋아요 총합:', likeCounts.get(sortedRestaurants[0]?.id) || 0);
+
+                return sortedRestaurants[0];
             } catch (error) {
                 console.error('리뷰수 가장 많은 맛집 조회 중 오류:', error);
                 return null;
