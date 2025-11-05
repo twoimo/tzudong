@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +75,7 @@ interface Review {
 }
 
 const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
-    const { isAdmin } = useAuth();
+    const { isAdmin, user } = useAuth();
     const queryClient = useQueryClient();
 
     // 검색어 상태를 별도로 관리 (의존성 순환 방지)
@@ -146,12 +146,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { restaurants: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => {
-            if (lastPage?.restaurants?.length === 50) {
-                return lastPage.pageParam + 50;
-            }
-            return undefined;
-        },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
         enabled: !searchQuery.trim(), // 검색어가 없을 때만 실행
     });
@@ -190,6 +185,45 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const [sortDirection, setSortDirection] = useState<SortDirection>(null);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [isRightPanelVisible, setIsRightPanelVisible] = useState(true);
+
+    // 좋아요 토글 함수
+    const toggleLike = async (reviewId: string, currentIsLiked: boolean, currentLikeCount: number) => {
+        if (!user) {
+            // 로그인하지 않은 경우 처리 (토스트 메시지 등)
+            console.warn('로그인이 필요합니다.');
+            return;
+        }
+
+        try {
+            if (currentIsLiked) {
+                // 좋아요 취소
+                const { error } = await supabase
+                    .from('review_likes')
+                    .delete()
+                    .eq('review_id', reviewId)
+                    .eq('user_id', user.id);
+
+                if (error) throw error;
+            } else {
+                // 좋아요 추가
+                const { error } = await supabase
+                    .from('review_likes')
+                    .insert({
+                        review_id: reviewId,
+                        user_id: user.id,
+                    });
+
+                if (error) throw error;
+            }
+
+            // 쿼리 무효화하여 데이터 새로고침
+            queryClient.invalidateQueries({ queryKey: ['top-liked-reviews'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
+        } catch (error) {
+            console.error('좋아요 토글 실패:', error);
+        }
+    };
 
     // 전체 리뷰 중 좋아요가 가장 많은 리뷰들 조회 (무한 스크롤)
     const {
@@ -250,9 +284,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     console.warn('review_likes 테이블이 존재하지 않음, 좋아요 수를 0으로 설정합니다:', error);
                 }
 
-                // 6. 좋아요 수 계산
+                // 6. 좋아요 수와 사용자 좋아요 상태 계산
                 const reviewsWithLikes = allReviews.map(review => {
                     const likesForReview = likesData?.filter(like => like.review_id === review.id) || [];
+                    const isLikedByUser = user ? likesForReview.some(like => like.user_id === user.id) : false;
                     return {
                         ...review,
                         likeCount: likesForReview.length,
@@ -268,7 +303,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
                         category: review.categories?.[0] || review.category,
-                        isLikedByUser: false,
+                        isLikedByUser,
                     } as Review;
                 });
 
@@ -285,12 +320,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => {
-            if (lastPage?.reviews?.length === 20) {
-                return lastPage.pageParam + 20;
-            }
-            return undefined;
-        },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
     });
 
@@ -392,9 +422,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 const likesMap = new Map<string, { count: number; isLiked: boolean }>();
                 reviewIds.forEach(reviewId => {
                     const likesForReview = likesData?.filter(like => like.review_id === reviewId) || [];
+                    const isLiked = user ? likesForReview.some(like => like.user_id === user.id) : false;
                     likesMap.set(reviewId, {
                         count: likesForReview.length,
-                        isLiked: false // FilteringPage에서는 사용자 상태를 확인하지 않음
+                        isLiked,
                     });
                 });
 
@@ -434,12 +465,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => {
-            if (lastPage?.reviews?.length === 20) {
-                return lastPage.pageParam + 20;
-            }
-            return undefined;
-        },
+        getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
         enabled: !!selectedRestaurant?.id,
     });
@@ -679,7 +705,12 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     return (
         <PanelGroup direction="horizontal" className="h-full bg-background">
             {/* Left Panel - Filtering */}
-            <Panel defaultSize={60} minSize={30} maxSize={80} className="flex flex-col min-w-0">
+            <Panel
+                defaultSize={isRightPanelVisible ? 60 : 100}
+                minSize={30}
+                maxSize={80}
+                className="flex flex-col min-w-0"
+            >
                 {/* Header */}
                 <div className="border-b border-border bg-card p-6">
                     <div className="flex items-center justify-between mb-4">
@@ -699,9 +730,18 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 )}
                             </p>
                         </div>
-                        <Button variant="outline" onClick={handleResetFilters}>
-                            필터 초기화
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setIsRightPanelVisible(true)}
+                                className={`hover:text-accent-foreground hover:bg-accent transition-transform duration-300 ease-in-out ${
+                                    isRightPanelVisible ? '-translate-x-full pointer-events-none' : 'translate-x-0'
+                                }`}
+                            >
+                                <MessageSquare className="h-5 w-5" />
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Filter Controls */}
@@ -808,6 +848,11 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                 <SelectItem value="500">500회 이상</SelectItem>
                             </SelectContent>
                         </Select>
+
+                        {/* 필터 초기화 */}
+                        <Button variant="outline" onClick={handleResetFilters}>
+                            필터 초기화
+                        </Button>
 
                     </div>
 
@@ -972,18 +1017,36 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             </Panel>
 
             {/* Resize Handle */}
-            <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
-                <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
-            </PanelResizeHandle>
+            {isRightPanelVisible && (
+                <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
+                    <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
+                </PanelResizeHandle>
+            )}
 
             {/* Right Panel - Reviews */}
-            <Panel defaultSize={20} minSize={20} maxSize={70} className="flex flex-col bg-card">
+            {isRightPanelVisible && (
+                <Panel
+                    defaultSize={20}
+                    minSize={20}
+                    maxSize={70}
+                    className="flex flex-col bg-card"
+                >
                 <div className="border-b border-border p-6">
-                    <div className="flex items-center gap-3">
-                        <MessageSquare className="h-6 w-6 text-primary" />
-                        <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                            {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
-                        </h2>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <MessageSquare className="h-6 w-6 text-primary" />
+                            <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                                {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
+                            </h2>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsRightPanelVisible(false)}
+                            className="hover:text-accent-foreground hover:bg-accent"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </Button>
                     </div>
                     {selectedRestaurant ? (
                         <p className="text-sm text-muted-foreground mt-1">
@@ -1056,12 +1119,18 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <span className="text-sm text-muted-foreground">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => toggleLike(review.id, review.isLikedByUser, review.likeCount)}
+                                                    className="flex items-center gap-1 h-6 px-2 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                    disabled={!user}
+                                                >
+                                                    <Heart className={`h-3 w-3 ${review.isLikedByUser ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                                                    <span className={`text-xs ${review.isLikedByUser ? 'text-red-500' : 'text-muted-foreground'}`}>
                                                         {review.likeCount}
                                                     </span>
-                                                    <Heart className="h-4 w-4 text-gray-400" />
-                                                </div>
+                                                </Button>
                                             </div>
 
                                             {/* Content */}
@@ -1074,9 +1143,13 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                 <div className="mb-3">
                                                     <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                                                         <img
-                                                            src={review.photos[0].url}
+                                                            src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
                                                             alt={`음식 사진`}
                                                             className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                console.error('이미지 로딩 실패:', review.photos[0].url);
+                                                                e.currentTarget.style.display = 'none';
+                                                            }}
                                                         />
                                                     </div>
                                                 </div>
@@ -1174,12 +1247,18 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <span className="text-sm text-muted-foreground">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => toggleLike(review.id, review.isLikedByUser, review.likeCount)}
+                                                className="flex items-center gap-1 h-6 px-2 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                disabled={!user}
+                                            >
+                                                <Heart className={`h-3 w-3 ${review.isLikedByUser ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                                                <span className={`text-xs ${review.isLikedByUser ? 'text-red-500' : 'text-muted-foreground'}`}>
                                                     {review.likeCount}
                                                 </span>
-                                                <Heart className="h-4 w-4 text-gray-400" />
-                                            </div>
+                                            </Button>
                                         </div>
 
                                         {/* Content */}
@@ -1207,9 +1286,13 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             <div className="mb-3">
                                                 <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
                                                     <img
-                                                        src={review.photos[0].url}
+                                                        src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
                                                         alt={`음식 사진`}
                                                         className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            console.error('이미지 로딩 실패:', review.photos[0].url);
+                                                            e.currentTarget.style.display = 'none';
+                                                        }}
                                                     />
                                                 </div>
                                             </div>
@@ -1235,7 +1318,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         </ScrollArea>
                     )}
                 </div>
-            </Panel>
+                </Panel>
+            )}
 
             {/* Review Modal */}
             <ReviewModal
