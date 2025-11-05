@@ -1,7 +1,6 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
     Table,
     TableBody,
@@ -12,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trophy, Medal, Award, TrendingUp, Star, CheckCircle, Loader2 } from "lucide-react";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -22,6 +21,7 @@ interface LeaderboardUser {
     username: string;
     reviewCount: number;
     verifiedReviewCount: number;
+    totalLikes: number; // 추가: 총 좋아요 수
     badges: { name: string; icon: string; earnedAt: string }[];
 }
 
@@ -29,173 +29,107 @@ interface LeaderboardUser {
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
 
-    // Fetch leaderboard data from Supabase - 무한 스크롤 방식
-    const {
-        data: leaderboardPages,
-        fetchNextPage,
-        hasNextPage,
-        isLoading,
-        isFetchingNextPage,
-    } = useInfiniteQuery({
-        queryKey: ['leaderboard', sortBy],
-        queryFn: async ({ pageParam = 0 }) => {
+    // Fetch leaderboard data from Supabase - 모든 사용자 포함
+    const { data: allUsers, isLoading } = useQuery({
+        queryKey: ['leaderboard-all-users'],
+        queryFn: async () => {
             try {
-                // Get verified reviews with pagination
-                const { data: reviewsData, error: reviewsError } = await supabase
-                    .from('reviews')
-                    .select('user_id, is_verified')
-                    .eq('is_verified', true)
-                    .range(pageParam, pageParam + 199) // 한 페이지당 200개 리뷰씩
-                    .order('created_at', { ascending: false });
-
-                if (reviewsError) {
-                    console.warn('리뷰 데이터 조회 실패:', reviewsError.message);
-                    throw new Error(`리뷰 데이터 조회 실패: ${reviewsError.message}`);
-                }
-
-                if (!reviewsData) {
-                    console.warn('리뷰 데이터가 null입니다');
-                    return { users: [], nextCursor: null };
-                }
-
-                if (reviewsData.length === 0) {
-                    return { users: [], nextCursor: null };
-                }
-
-                // Get unique user IDs - 데이터 유효성 검증
-                const userIds = [...new Set(
-                    reviewsData
-                        .map(review => review.user_id)
-                        .filter(userId => userId && typeof userId === 'string')
-                )];
-
-                if (userIds.length === 0) {
-                    console.warn('유효한 사용자 ID가 없습니다');
-                    return { users: [], nextCursor: null };
-                }
-
-                // Get profile info for these users
+                // Get all profiles (모든 사용자)
                 const { data: profilesData, error: profilesError } = await supabase
                     .from('profiles')
                     .select('user_id, nickname')
-                    .in('user_id', userIds);
+                    .not('nickname', 'is', null)
+                    .neq('nickname', '탈퇴한 사용자');
 
                 if (profilesError) {
                     console.warn('프로필 데이터 조회 실패:', profilesError.message);
                     throw new Error(`프로필 데이터 조회 실패: ${profilesError.message}`);
                 }
 
-                // Create profiles map
-                const profilesMap = new Map(
-                    (profilesData || []).map(profile => [profile.user_id, profile.nickname])
-                );
+                if (!profilesData || profilesData.length === 0) {
+                    return [];
+                }
 
-                // Group reviews by user and calculate stats
-                const userStats = new Map<string, {
-                    userId: string;
-                    nickname: string;
-                    totalReviews: number;
-                    verifiedReviews: number;
-                }>();
+                // Get all reviews for these users (좋아요 수 계산을 위해)
+                const userIds = profilesData.map(profile => profile.user_id);
+                const { data: allReviewsData, error: allReviewsError } = await supabase
+                    .from('reviews')
+                    .select('user_id, is_verified, likes_count')
+                    .in('user_id', userIds);
 
-                reviewsData.forEach(review => {
-                    const userId = review.user_id;
-                    const nickname = profilesMap.get(userId);
+                if (allReviewsError) {
+                    console.warn('전체 리뷰 데이터 조회 실패:', allReviewsError.message);
+                    // 리뷰 조회 실패해도 프로필은 표시 (리뷰 수 0으로)
+                }
 
-                    // 탈퇴한 사용자는 랭킹에서 제외 (프로필이 없거나 '탈퇴한 사용자'인 경우)
-                    if (!nickname || nickname === '탈퇴한 사용자') {
-                        return;
+                // Create review stats maps
+                const reviewCountMap = new Map<string, number>();
+                const verifiedReviewCountMap = new Map<string, number>();
+                const totalLikesMap = new Map<string, number>();
+
+                if (allReviewsData) {
+                    allReviewsData.forEach(review => {
+                        // 총 리뷰 수 계산
+                        const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
+                        reviewCountMap.set(review.user_id, currentReviewCount + 1);
+
+                        // 승인된 리뷰 수 계산
+                        if (review.is_verified) {
+                            const currentVerifiedCount = verifiedReviewCountMap.get(review.user_id) || 0;
+                            verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
+                        }
+
+                        // 총 좋아요 수 계산
+                        const currentLikes = totalLikesMap.get(review.user_id) || 0;
+                        const likesCount = review.likes_count || 0;
+                        totalLikesMap.set(review.user_id, currentLikes + likesCount);
+                    });
+                }
+
+                // Calculate user stats for all profiles
+                const users = profilesData.map(profile => {
+                    const reviewCount = reviewCountMap.get(profile.user_id) || 0;
+                    const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
+                    const totalLikes = totalLikesMap.get(profile.user_id) || 0;
+                    const badges: { name: string; icon: string; earnedAt: string }[] = [];
+
+                    // Award badges based on achievements
+                    if (reviewCount >= 1) {
+                        badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
+                    }
+                    if (reviewCount >= 10) {
+                        badges.push({ name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" });
+                    }
+                    if (reviewCount >= 50) {
+                        badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
+                    }
+                    if (verifiedReviewCount >= 10) {
+                        badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
+                    }
+                    if (totalLikes >= 50) {
+                        badges.push({ name: "인기인", icon: "❤️", earnedAt: "" });
                     }
 
-                    const current = userStats.get(userId) || {
-                        userId,
-                        nickname,
-                        totalReviews: 0,
-                        verifiedReviews: 0
+                    return {
+                        id: profile.user_id,
+                        username: profile.nickname,
+                        reviewCount,
+                        verifiedReviewCount,
+                        totalLikes,
+                        badges,
                     };
-
-                    current.totalReviews++;
-                    if (review.is_verified) {
-                        current.verifiedReviews++;
-                    }
-
-                    userStats.set(userId, current);
                 });
 
-                // Convert to leaderboard format
-                const users = Array.from(userStats.values())
-                    .filter(user => user.totalReviews > 0)
-                    .map((user) => {
-                        const badges = [];
-
-                        // Award badges based on achievements
-                        if (user.totalReviews >= 1) {
-                            badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
-                        }
-                        if (user.totalReviews >= 10) {
-                            badges.push({ name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" });
-                        }
-                        if (user.totalReviews >= 50) {
-                            badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
-                        }
-                        if (user.verifiedReviews >= 10) {
-                            badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
-                        }
-
-                        // 데이터 유효성 검증
-                        if (!user.userId || !user.nickname || user.totalReviews < 0 || user.verifiedReviews < 0) {
-                            console.warn('유효하지 않은 사용자 데이터:', user);
-                            return null;
-                        }
-
-                        return {
-                            id: user.userId,
-                            username: user.nickname,
-                            reviewCount: user.totalReviews,
-                            verifiedReviewCount: user.verifiedReviews,
-                            badges,
-                        };
-                    }).filter(user => user !== null); // null 값 필터링
-
-                // 다음 페이지 커서 계산
-                const nextCursor = reviewsData.length === 200 ? pageParam + 200 : null;
-
-                return {
-                    users,
-                    nextCursor,
-                };
+                return users;
             } catch (error) {
                 console.warn('리더보드 데이터 조회 중 오류 발생:', error);
-                return { users: [], nextCursor: null };
+                return [];
             }
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
-        initialPageParam: 0,
     });
 
-    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
-    const allLeaderboardUsers = leaderboardPages?.pages.flatMap(page => page.users) || [];
-
-    // 유저별로 데이터를 합치기 (중복 제거) - 메모리 효율적 방식
-    const userMap = new Map<string, LeaderboardUser>();
-
-    // 안전하게 데이터 처리
-    if (Array.isArray(allLeaderboardUsers)) {
-        allLeaderboardUsers.forEach(user => {
-            if (!user || !user.id || typeof user.reviewCount !== 'number') {
-                console.warn('Invalid user data:', user);
-                return;
-            }
-
-            const existing = userMap.get(user.id);
-            if (!existing || user.reviewCount > existing.reviewCount) {
-                userMap.set(user.id, user);
-            }
-        });
-    }
-
-    // 실시간 정렬 및 순위 부여
-    const leaderboardData = Array.from(userMap.values())
+    // 실시간 정렬 및 순위 부여 - 모든 사용자 포함
+    const leaderboardData = (allUsers || [])
         .sort((a, b) => b.reviewCount - a.reviewCount)
         .map((user, index) => ({
             ...user,
@@ -210,42 +144,6 @@ const LeaderboardPage = () => {
         return 0;
     });
 
-    // 테이블 무한 스크롤을 위한 Intersection Observer
-    const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
-
-    const loadMoreLeaderboard = useCallback(() => {
-        if (hasNextPage && !isFetchingNextPage && !isLoading) {
-            fetchNextPage();
-        }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage, isLoading]);
-
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                // entries가 존재하고 첫 번째 entry가 교차하는지 확인
-                if (entries && entries[0] && entries[0].isIntersecting) {
-                    loadMoreLeaderboard();
-                }
-            },
-            {
-                threshold: 0.1,
-                rootMargin: '50px' // 50px 전에 로드 시작
-            }
-        );
-
-        const currentRef = loadMoreTableRef.current;
-        if (currentRef) {
-            observer.observe(currentRef);
-        }
-
-        // 클린업 함수
-        return () => {
-            if (currentRef) {
-                observer.unobserve(currentRef);
-            }
-            observer.disconnect();
-        };
-    }, [loadMoreLeaderboard]);
 
     const getRankIcon = (rank: number, forTable: boolean = false) => {
         if (forTable) {
@@ -349,6 +247,7 @@ const LeaderboardPage = () => {
                                                 {sortBy === "reviews" && <TrendingUp className="h-3 w-3" />}
                                             </button>
                                         </TableHead>
+                                        <TableHead className="text-center">좋아요</TableHead>
                                         <TableHead className="text-center">티어</TableHead>
                                         <TableHead>배지</TableHead>
                                     </TableRow>
@@ -364,13 +263,13 @@ const LeaderboardPage = () => {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 bg-muted rounded animate-pulse"></div>
-                                                        <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
-                                                    </div>
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-10 mx-auto"></div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="h-4 bg-muted rounded animate-pulse w-12 mx-auto"></div>
@@ -386,7 +285,6 @@ const LeaderboardPage = () => {
                                     ) : sortedLeaderboard.map((user, index) => (
                                         <TableRow
                                             key={`${user.id}-${index}`}
-                                            ref={index === sortedLeaderboard.length - 1 ? loadMoreTableRef : null}
                                             className="hover:bg-muted/50"
                                         >
                                             <TableCell>
@@ -395,18 +293,17 @@ const LeaderboardPage = () => {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarFallback>
-                                                            {user.username[0]}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium">{user.username}</span>
-                                                </div>
+                                                <span className="font-medium">{user.username}</span>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <span className="font-semibold">{user.reviewCount}</span>
                                                 <span className="text-muted-foreground text-xs ml-1">개</span>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <span className="font-semibold text-red-600">{user.totalLikes}</span>
+                                                    <span className="text-muted-foreground text-xs">❤️</span>
+                                                </div>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <Badge variant="outline" className={`${getUserTier(user.reviewCount).bgColor} ${getUserTier(user.reviewCount).color} border-current`}>
@@ -465,7 +362,7 @@ const LeaderboardPage = () => {
                                     {/* 빈 데이터 상태 */}
                                     {!isLoading && sortedLeaderboard.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-12">
+                                            <TableCell colSpan={7} className="text-center py-12">
                                                 <div className="text-muted-foreground">
                                                     <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                                     <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
@@ -475,17 +372,6 @@ const LeaderboardPage = () => {
                                         </TableRow>
                                     )}
 
-                                    {/* 추가 로딩 표시 */}
-                                    {isFetchingNextPage && (
-                                        <TableRow>
-                                            <TableCell colSpan={6} className="text-center py-4">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                                                    <span className="text-sm text-muted-foreground">더 많은 랭킹을 불러오는 중...</span>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
                                 </TableBody>
                             </Table>
                         </ScrollArea>
