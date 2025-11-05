@@ -517,28 +517,30 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     };
 
     // 주소에서 지역 추출 함수
-    const extractRegion = (address: string): string => {
+    const extractRegion = (roadAddress: string | null, jibunAddress: string | null): string => {
+        // 도로명 주소 우선, 없으면 지번 주소 사용
+        const address = roadAddress || jibunAddress || "";
         if (!address) return "";
 
         // 시/도 패턴 매칭
         const regionPatterns = [
-            { pattern: /^서울/, region: "서울" },
+            { pattern: /^서울|서울특별시/, region: "서울" },
             { pattern: /^경기도|^경기/, region: "경기" },
-            { pattern: /^인천/, region: "인천" },
-            { pattern: /^부산/, region: "부산" },
-            { pattern: /^대구/, region: "대구" },
-            { pattern: /^광주/, region: "광주" },
-            { pattern: /^대전/, region: "대전" },
-            { pattern: /^울산/, region: "울산" },
-            { pattern: /^세종/, region: "세종" },
-            { pattern: /^강원/, region: "강원" },
+            { pattern: /^인천|인천광역시/, region: "인천" },
+            { pattern: /^부산|부산광역시/, region: "부산" },
+            { pattern: /^대구|대구광역시/, region: "대구" },
+            { pattern: /^광주|광주광역시/, region: "광주" },
+            { pattern: /^대전|대전광역시/, region: "대전" },
+            { pattern: /^울산|울산광역시/, region: "울산" },
+            { pattern: /^세종|세종특별자치시/, region: "세종" },
+            { pattern: /^강원|강원특별자치도|강원도/, region: "강원" },
             { pattern: /^충청북도|^충북/, region: "충북" },
             { pattern: /^충청남도|^충남/, region: "충남" },
-            { pattern: /^전라북도|^전북/, region: "전북" },
+            { pattern: /^전라북도|^전북|^전북특별자치도/, region: "전북" },
             { pattern: /^전라남도|^전남/, region: "전남" },
             { pattern: /^경상북도|^경북/, region: "경북" },
             { pattern: /^경상남도|^경남/, region: "경남" },
-            { pattern: /^제주/, region: "제주" },
+            { pattern: /^제주|제주특별자치도/, region: "제주" },
             // 해외 지역 패턴
             { pattern: /미국|USA|United States/i, region: "미국" },
             { pattern: /일본|Japan/i, region: "일본" },
@@ -585,7 +587,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         // 지역 필터
         if (filters.regions.length > 0) {
             result = result.filter(r => {
-                const region = extractRegion(r.address || "");
+                const region = extractRegion(r.road_address, r.jibun_address);
                 return filters.regions.includes(region);
             });
         }

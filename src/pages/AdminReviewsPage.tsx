@@ -179,11 +179,14 @@ export default function AdminReviewsPage() {
             // 승인할 리뷰 정보 조회
             const { data: review, error: reviewError } = await supabase
                 .from('reviews')
-                .select('restaurant_id')
+                .select('restaurant_id, is_verified')
                 .eq('id', reviewId)
                 .single();
 
             if (reviewError) throw reviewError;
+
+            // 이미 승인된 리뷰인 경우 중복 방지
+            const wasAlreadyVerified = review.is_verified;
 
             // 리뷰 승인
             const { error: approveError } = await supabase
@@ -198,25 +201,28 @@ export default function AdminReviewsPage() {
 
             if (approveError) throw approveError;
 
-            // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
-            const { data: restaurant, error: fetchError } = await supabase
-                .from('restaurants')
-                .select('review_count')
-                .eq('id', review.restaurant_id)
-                .single();
+            // 이미 승인된 리뷰가 아닐 때만 review_count 증가
+            if (!wasAlreadyVerified) {
+                // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
+                const { data: restaurant, error: fetchError } = await supabase
+                    .from('restaurants')
+                    .select('review_count')
+                    .eq('id', review.restaurant_id)
+                    .single();
 
-            if (fetchError) throw fetchError;
+                if (fetchError) throw fetchError;
 
-            // 해당 맛집의 사용자 방문 횟수 및 리뷰 수 증가
-            const { error: visitError } = await supabase
-                .from('restaurants')
-                .update({
-                    review_count: (restaurant.review_count ?? 0) + 1,
-                    updated_at: new Date().toISOString(),
-                })
-                .eq('id', review.restaurant_id);
+                // 해당 맛집의 사용자 방문 횟수 및 리뷰 수 증가
+                const { error: visitError } = await supabase
+                    .from('restaurants')
+                    .update({
+                        review_count: (restaurant.review_count ?? 0) + 1,
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq('id', review.restaurant_id);
 
-            if (visitError) throw visitError;
+                if (visitError) throw visitError;
+            }
         },
         onSuccess: () => {
             toast.success('리뷰가 승인되었습니다');

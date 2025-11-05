@@ -48,13 +48,14 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             if (region) {
                 if (region === "울릉도") {
                     // 울릉도는 주소에 '울릉'이 포함된 데이터 필터링
-                    query = query.ilike("address", "%울릉%");
+                    query = query.or(`road_address.ilike.%울릉%,jibun_address.ilike.%울릉%`);
                 } else if (region === "욕지도") {
                     // 욕지도는 주소에 '욕지'가 포함된 데이터 필터링
-                    query = query.ilike("address", "%욕지%");
+                    query = query.or(`road_address.ilike.%욕지%,jibun_address.ilike.%욕지%`);
                 } else {
-                    // 일반 지역은 region 필드로 필터링
-                    query = query.eq("region", region);
+                    // address_elements의 SIDO에서 지역 필터링
+                    // 도로명 주소나 지번 주소에 지역명이 포함되어 있는지 확인
+                    query = query.or(`road_address.ilike.%${region}%,jibun_address.ilike.%${region}%`);
                 }
             }
 
