@@ -180,6 +180,29 @@ async function main() {
     const outputFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_results.jsonl');
     const errorFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_errors.jsonl');
     
+    // youtube_meta 로드 (with_meta 파일에서)
+    console.log(`📂 youtube_meta 데이터 로드 중...`);
+    const metaFilePath = join(process.cwd(), '..', 'perplexity-restaurant-crawling', 'tzuyang_restaurant_results_with_meta.jsonl');
+    const metaMap = new Map<string, any>();
+    
+    if (existsSync(metaFilePath)) {
+      const metaContent = readFileSync(metaFilePath, 'utf-8');
+      const metaLines = metaContent.trim().split('\n').filter(line => line.trim());
+      for (const line of metaLines) {
+        try {
+          const data = JSON.parse(line);
+          if (data.youtube_link && data.youtube_meta) {
+            metaMap.set(data.youtube_link, data.youtube_meta);
+          }
+        } catch (e) {
+          // 파싱 실패 무시
+        }
+      }
+      console.log(`✅ youtube_meta 로드 완료: ${metaMap.size}개\n`);
+    } else {
+      console.log(`⚠️ youtube_meta 파일 없음 - youtube_meta 없이 진행합니다.\n`);
+    }
+    
     console.log(`📂 입력 파일 읽기: ${inputFilePath}`);
 
     const content = readFileSync(inputFilePath, 'utf-8');
@@ -311,6 +334,12 @@ async function main() {
               ...result.data
             }
           };
+          
+          // youtube_meta 추가 (있는 경우)
+          const youtubeMeta = metaMap.get(record.youtube_link);
+          if (youtubeMeta) {
+            updatedRecord.youtube_meta = youtubeMeta;
+          }
 
           // 결과를 JSONL 파일에 한 줄씩 저장
           const resultLine = JSON.stringify(updatedRecord) + '\n';
