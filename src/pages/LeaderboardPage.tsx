@@ -288,6 +288,15 @@ const LeaderboardPage = () => {
         }
     };
 
+    const getUserTier = (reviewCount: number) => {
+        if (reviewCount >= 100) return { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" };
+        if (reviewCount >= 50) return { name: "💎 다이아몬드", color: "text-blue-600", bgColor: "bg-blue-50" };
+        if (reviewCount >= 25) return { name: "🏆 골드", color: "text-yellow-600", bgColor: "bg-yellow-50" };
+        if (reviewCount >= 10) return { name: "🥈 실버", color: "text-gray-600", bgColor: "bg-gray-50" };
+        if (reviewCount >= 5) return { name: "🥉 브론즈", color: "text-amber-600", bgColor: "bg-amber-50" };
+        return { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
+    };
+
 
     return (
         <TooltipProvider>
@@ -338,9 +347,16 @@ const LeaderboardPage = () => {
                         ) : sortedLeaderboard.slice(0, 3).map((user, index) => (
                             <Card
                                 key={`${user.id}-${index}`}
-                                className={`p-4 ${user.rank === 1 ? "border-2 border-primary shadow-lg" : ""
+                                className={`p-4 relative ${user.rank === 1 ? "border-2 border-primary shadow-lg" : ""
                                     }`}
                             >
+                                {/* 티어 배지 - 우측 상단 */}
+                                <div className="absolute top-2 right-2">
+                                    <Badge variant="outline" className={`${getUserTier(user.reviewCount).bgColor} ${getUserTier(user.reviewCount).color} border-current text-xs px-2 py-0.5`}>
+                                        {getUserTier(user.reviewCount).name}
+                                    </Badge>
+                                </div>
+
                                 <div className="flex items-center gap-3 mb-3">
                                     <div className={`w-12 h-12 rounded-full ${getRankBadgeColor(user.rank)} flex items-center justify-center`}>
                                         {getRankIcon(user.rank)}
@@ -423,6 +439,7 @@ const LeaderboardPage = () => {
                                                 {sortBy === "reviews" && <TrendingUp className="h-3 w-3" />}
                                             </button>
                                         </TableHead>
+                                        <TableHead className="text-center">티어</TableHead>
                                         <TableHead>배지</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -444,6 +461,9 @@ const LeaderboardPage = () => {
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-12 mx-auto"></div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-1">
@@ -477,6 +497,11 @@ const LeaderboardPage = () => {
                                             <TableCell className="text-center">
                                                 <span className="font-semibold">{user.reviewCount}</span>
                                                 <span className="text-muted-foreground text-xs ml-1">개</span>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant="outline" className={`${getUserTier(user.reviewCount).bgColor} ${getUserTier(user.reviewCount).color} border-current`}>
+                                                    {getUserTier(user.reviewCount).name}
+                                                </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex gap-1 flex-wrap">
@@ -526,7 +551,7 @@ const LeaderboardPage = () => {
                                     {/* 빈 데이터 상태 */}
                                     {!isLoading && sortedLeaderboard.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-12">
+                                            <TableCell colSpan={6} className="text-center py-12">
                                                 <div className="text-muted-foreground">
                                                     <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                                     <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
@@ -539,7 +564,7 @@ const LeaderboardPage = () => {
                                     {/* 추가 로딩 표시 */}
                                     {isFetchingNextPage && (
                                         <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-4">
+                                            <TableCell colSpan={6} className="text-center py-4">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
                                                     <span className="text-sm text-muted-foreground">더 많은 랭킹을 불러오는 중...</span>
