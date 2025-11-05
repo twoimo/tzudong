@@ -1304,8 +1304,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     )}
                                 </div>
                             </ScrollArea>
-                        )}
-                    </div>
+                    )}
+                </div>
                 </Panel>
             )}
 
