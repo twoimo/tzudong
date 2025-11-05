@@ -1,7 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
     Table,
     TableBody,
@@ -18,10 +17,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface LeaderboardUser {
     id: string;
-    rank: number;
+    rank?: number; // 랭킹 데이터 생성 시 추가되는 속성
     username: string;
     reviewCount: number;
     verifiedReviewCount: number;
+    totalLikes: number; // 추가: 총 좋아요 수
     badges: { name: string; icon: string; earnedAt: string }[];
 }
 
@@ -29,116 +29,146 @@ interface LeaderboardUser {
 const LeaderboardPage = () => {
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
 
-    // Fetch leaderboard data from Supabase - reviews와 profiles 별도 조회 후 조인
-    const { data: leaderboardData = [], isLoading } = useQuery({
-        queryKey: ['leaderboard', sortBy],
+    // Fetch leaderboard data from Supabase - 모든 사용자 포함
+    const { data: allUsers, isLoading } = useQuery({
+        queryKey: ['leaderboard-all-users'],
         queryFn: async () => {
             try {
-                // Get all verified reviews
-                const { data: reviewsData, error: reviewsError } = await supabase
-                    .from('reviews')
-                    .select('user_id, is_verified')
-                    .eq('is_verified', true); // Only verified reviews
-
-                if (reviewsError) {
-                    console.warn('리뷰 데이터 조회 실패:', reviewsError.message);
-                    return [];
-                }
-
-                if (!reviewsData || reviewsData.length === 0) {
-                    console.warn('승인된 리뷰 데이터가 없음');
-                    return [];
-                }
-
-                // Get unique user IDs
-                const userIds = [...new Set(reviewsData.map(review => review.user_id))];
-
-                // Get profile info for these users
+                // Get all profiles (모든 사용자)
                 const { data: profilesData, error: profilesError } = await supabase
                     .from('profiles')
                     .select('user_id, nickname')
-                    .in('user_id', userIds);
+                    .not('nickname', 'is', null)
+                    .neq('nickname', '탈퇴한 사용자');
 
                 if (profilesError) {
                     console.warn('프로필 데이터 조회 실패:', profilesError.message);
+                    throw new Error(`프로필 데이터 조회 실패: ${profilesError.message}`);
                 }
 
-                // Create profiles map
-                const profilesMap = new Map(
-                    (profilesData || []).map(profile => [profile.user_id, profile.nickname])
-                );
+                if (!profilesData || profilesData.length === 0) {
+                    return [];
+                }
 
-                // Group reviews by user and calculate stats
-                const userStats = new Map<string, {
-                    userId: string;
-                    nickname: string;
-                    totalReviews: number;
-                    verifiedReviews: number;
-                }>();
+                // Get all reviews for these users
+                const userIds = profilesData.map(profile => profile.user_id);
+                const { data: allReviewsData, error: allReviewsError } = await supabase
+                    .from('reviews')
+                    .select('id, user_id, is_verified')
+                    .in('user_id', userIds);
 
-                reviewsData.forEach(review => {
-                    const userId = review.user_id;
-                    const nickname = profilesMap.get(userId);
+                if (allReviewsError) {
+                    console.warn('전체 리뷰 데이터 조회 실패:', allReviewsError.message);
+                    // 리뷰 조회 실패해도 프로필은 표시 (리뷰 수 0으로)
+                }
 
-                    // 탈퇴한 사용자는 랭킹에서 제외 (프로필이 없거나 '탈퇴한 사용자'인 경우)
-                    if (!nickname || nickname === '탈퇴한 사용자') {
-                        return;
-                    }
+                // Get likes data for all reviews
+                let reviewIds: string[] = [];
+                if (allReviewsData) {
+                    reviewIds = allReviewsData.map(review => review.id);
+                }
 
-                    const current = userStats.get(userId) || {
-                        userId,
-                        nickname,
-                        totalReviews: 0,
-                        verifiedReviews: 0
-                    };
+                const { data: likesData, error: likesError } = await supabase
+                    .from('review_likes')
+                    .select('review_id')
+                    .in('review_id', reviewIds);
 
-                    current.totalReviews++;
-                    if (review.is_verified) {
-                        current.verifiedReviews++;
-                    }
+                if (likesError) {
+                    console.warn('좋아요 데이터 조회 실패:', likesError.message);
+                }
 
-                    userStats.set(userId, current);
-                });
+                // 디버깅: 데이터 확인
+                console.log('All reviews data sample:', allReviewsData?.slice(0, 3));
+                console.log('Likes data sample:', likesData?.slice(0, 3));
 
-                // Convert to leaderboard format and sort
-                const leaderboard = Array.from(userStats.values())
-                    .filter(user => user.totalReviews > 0)
-                    .sort((a, b) => b.totalReviews - a.totalReviews)
-                    .map((user, index) => {
-                        const badges = [];
+                // Create review stats maps
+                const reviewCountMap = new Map<string, number>();
+                const verifiedReviewCountMap = new Map<string, number>();
+                const totalLikesMap = new Map<string, number>();
 
-                        // Award badges based on achievements
-                        if (user.totalReviews >= 1) {
-                            badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
+                // Create likes count map for each review
+                const reviewLikesMap = new Map<string, number>();
+                if (likesData) {
+                    likesData.forEach(like => {
+                        const current = reviewLikesMap.get(like.review_id) || 0;
+                        reviewLikesMap.set(like.review_id, current + 1);
+                    });
+                }
+
+                if (allReviewsData && allReviewsData.length > 0) {
+                    allReviewsData.forEach(review => {
+                        // 총 리뷰 수 계산
+                        const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
+                        reviewCountMap.set(review.user_id, currentReviewCount + 1);
+
+                        // 승인된 리뷰 수 계산
+                        if (review.is_verified) {
+                            const currentVerifiedCount = verifiedReviewCountMap.get(review.user_id) || 0;
+                            verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
                         }
-                        if (user.totalReviews >= 10) {
-                            badges.push({ name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" });
-                        }
-                        if (user.totalReviews >= 50) {
-                            badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
-                        }
-                        if (user.verifiedReviews >= 10) {
-                            badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
-                        }
 
-                        return {
-                            id: user.userId,
-                            rank: index + 1,
-                            username: user.nickname,
-                            reviewCount: user.totalReviews,
-                            verifiedReviewCount: user.verifiedReviews,
-                            badges,
-                        } as LeaderboardUser;
+                        // 총 좋아요 수 계산 (각 리뷰의 좋아요 수를 합산)
+                        const reviewLikes = reviewLikesMap.get(review.id) || 0;
+                        const currentLikes = totalLikesMap.get(review.user_id) || 0;
+                        totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
                     });
 
-                console.log(`🏆 리더보드 데이터 로드 완료: ${leaderboard.length}명의 사용자`);
-                return leaderboard;
+                    console.log('Review stats calculated:', {
+                        totalReviews: reviewCountMap.size,
+                        verifiedReviews: verifiedReviewCountMap.size,
+                        totalLikes: Array.from(totalLikesMap.values()).reduce((sum, likes) => sum + likes, 0)
+                    });
+                }
+
+                // Calculate user stats for all profiles
+                const users = profilesData.map(profile => {
+                    const reviewCount = reviewCountMap.get(profile.user_id) || 0;
+                    const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
+                    const totalLikes = totalLikesMap.get(profile.user_id) || 0;
+                    const badges: { name: string; icon: string; earnedAt: string }[] = [];
+
+                    // Award badges based on achievements
+                    if (reviewCount >= 1) {
+                        badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
+                    }
+                    if (reviewCount >= 10) {
+                        badges.push({ name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" });
+                    }
+                    if (reviewCount >= 50) {
+                        badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
+                    }
+                    if (verifiedReviewCount >= 10) {
+                        badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
+                    }
+                    if (totalLikes >= 50) {
+                        badges.push({ name: "인기인", icon: "❤️", earnedAt: "" });
+                    }
+
+                    return {
+                        id: profile.user_id,
+                        username: profile.nickname,
+                        reviewCount,
+                        verifiedReviewCount,
+                        totalLikes,
+                        badges,
+                    };
+                });
+
+                return users;
             } catch (error) {
                 console.warn('리더보드 데이터 조회 중 오류 발생:', error);
                 return [];
             }
         },
     });
+
+    // 실시간 정렬 및 순위 부여 - 모든 사용자 포함
+    const leaderboardData = (allUsers || [])
+        .sort((a, b) => b.reviewCount - a.reviewCount)
+        .map((user, index) => ({
+            ...user,
+            rank: index + 1,
+        }));
 
     // Apply sorting
     const sortedLeaderboard = [...leaderboardData].sort((a, b) => {
@@ -147,6 +177,7 @@ const LeaderboardPage = () => {
         }
         return 0;
     });
+
 
     const getRankIcon = (rank: number, forTable: boolean = false) => {
         if (forTable) {
@@ -189,6 +220,15 @@ const LeaderboardPage = () => {
         }
     };
 
+    const getUserTier = (reviewCount: number) => {
+        if (reviewCount >= 100) return { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" };
+        if (reviewCount >= 50) return { name: "💎 다이아몬드", color: "text-blue-600", bgColor: "bg-blue-50" };
+        if (reviewCount >= 25) return { name: "🏆 골드", color: "text-yellow-600", bgColor: "bg-yellow-50" };
+        if (reviewCount >= 10) return { name: "🥈 실버", color: "text-gray-600", bgColor: "bg-gray-50" };
+        if (reviewCount >= 5) return { name: "🥉 브론즈", color: "text-amber-600", bgColor: "bg-amber-50" };
+        return { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
+    };
+
 
     return (
         <TooltipProvider>
@@ -200,115 +240,23 @@ const LeaderboardPage = () => {
                             <div className="flex items-center gap-3">
                                 <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                                     <Trophy className="h-6 w-6 text-primary" />
-                                    쯔양 팬 랭킹
+                                    쯔동여지도 랭킹
                                 </h1>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
                                 맛집 리뷰로 쌓은 랭킹
                             </p>
                         </div>
+                        <div className="text-right">
+                            <div className="text-sm font-medium text-muted-foreground">
+                                총 참가자
+                            </div>
+                            <div className="text-2xl font-bold text-primary">
+                                {sortedLeaderboard.length}
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Top 3 Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                        {isLoading ? (
-                            // Loading skeleton for top 3
-                            Array.from({ length: 3 }).map((_, index) => (
-                                <Card key={index} className="p-4">
-                                    <div className="flex items-center gap-3 mb-3">
-                                        <div className="w-12 h-12 rounded-full bg-muted animate-pulse flex items-center justify-center">
-                                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="h-5 bg-muted rounded animate-pulse mb-1"></div>
-                                            <div className="h-3 bg-muted rounded animate-pulse w-16"></div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <div className="flex items-center justify-between">
-                                            <div className="h-3 bg-muted rounded animate-pulse w-12"></div>
-                                            <div className="h-3 bg-muted rounded animate-pulse w-8"></div>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <div className="h-3 bg-muted rounded animate-pulse w-20"></div>
-                                            <div className="h-3 bg-muted rounded animate-pulse w-8"></div>
-                                        </div>
-                                    </div>
-                                </Card>
-                            ))
-                        ) : sortedLeaderboard.slice(0, 3).map((user) => (
-                            <Card
-                                key={user.id}
-                                className={`p-4 ${user.rank === 1 ? "border-2 border-primary shadow-lg" : ""
-                                    }`}
-                            >
-                                <div className="flex items-center gap-3 mb-3">
-                                    <div className={`w-12 h-12 rounded-full ${getRankBadgeColor(user.rank)} flex items-center justify-center`}>
-                                        {getRankIcon(user.rank)}
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-lg">{user.username}</h3>
-                                        <p className="text-xs text-muted-foreground">#{user.rank} 랭킹</p>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">리뷰 수</span>
-                                        <span className="font-semibold">{user.reviewCount}개</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-1">
-                                            <CheckCircle className="h-3 w-3" />
-                                            검증된 리뷰
-                                        </span>
-                                        <span className="font-semibold text-green-600">
-                                            {user.verifiedReviewCount}개
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="mt-3 pt-3 border-t border-border">
-                                    <p className="text-xs text-muted-foreground mb-2">배지</p>
-                                    <div className="flex gap-1 flex-wrap">
-                                        {user.badges.map((badge, idx) => {
-                                            const getBadgeDescription = (badgeName: string) => {
-                                                switch (badgeName) {
-                                                    case "첫 리뷰":
-                                                        return "⭐ 첫 리뷰 작성 시 획득\n1개 이상의 리뷰를 작성하세요";
-                                                    case "열정적인 리뷰어":
-                                                        return "🔥 열정적인 리뷰어\n10개 이상의 리뷰를 작성하세요";
-                                                    case "리뷰 마스터":
-                                                        return "👑 리뷰 마스터\n50개 이상의 리뷰를 작성하세요";
-                                                    case "신뢰의 아이콘":
-                                                        return "💎 신뢰의 아이콘\n10개 이상의 리뷰가 승인되면 획득";
-                                                    default:
-                                                        return badgeName;
-                                                }
-                                            };
-
-                                            return (
-                                                <Tooltip key={idx}>
-                                                    <TooltipTrigger asChild>
-                                                        <div className="inline-block">
-                                                            <Badge variant="outline" className="text-xs cursor-help">
-                                                                {badge.icon} {badge.name}
-                                                            </Badge>
-                                                        </div>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p className="whitespace-pre-line text-sm">
-                                                            {getBadgeDescription(badge.name)}
-                                                        </p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                            </Card>
-                        ))}
-                    </div>
                 </div>
 
                 {/* Full Rankings Table */}
@@ -333,7 +281,8 @@ const LeaderboardPage = () => {
                                                 {sortBy === "reviews" && <TrendingUp className="h-3 w-3" />}
                                             </button>
                                         </TableHead>
-                                        <TableHead className="text-center">검증된 리뷰</TableHead>
+                                        <TableHead className="text-center">받은 좋아요</TableHead>
+                                        <TableHead className="text-center">티어</TableHead>
                                         <TableHead>배지</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -348,16 +297,16 @@ const LeaderboardPage = () => {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 bg-muted rounded animate-pulse"></div>
-                                                        <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
-                                                    </div>
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <div className="w-12 h-5 bg-muted rounded animate-pulse mx-auto"></div>
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-10 mx-auto"></div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="h-4 bg-muted rounded animate-pulse w-12 mx-auto"></div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-1">
@@ -367,31 +316,32 @@ const LeaderboardPage = () => {
                                                 </TableCell>
                                             </TableRow>
                                         ))
-                                    ) : sortedLeaderboard.map((user) => (
-                                        <TableRow key={user.id} className="hover:bg-muted/50">
+                                    ) : sortedLeaderboard.map((user, index) => (
+                                        <TableRow
+                                            key={`${user.id}-${index}`}
+                                            className="hover:bg-muted/50"
+                                        >
                                             <TableCell>
                                                 <div className="flex items-center justify-center">
                                                     {getRankIcon(user.rank, true)}
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex items-center gap-2">
-                                                    <Avatar className="h-8 w-8">
-                                                        <AvatarFallback>
-                                                            {user.username[0]}
-                                                        </AvatarFallback>
-                                                    </Avatar>
-                                                    <span className="font-medium">{user.username}</span>
-                                                </div>
+                                                <span className="font-medium">{user.username}</span>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <span className="font-semibold">{user.reviewCount}</span>
                                                 <span className="text-muted-foreground text-xs ml-1">개</span>
                                             </TableCell>
                                             <TableCell className="text-center">
-                                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                                    {user.verifiedReviewCount}
+                                                <div className="flex items-center justify-center gap-1">
+                                                    <span className="font-semibold text-red-600">{user.totalLikes}</span>
+                                                    <span className="text-muted-foreground text-xs">❤️</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-center">
+                                                <Badge variant="outline" className={`${getUserTier(user.reviewCount).bgColor} ${getUserTier(user.reviewCount).color} border-current`}>
+                                                    {getUserTier(user.reviewCount).name}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
@@ -416,15 +366,19 @@ const LeaderboardPage = () => {
                                                             <Tooltip key={idx}>
                                                                 <TooltipTrigger asChild>
                                                                     <div className="inline-block">
-                                                                        <span className="text-lg cursor-help">
+                                                                        <span className="text-lg cursor-help hover:scale-110 transition-transform duration-200 p-1 rounded-md hover:bg-muted/30">
                                                                             {badge.icon}
                                                                         </span>
                                                                     </div>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
-                                                                    <p className="text-sm">
-                                                                        {getBadgeDescription(badge.name)}
-                                                                    </p>
+                                                                    <div className="text-center">
+                                                                        <div className="text-lg mb-1">{badge.icon}</div>
+                                                                        <p className="font-semibold text-sm">{badge.name}</p>
+                                                                        <p className="text-xs text-muted-foreground whitespace-pre-line">
+                                                                            {getBadgeDescription(badge.name)}
+                                                                        </p>
+                                                                    </div>
                                                                 </TooltipContent>
                                                             </Tooltip>
                                                         );
@@ -438,6 +392,20 @@ const LeaderboardPage = () => {
                                             </TableCell>
                                         </TableRow>
                                     ))}
+
+                                    {/* 빈 데이터 상태 */}
+                                    {!isLoading && sortedLeaderboard.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center py-12">
+                                                <div className="text-muted-foreground">
+                                                    <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                                    <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
+                                                    <p className="text-xs">리뷰를 작성하고 랭킹에 도전해보세요!</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+
                                 </TableBody>
                             </Table>
                         </ScrollArea>

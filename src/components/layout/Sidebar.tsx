@@ -38,15 +38,15 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
     { icon: Globe, label: "쯔동여지도 글로벌", path: "/global", onClick: () => navigate("/global") },
     { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
-    { icon: Trophy, label: "쯔양 팬 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
-    { icon: MessageSquare, label: "쯔양 팬 맛집 리뷰", path: "/reviews", onClick: () => navigate("/reviews") },
-    { icon: Send, label: "쯔양 맛집 제보", path: "/submissions", onClick: () => navigate("/submissions") },
+    { icon: Trophy, label: "쯔동여지도 도장", path: "/stamp", onClick: () => navigate("/stamp") },
+    { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
+    { icon: Send, label: "쯔동여지도 제보", path: "/submissions", onClick: () => navigate("/submissions") },
   ];
 
   // 관리자에게만 보이는 메뉴
   const adminMenuItems = (user && isAdmin) ? [
-    { icon: Shield, label: "제보 관리", path: "/admin/submissions", onClick: () => navigate("/admin/submissions") },
-    { icon: MessageSquare, label: "리뷰 관리", path: "/admin/reviews", onClick: () => navigate("/admin/reviews") },
+    { icon: Shield, label: "관리자 제보 관리", path: "/admin/submissions", onClick: () => navigate("/admin/submissions") },
+    { icon: MessageSquare, label: "관리자 리뷰 관리", path: "/admin/reviews", onClick: () => navigate("/admin/reviews") },
   ] : [];
 
   // 공통 메뉴
@@ -114,9 +114,9 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border">
+      <div className="p-4 border-t border-sidebar-border text-center">
         <div className="text-xs text-muted-foreground space-y-1">
-          <p>쯔동여지도, 유튜브 쯔양 맛집 지도 v1.0.0</p>
+          <p>쯔동여지도, 유튜브 쯔양 맛집 지도 v1.5.3</p>
           <p className="text-primary font-semibold">@ 2025 Tzudong. All rights reserved.</p>
         </div>
       </div>

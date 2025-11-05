@@ -1,7 +1,8 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { createUserNotification } from "@/contexts/NotificationContext";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -61,22 +62,36 @@ export default function AdminReviewsPage() {
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'edit' | null>(null);
     const [adminNote, setAdminNote] = useState("");
 
-    // 모든 리뷰 조회 (관리자만)
-    const { data: reviews = [], isLoading, error: queryError } = useQuery({
-        queryKey: ['admin-reviews'],
-        queryFn: async () => {
-            console.log('🔍 리뷰 데이터 조회 시작...');
+    // 모든 리뷰 조회 (관리자만) - 무한 스크롤 방식
+    const {
+        data: reviewsPages,
+        fetchNextPage,
+        hasNextPage,
+        isLoading,
+        isFetchingNextPage,
+        error: queryError
+    } = useInfiniteQuery({
+        queryKey: ['admin-reviews', isAdmin],
+        queryFn: async ({ pageParam = 0 }) => {
+            if (!user || !isAdmin) return { reviews: [], nextCursor: null };
 
-            // 1. 리뷰 데이터 가져오기 (수동 조인으로 변경)
+            console.log('🔍 리뷰 데이터 조회 시작... 페이지:', pageParam);
+
+            // 1. 리뷰 데이터 가져오기 (페이지별)
             const { data: reviewsData, error: reviewsError } = await supabase
                 .from('reviews')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .range(pageParam, pageParam + 19); // 한 페이지당 20개씩
 
-            if (reviewsError) throw reviewsError;
+            if (reviewsError) {
+                console.error('❌ 리뷰 조회 실패:', reviewsError);
+                throw reviewsError;
+            }
 
             if (!reviewsData || reviewsData.length === 0) {
-                return [];
+                console.log('✅ 리뷰 데이터 없음');
+                return { reviews: [], nextCursor: null };
             }
 
             // 2. 필요한 user_id와 restaurant_id 수집
@@ -112,23 +127,51 @@ export default function AdminReviewsPage() {
                 restaurants: restaurantsMap.get(review.restaurant_id) || { name: '알 수 없음', address: '' }
             })) as Review[];
 
-            if (reviewsError) {
-                console.error('❌ 리뷰 조회 실패:', reviewsError);
-                throw reviewsError;
-            }
+            // 다음 페이지 커서 계산
+            const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
 
-            if (!reviewsData || reviewsData.length === 0) {
-                console.log('✅ 리뷰 데이터 없음');
-                return [];
-            }
-
-            console.log(`📊 ${reviewsData.length}개 리뷰 조회됨`);
-
-            // 필요한 user_id와 restaurant_id 수집 (이미 조인으로 가져옴)
-            return reviewsData as Review[];
+            console.log('✅ 리뷰 데이터 조회 성공:', reviews.length, '개 (다음 커서:', nextCursor, ')');
+            return {
+                reviews,
+                nextCursor,
+            };
         },
-        enabled: !!user && !!isAdmin,
+        getNextPageParam: (lastPage) => {
+            if (!lastPage) return undefined;
+            return lastPage.nextCursor ?? undefined;
+        },
+        initialPageParam: 0,
+        enabled: !!user,
     });
+
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
+    const reviews = reviewsPages?.pages.flatMap(page => page.reviews) || [];
+
+    // 리뷰 무한 스크롤을 위한 Intersection Observer
+    const loadMoreRef = useRef<HTMLDivElement>(null);
+
+    const loadMoreReviews = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMoreReviews();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMoreReviews]);
 
     // 리뷰 승인
     const approveMutation = useMutation({
@@ -158,7 +201,7 @@ export default function AdminReviewsPage() {
             // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
             const { data: restaurant, error: fetchError } = await supabase
                 .from('restaurants')
-                .select('visit_count, review_count')
+                .select('review_count')
                 .eq('id', review.restaurant_id)
                 .single();
 
@@ -168,7 +211,6 @@ export default function AdminReviewsPage() {
             const { error: visitError } = await supabase
                 .from('restaurants')
                 .update({
-                    visit_count: (restaurant.visit_count ?? 0) + 1,
                     review_count: (restaurant.review_count ?? 0) + 1,
                     updated_at: new Date().toISOString(),
                 })
@@ -178,6 +220,21 @@ export default function AdminReviewsPage() {
         },
         onSuccess: () => {
             toast.success('리뷰가 승인되었습니다');
+
+            // 승인 알림 생성 (리뷰 작성자에게)
+            if (selectedReview && selectedReview.user_id) {
+                createUserNotification(
+                    selectedReview.user_id,
+                    'review_approved',
+                    '리뷰 승인됨',
+                    `귀하의 리뷰 "${selectedReview.title}"이(가) 관리자 승인을 받았습니다.`,
+                    {
+                        reviewId: selectedReview.id,
+                        restaurantName: selectedReview.restaurants?.name
+                    }
+                );
+            }
+
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
             queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
             queryClient.invalidateQueries({ queryKey: ['restaurants'] }); // 맛집 데이터도 갱신
@@ -219,7 +276,7 @@ export default function AdminReviewsPage() {
                 // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
                 const { data: restaurant, error: fetchError } = await supabase
                     .from('restaurants')
-                    .select('visit_count, review_count')
+                    .select('review_count')
                     .eq('id', review.restaurant_id)
                     .single();
 
@@ -229,7 +286,6 @@ export default function AdminReviewsPage() {
                 const { error: visitError } = await supabase
                     .from('restaurants')
                     .update({
-                        visit_count: Math.max((restaurant.visit_count ?? 0) - 1, 0),
                         review_count: Math.max((restaurant.review_count ?? 0) - 1, 0),
                         updated_at: new Date().toISOString(),
                     })
@@ -240,6 +296,22 @@ export default function AdminReviewsPage() {
         },
         onSuccess: () => {
             toast.success('리뷰가 거부되었습니다');
+
+            // 거부 알림 생성 (리뷰 작성자에게)
+            if (selectedReview && selectedReview.user_id) {
+                createUserNotification(
+                    selectedReview.user_id,
+                    'review_rejected',
+                    '리뷰 거부됨',
+                    `귀하의 리뷰 "${selectedReview.title}"이(가) 관리자 검토 후 거부되었습니다.`,
+                    {
+                        reviewId: selectedReview.id,
+                        restaurantName: selectedReview.restaurants?.name,
+                        adminNote: adminNote
+                    }
+                );
+            }
+
             queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
             queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
             queryClient.invalidateQueries({ queryKey: ['restaurants'] }); // 맛집 데이터도 갱신
@@ -334,7 +406,7 @@ export default function AdminReviewsPage() {
                     <div>
                         <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                             <Shield className="h-6 w-6 text-primary" />
-                            리뷰 관리
+                            관리자 리뷰 관리
                         </h1>
                         <p className="text-muted-foreground text-sm mt-1">
                             쯔양 팬들이 작성한 리뷰를 검토하고 승인/거부할 수 있습니다
@@ -439,9 +511,14 @@ export default function AdminReviewsPage() {
                                 </p>
                             </Card>
                         ) : (
-                            <div className="grid gap-4">
-                                {pendingReviews.map((review) => (
-                                    <Card key={review.id} className="p-4">
+                            <>
+                                <div className="grid gap-4">
+                                    {pendingReviews.map((review, index) => (
+                                        <Card
+                                            key={`${review.id}-${index}`}
+                                            ref={index === pendingReviews.length - 1 ? loadMoreRef : null}
+                                            className="p-4"
+                                        >
                                         <div className="flex items-start justify-between mb-3">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-2 mb-2">
@@ -536,7 +613,18 @@ export default function AdminReviewsPage() {
                                         </div>
                                     </Card>
                                 ))}
-                            </div>
+                                </div>
+
+                                {/* 추가 로딩 표시 */}
+                                {isFetchingNextPage && (
+                                    <div className="text-center py-8">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                            <span className="text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </TabsContent>
 

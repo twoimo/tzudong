@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Calendar, Upload, X as XIcon, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Calendar, Upload, X as XIcon, AlertCircle, CheckCircle2, Image, Trash2, Plus } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ReviewModalProps {
@@ -67,6 +67,16 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // 드래그 앤 드롭을 위한 ref들
+    const verificationDropRef = useRef<HTMLDivElement>(null);
+    const foodPhotosDropRef = useRef<HTMLDivElement>(null);
+    const verificationFileInputRef = useRef<HTMLInputElement>(null);
+    const foodPhotosFileInputRef = useRef<HTMLInputElement>(null);
+
+    // 드래그 상태
+    const [isVerificationDragging, setIsVerificationDragging] = useState(false);
+    const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
+
     // 쯔양이 방문한 맛집 목록 조회
     const { data: jjyangRestaurants = [] } = useQuery({
         queryKey: ['jjyang-restaurants'],
@@ -103,6 +113,71 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
 
     const removeFoodPhoto = (index: number) => {
         setFoodPhotos(foodPhotos.filter((_, i) => i !== index));
+    };
+
+    // 드래그 앤 드롭 핸들러들
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleVerificationDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsVerificationDragging(true);
+    };
+
+    const handleVerificationDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsVerificationDragging(false);
+    };
+
+    const handleVerificationDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsVerificationDragging(false);
+
+        const files = Array.from(e.dataTransfer.files);
+        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+        if (imageFiles.length > 0) {
+            setVerificationPhoto(imageFiles[0]);
+        }
+    };
+
+    const handleFoodPhotosDragEnter = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsFoodPhotosDragging(true);
+    };
+
+    const handleFoodPhotosDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsFoodPhotosDragging(false);
+    };
+
+    const handleFoodPhotosDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsFoodPhotosDragging(false);
+
+        const files = Array.from(e.dataTransfer.files);
+        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+
+        if (imageFiles.length > 0) {
+            setFoodPhotos([...foodPhotos, ...imageFiles]);
+        }
+    };
+
+    // 파일 선택기 열기 함수들
+    const openVerificationFileDialog = () => {
+        verificationFileInputRef.current?.click();
+    };
+
+    const openFoodPhotosFileDialog = () => {
+        foodPhotosFileInputRef.current?.click();
     };
 
     const handleSubmit = async () => {
@@ -258,7 +333,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 <div className="flex flex-col h-full max-h-[90vh]">
                     <DialogHeader className="px-6 pt-6 pb-4 border-b">
                         <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                            쯔양 팬 맛집 리뷰 작성
+                            쯔동여지도 리뷰 작성
                         </DialogTitle>
                         <DialogDescription>
                             쯔양이 방문한 맛집에 대한 방문 후기를 공유해주세요
@@ -425,102 +500,220 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
 
                             {/* Verification Photo */}
                             <div className="space-y-2">
-                                <Label htmlFor="verificationPhoto" className="flex items-center gap-2">
+                                <Label className="flex items-center gap-2">
                                     인증 사진 (본인 닉네임 포함) <span className="text-red-500">*</span>
                                 </Label>
-                                <Card className="p-4 border-dashed">
-                                    <div className="flex flex-col items-center gap-3">
+                                <Card
+                                    ref={verificationDropRef}
+                                    className={`p-6 border-dashed transition-colors cursor-pointer ${
+                                        isVerificationDragging
+                                            ? 'border-primary bg-primary/5'
+                                            : verificationPhoto
+                                            ? 'border-green-300 bg-green-50/50'
+                                            : 'border-gray-300 hover:border-primary/50'
+                                    }`}
+                                    onDragOver={handleDragOver}
+                                    onDragEnter={handleVerificationDragEnter}
+                                    onDragLeave={handleVerificationDragLeave}
+                                    onDrop={handleVerificationDrop}
+                                    onClick={openVerificationFileDialog}
+                                >
+                                    <div className="flex flex-col items-center gap-4">
                                         {verificationPhoto ? (
-                                            <div className="relative">
-                                                <Badge variant="default" className="gap-1 mb-2">
-                                                    <CheckCircle2 className="h-3 w-3" />
-                                                    인증 사진 업로드 완료
-                                                </Badge>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {verificationPhoto.name}
+                                            <div className="w-full space-y-3">
+                                                <div className="flex items-center justify-center">
+                                                    <div className="relative">
+                                                        <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
+                                                            <img
+                                                                src={URL.createObjectURL(verificationPhoto)}
+                                                                alt="인증 사진 미리보기"
+                                                                className="w-full h-full object-cover"
+                                                            />
+                                                        </div>
+                                                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
+                                                            <CheckCircle2 className="h-4 w-4" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-center">
+                                                    <Badge variant="default" className="gap-1 mb-2 bg-green-500">
+                                                        <CheckCircle2 className="h-3 w-3" />
+                                                        인증 사진 업로드 완료
+                                                    </Badge>
+                                                    <p className="text-sm font-medium">{verificationPhoto.name}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {(verificationPhoto.size / 1024 / 1024).toFixed(1)}MB
+                                                    </p>
                                                 </div>
                                                 <Button
-                                                    variant="ghost"
+                                                    variant="outline"
                                                     size="sm"
-                                                    className="mt-2"
-                                                    onClick={() => setVerificationPhoto(null)}
+                                                    className="w-full gap-2"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setVerificationPhoto(null);
+                                                    }}
                                                 >
-                                                    <XIcon className="h-4 w-4 mr-2" />
-                                                    제거
+                                                    <Trash2 className="h-4 w-4" />
+                                                    사진 제거
                                                 </Button>
                                             </div>
                                         ) : (
-                                            <>
-                                                <div className="text-center">
-                                                    <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-                                                    <p className="text-sm text-muted-foreground mb-1">
-                                                        영수증 인증 사진을 업로드해주세요
-                                                    </p>
-                                                    <p className="text-xs text-muted-foreground">
-                                                        본인 닉네임이 포함된 영수증 사진
-                                                    </p>
+                                            <div className="w-full text-center space-y-3">
+                                                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
+                                                    isVerificationDragging ? 'bg-primary/10' : 'bg-gray-100'
+                                                }`}>
+                                                    <Image className={`h-8 w-8 transition-colors ${
+                                                        isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
+                                                    }`} />
                                                 </div>
-                                                <Input
-                                                    id="verificationPhoto"
-                                                    type="file"
-                                                    accept="image/*"
-                                                    onChange={handleVerificationPhotoChange}
-                                                    className="max-w-xs"
-                                                />
-                                            </>
+                                                <div>
+                                                    <p className="font-medium mb-1">
+                                                        {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
+                                                    </p>
+                                                    <p className="text-sm text-muted-foreground mb-3">
+                                                        본인 닉네임이 포함된 영수증 사진을 드래그하거나 클릭해서 선택해주세요
+                                                    </p>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        className="gap-2"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            openVerificationFileDialog();
+                                                        }}
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                        사진 선택
+                                                    </Button>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
+
+                                    {/* Hidden file input */}
+                                    <input
+                                        ref={verificationFileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleVerificationPhotoChange}
+                                        className="hidden"
+                                    />
                                 </Card>
+                                <p className="text-xs text-muted-foreground text-center">
+                                    💡 팁: 영수증에 닉네임을 적고 촬영하면 더 정확한 인증이 됩니다
+                                </p>
                             </div>
 
                             {/* Food Photos */}
                             <div className="space-y-2">
-                                <Label htmlFor="foodPhotos" className="flex items-center gap-2">
+                                <Label className="flex items-center gap-2">
                                     음식 사진 (다양한 각도) <span className="text-red-500">*</span>
                                 </Label>
-                                <Card className="p-4 border-dashed">
-                                    <div className="space-y-3">
-                                        {foodPhotos.length > 0 && (
-                                            <div className="grid grid-cols-3 gap-3">
-                                                {foodPhotos.map((photo, index) => (
-                                                    <div key={index} className="relative">
-                                                        <Card className="p-2">
-                                                            <div className="text-xs text-muted-foreground truncate">
-                                                                📷 {photo.name}
-                                                            </div>
-                                                        </Card>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="icon"
-                                                            className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                                                            onClick={() => removeFoodPhoto(index)}
-                                                        >
-                                                            <XIcon className="h-3 w-3" />
-                                                        </Button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
 
-                                        <div className="flex flex-col items-center gap-3 pt-3 border-t border-dashed">
-                                            <Upload className="h-6 w-6 text-muted-foreground" />
-                                            <p className="text-sm text-center text-muted-foreground">
-                                                먹은 음식을 다양한 각도에서 촬영한 사진을 올려주세요
+                                {/* 업로드된 사진들 미리보기 */}
+                                {foodPhotos.length > 0 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+                                        {foodPhotos.map((photo, index) => (
+                                            <div key={index} className="relative group">
+                                                <Card className="p-2 hover:shadow-md transition-shadow">
+                                                    <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                                        <img
+                                                            src={URL.createObjectURL(photo)}
+                                                            alt={`음식 사진 ${index + 1}`}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    </div>
+                                                    <div className="mt-2 space-y-1">
+                                                        <p className="text-xs font-medium truncate" title={photo.name}>
+                                                            {photo.name}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {(photo.size / 1024 / 1024).toFixed(1)}MB
+                                                        </p>
+                                                    </div>
+                                                </Card>
+                                                <Button
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                                    onClick={() => removeFoodPhoto(index)}
+                                                >
+                                                    <XIcon className="h-3 w-3" />
+                                                </Button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* 드래그 앤 드롭 영역 */}
+                                <Card
+                                    ref={foodPhotosDropRef}
+                                    className={`p-6 border-dashed transition-colors cursor-pointer ${
+                                        isFoodPhotosDragging
+                                            ? 'border-primary bg-primary/5'
+                                            : foodPhotos.length > 0
+                                            ? 'border-green-300 bg-green-50/50'
+                                            : 'border-gray-300 hover:border-primary/50'
+                                    }`}
+                                    onDragOver={handleDragOver}
+                                    onDragEnter={handleFoodPhotosDragEnter}
+                                    onDragLeave={handleFoodPhotosDragLeave}
+                                    onDrop={handleFoodPhotosDrop}
+                                    onClick={openFoodPhotosFileDialog}
+                                >
+                                    <div className="flex flex-col items-center gap-4">
+                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
+                                            isFoodPhotosDragging ? 'bg-primary/10' : 'bg-gray-100'
+                                        }`}>
+                                            <Upload className={`h-8 w-8 transition-colors ${
+                                                isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'
+                                            }`} />
+                                        </div>
+                                        <div className="text-center space-y-2">
+                                            <p className="font-medium">
+                                                {isFoodPhotosDragging ? '여기에 사진들을 놓아주세요' : '음식 사진을 업로드해주세요'}
                                             </p>
-                                            <Input
-                                                id="foodPhotos"
-                                                type="file"
-                                                accept="image/*"
-                                                multiple
-                                                onChange={handleFoodPhotosChange}
-                                                className="max-w-xs"
-                                            />
+                                            <p className="text-sm text-muted-foreground">
+                                                먹은 음식을 다양한 각도에서 촬영한 사진을 드래그하거나 클릭해서 선택해주세요
+                                            </p>
+                                            <div className="flex gap-2 justify-center">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="gap-2"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openFoodPhotosFileDialog();
+                                                    }}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                    사진 추가
+                                                </Button>
+                                                {foodPhotos.length > 0 && (
+                                                    <Badge variant="secondary" className="px-3 py-1">
+                                                        📷 {foodPhotos.length}장 업로드됨
+                                                    </Badge>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
+
+                                    {/* Hidden file input */}
+                                    <input
+                                        ref={foodPhotosFileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        multiple
+                                        onChange={handleFoodPhotosChange}
+                                        className="hidden"
+                                    />
                                 </Card>
-                                <p className="text-xs text-muted-foreground">
-                                    업로드된 사진: {foodPhotos.length}개
-                                </p>
+
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
+                                    <span>업로드된 사진: {foodPhotos.length}장</span>
+                                </div>
                             </div>
 
                             {/* Review Content */}
