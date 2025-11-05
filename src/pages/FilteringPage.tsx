@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart, Menu } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -716,8 +716,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     <div className="flex items-center justify-between mb-4">
                         <div>
                             <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-                                    <Filter className="h-6 w-6 text-primary" />
+                                <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
                                     쯔동여지도 필터링
                                 </h1>
                             </div>
@@ -734,12 +733,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => setIsRightPanelVisible(true)}
-                                className={`hover:text-accent-foreground hover:bg-accent transition-transform duration-300 ease-in-out ${
-                                    isRightPanelVisible ? '-translate-x-full pointer-events-none' : 'translate-x-0'
-                                }`}
+                                onClick={() => setIsRightPanelVisible(!isRightPanelVisible)}
+                                className="hover:text-accent-foreground hover:bg-accent"
                             >
-                                <MessageSquare className="h-5 w-5" />
+                                <Menu className="h-5 w-5" />
                             </Button>
                         </div>
                     </div>
@@ -1031,58 +1028,167 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     maxSize={70}
                     className="flex flex-col bg-card"
                 >
-                <div className="border-b border-border p-6">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <MessageSquare className="h-6 w-6 text-primary" />
-                            <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                                {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
-                            </h2>
+                    <div className="border-b border-border p-6">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <h2 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                                    {selectedRestaurant ? `${selectedRestaurant.name}` : "인기 리뷰"}
+                                </h2>
+                            </div>
                         </div>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setIsRightPanelVisible(false)}
-                            className="hover:text-accent-foreground hover:bg-accent"
-                        >
-                            <Menu className="h-5 w-5" />
-                        </Button>
+                        {selectedRestaurant ? (
+                            <p className="text-sm text-muted-foreground mt-1">
+                                {restaurantReviews.length}개의 리뷰
+                            </p>
+                        ) : (
+                            <p className="text-sm text-muted-foreground mt-1">
+                                좋아요가 가장 많은 리뷰들
+                            </p>
+                        )}
                     </div>
-                    {selectedRestaurant ? (
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {restaurantReviews.length}개의 리뷰
-                        </p>
-                    ) : (
-                        <p className="text-sm text-muted-foreground mt-1">
-                            좋아요가 가장 많은 리뷰들
-                        </p>
-                    )}
-                </div>
 
-                <div className="flex-1 overflow-hidden">
-                    {!selectedRestaurant ? (
-                        // 인기 리뷰 표시
-                        topReviewsLoading ? (
+                    <div className="flex-1 overflow-hidden">
+                        {!selectedRestaurant ? (
+                            // 인기 리뷰 표시
+                            topReviewsLoading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <div className="text-center">
+                                        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+                                        <p className="text-muted-foreground">인기 리뷰를 불러오는 중...</p>
+                                    </div>
+                                </div>
+                            ) : sortedTopLikedReviews.length === 0 ? (
+                                <div className="flex items-center justify-center h-full p-8">
+                                    <div className="text-center">
+                                        <p className="text-muted-foreground mb-4">아직 리뷰가 없습니다</p>
+                                        <p className="text-sm text-muted-foreground">첫 번째 리뷰를 작성해보세요!</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <ScrollArea className="h-full">
+                                    <div className="p-6 space-y-4">
+                                        {sortedTopLikedReviews.map((review, index) => (
+                                            <Card
+                                                key={`${review.id}-${index}`}
+                                                ref={index === sortedTopLikedReviews.length - 1 ? loadMoreRef : null}
+                                                className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}
+                                            >
+                                                {/* Header */}
+                                                <div className="flex items-start justify-between mb-3">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            {review.isPinned && (
+                                                                <Pin className="h-4 w-4 text-primary fill-primary" />
+                                                            )}
+                                                            {review.userName === "관리자" && (
+                                                                <Badge variant="default" className="bg-gradient-primary text-xs">
+                                                                    관리자
+                                                                </Badge>
+                                                            )}
+                                                            <span className="font-semibold text-sm">{review.userName}</span>
+                                                            {review.isVerified && (
+                                                                <Badge variant="default" className="gap-1 bg-green-600 text-xs">
+                                                                    <CheckCircle className="h-3 w-3" />
+                                                                    인증
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+
+                                                        {review.isEditedByAdmin && (
+                                                            <Badge variant="outline" className="mb-2 border-orange-500 text-orange-500 text-xs">
+                                                                ⚠️ 관리자가 수정함
+                                                            </Badge>
+                                                        )}
+
+                                                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                            <div className="flex items-center gap-1">
+                                                                <Calendar className="h-3 w-3" />
+                                                                방문: {formatDateTime(review.visitedAt)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => toggleLike(review.id, review.isLikedByUser, review.likeCount)}
+                                                        className="flex items-center gap-1 h-6 px-2 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                        disabled={!user}
+                                                    >
+                                                        <Heart className={`h-3 w-3 ${review.isLikedByUser ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                                                        <span className={`text-xs ${review.isLikedByUser ? 'text-red-500' : 'text-muted-foreground'}`}>
+                                                            {review.likeCount}
+                                                        </span>
+                                                    </Button>
+                                                </div>
+
+                                                {/* Content */}
+                                                <div className="mb-3">
+                                                    <p className="text-sm whitespace-pre-wrap">{review.content}</p>
+                                                </div>
+
+                                                {/* Photos */}
+                                                {review.photos.length > 0 && (
+                                                    <div className="mb-3">
+                                                        <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                            <img
+                                                                src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
+                                                                alt={`음식 사진`}
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => {
+                                                                    console.error('이미지 로딩 실패:', review.photos[0].url);
+                                                                    e.currentTarget.style.display = 'none';
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Footer */}
+                                                <div className="pt-2 border-t border-border">
+                                                    <div className="text-xs text-muted-foreground">
+                                                        작성: {formatDateTime(review.submittedAt)}
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        ))}
+
+                                        {/* 추가 로딩 표시 */}
+                                        {isFetchingNextTopReviewPage && (
+                                            <div className="flex items-center justify-center py-4">
+                                                <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
+                                                <span className="ml-2 text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </ScrollArea>
+                            )
+                        ) : reviewsLoading ? (
                             <div className="flex items-center justify-center h-full">
                                 <div className="text-center">
                                     <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                                    <p className="text-muted-foreground">인기 리뷰를 불러오는 중...</p>
+                                    <p className="text-muted-foreground">리뷰를 불러오는 중...</p>
                                 </div>
                             </div>
-                        ) : sortedTopLikedReviews.length === 0 ? (
+                        ) : restaurantReviews.length === 0 ? (
                             <div className="flex items-center justify-center h-full p-8">
                                 <div className="text-center">
                                     <p className="text-muted-foreground mb-4">아직 리뷰가 없습니다</p>
-                                    <p className="text-sm text-muted-foreground">첫 번째 리뷰를 작성해보세요!</p>
+                                    <p className="text-sm text-muted-foreground mb-6">첫 번째 리뷰를 작성해보세요!</p>
+                                    <Button
+                                        onClick={() => setIsReviewModalOpen(true)}
+                                        className="bg-gradient-primary hover:opacity-90"
+                                    >
+                                        리뷰 작성하기
+                                    </Button>
                                 </div>
                             </div>
                         ) : (
                             <ScrollArea className="h-full">
                                 <div className="p-6 space-y-4">
-                                    {sortedTopLikedReviews.map((review, index) => (
+                                    {restaurantReviews.map((review, index) => (
                                         <Card
-                                            key={`${review.id}-${index}`}
-                                            ref={index === sortedTopLikedReviews.length - 1 ? loadMoreRef : null}
+                                            key={review.id}
+                                            ref={index === restaurantReviews.length - 1 ? loadMoreRestaurantRef : null}
                                             className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}
                                         >
                                             {/* Header */}
@@ -1098,10 +1204,20 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                             </Badge>
                                                         )}
                                                         <span className="font-semibold text-sm">{review.userName}</span>
-                                                        {review.isVerified && (
+                                                        {review.isVerified ? (
                                                             <Badge variant="default" className="gap-1 bg-green-600 text-xs">
                                                                 <CheckCircle className="h-3 w-3" />
                                                                 인증
+                                                            </Badge>
+                                                        ) : review.admin_note ? (
+                                                            <Badge variant="destructive" className="gap-1 text-xs">
+                                                                <XCircle className="h-3 w-3" />
+                                                                거부
+                                                            </Badge>
+                                                        ) : (
+                                                            <Badge variant="secondary" className="gap-1 text-xs">
+                                                                <Clock className="h-3 w-3" />
+                                                                검토
                                                             </Badge>
                                                         )}
                                                     </div>
@@ -1138,6 +1254,21 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                 <p className="text-sm whitespace-pre-wrap">{review.content}</p>
                                             </div>
 
+                                            {/* 거부 사유 */}
+                                            {review.admin_note && review.admin_note.includes('거부') && (
+                                                <div className="mb-3 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
+                                                    <div className="flex items-center gap-1 mb-1">
+                                                        <XCircle className="h-3 w-3 text-red-600" />
+                                                        <span className="text-xs font-medium text-red-700 dark:text-red-300">
+                                                            거부 사유
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-xs text-red-600 dark:text-red-400">
+                                                        {review.admin_note.startsWith('거부: ') ? review.admin_note.substring(4) : review.admin_note}
+                                                    </p>
+                                                </div>
+                                            )}
+
                                             {/* Photos */}
                                             {review.photos.length > 0 && (
                                                 <div className="mb-3">
@@ -1165,7 +1296,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     ))}
 
                                     {/* 추가 로딩 표시 */}
-                                    {isFetchingNextTopReviewPage && (
+                                    {isFetchingNextRestaurantReviewPage && (
                                         <div className="flex items-center justify-center py-4">
                                             <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
                                             <span className="ml-2 text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
@@ -1173,151 +1304,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                     )}
                                 </div>
                             </ScrollArea>
-                        )
-                    ) : reviewsLoading ? (
-                        <div className="flex items-center justify-center h-full">
-                            <div className="text-center">
-                                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                                <p className="text-muted-foreground">리뷰를 불러오는 중...</p>
-                            </div>
-                        </div>
-                    ) : restaurantReviews.length === 0 ? (
-                        <div className="flex items-center justify-center h-full p-8">
-                            <div className="text-center">
-                                <p className="text-muted-foreground mb-4">아직 리뷰가 없습니다</p>
-                                <p className="text-sm text-muted-foreground mb-6">첫 번째 리뷰를 작성해보세요!</p>
-                                <Button
-                                    onClick={() => setIsReviewModalOpen(true)}
-                                    className="bg-gradient-primary hover:opacity-90"
-                                >
-                                    리뷰 작성하기
-                                </Button>
-                            </div>
-                        </div>
-                    ) : (
-                        <ScrollArea className="h-full">
-                            <div className="p-6 space-y-4">
-                                {restaurantReviews.map((review, index) => (
-                                    <Card
-                                        key={review.id}
-                                        ref={index === restaurantReviews.length - 1 ? loadMoreRestaurantRef : null}
-                                        className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}
-                                    >
-                                        {/* Header */}
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    {review.isPinned && (
-                                                        <Pin className="h-4 w-4 text-primary fill-primary" />
-                                                    )}
-                                                    {review.userName === "관리자" && (
-                                                        <Badge variant="default" className="bg-gradient-primary text-xs">
-                                                            관리자
-                                                        </Badge>
-                                                    )}
-                                                    <span className="font-semibold text-sm">{review.userName}</span>
-                                                    {review.isVerified ? (
-                                                        <Badge variant="default" className="gap-1 bg-green-600 text-xs">
-                                                            <CheckCircle className="h-3 w-3" />
-                                                            인증
-                                                        </Badge>
-                                                    ) : review.admin_note ? (
-                                                        <Badge variant="destructive" className="gap-1 text-xs">
-                                                            <XCircle className="h-3 w-3" />
-                                                            거부
-                                                        </Badge>
-                                                    ) : (
-                                                        <Badge variant="secondary" className="gap-1 text-xs">
-                                                            <Clock className="h-3 w-3" />
-                                                            검토
-                                                        </Badge>
-                                                    )}
-                                                </div>
-
-                                                {review.isEditedByAdmin && (
-                                                    <Badge variant="outline" className="mb-2 border-orange-500 text-orange-500 text-xs">
-                                                        ⚠️ 관리자가 수정함
-                                                    </Badge>
-                                                )}
-
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                                    <div className="flex items-center gap-1">
-                                                        <Calendar className="h-3 w-3" />
-                                                        방문: {formatDateTime(review.visitedAt)}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => toggleLike(review.id, review.isLikedByUser, review.likeCount)}
-                                                className="flex items-center gap-1 h-6 px-2 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                                disabled={!user}
-                                            >
-                                                <Heart className={`h-3 w-3 ${review.isLikedByUser ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-                                                <span className={`text-xs ${review.isLikedByUser ? 'text-red-500' : 'text-muted-foreground'}`}>
-                                                    {review.likeCount}
-                                                </span>
-                                            </Button>
-                                        </div>
-
-                                        {/* Content */}
-                                        <div className="mb-3">
-                                            <p className="text-sm whitespace-pre-wrap">{review.content}</p>
-                                        </div>
-
-                                        {/* 거부 사유 */}
-                                        {review.admin_note && review.admin_note.includes('거부') && (
-                                            <div className="mb-3 p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
-                                                <div className="flex items-center gap-1 mb-1">
-                                                    <XCircle className="h-3 w-3 text-red-600" />
-                                                    <span className="text-xs font-medium text-red-700 dark:text-red-300">
-                                                        거부 사유
-                                                    </span>
-                                                </div>
-                                                <p className="text-xs text-red-600 dark:text-red-400">
-                                                    {review.admin_note.startsWith('거부: ') ? review.admin_note.substring(4) : review.admin_note}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {/* Photos */}
-                                        {review.photos.length > 0 && (
-                                            <div className="mb-3">
-                                                <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                                                    <img
-                                                        src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
-                                                        alt={`음식 사진`}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => {
-                                                            console.error('이미지 로딩 실패:', review.photos[0].url);
-                                                            e.currentTarget.style.display = 'none';
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Footer */}
-                                        <div className="pt-2 border-t border-border">
-                                            <div className="text-xs text-muted-foreground">
-                                                작성: {formatDateTime(review.submittedAt)}
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
-
-                                {/* 추가 로딩 표시 */}
-                                {isFetchingNextRestaurantReviewPage && (
-                                    <div className="flex items-center justify-center py-4">
-                                        <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full"></div>
-                                        <span className="ml-2 text-sm text-muted-foreground">더 많은 리뷰를 불러오는 중...</span>
-                                    </div>
-                                )}
-                            </div>
-                        </ScrollArea>
-                    )}
-                </div>
+                        )}
+                    </div>
                 </Panel>
             )}
 
