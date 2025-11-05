@@ -50,11 +50,11 @@ const LeaderboardPage = () => {
                     return [];
                 }
 
-                // Get all reviews for these users (좋아요 수 계산을 위해)
+                // Get all reviews for these users
                 const userIds = profilesData.map(profile => profile.user_id);
                 const { data: allReviewsData, error: allReviewsError } = await supabase
                     .from('reviews')
-                    .select('user_id, is_verified, likes_count')
+                    .select('id, user_id, is_verified')
                     .in('user_id', userIds);
 
                 if (allReviewsError) {
@@ -62,12 +62,40 @@ const LeaderboardPage = () => {
                     // 리뷰 조회 실패해도 프로필은 표시 (리뷰 수 0으로)
                 }
 
+                // Get likes data for all reviews
+                let reviewIds: string[] = [];
+                if (allReviewsData) {
+                    reviewIds = allReviewsData.map(review => review.id);
+                }
+
+                const { data: likesData, error: likesError } = await supabase
+                    .from('review_likes')
+                    .select('review_id')
+                    .in('review_id', reviewIds);
+
+                if (likesError) {
+                    console.warn('좋아요 데이터 조회 실패:', likesError.message);
+                }
+
+                // 디버깅: 데이터 확인
+                console.log('All reviews data sample:', allReviewsData?.slice(0, 3));
+                console.log('Likes data sample:', likesData?.slice(0, 3));
+
                 // Create review stats maps
                 const reviewCountMap = new Map<string, number>();
                 const verifiedReviewCountMap = new Map<string, number>();
                 const totalLikesMap = new Map<string, number>();
 
-                if (allReviewsData) {
+                // Create likes count map for each review
+                const reviewLikesMap = new Map<string, number>();
+                if (likesData) {
+                    likesData.forEach(like => {
+                        const current = reviewLikesMap.get(like.review_id) || 0;
+                        reviewLikesMap.set(like.review_id, current + 1);
+                    });
+                }
+
+                if (allReviewsData && allReviewsData.length > 0) {
                     allReviewsData.forEach(review => {
                         // 총 리뷰 수 계산
                         const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
@@ -79,10 +107,16 @@ const LeaderboardPage = () => {
                             verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
                         }
 
-                        // 총 좋아요 수 계산
+                        // 총 좋아요 수 계산 (각 리뷰의 좋아요 수를 합산)
+                        const reviewLikes = reviewLikesMap.get(review.id) || 0;
                         const currentLikes = totalLikesMap.get(review.user_id) || 0;
-                        const likesCount = review.likes_count || 0;
-                        totalLikesMap.set(review.user_id, currentLikes + likesCount);
+                        totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
+                    });
+
+                    console.log('Review stats calculated:', {
+                        totalReviews: reviewCountMap.size,
+                        verifiedReviews: verifiedReviewCountMap.size,
+                        totalLikes: Array.from(totalLikesMap.values()).reduce((sum, likes) => sum + likes, 0)
                     });
                 }
 
@@ -243,11 +277,11 @@ const LeaderboardPage = () => {
                                                 onClick={() => setSortBy("reviews")}
                                                 className="flex items-center gap-1 mx-auto hover:text-primary"
                                             >
-                                                리뷰
+                                                리뷰 수
                                                 {sortBy === "reviews" && <TrendingUp className="h-3 w-3" />}
                                             </button>
                                         </TableHead>
-                                        <TableHead className="text-center">좋아요</TableHead>
+                                        <TableHead className="text-center">받은 좋아요</TableHead>
                                         <TableHead className="text-center">티어</TableHead>
                                         <TableHead>배지</TableHead>
                                     </TableRow>
