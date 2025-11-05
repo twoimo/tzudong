@@ -185,10 +185,10 @@ export default function AdminSubmissionsPage() {
                     .from('restaurants')
                     .update({
                         name: submission.restaurant_name,
-                        address: submission.address,
+                        road_address: submission.address, // 도로명 주소로 저장
                         phone: submission.phone,
                         category: Array.isArray(submission.category) ? submission.category : [submission.category],
-                        youtube_link: submission.youtube_link,
+                        youtube_links: [submission.youtube_link], // 배열로 저장
                         description: submission.description,
                         lat,
                         lng,
@@ -199,7 +199,20 @@ export default function AdminSubmissionsPage() {
                 if (updateError) throw updateError;
                 restaurantId = submission.original_restaurant_id;
             } else {
-                // 신규 제보: 새로운 맛집 생성
+                // 신규 제보: 중복 체크 먼저 수행
+                const { data: existingRestaurants, error: checkError } = await supabase
+                    .from('restaurants')
+                    .select('id, name, road_address')
+                    .eq('name', submission.restaurant_name)
+                    .eq('road_address', submission.address);
+
+                if (checkError) throw checkError;
+
+                if (existingRestaurants && existingRestaurants.length > 0) {
+                    throw new Error(`이미 등록된 맛집입니다: "${submission.restaurant_name}" (${submission.address})`);
+                }
+
+                // 새로운 맛집 생성
                 const lat = parseFloat(approvalData.lat);
                 const lng = parseFloat(approvalData.lng);
 
@@ -211,10 +224,10 @@ export default function AdminSubmissionsPage() {
                     .from('restaurants')
                     .insert({
                         name: submission.restaurant_name,
-                        address: submission.address,
+                        road_address: submission.address, // 도로명 주소로 저장
                         phone: submission.phone,
                         category: Array.isArray(submission.category) ? submission.category : [submission.category],
-                        youtube_link: submission.youtube_link,
+                        youtube_links: [submission.youtube_link], // 배열로 저장
                         description: submission.description,
                         lat,
                         lng,
