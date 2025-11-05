@@ -788,10 +788,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             onValueChange={(v) => setFilters({ ...filters, fanVisitsMin: parseInt(v) })}
                         >
                             <SelectTrigger>
-                                <SelectValue placeholder="리뷰" />
+                                <SelectValue placeholder="리뷰 수" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="0">리뷰 (전체)</SelectItem>
+                                <SelectItem value="0">리뷰 수 (전체)</SelectItem>
                                 <SelectItem value="10">10회 이상</SelectItem>
                                 <SelectItem value="50">50회 이상</SelectItem>
                                 <SelectItem value="100">100회 이상</SelectItem>
@@ -827,7 +827,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             ))}
                             {filters.fanVisitsMin > 0 && (
                                 <Badge variant="secondary">
-                                    리뷰 {filters.fanVisitsMin}회+
+                                    리뷰 수 {filters.fanVisitsMin}회+
                                 </Badge>
                             )}
                         </div>
@@ -869,7 +869,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             onClick={() => handleSort("fanVisits")}
                                             className="hover:bg-accent w-full justify-center"
                                         >
-                                            리뷰
+                                            리뷰 수
                                             {getSortIcon("fanVisits")}
                                         </Button>
                                     </TableHead>
@@ -989,7 +989,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                             </h2>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {selectedRestaurant ? `${restaurantReviews.length}개의 리뷰` : `리뷰수 1등 맛집 (${topReviewedRestaurant?.review_count || 0}회)`}
+                            {selectedRestaurant ? `${restaurantReviews.length}개의 리뷰` : `리뷰 수 1등 맛집 (${topReviewedRestaurant?.review_count || 0}회)`}
                         </p>
                     </div>
 
