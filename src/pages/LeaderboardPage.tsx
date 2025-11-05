@@ -18,7 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 
 interface LeaderboardUser {
     id: string;
-    rank: number;
+    rank?: number; // 랭킹 데이터 생성 시 추가되는 속성
     username: string;
     reviewCount: number;
     verifiedReviewCount: number;
@@ -50,15 +50,29 @@ const LeaderboardPage = () => {
 
                 if (reviewsError) {
                     console.warn('리뷰 데이터 조회 실패:', reviewsError.message);
+                    throw new Error(`리뷰 데이터 조회 실패: ${reviewsError.message}`);
+                }
+
+                if (!reviewsData) {
+                    console.warn('리뷰 데이터가 null입니다');
                     return { users: [], nextCursor: null };
                 }
 
-                if (!reviewsData || reviewsData.length === 0) {
+                if (reviewsData.length === 0) {
                     return { users: [], nextCursor: null };
                 }
 
-                // Get unique user IDs
-                const userIds = [...new Set(reviewsData.map(review => review.user_id))];
+                // Get unique user IDs - 데이터 유효성 검증
+                const userIds = [...new Set(
+                    reviewsData
+                        .map(review => review.user_id)
+                        .filter(userId => userId && typeof userId === 'string')
+                )];
+
+                if (userIds.length === 0) {
+                    console.warn('유효한 사용자 ID가 없습니다');
+                    return { users: [], nextCursor: null };
+                }
 
                 // Get profile info for these users
                 const { data: profilesData, error: profilesError } = await supabase
@@ -68,6 +82,7 @@ const LeaderboardPage = () => {
 
                 if (profilesError) {
                     console.warn('프로필 데이터 조회 실패:', profilesError.message);
+                    throw new Error(`프로필 데이터 조회 실패: ${profilesError.message}`);
                 }
 
                 // Create profiles map
@@ -127,6 +142,12 @@ const LeaderboardPage = () => {
                             badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
                         }
 
+                        // 데이터 유효성 검증
+                        if (!user.userId || !user.nickname || user.totalReviews < 0 || user.verifiedReviews < 0) {
+                            console.warn('유효하지 않은 사용자 데이터:', user);
+                            return null;
+                        }
+
                         return {
                             id: user.userId,
                             username: user.nickname,
@@ -134,7 +155,7 @@ const LeaderboardPage = () => {
                             verifiedReviewCount: user.verifiedReviews,
                             badges,
                         };
-                    });
+                    }).filter(user => user !== null); // null 값 필터링
 
                 // 다음 페이지 커서 계산
                 const nextCursor = reviewsData.length === 200 ? pageParam + 200 : null;
@@ -155,17 +176,26 @@ const LeaderboardPage = () => {
     // 모든 페이지를 평탄화하여 하나의 배열로 만들기
     const allLeaderboardUsers = leaderboardPages?.pages.flatMap(page => page.users) || [];
 
-    // 유저별로 데이터를 합치기 (중복 제거)
-    const userStats = new Map<string, typeof allLeaderboardUsers[0]>();
-    allLeaderboardUsers.forEach(user => {
-        const existing = userStats.get(user.id);
-        if (!existing || user.reviewCount > existing.reviewCount) {
-            userStats.set(user.id, user);
-        }
-    });
+    // 유저별로 데이터를 합치기 (중복 제거) - 메모리 효율적 방식
+    const userMap = new Map<string, LeaderboardUser>();
+
+    // 안전하게 데이터 처리
+    if (Array.isArray(allLeaderboardUsers)) {
+        allLeaderboardUsers.forEach(user => {
+            if (!user || !user.id || typeof user.reviewCount !== 'number') {
+                console.warn('Invalid user data:', user);
+                return;
+            }
+
+            const existing = userMap.get(user.id);
+            if (!existing || user.reviewCount > existing.reviewCount) {
+                userMap.set(user.id, user);
+            }
+        });
+    }
 
     // 실시간 정렬 및 순위 부여
-    const leaderboardData = Array.from(userStats.values())
+    const leaderboardData = Array.from(userMap.values())
         .sort((a, b) => b.reviewCount - a.reviewCount)
         .map((user, index) => ({
             ...user,
@@ -184,26 +214,37 @@ const LeaderboardPage = () => {
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
 
     const loadMoreLeaderboard = useCallback(() => {
-        if (hasNextPage && !isFetchingNextPage) {
+        if (hasNextPage && !isFetchingNextPage && !isLoading) {
             fetchNextPage();
         }
-    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage, isLoading]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting) {
+                // entries가 존재하고 첫 번째 entry가 교차하는지 확인
+                if (entries && entries[0] && entries[0].isIntersecting) {
                     loadMoreLeaderboard();
                 }
             },
-            { threshold: 0.1 }
+            {
+                threshold: 0.1,
+                rootMargin: '50px' // 50px 전에 로드 시작
+            }
         );
 
-        if (loadMoreTableRef.current) {
-            observer.observe(loadMoreTableRef.current);
+        const currentRef = loadMoreTableRef.current;
+        if (currentRef) {
+            observer.observe(currentRef);
         }
 
-        return () => observer.disconnect();
+        // 클린업 함수
+        return () => {
+            if (currentRef) {
+                observer.unobserve(currentRef);
+            }
+            observer.disconnect();
+        };
     }, [loadMoreLeaderboard]);
 
     const getRankIcon = (rank: number, forTable: boolean = false) => {
@@ -315,15 +356,6 @@ const LeaderboardPage = () => {
                                         <span className="text-muted-foreground">리뷰 수</span>
                                         <span className="font-semibold">{user.reviewCount}개</span>
                                     </div>
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-1">
-                                            <CheckCircle className="h-3 w-3" />
-                                            검증된 리뷰
-                                        </span>
-                                        <span className="font-semibold text-green-600">
-                                            {user.verifiedReviewCount}개
-                                        </span>
-                                    </div>
                                 </div>
 
                                 <div className="mt-3 pt-3 border-t border-border">
@@ -387,11 +419,10 @@ const LeaderboardPage = () => {
                                                 onClick={() => setSortBy("reviews")}
                                                 className="flex items-center gap-1 mx-auto hover:text-primary"
                                             >
-                                                리뷰 수
+                                                리뷰
                                                 {sortBy === "reviews" && <TrendingUp className="h-3 w-3" />}
                                             </button>
                                         </TableHead>
-                                        <TableHead className="text-center">검증된 리뷰</TableHead>
                                         <TableHead>배지</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -413,9 +444,6 @@ const LeaderboardPage = () => {
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="w-12 h-5 bg-muted rounded animate-pulse mx-auto"></div>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex gap-1">
@@ -449,12 +477,6 @@ const LeaderboardPage = () => {
                                             <TableCell className="text-center">
                                                 <span className="font-semibold">{user.reviewCount}</span>
                                                 <span className="text-muted-foreground text-xs ml-1">개</span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                                    {user.verifiedReviewCount}
-                                                </Badge>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex gap-1 flex-wrap">
@@ -500,6 +522,19 @@ const LeaderboardPage = () => {
                                             </TableCell>
                                         </TableRow>
                                     ))}
+
+                                    {/* 빈 데이터 상태 */}
+                                    {!isLoading && sortedLeaderboard.length === 0 && (
+                                        <TableRow>
+                                            <TableCell colSpan={5} className="text-center py-12">
+                                                <div className="text-muted-foreground">
+                                                    <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                                    <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
+                                                    <p className="text-xs">리뷰를 작성하고 랭킹에 도전해보세요!</p>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
 
                                     {/* 추가 로딩 표시 */}
                                     {isFetchingNextPage && (
