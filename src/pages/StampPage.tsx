@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { CheckCircle, Trophy, MapPin } from "lucide-react";
+import { CheckCircle, Trophy, MapPin, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Restaurant {
@@ -22,6 +22,7 @@ interface UserReview {
 const StampPage = () => {
     const { user } = useAuth();
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
+    const [showUnvisitedOnly, setShowUnvisitedOnly] = useState(false);
 
     // 방문한 맛집인지 확인
     const isVisited = (restaurantId: string) => {
@@ -58,7 +59,7 @@ const StampPage = () => {
     });
 
     // 방문한 맛집을 먼저 표시하기 위해 정렬
-    const restaurants = (restaurantsData || []).sort((a, b) => {
+    const sortedRestaurants = (restaurantsData || []).sort((a, b) => {
         const aVisited = isVisited(a.id);
         const bVisited = isVisited(b.id);
 
@@ -66,6 +67,11 @@ const StampPage = () => {
         if (!aVisited && bVisited) return 1;  // b가 방문했고 a가 방문하지 않았으면 b를 먼저
         return 0; // 둘 다 방문했거나 둘 다 방문하지 않았으면 기존 순서 유지
     });
+
+    // 방문하지 않은 맛집만 필터링
+    const restaurants = showUnvisitedOnly
+        ? sortedRestaurants.filter(restaurant => !isVisited(restaurant.id))
+        : sortedRestaurants;
 
 
     // 사용자 프로필 정보 조회 (로그인한 경우)
@@ -152,6 +158,17 @@ const StampPage = () => {
                                 <Trophy className="h-6 w-6 text-primary" />
                                 쯔동여지도 도장
                             </h1>
+                            <button
+                                onClick={() => setShowUnvisitedOnly(!showUnvisitedOnly)}
+                                className="p-1.5 rounded-md hover:bg-muted transition-colors"
+                                title={showUnvisitedOnly ? "모든 맛집 표시" : "방문하지 않은 맛집만 표시"}
+                            >
+                                {showUnvisitedOnly ? (
+                                    <EyeOff className="h-5 w-5 text-muted-foreground" />
+                                ) : (
+                                    <Eye className="h-5 w-5 text-muted-foreground" />
+                                )}
+                            </button>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
                             쯔양이 방문한 맛집을 모두 도장 찍어보세요!
