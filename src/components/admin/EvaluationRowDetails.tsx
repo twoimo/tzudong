@@ -251,6 +251,8 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
           <CardTitle className="text-lg">🍽️ 음식점 상세 정보</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          <p><strong>음식점명:</strong> {record.restaurant_name}</p>
+          <p><strong>카테고리:</strong> {restaurant_info.category}</p>
           <p><strong>전화번호:</strong> {restaurant_info.phone || '-'}</p>
           <p><strong>원본 주소:</strong> {restaurant_info.origin_address}</p>
           

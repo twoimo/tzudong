@@ -7,7 +7,7 @@ import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
-import { Loader2 } from 'lucide-react';
+import { ClipboardCheck, Loader2 } from 'lucide-react';
 
 export default function AdminEvaluationPage() {
   const { toast } = useToast();
@@ -48,7 +48,14 @@ export default function AdminEvaluationPage() {
   const filteredRecords = useMemo(() => {
     let filtered = selectedStatuses.length === 0 
       ? records 
-      : records.filter(r => selectedStatuses.includes(r.status));
+      : records.filter(r => {
+          // geocoding_failed 탭 클릭 시: status가 'geocoding_failed' 또는 (pending + 지오코딩 실패)
+          if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
+            return r.status === 'geocoding_failed' || 
+                   (r.status === 'pending' && !r.geocoding_success);
+          }
+          return selectedStatuses.includes(r.status);
+        });
 
     // 1. Visit Authenticity 필터 (0-3점)
     if (evalFilters.visit_authenticity) {
@@ -452,11 +459,19 @@ export default function AdminEvaluationPage() {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="p-6 border-b">
-        <h1 className="text-3xl font-bold">음식점 방문 데이터 평가 결과</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          총 {stats.total}개 레코드 | 필터링: {filteredRecords.length}개
-        </p>
+      {/* Header */}
+      <div className="border-b border-border bg-card p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+              <ClipboardCheck className="h-6 w-6 text-primary" />
+              음식점 방문 데이터 평가 결과 검수
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              총 {stats.total}개 레코드 | 필터링: {filteredRecords.length}개
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">

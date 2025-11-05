@@ -6,15 +6,19 @@
 
 ### 사용자 기능
 - 🗺️ **지도 기반 맛집 검색**: Google Maps 또는 Naver Maps 통합
-- 🔍 **다양한 필터링**: 지역, 카테고리, 평가 점수 기반 검색
+- 🔍 **다양한 필터링**: 지역, 카테고리, 리뷰 수 기반 검색
 - 📺 **YouTube 영상 연동**: 쯔양의 방문 영상 바로 보기
+- ⭐ **리뷰 시스템**: 사용자 리뷰 작성 및 관리
 - 📱 **반응형 디자인**: 모바일/데스크톱 최적화
+- 🎯 **맛집 제보**: 새로운 맛집 정보 제보 및 수정 요청
 
 ### 관리자 기능
-- ✅ **데이터 검수 시스템** (신규!)
+- ✅ **데이터 검수 시스템**
   - YouTube 영상에서 추출한 레스토랑 정보 검토 및 승인
   - 7가지 평가 지표 기반 품질 관리
   - 일괄 처리 및 상태 관리
+- 📝 **리뷰 관리**: 사용자 리뷰 승인/거부 시스템
+- 📋 **제보 관리**: 맛집 제보 및 수정 요청 검토
 
 ## 📋 관리자 데이터 검수 (Admin Evaluation Management)
 
@@ -94,6 +98,57 @@
 - Perplexity AI 기반 정보 추출
 - 네이버 지오코딩 API 주소 검증
 
+## 🎨 주요 페이지
+
+### 쯔동여지도 홈/글로벌 (Home/Global Map)
+- 지도 기반 맛집 탐색
+- 지역/카테고리 필터링 (road_address, jibun_address 기반)
+- 맛집 상세 정보 패널
+  - 도로명 주소 및 지번 주소 표시
+  - YouTube 영상 목록 (썸네일)
+  - 쯔양 리뷰 목록
+  - 카테고리 배지
+- 마커 클릭 시 상세 정보 표시
+
+### 쯔동여지도 필터링 (Filtering Page)
+- 테이블 형식 맛집 목록
+- 다중 필터 적용:
+  - 검색어 (맛집명)
+  - 지역 필터 (시/도 단위)
+  - 카테고리 필터 (복수 선택)
+  - 리뷰 수 필터 (슬라이더)
+- 정렬 기능 (이름, 카테고리, 리뷰 수)
+- 우측 패널: 선택한 맛집의 리뷰 목록
+
+### 쯔동여지도 도장 (Stamp Page)
+- YouTube 영상이 있는 맛집 그리드 표시
+- 썸네일 기반 시각적 탐색
+- 리뷰 수 표시
+
+### 쯔동여지도 제보 (Submission Page)
+- **신규 맛집 제보**:
+  - 맛집명, 주소(도로명), 전화번호
+  - 카테고리 선택 (복수 가능, 배열로 저장)
+  - YouTube 영상 링크
+  - 설명 (선택)
+  - 모든 주소는 **도로명 주소**로 저장
+- **맛집 수정 요청**:
+  - 기존 맛집 선택 (드롭다운)
+  - 변경사항 자동 감지 및 표시
+  - 수정된 정보 제출
+- 내 제보 내역 조회 (무한 스크롤)
+- 상태별 표시 (대기/승인/거부)
+
+### 관리자 페이지
+- **데이터 검수**: 평가 레코드 관리
+- **리뷰 승인**: 사용자 리뷰 검토 및 승인
+  - 승인 시 `review_count` 자동 증가
+  - 거부 시 `review_count` 자동 감소
+- **제보 관리**: 맛집 제보 및 수정 요청 처리
+  - 신규 제보: `road_address`에 주소 저장, `youtube_links` 배열로 저장
+  - **중복 방지**: 이름 + 도로명 주소 조합으로 자동 체크
+  - 중복 발견 시 에러 메시지 표시
+
 ## 🚀 시작하기
 
 ### 필수 조건
@@ -165,16 +220,118 @@ tzudong/
     └── migrations/          # Supabase 스키마
 ```
 
-## 🗄️ 데이터베이스 마이그레이션
+## 🗄️ 데이터베이스 구조
 
-평가 데이터를 Supabase에 로딩하려면:
+### restaurants 테이블
 
-```bash
-cd backend/perplexity-restaurant-evaluation/scripts/db-migration
-python3 load_data_in_batches.py
+| 컬럼명 | 타입 | 설명 |
+|--------|------|------|
+| id | UUID | Primary Key |
+| name | TEXT | 음식점명 |
+| phone | TEXT | 전화번호 |
+| road_address | TEXT | 도로명 주소 |
+| jibun_address | TEXT | 지번 주소 |
+| english_address | TEXT | 영문 주소 |
+| address_elements | JSONB | 네이버 지오코딩 주소 요소 배열 |
+| lat | DOUBLE | 위도 (Naver y) |
+| lng | DOUBLE | 경도 (Naver x) |
+| category | TEXT[] | 음식 카테고리 배열 |
+| youtube_links | TEXT[] | YouTube 영상 URL 배열 |
+| tzuyang_reviews | TEXT[] | 쯔양 리뷰 배열 |
+| youtube_metas | JSONB[] | YouTube 메타데이터 배열 |
+| review_count | INTEGER | 사용자 리뷰 수 (기본값: 0) |
+| created_at | TIMESTAMP | 생성 시간 |
+| updated_at | TIMESTAMP | 수정 시간 |
+
+### restaurant_submissions 테이블
+
+| 컬럼명 | 타입 | 설명 |
+|--------|------|------|
+| id | UUID | Primary Key |
+| user_id | UUID | 제보자 ID (profiles FK) |
+| restaurant_name | TEXT | 맛집명 |
+| address | TEXT | 주소 (도로명 주소로 저장) |
+| phone | TEXT | 전화번호 |
+| category | TEXT[] | 카테고리 배열 (항상 배열로 저장) |
+| youtube_link | TEXT | YouTube 영상 링크 |
+| description | TEXT | 설명 |
+| status | TEXT | pending/approved/rejected |
+| rejection_reason | TEXT | 거부 사유 |
+| submission_type | TEXT | new/update |
+| original_restaurant_id | UUID | 수정 대상 맛집 ID |
+| changes_requested | JSONB | 변경 요청 사항 |
+| created_at | TIMESTAMP | 제보 시간 |
+| reviewed_at | TIMESTAMP | 검토 시간 |
+
+> **주소 저장**: 사용자가 입력한 주소는 모두 **도로명 주소**로 저장됩니다.
+> 
+> **카테고리 저장**: 단일 선택이든 복수 선택이든 항상 **TEXT[] 배열**로 저장됩니다.
+> 
+> **중복 방지**: 승인 시 동일한 `name` + `road_address` 조합이 있는지 자동 체크하여 중복 등록을 방지합니다.
+
+### reviews 테이블
+
+| 컬럼명 | 타입 | 설명 |
+|--------|------|------|
+| id | UUID | Primary Key |
+| user_id | UUID | 작성자 ID |
+| restaurant_id | UUID | 맛집 ID |
+| title | TEXT | 리뷰 제목 |
+| content | TEXT | 리뷰 내용 |
+| visited_at | DATE | 방문 날짜 |
+| verification_photo | TEXT | 인증 사진 URL |
+| food_photos | TEXT[] | 음식 사진 URL 배열 |
+| category | TEXT | 카테고리 |
+| is_verified | BOOLEAN | 승인 여부 (기본값: false) |
+| is_pinned | BOOLEAN | 고정 여부 |
+| admin_note | TEXT | 관리자 메모 |
+| edited_by_admin | BOOLEAN | 관리자 수정 여부 |
+| created_at | TIMESTAMP | 작성 시간 |
+| updated_at | TIMESTAMP | 수정 시간 |
+
+### review_likes 테이블
+
+| 컬럼명 | 타입 | 설명 |
+|--------|------|------|
+| id | UUID | Primary Key |
+| review_id | UUID | 리뷰 ID |
+| user_id | UUID | 사용자 ID |
+| created_at | TIMESTAMP | 좋아요 시간 |
+
+> **복합 유니크 제약**: (review_id, user_id) - 한 사용자는 리뷰당 1개의 좋아요만 가능
+
+### address_elements 구조 예시
+
+```json
+[
+  {
+    "code": "",
+    "types": ["SIDO"],
+    "longName": "제주특별자치도",
+    "shortName": "제주특별자치도"
+  },
+  {
+    "code": "",
+    "types": ["SIGUGUN"],
+    "longName": "서귀포시",
+    "shortName": "서귀포시"
+  },
+  // ... 기타 주소 요소
+]
 ```
 
-자세한 내용은 [DB Migration Guide](./backend/perplexity-restaurant-evaluation/scripts/db-migration/README.md)를 참조하세요.
+**지역 필터링**: 
+- `road_address` 또는 `jibun_address`에서 시/도명 패턴 매칭
+- 우선순위: 도로명 주소 → 지번 주소
+- 특수 지역: 울릉도, 욕지도 등 별도 처리
+
+**카테고리 필터링**:
+- PostgreSQL `overlaps` 연산자 사용
+- TEXT[] 배열에서 교집합 검사
+
+**리뷰 수 필터링**:
+- `review_count` 컬럼 기반
+- 리뷰 승인 시 자동 증가, 거부 시 감소
 
 ## 🛠️ 기술 스택
 
@@ -197,21 +354,52 @@ python3 load_data_in_batches.py
 
 ## 📝 주요 컴포넌트
 
-### EvaluationTableNew.tsx
-- 평가 레코드 표시 및 관리
-- 7개 평가 지표 컬럼 + 상태/액션
-- 인라인 필터링 (드롭다운)
-- Sticky 컬럼 (왼쪽: 영상 정보, 오른쪽: 상태/액션)
-- YouTube 썸네일 통합
+### 지도 컴포넌트
+- **MapView.tsx**: Google Maps 통합
+- **NaverMapView.tsx**: Naver Maps 통합
+- 카테고리별 커스텀 마커 아이콘
+- 마커 클릭 시 상세 패널 표시
 
-### AdminEvaluationPage.tsx
-- 평가 데이터 로딩 및 상태 관리
-- 필터 로직 구현
-- 승인/보류/삭제 액션 처리
+### 관리자 컴포넌트
+- **EvaluationTableNew.tsx**: 평가 레코드 표시 및 관리
+  - 7개 평가 지표 컬럼 + 상태/액션
+  - 인라인 필터링 (드롭다운)
+  - Sticky 컬럼 (왼쪽: 영상 정보, 오른쪽: 상태/액션)
+  - YouTube 썸네일 통합
+- **AdminEvaluationPage.tsx**: 평가 데이터 로딩 및 상태 관리
+- **AdminReviewsPage.tsx**: 리뷰 승인/거부 관리
+- **AdminSubmissionsPage.tsx**: 맛집 제보 검토 및 처리
 
-## 🐛 알려진 이슈
+### 사용자 컴포넌트
+- **RestaurantDetailPanel.tsx**: 맛집 상세 정보 표시
+  - 도로명/지번 주소 분리 표시
+  - YouTube 영상 목록 (썸네일)
+  - 쯔양 리뷰 목록
+  - 카테고리 배지 (배열 전체 표시)
+- **ReviewModal.tsx**: 리뷰 작성 모달
+- **RestaurantSubmissionsPage.tsx**: 맛집 제보 및 수정 요청
+
+## 🔄 최근 업데이트
+
+### 2025-01-06
+- ✅ **지역 필터링 개선**: `road_address`/`jibun_address` 기반 필터링으로 변경
+- ✅ **맛집 제보 시스템**: 신규 제보 및 수정 요청 기능 추가
+- ✅ **주소 저장 형식**: 사용자 입력 주소는 모두 도로명 주소(`road_address`)로 저장
+- ✅ **카테고리 저장**: 단일/복수 상관없이 항상 TEXT[] 배열로 저장
+- ✅ **중복 방지**: 관리자 승인 시 이름 + 도로명 주소 조합으로 중복 체크
+- ✅ **리뷰 승인 로직**: review_count 중복 증가 방지
+- ✅ **YouTube 링크**: `youtube_links` 배열 타입으로 완전 지원
+
+### DB 스키마 마이그레이션
+- `address` → `road_address`, `jibun_address`, `address_elements` (JSONB)
+- `category` → `category` (TEXT[], 항상 배열)
+- `youtube_link` → `youtube_links` (TEXT[])
+- `tzuyang_review` → `tzuyang_reviews` (TEXT[])
+
+## �🐛 알려진 이슈
 
 - [ ] 마지막 레코드 스크롤 잘림 현상 (확인 필요)
+- [ ] Google Maps 타입 정의 경고 (기능상 문제 없음)
 
 ## 📚 추가 문서
 

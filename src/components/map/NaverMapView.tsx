@@ -256,7 +256,10 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
                 const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
                 // 카테고리별 적절한 이모티콘으로 변경
-                const getCategoryIcon = (category: string) => {
+                const getCategoryIcon = (category: string | string[]) => {
+                    // category가 배열이면 첫 번째 값 사용
+                    const categoryStr = Array.isArray(category) ? category[0] : category;
+                    
                     const iconMap: { [key: string]: string } = {
                         '고기': '🥩',
                         '치킨': '🍗',
@@ -275,7 +278,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         '야식': '🌙',
                         '도시락': '🍱'
                     };
-                    return iconMap[category] || '⭐'; // 기본값은 별표
+                    return iconMap[categoryStr] || '⭐'; // 기본값은 별표
                 };
 
                 const icon = getCategoryIcon(restaurant.category);
