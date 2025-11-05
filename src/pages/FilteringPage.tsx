@@ -75,7 +75,7 @@ interface Review {
 }
 
 const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
-    const { isAdmin } = useAuth();
+    const { isAdmin, user } = useAuth();
     const queryClient = useQueryClient();
 
     // 검색어 상태를 별도로 관리 (의존성 순환 방지)
@@ -186,6 +186,44 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
+    // 좋아요 토글 함수
+    const toggleLike = async (reviewId: string, currentIsLiked: boolean, currentLikeCount: number) => {
+        if (!user) {
+            // 로그인하지 않은 경우 처리 (토스트 메시지 등)
+            console.warn('로그인이 필요합니다.');
+            return;
+        }
+
+        try {
+            if (currentIsLiked) {
+                // 좋아요 취소
+                const { error } = await supabase
+                    .from('review_likes')
+                    .delete()
+                    .eq('review_id', reviewId)
+                    .eq('user_id', user.id);
+
+                if (error) throw error;
+            } else {
+                // 좋아요 추가
+                const { error } = await supabase
+                    .from('review_likes')
+                    .insert({
+                        review_id: reviewId,
+                        user_id: user.id,
+                    });
+
+                if (error) throw error;
+            }
+
+            // 쿼리 무효화하여 데이터 새로고침
+            queryClient.invalidateQueries({ queryKey: ['top-liked-reviews'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
+        } catch (error) {
+            console.error('좋아요 토글 실패:', error);
+        }
+    };
+
     // 전체 리뷰 중 좋아요가 가장 많은 리뷰들 조회 (무한 스크롤)
     const {
         data: topLikedReviewsData,
@@ -245,9 +283,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     console.warn('review_likes 테이블이 존재하지 않음, 좋아요 수를 0으로 설정합니다:', error);
                 }
 
-                // 6. 좋아요 수 계산
+                // 6. 좋아요 수와 사용자 좋아요 상태 계산
                 const reviewsWithLikes = allReviews.map(review => {
                     const likesForReview = likesData?.filter(like => like.review_id === review.id) || [];
+                    const isLikedByUser = user ? likesForReview.some(like => like.user_id === user.id) : false;
                     return {
                         ...review,
                         likeCount: likesForReview.length,
@@ -263,7 +302,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                         admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
                         category: review.categories?.[0] || review.category,
-                        isLikedByUser: false,
+                        isLikedByUser,
                     } as Review;
                 });
 
@@ -382,9 +421,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 const likesMap = new Map<string, { count: number; isLiked: boolean }>();
                 reviewIds.forEach(reviewId => {
                     const likesForReview = likesData?.filter(like => like.review_id === reviewId) || [];
+                    const isLiked = user ? likesForReview.some(like => like.user_id === user.id) : false;
                     likesMap.set(reviewId, {
                         count: likesForReview.length,
-                        isLiked: false // FilteringPage에서는 사용자 상태를 확인하지 않음
+                        isLiked,
                     });
                 });
 
@@ -1041,12 +1081,18 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    <span className="text-sm text-muted-foreground">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => toggleLike(review.id, review.isLikedByUser, review.likeCount)}
+                                                    className="flex items-center gap-1 h-6 px-2 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                    disabled={!user}
+                                                >
+                                                    <Heart className={`h-3 w-3 ${review.isLikedByUser ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                                                    <span className={`text-xs ${review.isLikedByUser ? 'text-red-500' : 'text-muted-foreground'}`}>
                                                         {review.likeCount}
                                                     </span>
-                                                    <Heart className="h-4 w-4 text-gray-400" />
-                                                </div>
+                                                </Button>
                                             </div>
 
                                             {/* Content */}
@@ -1159,12 +1205,18 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 shrink-0">
-                                                <span className="text-sm text-muted-foreground">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => toggleLike(review.id, review.isLikedByUser, review.likeCount)}
+                                                className="flex items-center gap-1 h-6 px-2 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                                disabled={!user}
+                                            >
+                                                <Heart className={`h-3 w-3 ${review.isLikedByUser ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
+                                                <span className={`text-xs ${review.isLikedByUser ? 'text-red-500' : 'text-muted-foreground'}`}>
                                                     {review.likeCount}
                                                 </span>
-                                                <Heart className="h-4 w-4 text-gray-400" />
-                                            </div>
+                                            </Button>
                                         </div>
 
                                         {/* Content */}
