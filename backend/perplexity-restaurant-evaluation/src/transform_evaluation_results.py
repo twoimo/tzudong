@@ -2,6 +2,7 @@
 음식점 평가 결과 변환 스크립트
 youtube_link 기준 → youtube_link-restaurant_name 기준으로 변환
 Missing 음식점 별도 레코드 생성
+NotSelection 음식점 별도 레코드 생성 (평가 미대상)
 """
 
 import json
@@ -98,7 +99,24 @@ def transform_evaluation_results(
     if not input_path.exists():
         raise FileNotFoundError(f"입력 파일을 찾을 수 없습니다: {input_file}")
     
+    # 기존 transform.jsonl에서 이미 처리된 키 로드
+    existing_keys = set()
+    if output_path.exists():
+        print(f"📂 기존 transform 파일 발견 - 중복 확인 중...")
+        with open(output_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                    key = f"{record['youtube_link']}|||{record['restaurant_name']}"
+                    existing_keys.add(key)
+                except:
+                    pass
+        print(f"✅ 기존 레코드: {len(existing_keys)}개")
+    
     transformed_records = []
+    skipped_count = 0
     stats = {
         'total_videos': 0,
         'total_restaurants': 0,
@@ -131,6 +149,12 @@ def transform_evaluation_results(
             missing_restaurants = evaluation_results.get('visit_authenticity', {}).get('missing', [])
             
             for missing_name in missing_restaurants:
+                # 중복 체크
+                key = f"{youtube_link}|||{missing_name}"
+                if key in existing_keys:
+                    skipped_count += 1
+                    continue
+                
                 stats['missing_restaurants'] += 1
                 
                 transformed_records.append({
@@ -149,9 +173,15 @@ def transform_evaluation_results(
             restaurants = record.get('restaurants', [])
             
             for restaurant in restaurants:
-                stats['total_restaurants'] += 1
-                
                 restaurant_name = restaurant['name']
+                
+                # 중복 체크
+                key = f"{youtube_link}|||{restaurant_name}"
+                if key in existing_keys:
+                    skipped_count += 1
+                    continue
+                
+                stats['total_restaurants'] += 1
                 
                 # 평가 결과 추출 (해당 음식점만)
                 restaurant_evaluation = extract_restaurant_evaluation(
@@ -206,8 +236,9 @@ def transform_evaluation_results(
             if line_num % 50 == 0:
                 print(f"  처리 중... {line_num}개 영상")
     
-    # 결과 저장
-    with open(output_path, 'w', encoding='utf-8') as f:
+    # 결과 저장 (append 모드로 기존 데이터에 추가)
+    mode = 'a' if output_path.exists() else 'w'
+    with open(output_path, mode, encoding='utf-8') as f:
         for record in transformed_records:
             f.write(json.dumps(record, ensure_ascii=False) + '\n')
     
@@ -215,11 +246,129 @@ def transform_evaluation_results(
     print(f"\n✅ 변환 완료!")
     print(f"📊 통계:")
     print(f"   - 총 영상: {stats['total_videos']}개")
-    print(f"   - 총 음식점: {stats['total_restaurants']}개")
-    print(f"   - Missing 음식점: {stats['missing_restaurants']}개")
+    print(f"   - 새 음식점: {stats['total_restaurants']}개")
+    print(f"   - 새 Missing 음식점: {stats['missing_restaurants']}개")
+    print(f"   - 중복 스킵: {skipped_count}개")
     print(f"   - 지오코딩 성공: {stats['geocoding_success']}개")
     print(f"   - 지오코딩 실패: {stats['geocoding_failed']}개")
-    print(f"   - 총 레코드: {len(transformed_records)}개")
+    print(f"   - 새 레코드: {len(transformed_records)}개")
+    print(f"\n📁 출력 파일: {output_path}")
+    
+    return transformed_records, stats
+
+
+def transform_notselection_results(
+    input_file: str = "tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl",
+    output_file: str = "transform.jsonl"
+):
+    """
+    평가 미대상(notSelection) 데이터를 transform.jsonl에 추가
+    
+    Args:
+        input_file: 평가 미대상 파일 경로
+        output_file: 출력 파일 경로
+    """
+    input_path = Path(input_file)
+    output_path = Path(output_file)
+    
+    if not input_path.exists():
+        print(f"⚠️ 평가 미대상 파일을 찾을 수 없습니다: {input_file}")
+        return [], {'total_videos': 0, 'total_restaurants': 0}
+    
+    # 기존 transform.jsonl에서 이미 처리된 키 로드
+    existing_keys = set()
+    if output_path.exists():
+        print(f"📂 기존 transform 파일에서 중복 확인 중...")
+        with open(output_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    record = json.loads(line)
+                    key = f"{record['youtube_link']}|||{record['restaurant_name']}"
+                    existing_keys.add(key)
+                except:
+                    pass
+        print(f"✅ 기존 레코드: {len(existing_keys)}개")
+    
+    transformed_records = []
+    skipped_count = 0
+    stats = {
+        'total_videos': 0,
+        'total_restaurants': 0
+    }
+    
+    print(f"📂 평가 미대상 파일: {input_path}")
+    print(f"📝 변환 시작...")
+    
+    with open(input_path, 'r', encoding='utf-8') as f:
+        for line_num, line in enumerate(f, 1):
+            if not line.strip():
+                continue
+            
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as e:
+                print(f"⚠️ 라인 {line_num}: JSON 파싱 실패 - {e}")
+                continue
+            
+            stats['total_videos'] += 1
+            
+            youtube_link = record['youtube_link']
+            youtube_meta = record.get('youtube_meta', {})
+            
+            # 모든 음식점 처리
+            restaurants = record.get('restaurants', [])
+            
+            for restaurant in restaurants:
+                restaurant_name = restaurant['name']
+                
+                # 중복 체크
+                key = f"{youtube_link}|||{restaurant_name}"
+                if key in existing_keys:
+                    skipped_count += 1
+                    continue
+                
+                stats['total_restaurants'] += 1
+                
+                transformed_records.append({
+                    "youtube_link": youtube_link,
+                    "restaurant_name": restaurant_name,
+                    "status": "not_selected",  # 평가 미대상
+                    "youtube_meta": youtube_meta,
+                    "evaluation_results": None,  # 평가 안함
+                    "restaurant_info": {
+                        "name": restaurant['name'],
+                        "phone": restaurant.get('phone'),
+                        "category": restaurant.get('category'),
+                        "origin_address": restaurant.get('address'),
+                        "origin_lat": restaurant.get('lat'),
+                        "origin_lng": restaurant.get('lng'),
+                        "reasoning_basis": restaurant.get('reasoning_basis'),
+                        "tzuyang_review": restaurant.get('tzuyang_review'),
+                        "naver_address_info": None
+                    },
+                    "geocoding_success": False,
+                    "geocoding_fail_reason": "평가 미대상 - 주소 정보 없음"
+                })
+            
+            # 진행 상황 표시
+            if line_num % 50 == 0:
+                print(f"  처리 중... {line_num}개 영상")
+    
+    # 결과 저장 (append 모드로 기존 데이터에 추가)
+    mode = 'a' if output_path.exists() else 'w'
+    with open(output_path, mode, encoding='utf-8') as f:
+        for record in transformed_records:
+            f.write(json.dumps(record, ensure_ascii=False) + '\n')
+    
+    # 통계 출력
+    print(f"\n✅ 평가 미대상 변환 완료!")
+    print(f"📊 통계:")
+    print(f"   - 총 영상: {stats['total_videos']}개")
+    print(f"   - 새 음식점: {stats['total_restaurants']}개")
+    print(f"   - 중복 스킵: {skipped_count}개")
+    print(f"   - 새 레코드: {len(transformed_records)}개")
     print(f"\n📁 출력 파일: {output_path}")
     
     return transformed_records, stats
@@ -227,13 +376,35 @@ def transform_evaluation_results(
 
 if __name__ == "__main__":
     import sys
+    import os
+    
+    # 스크립트가 src/ 디렉토리에서 실행될 때 프로젝트 루트로 이동
+    script_dir = Path(__file__).parent
+    project_root = script_dir.parent
+    os.chdir(project_root)
     
     # 명령줄 인자 처리
     input_file = sys.argv[1] if len(sys.argv) > 1 else "tzuyang_restaurant_evaluation_results.jsonl"
     output_file = sys.argv[2] if len(sys.argv) > 2 else "transform.jsonl"
+    notselection_file = sys.argv[3] if len(sys.argv) > 3 else "tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl"
     
     try:
+        # 1. 평가 결과 transform
+        print("=" * 80)
+        print("📋 Step 1: 평가 결과 변환")
+        print("=" * 80)
         transform_evaluation_results(input_file, output_file)
+        
+        # 2. 평가 미대상 transform
+        print("\n" + "=" * 80)
+        print("📋 Step 2: 평가 미대상 변환")
+        print("=" * 80)
+        transform_notselection_results(notselection_file, output_file)
+        
+        print("\n" + "=" * 80)
+        print("🎉 모든 변환 작업 완료!")
+        print("=" * 80)
+        
     except Exception as e:
         print(f"❌ 오류 발생: {e}")
         import traceback

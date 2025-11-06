@@ -145,29 +145,6 @@ async function main() {
   const evaluators: PerplexityEvaluator[] = [];
 
   try {
-    // 병렬 처리 개수 선택
-    console.log('병렬 처리할 브라우저 개수를 선택하세요:');
-    console.log('  1 - 1개 (순차 처리)');
-    console.log('  3 - 3개 (병렬 처리)');
-    console.log('  5 - 5개 (병렬 처리)');
-    const parallelChoice = await askUser('선택 (1/3/5): ');
-    
-    let parallelCount = 1; // 기본값
-    const choiceNum = parseInt(parallelChoice.trim());
-    
-    if (choiceNum === 1) {
-      parallelCount = 1;
-    } else if (choiceNum === 3) {
-      parallelCount = 3;
-    } else if (choiceNum === 5) {
-      parallelCount = 5;
-    } else {
-      console.log(`⚠️ 잘못된 선택: "${parallelChoice}" - 기본값 1개로 진행합니다.`);
-      parallelCount = 1;
-    }
-    
-    console.log(`\n✅ ${parallelCount}개 브라우저로 병렬 처리 시작\n`);
-
     // 파일 경로
     const errorFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_errors.jsonl');
     const outputFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_results.jsonl');
@@ -255,8 +232,31 @@ async function main() {
 
     if (linesToProcess.length === 0) {
       console.log('🎉 모든 에러가 이미 처리되었습니다!');
-      process.exit(0);
+      return;
     }
+
+    // 병렬 처리 개수 선택
+    console.log('병렬 처리할 브라우저 개수를 선택하세요:');
+    console.log('  1 - 1개 (순차 처리)');
+    console.log('  3 - 3개 (병렬 처리)');
+    console.log('  5 - 5개 (병렬 처리)');
+    const parallelChoice = await askUser('선택 (1/3/5): ');
+    
+    let parallelCount = 1; // 기본값
+    const choiceNum = parseInt(parallelChoice.trim());
+    
+    if (choiceNum === 1) {
+      parallelCount = 1;
+    } else if (choiceNum === 3) {
+      parallelCount = 3;
+    } else if (choiceNum === 5) {
+      parallelCount = 5;
+    } else {
+      console.log(`⚠️ 잘못된 선택: "${parallelChoice}" - 기본값 1개로 진행합니다.`);
+      parallelCount = 1;
+    }
+    
+    console.log(`\n✅ ${parallelCount}개 브라우저로 병렬 처리 시작\n`);
 
     // 여러 브라우저 초기화 (각각 고유 ID 부여)
     console.log(`🚀 ${parallelCount}개의 브라우저 초기화 중...`);
@@ -469,6 +469,26 @@ async function main() {
     }
 
     console.log('\n✅ 모든 재평가 작업이 완료되었습니다!\n');
+    
+    // 모든 재평가 완료 후 Transform 실행
+    console.log('\n🔄 Transform 작업 시작...');
+    try {
+      const { execSync } = await import('child_process');
+      const transformScriptPath = join(process.cwd(), 'src', 'transform_evaluation_results.py');
+      
+      console.log(`📂 Transform 스크립트 실행: ${transformScriptPath}`);
+      
+      // Python 스크립트 실행
+      execSync(`python3 "${transformScriptPath}"`, {
+        cwd: process.cwd(),
+        stdio: 'inherit'
+      });
+      
+      console.log('\n✅ Transform 작업 완료!');
+    } catch (transformError) {
+      console.error('\n❌ Transform 작업 실패:', transformError);
+      console.log('⚠️  Transform은 나중에 수동으로 실행할 수 있습니다: python3 src/transform_evaluation_results.py');
+    }
 
   } catch (error) {
     console.error('❌ 오류 발생:', error);
@@ -484,11 +504,7 @@ async function main() {
       }
     }
 
-    // 사용자 입력 대기 (Enter 키)
-    console.log('\n프로그램을 종료하려면 Enter 키를 누르세요...');
-    await askUser('');
-    
-    process.exit(0);
+    console.log('\n✅ 프로그램 종료');
   }
 }
 

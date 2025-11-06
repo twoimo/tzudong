@@ -124,6 +124,18 @@ def print_statistics(stats: dict):
         print(f"  새로 처리: {Colors.OKGREEN}{new_success}개 성공{Colors.ENDC} ({success_rate:.1f}%), {Colors.FAIL}{new_error}개 에러{Colors.ENDC} ({error_rate:.1f}%)")
         print(f"  최종 누적: 성공 {Colors.OKGREEN}{after_success}개{Colors.ENDC}, 에러 {Colors.FAIL}{after_error}개{Colors.ENDC}\n")
     
+    # Step 4: Transform
+    step4 = stats.get('step4', {})
+    if step4:
+        before = step4.get('before', 0)
+        after = step4.get('after', 0)
+        processed = after - before
+        
+        print(f"{Colors.BOLD}{Colors.OKBLUE}Step 4: Transform 결과 변환{Colors.ENDC}")
+        print(f"  이미 변환됨: {Colors.WARNING}{before}개{Colors.ENDC}")
+        print(f"  새로 변환: {Colors.OKGREEN}{processed}개{Colors.ENDC}")
+        print(f"  최종 누적: {Colors.OKCYAN}{after}개{Colors.ENDC}\n")
+    
     # 전체 성공률
     if step1 and step3:
         total_input = step1.get('after', 0)
@@ -286,6 +298,19 @@ def step3_ai_evaluation(project_root: Path, parallel_choice: str) -> bool:
         print_error(f"AI 평가 중 예류 발생: {str(e)}")
         return False
 
+def step4_transform_results(src_dir: Path) -> bool:
+    """Step 4: Transform 평가 결과"""
+    print_step(4, "Transform 평가 결과 변환")
+    
+    print_info("평가 결과를 youtube_link-음식점명 기준으로 변환합니다.")
+    print_info("중복된 레코드는 자동으로 스킵됩니다.\n")
+    
+    return run_command(
+        ["python3", "transform_evaluation_results.py"],
+        "Transform 평가 결과",
+        cwd=str(src_dir)
+    )
+
 def main():
     """메인 실행 함수"""
     print(f"\n{Colors.BOLD}{Colors.HEADER}")
@@ -378,6 +403,16 @@ def main():
         'after_error': step3_after_error
     }
     
+    # Step 4: Transform 평가 결과
+    transform_file = project_root / 'transform.jsonl'
+    step4_before = count_jsonl_lines(transform_file)
+    if not step4_transform_results(src_dir):
+        print_warning("\nStep 4 Transform 실패했지만, 평가는 완료되었습니다.")
+        print_info("Transform은 나중에 수동으로 실행할 수 있습니다: python3 src/transform_evaluation_results.py")
+    else:
+        step4_after = count_jsonl_lines(transform_file)
+        stats['step4'] = {'before': step4_before, 'after': step4_after}
+    
     # 통계 출력
     print_statistics(stats)
     
@@ -393,6 +428,7 @@ def main():
     print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_rule_results.jsonl'}")
     print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_results.jsonl'} (성공)")
     print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_errors.jsonl'} (실패)")
+    print(f"  📄 {project_root / 'transform.jsonl'} (변환 결과)")
     print()
 
 if __name__ == "__main__":
