@@ -171,7 +171,15 @@ export default function AdminEvaluationPage() {
 
     // 8. Status 필터
     if (evalFilters.status) {
-      filtered = filtered.filter(r => r.status === evalFilters.status);
+      if (evalFilters.status === 'geocoding_failed') {
+        // geocoding_failed: status가 'geocoding_failed' 또는 (pending + 지오코딩 실패)
+        filtered = filtered.filter(r => 
+          r.status === 'geocoding_failed' || 
+          (r.status === 'pending' && !r.geocoding_success)
+        );
+      } else {
+        filtered = filtered.filter(r => r.status === evalFilters.status);
+      }
     }
 
     // 9. 영상 제목 검색 필터 (전체 데이터에서 검색)
@@ -502,7 +510,8 @@ export default function AdminEvaluationPage() {
   const insertNewRestaurant = async (record: EvaluationRecord) => {
     const naverInfo = record.restaurant_info!.naver_address_info!;
 
-    const { error: insertError } = await supabase
+    // restaurants 테이블에 삽입하고 ID 받아오기
+    const { data: newRestaurant, error: insertError } = await supabase
       .from('restaurants')
       .insert({
         name: record.restaurant_name,
@@ -517,16 +526,19 @@ export default function AdminEvaluationPage() {
         youtube_links: [record.youtube_link],
         tzuyang_reviews: [record.restaurant_info!.tzuyang_review],
         youtube_metas: [record.youtube_meta],
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertError) throw insertError;
 
-    // evaluation_records 상태 업데이트
+    // evaluation_records 상태 업데이트 + restaurant_id 저장
     const { error: statusError } = await supabase
       .from('evaluation_records')
       .update({
         status: 'approved',
         processed_at: new Date().toISOString(),
+        restaurant_id: newRestaurant.id, // 삽입된 restaurant ID 저장
       })
       .eq('id', record.id);
 
@@ -536,6 +548,7 @@ export default function AdminEvaluationPage() {
     updateRecordInState(record.id, {
       status: 'approved',
       processed_at: new Date().toISOString(),
+      restaurant_id: newRestaurant.id,
     });
 
     toast({

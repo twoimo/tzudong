@@ -104,9 +104,9 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     tzuyang_review: string;
   } | null>(null);
 
-  // record가 변경될 때 폼 데이터 초기화 (쯔양 리뷰 포함)
+  // record가 변경되거나 모달이 열릴 때 폼 데이터 초기화 (쯔양 리뷰 포함)
   useEffect(() => {
-    if (record && record.restaurant_info) {
+    if (open && record && record.restaurant_info) {
       setFormData({
         name: record.restaurant_info.name || '',
         address: record.restaurant_info.origin_address || '',
@@ -114,8 +114,10 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         category: record.restaurant_info.category || '',
         tzuyang_review: record.restaurant_info.tzuyang_review || '',
       });
+      // 모달이 열릴 때 지오코딩 결과도 초기화
+      setGeocodingResult(null);
     }
-  }, [record]);
+  }, [record, open]);
 
   // 재지오코딩 핸들러
   const handleReGeocode = async () => {
@@ -249,12 +251,13 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         throw new Error(mergeResult.error);
       }
 
-      // evaluation_record 상태 업데이트
+      // evaluation_record 상태 업데이트 + restaurant_id 저장
       const { error: updateError } = await supabase
         .from('evaluation_records')
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
+          restaurant_id: existingRestaurant.id, // 병합된 restaurant ID 저장
         })
         .eq('id', record!.id);
 
@@ -268,6 +271,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       onSuccess(record!.id, {
         status: 'approved',
         processed_at: new Date().toISOString(),
+        restaurant_id: existingRestaurant.id,
       });
       onOpenChange(false);
       resetForm();
@@ -285,7 +289,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   // 새 레스토랑 등록 함수
   const registerNewRestaurant = async (geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
-      const { error: insertError } = await supabase
+      // restaurants 테이블에 삽입하고 ID 받아오기
+      const { data: newRestaurant, error: insertError } = await supabase
         .from('restaurants')
         .insert({
           name: trimmedName,
@@ -300,16 +305,19 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           youtube_links: [record!.youtube_link],
           youtube_metas: record!.youtube_meta ? [record!.youtube_meta] : [],
           tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record!.restaurant_info?.tzuyang_review ? [record!.restaurant_info.tzuyang_review] : []),
-        });
+        })
+        .select('id')
+        .single();
 
       if (insertError) throw insertError;
 
-      // evaluation_record 상태 업데이트
+      // evaluation_record 상태 업데이트 + restaurant_id 저장
       const { error: updateError } = await supabase
         .from('evaluation_records')
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
+          restaurant_id: newRestaurant.id, // 삽입된 restaurant ID 저장
         })
         .eq('id', record!.id);
 
@@ -323,6 +331,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       onSuccess(record!.id, {
         status: 'approved',
         processed_at: new Date().toISOString(),
+        restaurant_id: newRestaurant.id,
       });
       onOpenChange(false);
       resetForm();
@@ -364,46 +373,20 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     error?: string 
   }> => {
     try {
-      // 관리자 재지오코딩용 - 본인의 NCP Maps API 키 사용
-      const clientId = import.meta.env.VITE_NCP_MAPS_KEY_ID;
-      const clientSecret = import.meta.env.VITE_NCP_MAPS_KEY;
-
-      if (!clientId || !clientSecret) {
-        return { success: false, error: 'Naver 지오코딩 API 키가 설정되지 않았습니다.' };
-      }
-
-      const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`;
-
-      const response = await fetch(url, {
-        headers: {
-          'X-NCP-APIGW-API-KEY-ID': clientId,
-          'X-NCP-APIGW-API-KEY': clientSecret,
-        },
+      // Supabase Edge Function을 통해 지오코딩 (CORS 문제 해결)
+      const { data, error } = await supabase.functions.invoke('naver-geocode', {
+        body: { address },
       });
 
-      const data: NaverGeocodingResponse = await response.json();
-
-      if (data.errorMessage) {
-        return { success: false, error: data.errorMessage };
+      if (error) {
+        return { success: false, error: error.message };
       }
 
-      if (!data.addresses || data.addresses.length === 0) {
-        return { success: false, error: '주소를 찾을 수 없습니다.' };
+      if (!data.success) {
+        return { success: false, error: data.error || '지오코딩에 실패했습니다.' };
       }
 
-      const address_data = data.addresses[0];
-      return {
-        success: true,
-        data: {
-          road_address: address_data.roadAddress,
-          jibun_address: address_data.jibunAddress,
-          english_address: address_data.englishAddress,
-          address_elements: address_data.addressElements,
-          x: address_data.x,
-          y: address_data.y,
-        },
-      };
-
+      return data;
     } catch (error: any) {
       return { success: false, error: error.message };
     }

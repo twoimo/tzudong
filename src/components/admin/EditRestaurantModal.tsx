@@ -60,7 +60,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   } | null>(null);
 
   useEffect(() => {
-    if (record && record.restaurant_info) {
+    if (open && record && record.restaurant_info) {
       setFormData({
         name: record.restaurant_info.name,
         address: record.restaurant_info.naver_address_info?.jibun_address || record.restaurant_info.origin_address,
@@ -81,9 +81,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
             y: record.restaurant_info.naver_address_info.y,
           },
         });
+      } else {
+        setGeocodingResult(null);
       }
     }
-  }, [record]);
+  }, [record, open]);
 
   const handleReGeocode = async () => {
     const trimmedAddress = formData.address.trim();
@@ -137,45 +139,20 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     error?: string;
   }> => {
     try {
-      // 관리자 재지오코딩용 - 본인의 NCP Maps API 키 사용
-      const clientId = import.meta.env.VITE_NCP_MAPS_KEY_ID;
-      const clientSecret = import.meta.env.VITE_NCP_MAPS_KEY;
-
-      if (!clientId || !clientSecret) {
-        return { success: false, error: 'Naver 지오코딩 API 키가 설정되지 않았습니다.' };
-      }
-
-      const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`;
-
-      const response = await fetch(url, {
-        headers: {
-          'X-NCP-APIGW-API-KEY-ID': clientId,
-          'X-NCP-APIGW-API-KEY': clientSecret,
-        },
+      // Supabase Edge Function을 통해 지오코딩 (CORS 문제 해결)
+      const { data, error } = await supabase.functions.invoke('naver-geocode', {
+        body: { address },
       });
 
-      const data: NaverGeocodingResponse = await response.json();
-
-      if (data.errorMessage) {
-        return { success: false, error: data.errorMessage };
+      if (error) {
+        return { success: false, error: error.message };
       }
 
-      if (!data.addresses || data.addresses.length === 0) {
-        return { success: false, error: '주소를 찾을 수 없습니다.' };
+      if (!data.success) {
+        return { success: false, error: data.error || '지오코딩에 실패했습니다.' };
       }
 
-      const address_data = data.addresses[0];
-      return {
-        success: true,
-        data: {
-          road_address: address_data.roadAddress,
-          jibun_address: address_data.jibunAddress,
-          english_address: address_data.englishAddress,
-          address_elements: address_data.addressElements,
-          x: address_data.x,
-          y: address_data.y,
-        },
-      };
+      return data;
     } catch (error: any) {
       return { success: false, error: error.message };
     }
@@ -196,23 +173,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     try {
       setLoading(true);
 
-      const { data: existingRestaurants, error: searchError } = await supabase
-        .from('restaurants')
-        .select('id, name, jibun_address')
-        .eq('jibun_address', geocodingResult.data!.jibun_address);
-
-      if (searchError) throw searchError;
-
-      if (existingRestaurants && existingRestaurants.length > 0) {
-        toast({
-          variant: 'destructive',
-          title: '중복 레스토랑 존재',
-          description: `같은 주소(${geocodingResult.data!.jibun_address})의 레스토랑이 이미 존재합니다: ${existingRestaurants[0].name}`,
-        });
-        return;
-      }
-
-      // 새 레스토랑 등록
       if (!record.restaurant_info) {
         toast({
           variant: 'destructive',
@@ -233,55 +193,130 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         return;
       }
 
-      const { data: newRestaurant, error: insertError } = await supabase
-        .from('restaurants')
-        .insert({
-          name: trimmedName,
-          road_address: geocodingResult.data!.road_address,
-          jibun_address: geocodingResult.data!.jibun_address,
-          english_address: geocodingResult.data!.english_address,
-          address_elements: geocodingResult.data!.address_elements,
-          lat: parseFloat(geocodingResult.data!.y),
-          lng: parseFloat(geocodingResult.data!.x),
-          phone: trimmedPhone || null,
-          category: record.restaurant_info.category ? [record.restaurant_info.category] : [],
-          youtube_links: [record.youtube_link],
-          youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
-          tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record.restaurant_info.tzuyang_review ? [record.restaurant_info.tzuyang_review] : []),
-        })
-        .select()
-        .single();
+      // 핵심: restaurant_id가 있는지 확인
+      if (record.restaurant_id) {
+        // 이미 승인된 레코드 → restaurants 테이블 UPDATE
+        const { error: updateError } = await supabase
+          .from('restaurants')
+          .update({
+            name: trimmedName,
+            road_address: geocodingResult.data!.road_address,
+            jibun_address: geocodingResult.data!.jibun_address,
+            english_address: geocodingResult.data!.english_address,
+            address_elements: geocodingResult.data!.address_elements,
+            lat: parseFloat(geocodingResult.data!.y),
+            lng: parseFloat(geocodingResult.data!.x),
+            phone: trimmedPhone || null,
+            // category, youtube_links, youtube_metas, tzuyang_reviews는 배열이므로 유지
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', record.restaurant_id);
 
-      if (insertError) throw insertError;
+        if (updateError) throw updateError;
 
-      // evaluation_record 상태 업데이트
-      const { error: updateError } = await supabase
-        .from('evaluation_records')
-        .update({
+        // evaluation_records도 업데이트 (restaurant_info 갱신)
+        const { error: evalUpdateError } = await supabase
+          .from('evaluation_records')
+          .update({
+            restaurant_info: {
+              ...record.restaurant_info,
+              name: trimmedName,
+              phone: trimmedPhone,
+              tzuyang_review: trimmedTzuyangReview,
+              naver_address_info: geocodingResult.data,
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', record.id);
+
+        if (evalUpdateError) throw evalUpdateError;
+
+        toast({
+          title: '수정 완료',
+          description: `${trimmedName} 레스토랑 정보가 업데이트되었습니다.`,
+        });
+
+        onSuccess(record.id, {
+          restaurant_info: {
+            ...record.restaurant_info,
+            name: trimmedName,
+            phone: trimmedPhone,
+            tzuyang_review: trimmedTzuyangReview,
+            naver_address_info: geocodingResult.data,
+          },
+          updated_at: new Date().toISOString(),
+        });
+      } else {
+        // 아직 승인 안됨 → 중복 체크 후 새 레스토랑 등록
+        const { data: existingRestaurants, error: searchError } = await supabase
+          .from('restaurants')
+          .select('id, name, jibun_address')
+          .eq('jibun_address', geocodingResult.data!.jibun_address);
+
+        if (searchError) throw searchError;
+
+        if (existingRestaurants && existingRestaurants.length > 0) {
+          toast({
+            variant: 'destructive',
+            title: '중복 레스토랑 존재',
+            description: `같은 주소(${geocodingResult.data!.jibun_address})의 레스토랑이 이미 존재합니다: ${existingRestaurants[0].name}`,
+          });
+          return;
+        }
+
+        const { data: newRestaurant, error: insertError } = await supabase
+          .from('restaurants')
+          .insert({
+            name: trimmedName,
+            road_address: geocodingResult.data!.road_address,
+            jibun_address: geocodingResult.data!.jibun_address,
+            english_address: geocodingResult.data!.english_address,
+            address_elements: geocodingResult.data!.address_elements,
+            lat: parseFloat(geocodingResult.data!.y),
+            lng: parseFloat(geocodingResult.data!.x),
+            phone: trimmedPhone || null,
+            category: record.restaurant_info.category ? [record.restaurant_info.category] : [],
+            youtube_links: [record.youtube_link],
+            youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
+            tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record.restaurant_info.tzuyang_review ? [record.restaurant_info.tzuyang_review] : []),
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        // evaluation_record 상태 업데이트 + restaurant_id 저장
+        const { error: updateError } = await supabase
+          .from('evaluation_records')
+          .update({
+            status: 'approved',
+            processed_at: new Date().toISOString(),
+            restaurant_id: newRestaurant.id,
+          })
+          .eq('id', record.id);
+
+        if (updateError) throw updateError;
+
+        toast({
+          title: '승인 완료',
+          description: `${trimmedName} 레스토랑이 성공적으로 등록되었습니다.`,
+        });
+
+        onSuccess(record.id, {
           status: 'approved',
           processed_at: new Date().toISOString(),
-        })
-        .eq('id', record.id);
+          restaurant_id: newRestaurant.id,
+        });
+      }
 
-      if (updateError) throw updateError;
-
-      toast({
-        title: '승인 완료',
-        description: `${formData.name} 레스토랑이 성공적으로 등록되었습니다.`,
-      });
-
-      onSuccess(record.id, {
-        status: 'approved',
-        processed_at: new Date().toISOString(),
-      });
       onOpenChange(false);
       resetForm();
 
     } catch (error: any) {
-      console.error('승인 실패:', error);
+      console.error('처리 실패:', error);
       toast({
         variant: 'destructive',
-        title: '승인 실패',
+        title: '처리 실패',
         description: error.message,
       });
     } finally {

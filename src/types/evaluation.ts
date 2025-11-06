@@ -105,6 +105,7 @@ export interface EvaluationRecord {
   geocoding_fail_reason: string | null;
   db_conflict_info: DbConflictInfo | null;
   missing_message: string | null;
+  restaurant_id: string | null; // 승인되어 restaurants 테이블에 삽입된 음식점 ID
   created_at: string;
   updated_at: string;
   processed_by: string | null;

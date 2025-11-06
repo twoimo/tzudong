@@ -91,12 +91,13 @@ export function DbConflictResolutionPanel({
         throw updateError;
       }
 
-      // 7. evaluation_record 상태 업데이트
+      // 7. evaluation_record 상태 업데이트 + restaurant_id 저장
       const { error: recordError } = await supabase
         .from('evaluation_records')
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
+          restaurant_id: existing.id, // 병합된 restaurant ID 저장
         })
         .eq('id', record.id);
 
@@ -110,6 +111,7 @@ export function DbConflictResolutionPanel({
       onSuccess(record.id, {
         status: 'approved',
         processed_at: new Date().toISOString(),
+        restaurant_id: existing.id,
       });
       onOpenChange(false);
 
