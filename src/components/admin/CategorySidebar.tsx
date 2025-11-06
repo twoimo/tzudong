@@ -1,7 +1,5 @@
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { CategoryStats, EvaluationRecordStatus } from '@/types/evaluation';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 interface CategorySidebarProps {
   stats: CategoryStats;
@@ -14,57 +12,78 @@ export function CategorySidebar({
   selectedStatuses,
   onSelectStatuses,
 }: CategorySidebarProps) {
-  const categories = [
-    { label: '전체', status: [] as EvaluationRecordStatus[], count: stats.total },
-    { label: '미처리', status: ['pending'] as EvaluationRecordStatus[], count: stats.pending },
-    { label: '승인됨', status: ['approved'] as EvaluationRecordStatus[], count: stats.approved },
-    { label: '보류', status: ['hold'] as EvaluationRecordStatus[], count: stats.hold },
-    { 
-      label: 'Missing', 
-      status: ['missing'] as EvaluationRecordStatus[], 
-      count: stats.missing,
-    },
-    {
-      label: 'DB충돌',
-      status: ['db_conflict'] as EvaluationRecordStatus[],
-      count: stats.db_conflict,
-    },
-    {
-      label: '지오코딩실패',
-      status: ['geocoding_failed'] as EvaluationRecordStatus[],
-      count: stats.geocoding_failed,
-    },
+  // 통계 표시만 (클릭 불가)
+  const statCategories = [
+    { label: '미처리', count: stats.pending },
+    { label: '승인됨', count: stats.approved },
+    { label: '보류', count: stats.hold },
+    { label: 'Missing', count: stats.missing },
+    { label: 'DB충돌', count: stats.db_conflict },
+    { label: '지오코딩실패', count: stats.geocoding_failed },
+    { label: '평가미대상', count: stats.not_selected },
   ];
 
-  const handleClick = (status: EvaluationRecordStatus[]) => {
-    onSelectStatuses(status);
+  const isAllActive = selectedStatuses.length === 0;
+  const isDeletedActive = selectedStatuses.includes('deleted' as EvaluationRecordStatus);
+
+  const handleAllClick = () => {
+    onSelectStatuses([]); // 전체 = 빈 배열
   };
 
-  const isSelected = (status: EvaluationRecordStatus[]) => {
-    if (status.length === 0 && selectedStatuses.length === 0) return true;
-    if (status.length === 0 && selectedStatuses.length > 0) return false;
-    return selectedStatuses.length === status.length && 
-           selectedStatuses.every(s => status.includes(s));
+  const handleDeletedClick = () => {
+    if (isDeletedActive) {
+      onSelectStatuses([]); // 비활성화 -> 전체로
+    } else {
+      onSelectStatuses(['deleted' as EvaluationRecordStatus]); // 활성화
+    }
   };
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {categories.map((category, index) => (
-        <Button
+    <div className="flex flex-wrap gap-3 items-center">
+      {/* 전체 탭 - 클릭 가능 */}
+      <Button
+        variant={isAllActive ? 'default' : 'outline'}
+        size="sm"
+        onClick={handleAllClick}
+        className="gap-2"
+      >
+        <span className="text-sm font-medium">
+          전체
+        </span>
+        <span className="text-sm font-semibold">
+          {stats.total}
+        </span>
+      </Button>
+
+      {/* 통계 표시만 (클릭 불가) */}
+      {statCategories.map((category, index) => (
+        <div
           key={index}
-          variant={isSelected(category.status) ? 'default' : 'outline'}
-          onClick={() => handleClick(category.status)}
-          className="h-auto py-2 px-4"
+          className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md border border-border bg-muted/50 text-sm"
         >
-          <span className="font-medium">{category.label}</span>
-          <Badge 
-            variant={isSelected(category.status) ? 'secondary' : 'outline'}
-            className="ml-2"
-          >
+          <span className="font-medium text-muted-foreground">
+            {category.label}
+          </span>
+          <span className="font-semibold">
             {category.count}
-          </Badge>
-        </Button>
+          </span>
+        </div>
       ))}
+
+      {/* 삭제 탭 - 클릭 가능 */}
+      <Button
+        variant={isDeletedActive ? 'default' : 'outline'}
+        size="sm"
+        onClick={handleDeletedClick}
+        className="gap-2"
+      >
+        <span className="text-sm font-medium">
+          삭제
+        </span>
+        <span className="text-sm font-semibold">
+          {stats.deleted || 0}
+        </span>
+      </Button>
     </div>
   );
 }

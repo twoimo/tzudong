@@ -49,6 +49,7 @@ export function EvaluationTable({
       missing: { label: 'Missing', variant: 'destructive' },
       db_conflict: { label: 'DB 충돌', variant: 'destructive' },
       geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
+      not_selected: { label: '평가 미대상', variant: 'outline' },
     };
 
     const config = variants[status] || { label: status, variant: 'default' };
@@ -180,6 +181,26 @@ export function EvaluationTable({
                 <TableCell>
                   <div className="flex gap-2 justify-center">
                     {record.status === 'missing' ? (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => onRegisterMissing?.(record)}
+                          disabled={loading}
+                          className="bg-blue-600 hover:bg-blue-700"
+                        >
+                          수동 등록
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => onDelete(record)}
+                          disabled={loading}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </>
+                    ) : record.status === 'not_selected' ? (
                       <>
                         <Button
                           size="sm"

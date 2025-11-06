@@ -9,6 +9,17 @@ import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvaluationRecord } from '@/types/evaluation';
+import { checkDbConflict, mergeRestaurantData } from '@/lib/db-conflict-checker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 const CATEGORY_OPTIONS = [
   '한식',
@@ -63,6 +74,11 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     phone: '',
     category: '',
   });
+  
+  // DB 충돌 경고 다이얼로그 상태
+  const [showConflictWarning, setShowConflictWarning] = useState(false);
+  const [conflictData, setConflictData] = useState<any>(null);
+  const [pendingGeocodingData, setPendingGeocodingData] = useState<any>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,53 +99,118 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         return;
       }
 
-      // 2. 기존 레스토랑 중복 체크 (jibun_address 기준)
-      const { data: existingRestaurants, error: searchError } = await supabase
-        .from('restaurants')
-        .select('id, name, jibun_address')
-        .eq('jibun_address', geocodingResult.data!.jibun_address);
+      // 2. DB 충돌 체크 (새로운 로직)
+      const conflictCheck = await checkDbConflict({
+        jibunAddress: geocodingResult.data!.jibun_address,
+        restaurantName: formData.name,
+        youtubeLink: record.youtube_link,
+      });
 
-      if (searchError) throw searchError;
-
-      if (existingRestaurants && existingRestaurants.length > 0) {
-        toast({
-          variant: 'destructive',
-          title: '중복 레스토랑 존재',
-          description: `같은 주소(${geocodingResult.data!.jibun_address})의 레스토랑이 이미 존재합니다: ${existingRestaurants[0].name}`,
-        });
-        return;
+      if (conflictCheck.hasConflict) {
+        if (conflictCheck.conflictType === 'name_mismatch') {
+          // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
+          setPendingGeocodingData(geocodingResult.data);
+          setConflictData(conflictCheck.conflictingRestaurants);
+          setShowConflictWarning(true);
+          setLoading(false);
+          return;
+        } else if (conflictCheck.conflictType === 'merge_needed') {
+          // 충돌 타입 2: 같은 주소 + 같은 음식점명 → 자동 병합
+          await handleMerge(conflictCheck.conflictingRestaurants![0], geocodingResult.data);
+          return;
+        }
       }
 
-      // 3. 새 레스토랑 등록
-      const { data: newRestaurant, error: insertError } = await supabase
-        .from('restaurants')
-        .insert({
-          name: formData.name,
-          road_address: geocodingResult.data!.road_address,
-          jibun_address: geocodingResult.data!.jibun_address,
-          english_address: geocodingResult.data!.english_address,
-          address_elements: geocodingResult.data!.address_elements,
-          lat: parseFloat(geocodingResult.data!.y),
-          lng: parseFloat(geocodingResult.data!.x),
-          phone: formData.phone || null,
-          category: [formData.category],
-          youtube_links: [record.youtube_link],
-          youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
-          tzuyang_reviews: record.restaurant_info ? [record.restaurant_info.tzuyang_review] : [],
-        })
-        .select()
-        .single();
+      // 3. 충돌 없음 → 새 레스토랑 등록
+      await registerNewRestaurant(geocodingResult.data);
 
-      if (insertError) throw insertError;
+    } catch (error: any) {
+      console.error('레스토랑 등록 실패:', error);
+      toast({
+        variant: 'destructive',
+        title: '등록 실패',
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // 4. evaluation_record 상태 업데이트
+  // 병합 처리 함수
+  const handleMerge = async (existingRestaurant: any, geocodingData: any) => {
+    try {
+      const mergeResult = await mergeRestaurantData({
+        existingRestaurant,
+        newYoutubeLink: record!.youtube_link,
+        newYoutubeMeta: record!.youtube_meta,
+        newTzuyangReview: record!.restaurant_info?.tzuyang_review,
+        newCategory: formData.category,
+      });
+
+      if (!mergeResult.success) {
+        throw new Error(mergeResult.error);
+      }
+
+      // evaluation_record 상태 업데이트
       const { error: updateError } = await supabase
         .from('evaluation_records')
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
         })
-        .eq('id', record.id);
+        .eq('id', record!.id);
+
+      if (updateError) throw updateError;
+
+      toast({
+        title: '병합 완료',
+        description: `${formData.name} 레스토랑에 영상 링크가 병합되었습니다.`,
+      });
+
+      onSuccess();
+      onOpenChange(false);
+      resetForm();
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: '병합 실패',
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 새 레스토랑 등록 함수
+  const registerNewRestaurant = async (geocodingData: any) => {
+    try {
+      const { error: insertError } = await supabase
+        .from('restaurants')
+        .insert({
+          name: formData.name,
+          road_address: geocodingData.road_address,
+          jibun_address: geocodingData.jibun_address,
+          english_address: geocodingData.english_address,
+          address_elements: geocodingData.address_elements,
+          lat: parseFloat(geocodingData.y),
+          lng: parseFloat(geocodingData.x),
+          phone: formData.phone || null,
+          category: [formData.category],
+          youtube_links: [record!.youtube_link],
+          youtube_metas: record!.youtube_meta ? [record!.youtube_meta] : [],
+          tzuyang_reviews: record!.restaurant_info ? [record!.restaurant_info.tzuyang_review] : [],
+        });
+
+      if (insertError) throw insertError;
+
+      // evaluation_record 상태 업데이트
+      const { error: updateError } = await supabase
+        .from('evaluation_records')
+        .update({
+          status: 'approved',
+          processed_at: new Date().toISOString(),
+        })
+        .eq('id', record!.id);
 
       if (updateError) throw updateError;
 
@@ -141,9 +222,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       onSuccess();
       onOpenChange(false);
       resetForm();
-
     } catch (error: any) {
-      console.error('레스토랑 등록 실패:', error);
       toast({
         variant: 'destructive',
         title: '등록 실패',
@@ -151,6 +230,14 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // DB 충돌 경고 후 강제 등록
+  const handleForceRegister = async () => {
+    setShowConflictWarning(false);
+    if (pendingGeocodingData) {
+      await registerNewRestaurant(pendingGeocodingData);
     }
   };
 
@@ -228,8 +315,9 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Missing 레스토랑 등록</DialogTitle>
           <DialogDescription>
@@ -335,5 +423,57 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* DB 충돌 경고 다이얼로그 */}
+    <AlertDialog open={showConflictWarning} onOpenChange={setShowConflictWarning}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>⚠️ DB 충돌 감지</AlertDialogTitle>
+          <AlertDialogDescription className="space-y-4">
+            <p className="font-semibold text-destructive">
+              음식점의 주소와 영상 링크(youtube_link)가 같지만, 음식점명이 다릅니다.
+            </p>
+            
+            {conflictData && conflictData.length > 0 && (
+              <div className="space-y-3">
+                <div className="border rounded-lg p-3 bg-muted">
+                  <p className="text-sm font-semibold mb-2">🆕 등록하려는 데이터:</p>
+                  <ul className="text-sm space-y-1 ml-4">
+                    <li>• 음식점명: <span className="font-medium">{formData.name}</span></li>
+                    <li>• 주소: <span className="font-medium">{formData.address}</span></li>
+                    <li>• YouTube: <span className="font-medium text-xs">{record?.youtube_link}</span></li>
+                  </ul>
+                </div>
+
+                <div className="border rounded-lg p-3 bg-destructive/10">
+                  <p className="text-sm font-semibold mb-2">🗄️ 기존 데이터베이스:</p>
+                  {conflictData.map((restaurant: any, idx: number) => (
+                    <div key={idx} className="ml-4 mb-3">
+                      <ul className="text-sm space-y-1">
+                        <li>• 음식점명: <span className="font-medium">{restaurant.name}</span></li>
+                        <li>• 지번주소: <span className="font-medium">{restaurant.jibun_address}</span></li>
+                        <li>• 전화번호: <span className="font-medium">{restaurant.phone || '-'}</span></li>
+                        <li>• YouTube 링크 수: <span className="font-medium">{restaurant.youtube_links?.length || 0}개</span></li>
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <p className="text-sm">
+              그대로 승인하시겠습니까?
+            </p>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>취소</AlertDialogCancel>
+          <AlertDialogAction onClick={handleForceRegister} className="bg-destructive hover:bg-destructive/90">
+            승인
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 }

@@ -16,7 +16,7 @@ def create_evaluation_targets():
     # 경로 설정
     current_dir = Path(__file__).parent
     crawling_dir = current_dir.parent.parent / "perplexity-restaurant-crawling"
-    input_file = crawling_dir / "tzuyang_restaurant_results.jsonl"
+    input_file = crawling_dir / "tzuyang_restaurant_results_with_meta.jsonl"  # youtube_meta 포함 파일 사용
     output_file = current_dir.parent / "tzuyang_restaurant_evaluation_selection.jsonl"
     address_null_file = current_dir.parent / "tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl"
 
@@ -84,7 +84,8 @@ def create_evaluation_targets():
                 new_data = {
                     'youtube_link': data.get('youtube_link'),
                     'evaluation_target': evaluation_target,
-                    'restaurants': restaurants
+                    'restaurants': restaurants,
+                    'youtube_meta': data.get('youtube_meta', {})
                 }
 
                 # JSONL 형식으로 저장 (기존 파일)

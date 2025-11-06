@@ -152,29 +152,6 @@ async function main() {
   let evaluators: PerplexityEvaluator[] = [];
 
   try {
-    // 병렬 처리 개수 선택
-    console.log('\n병렬 처리할 브라우저 개수를 선택하세요:');
-    console.log('  1 - 1개 (순차 처리)');
-    console.log('  3 - 3개 (병렬 처리)');
-    console.log('  5 - 5개 (병렬 처리)');
-    const parallelChoice = await askUser('선택 (1/3/5): ');
-    
-    let parallelCount = 1; // 기본값
-    const choiceNum = parseInt(parallelChoice.trim());
-    
-    if (choiceNum === 1) {
-      parallelCount = 1;
-    } else if (choiceNum === 3) {
-      parallelCount = 3;
-    } else if (choiceNum === 5) {
-      parallelCount = 5;
-    } else {
-      console.log(`⚠️ 잘못된 선택: "${parallelChoice}" - 기본값 1개로 진행합니다.`);
-      parallelCount = 1;
-    }
-    
-    console.log(`\n✅ ${parallelCount}개 브라우저로 병렬 처리 시작\n`);
-
     // 입력 파일에서 데이터 읽기
     const inputFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_rule_results.jsonl');
     const outputFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_results.jsonl');
@@ -249,15 +226,6 @@ async function main() {
     
     console.log(`✅ 이미 처리된 레코드: ${processedLinks.size}개\n`);
 
-    // 여러 브라우저 초기화 (각각 고유 ID 부여)
-    console.log(`🚀 ${parallelCount}개의 브라우저 초기화 중...`);
-    for (let i = 0; i < parallelCount; i++) {
-      const evaluator = new PerplexityEvaluator(i);
-      await evaluator.initialize();
-      evaluators.push(evaluator);
-      console.log(`✅ 브라우저 ${i + 1}/${parallelCount} 초기화 완료`);
-    }
-
     // 미처리 레코드만 필터링
     const recordsToProcess: string[] = [];
     let skippedCount = 0;
@@ -283,6 +251,46 @@ async function main() {
     
     // 전체 레코드 처리
     const finalRecords = recordsToProcess;
+    
+    console.log(`\n📊 처리할 레코드: ${finalRecords.length}개`);
+    
+    // 처리할 레코드가 없으면 종료
+    if (finalRecords.length === 0) {
+      console.log('\n✅ 처리할 레코드가 없습니다. 프로그램을 종료합니다.');
+      return;
+    }
+    
+    // 병렬 처리 개수 선택
+    console.log('\n병렬 처리할 브라우저 개수를 선택하세요:');
+    console.log('  1 - 1개 (순차 처리)');
+    console.log('  3 - 3개 (병렬 처리)');
+    console.log('  5 - 5개 (병렬 처리)');
+    const parallelChoice = await askUser('선택 (1/3/5): ');
+    
+    let parallelCount = 1; // 기본값
+    const choiceNum = parseInt(parallelChoice.trim());
+    
+    if (choiceNum === 1) {
+      parallelCount = 1;
+    } else if (choiceNum === 3) {
+      parallelCount = 3;
+    } else if (choiceNum === 5) {
+      parallelCount = 5;
+    } else {
+      console.log(`⚠️ 잘못된 선택: "${parallelChoice}" - 기본값 1개로 진행합니다.`);
+      parallelCount = 1;
+    }
+    
+    console.log(`\n✅ ${parallelCount}개 브라우저로 병렬 처리 시작\n`);
+
+    // 여러 브라우저 초기화 (각각 고유 ID 부여)
+    console.log(`🚀 ${parallelCount}개의 브라우저 초기화 중...`);
+    for (let i = 0; i < parallelCount; i++) {
+      const evaluator = new PerplexityEvaluator(i);
+      await evaluator.initialize();
+      evaluators.push(evaluator);
+      console.log(`✅ 브라우저 ${i + 1}/${parallelCount} 초기화 완료`);
+    }
     
     console.log(`\n🎯 ${finalRecords.length}개의 레코드를 ${parallelCount}개 브라우저로 처리합니다.\n`);
 
@@ -444,9 +452,7 @@ async function main() {
       }
     }
 
-    // 프로그램 종료 대기
-    console.log('\n프로그램을 종료하려면 Enter 키를 누르세요...');
-    await askUser('');
+    console.log('\n✅ 프로그램 종료');
   }
 }
 

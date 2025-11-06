@@ -4,13 +4,14 @@ Perplexity AI를 활용한 음식점 평가 자동화 시스템입니다. 크롤
 
 ## 📋 시스템 개요
 
-이 시스템은 다음과 같은 **순차적 3단계**로 음식점 평가를 수행합니다:
+이 시스템은 다음과 같은 **순차적 4단계**로 음식점 평가를 수행합니다:
 
-1. **평가 대상 선정** (Python) - 크롤링 데이터에서 평가할 음식점을 필터링
+1. **평가 대상 선정** (Python) - 크롤링 데이터에서 평가할 음식점을 필터링 (평가 미대상 분리)
 2. **규칙 기반 평가** (Python) - 카테고리 유효성과 위치 정합성 검증 (네이버/NCP API 활용)
 3. **AI 평가 (LAAJ)** (TypeScript) - Perplexity AI를 통한 심층 평가 수행 (병렬 처리 지원)
+4. **Transform** (Python) - 평가 결과를 DB 로드용 포맷으로 변환 (평가 미대상 포함)
 
-**⚠️ 평가는 반드시 1→2→3 순서로 진행해야 합니다.**
+**⚠️ 평가는 반드시 1→2→3→4 순서로 진행해야 합니다.**
 
 ## 🚀 설치 및 설정
 
@@ -63,16 +64,17 @@ npm run build
 
 ### 🔥 전체 파이프라인 자동 실행 (권장)
 ```bash
-# 전체 평가 파이프라인 실행 (1→2→3 순차 실행)
+# 전체 평가 파이프라인 실행 (1→2→3→4 순차 실행)
 python3 src/evaluation_pipeline.py
 ```
 
 파이프라인은 다음을 자동으로 수행합니다:
 1. ✅ **빌드 확인 및 자동 빌드** - TypeScript 컴파일 필요 시 자동 실행
 2. ✅ **병렬 브라우저 수 선택** - 시작 시 1/3/5개 선택 (전체 파이프라인에 적용)
-3. ✅ **평가 대상 선정** (Step 1)
+3. ✅ **평가 대상 선정** (Step 1) - 평가 대상과 평가 미대상(not_selected) 분리
 4. ✅ **규칙 기반 평가** (Step 2)
 5. ✅ **AI 평가 LAAJ** (Step 3) - 선택한 병렬 브라우저 수로 실행
+6. ✅ **Transform** (Step 4) - 평가 결과 + 평가 미대상을 transform.jsonl로 통합
 
 **💡 중복 처리 방지**: 모든 단계에서 이미 처리된 레코드는 자동으로 건너뜁니다.
 
@@ -86,6 +88,8 @@ cd src
 python3 evaluation-target-selection.py
 ```
 - ✅ **중복 처리 방지**: 기존 출력 파일에 이미 있는 youtube_link는 자동으로 건너뜁니다.
+- ✅ **평가 미대상 분리**: 주소가 없는 음식점(광고, 해외 등)은 자동으로 `notSelection_with_addressNull.jsonl`로 분리
+- ✅ **youtube_meta 포함**: `tzuyang_restaurant_results_with_meta.jsonl`에서 영상 메타데이터 자동 포함
 
 #### 2. 규칙 기반 평가 (RULE)
 ```bash
@@ -240,7 +244,7 @@ Step 3: LAAJ 평가
 
 *30개마다 2-4분 휴식 적용 기준*
 
-### 3. AI 평가 실행
+#### 3. AI 평가 실행
 ```bash
 # 개발 모드
 npm run dev
@@ -256,6 +260,16 @@ node dist/index.js
 - 각 브라우저는 독립적인 프로필 디렉토리 사용 (충돌 방지)
 - 각 배치는 모두 완료된 후 다음 배치로 진행
 - **전체 레코드 처리**: 모든 미처리 레코드를 순차적으로 평가
+
+#### 4. Transform (평가 결과 변환)
+```bash
+cd src
+python3 transform_evaluation_results.py
+```
+- ✅ **평가 결과 통합**: evaluation_results.jsonl의 평가 결과를 youtube_link-restaurant_name 기준으로 변환
+- ✅ **평가 미대상 포함**: notSelection_with_addressNull.jsonl의 평가 미대상도 자동 통합
+- ✅ **중복 방지**: 이미 transform.jsonl에 있는 레코드는 자동 스킵
+- ✅ **출력**: transform.jsonl (pending + missing + not_selected 통합)
 
 ## 🎯 AI 평가 상세
 
@@ -299,30 +313,33 @@ node dist/index.js
 ```
 📂 perplexity-restaurant-evaluation/
 ├── 📄 tzuyang_restaurant_evaluation_selection.jsonl          # 평가 대상 데이터
+├── 📄 tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl  # 평가 미대상 (주소 없음)
 ├── 📄 tzuyang_restaurant_evaluation_rule_results.jsonl       # 규칙 평가 결과
 ├── 📄 tzuyang_restaurant_evaluation_results.jsonl            # AI 평가 성공 결과
 ├── 📄 tzuyang_restaurant_evaluation_errors.jsonl             # AI 평가 실패 기록
-├── 📄 tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl  # 제외된 데이터
+├── 📄 transform.jsonl                                        # DB 로드용 통합 데이터 (평가 결과 + 평가 미대상)
 ├── 📂 src/
-│   ├── 🔥 evaluation_pipeline.py           # 전체 파이프라인 실행 스크립트
-│   ├──  evaluation-target-selection.py   # Step 1: 평가 대상 선정
+│   ├── 🔥 evaluation_pipeline.py           # 전체 파이프라인 실행 스크립트 (1→2→3→4)
+│   ├── 📋 evaluation-target-selection.py   # Step 1: 평가 대상 선정 (평가 미대상 분리)
 │   ├── 🔧 evaluation-rule.py              # Step 2: 규칙 평가 (2단계 매칭)
 │   ├── 🤖 perplexity-evaluator.ts         # Step 3: Perplexity 제어 모듈
 │   ├── 📄 jsonl-processor.ts              # JSONL 파일 처리 모듈
-│   ├── ⚙️ index.ts                        # AI 평가 메인 파일 (병렬 처리)
+│   ├── ⚙️ index.ts                        # Step 3: AI 평가 메인 파일 (병렬 처리)
 │   ├── 🔄 index_retry_for_errors.ts       # 에러 레코드 재평가 (별도 실행)
-```
+│   ├── 🔀 transform_evaluation_results.py  # Step 4: Transform (평가 결과 + 평가 미대상 통합)
+│   ├── 💾 load_transform_to_db.py         # DB 로드 스크립트
 │   └── 📋 types.ts                         # 타입 정의
 └── ⚙️ .env                                  # 환경 변수 설정
 ```
 
 ### 워크플로우
 ```
-📥 입력: tzuyang_restaurant_results.jsonl (크롤링 데이터)
+📥 입력: tzuyang_restaurant_results_with_meta.jsonl (크롤링 데이터 + youtube_meta)
           ↓
 🔍 Step 1: 평가 대상 선정 (evaluation-target-selection.py)
           ↓
-📄 출력: tzuyang_restaurant_evaluation_selection.jsonl
+📄 출력: tzuyang_restaurant_evaluation_selection.jsonl (평가 대상)
+        tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl (평가 미대상)
           ↓
 📏 Step 2: 규칙 평가 - RULE (evaluation-rule.py)
           ↓
@@ -332,6 +349,14 @@ node dist/index.js
           ↓
 📄 출력: tzuyang_restaurant_evaluation_results.jsonl (성공)
         tzuyang_restaurant_evaluation_errors.jsonl (실패)
+          ↓
+🔀 Step 4: Transform (transform_evaluation_results.py)
+          ↓
+📄 출력: transform.jsonl (평가 결과 + 평가 미대상 통합)
+          ↓
+💾 DB 로드: load_transform_to_db.py
+          ↓
+📊 Supabase evaluation_records 테이블
 ```
 
 **💡 전체 파이프라인은 `python3 src/evaluation_pipeline.py`로 한 번에 실행 가능**
@@ -373,6 +398,41 @@ node dist/index.js
 ### AI 평가
 - `tzuyang_restaurant_evaluation_results.jsonl`: 평가 성공한 레코드 (evaluation_results 필드 추가)
 - `tzuyang_restaurant_evaluation_errors.jsonl`: 평가 실패한 레코드 (error 필드 포함)
+
+## 🎬 관리자 액션 동작 방식
+
+### 1️⃣ 수동 등록 (`not_selected`, `missing` 상태에서 사용)
+- **동작**: `MissingRestaurantForm` 모달 팝업 열림
+- **목적**: 평가 미대상이거나 누락된 음식점을 수동으로 등록
+- **입력 데이터**:
+  - 선택된 레코드의 `youtube_link`와 `youtube_meta` 자동 전달
+  - 음식점 이름, 주소, 카테고리 등 수동 입력
+- **결과**: 
+  - 새로운 `restaurant` 레코드 생성
+  - `evaluation_record`의 `status`는 `pending`으로 변경됨
+  - 입력한 음식점 정보가 DB에 저장됨
+
+### 2️⃣ 삭제 (모든 상태에서 사용 가능)
+- **동작**: 
+  1. 확인 다이얼로그 표시 ("정말 삭제하시겠습니까?")
+  2. 확인 시 `evaluation_records` 테이블에서 레코드 완전 삭제
+- **결과**: 
+  - DB에서 영구 제거 (복구 불가능)
+  - 성공 토스트 메시지 표시
+- **주의**: 
+  - 실제 음식점 데이터(`restaurant` 테이블)는 삭제되지 않음
+  - 평가 레코드만 제거됨
+
+### 3️⃣ 상태별 액션 버튼 가시성
+| 상태 | 수동 등록 | 삭제 |
+|------|----------|------|
+| `pending` | ❌ | ✅ |
+| `approved` | ❌ | ✅ |
+| `hold` | ❌ | ✅ |
+| `db_conflict` | ❌ | ✅ |
+| `geocoding_failed` | ❌ | ✅ |
+| `missing` | ✅ | ✅ |
+| `not_selected` | ✅ | ✅ |
 
 ## 🛠️ 개발
 

@@ -81,7 +81,8 @@ export type EvaluationRecordStatus =
   | 'deleted'
   | 'missing'
   | 'db_conflict'
-  | 'geocoding_failed';
+  | 'geocoding_failed'
+  | 'not_selected';
 
 export interface EvaluationRecord {
   id: string;
@@ -127,4 +128,6 @@ export interface CategoryStats {
   missing: number;
   db_conflict: number;
   geocoding_failed: number;
+  not_selected: number;
+  deleted: number;
 }
