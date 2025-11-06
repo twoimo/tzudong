@@ -12,7 +12,7 @@ interface DbConflictResolutionPanelProps {
   record: EvaluationRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (recordId: string, updates: Partial<EvaluationRecord>) => void;
 }
 
 export function DbConflictResolutionPanel({
@@ -107,7 +107,10 @@ export function DbConflictResolutionPanel({
         description: '기존 레스토랑 데이터가 성공적으로 업데이트되었습니다.',
       });
 
-      onSuccess();
+      onSuccess(record.id, {
+        status: 'approved',
+        processed_at: new Date().toISOString(),
+      });
       onOpenChange(false);
 
     } catch (error: any) {
@@ -141,7 +144,10 @@ export function DbConflictResolutionPanel({
         description: '새 데이터가 보류 상태로 변경되었습니다.',
       });
 
-      onSuccess();
+      onSuccess(record.id, {
+        status: 'hold',
+        processed_at: new Date().toISOString(),
+      });
       onOpenChange(false);
 
     } catch (error: any) {
