@@ -83,7 +83,9 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   }, [record]);
 
   const handleReGeocode = async () => {
-    if (!formData.address.trim()) {
+    const trimmedAddress = formData.address.trim();
+    
+    if (!trimmedAddress) {
       toast({
         variant: 'destructive',
         title: '주소를 입력해주세요',
@@ -93,7 +95,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
     try {
       setGeocoding(true);
-      const result = await geocodeAddress(formData.address);
+      const result = await geocodeAddress(trimmedAddress);
       setGeocodingResult(result);
 
       if (result.success) {
@@ -132,8 +134,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     error?: string;
   }> => {
     try {
-      const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
-      const clientSecret = import.meta.env.VITE_NAVER_GEOCODING_CLIENT_SECRET;
+      const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
+      const clientSecret = import.meta.env.VITE_NAVER_CLIENT_SECRET;
 
       if (!clientId || !clientSecret) {
         return { success: false, error: 'Naver API 키가 설정되지 않았습니다.' };
@@ -215,17 +217,28 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         return;
       }
 
+      const trimmedName = formData.name.trim();
+      const trimmedPhone = formData.phone.trim();
+
+      if (!trimmedName) {
+        toast({
+          variant: 'destructive',
+          title: '음식점명을 입력해주세요',
+        });
+        return;
+      }
+
       const { data: newRestaurant, error: insertError } = await supabase
         .from('restaurants')
         .insert({
-          name: formData.name,
+          name: trimmedName,
           road_address: geocodingResult.data!.road_address,
           jibun_address: geocodingResult.data!.jibun_address,
           english_address: geocodingResult.data!.english_address,
           address_elements: geocodingResult.data!.address_elements,
           lat: parseFloat(geocodingResult.data!.y),
           lng: parseFloat(geocodingResult.data!.x),
-          phone: formData.phone || null,
+          phone: trimmedPhone || null,
           category: record.restaurant_info.category ? [record.restaurant_info.category] : [],
           youtube_links: [record.youtube_link],
           youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
@@ -343,7 +356,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
             <Textarea
               id="edit-address"
               value={formData.address}
-              onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+              onChange={(e) => {
+                setFormData(prev => ({ ...prev, address: e.target.value }));
+                // 주소가 변경되면 지오코딩 결과 초기화
+                setGeocodingResult(null);
+              }}
               placeholder="예: 서울특별시 마포구 양화로 160"
               rows={2}
             />
@@ -351,23 +368,36 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
           {/* 지오코딩 결과 */}
           {geocodingResult && (
-            <div className={`rounded-lg p-3 ${geocodingResult.success ? 'bg-green-50 dark:bg-green-950' : 'bg-red-50 dark:bg-red-950'}`}>
+            <div className={`rounded-lg p-3 ${geocodingResult.success ? 'bg-green-50 dark:bg-green-950 border border-green-200' : 'bg-red-50 dark:bg-red-950 border border-red-200'}`}>
               <div className="flex items-center gap-2 mb-2">
                 <Label className="text-sm font-medium">
                   지오코딩 결과
                 </Label>
                 {geocodingResult.success ? (
-                  <Badge variant="default">성공</Badge>
+                  <Badge variant="default" className="bg-green-600">성공</Badge>
                 ) : (
                   <Badge variant="destructive">실패</Badge>
                 )}
               </div>
               
               {geocodingResult.success && geocodingResult.data ? (
-                <div className="space-y-1 text-sm">
-                  <p><span className="font-medium">도로명:</span> {geocodingResult.data.road_address}</p>
-                  <p><span className="font-medium">지번:</span> {geocodingResult.data.jibun_address}</p>
-                  <p><span className="font-medium">좌표:</span> ({geocodingResult.data.y}, {geocodingResult.data.x})</p>
+                <div className="space-y-1 text-sm text-muted-foreground">
+                  <div>
+                    <span className="font-medium">도로명: </span>
+                    {geocodingResult.data.road_address}
+                  </div>
+                  <div>
+                    <span className="font-medium">지번: </span>
+                    {geocodingResult.data.jibun_address}
+                  </div>
+                  <div>
+                    <span className="font-medium">영어 주소: </span>
+                    {geocodingResult.data.english_address}
+                  </div>
+                  <div>
+                    <span className="font-medium">좌표: </span>
+                    위도 {geocodingResult.data.y}, 경도 {geocodingResult.data.x}
+                  </div>
                 </div>
               ) : (
                 <p className="text-sm text-destructive">{geocodingResult.error}</p>

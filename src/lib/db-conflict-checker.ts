@@ -22,12 +22,17 @@ export async function checkDbConflict(params: {
 }): Promise<ConflictCheckResult> {
   const { jibunAddress, restaurantName, youtubeLink, excludeRestaurantId } = params;
 
+  // 입력값 trim
+  const trimmedJibunAddress = jibunAddress.trim();
+  const trimmedRestaurantName = restaurantName.trim();
+  const trimmedYoutubeLink = youtubeLink.trim();
+
   try {
     // 같은 지번주소의 모든 음식점 검색
     let query = supabase
       .from('restaurants')
       .select('*')
-      .eq('jibun_address', jibunAddress);
+      .eq('jibun_address', trimmedJibunAddress);
 
     // 수정 시 본인 제외
     if (excludeRestaurantId) {
@@ -43,8 +48,8 @@ export async function checkDbConflict(params: {
 
     // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
     const nameMismatchConflicts = existingRestaurants.filter(restaurant => 
-      restaurant.youtube_links?.includes(youtubeLink) && 
-      restaurant.name !== restaurantName
+      restaurant.youtube_links?.includes(trimmedYoutubeLink) && 
+      restaurant.name.trim() !== trimmedRestaurantName
     );
 
     if (nameMismatchConflicts.length > 0) {
@@ -52,14 +57,14 @@ export async function checkDbConflict(params: {
         hasConflict: true,
         conflictType: 'name_mismatch',
         conflictingRestaurants: nameMismatchConflicts,
-        message: `같은 주소(${jibunAddress})와 영상 링크를 가진 다른 음식점명이 존재합니다: ${nameMismatchConflicts.map(r => r.name).join(', ')}`,
+        message: `같은 주소(${trimmedJibunAddress})와 영상 링크를 가진 다른 음식점명이 존재합니다: ${nameMismatchConflicts.map(r => r.name).join(', ')}`,
       };
     }
 
     // 충돌 타입 2: 같은 주소 + 같은 음식점명 + 다른 youtube_link (병합 필요)
     const mergeNeededRestaurants = existingRestaurants.filter(restaurant => 
-      restaurant.name === restaurantName &&
-      !restaurant.youtube_links?.includes(youtubeLink)
+      restaurant.name.trim() === trimmedRestaurantName &&
+      !restaurant.youtube_links?.includes(trimmedYoutubeLink)
     );
 
     if (mergeNeededRestaurants.length > 0) {
