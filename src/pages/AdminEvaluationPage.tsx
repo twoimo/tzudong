@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
 import { CategorySidebar } from '@/components/admin/CategorySidebar';
 import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
@@ -25,6 +27,9 @@ const PAGE_SIZE = 50; // 한 번에 로드할 레코드 수
 
 export default function AdminEvaluationPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { user, isAdmin, isLoading: authLoading } = useAuth();
+  
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
   const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
   const [loading, setLoading] = useState(true);
@@ -70,10 +75,26 @@ export default function AdminEvaluationPage() {
   // 무한 스크롤을 위한 scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // 인증 체크 및 관리자 권한 확인
+  useEffect(() => {
+    if (authLoading) return; // 인증 로딩 중에는 대기
+    
+    if (!user || !isAdmin) {
+      toast({
+        title: "접근 권한이 없습니다",
+        description: "관리자만 접근할 수 있는 페이지입니다.",
+        variant: "destructive",
+      });
+      navigate('/login');
+    }
+  }, [user, isAdmin, authLoading, navigate, toast]);
+
   // 초기 데이터 로드
   useEffect(() => {
-    loadAllRecords();
-  }, []);
+    if (user && isAdmin && !authLoading) {
+      loadAllRecords();
+    }
+  }, [user, isAdmin, authLoading]);
 
   // 필터링 + 검색된 레코드 (전체 데이터에서 검색)
   const filteredRecords = useMemo(() => {
@@ -292,6 +313,49 @@ export default function AdminEvaluationPage() {
     }
   };
 
+  // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
+  const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
+    setAllRecords(prev => 
+      prev.map(r => r.id === recordId ? { ...r, ...updates } : r)
+    );
+  };
+
+  // 레코드 제거 (상태에서만)
+  const removeRecordFromState = (recordId: string) => {
+    setAllRecords(prev => prev.filter(r => r.id !== recordId));
+  };
+
+  // 통계 재계산 (현재 allRecords 기준)
+  const recalculateStats = () => {
+    const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
+    const activeData = allRecords.filter(r => r.status !== 'deleted');
+    
+    const newStats: CategoryStats = {
+      total: activeData.length,
+      pending: allRecords.filter(r => r.status === 'pending').length,
+      approved: allRecords.filter(r => r.status === 'approved').length,
+      hold: allRecords.filter(r => r.status === 'hold').length,
+      missing: allRecords.filter(r => r.status === 'missing').length,
+      db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
+      geocoding_failed: allRecords.filter(r => 
+        r.status === 'geocoding_failed' || 
+        (r.status === 'pending' && !r.geocoding_success) ||
+        (r.status === 'not_selected' && !r.geocoding_success)
+      ).length,
+      not_selected: allRecords.filter(r => r.status === 'not_selected').length,
+      deleted: deletedCount,
+    };
+    
+    setStats(newStats);
+  };
+
+  // allRecords가 변경될 때마다 통계 재계산
+  useEffect(() => {
+    if (allRecords.length > 0) {
+      recalculateStats();
+    }
+  }, [allRecords]);
+
   // 승인 핸들러 (DB 충돌 체크 포함)
   const handleApprove = async (record: EvaluationRecord) => {
     // 지오코딩 실패 체크
@@ -346,7 +410,6 @@ export default function AdminEvaluationPage() {
           // 충돌 타입 2: 같은 주소 + 같은 음식점명 + 다른 youtube_link
           // → 자동 병합
           await mergeToExisting(conflictCheck.conflictingRestaurants![0], record);
-          await loadAllRecords();
           setLoading(false);
           return;
         }
@@ -354,7 +417,6 @@ export default function AdminEvaluationPage() {
 
       // 충돌 없음 → 새 음식점 등록
       await insertNewRestaurant(record);
-      await loadAllRecords();
 
     } catch (error: any) {
       console.error('승인 처리 실패:', error);
@@ -393,6 +455,12 @@ export default function AdminEvaluationPage() {
 
     if (statusError) throw statusError;
 
+    // 상태 업데이트 (새로고침 없이)
+    updateRecordInState(newRecord.id, {
+      status: 'approved',
+      processed_at: new Date().toISOString(),
+    });
+
     toast({
       title: '병합 완료',
       description: `✅ "${newRecord.restaurant_name}"이(가) 기존 음식점에 병합되었습니다`,
@@ -413,6 +481,15 @@ export default function AdminEvaluationPage() {
       .eq('id', newRecord.id);
 
     if (error) throw error;
+
+    // 상태 업데이트 (새로고침 없이)
+    updateRecordInState(newRecord.id, {
+      status: 'db_conflict',
+      db_conflict_info: {
+        existing_restaurant: existing,
+        new_restaurant: newRecord.restaurant_info,
+      },
+    });
 
     toast({
       variant: 'destructive',
@@ -455,6 +532,12 @@ export default function AdminEvaluationPage() {
 
     if (statusError) throw statusError;
 
+    // 상태 업데이트 (새로고침 없이)
+    updateRecordInState(record.id, {
+      status: 'approved',
+      processed_at: new Date().toISOString(),
+    });
+
     toast({
       title: '등록 완료',
       description: `✅ "${record.restaurant_name}" 새 음식점이 등록되었습니다`,
@@ -479,7 +562,12 @@ export default function AdminEvaluationPage() {
 
       if (error) throw error;
 
-      await loadAllRecords();
+      // 상태 업데이트 (새로고침 없이)
+      updateRecordInState(record.id, {
+        status: 'deleted',
+        deleted_at: new Date().toISOString(),
+      } as Partial<EvaluationRecord>);
+
       toast({
         title: '삭제 완료',
         description: `"${record.restaurant_name}"이(가) 삭제되었습니다 (복구 불가)`,
@@ -508,12 +596,18 @@ export default function AdminEvaluationPage() {
     setEditModalOpen(true);
   };
 
-  if (loading && allRecords.length === 0) {
+  // 인증 로딩 중이거나 권한 확인 중일 때
+  if (authLoading || (loading && allRecords.length === 0)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
+  }
+
+  // 로그인하지 않았거나 관리자가 아닌 경우 (리다이렉트 전 화면 방지)
+  if (!user || !isAdmin) {
+    return null;
   }
 
   return (
@@ -611,7 +705,9 @@ export default function AdminEvaluationPage() {
         record={selectedMissingRecord}
         open={missingFormOpen}
         onOpenChange={setMissingFormOpen}
-        onSuccess={loadAllRecords}
+        onSuccess={(recordId, updates) => {
+          updateRecordInState(recordId, updates);
+        }}
       />
 
       {/* DB 충돌 해결 패널 */}
@@ -619,7 +715,9 @@ export default function AdminEvaluationPage() {
         record={selectedConflictRecord}
         open={conflictPanelOpen}
         onOpenChange={setConflictPanelOpen}
-        onSuccess={loadAllRecords}
+        onSuccess={(recordId, updates) => {
+          updateRecordInState(recordId, updates);
+        }}
       />
 
       {/* 보류 레스토랑 편집 모달 */}
@@ -627,7 +725,9 @@ export default function AdminEvaluationPage() {
         record={selectedEditRecord}
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
-        onSuccess={loadAllRecords}
+        onSuccess={(recordId, updates) => {
+          updateRecordInState(recordId, updates);
+        }}
       />
     </div>
   );

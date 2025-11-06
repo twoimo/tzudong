@@ -14,13 +14,14 @@ interface EditRestaurantModalProps {
   record: EvaluationRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (recordId: string, updates: Partial<EvaluationRecord>) => void;
 }
 
 interface FormData {
   name: string;
   address: string;
   phone: string;
+  tzuyang_review: string;
 }
 
 interface NaverGeocodingResponse {
@@ -43,6 +44,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     name: '',
     address: '',
     phone: '',
+    tzuyang_review: '',
   });
   const [geocodingResult, setGeocodingResult] = useState<{
     success: boolean;
@@ -63,6 +65,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         name: record.restaurant_info.name,
         address: record.restaurant_info.naver_address_info?.jibun_address || record.restaurant_info.origin_address,
         phone: record.restaurant_info.phone || '',
+        tzuyang_review: record.restaurant_info.tzuyang_review || '',
       });
       
       // 기존 지오코딩 결과가 있다면 표시
@@ -134,11 +137,12 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     error?: string;
   }> => {
     try {
-      const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
-      const clientSecret = import.meta.env.VITE_NAVER_CLIENT_SECRET;
+      // 관리자 재지오코딩용 - 본인의 NCP Maps API 키 사용
+      const clientId = import.meta.env.VITE_NCP_MAPS_KEY_ID;
+      const clientSecret = import.meta.env.VITE_NCP_MAPS_KEY;
 
       if (!clientId || !clientSecret) {
-        return { success: false, error: 'Naver API 키가 설정되지 않았습니다.' };
+        return { success: false, error: 'Naver 지오코딩 API 키가 설정되지 않았습니다.' };
       }
 
       const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`;
@@ -219,6 +223,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       const trimmedName = formData.name.trim();
       const trimmedPhone = formData.phone.trim();
+      const trimmedTzuyangReview = formData.tzuyang_review.trim();
 
       if (!trimmedName) {
         toast({
@@ -242,7 +247,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           category: record.restaurant_info.category ? [record.restaurant_info.category] : [],
           youtube_links: [record.youtube_link],
           youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
-          tzuyang_reviews: record.restaurant_info.tzuyang_review ? [record.restaurant_info.tzuyang_review] : [],
+          tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record.restaurant_info.tzuyang_review ? [record.restaurant_info.tzuyang_review] : []),
         })
         .select()
         .single();
@@ -265,7 +270,10 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         description: `${formData.name} 레스토랑이 성공적으로 등록되었습니다.`,
       });
 
-      onSuccess();
+      onSuccess(record.id, {
+        status: 'approved',
+        processed_at: new Date().toISOString(),
+      });
       onOpenChange(false);
       resetForm();
 
@@ -286,6 +294,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       name: '',
       address: '',
       phone: '',
+      tzuyang_review: '',
     });
     setGeocodingResult(null);
   };
@@ -413,6 +422,18 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               value={formData.phone}
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="예: 02-1234-5678"
+            />
+          </div>
+
+          {/* 쯔양 리뷰 */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-tzuyang-review">쯔양 리뷰</Label>
+            <Textarea
+              id="edit-tzuyang-review"
+              value={formData.tzuyang_review}
+              onChange={(e) => setFormData(prev => ({ ...prev, tzuyang_review: e.target.value }))}
+              placeholder="리뷰 내용을 입력하세요"
+              rows={3}
             />
           </div>
         </div>

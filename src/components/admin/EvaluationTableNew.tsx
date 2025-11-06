@@ -509,12 +509,10 @@ export function EvaluationTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {records.map((record) => {
+            {records.flatMap((record) => {
               const thumbnailUrl = getThumbnailUrl(record.youtube_link);
               
-              return (
-                <>
-                  {/* 메인 행 */}
+              const mainRow = (
                   <TableRow key={record.id} className="hover:bg-muted/50">
                     <TableCell className="sticky left-0 bg-background">
                       <Button
@@ -745,17 +743,17 @@ export function EvaluationTable({
                       )}
                     </TableCell>
                   </TableRow>
+              );
 
-                  {/* 확장된 상세 정보 */}
-                  {expandedId === record.id && (
-                    <TableRow>
+              const detailRow = expandedId === record.id ? (
+                    <TableRow key={`${record.id}-details`}>
                       <TableCell colSpan={11} className="bg-muted/30">
                         <EvaluationRowDetails record={record} />
                       </TableCell>
                     </TableRow>
-                  )}
-                </>
-              );
+              ) : null;
+
+              return detailRow ? [mainRow, detailRow] : [mainRow];
             })}
           </TableBody>
         </Table>
