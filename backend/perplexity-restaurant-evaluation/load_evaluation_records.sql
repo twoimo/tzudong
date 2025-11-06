@@ -4,7 +4,7 @@
 -- 1. RLS 임시 비활성화
 ALTER TABLE public.evaluation_records DISABLE ROW LEVEL SECURITY;
 
--- 배치 1 (1-50)여
+-- 배치 1 (1-50)
 INSERT INTO public.evaluation_records
   (youtube_link, restaurant_name, status, youtube_meta, evaluation_results, restaurant_info, geocoding_success, geocoding_fail_reason, db_conflict_info, missing_message)
 VALUES

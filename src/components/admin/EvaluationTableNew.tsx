@@ -29,12 +29,12 @@ import { EvaluationRowDetails } from './EvaluationRowDetails';
 interface EvaluationTableProps {
   records: EvaluationRecord[];
   onApprove: (record: EvaluationRecord) => void;
-  onHold: (record: EvaluationRecord) => void;
   onDelete: (record: EvaluationRecord) => void;
   onRegisterMissing?: (record: EvaluationRecord) => void;
   onResolveConflict?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
   loading?: boolean;
+  isDeletedFilterActive?: boolean; // 삭제 필터 활성화 여부
   evalFilters: {
     visit_authenticity?: string;
     rb_inference_score?: string;
@@ -79,12 +79,12 @@ False = 영상에서 음식들, 메뉴판 등을 확인했을 때 기존 categor
 export function EvaluationTable({
   records,
   onApprove,
-  onHold,
   onDelete,
   onRegisterMissing,
   onResolveConflict,
   onEdit,
   loading,
+  isDeletedFilterActive = false,
   evalFilters,
   onFilterChange,
   onResetFilters,
@@ -106,10 +106,11 @@ export function EvaluationTable({
       missing: { label: 'Missing', variant: 'destructive' },
       db_conflict: { label: 'DB 충돌', variant: 'destructive' },
       geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
+      not_selected: { label: '평가미대상', variant: 'outline' },
     };
 
     const config = variants[status] || { label: status, variant: 'default' };
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return <Badge variant={config.variant} className="whitespace-nowrap">{config.label}</Badge>;
   };
 
   const getYoutubeVideoId = (url: string) => {
@@ -316,7 +317,28 @@ export function EvaluationTable({
                 </TableHead>
                 
                 {/* 고정 컬럼 */}
-                <TableHead className="text-center min-w-[100px] sticky right-[250px] bg-background z-10">상태</TableHead>
+                <TableHead className="text-center min-w-[100px] sticky right-[250px] bg-background z-10">
+                  {/* 삭제 필터 활성화 시 드롭다운 숨김 */}
+                  {isDeletedFilterActive ? (
+                    <div className="text-sm font-medium">상태</div>
+                  ) : (
+                    <FilterDropdown
+                      filterKey="status"
+                      label="상태"
+                      tooltip="레코드 상태별로 필터링"
+                      options={[
+                        { value: 'all', label: '모두' },
+                        { value: 'pending', label: '미처리' },
+                        { value: 'approved', label: '승인됨' },
+                        { value: 'hold', label: '보류' },
+                        { value: 'missing', label: 'Missing' },
+                        { value: 'not_selected', label: '평가미대상' },
+                        { value: 'db_conflict', label: 'DB 충돌' },
+                        { value: 'geocoding_failed', label: '지오코딩 실패' },
+                      ]}
+                    />
+                  )}
+                </TableHead>
                 <TableHead className="text-center min-w-[250px] sticky right-0 bg-background z-10">액션</TableHead>
               </TableRow>
             </TableHeader>
@@ -461,7 +483,28 @@ export function EvaluationTable({
               </TableHead>
               
               {/* 고정 컬럼 */}
-              <TableHead className="text-center min-w-[100px] sticky right-[250px] bg-background z-10">상태</TableHead>
+              <TableHead className="text-center min-w-[100px] sticky right-[250px] bg-background z-10">
+                {/* 삭제 필터 활성화 시 드롭다운 숨김 */}
+                {isDeletedFilterActive ? (
+                  <div className="text-sm font-medium">상태</div>
+                ) : (
+                  <FilterDropdown
+                    filterKey="status"
+                    label="상태"
+                    tooltip="레코드 상태별로 필터링"
+                    options={[
+                      { value: 'all', label: '모두' },
+                      { value: 'pending', label: '미처리' },
+                      { value: 'approved', label: '승인됨' },
+                      { value: 'hold', label: '보류' },
+                      { value: 'missing', label: 'Missing' },
+                      { value: 'not_selected', label: '평가미대상' },
+                      { value: 'db_conflict', label: 'DB 충돌' },
+                      { value: 'geocoding_failed', label: '지오코딩 실패' },
+                    ]}
+                  />
+                )}
+              </TableHead>
               <TableHead className="text-center min-w-[250px] sticky right-0 bg-background z-10">액션</TableHead>
             </TableRow>
           </TableHeader>
@@ -516,49 +559,49 @@ export function EvaluationTable({
                     
                     {/* 평가 컬럼 값들 */}
                     <TableCell className="text-center text-sm">
-                      {record.evaluation_results?.visit_authenticity?.eval_value ?? '-'}
+                      {record.status === 'not_selected' ? '-' : (record.evaluation_results?.visit_authenticity?.eval_value ?? '-')}
                     </TableCell>
                     
                     <TableCell className="text-center text-sm">
-                      {record.evaluation_results?.rb_inference_score?.eval_value ?? '-'}
+                      {record.status === 'not_selected' ? '-' : (record.evaluation_results?.rb_inference_score?.eval_value ?? '-')}
                     </TableCell>
                     
                     <TableCell className="text-center text-sm">
-                      {record.evaluation_results?.rb_grounding_TF?.eval_value !== undefined 
+                      {record.status === 'not_selected' ? '-' : (record.evaluation_results?.rb_grounding_TF?.eval_value !== undefined 
                         ? (record.evaluation_results.rb_grounding_TF.eval_value 
                           ? <Badge variant="default" className="bg-green-600">True</Badge>
                           : <Badge variant="destructive">False</Badge>)
-                        : '-'}
+                        : '-')}
                     </TableCell>
                     
                     <TableCell className="text-center text-sm">
-                      {record.evaluation_results?.review_faithfulness_score?.eval_value ?? '-'}
+                      {record.status === 'not_selected' ? '-' : (record.evaluation_results?.review_faithfulness_score?.eval_value ?? '-')}
                     </TableCell>
                     
                     <TableCell className="text-center text-sm">
-                      {record.evaluation_results?.location_match_TF?.eval_value !== undefined
+                      {record.status === 'not_selected' ? '-' : (record.evaluation_results?.location_match_TF?.eval_value !== undefined
                         ? (typeof record.evaluation_results.location_match_TF.eval_value === 'string'
                           ? <Badge variant="outline" className="bg-yellow-100">Failed</Badge>
                           : (record.evaluation_results.location_match_TF.eval_value 
                             ? <Badge variant="default" className="bg-green-600">True</Badge>
                             : <Badge variant="destructive">False</Badge>))
-                        : '-'}
+                        : '-')}
                     </TableCell>
                     
                     <TableCell className="text-center text-sm">
-                      {record.evaluation_results?.category_validity_TF?.eval_value !== undefined
+                      {record.status === 'not_selected' ? '-' : (record.evaluation_results?.category_validity_TF?.eval_value !== undefined
                         ? (record.evaluation_results.category_validity_TF.eval_value 
                           ? <Badge variant="default" className="bg-green-600">True</Badge>
                           : <Badge variant="destructive">False</Badge>)
-                        : '-'}
+                        : '-')}
                     </TableCell>
                     
                     <TableCell className="text-center text-sm">
-                      {record.evaluation_results?.category_TF?.eval_value !== undefined
+                      {record.status === 'not_selected' ? '-' : (record.evaluation_results?.category_TF?.eval_value !== undefined
                         ? (record.evaluation_results.category_TF.eval_value 
                           ? <Badge variant="default" className="bg-green-600">True</Badge>
                           : <Badge variant="destructive">False</Badge>)
-                        : '-'}
+                        : '-')}
                     </TableCell>
                     
                     {/* 고정 컬럼: 상태 */}
@@ -570,6 +613,26 @@ export function EvaluationTable({
                     <TableCell className="sticky right-0 bg-background">
                       <div className="flex gap-2 justify-center">
                         {record.status === 'missing' ? (
+                          <>
+                            <Button
+                              size="sm"
+                              onClick={() => onRegisterMissing?.(record)}
+                              disabled={loading}
+                              className="bg-blue-600 hover:bg-blue-700"
+                            >
+                              수동 등록
+                            </Button>
+                            
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => onDelete(record)}
+                              disabled={loading}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </>
+                        ) : record.status === 'not_selected' ? (
                           <>
                             <Button
                               size="sm"
@@ -650,15 +713,17 @@ export function EvaluationTable({
                               승인
                             </Button>
                             
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => onHold(record)}
-                              disabled={loading}
-                            >
-                              <Pause className="w-4 h-4 mr-1" />
-                              보류
-                            </Button>
+                            {onEdit && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => onEdit(record)}
+                                disabled={loading}
+                              >
+                                <Edit className="w-4 h-4 mr-1" />
+                                수정
+                              </Button>
+                            )}
                             
                             <Button
                               size="sm"

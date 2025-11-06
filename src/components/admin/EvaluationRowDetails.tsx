@@ -38,6 +38,44 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
     );
   }
 
+  // 평가 미대상인 경우
+  if (record.status === 'not_selected') {
+    return (
+      <Card className="border-gray-400">
+        <CardHeader>
+          <CardTitle className="text-gray-600 flex items-center gap-2">
+            <AlertCircle className="w-5 h-5" />
+            평가 미대상: {record.restaurant_name}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <p><strong>사유:</strong> {record.geocoding_fail_reason || '주소 정보 없음'}</p>
+            <p><strong>영상 제목:</strong> {youtube_meta?.title}</p>
+            <p><strong>YouTube 링크:</strong> 
+              <a href={record.youtube_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">
+                {record.youtube_link}
+              </a>
+            </p>
+            {restaurant_info && (
+              <>
+                <p><strong>음식점명:</strong> {restaurant_info.name}</p>
+                <p><strong>카테고리:</strong> {restaurant_info.category || '-'}</p>
+                <p><strong>전화번호:</strong> {restaurant_info.phone || '-'}</p>
+                {restaurant_info.tzuyang_review && (
+                  <p><strong>쯔양 리뷰:</strong> {restaurant_info.tzuyang_review}</p>
+                )}
+              </>
+            )}
+            <p className="text-sm text-muted-foreground">
+              이 음식점은 주소 정보가 없어 평가 대상에서 제외되었습니다.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   // DB 충돌인 경우
   if (record.status === 'db_conflict' && record.db_conflict_info) {
     const { existing_restaurant, new_restaurant } = record.db_conflict_info;
