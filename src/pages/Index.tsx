@@ -434,12 +434,12 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   .insert({
                     user_id: user.id,
                     submission_type: 'update',
-                    restaurant_name: updatedData.name,
-                    address: updatedData.address,
-                    phone: updatedData.phone || null,
+                    restaurant_name: updatedData.name.trim(),
+                    address: updatedData.address.trim(),
+                    phone: updatedData.phone?.trim() || null,
                     category: [updatedData.category], // TEXT[] 타입이므로 배열로
-                    youtube_link: updatedData.youtube_link || null,
-                    tzuyang_review: updatedData.tzuyang_review || null,
+                    youtube_link: updatedData.youtube_link?.trim() || null,
+                    tzuyang_review: updatedData.tzuyang_review?.trim() || null,
                     original_restaurant_id: restaurantToEdit.id,
                     changes_requested: changes_requested,
                     status: 'pending'

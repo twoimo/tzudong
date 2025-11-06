@@ -256,8 +256,11 @@ export default function AdminEvaluationPage() {
         hold: data.filter(r => r.status === 'hold').length,
         missing: data.filter(r => r.status === 'missing').length,
         db_conflict: data.filter(r => r.status === 'db_conflict').length,
-        geocoding_failed: data.filter(r => r.status === 'geocoding_failed' || 
-          (r.status === 'pending' && !r.geocoding_success)).length,
+        geocoding_failed: data.filter(r => 
+          r.status === 'geocoding_failed' || 
+          (r.status === 'pending' && !r.geocoding_success) ||
+          (r.status === 'not_selected' && !r.geocoding_success)
+        ).length,
         not_selected: data.filter(r => r.status === 'not_selected').length,
         deleted: deletedCount,
       };

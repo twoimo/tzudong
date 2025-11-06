@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvaluationRecord } from '@/types/evaluation';
 import { checkDbConflict, mergeRestaurantData } from '@/lib/db-conflict-checker';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,6 +69,7 @@ interface NaverGeocodingResponse {
 export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }: MissingRestaurantFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     address: '',
@@ -75,34 +77,102 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     category: '',
   });
   
+  // 지오코딩 결과 상태
+  const [geocodingResult, setGeocodingResult] = useState<{
+    success: boolean;
+    data?: {
+      road_address: string;
+      jibun_address: string;
+      english_address: string;
+      address_elements: any;
+      x: string;
+      y: string;
+    };
+    error?: string;
+  } | null>(null);
+  
   // DB 충돌 경고 다이얼로그 상태
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictData, setConflictData] = useState<any>(null);
   const [pendingGeocodingData, setPendingGeocodingData] = useState<any>(null);
 
+  // 재지오코딩 핸들러
+  const handleReGeocode = async () => {
+    const trimmedAddress = formData.address.trim();
+    
+    if (!trimmedAddress) {
+      toast({
+        variant: 'destructive',
+        title: '주소를 입력해주세요',
+      });
+      return;
+    }
+
+    try {
+      setGeocoding(true);
+      const result = await geocodeAddress(trimmedAddress);
+      setGeocodingResult(result);
+
+      if (result.success) {
+        toast({
+          title: '지오코딩 성공',
+          description: '주소가 성공적으로 변환되었습니다.',
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '지오코딩 실패',
+          description: result.error || '주소를 좌표로 변환할 수 없습니다.',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: '지오코딩 실패',
+        description: error.message,
+      });
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!record) return;
 
+    // 지오코딩 결과 확인
+    if (!geocodingResult || !geocodingResult.success) {
+      toast({
+        variant: 'destructive',
+        title: '지오코딩 필요',
+        description: '먼저 주소를 지오코딩해주세요.',
+      });
+      return;
+    }
+
     try {
       setLoading(true);
 
-      // 1. Naver Geocoding API 호출
-      const geocodingResult = await geocodeAddress(formData.address);
+      // 입력값 trim
+      const trimmedName = formData.name.trim();
+      const trimmedPhone = formData.phone.trim();
+      const trimmedCategory = formData.category.trim();
 
-      if (!geocodingResult.success) {
+      // 필수 입력 검증
+      if (!trimmedName || !trimmedCategory) {
         toast({
           variant: 'destructive',
-          title: '주소 변환 실패',
-          description: geocodingResult.error || '주소를 좌표로 변환할 수 없습니다.',
+          title: '필수 항목을 입력해주세요',
+          description: '음식점명과 카테고리는 필수입니다.',
         });
+        setLoading(false);
         return;
       }
 
-      // 2. DB 충돌 체크 (새로운 로직)
+      // DB 충돌 체크 (새로운 로직) - trim된 값 사용
       const conflictCheck = await checkDbConflict({
         jibunAddress: geocodingResult.data!.jibun_address,
-        restaurantName: formData.name,
+        restaurantName: trimmedName,
         youtubeLink: record.youtube_link,
       });
 
@@ -116,13 +186,13 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           return;
         } else if (conflictCheck.conflictType === 'merge_needed') {
           // 충돌 타입 2: 같은 주소 + 같은 음식점명 → 자동 병합
-          await handleMerge(conflictCheck.conflictingRestaurants![0], geocodingResult.data);
+          await handleMerge(conflictCheck.conflictingRestaurants![0], geocodingResult.data, trimmedName, trimmedPhone, trimmedCategory);
           return;
         }
       }
 
-      // 3. 충돌 없음 → 새 레스토랑 등록
-      await registerNewRestaurant(geocodingResult.data);
+      // 충돌 없음 → 새 레스토랑 등록
+      await registerNewRestaurant(geocodingResult.data, trimmedName, trimmedPhone, trimmedCategory);
 
     } catch (error: any) {
       console.error('레스토랑 등록 실패:', error);
@@ -137,14 +207,14 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   };
 
   // 병합 처리 함수
-  const handleMerge = async (existingRestaurant: any, geocodingData: any) => {
+  const handleMerge = async (existingRestaurant: any, geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string) => {
     try {
       const mergeResult = await mergeRestaurantData({
         existingRestaurant,
         newYoutubeLink: record!.youtube_link,
         newYoutubeMeta: record!.youtube_meta,
         newTzuyangReview: record!.restaurant_info?.tzuyang_review,
-        newCategory: formData.category,
+        newCategory: trimmedCategory,
       });
 
       if (!mergeResult.success) {
@@ -164,7 +234,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
       toast({
         title: '병합 완료',
-        description: `${formData.name} 레스토랑에 영상 링크가 병합되었습니다.`,
+        description: `${trimmedName} 레스토랑에 영상 링크가 병합되었습니다.`,
       });
 
       onSuccess();
@@ -182,20 +252,20 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   };
 
   // 새 레스토랑 등록 함수
-  const registerNewRestaurant = async (geocodingData: any) => {
+  const registerNewRestaurant = async (geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string) => {
     try {
       const { error: insertError } = await supabase
         .from('restaurants')
         .insert({
-          name: formData.name,
+          name: trimmedName,
           road_address: geocodingData.road_address,
           jibun_address: geocodingData.jibun_address,
           english_address: geocodingData.english_address,
           address_elements: geocodingData.address_elements,
           lat: parseFloat(geocodingData.y),
           lng: parseFloat(geocodingData.x),
-          phone: formData.phone || null,
-          category: [formData.category],
+          phone: trimmedPhone || null,
+          category: [trimmedCategory],
           youtube_links: [record!.youtube_link],
           youtube_metas: record!.youtube_meta ? [record!.youtube_meta] : [],
           tzuyang_reviews: record!.restaurant_info ? [record!.restaurant_info.tzuyang_review] : [],
@@ -216,7 +286,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
       toast({
         title: '등록 완료',
-        description: `${formData.name} 레스토랑이 성공적으로 등록되었습니다.`,
+        description: `${trimmedName} 레스토랑이 성공적으로 등록되었습니다.`,
       });
 
       onSuccess();
@@ -254,8 +324,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     error?: string 
   }> => {
     try {
-      const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
-      const clientSecret = import.meta.env.VITE_NAVER_GEOCODING_CLIENT_SECRET;
+      const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
+      const clientSecret = import.meta.env.VITE_NAVER_CLIENT_SECRET;
 
       if (!clientId || !clientSecret) {
         return { success: false, error: 'Naver API 키가 설정되지 않았습니다.' };
@@ -305,6 +375,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       phone: '',
       category: '',
     });
+    setGeocodingResult(null);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -359,18 +430,76 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
 
             {/* 주소 */}
             <div className="space-y-2">
-              <Label htmlFor="address">주소 *</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="address">주소 *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleReGeocode}
+                  disabled={geocoding || !formData.address.trim()}
+                >
+                  {geocoding ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      지오코딩 중...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      재지오코딩
+                    </>
+                  )}
+                </Button>
+              </div>
               <Textarea
                 id="address"
                 value={formData.address}
-                onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                onChange={(e) => {
+                  setFormData(prev => ({ ...prev, address: e.target.value }));
+                  // 주소가 변경되면 지오코딩 결과 초기화
+                  setGeocodingResult(null);
+                }}
                 placeholder="예: 서울특별시 마포구 양화로 160"
                 required
                 rows={2}
               />
-              <p className="text-xs text-muted-foreground">
-                정확한 주소를 입력해주세요. 자동으로 좌표 변환됩니다.
-              </p>
+              
+              {/* 지오코딩 결과 표시 */}
+              {geocodingResult && geocodingResult.success && geocodingResult.data && (
+                <div className="mt-2 p-3 bg-green-50 border border-green-200 rounded-lg space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="default" className="bg-green-600">지오코딩 성공</Badge>
+                  </div>
+                  <div className="text-sm space-y-1">
+                    <div>
+                      <span className="font-medium">도로명: </span>
+                      <span className="text-muted-foreground">{geocodingResult.data.road_address}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">지번: </span>
+                      <span className="text-muted-foreground">{geocodingResult.data.jibun_address}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">영어 주소: </span>
+                      <span className="text-muted-foreground">{geocodingResult.data.english_address}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium">좌표: </span>
+                      <span className="text-muted-foreground">
+                        위도 {geocodingResult.data.y}, 경도 {geocodingResult.data.x}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {geocodingResult && !geocodingResult.success && (
+                <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <Badge variant="destructive">지오코딩 실패</Badge>
+                  <p className="text-sm text-red-600 mt-1">{geocodingResult.error}</p>
+                </div>
+              )}
             </div>
 
             {/* 전화번호 */}
