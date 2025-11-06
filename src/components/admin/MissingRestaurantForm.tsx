@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +44,7 @@ interface MissingRestaurantFormProps {
   record: EvaluationRecord | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (recordId: string, updates: Partial<EvaluationRecord>) => void;
 }
 
 interface FormData {
@@ -52,6 +52,7 @@ interface FormData {
   address: string;
   phone: string;
   category: string;
+  tzuyang_review: string;
 }
 
 interface NaverGeocodingResponse {
@@ -75,6 +76,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     address: '',
     phone: '',
     category: '',
+    tzuyang_review: '',
   });
   
   // 지오코딩 결과 상태
@@ -95,6 +97,25 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictData, setConflictData] = useState<any>(null);
   const [pendingGeocodingData, setPendingGeocodingData] = useState<any>(null);
+  const [pendingFormData, setPendingFormData] = useState<{
+    name: string;
+    phone: string;
+    category: string;
+    tzuyang_review: string;
+  } | null>(null);
+
+  // record가 변경될 때 폼 데이터 초기화 (쯔양 리뷰 포함)
+  useEffect(() => {
+    if (record && record.restaurant_info) {
+      setFormData({
+        name: record.restaurant_info.name || '',
+        address: record.restaurant_info.origin_address || '',
+        phone: record.restaurant_info.phone || '',
+        category: record.restaurant_info.category || '',
+        tzuyang_review: record.restaurant_info.tzuyang_review || '',
+      });
+    }
+  }, [record]);
 
   // 재지오코딩 핸들러
   const handleReGeocode = async () => {
@@ -157,6 +178,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       const trimmedName = formData.name.trim();
       const trimmedPhone = formData.phone.trim();
       const trimmedCategory = formData.category.trim();
+      const trimmedTzuyangReview = formData.tzuyang_review.trim();
 
       // 필수 입력 검증
       if (!trimmedName || !trimmedCategory) {
@@ -180,19 +202,25 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         if (conflictCheck.conflictType === 'name_mismatch') {
           // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
           setPendingGeocodingData(geocodingResult.data);
+          setPendingFormData({
+            name: trimmedName,
+            phone: trimmedPhone,
+            category: trimmedCategory,
+            tzuyang_review: trimmedTzuyangReview,
+          });
           setConflictData(conflictCheck.conflictingRestaurants);
           setShowConflictWarning(true);
           setLoading(false);
           return;
         } else if (conflictCheck.conflictType === 'merge_needed') {
           // 충돌 타입 2: 같은 주소 + 같은 음식점명 → 자동 병합
-          await handleMerge(conflictCheck.conflictingRestaurants![0], geocodingResult.data, trimmedName, trimmedPhone, trimmedCategory);
+          await handleMerge(conflictCheck.conflictingRestaurants![0], geocodingResult.data, trimmedName, trimmedPhone, trimmedCategory, trimmedTzuyangReview);
           return;
         }
       }
 
       // 충돌 없음 → 새 레스토랑 등록
-      await registerNewRestaurant(geocodingResult.data, trimmedName, trimmedPhone, trimmedCategory);
+      await registerNewRestaurant(geocodingResult.data, trimmedName, trimmedPhone, trimmedCategory, trimmedTzuyangReview);
 
     } catch (error: any) {
       console.error('레스토랑 등록 실패:', error);
@@ -207,13 +235,13 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   };
 
   // 병합 처리 함수
-  const handleMerge = async (existingRestaurant: any, geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string) => {
+  const handleMerge = async (existingRestaurant: any, geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
       const mergeResult = await mergeRestaurantData({
         existingRestaurant,
         newYoutubeLink: record!.youtube_link,
         newYoutubeMeta: record!.youtube_meta,
-        newTzuyangReview: record!.restaurant_info?.tzuyang_review,
+        newTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review,
         newCategory: trimmedCategory,
       });
 
@@ -237,7 +265,10 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         description: `${trimmedName} 레스토랑에 영상 링크가 병합되었습니다.`,
       });
 
-      onSuccess();
+      onSuccess(record!.id, {
+        status: 'approved',
+        processed_at: new Date().toISOString(),
+      });
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
@@ -252,7 +283,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   };
 
   // 새 레스토랑 등록 함수
-  const registerNewRestaurant = async (geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string) => {
+  const registerNewRestaurant = async (geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
       const { error: insertError } = await supabase
         .from('restaurants')
@@ -268,7 +299,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
           category: [trimmedCategory],
           youtube_links: [record!.youtube_link],
           youtube_metas: record!.youtube_meta ? [record!.youtube_meta] : [],
-          tzuyang_reviews: record!.restaurant_info ? [record!.restaurant_info.tzuyang_review] : [],
+          tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record!.restaurant_info?.tzuyang_review ? [record!.restaurant_info.tzuyang_review] : []),
         });
 
       if (insertError) throw insertError;
@@ -289,7 +320,10 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         description: `${trimmedName} 레스토랑이 성공적으로 등록되었습니다.`,
       });
 
-      onSuccess();
+      onSuccess(record!.id, {
+        status: 'approved',
+        processed_at: new Date().toISOString(),
+      });
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
@@ -306,8 +340,14 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   // DB 충돌 경고 후 강제 등록
   const handleForceRegister = async () => {
     setShowConflictWarning(false);
-    if (pendingGeocodingData) {
-      await registerNewRestaurant(pendingGeocodingData);
+    if (pendingGeocodingData && pendingFormData) {
+      await registerNewRestaurant(
+        pendingGeocodingData, 
+        pendingFormData.name, 
+        pendingFormData.phone, 
+        pendingFormData.category, 
+        pendingFormData.tzuyang_review
+      );
     }
   };
 
@@ -324,11 +364,12 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     error?: string 
   }> => {
     try {
-      const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
-      const clientSecret = import.meta.env.VITE_NAVER_CLIENT_SECRET;
+      // 관리자 재지오코딩용 - 본인의 NCP Maps API 키 사용
+      const clientId = import.meta.env.VITE_NCP_MAPS_KEY_ID;
+      const clientSecret = import.meta.env.VITE_NCP_MAPS_KEY;
 
       if (!clientId || !clientSecret) {
-        return { success: false, error: 'Naver API 키가 설정되지 않았습니다.' };
+        return { success: false, error: 'Naver 지오코딩 API 키가 설정되지 않았습니다.' };
       }
 
       const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`;
@@ -374,6 +415,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       address: '',
       phone: '',
       category: '',
+      tzuyang_review: '',
     });
     setGeocodingResult(null);
   };
@@ -532,6 +574,18 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* 쯔양 리뷰 */}
+            <div className="space-y-2">
+              <Label htmlFor="tzuyang_review">쯔양 리뷰</Label>
+              <Textarea
+                id="tzuyang_review"
+                value={formData.tzuyang_review}
+                onChange={(e) => setFormData(prev => ({ ...prev, tzuyang_review: e.target.value }))}
+                placeholder="리뷰 내용을 입력하세요"
+                rows={3}
+              />
             </div>
           </div>
 

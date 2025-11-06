@@ -109,6 +109,7 @@ export interface EvaluationRecord {
   updated_at: string;
   processed_by: string | null;
   processed_at: string | null;
+  deleted_at?: string | null;
 }
 
 export interface EvaluationFilter {
