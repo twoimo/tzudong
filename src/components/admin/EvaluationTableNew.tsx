@@ -192,7 +192,7 @@ export function EvaluationTable({
   if (records.length === 0) {
     return (
       <TooltipProvider>
-        <div className="border rounded-lg overflow-auto h-full">
+        <div className="border rounded-lg">
           <Table>
             <TableHeader className="sticky top-0 bg-background z-20">
               <TableRow>
@@ -358,7 +358,7 @@ export function EvaluationTable({
 
   return (
     <TooltipProvider>
-      <div className="border rounded-lg overflow-auto h-full">
+      <div className="border rounded-lg">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-20">
             <TableRow>

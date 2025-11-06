@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EvaluationRecord, EvaluationRecordStatus, CategoryStats } from '@/types/evaluation';
@@ -21,10 +21,15 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+const PAGE_SIZE = 50; // 한 번에 로드할 레코드 수
+
 export default function AdminEvaluationPage() {
   const { toast } = useToast();
-  const [records, setRecords] = useState<EvaluationRecord[]>([]);
+  const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
+  const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [stats, setStats] = useState<CategoryStats>({
     total: 0,
     pending: 0,
@@ -62,16 +67,19 @@ export default function AdminEvaluationPage() {
     conflicts: any[];
   } | null>(null);
 
-  // 데이터 로드
+  // 무한 스크롤을 위한 scroll container ref
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 초기 데이터 로드
   useEffect(() => {
-    loadRecords();
+    loadAllRecords();
   }, []);
 
-  // 필터링된 레코드
+  // 필터링 + 검색된 레코드 (전체 데이터에서 검색)
   const filteredRecords = useMemo(() => {
     let filtered = selectedStatuses.length === 0 
-      ? records.filter(r => r.status !== 'deleted') // 전체 탭일 때는 deleted 제외
-      : records.filter(r => {
+      ? allRecords.filter(r => r.status !== 'deleted') // 전체 탭일 때는 deleted 제외
+      : allRecords.filter(r => {
           // geocoding_failed 탭 클릭 시: status가 'geocoding_failed' 또는 (pending + 지오코딩 실패)
           if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
             return r.status === 'geocoding_failed' || 
@@ -145,7 +153,7 @@ export default function AdminEvaluationPage() {
       filtered = filtered.filter(r => r.status === evalFilters.status);
     }
 
-    // 9. 영상 제목 검색 필터
+    // 9. 영상 제목 검색 필터 (전체 데이터에서 검색)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(r => 
@@ -154,9 +162,55 @@ export default function AdminEvaluationPage() {
     }
 
     return filtered;
-  }, [records, selectedStatuses, evalFilters, searchQuery]);
+  }, [allRecords, selectedStatuses, evalFilters, searchQuery]);
 
-  const loadRecords = async () => {
+  // 더 많은 레코드 로드
+  const loadMoreRecords = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    setTimeout(() => {
+      const currentLength = displayedRecords.length;
+      const newRecords = filteredRecords.slice(currentLength, currentLength + PAGE_SIZE);
+      
+      setDisplayedRecords(prev => [...prev, ...newRecords]);
+      setHasMore(currentLength + PAGE_SIZE < filteredRecords.length);
+      setLoadingMore(false);
+    }, 100);
+  }, [displayedRecords.length, filteredRecords, loadingMore, hasMore]);
+
+  // 필터링 결과가 변경될 때마다 표시할 레코드 초기화
+  useEffect(() => {
+    setDisplayedRecords(filteredRecords.slice(0, PAGE_SIZE));
+    setHasMore(filteredRecords.length > PAGE_SIZE);
+  }, [filteredRecords]);
+
+  // 무한 스크롤 - Scroll Event 방식
+  useEffect(() => {
+    const scrollContainer = scrollContainerRef.current;
+    if (!scrollContainer) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
+      const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+      
+      // 80% 이상 스크롤 시 다음 데이터 로드
+      if (scrollPercentage > 0.8 && hasMore && !loadingMore) {
+        console.log('Loading more records...', {
+          scrollPercentage,
+          displayedLength: displayedRecords.length,
+          filteredLength: filteredRecords.length
+        });
+        loadMoreRecords();
+      }
+    };
+
+    scrollContainer.addEventListener('scroll', handleScroll);
+    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+  }, [hasMore, loadingMore, loadMoreRecords, displayedRecords.length, filteredRecords.length]);
+
+  // 전체 데이터 로드 (한 번만)
+  const loadAllRecords = async () => {
     try {
       setLoading(true);
       
@@ -173,7 +227,8 @@ export default function AdminEvaluationPage() {
 
       if (!data) {
         console.warn('No data returned from evaluation_records');
-        setRecords([]);
+        setAllRecords([]);
+        setDisplayedRecords([]);
         setStats({
           total: 0,
           pending: 0,
@@ -188,7 +243,7 @@ export default function AdminEvaluationPage() {
         return;
       }
 
-      setRecords(data as EvaluationRecord[]);
+      setAllRecords(data as EvaluationRecord[]);
       
       // 통계 계산 (deleted 포함)
       const deletedCount = data.filter(r => r.status === 'deleted').length;
@@ -216,7 +271,8 @@ export default function AdminEvaluationPage() {
         description: error.message || '알 수 없는 오류가 발생했습니다.',
       });
       // 에러 발생 시에도 빈 배열로 설정하여 UI가 렌더링되도록
-      setRecords([]);
+      setAllRecords([]);
+      setDisplayedRecords([]);
       setStats({
         total: 0,
         pending: 0,
@@ -287,7 +343,7 @@ export default function AdminEvaluationPage() {
           // 충돌 타입 2: 같은 주소 + 같은 음식점명 + 다른 youtube_link
           // → 자동 병합
           await mergeToExisting(conflictCheck.conflictingRestaurants![0], record);
-          await loadRecords();
+          await loadAllRecords();
           setLoading(false);
           return;
         }
@@ -295,7 +351,7 @@ export default function AdminEvaluationPage() {
 
       // 충돌 없음 → 새 음식점 등록
       await insertNewRestaurant(record);
-      await loadRecords();
+      await loadAllRecords();
 
     } catch (error: any) {
       console.error('승인 처리 실패:', error);
@@ -420,7 +476,7 @@ export default function AdminEvaluationPage() {
 
       if (error) throw error;
 
-      await loadRecords();
+      await loadAllRecords();
       toast({
         title: '삭제 완료',
         description: `"${record.restaurant_name}"이(가) 삭제되었습니다 (복구 불가)`,
@@ -449,7 +505,7 @@ export default function AdminEvaluationPage() {
     setEditModalOpen(true);
   };
 
-  if (loading && records.length === 0) {
+  if (loading && allRecords.length === 0) {
     return (
       <div className="flex items-center justify-center h-screen">
         <Loader2 className="w-8 h-8 animate-spin" />
@@ -496,32 +552,54 @@ export default function AdminEvaluationPage() {
           </div>
         </div>
 
-        {/* 테이블 영역 (스크롤 가능) */}
-        <div className="flex-1 p-4 overflow-hidden">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-          ) : (
-            <EvaluationTable
-              records={filteredRecords}
-              onApprove={handleApprove}
-              onDelete={handleDelete}
-              onRegisterMissing={handleRegisterMissing}
-              onResolveConflict={handleResolveConflict}
-              onEdit={handleEdit}
-              loading={loading}
-              evalFilters={evalFilters}
-              isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
-              onFilterChange={(key, value) => {
-                setEvalFilters(prev => ({
-                  ...prev,
-                  [key]: value === '' ? undefined : value
-                }));
-              }}
-              onResetFilters={() => setEvalFilters({})}
-            />
-          )}
+        {/* 테이블 영역 (무한 스크롤) */}
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <div 
+            ref={scrollContainerRef}
+            className="flex-1 p-4 overflow-auto" 
+            id="scroll-container"
+          >
+            {loading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="w-8 h-8 animate-spin" />
+              </div>
+            ) : (
+              <>
+                <EvaluationTable
+                  records={displayedRecords}
+                  onApprove={handleApprove}
+                  onDelete={handleDelete}
+                  onRegisterMissing={handleRegisterMissing}
+                  onResolveConflict={handleResolveConflict}
+                  onEdit={handleEdit}
+                  loading={loading}
+                  evalFilters={evalFilters}
+                  isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
+                  onFilterChange={(key, value) => {
+                    setEvalFilters(prev => ({
+                      ...prev,
+                      [key]: value === '' ? undefined : value
+                    }));
+                  }}
+                  onResetFilters={() => setEvalFilters({})}
+                />
+                
+                {/* 로딩 인디케이터 */}
+                {loadingMore && (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+                
+                {/* 모든 데이터 로드 완료 메시지 */}
+                {!hasMore && displayedRecords.length > 0 && (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    모든 레코드를 불러왔습니다 ({displayedRecords.length}개 / 전체 {filteredRecords.length}개)
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -530,7 +608,7 @@ export default function AdminEvaluationPage() {
         record={selectedMissingRecord}
         open={missingFormOpen}
         onOpenChange={setMissingFormOpen}
-        onSuccess={loadRecords}
+        onSuccess={loadAllRecords}
       />
 
       {/* DB 충돌 해결 패널 */}
@@ -538,7 +616,7 @@ export default function AdminEvaluationPage() {
         record={selectedConflictRecord}
         open={conflictPanelOpen}
         onOpenChange={setConflictPanelOpen}
-        onSuccess={loadRecords}
+        onSuccess={loadAllRecords}
       />
 
       {/* 보류 레스토랑 편집 모달 */}
@@ -546,7 +624,7 @@ export default function AdminEvaluationPage() {
         record={selectedEditRecord}
         open={editModalOpen}
         onOpenChange={setEditModalOpen}
-        onSuccess={loadRecords}
+        onSuccess={loadAllRecords}
       />
     </div>
   );
