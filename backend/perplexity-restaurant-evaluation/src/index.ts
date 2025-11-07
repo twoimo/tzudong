@@ -7,17 +7,18 @@ import { config } from 'dotenv';
 config();
 
 // 평가 프롬프트 템플릿
-const EVALUATION_PROMPT_TEMPLATE = `당신은 유튜브 음식 리뷰 데이터를 평가하는 전문가입니다.  
+const EVALUATION_PROMPT_TEMPLATE = `당신은 유튜버의 음식점 방문 관련 AI 기반 생성 데이터를 평가하는 전문가입니다.  
 입력으로 주어지는 <평가할 데이터>는 한 유튜브 영상에서 유튜버가 방문한 음식점 데이터(restaurant 리스트 포함)입니다.  
-영상 내용, reasoning_basis, tzuyang_review, category를 종합적으로 검토하여 아래의 5개 평가 항목에 대해 판단하세요.(검색 시도 금지)
+영상 내용, reasoning_basis, tzuyang_review, category를 종합적으로 검토하여 아래의 5개 평가 항목에 대해 판단하세요.
 **추측이나 새로운 정보 추가는 절대 금지하며, 반드시 아래 <평가 루브릭>의 평가기준·평가대상·출력형식을 그대로 따르세요.**
 <평가할 데이터>
 {restaurant_data}
 </평가할 데이터>
 
 <평가 루브릭>
-**평가는 새로운 항목이나 근거를 추가하지 말고, 평가할 데이터와 실제 영상 근거를 기반으로만 판단하세요.**
-모든 평가항목에서 eval_basis는 **구체적으로** 작성합니다.
+- **평가는 새로운 항목이나 근거를 추가하지 말고, <평가할 데이터>와 '실제 영상' 근거를 기반으로만 판단하세요.**
+- **다른 게시물/블로그 등에서 절대로 검색하지 않습니다.(오로지 해당 유튜브 영상 url 방문과 <평가할 데이터>만 이용)**
+- 모든 평가항목에서 eval_basis는 **구체적으로** 작성합니다.
 
 [평가 항목 1] 방문 여부 정확성 (visit_authenticity)
 - 평가 목적: **실제 영상**에서 유튜버가 실제로 해당 음식점을 방문했는지, 지점명까지 명확히 식별 가능한지, 누락된 음식점이 있는지 평가
@@ -151,33 +152,33 @@ async function main() {
   let evaluators: PerplexityEvaluator[] = [];
 
   try {
-    // 병렬 처리 개수 선택
-    console.log('\n병렬 처리할 브라우저 개수를 선택하세요:');
-    console.log('  1 - 1개 (순차 처리)');
-    console.log('  3 - 3개 (병렬 처리)');
-    console.log('  5 - 5개 (병렬 처리)');
-    const parallelChoice = await askUser('선택 (1/3/5): ');
-    
-    let parallelCount = 1; // 기본값
-    const choiceNum = parseInt(parallelChoice.trim());
-    
-    if (choiceNum === 1) {
-      parallelCount = 1;
-    } else if (choiceNum === 3) {
-      parallelCount = 3;
-    } else if (choiceNum === 5) {
-      parallelCount = 5;
-    } else {
-      console.log(`⚠️ 잘못된 선택: "${parallelChoice}" - 기본값 1개로 진행합니다.`);
-      parallelCount = 1;
-    }
-    
-    console.log(`\n✅ ${parallelCount}개 브라우저로 병렬 처리 시작\n`);
-
     // 입력 파일에서 데이터 읽기
     const inputFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_rule_results.jsonl');
     const outputFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_results.jsonl');
     const errorFilePath = join(process.cwd(), 'tzuyang_restaurant_evaluation_errors.jsonl');
+    
+    // youtube_meta 로드 (with_meta 파일에서)
+    console.log(`📂 youtube_meta 데이터 로드 중...`);
+    const metaFilePath = join(process.cwd(), '..', 'perplexity-restaurant-crawling', 'tzuyang_restaurant_results_with_meta.jsonl');
+    const metaMap = new Map<string, any>();
+    
+    if (existsSync(metaFilePath)) {
+      const metaContent = readFileSync(metaFilePath, 'utf-8');
+      const metaLines = metaContent.trim().split('\n').filter(line => line.trim());
+      for (const line of metaLines) {
+        try {
+          const data = JSON.parse(line);
+          if (data.youtube_link && data.youtube_meta) {
+            metaMap.set(data.youtube_link, data.youtube_meta);
+          }
+        } catch (e) {
+          // 파싱 실패 무시
+        }
+      }
+      console.log(`✅ youtube_meta 로드 완료: ${metaMap.size}개\n`);
+    } else {
+      console.log(`⚠️ youtube_meta 파일 없음 - youtube_meta 없이 진행합니다.\n`);
+    }
     
     console.log(`📂 입력 파일 읽기: ${inputFilePath}`);
 
@@ -225,15 +226,6 @@ async function main() {
     
     console.log(`✅ 이미 처리된 레코드: ${processedLinks.size}개\n`);
 
-    // 여러 브라우저 초기화 (각각 고유 ID 부여)
-    console.log(`🚀 ${parallelCount}개의 브라우저 초기화 중...`);
-    for (let i = 0; i < parallelCount; i++) {
-      const evaluator = new PerplexityEvaluator(i);
-      await evaluator.initialize();
-      evaluators.push(evaluator);
-      console.log(`✅ 브라우저 ${i + 1}/${parallelCount} 초기화 완료`);
-    }
-
     // 미처리 레코드만 필터링
     const recordsToProcess: string[] = [];
     let skippedCount = 0;
@@ -259,6 +251,46 @@ async function main() {
     
     // 전체 레코드 처리
     const finalRecords = recordsToProcess;
+    
+    console.log(`\n📊 처리할 레코드: ${finalRecords.length}개`);
+    
+    // 처리할 레코드가 없으면 종료
+    if (finalRecords.length === 0) {
+      console.log('\n✅ 처리할 레코드가 없습니다. 프로그램을 종료합니다.');
+      return;
+    }
+    
+    // 병렬 처리 개수 선택
+    console.log('\n병렬 처리할 브라우저 개수를 선택하세요:');
+    console.log('  1 - 1개 (순차 처리)');
+    console.log('  3 - 3개 (병렬 처리)');
+    console.log('  5 - 5개 (병렬 처리)');
+    const parallelChoice = await askUser('선택 (1/3/5): ');
+    
+    let parallelCount = 1; // 기본값
+    const choiceNum = parseInt(parallelChoice.trim());
+    
+    if (choiceNum === 1) {
+      parallelCount = 1;
+    } else if (choiceNum === 3) {
+      parallelCount = 3;
+    } else if (choiceNum === 5) {
+      parallelCount = 5;
+    } else {
+      console.log(`⚠️ 잘못된 선택: "${parallelChoice}" - 기본값 1개로 진행합니다.`);
+      parallelCount = 1;
+    }
+    
+    console.log(`\n✅ ${parallelCount}개 브라우저로 병렬 처리 시작\n`);
+
+    // 여러 브라우저 초기화 (각각 고유 ID 부여)
+    console.log(`🚀 ${parallelCount}개의 브라우저 초기화 중...`);
+    for (let i = 0; i < parallelCount; i++) {
+      const evaluator = new PerplexityEvaluator(i);
+      await evaluator.initialize();
+      evaluators.push(evaluator);
+      console.log(`✅ 브라우저 ${i + 1}/${parallelCount} 초기화 완료`);
+    }
     
     console.log(`\n🎯 ${finalRecords.length}개의 레코드를 ${parallelCount}개 브라우저로 처리합니다.\n`);
 
@@ -310,6 +342,12 @@ async function main() {
               ...result.data
             }
           };
+          
+          // youtube_meta 추가 (있는 경우)
+          const youtubeMeta = metaMap.get(record.youtube_link);
+          if (youtubeMeta) {
+            updatedRecord.youtube_meta = youtubeMeta;
+          }
 
           // 결과를 JSONL 파일에 한 줄씩 저장
           const resultLine = JSON.stringify(updatedRecord) + '\n';
@@ -352,8 +390,17 @@ async function main() {
     let currentRecordIndex = 0;
     const activePromises: Promise<void>[] = [];
     let isFirstBatch = true;
+    let processedCount = 0; // 처리된 레코드 수 (30개마다 휴식용)
 
     while (currentRecordIndex < finalRecords.length) {
+      // 30개 처리마다 휴식 (처음 제외)
+      if (processedCount > 0 && processedCount % 30 === 0) {
+        const restTime = Math.floor(Math.random() * 120000) + 120000; // 2-4분 (120000-240000ms)
+        console.log(`\n� 30개 처리 완료 - ${(restTime/60000).toFixed(1)}분 휴식 중... (과부하 방지)`);
+        await new Promise(resolve => setTimeout(resolve, restTime));
+        console.log(`✅ 휴식 완료 - 처리 재개\n`);
+      }
+
       // 배치 시작 시 첫 번째 브라우저에서만 Delete All 수행
       if (isFirstBatch || currentRecordIndex % parallelCount === 0) {
         const firstEvaluator = evaluators[0];
@@ -379,6 +426,7 @@ async function main() {
 
       // 현재 배치의 모든 작업이 완료될 때까지 대기
       await Promise.all(activePromises);
+      processedCount += activePromises.length; // 처리된 개수 누적
       activePromises.length = 0; // 배열 초기화
 
       // 다음 배치 전 잠시 대기
@@ -404,9 +452,7 @@ async function main() {
       }
     }
 
-    // 프로그램 종료 대기
-    console.log('\n프로그램을 종료하려면 Enter 키를 누르세요...');
-    await askUser('');
+    console.log('\n✅ 프로그램 종료');
   }
 }
 

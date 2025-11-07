@@ -55,7 +55,7 @@ export default function RestaurantSubmissionsPage() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, address, category, phone, youtube_link, description')
+                .select('id, name, road_address, jibun_address, category, phone, youtube_links, description')
                 .order('name');
 
             if (error) throw error;
@@ -138,9 +138,9 @@ export default function RestaurantSubmissionsPage() {
             const submissionData: any = {
                 user_id: user.id,
                 restaurant_name: data.restaurant_name.trim(),
-                address: data.address.trim(),
+                address: data.address.trim(), // 사용자가 입력한 주소는 도로명 주소로 저장
                 phone: data.phone.trim() || null,
-                category: data.categories, // TEXT[] 배열로 저장
+                category: data.categories, // 항상 배열로 저장 (TEXT[])
                 youtube_link: data.youtube_link.trim(),
                 description: data.description.trim() || null,
                 status: 'pending',
@@ -232,21 +232,28 @@ export default function RestaurantSubmissionsPage() {
     const handleRestaurantSelect = (restaurant: any) => {
         setSelectedRestaurant(restaurant);
         const safeCategories = Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category].filter(Boolean);
+        
+        // 도로명 주소 우선, 없으면 지번 주소 사용
+        const restaurantAddress = restaurant.road_address || restaurant.jibun_address || "";
 
         setOriginalData({
             restaurant_name: restaurant.name,
-            address: restaurant.address,
+            address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: restaurant.youtube_link || "",
+            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0 
+                ? restaurant.youtube_links[0] 
+                : (restaurant.youtube_links || ""),
             description: restaurant.description || "",
         });
         setFormData({
             restaurant_name: restaurant.name,
-            address: restaurant.address,
+            address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: restaurant.youtube_link || "",
+            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0 
+                ? restaurant.youtube_links[0] 
+                : (restaurant.youtube_links || ""),
             description: restaurant.description || "",
         });
     };
@@ -598,11 +605,16 @@ export default function RestaurantSubmissionsPage() {
                                         <SelectValue placeholder="수정할 맛집을 선택해주세요" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {allRestaurants.map((restaurant) => (
-                                            <SelectItem key={restaurant.id} value={restaurant.id}>
-                                                {restaurant.name} - {restaurant.category}
-                                            </SelectItem>
-                                        ))}
+                                        {allRestaurants.map((restaurant) => {
+                                            const categoryDisplay = Array.isArray(restaurant.category) 
+                                                ? restaurant.category[0] 
+                                                : restaurant.category;
+                                            return (
+                                                <SelectItem key={restaurant.id} value={restaurant.id}>
+                                                    {restaurant.name} - {categoryDisplay}
+                                                </SelectItem>
+                                            );
+                                        })}
                                     </SelectContent>
                                 </Select>
                             </div>

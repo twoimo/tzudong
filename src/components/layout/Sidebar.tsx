@@ -1,4 +1,4 @@
-import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield, MapPin } from "lucide-react";
+import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield, MapPin, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -47,6 +47,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const adminMenuItems = (user && isAdmin) ? [
     { icon: Shield, label: "관리자 제보 관리", path: "/admin/submissions", onClick: () => navigate("/admin/submissions") },
     { icon: MessageSquare, label: "관리자 리뷰 관리", path: "/admin/reviews", onClick: () => navigate("/admin/reviews") },
+    { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => navigate("/admin/evaluations") },
   ] : [];
 
   // 공통 메뉴

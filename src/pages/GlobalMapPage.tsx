@@ -242,12 +242,12 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 .from('restaurant_submissions')
                 .insert({
                     original_restaurant_id: restaurantToEdit.id,
-                    restaurant_name: updatedData.name,
-                    address: updatedData.address,
-                    phone: updatedData.phone,
+                    restaurant_name: updatedData.name.trim(),
+                    address: updatedData.address.trim(),
+                    phone: updatedData.phone?.trim() || null,
                     category: updatedData.category,
-                    youtube_link: updatedData.youtube_link,
-                    tzuyang_review: updatedData.tzuyang_review,
+                    youtube_link: updatedData.youtube_link.trim(),
+                    tzuyang_review: updatedData.tzuyang_review?.trim(),
                     changes_requested,
                     user_id: user.id,
                     submission_type: 'edit'

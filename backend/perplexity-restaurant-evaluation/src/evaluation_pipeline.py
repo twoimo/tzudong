@@ -58,6 +58,94 @@ def print_warning(message: str):
     """경고 메시지 출력"""
     print(f"{Colors.WARNING}⚠️  {message}{Colors.ENDC}")
 
+def count_jsonl_lines(file_path: Path) -> int:
+    """JSONL 파일의 라인 수를 카운트"""
+    if not file_path.exists():
+        return 0
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return sum(1 for _ in f)
+    except Exception:
+        return 0
+
+def print_statistics(stats: dict):
+    """각 단계별 통계 출력"""
+    print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*80}{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.OKCYAN}📊 전체 처리 통계{Colors.ENDC}")
+    print(f"{Colors.BOLD}{Colors.HEADER}{'='*80}{Colors.ENDC}\n")
+    
+    # Step 1: 평가 대상 선정
+    step1 = stats.get('step1', {})
+    if step1:
+        before = step1.get('before', 0)
+        after = step1.get('after', 0)
+        processed = after - before
+        print(f"{Colors.BOLD}{Colors.OKBLUE}Step 1: 평가 대상 선정{Colors.ENDC}")
+        print(f"  입력: {Colors.OKCYAN}전체 크롤링 데이터{Colors.ENDC}")
+        print(f"  이미 처리됨: {Colors.WARNING}{before}개{Colors.ENDC}")
+        print(f"  새로 처리: {Colors.OKGREEN}{processed}개{Colors.ENDC}")
+        print(f"  최종 누적: {Colors.OKCYAN}{after}개{Colors.ENDC}\n")
+    
+    # Step 2: RULE 평가
+    step2 = stats.get('step2', {})
+    if step2:
+        input_count = step2.get('input', 0)
+        before = step2.get('before', 0)
+        after = step2.get('after', 0)
+        processed = after - before
+        success_rate = (processed / input_count * 100) if input_count > 0 else 0
+        
+        print(f"{Colors.BOLD}{Colors.OKBLUE}Step 2: RULE 평가{Colors.ENDC}")
+        print(f"  입력: {Colors.OKCYAN}{input_count}개{Colors.ENDC}")
+        print(f"  이미 처리됨: {Colors.WARNING}{before}개{Colors.ENDC}")
+        print(f"  새로 처리: {Colors.OKGREEN}{processed}개{Colors.ENDC} ({success_rate:.1f}%)")
+        print(f"  최종 누적: {Colors.OKCYAN}{after}개{Colors.ENDC}\n")
+    
+    # Step 3: LAAJ 평가
+    step3 = stats.get('step3', {})
+    if step3:
+        input_count = step3.get('input', 0)
+        before_success = step3.get('before_success', 0)
+        before_error = step3.get('before_error', 0)
+        after_success = step3.get('after_success', 0)
+        after_error = step3.get('after_error', 0)
+        
+        before_total = before_success + before_error
+        new_success = after_success - before_success
+        new_error = after_error - before_error
+        new_total = new_success + new_error
+        
+        success_rate = (new_success / new_total * 100) if new_total > 0 else 0
+        error_rate = (new_error / new_total * 100) if new_total > 0 else 0
+        
+        print(f"{Colors.BOLD}{Colors.OKBLUE}Step 3: LAAJ 평가{Colors.ENDC}")
+        print(f"  입력: {Colors.OKCYAN}{input_count}개{Colors.ENDC}")
+        print(f"  이미 처리됨: {Colors.WARNING}{before_total}개{Colors.ENDC} (성공 {before_success}, 에러 {before_error})")
+        print(f"  새로 처리: {Colors.OKGREEN}{new_success}개 성공{Colors.ENDC} ({success_rate:.1f}%), {Colors.FAIL}{new_error}개 에러{Colors.ENDC} ({error_rate:.1f}%)")
+        print(f"  최종 누적: 성공 {Colors.OKGREEN}{after_success}개{Colors.ENDC}, 에러 {Colors.FAIL}{after_error}개{Colors.ENDC}\n")
+    
+    # Step 4: Transform
+    step4 = stats.get('step4', {})
+    if step4:
+        before = step4.get('before', 0)
+        after = step4.get('after', 0)
+        processed = after - before
+        
+        print(f"{Colors.BOLD}{Colors.OKBLUE}Step 4: Transform 결과 변환{Colors.ENDC}")
+        print(f"  이미 변환됨: {Colors.WARNING}{before}개{Colors.ENDC}")
+        print(f"  새로 변환: {Colors.OKGREEN}{processed}개{Colors.ENDC}")
+        print(f"  최종 누적: {Colors.OKCYAN}{after}개{Colors.ENDC}\n")
+    
+    # 전체 성공률
+    if step1 and step3:
+        total_input = step1.get('after', 0)
+        final_success = step3.get('after_success', 0)
+        if total_input > 0:
+            overall_rate = (final_success / total_input) * 100
+            print(f"{Colors.BOLD}{Colors.HEADER}{'─'*80}{Colors.ENDC}")
+            print(f"{Colors.BOLD}{Colors.OKGREEN}✅ 전체 성공률: {final_success}/{total_input} ({overall_rate:.1f}%){Colors.ENDC}")
+            print(f"{Colors.BOLD}{Colors.HEADER}{'─'*80}{Colors.ENDC}\n")
+
 def run_command(command: list, description: str, cwd: str = None) -> bool:
     """
     명령어를 실행하고 결과를 반환
@@ -210,6 +298,19 @@ def step3_ai_evaluation(project_root: Path, parallel_choice: str) -> bool:
         print_error(f"AI 평가 중 예류 발생: {str(e)}")
         return False
 
+def step4_transform_results(src_dir: Path) -> bool:
+    """Step 4: Transform 평가 결과"""
+    print_step(4, "Transform 평가 결과 변환")
+    
+    print_info("평가 결과를 youtube_link-음식점명 기준으로 변환합니다.")
+    print_info("중복된 레코드는 자동으로 스킵됩니다.\n")
+    
+    return run_command(
+        ["python3", "transform_evaluation_results.py"],
+        "Transform 평가 결과",
+        cwd=str(src_dir)
+    )
+
 def main():
     """메인 실행 함수"""
     print(f"\n{Colors.BOLD}{Colors.HEADER}")
@@ -230,6 +331,15 @@ def main():
     else:
         src_dir = current_dir / "src"
         project_root = current_dir
+    
+    # 통계를 위한 딕셔너리
+    stats = {}
+    
+    # 파일 경로
+    selection_file = project_root / 'tzuyang_restaurant_evaluation_selection.jsonl'
+    rule_results_file = project_root / 'tzuyang_restaurant_evaluation_rule_results.jsonl'
+    laaj_results_file = project_root / 'tzuyang_restaurant_evaluation_results.jsonl'
+    laaj_errors_file = project_root / 'tzuyang_restaurant_evaluation_errors.jsonl'
     
     # AI 평가 병렬 처리 브라우저 수 선택 (미리 받기)
     print(f"\n{Colors.BOLD}{Colors.OKCYAN}{'='*80}{Colors.ENDC}")
@@ -256,22 +366,55 @@ def main():
     print(f"{Colors.BOLD}{Colors.HEADER}{'='*80}{Colors.ENDC}")
     print(f"{Colors.BOLD}{Colors.HEADER}평가 파이프라인 시작{Colors.ENDC}")
     print(f"{Colors.BOLD}{Colors.HEADER}{'='*80}{Colors.ENDC}\n")
+    
     # Step 1: 평가 대상 선정
+    step1_before = count_jsonl_lines(selection_file)
     if not step1_target_selection(src_dir):
         print_error("\nStep 1 실패로 인해 파이프라인을 중단합니다.")
         sys.exit(1)
+    step1_after = count_jsonl_lines(selection_file)
+    stats['step1'] = {'before': step1_before, 'after': step1_after}
     
     # Step 2: 규칙 기반 평가
+    step2_before = count_jsonl_lines(rule_results_file)
+    step2_input = step1_after
     if not step2_rule_evaluation(src_dir):
         print_error("\nStep 2 실패로 인해 파이프라인을 중단합니다.")
         print_info("규칙 평가 중 일부 실패는 정상일 수 있습니다. (해외 주소, API 제한 등)")
         print_info("계속 진행하려면 수동으로 Step 3을 실행하세요: node dist/index.js")
         sys.exit(1)
+    step2_after = count_jsonl_lines(rule_results_file)
+    stats['step2'] = {'input': step2_input, 'before': step2_before, 'after': step2_after}
     
     # Step 3: AI 평가
+    step3_before_success = count_jsonl_lines(laaj_results_file)
+    step3_before_error = count_jsonl_lines(laaj_errors_file)
+    step3_input = step2_after
     if not step3_ai_evaluation(project_root, parallel_choice):
         print_error("\nStep 3 실패로 인해 파이프라인을 중단합니다.")
         sys.exit(1)
+    step3_after_success = count_jsonl_lines(laaj_results_file)
+    step3_after_error = count_jsonl_lines(laaj_errors_file)
+    stats['step3'] = {
+        'input': step3_input,
+        'before_success': step3_before_success,
+        'before_error': step3_before_error,
+        'after_success': step3_after_success,
+        'after_error': step3_after_error
+    }
+    
+    # Step 4: Transform 평가 결과
+    transform_file = project_root / 'transform.jsonl'
+    step4_before = count_jsonl_lines(transform_file)
+    if not step4_transform_results(src_dir):
+        print_warning("\nStep 4 Transform 실패했지만, 평가는 완료되었습니다.")
+        print_info("Transform은 나중에 수동으로 실행할 수 있습니다: python3 src/transform_evaluation_results.py")
+    else:
+        step4_after = count_jsonl_lines(transform_file)
+        stats['step4'] = {'before': step4_before, 'after': step4_after}
+    
+    # 통계 출력
+    print_statistics(stats)
     
     # 완료
     print(f"\n{Colors.BOLD}{Colors.OKGREEN}")
@@ -285,6 +428,7 @@ def main():
     print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_rule_results.jsonl'}")
     print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_results.jsonl'} (성공)")
     print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_errors.jsonl'} (실패)")
+    print(f"  📄 {project_root / 'transform.jsonl'} (변환 결과)")
     print()
 
 if __name__ == "__main__":

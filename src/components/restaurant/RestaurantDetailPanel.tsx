@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -53,9 +53,11 @@ export function RestaurantDetailPanel({
 
     if (!restaurant) return null;
 
-    // 카테고리 처리: 단일 값 또는 배열
-    const categories: string[] = restaurant.category
-        ? [restaurant.category].filter(Boolean)
+    // 카테고리 처리: 배열로 저장됨
+    const categories: string[] = Array.isArray(restaurant.category)
+        ? restaurant.category
+        : restaurant.category
+        ? [restaurant.category]
         : [];
 
     // 실제 리뷰 데이터 가져오기
@@ -398,11 +400,22 @@ export function RestaurantDetailPanel({
                                         매장 정보
                                     </h3>
 
-                                    {restaurant.address && (
+                                    {restaurant.road_address && (
                                         <div className="flex gap-3">
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
-                                                <p className="text-sm">{restaurant.address}</p>
+                                                <p className="text-xs text-muted-foreground">도로명 주소</p>
+                                                <p className="text-sm">{restaurant.road_address}</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {restaurant.jibun_address && (
+                                        <div className="flex gap-3">
+                                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="text-xs text-muted-foreground">지번 주소</p>
+                                                <p className="text-sm">{restaurant.jibun_address}</p>
                                             </div>
                                         </div>
                                     )}
@@ -432,8 +445,8 @@ export function RestaurantDetailPanel({
                                     </div>
                                 </div>
 
-                                {/* YouTube Link */}
-                                {restaurant.youtube_link && (
+                                {/* YouTube Links */}
+                                {restaurant.youtube_links && restaurant.youtube_links.length > 0 && (
                                     <>
                                         <Separator />
                                         <div className="space-y-3">
@@ -441,27 +454,32 @@ export function RestaurantDetailPanel({
                                                 <Youtube className="h-4 w-4 text-red-500" />
                                                 쯔양 유튜브 영상
                                             </h3>
-                                            <div
-                                                className="relative cursor-pointer rounded-lg overflow-hidden group"
-                                                onClick={() => window.open(restaurant.youtube_link, '_blank')}
-                                            >
-                                                {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
-                                                    <img
-                                                        src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
-                                                        alt="YouTube Thumbnail"
-                                                        className="w-full h-48 object-cover"
-                                                    />
-                                                )}
-                                                <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                    <Youtube className="h-12 w-12 text-white" />
-                                                </div>
+                                            <div className="space-y-2">
+                                                {restaurant.youtube_links.map((link, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="relative cursor-pointer rounded-lg overflow-hidden group"
+                                                        onClick={() => window.open(link, '_blank')}
+                                                    >
+                                                        {getYouTubeThumbnailUrl(link) && (
+                                                            <img
+                                                                src={getYouTubeThumbnailUrl(link)!}
+                                                                alt={`YouTube Thumbnail ${index + 1}`}
+                                                                className="w-full h-32 object-cover"
+                                                            />
+                                                        )}
+                                                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                                                            <Youtube className="h-8 w-8 text-white" />
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     </>
                                 )}
 
-                                {/* 쯔양 리뷰 */}
-                                {restaurant.tzuyang_review && (
+                                {/* 쯔양 리뷰들 */}
+                                {restaurant.tzuyang_reviews && restaurant.tzuyang_reviews.length > 0 && (
                                     <>
                                         <Separator />
                                         <div className="space-y-2">
@@ -469,10 +487,14 @@ export function RestaurantDetailPanel({
                                                 <Quote className="h-4 w-4 text-muted-foreground" />
                                                 쯔양의 리뷰
                                             </h3>
-                                            <div className="p-4 bg-muted/50 rounded-lg">
-                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                    {restaurant.tzuyang_review}
-                                                </p>
+                                            <div className="space-y-2">
+                                                {restaurant.tzuyang_reviews.map((review, index) => (
+                                                    <div key={index} className="p-4 bg-muted/50 rounded-lg">
+                                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                            {review}
+                                                        </p>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     </>
