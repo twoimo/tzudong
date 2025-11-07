@@ -59,15 +59,16 @@ DROP TABLE IF EXISTS public.profiles CASCADE;
 CREATE TABLE public.profiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
-    nickname TEXT NOT NULL UNIQUE,
-    email TEXT NOT NULL,
+    nickname TEXT NOT NULL UNIQUE CHECK (length(nickname) >= 2 AND length(nickname) <= 20),
+    email TEXT NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
     profile_picture TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    last_login TIMESTAMP WITH TIME ZONE DEFAULT now()
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    last_login TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.profiles IS '사용자 프로필 정보 테이블';
-COMMENT ON COLUMN public.profiles.nickname IS '사용자 닉네임 (고유값)';
+COMMENT ON COLUMN public.profiles.nickname IS '사용자 닉네임 (고유값, 2-20자)';
+COMMENT ON COLUMN public.profiles.email IS '이메일 주소 (형식 검증)';
 COMMENT ON COLUMN public.profiles.profile_picture IS '프로필 이미지 URL';
 COMMENT ON COLUMN public.profiles.last_login IS '마지막 로그인 시간';
 
@@ -75,39 +76,45 @@ COMMENT ON COLUMN public.profiles.last_login IS '마지막 로그인 시간';
 DROP TABLE IF EXISTS public.restaurants CASCADE;
 CREATE TABLE public.restaurants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    name TEXT NOT NULL,
-    phone TEXT,
-    lat NUMERIC NOT NULL,
-    lng NUMERIC NOT NULL,
+    name TEXT NOT NULL CHECK (length(name) >= 2 AND length(name) <= 100),
+    phone TEXT CHECK (phone IS NULL OR phone ~ '^\d{2,3}-\d{3,4}-\d{4}$'),
+    lat NUMERIC NOT NULL CHECK (lat >= -90 AND lat <= 90),
+    lng NUMERIC NOT NULL CHECK (lng >= -180 AND lng <= 180),
     description TEXT,
-    category TEXT[] NOT NULL,
+    category TEXT[] NOT NULL CHECK (array_length(category, 1) > 0 AND array_length(category, 1) <= 5),
     road_address TEXT,
     jibun_address TEXT,
     english_address TEXT,
-    address_elements JSONB,
+    address_elements JSONB DEFAULT '{}'::JSONB,
     youtube_links TEXT[] DEFAULT ARRAY[]::TEXT[],
     tzuyang_reviews JSONB DEFAULT '[]'::JSONB,
     youtube_metas JSONB DEFAULT '[]'::JSONB,
-    review_count INTEGER DEFAULT 0,
-    created_by UUID REFERENCES auth.users(id),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_by_admin_id UUID REFERENCES auth.users(id)
+    review_count INTEGER NOT NULL DEFAULT 0 CHECK (review_count >= 0),
+    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    
+    -- 데이터 무결성을 위한 제약조건
+    CONSTRAINT restaurants_address_required CHECK (
+        road_address IS NOT NULL OR jibun_address IS NOT NULL
+    )
 );
 
 COMMENT ON TABLE public.restaurants IS '맛집 정보 테이블';
-COMMENT ON COLUMN public.restaurants.name IS '맛집 이름';
-COMMENT ON COLUMN public.restaurants.lat IS '위도';
-COMMENT ON COLUMN public.restaurants.lng IS '경도';
-COMMENT ON COLUMN public.restaurants.category IS '맛집 카테고리 배열 (예: {한식, 고기})';
+COMMENT ON COLUMN public.restaurants.name IS '맛집 이름 (2-100자)';
+COMMENT ON COLUMN public.restaurants.phone IS '전화번호 (형식: 02-1234-5678 또는 010-1234-5678)';
+COMMENT ON COLUMN public.restaurants.lat IS '위도 (범위: -90 ~ 90)';
+COMMENT ON COLUMN public.restaurants.lng IS '경도 (범위: -180 ~ 180)';
+COMMENT ON COLUMN public.restaurants.category IS '맛집 카테고리 배열 (1-5개)';
 COMMENT ON COLUMN public.restaurants.road_address IS '도로명 주소';
 COMMENT ON COLUMN public.restaurants.jibun_address IS '지번 주소';
 COMMENT ON COLUMN public.restaurants.english_address IS '영문 주소';
-COMMENT ON COLUMN public.restaurants.address_elements IS '주소 상세 정보 (JSON)';
+COMMENT ON COLUMN public.restaurants.address_elements IS '주소 상세 정보 (JSONB)';
 COMMENT ON COLUMN public.restaurants.youtube_links IS '유튜브 영상 링크 배열';
-COMMENT ON COLUMN public.restaurants.tzuyang_reviews IS '쯔양 리뷰 정보 (JSON 배열)';
-COMMENT ON COLUMN public.restaurants.youtube_metas IS '유튜브 메타데이터 (JSON 배열)';
-COMMENT ON COLUMN public.restaurants.review_count IS '리뷰 개수';
+COMMENT ON COLUMN public.restaurants.tzuyang_reviews IS '쯔양 리뷰 정보 (JSONB 배열)';
+COMMENT ON COLUMN public.restaurants.youtube_metas IS '유튜브 메타데이터 (JSONB 배열)';
+COMMENT ON COLUMN public.restaurants.review_count IS '리뷰 개수 (0 이상)';
 
 -- 2.4 리뷰 테이블
 DROP TABLE IF EXISTS public.reviews CASCADE;
@@ -115,35 +122,40 @@ CREATE TABLE public.reviews (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     restaurant_id UUID REFERENCES public.restaurants(id) ON DELETE CASCADE NOT NULL,
-    title TEXT NOT NULL,
-    content TEXT NOT NULL,
-    visited_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    title TEXT NOT NULL CHECK (length(title) >= 2 AND length(title) <= 200),
+    content TEXT NOT NULL CHECK (length(content) >= 10),
+    visited_at TIMESTAMP WITH TIME ZONE NOT NULL CHECK (visited_at <= now()),
     verification_photo TEXT NOT NULL,
-    food_photos TEXT[] DEFAULT '{}',
-    is_verified BOOLEAN DEFAULT false,
+    food_photos TEXT[] DEFAULT ARRAY[]::TEXT[],
+    categories TEXT[] DEFAULT ARRAY[]::TEXT[],
+    is_verified BOOLEAN NOT NULL DEFAULT false,
     admin_note TEXT,
-    is_pinned BOOLEAN DEFAULT false,
-    edited_by_admin BOOLEAN DEFAULT false,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    is_edited_by_admin BOOLEAN DEFAULT false,
-    edited_by_admin_id UUID REFERENCES auth.users(id),
+    is_pinned BOOLEAN NOT NULL DEFAULT false,
+    is_edited_by_admin BOOLEAN NOT NULL DEFAULT false,
+    edited_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     edited_at TIMESTAMP WITH TIME ZONE,
-    category TEXT[],
-    categories TEXT[]
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    
+    -- 데이터 무결성을 위한 제약조건
+    CONSTRAINT reviews_edited_consistency CHECK (
+        (is_edited_by_admin = false AND edited_by_admin_id IS NULL AND edited_at IS NULL) OR
+        (is_edited_by_admin = true AND edited_by_admin_id IS NOT NULL AND edited_at IS NOT NULL)
+    )
 );
 
 COMMENT ON TABLE public.reviews IS '사용자 리뷰 테이블';
-COMMENT ON COLUMN public.reviews.title IS '리뷰 제목';
-COMMENT ON COLUMN public.reviews.content IS '리뷰 내용';
-COMMENT ON COLUMN public.reviews.visited_at IS '방문 일시';
+COMMENT ON COLUMN public.reviews.title IS '리뷰 제목 (2-200자)';
+COMMENT ON COLUMN public.reviews.content IS '리뷰 내용 (최소 10자)';
+COMMENT ON COLUMN public.reviews.visited_at IS '방문 일시 (미래 날짜 불가)';
 COMMENT ON COLUMN public.reviews.verification_photo IS '방문 인증 사진 URL';
 COMMENT ON COLUMN public.reviews.food_photos IS '음식 사진 URL 배열';
+COMMENT ON COLUMN public.reviews.categories IS '리뷰 카테고리 배열';
 COMMENT ON COLUMN public.reviews.is_verified IS '관리자 인증 여부';
 COMMENT ON COLUMN public.reviews.admin_note IS '관리자 메모';
 COMMENT ON COLUMN public.reviews.is_pinned IS '고정 여부';
-COMMENT ON COLUMN public.reviews.edited_by_admin IS '관리자 수정 여부 (레거시)';
 COMMENT ON COLUMN public.reviews.is_edited_by_admin IS '관리자 수정 여부';
+COMMENT ON COLUMN public.reviews.edited_by_admin_id IS '수정한 관리자 ID';
 COMMENT ON COLUMN public.reviews.edited_at IS '관리자 수정 시간';
 
 -- 2.5 리뷰 좋아요 테이블
@@ -164,16 +176,16 @@ COMMENT ON COLUMN public.review_likes.user_id IS '좋아요한 사용자 ID';
 DROP TABLE IF EXISTS public.server_costs CASCADE;
 CREATE TABLE public.server_costs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    item_name TEXT NOT NULL,
-    monthly_cost NUMERIC NOT NULL,
+    item_name TEXT NOT NULL CHECK (length(item_name) >= 2),
+    monthly_cost NUMERIC NOT NULL CHECK (monthly_cost >= 0),
     description TEXT,
-    updated_by UUID REFERENCES auth.users(id),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.server_costs IS '서버 운영 비용 테이블';
-COMMENT ON COLUMN public.server_costs.item_name IS '비용 항목명';
-COMMENT ON COLUMN public.server_costs.monthly_cost IS '월 비용';
+COMMENT ON COLUMN public.server_costs.item_name IS '비용 항목명 (최소 2자)';
+COMMENT ON COLUMN public.server_costs.monthly_cost IS '월 비용 (0 이상)';
 COMMENT ON COLUMN public.server_costs.description IS '비용 설명';
 
 -- 2.7 사용자 통계 테이블 (리더보드용)
@@ -181,15 +193,18 @@ DROP TABLE IF EXISTS public.user_stats CASCADE;
 CREATE TABLE public.user_stats (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
-    review_count INTEGER DEFAULT 0,
-    verified_review_count INTEGER DEFAULT 0,
-    trust_score NUMERIC DEFAULT 0,
-    last_updated TIMESTAMP WITH TIME ZONE DEFAULT now()
+    review_count INTEGER NOT NULL DEFAULT 0 CHECK (review_count >= 0),
+    verified_review_count INTEGER NOT NULL DEFAULT 0 CHECK (verified_review_count >= 0),
+    trust_score NUMERIC NOT NULL DEFAULT 0 CHECK (trust_score >= 0 AND trust_score <= 100),
+    last_updated TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    
+    -- 데이터 무결성을 위한 제약조건
+    CONSTRAINT user_stats_count_consistency CHECK (verified_review_count <= review_count)
 );
 
 COMMENT ON TABLE public.user_stats IS '사용자 활동 통계 테이블';
-COMMENT ON COLUMN public.user_stats.review_count IS '총 리뷰 작성 수';
-COMMENT ON COLUMN public.user_stats.verified_review_count IS '인증된 리뷰 수';
+COMMENT ON COLUMN public.user_stats.review_count IS '총 리뷰 작성 수 (0 이상)';
+COMMENT ON COLUMN public.user_stats.verified_review_count IS '인증된 리뷰 수 (0 이상, review_count 이하)';
 COMMENT ON COLUMN public.user_stats.trust_score IS '신뢰도 점수 (0-100)';
 
 -- 2.8 알림 테이블
@@ -198,37 +213,39 @@ CREATE TABLE public.notifications (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
     type notification_type NOT NULL DEFAULT 'system',
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
-    is_read BOOLEAN DEFAULT false,
-    data JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    title TEXT NOT NULL CHECK (length(title) >= 1 AND length(title) <= 100),
+    message TEXT NOT NULL CHECK (length(message) >= 1 AND length(message) <= 500),
+    is_read BOOLEAN NOT NULL DEFAULT false,
+    data JSONB DEFAULT '{}'::JSONB,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.notifications IS '사용자 알림 테이블';
 COMMENT ON COLUMN public.notifications.type IS '알림 타입 (system, user, admin_announcement 등)';
-COMMENT ON COLUMN public.notifications.title IS '알림 제목';
-COMMENT ON COLUMN public.notifications.message IS '알림 내용';
+COMMENT ON COLUMN public.notifications.title IS '알림 제목 (1-100자)';
+COMMENT ON COLUMN public.notifications.message IS '알림 내용 (1-500자)';
 COMMENT ON COLUMN public.notifications.is_read IS '읽음 여부';
-COMMENT ON COLUMN public.notifications.data IS '추가 데이터 (JSON)';
+COMMENT ON COLUMN public.notifications.data IS '추가 데이터 (JSONB)';
 
 -- 2.9 관리자 공지사항 테이블
 DROP TABLE IF EXISTS public.announcements CASCADE;
 CREATE TABLE public.announcements (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id UUID REFERENCES auth.users(id),
-    title TEXT NOT NULL,
-    message TEXT NOT NULL,
+    admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+    title TEXT NOT NULL CHECK (length(title) >= 1 AND length(title) <= 100),
+    message TEXT NOT NULL CHECK (length(message) >= 1),
     data JSONB DEFAULT '{}'::JSONB,
-    is_active BOOLEAN DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    is_active BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 COMMENT ON TABLE public.announcements IS '관리자 공지사항 테이블';
 COMMENT ON COLUMN public.announcements.admin_id IS '공지 작성 관리자 ID';
+COMMENT ON COLUMN public.announcements.title IS '공지 제목 (1-100자)';
+COMMENT ON COLUMN public.announcements.message IS '공지 내용 (1자 이상)';
 COMMENT ON COLUMN public.announcements.is_active IS '공지 활성화 여부';
-COMMENT ON COLUMN public.announcements.data IS '추가 데이터 (JSON)';
+COMMENT ON COLUMN public.announcements.data IS '추가 데이터 (JSONB)';
 
 -- 2.10 평가 기록 테이블 (Perplexity 크롤링 결과)
 DROP TABLE IF EXISTS public.evaluation_records CASCADE;
@@ -236,55 +253,144 @@ CREATE TABLE public.evaluation_records (
     id BIGSERIAL PRIMARY KEY,
     unique_id TEXT NOT NULL UNIQUE,
     youtube_link TEXT NOT NULL,
-    restaurant_name TEXT,
-    status TEXT NOT NULL CHECK (status = ANY (ARRAY[
-        'pending',
-        'approved',
-        'hold',
-        'deleted',
-        'missing',
-        'db_conflict',
-        'geocoding_failed',
-        'not_selected'
-    ])),
-    source_type TEXT DEFAULT 'perplexity',
+    status TEXT NOT NULL DEFAULT 'pending',
+    
+    -- YouTube 메타데이터
     youtube_meta JSONB,
+    
+    -- AI 평가 결과
     evaluation_results JSONB,
-    restaurant_info JSONB,
-    geocoding_success BOOLEAN DEFAULT false,
-    geocoding_fail_reason TEXT,
-    db_conflict_info JSONB,
-    missing_message TEXT,
+    
+    -- 맛집 기본 정보
+    name TEXT,
+    phone TEXT,
+    category TEXT,
+    reasoning_basis TEXT,
+    tzuyang_review TEXT,
+    
+    -- 주소 정보
+    origin_address JSONB,
+    road_address TEXT,
+    jibun_address TEXT,
+    english_address TEXT,
+    address_elements JSONB,
+    
+    -- 지오코딩 정보
+    geocoding_success BOOLEAN NOT NULL DEFAULT false,
+    geocoding_false_stage INTEGER CHECK (geocoding_false_stage IN (0, 1, 2)),
+    
+    -- 상태 플래그
+    is_missing BOOLEAN NOT NULL DEFAULT false,
+    is_not_selected BOOLEAN NOT NULL DEFAULT false,
+    
+    -- 관리자 메모
     admin_notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+    
+    -- 타임스탬프
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    
+    -- 데이터 무결성 제약조건
+    CONSTRAINT evaluation_records_address_check CHECK (
+        (is_missing = false AND (road_address IS NOT NULL OR jibun_address IS NOT NULL)) OR
+        is_missing = true
+    ),
+    CONSTRAINT evaluation_records_geocoding_stage_check CHECK (
+        (geocoding_success = true AND geocoding_false_stage IS NULL) OR
+        (geocoding_success = false AND geocoding_false_stage IS NOT NULL)
+    )
 );
 
-COMMENT ON TABLE public.evaluation_records IS 'Perplexity AI 크롤링 평가 기록 테이블';
+COMMENT ON TABLE public.evaluation_records IS 'Perplexity AI 크롤링 맛집 평가 기록 테이블';
 COMMENT ON COLUMN public.evaluation_records.unique_id IS '고유 식별자 (youtube_link 기반)';
-COMMENT ON COLUMN public.evaluation_records.status IS '평가 상태 (pending, approved, hold 등)';
+COMMENT ON COLUMN public.evaluation_records.youtube_link IS '유튜브 영상 링크';
+COMMENT ON COLUMN public.evaluation_records.status IS '처리 상태 (기본값: pending)';
+COMMENT ON COLUMN public.evaluation_records.youtube_meta IS 'YouTube 메타데이터 (JSON)';
+COMMENT ON COLUMN public.evaluation_records.evaluation_results IS 'AI 평가 결과 (JSON)';
+COMMENT ON COLUMN public.evaluation_records.name IS '맛집 이름';
+COMMENT ON COLUMN public.evaluation_records.phone IS '전화번호';
+COMMENT ON COLUMN public.evaluation_records.category IS '카테고리';
+COMMENT ON COLUMN public.evaluation_records.reasoning_basis IS '평가 근거';
+COMMENT ON COLUMN public.evaluation_records.tzuyang_review IS '쯔양 리뷰 내용';
+COMMENT ON COLUMN public.evaluation_records.origin_address IS '원본 주소 정보 (JSON: {address, lat, lng})';
+COMMENT ON COLUMN public.evaluation_records.road_address IS '도로명 주소';
+COMMENT ON COLUMN public.evaluation_records.jibun_address IS '지번 주소';
+COMMENT ON COLUMN public.evaluation_records.english_address IS '영문 주소';
+COMMENT ON COLUMN public.evaluation_records.address_elements IS '주소 상세 요소 (JSON)';
 COMMENT ON COLUMN public.evaluation_records.geocoding_success IS '지오코딩 성공 여부';
-COMMENT ON COLUMN public.evaluation_records.db_conflict_info IS 'DB 충돌 정보 (JSON)';
+COMMENT ON COLUMN public.evaluation_records.geocoding_false_stage IS '지오코딩 실패 단계 (0: 초기, 1: 중간, 2: 최종)';
+COMMENT ON COLUMN public.evaluation_records.is_missing IS '맛집 정보 누락 여부';
+COMMENT ON COLUMN public.evaluation_records.is_not_selected IS '선택되지 않음 여부';
+COMMENT ON COLUMN public.evaluation_records.admin_notes IS '관리자 메모';
 
 -- ========================================
 -- PART 3: 인덱스 생성 (성능 최적화)
 -- ========================================
 
+-- 3.0 프로필 테이블 인덱스
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON public.profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_nickname ON public.profiles(nickname);
+CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
+CREATE INDEX IF NOT EXISTS idx_profiles_created_at ON public.profiles(created_at DESC);
+
+COMMENT ON INDEX idx_profiles_nickname IS '닉네임 검색 최적화';
+COMMENT ON INDEX idx_profiles_email IS '이메일 검색 최적화';
+
 -- 3.1 맛집 테이블 인덱스
+-- 기본 인덱스
+CREATE INDEX IF NOT EXISTS idx_restaurants_name ON public.restaurants(name);
 CREATE INDEX IF NOT EXISTS idx_restaurants_lat_lng ON public.restaurants(lat, lng);
 CREATE INDEX IF NOT EXISTS idx_restaurants_category ON public.restaurants USING GIN(category);
+CREATE INDEX IF NOT EXISTS idx_restaurants_created_at ON public.restaurants(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_restaurants_review_count ON public.restaurants(review_count DESC);
 
+-- JSONB 인덱스 (빠른 검색을 위한 GIN 인덱스)
+CREATE INDEX IF NOT EXISTS idx_restaurants_address_elements ON public.restaurants USING GIN(address_elements);
+CREATE INDEX IF NOT EXISTS idx_restaurants_youtube_metas ON public.restaurants USING GIN(youtube_metas);
+CREATE INDEX IF NOT EXISTS idx_restaurants_tzuyang_reviews ON public.restaurants USING GIN(tzuyang_reviews);
+
+-- 복합 인덱스 (자주 함께 조회되는 컬럼)
+CREATE INDEX IF NOT EXISTS idx_restaurants_category_location ON public.restaurants USING GIN(category) INCLUDE (lat, lng, name);
+CREATE INDEX IF NOT EXISTS idx_restaurants_location_review_count ON public.restaurants(lat, lng, review_count DESC);
+
+-- 부분 인덱스 (리뷰가 있는 맛집만)
+CREATE INDEX IF NOT EXISTS idx_restaurants_with_reviews ON public.restaurants(review_count DESC, created_at DESC) 
+    WHERE review_count > 0;
+
+-- 전문 검색 인덱스 (pg_trgm 사용)
+CREATE INDEX IF NOT EXISTS idx_restaurants_name_trgm ON public.restaurants USING GIN(name gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_restaurants_road_address_trgm ON public.restaurants USING GIN(road_address gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS idx_restaurants_jibun_address_trgm ON public.restaurants USING GIN(jibun_address gin_trgm_ops);
+
+COMMENT ON INDEX idx_restaurants_name IS '맛집 이름 검색 최적화';
 COMMENT ON INDEX idx_restaurants_lat_lng IS '지도 검색 최적화를 위한 위치 인덱스';
 COMMENT ON INDEX idx_restaurants_category IS '카테고리 검색 최적화를 위한 GIN 인덱스';
+COMMENT ON INDEX idx_restaurants_address_elements IS 'JSONB 주소 요소 검색 최적화';
+COMMENT ON INDEX idx_restaurants_with_reviews IS '리뷰가 있는 인기 맛집 조회 최적화';
+COMMENT ON INDEX idx_restaurants_name_trgm IS '맛집 이름 유사도 검색 인덱스';
+COMMENT ON INDEX idx_restaurants_category_location IS '카테고리+위치 복합 검색 최적화';
 
 -- 3.2 리뷰 테이블 인덱스
+-- 기본 인덱스
 CREATE INDEX IF NOT EXISTS idx_reviews_restaurant_id ON public.reviews(restaurant_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_user_id ON public.reviews(user_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_created_at ON public.reviews(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_reviews_is_verified ON public.reviews(is_verified);
-CREATE INDEX IF NOT EXISTS idx_reviews_is_edited_by_admin ON public.reviews(is_edited_by_admin);
+
+-- 부분 인덱스 (특정 조건의 데이터만)
+CREATE INDEX IF NOT EXISTS idx_reviews_verified ON public.reviews(restaurant_id, created_at DESC) WHERE is_verified = true;
+CREATE INDEX IF NOT EXISTS idx_reviews_pinned ON public.reviews(restaurant_id, created_at DESC) WHERE is_pinned = true;
+CREATE INDEX IF NOT EXISTS idx_reviews_admin_edited ON public.reviews(edited_by_admin_id, edited_at DESC) WHERE is_edited_by_admin = true;
+
+-- 복합 인덱스 (자주 함께 조회되는 컬럼)
+CREATE INDEX IF NOT EXISTS idx_reviews_restaurant_created ON public.reviews(restaurant_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_user_created ON public.reviews(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_categories ON public.reviews USING GIN(categories);
 
 COMMENT ON INDEX idx_reviews_created_at IS '최신 리뷰 조회 최적화';
+COMMENT ON INDEX idx_reviews_verified IS '인증된 리뷰 조회 최적화';
+COMMENT ON INDEX idx_reviews_pinned IS '고정된 리뷰 조회 최적화';
+COMMENT ON INDEX idx_reviews_restaurant_created IS '맛집별 최신 리뷰 조회 최적화';
+COMMENT ON INDEX idx_reviews_user_created IS '사용자별 최신 리뷰 조회 최적화';
 
 -- 3.3 리뷰 좋아요 테이블 인덱스
 CREATE INDEX IF NOT EXISTS idx_review_likes_review_id ON public.review_likes(review_id);
@@ -292,20 +398,172 @@ CREATE INDEX IF NOT EXISTS idx_review_likes_user_id ON public.review_likes(user_
 
 -- 3.4 사용자 통계 테이블 인덱스
 CREATE INDEX IF NOT EXISTS idx_user_stats_trust_score ON public.user_stats(trust_score DESC);
+CREATE INDEX IF NOT EXISTS idx_user_stats_review_count ON public.user_stats(review_count DESC);
+CREATE INDEX IF NOT EXISTS idx_user_stats_verified_count ON public.user_stats(verified_review_count DESC);
 
-COMMENT ON INDEX idx_user_stats_trust_score IS '리더보드 조회 최적화';
+-- 복합 인덱스 (리더보드 정렬 최적화)
+CREATE INDEX IF NOT EXISTS idx_user_stats_leaderboard ON public.user_stats(trust_score DESC, verified_review_count DESC, review_count DESC);
+
+COMMENT ON INDEX idx_user_stats_trust_score IS '신뢰도순 리더보드 조회 최적화';
+COMMENT ON INDEX idx_user_stats_leaderboard IS '종합 리더보드 조회 최적화';
 
 -- 3.5 알림 테이블 인덱스
+-- 기본 인덱스
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON public.notifications(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_notifications_is_read ON public.notifications(is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_type ON public.notifications(type);
+
+-- 복합 인덱스
 CREATE INDEX IF NOT EXISTS idx_notifications_user_created ON public.notifications(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_type ON public.notifications(user_id, type);
+
+-- 부분 인덱스 (읽지 않은 알림만)
+CREATE INDEX IF NOT EXISTS idx_notifications_unread ON public.notifications(user_id, created_at DESC) WHERE is_read = false;
+
+-- JSONB 인덱스
+CREATE INDEX IF NOT EXISTS idx_notifications_data ON public.notifications USING GIN(data);
 
 COMMENT ON INDEX idx_notifications_user_created IS '사용자별 최신 알림 조회 최적화';
+COMMENT ON INDEX idx_notifications_unread IS '읽지 않은 알림 조회 최적화';
 
 -- 3.6 평가 기록 테이블 인덱스
+-- 기본 인덱스
 CREATE INDEX IF NOT EXISTS idx_evaluation_records_status ON public.evaluation_records(status);
 CREATE INDEX IF NOT EXISTS idx_evaluation_records_unique_id ON public.evaluation_records(unique_id);
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_youtube_link ON public.evaluation_records(youtube_link);
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_created_at ON public.evaluation_records(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_name ON public.evaluation_records(name);
+
+-- JSONB 인덱스 (빠른 검색)
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_youtube_meta ON public.evaluation_records USING GIN(youtube_meta);
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_evaluation_results ON public.evaluation_records USING GIN(evaluation_results);
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_origin_address ON public.evaluation_records USING GIN(origin_address);
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_address_elements ON public.evaluation_records USING GIN(address_elements);
+
+-- 부분 인덱스 (특정 조건만)
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_geocoding_failed ON public.evaluation_records(geocoding_false_stage, created_at DESC) 
+    WHERE geocoding_success = false;
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_missing ON public.evaluation_records(created_at DESC) 
+    WHERE is_missing = true;
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_not_selected ON public.evaluation_records(created_at DESC) 
+    WHERE is_not_selected = true;
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_pending ON public.evaluation_records(created_at DESC) 
+    WHERE status = 'pending';
+
+-- 복합 인덱스
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_geocoding_status ON public.evaluation_records(geocoding_success, geocoding_false_stage);
+CREATE INDEX IF NOT EXISTS idx_evaluation_records_flags ON public.evaluation_records(is_missing, is_not_selected, status);
+
+COMMENT ON INDEX idx_evaluation_records_geocoding_failed IS '지오코딩 실패 케이스 분석 최적화';
+COMMENT ON INDEX idx_evaluation_records_missing IS '누락된 맛집 정보 조회 최적화';
+COMMENT ON INDEX idx_evaluation_records_not_selected IS '선택되지 않은 맛집 조회 최적화';
+COMMENT ON INDEX idx_evaluation_records_pending IS '대기 중인 평가 조회 최적화';
+
+-- ========================================
+-- PART 3.7: Materialized View (성능 최적화)
+-- ========================================
+
+-- 3.7.1 맛집 통계 Materialized View
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_restaurant_stats AS
+SELECT 
+    r.id,
+    r.name,
+    r.category,
+    r.lat,
+    r.lng,
+    r.road_address,
+    r.review_count,
+    COUNT(rv.id) AS actual_review_count,
+    COUNT(rv.id) FILTER (WHERE rv.is_verified = true) AS verified_review_count,
+    COUNT(DISTINCT rv.user_id) AS unique_reviewers,
+    MAX(rv.created_at) AS last_review_at,
+    array_agg(DISTINCT unnest(rv.categories)) FILTER (WHERE rv.categories IS NOT NULL) AS all_review_categories
+FROM public.restaurants r
+LEFT JOIN public.reviews rv ON r.id = rv.restaurant_id
+GROUP BY r.id, r.name, r.category, r.lat, r.lng, r.road_address, r.review_count;
+
+-- Materialized View 인덱스
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_restaurant_stats_id ON public.mv_restaurant_stats(id);
+CREATE INDEX IF NOT EXISTS idx_mv_restaurant_stats_review_count ON public.mv_restaurant_stats(actual_review_count DESC);
+CREATE INDEX IF NOT EXISTS idx_mv_restaurant_stats_verified ON public.mv_restaurant_stats(verified_review_count DESC);
+CREATE INDEX IF NOT EXISTS idx_mv_restaurant_stats_location ON public.mv_restaurant_stats(lat, lng);
+
+COMMENT ON MATERIALIZED VIEW public.mv_restaurant_stats IS '맛집 통계 Materialized View (주기적 REFRESH 필요)';
+
+-- 3.7.2 사용자 리더보드 Materialized View
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_user_leaderboard AS
+SELECT 
+    p.user_id,
+    p.nickname,
+    p.profile_picture,
+    us.review_count,
+    us.verified_review_count,
+    us.trust_score,
+    COUNT(rl.id) AS total_likes_received,
+    RANK() OVER (ORDER BY us.trust_score DESC, us.verified_review_count DESC, us.review_count DESC) AS rank
+FROM public.profiles p
+INNER JOIN public.user_stats us ON p.user_id = us.user_id
+LEFT JOIN public.reviews rv ON p.user_id = rv.user_id
+LEFT JOIN public.review_likes rl ON rv.id = rl.review_id
+GROUP BY p.user_id, p.nickname, p.profile_picture, us.review_count, us.verified_review_count, us.trust_score;
+
+-- Materialized View 인덱스
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_user_leaderboard_user_id ON public.mv_user_leaderboard(user_id);
+CREATE INDEX IF NOT EXISTS idx_mv_user_leaderboard_rank ON public.mv_user_leaderboard(rank);
+CREATE INDEX IF NOT EXISTS idx_mv_user_leaderboard_trust_score ON public.mv_user_leaderboard(trust_score DESC);
+
+COMMENT ON MATERIALIZED VIEW public.mv_user_leaderboard IS '사용자 리더보드 Materialized View (주기적 REFRESH 필요)';
+
+-- 3.7.3 인기 리뷰 Materialized View
+CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_popular_reviews AS
+SELECT 
+    rv.id,
+    rv.restaurant_id,
+    rv.user_id,
+    rv.title,
+    rv.content,
+    rv.visited_at,
+    rv.verification_photo,
+    rv.food_photos,
+    rv.is_verified,
+    rv.is_pinned,
+    rv.created_at,
+    COUNT(rl.id) AS like_count,
+    p.nickname AS user_nickname,
+    p.profile_picture AS user_profile_picture,
+    r.name AS restaurant_name,
+    r.road_address AS restaurant_address
+FROM public.reviews rv
+INNER JOIN public.profiles p ON rv.user_id = p.user_id
+INNER JOIN public.restaurants r ON rv.restaurant_id = r.id
+LEFT JOIN public.review_likes rl ON rv.id = rl.review_id
+GROUP BY rv.id, rv.restaurant_id, rv.user_id, rv.title, rv.content, rv.visited_at, 
+         rv.verification_photo, rv.food_photos, rv.is_verified, rv.is_pinned, rv.created_at,
+         p.nickname, p.profile_picture, r.name, r.road_address;
+
+-- Materialized View 인덱스
+CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_popular_reviews_id ON public.mv_popular_reviews(id);
+CREATE INDEX IF NOT EXISTS idx_mv_popular_reviews_like_count ON public.mv_popular_reviews(like_count DESC);
+CREATE INDEX IF NOT EXISTS idx_mv_popular_reviews_restaurant ON public.mv_popular_reviews(restaurant_id, like_count DESC);
+CREATE INDEX IF NOT EXISTS idx_mv_popular_reviews_created_at ON public.mv_popular_reviews(created_at DESC);
+
+COMMENT ON MATERIALIZED VIEW public.mv_popular_reviews IS '인기 리뷰 Materialized View (좋아요 수 포함)';
+
+-- 3.7.4 Materialized View 자동 갱신 함수
+CREATE OR REPLACE FUNCTION public.refresh_materialized_views()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_restaurant_stats;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_user_leaderboard;
+    REFRESH MATERIALIZED VIEW CONCURRENTLY public.mv_popular_reviews;
+END;
+$$;
+
+COMMENT ON FUNCTION public.refresh_materialized_views IS 'Materialized View들을 동시에 REFRESH (CONCURRENTLY)';
 
 -- ========================================
 -- PART 4: Row Level Security (RLS) 활성화
@@ -439,6 +697,11 @@ BEGIN
             review_count = COALESCE(review_count, 0) + 1,
             last_updated = now()
         WHERE user_id = NEW.user_id;
+        
+        -- 맛집 리뷰 카운트 증가
+        UPDATE public.restaurants
+        SET review_count = COALESCE(review_count, 0) + 1
+        WHERE id = NEW.restaurant_id;
 
         RETURN NEW;
 
@@ -464,6 +727,11 @@ BEGIN
             END,
             last_updated = now()
         WHERE user_id = OLD.user_id;
+        
+        -- 맛집 리뷰 카운트 감소
+        UPDATE public.restaurants
+        SET review_count = GREATEST(COALESCE(review_count, 0) - 1, 0)
+        WHERE id = OLD.restaurant_id;
 
         RETURN OLD;
     END IF;
@@ -472,7 +740,7 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.update_user_stats_on_review IS '리뷰 작성/인증/삭제 시 사용자 통계 자동 업데이트';
+COMMENT ON FUNCTION public.update_user_stats_on_review IS '리뷰 작성/인증/삭제 시 사용자 통계 및 맛집 리뷰 카운트 자동 업데이트';
 
 -- 5.7 리뷰 관리자 수정 시간 설정 함수
 CREATE OR REPLACE FUNCTION public.set_review_edited_at()
@@ -748,6 +1016,176 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.get_user_stats IS '사용자 및 리뷰 전체 통계 조회';
+
+-- 5.20 데이터베이스 통계 업데이트 함수 (성능 최적화)
+CREATE OR REPLACE FUNCTION public.update_table_statistics()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    -- 주요 테이블의 통계 정보 업데이트
+    ANALYZE public.restaurants;
+    ANALYZE public.reviews;
+    ANALYZE public.review_likes;
+    ANALYZE public.user_stats;
+    ANALYZE public.notifications;
+END;
+$$;
+
+COMMENT ON FUNCTION public.update_table_statistics IS '주요 테이블의 통계 정보 업데이트 (쿼리 플래너 최적화)';
+
+-- 5.21 오래된 알림 삭제 함수 (데이터 정리)
+CREATE OR REPLACE FUNCTION public.cleanup_old_notifications(days_to_keep INTEGER DEFAULT 90)
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    deleted_count INTEGER;
+BEGIN
+    DELETE FROM public.notifications
+    WHERE created_at < now() - (days_to_keep || ' days')::INTERVAL
+    AND is_read = true;
+    
+    GET DIAGNOSTICS deleted_count = ROW_COUNT;
+    RETURN deleted_count;
+END;
+$$;
+
+COMMENT ON FUNCTION public.cleanup_old_notifications IS '오래된 읽은 알림 삭제 (기본: 90일)';
+
+-- 5.22 맛집 검색 최적화 함수 (전문 검색)
+CREATE OR REPLACE FUNCTION public.search_restaurants(
+    search_query TEXT,
+    search_category TEXT[] DEFAULT NULL,
+    max_results INTEGER DEFAULT 50
+)
+RETURNS TABLE (
+    id UUID,
+    name TEXT,
+    category TEXT[],
+    road_address TEXT,
+    jibun_address TEXT,
+    lat NUMERIC,
+    lng NUMERIC,
+    review_count INTEGER,
+    similarity REAL
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        r.id,
+        r.name,
+        r.category,
+        r.road_address,
+        r.jibun_address,
+        r.lat,
+        r.lng,
+        r.review_count,
+        GREATEST(
+            similarity(r.name, search_query),
+            similarity(COALESCE(r.road_address, ''), search_query),
+            similarity(COALESCE(r.jibun_address, ''), search_query)
+        ) AS similarity
+    FROM public.restaurants r
+    WHERE 
+        (search_category IS NULL OR r.category && search_category)
+        AND (
+            r.name ILIKE '%' || search_query || '%'
+            OR r.road_address ILIKE '%' || search_query || '%'
+            OR r.jibun_address ILIKE '%' || search_query || '%'
+        )
+    ORDER BY similarity DESC, r.review_count DESC
+    LIMIT max_results;
+END;
+$$;
+
+COMMENT ON FUNCTION public.search_restaurants IS '맛집 검색 함수 (이름, 주소 유사도 검색)';
+
+-- 5.23 평가 기록 통계 조회 함수
+CREATE OR REPLACE FUNCTION public.get_evaluation_records_stats()
+RETURNS TABLE (
+    total_records BIGINT,
+    geocoding_success_count BIGINT,
+    geocoding_failed_count BIGINT,
+    missing_count BIGINT,
+    not_selected_count BIGINT,
+    pending_count BIGINT,
+    geocoding_success_rate NUMERIC
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        COUNT(*)::BIGINT as total_records,
+        COUNT(*) FILTER (WHERE geocoding_success = true)::BIGINT as geocoding_success_count,
+        COUNT(*) FILTER (WHERE geocoding_success = false)::BIGINT as geocoding_failed_count,
+        COUNT(*) FILTER (WHERE is_missing = true)::BIGINT as missing_count,
+        COUNT(*) FILTER (WHERE is_not_selected = true)::BIGINT as not_selected_count,
+        COUNT(*) FILTER (WHERE status = 'pending')::BIGINT as pending_count,
+        ROUND(
+            (COUNT(*) FILTER (WHERE geocoding_success = true)::NUMERIC / 
+            NULLIF(COUNT(*), 0)::NUMERIC * 100), 2
+        ) as geocoding_success_rate
+    FROM public.evaluation_records;
+END;
+$$;
+
+COMMENT ON FUNCTION public.get_evaluation_records_stats IS '평가 기록 통계 조회 (지오코딩 성공률 포함)';
+
+-- 5.24 평가 기록에서 맛집 정보 추출 함수
+CREATE OR REPLACE FUNCTION public.extract_restaurant_from_evaluation(
+    evaluation_id BIGINT
+)
+RETURNS TABLE (
+    name TEXT,
+    phone TEXT,
+    category TEXT,
+    road_address TEXT,
+    jibun_address TEXT,
+    english_address TEXT,
+    lat NUMERIC,
+    lng NUMERIC,
+    description TEXT
+)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+    RETURN QUERY
+    SELECT
+        e.name,
+        e.phone,
+        e.category,
+        e.road_address,
+        e.jibun_address,
+        e.english_address,
+        (e.origin_address->>'lat')::NUMERIC as lat,
+        (e.origin_address->>'lng')::NUMERIC as lng,
+        e.tzuyang_review as description
+    FROM public.evaluation_records e
+    WHERE e.id = evaluation_id
+    AND e.geocoding_success = true
+    AND e.is_missing = false
+    AND e.is_not_selected = false;
+END;
+$$;
+
+COMMENT ON FUNCTION public.extract_restaurant_from_evaluation IS '평가 기록에서 맛집 정보 추출 (restaurants 테이블 삽입용)';
 
 -- ========================================
 -- PART 6: 트리거 생성
@@ -1043,8 +1481,213 @@ WHERE email = 'twoimo@dgu.ac.kr'
 ON CONFLICT (user_id, role) DO NOTHING;
 
 -- ========================================
+-- PART 11: 성능 최적화 설정
+-- ========================================
+
+-- 11.1 pg_trgm 확장 설치 (유사도 검색용)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS btree_gin;
+
+COMMENT ON EXTENSION pg_trgm IS '텍스트 유사도 검색을 위한 PostgreSQL 확장';
+COMMENT ON EXTENSION "uuid-ossp" IS 'UUID 생성 함수 제공';
+COMMENT ON EXTENSION btree_gin IS 'GIN 인덱스에서 B-tree 연산자 지원';
+
+-- 11.2 맛집 이름/주소 유사도 검색 인덱스는 이미 PART 3.1에서 생성됨
+
+-- 11.3 테이블 통계 정보 업데이트
+ANALYZE public.restaurants;
+ANALYZE public.reviews;
+ANALYZE public.review_likes;
+ANALYZE public.user_stats;
+ANALYZE public.profiles;
+ANALYZE public.notifications;
+
+-- ========================================
+-- PART 12: 유지보수 스케줄링 안내
+-- ========================================
+
+/*
+=== 주기적 유지보수 작업 안내 ===
+
+1. Materialized View 갱신 (매일 1회 권장):
+   SELECT public.refresh_materialized_views();
+
+2. 테이블 통계 업데이트 (매주 1회 권장):
+   SELECT public.update_table_statistics();
+
+3. 오래된 알림 정리 (매월 1회 권장):
+   SELECT public.cleanup_old_notifications(90); -- 90일 이상 된 읽은 알림 삭제
+
+4. VACUUM 작업 (매월 1회 권장):
+   VACUUM ANALYZE public.restaurants;
+   VACUUM ANALYZE public.reviews;
+   VACUUM ANALYZE public.review_likes;
+   VACUUM ANALYZE public.notifications;
+
+5. 인덱스 재구성 (분기별 1회 권장):
+   REINDEX TABLE CONCURRENTLY public.restaurants;
+   REINDEX TABLE CONCURRENTLY public.reviews;
+
+=== Supabase 대시보드에서 설정 가능 ===
+- Database > Cron Jobs 메뉴에서 pg_cron을 사용하여 자동 스케줄링 설정 가능
+*/
+
+-- ========================================
+-- PART 13: 성능 모니터링 뷰
+-- ========================================
+
+-- 13.1 테이블 크기 모니터링 뷰
+CREATE OR REPLACE VIEW public.v_table_sizes AS
+SELECT
+    schemaname AS schema_name,
+    tablename AS table_name,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS total_size,
+    pg_size_pretty(pg_relation_size(schemaname||'.'||tablename)) AS table_size,
+    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename) - pg_relation_size(schemaname||'.'||tablename)) AS index_size
+FROM pg_tables
+WHERE schemaname = 'public'
+ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC;
+
+COMMENT ON VIEW public.v_table_sizes IS '테이블 및 인덱스 크기 모니터링 뷰';
+
+-- 13.2 인덱스 사용 통계 뷰
+CREATE OR REPLACE VIEW public.v_index_usage AS
+SELECT
+    schemaname AS schema_name,
+    tablename AS table_name,
+    indexname AS index_name,
+    idx_scan AS index_scans,
+    idx_tup_read AS tuples_read,
+    idx_tup_fetch AS tuples_fetched,
+    pg_size_pretty(pg_relation_size(indexrelid)) AS index_size
+FROM pg_stat_user_indexes
+WHERE schemaname = 'public'
+ORDER BY idx_scan DESC;
+
+COMMENT ON VIEW public.v_index_usage IS '인덱스 사용 통계 뷰 (사용되지 않는 인덱스 확인)';
+
+-- 13.3 느린 쿼리 모니터링을 위한 안내
+/*
+=== 느린 쿼리 모니터링 설정 ===
+
+Supabase 대시보드 > Database > Query Performance에서 확인 가능
+
+또는 직접 설정:
+ALTER DATABASE postgres SET log_min_duration_statement = '1000'; -- 1초 이상 쿼리 로깅
+
+주요 확인 사항:
+1. Sequential Scan이 많은 쿼리 → 인덱스 추가 고려
+2. 높은 실행 시간 → 쿼리 최적화 또는 Materialized View 사용
+3. 높은 Buffer 사용량 → 메모리 설정 조정
+*/
+
+-- ========================================
+-- PART 14: 데이터 백업 및 복구 안내
+-- ========================================
+
+/*
+=== 백업 전략 ===
+
+1. Supabase 자동 백업:
+   - 모든 프로젝트는 자동으로 일일 백업됨
+   - Settings > Database > Backups에서 확인
+
+2. 중요 테이블 수동 백업 (필요시):
+   -- CSV 내보내기
+   COPY public.restaurants TO '/tmp/restaurants_backup.csv' WITH CSV HEADER;
+   COPY public.reviews TO '/tmp/reviews_backup.csv' WITH CSV HEADER;
+
+3. Point-in-Time Recovery (PITR):
+   - Pro 플랜 이상에서 사용 가능
+   - 지난 7일 내 특정 시점으로 복구 가능
+
+=== 복구 절차 ===
+
+1. Supabase 대시보드 > Settings > Database > Backups
+2. 복구하려는 백업 선택
+3. "Restore" 버튼 클릭
+
+주의: 전체 데이터베이스가 복구되므로 최근 데이터가 손실될 수 있음
+*/
+
+-- ========================================
 -- 마이그레이션 완료
 -- ========================================
 
 -- 모든 테이블, 함수, 트리거, RLS 정책이 성공적으로 생성되었습니다.
 -- 이 파일은 Supabase SQL Editor에서 한 번에 실행 가능합니다.
+
+/*
+=== 최적화 요약 ===
+
+✅ 데이터 무결성 강화:
+   - CHECK 제약조건 추가 (lat/lng 범위, trust_score 범위, 문자열 길이, 이메일 형식, 전화번호 형식 등)
+   - 외래 키 ON DELETE 동작 명확화 (CASCADE, SET NULL)
+   - NOT NULL 제약조건 추가
+   - 중복 컬럼 제거
+   - 복합 제약조건 추가 (데이터 일관성 검증)
+
+✅ 인덱스 최적화 (총 50+ 인덱스):
+   - 복합 인덱스: 자주 함께 조회되는 컬럼
+   - 부분 인덱스: 특정 조건만 (is_verified, is_pinned, is_read, geocoding_success 등)
+   - GIN 인덱스: 배열 및 JSONB 검색
+   - pg_trgm 인덱스: 유사도 검색
+   - INCLUDE 인덱스: covering index 최적화
+
+✅ 성능 최적화:
+   - 3개의 Materialized View (맛집 통계, 리더보드, 인기 리뷰)
+   - 24개의 최적화 함수
+   - 자동 갱신 및 유지보수 함수
+   - 유사도 검색 함수
+   - 통계 정보 업데이트 함수
+
+✅ evaluation_records 테이블 최적화:
+   - 명확한 컬럼 구조 (name, phone, category 등)
+   - JSONB 필드 최적화 (youtube_meta, evaluation_results, origin_address, address_elements)
+   - 지오코딩 상태 추적 (geocoding_success, geocoding_false_stage)
+   - 상태 플래그 (is_missing, is_not_selected)
+   - 부분 인덱스 및 복합 인덱스로 성능 최적화
+
+✅ 테이블/컬럼명 일관성:
+   - 스네이크 케이스(snake_case) 사용
+   - 명확하고 직관적인 네이밍
+   - 약어 최소화
+   - 일관된 접두사/접미사 사용
+
+✅ 유지보수 편의성:
+   - 2개의 모니터링 뷰
+   - 데이터 정리 함수
+   - 상세한 한글 주석 (모든 테이블, 컬럼, 함수, 인덱스)
+   - 유지보수 가이드 포함
+
+=== 다음 단계 권장사항 ===
+
+1. 이 마이그레이션 실행 후 Materialized View를 첫 갱신:
+   SELECT public.refresh_materialized_views();
+
+2. 평가 기록 통계 확인:
+   SELECT * FROM public.get_evaluation_records_stats();
+
+3. Supabase 대시보드에서 pg_cron 설정:
+   - 매일 새벽 2시: Materialized View 갱신
+   - 매주 일요일: 통계 정보 업데이트
+   - 매월 1일: 오래된 알림 정리
+
+4. 성능 모니터링:
+   - SELECT * FROM public.v_table_sizes;
+   - SELECT * FROM public.v_index_usage;
+
+5. 보안 설정:
+   - Authentication > Settings에서 "Enable password leak detection" 활성화
+   - RLS 정책이 모든 테이블에 올바르게 적용되었는지 확인
+
+6. 데이터 검증:
+   - 전화번호 형식: 02-1234-5678 또는 010-1234-5678
+   - 이메일 형식: example@domain.com
+   - 닉네임 길이: 2-20자
+   - 맛집 이름 길이: 2-100자
+   - 카테고리 개수: 1-5개
+
+즐거운 개발 되세요! 🚀
+*/
