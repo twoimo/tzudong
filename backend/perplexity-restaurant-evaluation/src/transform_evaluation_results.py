@@ -1,412 +1,350 @@
-"""
-음식점 평가 결과 변환 스크립트
-youtube_link 기준 → youtube_link-restaurant_name 기준으로 변환
-Missing 음식점 별도 레코드 생성
-NotSelection 음식점 별도 레코드 생성 (평가 미대상)
-"""
-
 import json
-from typing import Dict, List, Any, Optional
-from pathlib import Path
+import os
+import hashlib
+
+# --- 파일 경로 설정 ---
+# (필요시 이 경로를 실제 파일 위치에 맞게 수정하세요.)
+BASE_DIR = os.path.dirname(__file__) if '__file__' in locals() else os.getcwd()
+
+# 입력 파일 경로
+INPUT_FILE_RESULTS = os.path.join(BASE_DIR, '../tzuyang_restaurant_evaluation_results.jsonl')
+INPUT_FILE_NOTSELECTION = os.path.join(BASE_DIR, '../tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl')
+
+# 최종 출력 파일
+OUTPUT_FILE = os.path.join(BASE_DIR, '../tzuyang_restaurant_transforms.jsonl')
 
 
-def extract_restaurant_evaluation(
-    evaluation_results: Dict[str, Any], 
-    restaurant_name: str
-) -> Dict[str, Any]:
+def generate_unique_id(youtube_link, name, review):
     """
-    특정 음식점의 평가 결과만 추출
+    youtube_link, name, tzuyang_review를 조합하여 SHA-256 해시 ID를 생성합니다.
+    값이 None일 경우 빈 문자열로 처리합니다.
+    """
+    key_string = (
+        str(youtube_link or "") + 
+        str(name or "") + 
+        str(review or "")
+    )
+    return hashlib.sha256(key_string.encode('utf-8')).hexdigest()
+
+
+def transform_json_object(original_data, source_file_type):
+    """
+    하나의 원본 JSON 객체를 '펼쳐진' 구조의 객체 리스트로 변환합니다.
+    unique_id가 각 객체에 포함됩니다.
+    """
+    flattened_results = []
     
-    Args:
-        evaluation_results: 전체 평가 결과
-        restaurant_name: 추출할 음식점명
+    youtube_link = original_data.get('youtube_link')
+    youtube_meta = original_data.get('youtube_meta')
+    original_eval_results = original_data.get('evaluation_results')
+    restaurants_list = original_data.get('restaurants', [])
+    evaluation_targets = original_data.get('evaluation_target', {})
+
+    # --- 공통 함수: 'evaluation_results'에서 name으로 항목 찾기 ---
+    def get_eval_item(eval_results, rest_name, key):
+        if not eval_results:
+            return None
         
-    Returns:
-        해당 음식점의 평가 결과
-    """
-    result = {}
-    
-    # 각 평가 항목별로 해당 음식점 데이터만 추출
-    eval_keys = [
-        'visit_authenticity',
-        'rb_inference_score',
-        'rb_grounding_TF',
-        'review_faithfulness_score',
-        'category_TF',
-        'category_validity_TF',
-        'location_match_TF'
-    ]
-    
-    for eval_key in eval_keys:
-        if eval_key == 'visit_authenticity':
-            # visit_authenticity는 values 배열 안에 있음
-            values = evaluation_results.get(eval_key, {}).get('values', [])
-            matching = [v for v in values if v.get('name') == restaurant_name]
-            result[eval_key] = matching[0] if matching else None
-        else:
-            # 나머지는 직접 배열
-            items = evaluation_results.get(eval_key, [])
-            matching = [item for item in items if item.get('name') == restaurant_name]
-            result[eval_key] = matching[0] if matching else None
-    
-    return result
+        value = eval_results.get(key)
+        if not value:
+            return None
 
-
-def get_naver_address_info(location_match: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-    """
-    Naver 지오코딩 결과에서 주소 정보 추출
-    
-    Args:
-        location_match: location_match_TF 평가 결과
+        item_list = []
+        if isinstance(value, dict) and 'values' in value:
+            item_list = value['values']
+        elif isinstance(value, list):
+            item_list = value
         
-    Returns:
-        Naver 주소 정보 또는 None
-    """
-    if not location_match or not location_match.get('eval_value'):
+        found_item = next((item for item in item_list if item.get('name') == rest_name), None)
+        
+        if found_item:
+            new_item = found_item.copy()
+            del new_item['name']
+            return new_item
         return None
-    
-    naver_address = location_match.get('naver_address')
-    if not naver_address or len(naver_address) == 0:
-        return None
-    
-    # 첫 번째 결과 사용
-    naver_addr = naver_address[0]
-    
-    return {
-        "road_address": naver_addr.get('roadAddress'),
-        "jibun_address": naver_addr.get('jibunAddress'),
-        "english_address": naver_addr.get('englishAddress'),
-        "address_elements": naver_addr.get('addressElements'),
-        "x": naver_addr.get('x'),  # lng
-        "y": naver_addr.get('y')   # lat
-    }
 
+    # --- 공통 함수: 'location_match_TF' 처리 ---
+    def get_location_data(eval_results, rest_name, is_missing_flag):
+        loc_data = {
+            "roadAddress": None, "jibunAddress": None, "englishAddress": None,
+            "addressElements": None, "geocoding_success": False, "geocoding_false_stage": None
+        }
+        
+        loc_match_item = None
+        if eval_results:
+            loc_match_list = eval_results.get('location_match_TF', [])
+            loc_match_item = next((item for item in loc_match_list if item.get('name') == rest_name), None)
 
-def transform_evaluation_results(
-    input_file: str = "tzuyang_restaurant_evaluation_results.jsonl",
-    output_file: str = "transform.jsonl"
-):
-    """
-    평가 결과를 youtube_link-음식점명 기준으로 변환
-    
-    Args:
-        input_file: 입력 파일 경로
-        output_file: 출력 파일 경로
-    """
-    input_path = Path(input_file)
-    output_path = Path(output_file)
-    
-    if not input_path.exists():
-        raise FileNotFoundError(f"입력 파일을 찾을 수 없습니다: {input_file}")
-    
-    # 기존 transform.jsonl에서 이미 처리된 키 로드
-    existing_keys = set()
-    if output_path.exists():
-        print(f"📂 기존 transform 파일 발견 - 중복 확인 중...")
-        with open(output_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                if not line.strip():
+        if loc_match_item:
+            loc_data["geocoding_success"] = loc_match_item.get('eval_value', False)
+            if not loc_data["geocoding_success"]:
+                false_message = loc_match_item.get('falseMessage', '')
+                if false_message == "1단계 실패: 주소 지오코딩 실패" or \
+                   false_message == "1단계 실패: 검색 결과 없음":
+                    loc_data["geocoding_false_stage"] = 1
+                elif false_message == "2단계 실패: 20m 이내 후보 없음":
+                    loc_data["geocoding_false_stage"] = 2
+            
+            naver_address = loc_match_item.get('naver_address')
+            if naver_address and len(naver_address) > 0:
+                naver_address_data = naver_address[0]
+                loc_data["roadAddress"] = naver_address_data.get('roadAddress')
+                loc_data["jibunAddress"] = naver_address_data.get('jibunAddress')
+                loc_data["englishAddress"] = naver_address_data.get('englishAddress')
+                loc_data["addressElements"] = naver_address_data.get('addressElements')
+
+        if source_file_type == 'results' and is_missing_flag:
+            loc_data["geocoding_false_stage"] = None
+        elif source_file_type == 'notSelection':
+            loc_data["geocoding_false_stage"] = 0
+            
+        return loc_data
+
+    # -----------------------------------------------------------------
+    # 1. 'results' 파일 처리 (restaurants 리스트 기준 + missing 보충)
+    # -----------------------------------------------------------------
+    if source_file_type == 'results':
+        processed_names = set()
+
+        # --- 1A. 'restaurants' 리스트를 기준으로 처리 ---
+        for restaurant_data in restaurants_list:
+            restaurant_name = restaurant_data.get('name')
+            if not restaurant_name:
+                continue
+            
+            processed_names.add(restaurant_name)
+            is_target = evaluation_targets.get(restaurant_name, True)
+            
+            loc_data = get_location_data(original_eval_results, restaurant_name, is_missing_flag=False)
+            
+            new_eval_results = {}
+            if original_eval_results:
+                for key in original_eval_results:
+                    if key == 'location_match_TF': continue
+                    if key == 'visit_authenticity':
+                        visit_auth_values = original_eval_results.get('visit_authenticity', {}).get('values', [])
+                        visit_auth_item = next((item for item in visit_auth_values if item.get('name') == restaurant_name), None)
+                        if visit_auth_item:
+                            new_visit_item = visit_auth_item.copy()
+                            del new_visit_item['name']
+                            new_eval_results['visit_authenticity'] = new_visit_item
+                    else:
+                        eval_item = get_eval_item(original_eval_results, restaurant_name, key)
+                        if eval_item:
+                            new_eval_results[key] = eval_item
+            
+            tzuyang_review = restaurant_data.get('tzuyang_review')
+            output = {
+                "youtube_link": youtube_link, "status": "pending", "youtube_meta": youtube_meta,
+                "name": restaurant_name,
+                "phone": restaurant_data.get('phone'),
+                "category": restaurant_data.get('category'),
+                "reasoning_basis": restaurant_data.get('reasoning_basis'),
+                "tzuyang_review": tzuyang_review,
+                "origin_address": {
+                    "address": restaurant_data.get('address'),
+                    "lat": restaurant_data.get('lat'),
+                    "lng": restaurant_data.get('lng')
+                },
+                "roadAddress": loc_data["roadAddress"],
+                "jibunAddress": loc_data["jibunAddress"],
+                "englishAddress": loc_data["englishAddress"],
+                "addressElements": loc_data["addressElements"],
+                "geocoding_success": loc_data["geocoding_success"],
+                "geocoding_false_stage": loc_data["geocoding_false_stage"],
+                "is_missing": False,
+                "is_notSelected": not is_target,
+                "evaluation_results": new_eval_results if new_eval_results else None
+            }
+            output['unique_id'] = generate_unique_id(youtube_link, restaurant_name, tzuyang_review)
+            flattened_results.append(output)
+
+        # --- 1B. 'evaluation_target'에만 있는 항목 처리 (Missing 1) ---
+        for restaurant_name, is_target in evaluation_targets.items():
+            if restaurant_name not in processed_names:
+                processed_names.add(restaurant_name)
+                loc_data = get_location_data(original_eval_results, restaurant_name, is_missing_flag=True)
+                
+                output = {
+                    "youtube_link": youtube_link, "status": "pending", "youtube_meta": youtube_meta,
+                    "name": restaurant_name,
+                    "phone": None, "category": None, "reasoning_basis": None, "tzuyang_review": None,
+                    "origin_address": None,
+                    "roadAddress": loc_data["roadAddress"],
+                    "jibunAddress": loc_data["jibunAddress"],
+                    "englishAddress": loc_data["englishAddress"],
+                    "addressElements": loc_data["addressElements"],
+                    "geocoding_success": loc_data["geocoding_success"],
+                    "geocoding_false_stage": loc_data["geocoding_false_stage"],
+                    "is_missing": True,
+                    "is_notSelected": not is_target,
+                    "evaluation_results": None
+                }
+                output['unique_id'] = generate_unique_id(youtube_link, restaurant_name, None)
+                flattened_results.append(output)
+
+        # --- 1C. 'visit_authenticity.missing'에만 있는 항목 처리 (Missing 2) ---
+        if original_eval_results:
+            missing_list = original_eval_results.get('visit_authenticity', {}).get('missing', [])
+            for missing_item in missing_list:
+                missing_name = missing_item.get('name')
+                if not missing_name or missing_name in processed_names:
                     continue
-                try:
-                    record = json.loads(line)
-                    key = f"{record['youtube_link']}|||{record['restaurant_name']}"
-                    existing_keys.add(key)
-                except:
-                    pass
-        print(f"✅ 기존 레코드: {len(existing_keys)}개")
-    
-    transformed_records = []
-    skipped_count = 0
+                
+                processed_names.add(missing_name)
+                loc_data = get_location_data(original_eval_results, missing_name, is_missing_flag=True)
+
+                output = {
+                    "youtube_link": youtube_link, "status": "pending", "youtube_meta": youtube_meta,
+                    "name": missing_name,
+                    "phone": None, "category": None, "reasoning_basis": None, "tzuyang_review": None,
+                    "origin_address": None,
+                    "roadAddress": loc_data["roadAddress"],
+                    "jibunAddress": loc_data["jibunAddress"],
+                    "englishAddress": loc_data["englishAddress"],
+                    "addressElements": loc_data["addressElements"],
+                    "geocoding_success": loc_data["geocoding_success"],
+                    "geocoding_false_stage": loc_data["geocoding_false_stage"],
+                    "is_missing": True,
+                    "is_notSelected": False,
+                    "evaluation_results": None
+                }
+                output['unique_id'] = generate_unique_id(youtube_link, missing_name, None)
+                flattened_results.append(output)
+
+    # -----------------------------------------------------------------
+    # 2. 'notSelection' 파일 처리 (evaluation_target 기준)
+    # -----------------------------------------------------------------
+    elif source_file_type == 'notSelection':
+        for restaurant_name, is_target in evaluation_targets.items():
+            restaurant_data = next((r for r in restaurants_list if r.get('name') == restaurant_name), None)
+            is_missing = (restaurant_data is None)
+            
+            loc_data = get_location_data(None, restaurant_name, is_missing_flag=is_missing)
+            
+            tzuyang_review = restaurant_data.get('tzuyang_review') if restaurant_data else None
+            output = {
+                "youtube_link": youtube_link, "status": "pending", "youtube_meta": youtube_meta,
+                "name": restaurant_name,
+                "phone": restaurant_data.get('phone') if restaurant_data else None,
+                "category": restaurant_data.get('category') if restaurant_data else None,
+                "reasoning_basis": restaurant_data.get('reasoning_basis') if restaurant_data else None,
+                "tzuyang_review": tzuyang_review,
+                "origin_address": {
+                    "address": restaurant_data.get('address'),
+                    "lat": restaurant_data.get('lat'),
+                    "lng": restaurant_data.get('lng')
+                } if restaurant_data else None,
+                "roadAddress": loc_data["roadAddress"],
+                "jibunAddress": loc_data["jibunAddress"],
+                "englishAddress": loc_data["englishAddress"],
+                "addressElements": loc_data["addressElements"],
+                "geocoding_success": loc_data["geocoding_success"],
+                "geocoding_false_stage": loc_data["geocoding_false_stage"],
+                "is_missing": is_missing,
+                "is_notSelected": not is_target,
+                "evaluation_results": None
+            }
+            output['unique_id'] = generate_unique_id(youtube_link, restaurant_name, tzuyang_review)
+            flattened_results.append(output)
+
+    return flattened_results
+
+# --- 메인 실행 로직 ---
+def main():
+    written_ids = set()
     stats = {
-        'total_videos': 0,
-        'total_restaurants': 0,
-        'missing_restaurants': 0,
-        'geocoding_success': 0,
-        'geocoding_failed': 0
+        "results_lines": 0,
+        "notselection_lines": 0,
+        "total_processed": 0,
+        "total_written": 0,
+        "total_skipped": 0
     }
     
-    print(f"📂 입력 파일: {input_path}")
-    print(f"📝 변환 시작...")
-    
-    with open(input_path, 'r', encoding='utf-8') as f:
-        for line_num, line in enumerate(f, 1):
-            if not line.strip():
-                continue
+    # 출력 디렉토리 생성 (필요한 경우)
+    try:
+        os.makedirs(os.path.dirname(OUTPUT_FILE), exist_ok=True)
+    except Exception as e:
+        print(f"출력 디렉토리 생성 실패: {e}")
+        return
+
+    # 1. & 2. 파일 처리 및 쓰기 (하나의 'w' 컨텍스트에서)
+    try:
+        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f_out:
             
+            # --- 1. 'results' 파일 처리 ---
+            print(f"'{INPUT_FILE_RESULTS}' 파일 처리 시작...")
             try:
-                record = json.loads(line)
-            except json.JSONDecodeError as e:
-                print(f"⚠️ 라인 {line_num}: JSON 파싱 실패 - {e}")
-                continue
-            
-            stats['total_videos'] += 1
-            
-            youtube_link = record['youtube_link']
-            youtube_meta = record.get('youtube_meta', {})
-            evaluation_results = record['evaluation_results']
-            
-            # 1. Missing 음식점 처리
-            missing_restaurants = evaluation_results.get('visit_authenticity', {}).get('missing', [])
-            
-            for missing_name in missing_restaurants:
-                # 중복 체크
-                key = f"{youtube_link}|||{missing_name}"
-                if key in existing_keys:
-                    skipped_count += 1
-                    continue
-                
-                stats['missing_restaurants'] += 1
-                
-                transformed_records.append({
-                    "youtube_link": youtube_link,
-                    "restaurant_name": missing_name,
-                    "status": "missing",
-                    "missing_message": f"youtube_link에서 음식점 누락({missing_name}) 존재",
-                    "youtube_meta": youtube_meta,
-                    "evaluation_results": None,
-                    "restaurant_info": None,
-                    "geocoding_success": False,
-                    "geocoding_fail_reason": "Missing 음식점 - 데이터 없음"
-                })
-            
-            # 2. 정상 음식점 처리
-            restaurants = record.get('restaurants', [])
-            
-            for restaurant in restaurants:
-                restaurant_name = restaurant['name']
-                
-                # 중복 체크
-                key = f"{youtube_link}|||{restaurant_name}"
-                if key in existing_keys:
-                    skipped_count += 1
-                    continue
-                
-                stats['total_restaurants'] += 1
-                
-                # 평가 결과 추출 (해당 음식점만)
-                restaurant_evaluation = extract_restaurant_evaluation(
-                    evaluation_results,
-                    restaurant_name
-                )
-                
-                # 지오코딩 성공 여부 확인
-                location_match = restaurant_evaluation.get('location_match_TF')
-                geocoding_success = location_match and location_match.get('eval_value', False)
-                geocoding_fail_reason = None
-                
-                if not geocoding_success and location_match:
-                    geocoding_fail_reason = location_match.get('falseMessage', '알 수 없는 이유')
-                    stats['geocoding_failed'] += 1
-                elif geocoding_success:
-                    stats['geocoding_success'] += 1
-                
-                # Naver 주소 정보 추출
-                naver_address_info = get_naver_address_info(location_match)
-                
-                # 카테고리 수정 여부 확인
-                category_tf = restaurant_evaluation.get('category_TF')
-                final_category = restaurant.get('category')
-                
-                if category_tf and not category_tf.get('eval_value'):
-                    # 카테고리 수정이 있는 경우
-                    final_category = category_tf.get('category_revision', final_category)
-                
-                transformed_records.append({
-                    "youtube_link": youtube_link,
-                    "restaurant_name": restaurant_name,
-                    "status": "pending",  # 미처리
-                    "youtube_meta": youtube_meta,
-                    "evaluation_results": restaurant_evaluation,
-                    "restaurant_info": {
-                        "name": restaurant['name'],
-                        "phone": restaurant.get('phone'),
-                        "category": final_category,
-                        "origin_address": restaurant.get('address'),
-                        "origin_lat": restaurant.get('lat'),
-                        "origin_lng": restaurant.get('lng'),
-                        "reasoning_basis": restaurant.get('reasoning_basis'),
-                        "tzuyang_review": restaurant.get('tzuyang_review'),
-                        "naver_address_info": naver_address_info
-                    },
-                    "geocoding_success": geocoding_success,
-                    "geocoding_fail_reason": geocoding_fail_reason
-                })
-            
-            # 진행 상황 표시
-            if line_num % 50 == 0:
-                print(f"  처리 중... {line_num}개 영상")
-    
-    # 결과 저장 (append 모드로 기존 데이터에 추가)
-    mode = 'a' if output_path.exists() else 'w'
-    with open(output_path, mode, encoding='utf-8') as f:
-        for record in transformed_records:
-            f.write(json.dumps(record, ensure_ascii=False) + '\n')
-    
-    # 통계 출력
-    print(f"\n✅ 변환 완료!")
-    print(f"📊 통계:")
-    print(f"   - 총 영상: {stats['total_videos']}개")
-    print(f"   - 새 음식점: {stats['total_restaurants']}개")
-    print(f"   - 새 Missing 음식점: {stats['missing_restaurants']}개")
-    print(f"   - 중복 스킵: {skipped_count}개")
-    print(f"   - 지오코딩 성공: {stats['geocoding_success']}개")
-    print(f"   - 지오코딩 실패: {stats['geocoding_failed']}개")
-    print(f"   - 새 레코드: {len(transformed_records)}개")
-    print(f"\n📁 출력 파일: {output_path}")
-    
-    return transformed_records, stats
+                with open(INPUT_FILE_RESULTS, 'r', encoding='utf-8') as f_in:
+                    for i, line in enumerate(f_in):
+                        stats["results_lines"] += 1
+                        try:
+                            data = json.loads(line)
+                            transformed_list = transform_json_object(data, source_file_type='results')
+                            
+                            for entry in transformed_list:
+                                stats["total_processed"] += 1
+                                uid = entry.get('unique_id')
+                                
+                                if uid not in written_ids:
+                                    f_out.write(json.dumps(entry, ensure_ascii=False) + '\n')
+                                    written_ids.add(uid)
+                                    stats["total_written"] += 1
+                                else:
+                                    stats["total_skipped"] += 1
+                                    
+                        except json.JSONDecodeError:
+                            print(f"  [경고] '{INPUT_FILE_RESULTS}' {i+1}번째 줄 JSON 디코딩 실패. 건너뜁니다.")
+                        except Exception as e:
+                            print(f"  [오류] '{INPUT_FILE_RESULTS}' {i+1}번째 줄 처리 중 오류: {e}")
+            except FileNotFoundError:
+                print(f"  [오류] '{INPUT_FILE_RESULTS}' 파일을 찾을 수 없습니다.")
+            except Exception as e:
+                print(f"  [오류] '{INPUT_FILE_RESULTS}' 파일 읽기 중 오류: {e}")
 
-
-def transform_notselection_results(
-    input_file: str = "tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl",
-    output_file: str = "transform.jsonl"
-):
-    """
-    평가 미대상(notSelection) 데이터를 transform.jsonl에 추가
-    
-    Args:
-        input_file: 평가 미대상 파일 경로
-        output_file: 출력 파일 경로
-    """
-    input_path = Path(input_file)
-    output_path = Path(output_file)
-    
-    if not input_path.exists():
-        print(f"⚠️ 평가 미대상 파일을 찾을 수 없습니다: {input_file}")
-        return [], {'total_videos': 0, 'total_restaurants': 0}
-    
-    # 기존 transform.jsonl에서 이미 처리된 키 로드
-    existing_keys = set()
-    if output_path.exists():
-        print(f"📂 기존 transform 파일에서 중복 확인 중...")
-        with open(output_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                try:
-                    record = json.loads(line)
-                    key = f"{record['youtube_link']}|||{record['restaurant_name']}"
-                    existing_keys.add(key)
-                except:
-                    pass
-        print(f"✅ 기존 레코드: {len(existing_keys)}개")
-    
-    transformed_records = []
-    skipped_count = 0
-    stats = {
-        'total_videos': 0,
-        'total_restaurants': 0
-    }
-    
-    print(f"📂 평가 미대상 파일: {input_path}")
-    print(f"📝 변환 시작...")
-    
-    with open(input_path, 'r', encoding='utf-8') as f:
-        for line_num, line in enumerate(f, 1):
-            if not line.strip():
-                continue
-            
+            # --- 2. 'notSelection' 파일 처리 ---
+            print(f"'{INPUT_FILE_NOTSELECTION}' 파일 처리 시작...")
             try:
-                record = json.loads(line)
-            except json.JSONDecodeError as e:
-                print(f"⚠️ 라인 {line_num}: JSON 파싱 실패 - {e}")
-                continue
-            
-            stats['total_videos'] += 1
-            
-            youtube_link = record['youtube_link']
-            youtube_meta = record.get('youtube_meta', {})
-            
-            # 모든 음식점 처리
-            restaurants = record.get('restaurants', [])
-            
-            for restaurant in restaurants:
-                restaurant_name = restaurant['name']
-                
-                # 중복 체크
-                key = f"{youtube_link}|||{restaurant_name}"
-                if key in existing_keys:
-                    skipped_count += 1
-                    continue
-                
-                stats['total_restaurants'] += 1
-                
-                transformed_records.append({
-                    "youtube_link": youtube_link,
-                    "restaurant_name": restaurant_name,
-                    "status": "not_selected",  # 평가 미대상
-                    "youtube_meta": youtube_meta,
-                    "evaluation_results": None,  # 평가 안함
-                    "restaurant_info": {
-                        "name": restaurant['name'],
-                        "phone": restaurant.get('phone'),
-                        "category": restaurant.get('category'),
-                        "origin_address": restaurant.get('address'),
-                        "origin_lat": restaurant.get('lat'),
-                        "origin_lng": restaurant.get('lng'),
-                        "reasoning_basis": restaurant.get('reasoning_basis'),
-                        "tzuyang_review": restaurant.get('tzuyang_review'),
-                        "naver_address_info": None
-                    },
-                    "geocoding_success": False,
-                    "geocoding_fail_reason": "평가 미대상 - 주소 정보 없음"
-                })
-            
-            # 진행 상황 표시
-            if line_num % 50 == 0:
-                print(f"  처리 중... {line_num}개 영상")
+                with open(INPUT_FILE_NOTSELECTION, 'r', encoding='utf-8') as f_in:
+                    for i, line in enumerate(f_in):
+                        stats["notselection_lines"] += 1
+                        try:
+                            data = json.loads(line)
+                            transformed_list = transform_json_object(data, source_file_type='notSelection')
+                            
+                            for entry in transformed_list:
+                                stats["total_processed"] += 1
+                                uid = entry.get('unique_id')
+                                
+                                if uid not in written_ids:
+                                    f_out.write(json.dumps(entry, ensure_ascii=False) + '\n')
+                                    written_ids.add(uid)
+                                    stats["total_written"] += 1
+                                else:
+                                    stats["total_skipped"] += 1
+                                    
+                        except json.JSONDecodeError:
+                            print(f"  [경고] '{INPUT_FILE_NOTSELECTION}' {i+1}번째 줄 JSON 디코딩 실패. 건너뜁니다.")
+                        except Exception as e:
+                            print(f"  [오류] '{INPUT_FILE_NOTSELECTION}' {i+1}번째 줄 처리 중 오류: {e}")
+            except FileNotFoundError:
+                print(f"  [오류] '{INPUT_FILE_NOTSELECTION}' 파일을 찾을 수 없습니다.")
+            except Exception as e:
+                print(f"  [오류] '{INPUT_FILE_NOTSELECTION}' 파일 읽기 중 오류: {e}")
     
-    # 결과 저장 (append 모드로 기존 데이터에 추가)
-    mode = 'a' if output_path.exists() else 'w'
-    with open(output_path, mode, encoding='utf-8') as f:
-        for record in transformed_records:
-            f.write(json.dumps(record, ensure_ascii=False) + '\n')
-    
-    # 통계 출력
-    print(f"\n✅ 평가 미대상 변환 완료!")
-    print(f"📊 통계:")
-    print(f"   - 총 영상: {stats['total_videos']}개")
-    print(f"   - 새 음식점: {stats['total_restaurants']}개")
-    print(f"   - 중복 스킵: {skipped_count}개")
-    print(f"   - 새 레코드: {len(transformed_records)}개")
-    print(f"\n📁 출력 파일: {output_path}")
-    
-    return transformed_records, stats
+    except Exception as e:
+        print(f"'{OUTPUT_FILE}' 파일 쓰기 중 치명적 오류 발생: {e}")
+        return
 
+    # --- 3. 최종 통계 출력 ---
+    print("\n--- 🚀 작업 완료: 처리 통계 ---")
+    print(f"  'results' 파일 처리 라인: {stats['results_lines']} 개")
+    print(f"  'notSelection' 파일 처리 라인: {stats['notselection_lines']} 개")
+    print("-" * 30)
+    print(f"  총 변환 시도 항목: {stats['total_processed']} 개")
+    print(f"  ✅ 최종 파일에 쓰인 항목: {stats['total_written']} 개")
+    print(f"  ⏭️ 중복으로 건너뛴 항목: {stats['total_skipped']} 개")
+    print(f"\n결과가 '{OUTPUT_FILE}' 파일에 저장되었습니다.")
 
 if __name__ == "__main__":
-    import sys
-    import os
-    
-    # 스크립트가 src/ 디렉토리에서 실행될 때 프로젝트 루트로 이동
-    script_dir = Path(__file__).parent
-    project_root = script_dir.parent
-    os.chdir(project_root)
-    
-    # 명령줄 인자 처리
-    input_file = sys.argv[1] if len(sys.argv) > 1 else "tzuyang_restaurant_evaluation_results.jsonl"
-    output_file = sys.argv[2] if len(sys.argv) > 2 else "transform.jsonl"
-    notselection_file = sys.argv[3] if len(sys.argv) > 3 else "tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl"
-    
-    try:
-        # 1. 평가 결과 transform
-        print("=" * 80)
-        print("📋 Step 1: 평가 결과 변환")
-        print("=" * 80)
-        transform_evaluation_results(input_file, output_file)
-        
-        # 2. 평가 미대상 transform
-        print("\n" + "=" * 80)
-        print("📋 Step 2: 평가 미대상 변환")
-        print("=" * 80)
-        transform_notselection_results(notselection_file, output_file)
-        
-        print("\n" + "=" * 80)
-        print("🎉 모든 변환 작업 완료!")
-        print("=" * 80)
-        
-    except Exception as e:
-        print(f"❌ 오류 발생: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    main()
