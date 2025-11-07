@@ -1,101 +1,162 @@
-# 🔄 데이터베이스 최적화 변경사항 요약 (v2.0)
+# 🔄 데이터베이스 최적화 변경사항 요약 (v3.0)
 
 ## 📅 날짜
-2025년 11월 7일 - 버전 2.0 (최종 최적화)
+2025년 11월 7일 - 버전 3.0 (테이블 통합 및 승인 시스템)
 
 ---
 
-## 🎯 v2.0 주요 변경사항
+## 🎯 v3.0 주요 변경사항
 
-### 🔥 evaluation_records 테이블 대폭 개선
-- ✅ **명확한 컬럼 구조**: 모호했던 JSONB 필드를 개별 컬럼으로 분리
-- ✅ **상태 관리 단순화**: 복잡한 status 값들을 'pending'으로 통일, 플래그로 상태 관리
-- ✅ **지오코딩 추적 강화**: 성공/실패 단계를 명확히 추적
-- ✅ **데이터 무결성**: 복합 제약조건으로 일관성 보장
+### 🔥 restaurants + evaluation_records 테이블 통합
+- ✅ **테이블 통합**: evaluation_records를 restaurants 테이블로 완전 통합
+- ✅ **승인 시스템**: status 필드로 승인 관리 (pending, approved, rejected)
+- ✅ **RLS 정책**: 일반 사용자는 승인된 맛집만 조회 가능
+- ✅ **관리자 기능**: 승인/거부 함수 추가
+- ✅ **데이터 무결성**: 승인 시 필수 필드 검증
 
 ### 📊 테이블별 세부 변경사항
 
-#### evaluation_records (평가 기록) - 완전 재설계
-**추가된 컬럼:**
+#### restaurants (맛집 정보) - 완전 재설계 (통합)
+**추가된 컬럼 (evaluation_records에서 이동):**
 ```sql
-✅ name TEXT                      -- 맛집 이름
-✅ phone TEXT                     -- 전화번호
-✅ category TEXT                  -- 카테고리
-✅ reasoning_basis TEXT           -- 평가 근거
-✅ tzuyang_review TEXT            -- 쯔양 리뷰 내용
-✅ origin_address JSONB           -- 원본 주소 정보 {address, lat, lng}
-✅ road_address TEXT              -- 도로명 주소
-✅ jibun_address TEXT             -- 지번 주소
-✅ english_address TEXT           -- 영문 주소
-✅ address_elements JSONB         -- 주소 상세 요소
-✅ geocoding_false_stage INTEGER  -- 지오코딩 실패 단계 (0, 1, 2)
-✅ is_missing BOOLEAN             -- 맛집 정보 누락 여부
-✅ is_not_selected BOOLEAN        -- 선택되지 않음 여부
+✅ unique_id TEXT UNIQUE               -- AI 크롤링 고유 식별자
+✅ status TEXT                         -- 승인 상태 (pending, approved, rejected)
+✅ youtube_meta JSONB                  -- 개별 유튜브 메타데이터 (AI 크롤링용)
+✅ evaluation_results JSONB            -- AI 평가 결과
+✅ reasoning_basis TEXT                -- AI 평가 근거
+✅ origin_address JSONB                -- AI 크롤링 원본 주소
+✅ geocoding_success BOOLEAN           -- 지오코딩 성공 여부
+✅ geocoding_false_stage INTEGER       -- 지오코딩 실패 단계 (0, 1, 2)
+✅ is_missing BOOLEAN                  -- 맛집 정보 누락 여부
+✅ is_not_selected BOOLEAN             -- 선택되지 않음 여부
+✅ admin_notes TEXT                    -- 관리자 메모
 ```
 
-**제거된 컬럼:**
+**변경된 컬럼:**
 ```sql
-❌ restaurant_name              → name으로 대체
-❌ source_type                  → 불필요 (모두 perplexity)
-❌ restaurant_info              → 개별 컬럼으로 분리
-❌ geocoding_fail_reason        → geocoding_false_stage로 대체
-❌ db_conflict_info             → 불필요
-❌ missing_message              → is_missing으로 대체
-❌ status CHECK 제약조건        → 단순화 ('pending'만 사용)
+🔄 lat NUMERIC NOT NULL              → lat NUMERIC (NULL 허용)
+🔄 lng NUMERIC NOT NULL              → lng NUMERIC (NULL 허용)
+🔄 category TEXT[] NOT NULL          → category TEXT[] (NULL 허용)
+🔄 youtube_links 유지                 -- 복수 링크 배열
+🔄 youtube_metas 유지                 -- 복수 메타데이터 배열
 ```
 
 **추가된 제약조건:**
 ```sql
-✅ evaluation_records_address_check
+✅ restaurants_approved_data_check
+   - status = 'approved'일 때: lat, lng, category, 주소 필수
+   - status = 'pending' 또는 'rejected'일 때: 제약 없음
+
+✅ restaurants_geocoding_stage_check
+   - 성공 시: geocoding_false_stage = NULL
+   - 실패 시: geocoding_false_stage = 0, 1, 2 중 하나
+
+✅ restaurants_missing_data_check
    - 누락이 아닌 경우 주소 필수
-
-✅ evaluation_records_geocoding_stage_check
-   - 성공 시 stage = NULL
-   - 실패 시 stage = 0, 1, 2 중 하나
 ```
 
-**추가된 인덱스 (총 15개):**
+**추가된 인덱스 (총 18개 추가):**
 ```sql
-✅ idx_evaluation_records_name                  -- 맛집 이름 검색
-✅ idx_evaluation_records_youtube_link          -- YouTube 링크 검색
-✅ idx_evaluation_records_geocoding_failed     -- 지오코딩 실패 케이스 (부분)
-✅ idx_evaluation_records_missing              -- 누락된 맛집 (부분)
-✅ idx_evaluation_records_not_selected         -- 선택되지 않은 맛집 (부분)
-✅ idx_evaluation_records_pending              -- 대기 중인 평가 (부분)
-✅ idx_evaluation_records_geocoding_status     -- 지오코딩 상태 (복합)
-✅ idx_evaluation_records_flags                -- 플래그 복합 검색
-✅ 4개의 JSONB GIN 인덱스 추가
+✅ idx_restaurants_status                      -- 상태 검색
+✅ idx_restaurants_unique_id                   -- AI 크롤링 ID
+✅ idx_restaurants_geocoding_success           -- 지오코딩 성공 여부
+✅ idx_restaurants_geocoding_false_stage      -- 지오코딩 실패 단계
+✅ idx_restaurants_approved                    -- 승인된 맛집 (부분)
+✅ idx_restaurants_approved_with_reviews      -- 리뷰 있는 승인 맛집 (부분)
+✅ idx_restaurants_pending                     -- 대기 중인 맛집 (부분)
+✅ idx_restaurants_rejected                    -- 거부된 맛집 (부분)
+✅ idx_restaurants_missing                     -- 누락된 맛집 (부분)
+✅ idx_restaurants_not_selected               -- 미선택 맛집 (부분)
+✅ idx_restaurants_youtube_meta               -- YouTube 메타 JSONB
+✅ idx_restaurants_evaluation_results         -- 평가 결과 JSONB
+✅ idx_restaurants_origin_address             -- 원본 주소 JSONB
+✅ idx_restaurants_status_created             -- 상태+생성일 복합
 ```
 
-**추가된 함수 (2개):**
+**제거된 테이블:**
 ```sql
-✅ get_evaluation_records_stats()
-   - 전체 통계 조회 (총 개수, 성공률, 누락, 미선택 등)
-
-✅ extract_restaurant_from_evaluation(id)
-   - restaurants 테이블 삽입용 데이터 추출
+❌ evaluation_records                -- restaurants로 완전 통합
 ```
 
 ---
 
-#### restaurants (맛집 정보) - 검증 강화
-**강화된 제약조건:**
+#### RLS 정책 변경
+
+**restaurants 테이블:**
 ```sql
-✅ name: 2-100자
-✅ phone: 정규식 검증 (02-1234-5678 또는 010-1234-5678)
-✅ category: 1-5개 제한
-✅ review_count: NOT NULL DEFAULT 0
-✅ 제약조건명 변경: restaurants_address_check → restaurants_address_required
+✅ "Approved restaurants are viewable by everyone"
+   - 일반 사용자: status = 'approved'인 맛집만 조회
+
+✅ "Admins can view all restaurants"
+   - 관리자: 모든 status의 맛집 조회
+
+✅ "Admins can insert/update/delete restaurants"
+   - 관리자만 맛집 생성/수정/삭제 가능
 ```
 
-**추가된 인덱스:**
+**제거된 정책:**
 ```sql
-✅ idx_restaurants_name                        -- 이름 검색
-✅ idx_restaurants_review_count               -- 리뷰 수 정렬
-✅ idx_restaurants_tzuyang_reviews            -- 쯔양 리뷰 JSONB 검색
-✅ idx_restaurants_category_location          -- 카테고리+위치 복합 (INCLUDE)
-✅ idx_restaurants_location_review_count      -- 위치+리뷰수 복합
-✅ idx_restaurants_with_reviews               -- 리뷰 있는 맛집만 (부분)
+❌ "Restaurants are viewable by everyone"
+❌ evaluation_records 관련 모든 정책
+```
+
+---
+
+#### 추가된 함수 (4개)
+
+**1. get_restaurant_stats_by_status()**
+```sql
+✅ 맛집 통계 조회 (상태별)
+   - total_records: 전체 맛집 수
+   - approved_count: 승인된 맛집 수
+   - pending_count: 대기 중인 맛집 수
+   - rejected_count: 거부된 맛집 수
+   - geocoding_success_count: 지오코딩 성공 수
+   - geocoding_failed_count: 지오코딩 실패 수
+   - missing_count: 누락된 맛집 수
+   - not_selected_count: 미선택 맛집 수
+   - geocoding_success_rate: 지오코딩 성공률 (%)
+   - approval_rate: 승인률 (%)
+```
+
+**2. get_approved_restaurants(limit, offset)**
+```sql
+✅ 승인된 맛집 조회 (일반 사용자용)
+   - status = 'approved'인 맛집만 반환
+   - 페이징 지원
+```
+
+**3. approve_restaurant(restaurant_id, admin_user_id)**
+```sql
+✅ 맛집 승인 처리
+   - 관리자 권한 확인
+   - status = 'pending' → 'approved'
+   - updated_by_admin_id 기록
+```
+
+**4. reject_restaurant(restaurant_id, admin_user_id, reject_reason)**
+```sql
+✅ 맛집 거부 처리
+   - 관리자 권한 확인
+   - status = 'pending' → 'rejected'
+   - admin_notes에 거부 사유 기록
+```
+
+**제거된 함수:**
+```sql
+❌ get_evaluation_records_stats()
+❌ extract_restaurant_from_evaluation()
+```
+
+---
+
+#### Materialized View 업데이트
+
+**mv_restaurant_stats:**
+```sql
+🔄 WHERE r.status = 'approved' 추가
+   - 승인된 맛집만 통계에 포함
+   - status 컬럼 추가
 ```
 
 ---

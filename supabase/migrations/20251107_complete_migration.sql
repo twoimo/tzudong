@@ -1,7 +1,14 @@
 -- ========================================
--- 쯔양 맛집 지도 - 완전 통합 마이그레이션 파일
+-- 쯔양 맛집 지도 - 완전 통합 마이그레이션 파일 (v3.0)
 -- 작성일: 2025년 11월 7일
+-- 버전: 3.0 - restaurants + evaluation_records 테이블 통합
 -- 설명: 모든 테이블, 함수, 정책을 포함한 완전한 데이터베이스 스키마
+-- 
+-- 주요 변경사항:
+-- - restaurants와 evaluation_records 테이블 통합
+-- - 승인 시스템 추가 (status: pending, approved, rejected)
+-- - RLS 정책: 일반 사용자는 승인된 맛집만 조회
+-- - 관리자 전용 승인/거부 함수 추가
 -- ========================================
 
 -- ========================================
@@ -72,49 +79,109 @@ COMMENT ON COLUMN public.profiles.email IS '이메일 주소 (형식 검증)';
 COMMENT ON COLUMN public.profiles.profile_picture IS '프로필 이미지 URL';
 COMMENT ON COLUMN public.profiles.last_login IS '마지막 로그인 시간';
 
--- 2.3 맛집 정보 테이블
+-- 2.3 맛집 정보 테이블 (통합: restaurants + evaluation_records)
 DROP TABLE IF EXISTS public.restaurants CASCADE;
 CREATE TABLE public.restaurants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- 기본 정보
     name TEXT NOT NULL CHECK (length(name) >= 2 AND length(name) <= 100),
     phone TEXT CHECK (phone IS NULL OR phone ~ '^\d{2,3}-\d{3,4}-\d{4}$'),
-    lat NUMERIC NOT NULL CHECK (lat >= -90 AND lat <= 90),
-    lng NUMERIC NOT NULL CHECK (lng >= -180 AND lng <= 180),
     description TEXT,
-    category TEXT[] NOT NULL CHECK (array_length(category, 1) > 0 AND array_length(category, 1) <= 5),
+    category TEXT[] CHECK (category IS NULL OR (array_length(category, 1) > 0 AND array_length(category, 1) <= 5)),
+    
+    -- 위치 정보
+    lat NUMERIC CHECK (lat IS NULL OR (lat >= -90 AND lat <= 90)),
+    lng NUMERIC CHECK (lng IS NULL OR (lng >= -180 AND lng <= 180)),
+    
+    -- 주소 정보
     road_address TEXT,
     jibun_address TEXT,
     english_address TEXT,
     address_elements JSONB DEFAULT '{}'::JSONB,
+    origin_address JSONB,  -- AI 크롤링 원본 주소 정보 (JSON: {address, lat, lng})
+    
+    -- 유튜브 관련 정보
     youtube_links TEXT[] DEFAULT ARRAY[]::TEXT[],
-    tzuyang_reviews JSONB DEFAULT '[]'::JSONB,
-    youtube_metas JSONB DEFAULT '[]'::JSONB,
+    youtube_meta JSONB,  -- 개별 유튜브 메타데이터 (AI 크롤링용)
+    youtube_metas JSONB DEFAULT '[]'::JSONB,  -- 복수 유튜브 메타데이터 배열
+    unique_id TEXT UNIQUE,  -- AI 크롤링 고유 식별자 (youtube_link 기반)
+    
+    -- 쯔양 리뷰 정보
+    tzuyang_reviews JSONB DEFAULT '[]'::JSONB,  -- 쯔양 리뷰 정보 (JSONB 배열)
+    reasoning_basis TEXT,  -- AI 평가 근거
+    
+    -- AI 평가 정보
+    evaluation_results JSONB,  -- AI 평가 결과 (JSON)
+    
+    -- 지오코딩 정보
+    geocoding_success BOOLEAN NOT NULL DEFAULT false,
+    geocoding_false_stage INTEGER CHECK (geocoding_false_stage IS NULL OR geocoding_false_stage IN (0, 1, 2)),
+    
+    -- 상태 관리
+    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    is_missing BOOLEAN NOT NULL DEFAULT false,  -- 맛집 정보 누락 여부
+    is_not_selected BOOLEAN NOT NULL DEFAULT false,  -- 선택되지 않음 여부
+    
+    -- 리뷰 통계
     review_count INTEGER NOT NULL DEFAULT 0 CHECK (review_count >= 0),
+    
+    -- 관리자 정보
+    admin_notes TEXT,  -- 관리자 메모
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     
+    -- 타임스탬프
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+    
     -- 데이터 무결성을 위한 제약조건
-    CONSTRAINT restaurants_address_required CHECK (
-        road_address IS NOT NULL OR jibun_address IS NOT NULL
+    CONSTRAINT restaurants_approved_data_check CHECK (
+        -- status가 'approved'인 경우 필수 데이터 검증
+        (status = 'approved' AND 
+         lat IS NOT NULL AND 
+         lng IS NOT NULL AND 
+         category IS NOT NULL AND
+         (road_address IS NOT NULL OR jibun_address IS NOT NULL)) OR
+        -- 그 외의 status는 제약 없음
+        status IN ('pending', 'rejected')
+    ),
+    CONSTRAINT restaurants_geocoding_stage_check CHECK (
+        (geocoding_success = true AND geocoding_false_stage IS NULL) OR
+        (geocoding_success = false AND geocoding_false_stage IS NOT NULL) OR
+        (geocoding_success = false AND geocoding_false_stage IS NULL)
+    ),
+    CONSTRAINT restaurants_missing_data_check CHECK (
+        (is_missing = false AND (road_address IS NOT NULL OR jibun_address IS NOT NULL)) OR
+        is_missing = true
     )
 );
 
-COMMENT ON TABLE public.restaurants IS '맛집 정보 테이블';
+COMMENT ON TABLE public.restaurants IS '맛집 정보 통합 테이블 (restaurants + evaluation_records)';
 COMMENT ON COLUMN public.restaurants.name IS '맛집 이름 (2-100자)';
 COMMENT ON COLUMN public.restaurants.phone IS '전화번호 (형식: 02-1234-5678 또는 010-1234-5678)';
-COMMENT ON COLUMN public.restaurants.lat IS '위도 (범위: -90 ~ 90)';
-COMMENT ON COLUMN public.restaurants.lng IS '경도 (범위: -180 ~ 180)';
-COMMENT ON COLUMN public.restaurants.category IS '맛집 카테고리 배열 (1-5개)';
+COMMENT ON COLUMN public.restaurants.lat IS '위도 (범위: -90 ~ 90, status=approved일 때 필수)';
+COMMENT ON COLUMN public.restaurants.lng IS '경도 (범위: -180 ~ 180, status=approved일 때 필수)';
+COMMENT ON COLUMN public.restaurants.category IS '맛집 카테고리 배열 (1-5개, status=approved일 때 필수)';
 COMMENT ON COLUMN public.restaurants.road_address IS '도로명 주소';
 COMMENT ON COLUMN public.restaurants.jibun_address IS '지번 주소';
 COMMENT ON COLUMN public.restaurants.english_address IS '영문 주소';
 COMMENT ON COLUMN public.restaurants.address_elements IS '주소 상세 정보 (JSONB)';
+COMMENT ON COLUMN public.restaurants.origin_address IS 'AI 크롤링 원본 주소 정보 (JSON: {address, lat, lng})';
 COMMENT ON COLUMN public.restaurants.youtube_links IS '유튜브 영상 링크 배열';
+COMMENT ON COLUMN public.restaurants.youtube_meta IS '개별 유튜브 메타데이터 (AI 크롤링용)';
+COMMENT ON COLUMN public.restaurants.youtube_metas IS '복수 유튜브 메타데이터 배열';
+COMMENT ON COLUMN public.restaurants.unique_id IS 'AI 크롤링 고유 식별자 (youtube_link 기반)';
 COMMENT ON COLUMN public.restaurants.tzuyang_reviews IS '쯔양 리뷰 정보 (JSONB 배열)';
-COMMENT ON COLUMN public.restaurants.youtube_metas IS '유튜브 메타데이터 (JSONB 배열)';
+COMMENT ON COLUMN public.restaurants.reasoning_basis IS 'AI 평가 근거';
+COMMENT ON COLUMN public.restaurants.evaluation_results IS 'AI 평가 결과 (JSON)';
+COMMENT ON COLUMN public.restaurants.geocoding_success IS '지오코딩 성공 여부';
+COMMENT ON COLUMN public.restaurants.geocoding_false_stage IS '지오코딩 실패 단계 (0: 초기, 1: 중간, 2: 최종)';
+COMMENT ON COLUMN public.restaurants.status IS '승인 상태 (pending: 대기, approved: 승인, rejected: 거부)';
+COMMENT ON COLUMN public.restaurants.is_missing IS '맛집 정보 누락 여부';
+COMMENT ON COLUMN public.restaurants.is_not_selected IS '선택되지 않음 여부';
 COMMENT ON COLUMN public.restaurants.review_count IS '리뷰 개수 (0 이상)';
+COMMENT ON COLUMN public.restaurants.admin_notes IS '관리자 메모';
 
 -- 2.4 리뷰 테이블
 DROP TABLE IF EXISTS public.reviews CASCADE;
@@ -247,81 +314,11 @@ COMMENT ON COLUMN public.announcements.message IS '공지 내용 (1자 이상)';
 COMMENT ON COLUMN public.announcements.is_active IS '공지 활성화 여부';
 COMMENT ON COLUMN public.announcements.data IS '추가 데이터 (JSONB)';
 
--- 2.10 평가 기록 테이블 (Perplexity 크롤링 결과)
-DROP TABLE IF EXISTS public.evaluation_records CASCADE;
-CREATE TABLE public.evaluation_records (
-    id BIGSERIAL PRIMARY KEY,
-    unique_id TEXT NOT NULL UNIQUE,
-    youtube_link TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    
-    -- YouTube 메타데이터
-    youtube_meta JSONB,
-    
-    -- AI 평가 결과
-    evaluation_results JSONB,
-    
-    -- 맛집 기본 정보
-    name TEXT,
-    phone TEXT,
-    category TEXT,
-    reasoning_basis TEXT,
-    tzuyang_review TEXT,
-    
-    -- 주소 정보
-    origin_address JSONB,
-    road_address TEXT,
-    jibun_address TEXT,
-    english_address TEXT,
-    address_elements JSONB,
-    
-    -- 지오코딩 정보
-    geocoding_success BOOLEAN NOT NULL DEFAULT false,
-    geocoding_false_stage INTEGER CHECK (geocoding_false_stage IN (0, 1, 2)),
-    
-    -- 상태 플래그
-    is_missing BOOLEAN NOT NULL DEFAULT false,
-    is_not_selected BOOLEAN NOT NULL DEFAULT false,
-    
-    -- 관리자 메모
-    admin_notes TEXT,
-    
-    -- 타임스탬프
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    
-    -- 데이터 무결성 제약조건
-    CONSTRAINT evaluation_records_address_check CHECK (
-        (is_missing = false AND (road_address IS NOT NULL OR jibun_address IS NOT NULL)) OR
-        is_missing = true
-    ),
-    CONSTRAINT evaluation_records_geocoding_stage_check CHECK (
-        (geocoding_success = true AND geocoding_false_stage IS NULL) OR
-        (geocoding_success = false AND geocoding_false_stage IS NOT NULL)
-    )
-);
-
-COMMENT ON TABLE public.evaluation_records IS 'Perplexity AI 크롤링 맛집 평가 기록 테이블';
-COMMENT ON COLUMN public.evaluation_records.unique_id IS '고유 식별자 (youtube_link 기반)';
-COMMENT ON COLUMN public.evaluation_records.youtube_link IS '유튜브 영상 링크';
-COMMENT ON COLUMN public.evaluation_records.status IS '처리 상태 (기본값: pending)';
-COMMENT ON COLUMN public.evaluation_records.youtube_meta IS 'YouTube 메타데이터 (JSON)';
-COMMENT ON COLUMN public.evaluation_records.evaluation_results IS 'AI 평가 결과 (JSON)';
-COMMENT ON COLUMN public.evaluation_records.name IS '맛집 이름';
-COMMENT ON COLUMN public.evaluation_records.phone IS '전화번호';
-COMMENT ON COLUMN public.evaluation_records.category IS '카테고리';
-COMMENT ON COLUMN public.evaluation_records.reasoning_basis IS '평가 근거';
-COMMENT ON COLUMN public.evaluation_records.tzuyang_review IS '쯔양 리뷰 내용';
-COMMENT ON COLUMN public.evaluation_records.origin_address IS '원본 주소 정보 (JSON: {address, lat, lng})';
-COMMENT ON COLUMN public.evaluation_records.road_address IS '도로명 주소';
-COMMENT ON COLUMN public.evaluation_records.jibun_address IS '지번 주소';
-COMMENT ON COLUMN public.evaluation_records.english_address IS '영문 주소';
-COMMENT ON COLUMN public.evaluation_records.address_elements IS '주소 상세 요소 (JSON)';
-COMMENT ON COLUMN public.evaluation_records.geocoding_success IS '지오코딩 성공 여부';
-COMMENT ON COLUMN public.evaluation_records.geocoding_false_stage IS '지오코딩 실패 단계 (0: 초기, 1: 중간, 2: 최종)';
-COMMENT ON COLUMN public.evaluation_records.is_missing IS '맛집 정보 누락 여부';
-COMMENT ON COLUMN public.evaluation_records.is_not_selected IS '선택되지 않음 여부';
-COMMENT ON COLUMN public.evaluation_records.admin_notes IS '관리자 메모';
+-- 2.10 evaluation_records 테이블은 restaurants 테이블과 통합되었습니다.
+-- 모든 평가 기록은 restaurants 테이블에서 status 필드로 관리됩니다.
+-- - status = 'pending': 승인 대기 중
+-- - status = 'approved': 승인됨 (일반 사용자에게 조회 가능)
+-- - status = 'rejected': 거부됨
 
 -- ========================================
 -- PART 3: 인덱스 생성 (성능 최적화)
@@ -344,18 +341,36 @@ CREATE INDEX IF NOT EXISTS idx_restaurants_category ON public.restaurants USING 
 CREATE INDEX IF NOT EXISTS idx_restaurants_created_at ON public.restaurants(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_restaurants_review_count ON public.restaurants(review_count DESC);
 
+-- 상태 관리 인덱스
+CREATE INDEX IF NOT EXISTS idx_restaurants_status ON public.restaurants(status);
+CREATE INDEX IF NOT EXISTS idx_restaurants_unique_id ON public.restaurants(unique_id);
+CREATE INDEX IF NOT EXISTS idx_restaurants_geocoding_success ON public.restaurants(geocoding_success);
+CREATE INDEX IF NOT EXISTS idx_restaurants_geocoding_false_stage ON public.restaurants(geocoding_false_stage) WHERE geocoding_success = false;
+
+-- 부분 인덱스 (승인된 맛집만 - 일반 사용자 조회용)
+CREATE INDEX IF NOT EXISTS idx_restaurants_approved ON public.restaurants(created_at DESC, review_count DESC) 
+    WHERE status = 'approved';
+CREATE INDEX IF NOT EXISTS idx_restaurants_approved_with_reviews ON public.restaurants(review_count DESC, created_at DESC) 
+    WHERE status = 'approved' AND review_count > 0;
+
+-- 부분 인덱스 (관리자용 - 승인 대기, 거부된 맛집)
+CREATE INDEX IF NOT EXISTS idx_restaurants_pending ON public.restaurants(created_at DESC) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_restaurants_rejected ON public.restaurants(created_at DESC) WHERE status = 'rejected';
+CREATE INDEX IF NOT EXISTS idx_restaurants_missing ON public.restaurants(created_at DESC) WHERE is_missing = true;
+CREATE INDEX IF NOT EXISTS idx_restaurants_not_selected ON public.restaurants(created_at DESC) WHERE is_not_selected = true;
+
 -- JSONB 인덱스 (빠른 검색을 위한 GIN 인덱스)
 CREATE INDEX IF NOT EXISTS idx_restaurants_address_elements ON public.restaurants USING GIN(address_elements);
 CREATE INDEX IF NOT EXISTS idx_restaurants_youtube_metas ON public.restaurants USING GIN(youtube_metas);
 CREATE INDEX IF NOT EXISTS idx_restaurants_tzuyang_reviews ON public.restaurants USING GIN(tzuyang_reviews);
+CREATE INDEX IF NOT EXISTS idx_restaurants_youtube_meta ON public.restaurants USING GIN(youtube_meta);
+CREATE INDEX IF NOT EXISTS idx_restaurants_evaluation_results ON public.restaurants USING GIN(evaluation_results);
+CREATE INDEX IF NOT EXISTS idx_restaurants_origin_address ON public.restaurants USING GIN(origin_address);
 
 -- 복합 인덱스 (자주 함께 조회되는 컬럼)
 CREATE INDEX IF NOT EXISTS idx_restaurants_category_location ON public.restaurants USING GIN(category) INCLUDE (lat, lng, name);
 CREATE INDEX IF NOT EXISTS idx_restaurants_location_review_count ON public.restaurants(lat, lng, review_count DESC);
-
--- 부분 인덱스 (리뷰가 있는 맛집만)
-CREATE INDEX IF NOT EXISTS idx_restaurants_with_reviews ON public.restaurants(review_count DESC, created_at DESC) 
-    WHERE review_count > 0;
+CREATE INDEX IF NOT EXISTS idx_restaurants_status_created ON public.restaurants(status, created_at DESC);
 
 -- 전문 검색 인덱스 (pg_trgm 사용)
 CREATE INDEX IF NOT EXISTS idx_restaurants_name_trgm ON public.restaurants USING GIN(name gin_trgm_ops);
@@ -365,8 +380,13 @@ CREATE INDEX IF NOT EXISTS idx_restaurants_jibun_address_trgm ON public.restaura
 COMMENT ON INDEX idx_restaurants_name IS '맛집 이름 검색 최적화';
 COMMENT ON INDEX idx_restaurants_lat_lng IS '지도 검색 최적화를 위한 위치 인덱스';
 COMMENT ON INDEX idx_restaurants_category IS '카테고리 검색 최적화를 위한 GIN 인덱스';
+COMMENT ON INDEX idx_restaurants_status IS '상태별 검색 최적화 (pending, approved, rejected)';
+COMMENT ON INDEX idx_restaurants_unique_id IS 'AI 크롤링 고유 ID 검색 최적화';
+COMMENT ON INDEX idx_restaurants_approved IS '승인된 맛집 조회 최적화 (일반 사용자용)';
+COMMENT ON INDEX idx_restaurants_approved_with_reviews IS '리뷰가 있는 승인된 맛집 조회 최적화';
+COMMENT ON INDEX idx_restaurants_pending IS '승인 대기 맛집 조회 최적화 (관리자용)';
+COMMENT ON INDEX idx_restaurants_geocoding_false_stage IS '지오코딩 실패 단계별 조회 최적화';
 COMMENT ON INDEX idx_restaurants_address_elements IS 'JSONB 주소 요소 검색 최적화';
-COMMENT ON INDEX idx_restaurants_with_reviews IS '리뷰가 있는 인기 맛집 조회 최적화';
 COMMENT ON INDEX idx_restaurants_name_trgm IS '맛집 이름 유사도 검색 인덱스';
 COMMENT ON INDEX idx_restaurants_category_location IS '카테고리+위치 복합 검색 최적화';
 
@@ -426,44 +446,13 @@ CREATE INDEX IF NOT EXISTS idx_notifications_data ON public.notifications USING 
 COMMENT ON INDEX idx_notifications_user_created IS '사용자별 최신 알림 조회 최적화';
 COMMENT ON INDEX idx_notifications_unread IS '읽지 않은 알림 조회 최적화';
 
--- 3.6 평가 기록 테이블 인덱스
--- 기본 인덱스
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_status ON public.evaluation_records(status);
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_unique_id ON public.evaluation_records(unique_id);
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_youtube_link ON public.evaluation_records(youtube_link);
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_created_at ON public.evaluation_records(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_name ON public.evaluation_records(name);
-
--- JSONB 인덱스 (빠른 검색)
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_youtube_meta ON public.evaluation_records USING GIN(youtube_meta);
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_evaluation_results ON public.evaluation_records USING GIN(evaluation_results);
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_origin_address ON public.evaluation_records USING GIN(origin_address);
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_address_elements ON public.evaluation_records USING GIN(address_elements);
-
--- 부분 인덱스 (특정 조건만)
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_geocoding_failed ON public.evaluation_records(geocoding_false_stage, created_at DESC) 
-    WHERE geocoding_success = false;
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_missing ON public.evaluation_records(created_at DESC) 
-    WHERE is_missing = true;
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_not_selected ON public.evaluation_records(created_at DESC) 
-    WHERE is_not_selected = true;
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_pending ON public.evaluation_records(created_at DESC) 
-    WHERE status = 'pending';
-
--- 복합 인덱스
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_geocoding_status ON public.evaluation_records(geocoding_success, geocoding_false_stage);
-CREATE INDEX IF NOT EXISTS idx_evaluation_records_flags ON public.evaluation_records(is_missing, is_not_selected, status);
-
-COMMENT ON INDEX idx_evaluation_records_geocoding_failed IS '지오코딩 실패 케이스 분석 최적화';
-COMMENT ON INDEX idx_evaluation_records_missing IS '누락된 맛집 정보 조회 최적화';
-COMMENT ON INDEX idx_evaluation_records_not_selected IS '선택되지 않은 맛집 조회 최적화';
-COMMENT ON INDEX idx_evaluation_records_pending IS '대기 중인 평가 조회 최적화';
+-- 3.6 evaluation_records 테이블 인덱스 섹션 제거됨 (restaurants 테이블과 통합)
 
 -- ========================================
 -- PART 3.7: Materialized View (성능 최적화)
 -- ========================================
 
--- 3.7.1 맛집 통계 Materialized View
+-- 3.7.1 맛집 통계 Materialized View (승인된 맛집만)
 CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_restaurant_stats AS
 SELECT 
     r.id,
@@ -472,6 +461,7 @@ SELECT
     r.lat,
     r.lng,
     r.road_address,
+    r.status,
     r.review_count,
     COUNT(rv.id) AS actual_review_count,
     COUNT(rv.id) FILTER (WHERE rv.is_verified = true) AS verified_review_count,
@@ -480,7 +470,8 @@ SELECT
     array_agg(DISTINCT unnest(rv.categories)) FILTER (WHERE rv.categories IS NOT NULL) AS all_review_categories
 FROM public.restaurants r
 LEFT JOIN public.reviews rv ON r.id = rv.restaurant_id
-GROUP BY r.id, r.name, r.category, r.lat, r.lng, r.road_address, r.review_count;
+WHERE r.status = 'approved'  -- 승인된 맛집만 포함
+GROUP BY r.id, r.name, r.category, r.lat, r.lng, r.road_address, r.status, r.review_count;
 
 -- Materialized View 인덱스
 CREATE UNIQUE INDEX IF NOT EXISTS idx_mv_restaurant_stats_id ON public.mv_restaurant_stats(id);
@@ -488,7 +479,7 @@ CREATE INDEX IF NOT EXISTS idx_mv_restaurant_stats_review_count ON public.mv_res
 CREATE INDEX IF NOT EXISTS idx_mv_restaurant_stats_verified ON public.mv_restaurant_stats(verified_review_count DESC);
 CREATE INDEX IF NOT EXISTS idx_mv_restaurant_stats_location ON public.mv_restaurant_stats(lat, lng);
 
-COMMENT ON MATERIALIZED VIEW public.mv_restaurant_stats IS '맛집 통계 Materialized View (주기적 REFRESH 필요)';
+COMMENT ON MATERIALIZED VIEW public.mv_restaurant_stats IS '승인된 맛집 통계 Materialized View (status=approved만 포함, 주기적 REFRESH 필요)';
 
 -- 3.7.2 사용자 리더보드 Materialized View
 CREATE MATERIALIZED VIEW IF NOT EXISTS public.mv_user_leaderboard AS
@@ -578,7 +569,6 @@ ALTER TABLE public.server_costs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_stats ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.evaluation_records ENABLE ROW LEVEL SECURITY;
 
 -- ========================================
 -- PART 5: 함수 생성
@@ -1110,16 +1100,19 @@ $$;
 
 COMMENT ON FUNCTION public.search_restaurants IS '맛집 검색 함수 (이름, 주소 유사도 검색)';
 
--- 5.23 평가 기록 통계 조회 함수
-CREATE OR REPLACE FUNCTION public.get_evaluation_records_stats()
+-- 5.23 맛집 통계 조회 함수 (상태별)
+CREATE OR REPLACE FUNCTION public.get_restaurant_stats_by_status()
 RETURNS TABLE (
     total_records BIGINT,
+    approved_count BIGINT,
+    pending_count BIGINT,
+    rejected_count BIGINT,
     geocoding_success_count BIGINT,
     geocoding_failed_count BIGINT,
     missing_count BIGINT,
     not_selected_count BIGINT,
-    pending_count BIGINT,
-    geocoding_success_rate NUMERIC
+    geocoding_success_rate NUMERIC,
+    approval_rate NUMERIC
 )
 LANGUAGE plpgsql
 STABLE
@@ -1130,35 +1123,46 @@ BEGIN
     RETURN QUERY
     SELECT
         COUNT(*)::BIGINT as total_records,
+        COUNT(*) FILTER (WHERE status = 'approved')::BIGINT as approved_count,
+        COUNT(*) FILTER (WHERE status = 'pending')::BIGINT as pending_count,
+        COUNT(*) FILTER (WHERE status = 'rejected')::BIGINT as rejected_count,
         COUNT(*) FILTER (WHERE geocoding_success = true)::BIGINT as geocoding_success_count,
         COUNT(*) FILTER (WHERE geocoding_success = false)::BIGINT as geocoding_failed_count,
         COUNT(*) FILTER (WHERE is_missing = true)::BIGINT as missing_count,
         COUNT(*) FILTER (WHERE is_not_selected = true)::BIGINT as not_selected_count,
-        COUNT(*) FILTER (WHERE status = 'pending')::BIGINT as pending_count,
         ROUND(
             (COUNT(*) FILTER (WHERE geocoding_success = true)::NUMERIC / 
             NULLIF(COUNT(*), 0)::NUMERIC * 100), 2
-        ) as geocoding_success_rate
-    FROM public.evaluation_records;
+        ) as geocoding_success_rate,
+        ROUND(
+            (COUNT(*) FILTER (WHERE status = 'approved')::NUMERIC / 
+            NULLIF(COUNT(*), 0)::NUMERIC * 100), 2
+        ) as approval_rate
+    FROM public.restaurants;
 END;
 $$;
 
-COMMENT ON FUNCTION public.get_evaluation_records_stats IS '평가 기록 통계 조회 (지오코딩 성공률 포함)';
+COMMENT ON FUNCTION public.get_restaurant_stats_by_status IS '맛집 통계 조회 (상태별: approved, pending, rejected)';
 
--- 5.24 평가 기록에서 맛집 정보 추출 함수
-CREATE OR REPLACE FUNCTION public.extract_restaurant_from_evaluation(
-    evaluation_id BIGINT
+-- 5.24 승인된 맛집 조회 함수
+CREATE OR REPLACE FUNCTION public.get_approved_restaurants(
+    limit_count INTEGER DEFAULT 100,
+    offset_count INTEGER DEFAULT 0
 )
 RETURNS TABLE (
+    id UUID,
     name TEXT,
     phone TEXT,
-    category TEXT,
+    lat NUMERIC,
+    lng NUMERIC,
+    category TEXT[],
     road_address TEXT,
     jibun_address TEXT,
     english_address TEXT,
-    lat NUMERIC,
-    lng NUMERIC,
-    description TEXT
+    youtube_links TEXT[],
+    tzuyang_reviews JSONB,
+    review_count INTEGER,
+    created_at TIMESTAMP WITH TIME ZONE
 )
 LANGUAGE plpgsql
 STABLE
@@ -1168,24 +1172,255 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        e.name,
-        e.phone,
-        e.category,
-        e.road_address,
-        e.jibun_address,
-        e.english_address,
-        (e.origin_address->>'lat')::NUMERIC as lat,
-        (e.origin_address->>'lng')::NUMERIC as lng,
-        e.tzuyang_review as description
-    FROM public.evaluation_records e
-    WHERE e.id = evaluation_id
-    AND e.geocoding_success = true
-    AND e.is_missing = false
-    AND e.is_not_selected = false;
+        r.id,
+        r.name,
+        r.phone,
+        r.lat,
+        r.lng,
+        r.category,
+        r.road_address,
+        r.jibun_address,
+        r.english_address,
+        r.youtube_links,
+        r.tzuyang_reviews,
+        r.review_count,
+        r.created_at
+    FROM public.restaurants r
+    WHERE r.status = 'approved'
+    ORDER BY r.created_at DESC
+    LIMIT limit_count
+    OFFSET offset_count;
 END;
 $$;
 
-COMMENT ON FUNCTION public.extract_restaurant_from_evaluation IS '평가 기록에서 맛집 정보 추출 (restaurants 테이블 삽입용)';
+COMMENT ON FUNCTION public.get_approved_restaurants IS '승인된 맛집만 조회 (일반 사용자용)';
+
+-- 5.25 맛집 승인 처리 함수
+CREATE OR REPLACE FUNCTION public.approve_restaurant(
+    restaurant_id UUID,
+    admin_user_id UUID
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    is_admin BOOLEAN;
+BEGIN
+    -- 관리자 권한 확인
+    SELECT EXISTS(
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = admin_user_id AND role = 'admin'
+    ) INTO is_admin;
+    
+    IF NOT is_admin THEN
+        RAISE EXCEPTION '관리자 권한이 필요합니다.';
+    END IF;
+    
+    -- 맛집 승인 처리
+    UPDATE public.restaurants
+    SET 
+        status = 'approved',
+        updated_at = now(),
+        updated_by_admin_id = admin_user_id
+    WHERE id = restaurant_id
+    AND status = 'pending';
+    
+    RETURN FOUND;
+END;
+$$;
+
+COMMENT ON FUNCTION public.approve_restaurant IS '맛집 승인 처리 (관리자 전용)';
+
+-- 5.26 맛집 거부 처리 함수
+CREATE OR REPLACE FUNCTION public.reject_restaurant(
+    restaurant_id UUID,
+    admin_user_id UUID,
+    reject_reason TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    is_admin BOOLEAN;
+BEGIN
+    -- 관리자 권한 확인
+    SELECT EXISTS(
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = admin_user_id AND role = 'admin'
+    ) INTO is_admin;
+    
+    IF NOT is_admin THEN
+        RAISE EXCEPTION '관리자 권한이 필요합니다.';
+    END IF;
+    
+    -- 맛집 거부 처리
+    UPDATE public.restaurants
+    SET 
+        status = 'rejected',
+        updated_at = now(),
+        updated_by_admin_id = admin_user_id,
+        admin_notes = COALESCE(reject_reason, admin_notes)
+    WHERE id = restaurant_id
+    AND status = 'pending';
+    
+    RETURN FOUND;
+END;
+$$;
+
+COMMENT ON FUNCTION public.reject_restaurant IS '맛집 거부 처리 (관리자 전용)';
+
+-- 5.27 JSONL 데이터 삽입 헬퍼 함수 (AI 크롤링 결과 → DB)
+CREATE OR REPLACE FUNCTION public.insert_restaurant_from_jsonl(
+    jsonl_data JSONB
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    new_restaurant_id UUID;
+    category_array TEXT[];
+BEGIN
+    -- category를 TEXT[]로 변환 (단일 값인 경우 배열로)
+    IF jsonb_typeof(jsonl_data->'category') = 'string' THEN
+        category_array := ARRAY[jsonl_data->>'category'];
+    ELSE
+        category_array := ARRAY(SELECT jsonb_array_elements_text(jsonl_data->'category'));
+    END IF;
+    
+    -- restaurants 테이블에 삽입
+    INSERT INTO public.restaurants (
+        unique_id,
+        name,
+        phone,
+        category,
+        status,
+        youtube_meta,
+        evaluation_results,
+        reasoning_basis,
+        tzuyang_reviews,
+        origin_address,
+        road_address,
+        jibun_address,
+        english_address,
+        address_elements,
+        geocoding_success,
+        geocoding_false_stage,
+        is_missing,
+        is_not_selected,
+        lat,
+        lng
+    ) VALUES (
+        jsonl_data->>'unique_id',
+        jsonl_data->>'name',
+        jsonl_data->>'phone',
+        category_array,
+        COALESCE(jsonl_data->>'status', 'pending'),
+        jsonl_data->'youtube_meta',
+        jsonl_data->'evaluation_results',
+        jsonl_data->>'reasoning_basis',
+        jsonb_build_array(jsonb_build_object('review', jsonl_data->>'tzuyang_review')),
+        jsonl_data->'origin_address',
+        jsonl_data->>'roadAddress',
+        jsonl_data->>'jibunAddress',
+        jsonl_data->>'englishAddress',
+        jsonl_data->'addressElements',
+        COALESCE((jsonl_data->>'geocoding_success')::boolean, false),
+        (jsonl_data->>'geocoding_false_stage')::integer,
+        COALESCE((jsonl_data->>'is_missing')::boolean, false),
+        COALESCE((jsonl_data->>'is_notSelected')::boolean, false),  -- camelCase 지원
+        (jsonl_data->'origin_address'->>'lat')::numeric,
+        (jsonl_data->'origin_address'->>'lng')::numeric
+    )
+    ON CONFLICT (unique_id) 
+    DO UPDATE SET
+        name = EXCLUDED.name,
+        phone = EXCLUDED.phone,
+        category = EXCLUDED.category,
+        youtube_meta = EXCLUDED.youtube_meta,
+        evaluation_results = EXCLUDED.evaluation_results,
+        reasoning_basis = EXCLUDED.reasoning_basis,
+        road_address = EXCLUDED.road_address,
+        jibun_address = EXCLUDED.jibun_address,
+        english_address = EXCLUDED.english_address,
+        address_elements = EXCLUDED.address_elements,
+        geocoding_success = EXCLUDED.geocoding_success,
+        geocoding_false_stage = EXCLUDED.geocoding_false_stage,
+        is_missing = EXCLUDED.is_missing,
+        is_not_selected = EXCLUDED.is_not_selected,
+        lat = EXCLUDED.lat,
+        lng = EXCLUDED.lng,
+        updated_at = now()
+    RETURNING id INTO new_restaurant_id;
+    
+    -- youtube_links 배열에 추가 (중복 방지)
+    UPDATE public.restaurants
+    SET youtube_links = array_append(
+        COALESCE(youtube_links, ARRAY[]::TEXT[]),
+        jsonl_data->>'youtube_link'
+    )
+    WHERE id = new_restaurant_id
+    AND NOT (jsonl_data->>'youtube_link' = ANY(COALESCE(youtube_links, ARRAY[]::TEXT[])));
+    
+    RETURN new_restaurant_id;
+END;
+$$;
+
+COMMENT ON FUNCTION public.insert_restaurant_from_jsonl IS 'JSONL 크롤링 데이터를 restaurants 테이블에 삽입/업데이트 (unique_id 기준 UPSERT)';
+
+-- 5.28 배치 삽입 함수 (여러 JSONL 레코드 한 번에 처리)
+CREATE OR REPLACE FUNCTION public.batch_insert_restaurants_from_jsonl(
+    jsonl_array JSONB[]
+)
+RETURNS TABLE (
+    inserted_count INTEGER,
+    updated_count INTEGER,
+    failed_count INTEGER,
+    failed_records JSONB[]
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    record JSONB;
+    inserted INTEGER := 0;
+    updated INTEGER := 0;
+    failed INTEGER := 0;
+    failed_list JSONB[] := ARRAY[]::JSONB[];
+    result_id UUID;
+BEGIN
+    FOREACH record IN ARRAY jsonl_array
+    LOOP
+        BEGIN
+            -- unique_id 존재 여부 확인
+            IF EXISTS (SELECT 1 FROM public.restaurants WHERE unique_id = record->>'unique_id') THEN
+                result_id := public.insert_restaurant_from_jsonl(record);
+                updated := updated + 1;
+            ELSE
+                result_id := public.insert_restaurant_from_jsonl(record);
+                inserted := inserted + 1;
+            END IF;
+        EXCEPTION
+            WHEN OTHERS THEN
+                failed := failed + 1;
+                failed_list := array_append(failed_list, jsonb_build_object(
+                    'data', record,
+                    'error', SQLERRM
+                ));
+        END;
+    END LOOP;
+    
+    RETURN QUERY SELECT inserted, updated, failed, failed_list;
+END;
+$$;
+
+COMMENT ON FUNCTION public.batch_insert_restaurants_from_jsonl IS 'JSONL 배열을 한 번에 처리하여 restaurants 테이블에 삽입/업데이트';
 
 -- ========================================
 -- PART 6: 트리거 생성
@@ -1285,12 +1520,19 @@ CREATE POLICY "Users can insert own profile"
     TO authenticated
     WITH CHECK (user_id = auth.uid());
 
--- 7.3 맛집 테이블 정책
+-- 7.3 맛집 테이블 정책 (승인된 맛집만 조회 가능)
 DROP POLICY IF EXISTS "Restaurants are viewable by everyone" ON public.restaurants;
-CREATE POLICY "Restaurants are viewable by everyone"
+DROP POLICY IF EXISTS "Approved restaurants are viewable by everyone" ON public.restaurants;
+CREATE POLICY "Approved restaurants are viewable by everyone"
     ON public.restaurants FOR SELECT
     TO public
-    USING (true);
+    USING (status = 'approved');
+
+DROP POLICY IF EXISTS "Admins can view all restaurants" ON public.restaurants;
+CREATE POLICY "Admins can view all restaurants"
+    ON public.restaurants FOR SELECT
+    TO authenticated
+    USING (public.has_role(auth.uid(), 'admin'));
 
 DROP POLICY IF EXISTS "Admins can insert restaurants" ON public.restaurants;
 CREATE POLICY "Admins can insert restaurants"
@@ -1413,18 +1655,7 @@ CREATE POLICY "Admins can manage announcements"
     TO authenticated
     USING (public.has_role(auth.uid(), 'admin'));
 
--- 7.10 평가 기록 테이블 정책
-DROP POLICY IF EXISTS "Admins can view evaluation records" ON public.evaluation_records;
-CREATE POLICY "Admins can view evaluation records"
-    ON public.evaluation_records FOR SELECT
-    TO authenticated
-    USING (public.has_role(auth.uid(), 'admin'));
-
-DROP POLICY IF EXISTS "Admins can manage evaluation records" ON public.evaluation_records;
-CREATE POLICY "Admins can manage evaluation records"
-    ON public.evaluation_records FOR ALL
-    TO authenticated
-    USING (public.has_role(auth.uid(), 'admin'));
+-- 7.10 evaluation_records 테이블 정책 제거됨 (restaurants 테이블과 통합)
 
 -- ========================================
 -- PART 8: Storage 버킷 및 정책
@@ -1637,17 +1868,19 @@ ALTER DATABASE postgres SET log_min_duration_statement = '1000'; -- 1초 이상 
 
 ✅ 성능 최적화:
    - 3개의 Materialized View (맛집 통계, 리더보드, 인기 리뷰)
-   - 24개의 최적화 함수
+   - 26개의 최적화 함수 (승인/거부 함수 포함)
    - 자동 갱신 및 유지보수 함수
    - 유사도 검색 함수
    - 통계 정보 업데이트 함수
 
-✅ evaluation_records 테이블 최적화:
+✅ restaurants 테이블 통합 (restaurants + evaluation_records):
    - 명확한 컬럼 구조 (name, phone, category 등)
    - JSONB 필드 최적화 (youtube_meta, evaluation_results, origin_address, address_elements)
    - 지오코딩 상태 추적 (geocoding_success, geocoding_false_stage)
+   - 상태 관리 (status: pending, approved, rejected)
    - 상태 플래그 (is_missing, is_not_selected)
    - 부분 인덱스 및 복합 인덱스로 성능 최적화
+   - 승인된 맛집만 일반 사용자에게 조회 가능 (RLS 정책)
 
 ✅ 테이블/컬럼명 일관성:
    - 스네이크 케이스(snake_case) 사용
@@ -1666,28 +1899,94 @@ ALTER DATABASE postgres SET log_min_duration_statement = '1000'; -- 1초 이상 
 1. 이 마이그레이션 실행 후 Materialized View를 첫 갱신:
    SELECT public.refresh_materialized_views();
 
-2. 평가 기록 통계 확인:
-   SELECT * FROM public.get_evaluation_records_stats();
+2. 맛집 통계 확인 (상태별):
+   SELECT * FROM public.get_restaurant_stats_by_status();
 
-3. Supabase 대시보드에서 pg_cron 설정:
+3. 승인된 맛집 조회:
+   SELECT * FROM public.get_approved_restaurants(100, 0);
+
+4. Supabase 대시보드에서 pg_cron 설정:
    - 매일 새벽 2시: Materialized View 갱신
    - 매주 일요일: 통계 정보 업데이트
    - 매월 1일: 오래된 알림 정리
 
-4. 성능 모니터링:
+5. 성능 모니터링:
    - SELECT * FROM public.v_table_sizes;
    - SELECT * FROM public.v_index_usage;
 
-5. 보안 설정:
+6. 보안 설정:
    - Authentication > Settings에서 "Enable password leak detection" 활성화
    - RLS 정책이 모든 테이블에 올바르게 적용되었는지 확인
+   - 일반 사용자는 status='approved'인 맛집만 조회 가능
+   - 관리자는 모든 상태의 맛집 조회/수정 가능
 
-6. 데이터 검증:
+7. 데이터 검증:
    - 전화번호 형식: 02-1234-5678 또는 010-1234-5678
    - 이메일 형식: example@domain.com
    - 닉네임 길이: 2-20자
    - 맛집 이름 길이: 2-100자
    - 카테고리 개수: 1-5개
+
+=== JSONL 크롤링 데이터 삽입 예시 ===
+
+-- 단일 레코드 삽입
+SELECT insert_restaurant_from_jsonl('{
+  "youtube_link": "https://www.youtube.com/watch?v=oRWZAJN4ZFQ",
+  "status": "pending",
+  "youtube_meta": {
+    "title": "할머니가 끓여주시는 울트라라면?!🔥",
+    "publishedAt": "2025-09-02T12:30:02Z",
+    "is_shorts": false,
+    "duration": 941
+  },
+  "name": "대성식품",
+  "phone": "063-284-1486",
+  "category": "분식",
+  "reasoning_basis": "영상은 전주시에 위치한 대성식품 한 곳을 다루고 있습니다...",
+  "tzuyang_review": "쯔양은 이곳의 음식들이 할머니가 해준 것 같은 깊은 손맛...",
+  "origin_address": {
+    "address": "전북 전주시 완산구 팔달로 157-5",
+    "lat": 35.8162906,
+    "lng": 127.1471678
+  },
+  "roadAddress": "전북특별자치도 전주시 완산구 팔달로 157-5",
+  "jibunAddress": "전북특별자치도 전주시 완산구 경원동1가 104-26",
+  "englishAddress": "157-5, Paldal-ro, Wansan-gu, Jeonju-si",
+  "addressElements": [...],
+  "geocoding_success": true,
+  "geocoding_false_stage": null,
+  "is_missing": false,
+  "is_notSelected": false,
+  "evaluation_results": {...},
+  "unique_id": "4ed18d7db97160cecaf8ec7d848d2393a5268dba8029a193dd9309801ca522da"
+}'::jsonb);
+
+-- 배치 삽입
+SELECT * FROM batch_insert_restaurants_from_jsonl(
+  ARRAY[
+    '{"youtube_link": "...", "name": "대성식품", ...}'::jsonb,
+    '{"youtube_link": "...", "name": "전통춘천닭갈비", ...}'::jsonb
+  ]
+);
+
+-- Python에서 사용 예시:
+/*
+import json
+from supabase import create_client
+
+# JSONL 파일 읽기
+with open('restaurants.jsonl', 'r', encoding='utf-8') as f:
+    records = [json.loads(line) for line in f]
+
+# 배치 삽입
+result = supabase.rpc('batch_insert_restaurants_from_jsonl', {
+    'jsonl_array': records
+}).execute()
+
+print(f"삽입: {result.data[0]['inserted_count']}")
+print(f"업데이트: {result.data[0]['updated_count']}")
+print(f"실패: {result.data[0]['failed_count']}")
+*/
 
 즐거운 개발 되세요! 🚀
 */
