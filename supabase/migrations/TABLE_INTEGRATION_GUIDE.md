@@ -388,6 +388,12 @@ result = supabase.rpc('insert_restaurant_from_jsonl', {
 }).execute()
 
 print(f"삽입된 맛집 ID: {result.data}")
+
+# source_type 지정 (선택 사항, 기본값: 'perplexity')
+data['source_type'] = 'perplexity'  # 또는 'manual', 'user_submission' 등
+result = supabase.rpc('insert_restaurant_from_jsonl', {
+    'jsonl_data': data
+}).execute()
 ```
 
 #### 2. 배치 삽입 (권장)
@@ -426,13 +432,14 @@ for i in range(0, len(records), batch_size):
 
 JSONL 데이터의 필드명이 camelCase이지만, 함수가 자동으로 변환해줍니다:
 
-| JSONL 필드        | DB 컬럼            | 자동 변환 |
-| ----------------- | ------------------ | --------- |
-| `is_notSelected`  | `is_not_selected`  | ✅         |
-| `roadAddress`     | `road_address`     | ✅         |
-| `jibunAddress`    | `jibun_address`    | ✅         |
-| `englishAddress`  | `english_address`  | ✅         |
-| `addressElements` | `address_elements` | ✅         |
+| JSONL 필드        | DB 컬럼            | 자동 변환                |
+| ----------------- | ------------------ | ------------------------ |
+| `source_type`     | `source_type`      | ✅ (기본값: 'perplexity') |
+| `is_notSelected`  | `is_not_selected`  | ✅                        |
+| `roadAddress`     | `road_address`     | ✅                        |
+| `jibunAddress`    | `jibun_address`    | ✅                        |
+| `englishAddress`  | `english_address`  | ✅                        |
+| `addressElements` | `address_elements` | ✅                        |
 
 #### 4. UPSERT 동작
 

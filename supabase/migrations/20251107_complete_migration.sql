@@ -114,6 +114,9 @@ CREATE TABLE public.restaurants (
     -- AI 평가 정보
     evaluation_results JSONB,  -- AI 평가 결과 (JSON)
     
+    -- 데이터 출처
+    source_type TEXT,  -- 데이터 출처 (예: 'perplexity', 'manual', 'user_submission')
+    
     -- 지오코딩 정보
     geocoding_success BOOLEAN NOT NULL DEFAULT false,
     geocoding_false_stage INTEGER CHECK (geocoding_false_stage IS NULL OR geocoding_false_stage IN (0, 1, 2)),
@@ -1300,6 +1303,7 @@ BEGIN
         phone,
         category,
         status,
+        source_type,
         youtube_meta,
         evaluation_results,
         reasoning_basis,
@@ -1321,6 +1325,7 @@ BEGIN
         jsonl_data->>'phone',
         category_array,
         COALESCE(jsonl_data->>'status', 'pending'),
+        COALESCE(jsonl_data->>'source_type', 'perplexity'),  -- 기본값: perplexity
         jsonl_data->'youtube_meta',
         jsonl_data->'evaluation_results',
         jsonl_data->>'reasoning_basis',
@@ -1342,6 +1347,7 @@ BEGIN
         name = EXCLUDED.name,
         phone = EXCLUDED.phone,
         category = EXCLUDED.category,
+        source_type = EXCLUDED.source_type,
         youtube_meta = EXCLUDED.youtube_meta,
         evaluation_results = EXCLUDED.evaluation_results,
         reasoning_basis = EXCLUDED.reasoning_basis,
