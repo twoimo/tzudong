@@ -4,10 +4,11 @@
 """
 🚀 음식점 평가 전체 파이프라인 실행 스크립트
 
-이 스크립트는 다음 3단계를 순차적으로 실행합니다:
+이 스크립트는 다음 4단계를 순차적으로 실행합니다:
 1. 평가 대상 선정 (evaluation-target-selection.py)
 2. 규칙 기반 평가 - RULE (evaluation-rule.py)
 3. AI 평가 - LAAJ (TypeScript via Node.js)
+4. 평가 결과 변환 (transform_evaluation_results.py)
 
 사용법:
     python3 evaluation_pipeline.py
@@ -68,6 +69,7 @@ def count_jsonl_lines(file_path: Path) -> int:
     except Exception:
         return 0
 
+# --- [수정된 부분] ---
 def print_statistics(stats: dict):
     """각 단계별 통계 출력"""
     print(f"\n{Colors.BOLD}{Colors.HEADER}{'='*80}{Colors.ENDC}")
@@ -89,19 +91,26 @@ def print_statistics(stats: dict):
     # Step 2: RULE 평가
     step2 = stats.get('step2', {})
     if step2:
-        input_count = step2.get('input', 0)
-        before = step2.get('before', 0)
-        after = step2.get('after', 0)
-        processed = after - before
-        success_rate = (processed / input_count * 100) if input_count > 0 else 0
+        total_selection = step2.get('input', 0) # Step 1의 전체 결과 (e.g. 150)
+        before = step2.get('before', 0)         # 이전에 RULE 처리 완료 (e.g. 100)
+        after = step2.get('after', 0)           # 이번에 RULE 처리 완료 (e.g. 150)
+        
+        processed = after - before              # 이번 실행에서 새로 처리 (e.g. 50)
+        
+        # 이번 실행의 실제 입력 = Step 1 전체 - 이전 RULE 완료
+        run_input = total_selection - before    # (e.g. 150 - 100 = 50)
+        
+        # 이번 실행의 성공률 = (새로 처리 / 이번 실행 입력)
+        success_rate = (processed / run_input * 100) if run_input > 0 else 0
         
         print(f"{Colors.BOLD}{Colors.OKBLUE}Step 2: RULE 평가{Colors.ENDC}")
-        print(f"  입력: {Colors.OKCYAN}{input_count}개{Colors.ENDC}")
+        print(f"  전체 대상: {Colors.OKCYAN}{total_selection}개{Colors.ENDC}")
         print(f"  이미 처리됨: {Colors.WARNING}{before}개{Colors.ENDC}")
+        print(f"  {Colors.BOLD}이번 실행 입력: {Colors.OKCYAN}{run_input}개{Colors.ENDC}")
         print(f"  새로 처리: {Colors.OKGREEN}{processed}개{Colors.ENDC} ({success_rate:.1f}%)")
         print(f"  최종 누적: {Colors.OKCYAN}{after}개{Colors.ENDC}\n")
     
-    # Step 3: LAAJ 평가
+    # Step 3: LAAJ 평가 (이 부분은 이미 올바르게 계산되고 있었습니다)
     step3 = stats.get('step3', {})
     if step3:
         input_count = step3.get('input', 0)
@@ -145,6 +154,7 @@ def print_statistics(stats: dict):
             print(f"{Colors.BOLD}{Colors.HEADER}{'─'*80}{Colors.ENDC}")
             print(f"{Colors.BOLD}{Colors.OKGREEN}✅ 전체 성공률: {final_success}/{total_input} ({overall_rate:.1f}%){Colors.ENDC}")
             print(f"{Colors.BOLD}{Colors.HEADER}{'─'*80}{Colors.ENDC}\n")
+# --- [수정 끝] ---
 
 def run_command(command: list, description: str, cwd: str = None) -> bool:
     """
@@ -206,6 +216,7 @@ def check_prerequisites() -> bool:
     required_files = [
         "evaluation-target-selection.py",
         "evaluation-rule.py",
+        "transform_evaluation_results.py" # Step 4 스크립트 추가 확인
     ]
     
     for file in required_files:
@@ -298,6 +309,7 @@ def step3_ai_evaluation(project_root: Path, parallel_choice: str) -> bool:
         print_error(f"AI 평가 중 예류 발생: {str(e)}")
         return False
 
+
 def step4_transform_results(src_dir: Path) -> bool:
     """Step 4: Transform 평가 결과"""
     print_step(4, "Transform 평가 결과 변환")
@@ -305,11 +317,32 @@ def step4_transform_results(src_dir: Path) -> bool:
     print_info("평가 결과를 youtube_link-음식점명 기준으로 변환합니다.")
     print_info("중복된 레코드는 자동으로 스킵됩니다.\n")
     
+    # src_dir.parent는 main()의 project_root와 동일합니다.
+    
+    # 1. 평가 완료 파일 (Input 1)
+    results_file = src_dir.parent / 'tzuyang_restaurant_evaluation_results.jsonl'
+    
+    # 2. 미선택 (주소없음) 파일 (Input 2)
+    notselection_file = src_dir.parent / 'tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl'
+    
+    # 3. 변환 결과 파일 (Output)
+    # main() 함수가 통계에 사용하는 'transform.jsonl' 경로와 일치시킵니다.
+    transform_file = src_dir.parent / 'transform.jsonl'
+    
+    # Python 스크립트 실행 (인자 전달)
+    # transform_evaluation_results.py가 sys.argv[1], [2], [3]을 받는다고 가정합니다.
     return run_command(
-        ["python3", "transform_evaluation_results.py"],
+        [
+            "python3", 
+            "transform_evaluation_results.py", # 0. 스크립트
+            str(results_file),                 # 1. INPUT_FILE_RESULTS
+            str(notselection_file),            # 2. INPUT_FILE_NOTSELECTION
+            str(transform_file)                # 3. OUTPUT_FILE
+        ],
         "Transform 평가 결과",
-        cwd=str(src_dir)
+        cwd=str(src_dir) # 스크립트가 'src' 폴더 안에 있다고 가정
     )
+
 
 def main():
     """메인 실행 함수"""
@@ -377,7 +410,7 @@ def main():
     
     # Step 2: 규칙 기반 평가
     step2_before = count_jsonl_lines(rule_results_file)
-    step2_input = step1_after
+    step2_input = step1_after # Step 1의 전체 결과를 input으로 전달
     if not step2_rule_evaluation(src_dir):
         print_error("\nStep 2 실패로 인해 파이프라인을 중단합니다.")
         print_info("규칙 평가 중 일부 실패는 정상일 수 있습니다. (해외 주소, API 제한 등)")
@@ -389,7 +422,7 @@ def main():
     # Step 3: AI 평가
     step3_before_success = count_jsonl_lines(laaj_results_file)
     step3_before_error = count_jsonl_lines(laaj_errors_file)
-    step3_input = step2_after
+    step3_input = step2_after # Step 2의 전체 결과를 input으로 전달
     if not step3_ai_evaluation(project_root, parallel_choice):
         print_error("\nStep 3 실패로 인해 파이프라인을 중단합니다.")
         sys.exit(1)
@@ -408,7 +441,7 @@ def main():
     step4_before = count_jsonl_lines(transform_file)
     if not step4_transform_results(src_dir):
         print_warning("\nStep 4 Transform 실패했지만, 평가는 완료되었습니다.")
-        print_info("Transform은 나중에 수동으로 실행할 수 있습니다: python3 src/transform_evaluation_results.py")
+        print_info("Transform은 나중에 수동으로 실행할 수 있습니다: python3 src/transform_evaluation_results.py <input1> <input2> <output>")
     else:
         step4_after = count_jsonl_lines(transform_file)
         stats['step4'] = {'before': step4_before, 'after': step4_after}
