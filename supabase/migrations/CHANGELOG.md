@@ -1,7 +1,45 @@
-# 🔄 데이터베이스 최적화 변경사항 요약 (v3.0)
+# 🔄 데이터베이스 최적화 변경사항 요약 (v3.2)
 
 ## 📅 날짜
-2025년 11월 7일 - 버전 3.0 (테이블 통합 및 승인 시스템)
+- 2025년 11월 7일 - 버전 3.0 (테이블 통합 및 승인 시스템)
+- 2025년 11월 7일 - 버전 3.1 (JSONL 삽입 함수 추가)
+- 2025년 11월 7일 - 버전 3.2 (source_type 컬럼 추가)
+
+---
+
+## 🆕 v3.2 변경사항 (2025-11-07)
+
+### 📍 restaurants 테이블 - source_type 컬럼 추가
+**추가된 컬럼:**
+```sql
+✅ source_type TEXT                    -- 데이터 출처 (예: 'perplexity', 'manual', 'user_submission')
+```
+
+**함수 업데이트:**
+- `insert_restaurant_from_jsonl()`: source_type 필드 자동 매핑 추가
+  - 기본값: 'perplexity' (JSONL에 없을 경우)
+  - UPSERT 시 source_type도 업데이트
+
+**사용 예시:**
+```python
+# Python에서 source_type 지정
+data['source_type'] = 'perplexity'
+result = supabase.rpc('insert_restaurant_from_jsonl', {'jsonl_data': data})
+```
+
+---
+
+## 🎯 v3.1 변경사항 (2025-11-07)
+
+### 🔧 JSONL 삽입 함수 추가
+**새 함수:**
+- `insert_restaurant_from_jsonl(jsonb)`: 단일 JSONL 레코드 삽입/업데이트
+- `batch_insert_restaurants_from_jsonl(jsonb[])`: 배치 삽입 (통계 반환)
+
+**자동 필드 매핑:**
+- camelCase → snake_case 자동 변환
+- category: string → text[] 자동 변환
+- tzuyang_review → tzuyang_reviews JSONB 배열 변환
 
 ---
 

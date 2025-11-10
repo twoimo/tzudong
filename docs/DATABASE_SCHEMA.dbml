@@ -1,9 +1,14 @@
 // ========================================
-// 쯔양 맛집 지도 - 데이터베이스 스키마 (v3.1)
+// 쯔양 맛집 지도 - 데이터베이스 스키마 (v3.2)
 // dbdiagram.io 형식
 // 작성일: 2025년 11월 7일
-// 버전: 3.1 - JSONL 크롤링 데이터 삽입 함수 추가
+// 버전: 3.2 - source_type 컬럼 추가
 // 
+// 주요 변경사항 (v3.2):
+// - restaurants 테이블에 source_type 컬럼 추가
+// - source_type: 데이터 출처 추적 (perplexity, manual, user_submission 등)
+// - insert_restaurant_from_jsonl() 함수 업데이트 (source_type 자동 매핑)
+//
 // 주요 변경사항 (v3.1):
 // - JSONL 크롤링 데이터 삽입 헬퍼 함수 추가
 // - insert_restaurant_from_jsonl(): 단일 레코드 UPSERT
@@ -106,6 +111,9 @@ Table restaurants {
   
   // AI 평가 정보
   evaluation_results jsonb [note: 'AI 평가 결과 (JSON)']
+  
+  // 데이터 출처
+  source_type text [note: '데이터 출처 (예: perplexity, manual, user_submission)']
   
   // 지오코딩 정보
   geocoding_success boolean [not null, default: false, note: '지오코딩 성공 여부']
