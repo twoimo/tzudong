@@ -135,7 +135,9 @@ def transform_json_object(original_data, source_file_type):
             
             tzuyang_review = restaurant_data.get('tzuyang_review')
             output = {
-                "youtube_link": youtube_link, "status": "pending", "youtube_meta": youtube_meta,
+                "youtube_link": youtube_link,
+                "unique_id": generate_unique_id(youtube_link, restaurant_name, tzuyang_review),
+                "status": "pending", "youtube_meta": youtube_meta,
                 "name": restaurant_name,
                 "phone": restaurant_data.get('phone'),
                 "category": restaurant_data.get('category'),
@@ -154,9 +156,9 @@ def transform_json_object(original_data, source_file_type):
                 "geocoding_false_stage": loc_data["geocoding_false_stage"],
                 "is_missing": False,
                 "is_notSelected": not is_target,
-                "evaluation_results": new_eval_results if new_eval_results else None
+                "evaluation_results": new_eval_results if new_eval_results else None,
+                "source_type": "perplexity"
             }
-            output['unique_id'] = generate_unique_id(youtube_link, restaurant_name, tzuyang_review)
             flattened_results.append(output)
 
         # --- 1B. 'evaluation_target'에만 있는 항목 처리 (Missing 1) ---
@@ -166,7 +168,9 @@ def transform_json_object(original_data, source_file_type):
                 loc_data = get_location_data(original_eval_results, restaurant_name, is_missing_flag=True)
                 
                 output = {
-                    "youtube_link": youtube_link, "status": "pending", "youtube_meta": youtube_meta,
+                    "youtube_link": youtube_link,
+                    "unique_id": generate_unique_id(youtube_link, restaurant_name, None),
+                    "status": "pending", "youtube_meta": youtube_meta,
                     "name": restaurant_name,
                     "phone": None, "category": None, "reasoning_basis": None, "tzuyang_review": None,
                     "origin_address": None,
@@ -178,9 +182,9 @@ def transform_json_object(original_data, source_file_type):
                     "geocoding_false_stage": loc_data["geocoding_false_stage"],
                     "is_missing": True,
                     "is_notSelected": not is_target,
-                    "evaluation_results": None
+                    "evaluation_results": None,
+                    "source_type": "perplexity"
                 }
-                output['unique_id'] = generate_unique_id(youtube_link, restaurant_name, None)
                 flattened_results.append(output)
 
         # --- 1C. 'visit_authenticity.missing'에만 있는 항목 처리 (Missing 2) ---
@@ -193,9 +197,11 @@ def transform_json_object(original_data, source_file_type):
                 
                 processed_names.add(missing_name)
                 loc_data = get_location_data(original_eval_results, missing_name, is_missing_flag=True)
-
                 output = {
-                    "youtube_link": youtube_link, "status": "pending", "youtube_meta": youtube_meta,
+                    "youtube_link": youtube_link,
+                    "unique_id": generate_unique_id(youtube_link, missing_name, None),
+                    "status": "pending",
+                    "youtube_meta": youtube_meta,
                     "name": missing_name,
                     "phone": None, "category": None, "reasoning_basis": None, "tzuyang_review": None,
                     "origin_address": None,
@@ -207,9 +213,10 @@ def transform_json_object(original_data, source_file_type):
                     "geocoding_false_stage": loc_data["geocoding_false_stage"],
                     "is_missing": True,
                     "is_notSelected": False,
-                    "evaluation_results": None
+                    "evaluation_results": None,
+                    "source_type": "perplexity"
                 }
-                output['unique_id'] = generate_unique_id(youtube_link, missing_name, None)
+                
                 flattened_results.append(output)
 
     # -----------------------------------------------------------------
@@ -224,7 +231,9 @@ def transform_json_object(original_data, source_file_type):
             
             tzuyang_review = restaurant_data.get('tzuyang_review') if restaurant_data else None
             output = {
-                "youtube_link": youtube_link, "status": "pending", "youtube_meta": youtube_meta,
+                "youtube_link": youtube_link,
+                "unique_id": generate_unique_id(youtube_link, restaurant_name, tzuyang_review),
+                "status": "pending", "youtube_meta": youtube_meta,
                 "name": restaurant_name,
                 "phone": restaurant_data.get('phone') if restaurant_data else None,
                 "category": restaurant_data.get('category') if restaurant_data else None,
@@ -243,9 +252,9 @@ def transform_json_object(original_data, source_file_type):
                 "geocoding_false_stage": loc_data["geocoding_false_stage"],
                 "is_missing": is_missing,
                 "is_notSelected": not is_target,
-                "evaluation_results": None
+                "evaluation_results": None,
+                "source_type": "perplexity"
             }
-            output['unique_id'] = generate_unique_id(youtube_link, restaurant_name, tzuyang_review)
             flattened_results.append(output)
 
     return flattened_results
