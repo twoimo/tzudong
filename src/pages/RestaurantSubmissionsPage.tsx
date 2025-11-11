@@ -9,10 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube, ChevronDown, X } from "lucide-react";
+import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube, X, MessageSquare } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -40,6 +38,7 @@ export default function RestaurantSubmissionsPage() {
     const [submissionMode, setSubmissionMode] = useState<'new' | 'update'>('new');
     const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
     const [originalData, setOriginalData] = useState<any>(null);
+    const [categoryInput, setCategoryInput] = useState("");
     const [formData, setFormData] = useState({
         restaurant_name: "",
         address: "",
@@ -47,18 +46,27 @@ export default function RestaurantSubmissionsPage() {
         categories: [] as string[],
         youtube_link: "",
         description: "",
+        youtube_links: [] as string[],
+        youtube_metas: [] as any[],
+        tzuyang_reviews: [] as any[],
     });
 
-    // 모든 맛집 조회 (수정 요청용)
+    // 모든 맛집 조회 (수정 요청용) - youtube_links, youtube_metas, tzuyang_reviews 포함
     const { data: allRestaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: async () => {
+            console.log('🔍 맛집 조회 시작...');
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, road_address, jibun_address, category, phone, youtube_links, description')
+                .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_links, youtube_metas, tzuyang_reviews')
+                .eq('status', 'approved')
                 .order('name');
 
-            if (error) throw error;
+            if (error) {
+                console.error('❌ 맛집 조회 실패:', error);
+                throw error;
+            }
+            console.log('✅ 맛집 조회 성공:', data?.length, '개');
             return data || [];
         },
     });
@@ -129,66 +137,101 @@ export default function RestaurantSubmissionsPage() {
         return () => observer.disconnect();
     }, [loadMoreSubmissions]);
 
+    // 모달이 열릴 때 상태 초기화
+    useEffect(() => {
+        if (isSubmitModalOpen) {
+            if (submissionMode === 'new') {
+                // 신규 제보 모드 초기화
+                setFormData({
+                    restaurant_name: "",
+                    address: "",
+                    phone: "",
+                    categories: [],
+                    youtube_link: "",
+                    description: "",
+                    youtube_links: [],
+                    youtube_metas: [],
+                    tzuyang_reviews: [],
+                });
+                setSelectedRestaurant(null);
+                setOriginalData(null);
+            } else if (submissionMode === 'update') {
+                // 수정 요청 모드 초기화 - 맛집 선택만 초기화
+                setFormData({
+                    restaurant_name: "",
+                    address: "",
+                    phone: "",
+                    categories: [],
+                    youtube_link: "",
+                    description: "",
+                    youtube_links: [],
+                    youtube_metas: [],
+                    tzuyang_reviews: [],
+                });
+                setSelectedRestaurant(null);
+                setOriginalData(null);
+            }
+            setCategoryInput("");
+        }
+    }, [isSubmitModalOpen, submissionMode]);
+
     // 제보 제출
     const submitMutation = useMutation({
         mutationFn: async (data: typeof formData) => {
             if (!user) throw new Error('로그인이 필요합니다');
 
-            // 기본 제보 데이터
+            // 기본 제보 데이터 - DB 스키마에 맞게 수정
             const submissionData: any = {
                 user_id: user.id,
-                restaurant_name: data.restaurant_name.trim(),
-                address: data.address.trim(), // 사용자가 입력한 주소는 도로명 주소로 저장
-                phone: data.phone.trim() || null,
-                category: data.categories, // 항상 배열로 저장 (TEXT[])
+                // 사용자 입력 필드 (user_submitted_*)
+                user_submitted_name: data.restaurant_name.trim(),
+                user_submitted_categories: data.categories,
+                user_submitted_phone: data.phone.trim() || null,
+                user_raw_address: data.address.trim(),
+                // 추가 정보
                 youtube_link: data.youtube_link.trim(),
                 description: data.description.trim() || null,
                 status: 'pending',
+                submission_type: submissionMode, // 'new' 또는 'update'
             };
 
-            // 수정 요청인 경우 추가 데이터 (컬럼이 존재하는 경우에만)
+            // 수정 요청인 경우 추가 데이터
             if (submissionMode === 'update' && selectedRestaurant) {
-                try {
-                    // submission_type 컬럼 존재 확인
-                    const { error: testError } = await supabase
-                        .from('restaurant_submissions')
-                        .select('submission_type')
-                        .limit(1);
+                submissionData.restaurant_id = selectedRestaurant.id;
+                submissionData.unique_id = selectedRestaurant.unique_id; // unique_id 추가
+                submissionData.youtube_links = data.youtube_links; // 모든 유튜브 링크 배열
+                submissionData.tzuyang_reviews = data.tzuyang_reviews; // 모든 쯔양 리뷰 배열
 
-                    if (!testError) {
-                        submissionData.submission_type = submissionMode;
-                        submissionData.original_restaurant_id = selectedRestaurant.id;
+                // 동일 상호명 맛집들의 ID 목록 저장
+                if (selectedRestaurant.sameNameRestaurants && selectedRestaurant.sameNameRestaurants.length > 1) {
+                    submissionData.admin_notes = `동일 상호명 맛집 ${selectedRestaurant.sameNameRestaurants.length}개 일괄 수정 요청: ${selectedRestaurant.sameNameRestaurants.map((r: any) => r.id).join(', ')}`;
+                }
 
-                        // 변경사항 계산
-                        if (originalData) {
-                            const changes_requested: any = {};
-                            Object.keys(data).forEach(key => {
-                                const originalValue = originalData[key as keyof typeof originalData];
-                                const newValue = data[key as keyof typeof data];
+                // 변경사항 계산
+                if (originalData) {
+                    const changes_requested: Record<string, { from: any; to: any }> = {};
+                    Object.keys(data).forEach(key => {
+                        const originalValue = originalData[key as keyof typeof originalData];
+                        const newValue = data[key as keyof typeof data];
 
-                                // 배열 비교 (categories)
-                                if (Array.isArray(originalValue) && Array.isArray(newValue)) {
-                                    if (JSON.stringify(originalValue.sort()) !== JSON.stringify(newValue.sort())) {
-                                        changes_requested[key] = {
-                                            from: originalValue,
-                                            to: newValue
-                                        };
-                                    }
-                                } else if (originalValue !== newValue) {
-                                    changes_requested[key] = {
-                                        from: originalValue || '',
-                                        to: newValue || ''
-                                    };
-                                }
-                            });
-                            if (Object.keys(changes_requested).length > 0) {
-                                submissionData.changes_requested = changes_requested;
+                        // 배열 비교 (categories, youtube_links, tzuyang_reviews)
+                        if (Array.isArray(originalValue) && Array.isArray(newValue)) {
+                            if (JSON.stringify(originalValue.sort()) !== JSON.stringify(newValue.sort())) {
+                                changes_requested[key] = {
+                                    from: originalValue,
+                                    to: newValue
+                                };
                             }
+                        } else if (originalValue !== newValue) {
+                            changes_requested[key] = {
+                                from: originalValue || '',
+                                to: newValue || ''
+                            };
                         }
+                    });
+                    if (Object.keys(changes_requested).length > 0) {
+                        submissionData.changes_requested = changes_requested;
                     }
-                } catch (error) {
-                    // 컬럼이 존재하지 않으면 그냥 신규 제보로 처리
-                    console.warn('수정 요청 관련 컬럼이 존재하지 않아 신규 제보로 처리합니다');
                 }
             }
 
@@ -222,15 +265,21 @@ export default function RestaurantSubmissionsPage() {
                 categories: [],
                 youtube_link: "",
                 description: "",
+                youtube_links: [],
+                tzuyang_reviews: [],
             });
             setSelectedRestaurant(null);
             setOriginalData(null);
         }
     };
 
-    // 기존 맛집 선택 핸들러
+    // 기존 맛집 선택 핸들러 - 동일한 상호명의 맛집들을 그룹화
     const handleRestaurantSelect = (restaurant: any) => {
-        setSelectedRestaurant(restaurant);
+        // 동일한 상호명을 가진 모든 맛집 찾기
+        const sameNameRestaurants = allRestaurants.filter(r => r.name === restaurant.name);
+
+        console.log(`🏪 "${restaurant.name}" 맛집 ${sameNameRestaurants.length}개 발견`);
+
         const safeCategories = Array.isArray(restaurant.categories)
             ? restaurant.categories
             : (restaurant.categories ? [restaurant.categories] : []);
@@ -238,25 +287,73 @@ export default function RestaurantSubmissionsPage() {
         // 도로명 주소 우선, 없으면 지번 주소 사용
         const restaurantAddress = restaurant.road_address || restaurant.jibun_address || "";
 
+        // 동일한 상호명의 모든 맛집에서 youtube_links와 tzuyang_reviews 통합
+        const allYoutubeLinks: string[] = [];
+        const allYoutubeMetas: any[] = [];
+        const allTzuyangReviews: any[] = [];
+
+        sameNameRestaurants.forEach((r, index) => {
+            console.log(`  - 맛집 ${index + 1}: ID=${r.id.substring(0, 8)}, unique_id=${r.unique_id}`);
+
+            // youtube_links 통합
+            if (Array.isArray(r.youtube_links)) {
+                r.youtube_links.forEach(link => {
+                    if (link && !allYoutubeLinks.includes(link)) {
+                        allYoutubeLinks.push(link);
+                    }
+                });
+            }
+
+            // youtube_metas 통합
+            if (Array.isArray(r.youtube_metas)) {
+                r.youtube_metas.forEach(meta => {
+                    if (meta) {
+                        allYoutubeMetas.push(meta);
+                    }
+                });
+            }
+
+            // tzuyang_reviews 통합
+            if (Array.isArray(r.tzuyang_reviews)) {
+                r.tzuyang_reviews.forEach(review => {
+                    if (review) {
+                        allTzuyangReviews.push(review);
+                    }
+                });
+            } else if (typeof r.tzuyang_reviews === 'string' && r.tzuyang_reviews) {
+                allTzuyangReviews.push({ review: r.tzuyang_reviews });
+            }
+        });
+
+        console.log(`✅ 통합 결과: 유튜브 ${allYoutubeLinks.length}개, 메타 ${allYoutubeMetas.length}개, 리뷰 ${allTzuyangReviews.length}개`);
+
+        setSelectedRestaurant({
+            ...restaurant,
+            sameNameRestaurants, // 동일 상호명 맛집 목록 저장
+            allYoutubeMetas, // 통합된 메타데이터 저장
+        });
+
         setOriginalData({
             restaurant_name: restaurant.name,
             address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
-                ? restaurant.youtube_links[0]
-                : (restaurant.youtube_links || ""),
-            description: restaurant.description || "",
+            youtube_link: allYoutubeLinks.length > 0 ? allYoutubeLinks[0] : "",
+            youtube_links: allYoutubeLinks,
+            youtube_metas: allYoutubeMetas,
+            tzuyang_reviews: allTzuyangReviews,
+            description: "",
         });
         setFormData({
             restaurant_name: restaurant.name,
             address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
-                ? restaurant.youtube_links[0]
-                : (restaurant.youtube_links || ""),
-            description: restaurant.description || "",
+            youtube_link: allYoutubeLinks.length > 0 ? allYoutubeLinks[0] : "",
+            youtube_links: allYoutubeLinks,
+            youtube_metas: allYoutubeMetas,
+            tzuyang_reviews: allTzuyangReviews,
+            description: "",
         });
     };
 
@@ -287,6 +384,8 @@ export default function RestaurantSubmissionsPage() {
             categories: [],
             youtube_link: "",
             description: "",
+            youtube_links: [],
+            tzuyang_reviews: [],
         });
     };
 
@@ -607,18 +706,43 @@ export default function RestaurantSubmissionsPage() {
                                         <SelectValue placeholder="수정할 맛집을 선택해주세요" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {allRestaurants.map((restaurant) => {
-                                            const categoryDisplay = Array.isArray(restaurant.categories) && restaurant.categories.length > 0
-                                                ? restaurant.categories[0]
-                                                : (restaurant.categories || "기타");
-                                            return (
-                                                <SelectItem key={restaurant.id} value={restaurant.id}>
-                                                    {restaurant.name} - {categoryDisplay}
-                                                </SelectItem>
-                                            );
-                                        })}
+                                        {(() => {
+                                            // 상호명별로 그룹화
+                                            const groupedByName = allRestaurants.reduce((acc, restaurant) => {
+                                                if (!acc[restaurant.name]) {
+                                                    acc[restaurant.name] = [];
+                                                }
+                                                acc[restaurant.name].push(restaurant);
+                                                return acc;
+                                            }, {} as Record<string, typeof allRestaurants>);
+
+                                            // 각 그룹의 첫 번째 맛집만 표시 (대표)
+                                            return Object.entries(groupedByName).map(([name, restaurants]) => {
+                                                const representative = restaurants[0];
+                                                const count = restaurants.length;
+                                                const categoryDisplay = Array.isArray(representative.categories) && representative.categories.length > 0
+                                                    ? representative.categories[0]
+                                                    : (representative.categories || "기타");
+
+                                                return (
+                                                    <SelectItem key={representative.id} value={representative.id}>
+                                                        {name} - {categoryDisplay}
+                                                        {count > 1 && (
+                                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                                (동일 상호명 {count}개)
+                                                            </span>
+                                                        )}
+                                                    </SelectItem>
+                                                );
+                                            });
+                                        })()}
                                     </SelectContent>
                                 </Select>
+                                {selectedRestaurant?.sameNameRestaurants && selectedRestaurant.sameNameRestaurants.length > 1 && (
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                                        💡 이 상호명을 가진 맛집 {selectedRestaurant.sameNameRestaurants.length}개의 유튜브 영상과 리뷰를 함께 수정합니다
+                                    </p>
+                                )}
                             </div>
                         )}
 
@@ -722,90 +846,141 @@ export default function RestaurantSubmissionsPage() {
                             <Label>
                                 카테고리 <span className="text-red-500">*</span>
                             </Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-between"
-                                    >
-                                        <span className="truncate">
-                                            {formData.categories.length > 0
-                                                ? `${formData.categories.length}개 선택됨`
-                                                : "카테고리 선택"
-                                            }
-                                        </span>
-                                        <ChevronDown className="h-4 w-4 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-64" align="start">
-                                    <div className="space-y-2">
-                                        <h4 className="font-semibold text-sm">카테고리 선택</h4>
-                                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                                            {RESTAURANT_CATEGORIES.map((category) => (
-                                                <div key={category} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`category-${category}`}
-                                                        checked={formData.categories.includes(category)}
-                                                        onCheckedChange={(checked) => {
-                                                            if (checked) {
-                                                                setFormData({
-                                                                    ...formData,
-                                                                    categories: [...formData.categories, category]
-                                                                });
-                                                            } else {
-                                                                setFormData({
-                                                                    ...formData,
-                                                                    categories: formData.categories.filter(c => c !== category)
-                                                                });
-                                                            }
-                                                        }}
-                                                    />
-                                                    <Label
-                                                        htmlFor={`category-${category}`}
-                                                        className="text-sm cursor-pointer flex-1"
-                                                    >
-                                                        {category}
-                                                    </Label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {formData.categories.length > 0 && (
-                                            <div className="pt-2 border-t">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setFormData({ ...formData, categories: [] })}
-                                                    className="w-full"
-                                                >
-                                                    선택 해제
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
+
+                            {/* 선택된 카테고리 표시 */}
                             {formData.categories.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                    {formData.categories.map((category) => (
-                                        <Badge key={category} variant="secondary" className="text-xs">
-                                            {category}
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    categories: formData.categories.filter(c => c !== category)
-                                                })}
-                                                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </Badge>
-                                    ))}
+                                <div className="flex flex-wrap gap-1.5 p-3 bg-muted/50 rounded-lg border">
+                                    {(() => {
+                                        // 기본 카테고리와 직접 입력 카테고리 분리
+                                        const standardCategories = formData.categories.filter(cat =>
+                                            RESTAURANT_CATEGORIES.includes(cat as any)
+                                        );
+                                        const customCategories = formData.categories.filter(cat =>
+                                            !RESTAURANT_CATEGORIES.includes(cat as any)
+                                        );
+
+                                        // 기본 카테고리 먼저, 직접 입력 카테고리는 마지막에 표시
+                                        const sortedCategories = [...standardCategories, ...customCategories];
+
+                                        return sortedCategories.map((category) => {
+                                            // 광고 관련 태그인지 확인
+                                            const isAdTag = ['광고', '협찬', 'PPL', 'AD', '광고협찬'].some(
+                                                ad => category.toLowerCase().includes(ad.toLowerCase())
+                                            );
+
+                                            // 직접 입력한 커스텀 카테고리인지 확인
+                                            const isCustomCategory = !RESTAURANT_CATEGORIES.includes(category as any);
+
+                                            // 광고 태그이거나 직접 입력한 카테고리면 오렌지 스타일
+                                            const isOrangeStyle = isAdTag || isCustomCategory;
+
+                                            return (
+                                                <Badge
+                                                    key={category}
+                                                    variant={isOrangeStyle ? "outline" : "secondary"}
+                                                    className={
+                                                        isOrangeStyle
+                                                            ? "text-xs px-2.5 py-1 bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 transition-colors"
+                                                            : "text-xs px-2.5 py-1 hover:bg-secondary/80 transition-colors"
+                                                    }
+                                                >
+                                                    {isAdTag && '📢 '}{category}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({
+                                                            ...formData,
+                                                            categories: formData.categories.filter(c => c !== category)
+                                                        })}
+                                                        className="ml-1.5 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                            );
+                                        });
+                                    })()}
                                 </div>
                             )}
-                        </div>
 
-                        <div className="space-y-2">
+                            {/* 빠른 선택 */}
+                            <div className="space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground">빠른 선택</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {RESTAURANT_CATEGORIES.map((category) => (
+                                        <Button
+                                            key={category}
+                                            type="button"
+                                            variant={formData.categories.includes(category) ? "default" : "outline"}
+                                            size="sm"
+                                            onClick={() => {
+                                                if (formData.categories.includes(category)) {
+                                                    setFormData({
+                                                        ...formData,
+                                                        categories: formData.categories.filter(c => c !== category)
+                                                    });
+                                                } else {
+                                                    // 맨 앞에 추가 (빠른 선택)
+                                                    setFormData({
+                                                        ...formData,
+                                                        categories: [...formData.categories, category]
+                                                    });
+                                                }
+                                            }}
+                                            className="h-8 text-xs px-3"
+                                        >
+                                            {category}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 직접 입력 */}
+                            <div className="space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground">직접 입력 (광고, 협찬 등)</p>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={categoryInput}
+                                        onChange={(e) => setCategoryInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                const trimmed = categoryInput.trim();
+                                                if (trimmed && !formData.categories.includes(trimmed)) {
+                                                    // 맨 마지막에 추가 (직접 입력)
+                                                    setFormData({
+                                                        ...formData,
+                                                        categories: [...formData.categories, trimmed]
+                                                    });
+                                                    setCategoryInput("");
+                                                }
+                                            }
+                                        }}
+                                        placeholder="예: 광고, 협찬, PPL"
+                                        className="flex-1 h-9"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const trimmed = categoryInput.trim();
+                                            if (trimmed && !formData.categories.includes(trimmed)) {
+                                                // 맨 마지막에 추가 (직접 입력)
+                                                setFormData({
+                                                    ...formData,
+                                                    categories: [...formData.categories, trimmed]
+                                                });
+                                                setCategoryInput("");
+                                            }
+                                        }}
+                                        disabled={!categoryInput.trim()}
+                                        className="h-9 px-4"
+                                    >
+                                        추가
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>                        <div className="space-y-2">
                             <Label htmlFor="address">
                                 주소 <span className="text-red-500">*</span>
                             </Label>
@@ -827,31 +1002,172 @@ export default function RestaurantSubmissionsPage() {
                             />
                         </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="youtube_link">
-                                유튜브 영상 링크 <span className="text-red-500">*</span>
-                            </Label>
-                            <Input
-                                id="youtube_link"
-                                value={formData.youtube_link}
-                                onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
-                                placeholder="https://youtube.com/watch?v=..."
-                            />
-                            <p className="text-xs text-muted-foreground">
-                                쯔양이 방문한 맛집 유튜브 영상 링크를 입력해주세요
-                            </p>
-                        </div>
+                        {/* 신규 제보일 때: 유튜브 영상 링크와 리뷰 입력 */}
+                        {submissionMode === 'new' && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="youtube_link">
+                                        유튜브 영상 링크 <span className="text-red-500">*</span>
+                                    </Label>
+                                    <Input
+                                        id="youtube_link"
+                                        value={formData.youtube_link}
+                                        onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
+                                        placeholder="https://youtube.com/watch?v=..."
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        쯔양이 방문한 맛집 유튜브 영상 링크를 입력해주세요
+                                    </p>
+                                </div>
 
-                        <div className="space-y-2">
-                            <Label htmlFor="description">쯔양의 리뷰</Label>
-                            <Textarea
-                                id="description"
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요... (팩트 체크 예정)"
-                                rows={4}
-                            />
-                        </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="description">쯔양의 리뷰</Label>
+                                    <Textarea
+                                        id="description"
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        placeholder="쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요... (팩트 체크 예정)"
+                                        rows={4}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {/* 수정 요청일 때: 모든 유튜브 영상 표시 - 편집 가능 */}
+                        {submissionMode === 'update' && selectedRestaurant && formData.youtube_links.length > 0 && (
+                            <Card className="p-4 bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Youtube className="h-5 w-5 text-purple-600" />
+                                            <Label className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                                                등록된 유튜브 영상 ({formData.youtube_links.length}개)
+                                            </Label>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setFormData({
+                                                    ...formData,
+                                                    youtube_links: [...formData.youtube_links, ''],
+                                                    tzuyang_reviews: [...formData.tzuyang_reviews, { review: '' }]
+                                                });
+                                                // 새로운 영상이 추가되면 잠시 후 스크롤
+                                                setTimeout(() => {
+                                                    const elements = document.querySelectorAll('[data-video-item]');
+                                                    const lastElement = elements[elements.length - 1];
+                                                    lastElement?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                                }, 100);
+                                            }}
+                                            className="text-xs"
+                                        >
+                                            + 영상 추가
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {formData.youtube_links.map((link, index) => {
+                                            return (
+                                                <div key={index} data-video-item className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                                    <div className="flex items-start gap-2">
+                                                        <Badge variant="outline" className="text-xs mt-1 shrink-0">영상 {index + 1}</Badge>
+                                                        <div className="flex-1">
+                                                            <Textarea
+                                                                value={link}
+                                                                onChange={(e) => {
+                                                                    const newLinks = [...formData.youtube_links];
+                                                                    newLinks[index] = e.target.value;
+                                                                    setFormData({ ...formData, youtube_links: newLinks });
+                                                                }}
+                                                                placeholder="https://youtube.com/watch?v=..."
+                                                                className="min-h-[60px] text-sm resize-none"
+                                                            />
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                const newLinks = formData.youtube_links.filter((_, i) => i !== index);
+                                                                const newReviews = formData.tzuyang_reviews.filter((_, i) => i !== index);
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    youtube_links: newLinks,
+                                                                    tzuyang_reviews: newReviews
+                                                                });
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 h-8 px-2 shrink-0"
+                                                            title="영상 및 리뷰 삭제"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
+
+                        {/* 수정 요청일 때: 모든 쯔양 리뷰 표시 - 편집 가능 */}
+                        {submissionMode === 'update' && selectedRestaurant && formData.tzuyang_reviews.length > 0 && (
+                            <Card className="p-4 bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800">
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between flex-wrap gap-2">
+                                        <div className="flex items-center gap-2">
+                                            <MessageSquare className="h-5 w-5 text-pink-600" />
+                                            <Label className="text-sm font-medium text-pink-800 dark:text-pink-200">
+                                                쯔양의 리뷰 ({formData.tzuyang_reviews.length}개)
+                                            </Label>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-xs text-pink-700 dark:text-pink-300 bg-pink-100 dark:bg-pink-900/30 px-2 py-1 rounded">
+                                            <span>💡</span>
+                                            <span>영상과 리뷰는 1:1로 자동 매칭됩니다</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {formData.tzuyang_reviews.map((review, index) => {
+                                            const reviewText = typeof review === 'string'
+                                                ? review
+                                                : review.review || review.content || '';
+
+                                            return (
+                                                <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-pink-200 dark:border-pink-700">
+                                                    <div className="flex items-start gap-2">
+                                                        <Badge variant="outline" className="text-xs mt-1 shrink-0">리뷰 {index + 1}</Badge>
+                                                        <div className="flex-1">
+                                                            <Textarea
+                                                                ref={(el) => {
+                                                                    if (el) {
+                                                                        el.style.height = 'auto';
+                                                                        el.style.height = el.scrollHeight + 'px';
+                                                                    }
+                                                                }}
+                                                                value={reviewText}
+                                                                onChange={(e) => {
+                                                                    const newReviews = [...formData.tzuyang_reviews];
+                                                                    newReviews[index] = { review: e.target.value };
+                                                                    setFormData({ ...formData, tzuyang_reviews: newReviews });
+
+                                                                    // 자동 높이 조절
+                                                                    e.target.style.height = 'auto';
+                                                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                                                }}
+                                                                placeholder="쯔양의 리뷰를 입력하세요..."
+                                                                className="text-sm resize-none overflow-hidden"
+                                                                style={{ minHeight: '60px' }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
 
                         <div className="flex justify-end gap-2">
                             <Button
