@@ -24,14 +24,77 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
     queryFn: async () => {
       if (!searchQuery.trim()) return [];
 
-      const { data, error } = await supabase
-        .from("restaurants")
-        .select("*")
-        .ilike("name", `%${searchQuery}%`)
-        .limit(10);
+      const trimmedQuery = searchQuery.trim();
 
-      if (error) throw error;
-      return data as Restaurant[];
+      // 1. 맛집 이름으로 검색 (RPC 함수 사용 - Trigram 유사도 기반)
+      let nameResults: any = null;
+      try {
+        const rpcResult = await (supabase as any).rpc("search_restaurants_by_name", {
+          search_query: trimmedQuery,
+          similarity_threshold: 0.001,  // SQL 기본값과 동일하게 낮춤
+          max_results: 50,
+        });
+        nameResults = rpcResult.data;
+        
+        if (rpcResult.error) {
+          console.warn("맛집 이름 검색 실패:", rpcResult.error);
+        }
+      } catch (error) {
+        console.warn("맛집 이름 검색 오류:", error);
+      }
+
+      // SQL에서 이미 필터링했으므로 그대로 사용
+      const nameResultsArray = (nameResults || []) as Restaurant[];
+
+      // 2. YouTube 제목으로 검색 (RPC 함수 사용)
+      let youtubeResults: any = null;
+      try {
+        const rpcResult = await (supabase as any).rpc("search_restaurants_by_youtube_title", {
+          search_query: trimmedQuery,
+          similarity_threshold: 0.01,  // 일관성을 위해 동일하게 설정
+          max_results: 50,
+        });
+        youtubeResults = rpcResult.data;
+        
+        if (rpcResult.error) {
+          console.warn("YouTube 제목 검색 실패:", rpcResult.error);
+        }
+      } catch (error) {
+        console.warn("YouTube 제목 검색 오류:", error);
+      }
+
+      // 3. 두 결과 병합 (ID 기준 중복 제거)
+      const youtubeResultsArray = ((youtubeResults || []) as Restaurant[])
+        .filter(r => r.status === "approved"); // YouTube 결과도 approved만
+      
+      const restaurantMap = new Map<string, Restaurant>();
+      
+      // 이름 검색 결과 추가
+      nameResultsArray.forEach(restaurant => {
+        restaurantMap.set(restaurant.id, restaurant);
+      });
+
+      // YouTube 결과 중 없는 것만 추가
+      youtubeResultsArray.forEach(restaurant => {
+        if (!restaurantMap.has(restaurant.id)) {
+          restaurantMap.set(restaurant.id, restaurant);
+        }
+      });
+
+      // 4. 같은 음식점명 중복 제거 (첫 번째 것만 유지)
+      const seenNames = new Set<string>();
+      const uniqueResults: Restaurant[] = [];
+
+      for (const restaurant of restaurantMap.values()) {
+        const normalizedName = restaurant.name.trim().toLowerCase();
+        if (!seenNames.has(normalizedName)) {
+          seenNames.add(normalizedName);
+          uniqueResults.push(restaurant);
+        }
+      }
+
+      // 5. 최대 10개로 제한
+      return uniqueResults.slice(0, 10);
     },
     enabled: searchQuery.length > 0,
   });
@@ -73,7 +136,7 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
       <div className="relative">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="맛집 검색..."
+          placeholder="맛집 이름 또는 유튜브 제목 검색..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
