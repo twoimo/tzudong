@@ -47,6 +47,8 @@ export default function AdminEvaluationPage() {
   });
   const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
+  const [searchResults, setSearchResults] = useState<EvaluationRecord[] | null>(null); // 검색 결과
+  const [isSearching, setIsSearching] = useState(false); // 검색 로딩 상태
   const [evalFilters, setEvalFilters] = useState<{
     visit_authenticity?: string;
     rb_inference_score?: string;
@@ -99,11 +101,56 @@ export default function AdminEvaluationPage() {
     }
   }, [user, isAdmin, authLoading]);
 
-  // 필터링 + 검색된 레코드 (전체 데이터에서 검색)
+  // YouTube 제목 퍼지 검색
+  useEffect(() => {
+    const performFuzzySearch = async () => {
+      if (!searchQuery.trim()) {
+        setSearchResults(null);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        console.log('검색 시작:', searchQuery.trim());
+        const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
+          search_query: searchQuery.trim(),
+          similarity_threshold: 0.02,
+          max_results: 100
+        });
+
+        if (error) {
+          console.error('RPC 에러:', error);
+          throw error;
+        }
+        
+        console.log('검색 결과:', data?.length || 0, '개');
+        console.log('검색 결과 샘플:', data?.slice(0, 3));
+        setSearchResults(data || []);
+      } catch (error) {
+        console.error('YouTube 제목 검색 실패:', error);
+        toast({
+          variant: 'destructive',
+          title: '검색 실패',
+          description: '영상 제목 검색 중 오류가 발생했습니다.',
+        });
+        setSearchResults(null);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(performFuzzySearch, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, toast]);
+
+  // 필터링 + 검색된 레코드
   const filteredRecords = useMemo(() => {
+    // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
+    const baseRecords = searchResults || allRecords;
+
     let filtered = selectedStatuses.length === 0
-      ? allRecords.filter(r => r.status !== 'deleted') // 전체 탭일 때는 deleted 제외
-      : allRecords.filter(r => {
+      ? baseRecords.filter(r => r.status !== 'deleted') // 전체 탭일 때는 deleted 제외
+      : baseRecords.filter(r => {
         // geocoding_failed 탭 클릭 시: geocoding_success가 false인 레코드
         if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
           return !r.geocoding_success;
@@ -184,16 +231,8 @@ export default function AdminEvaluationPage() {
       filtered = filtered.filter(r => r.status === evalFilters.status);
     }
 
-    // 9. 영상 제목 검색 필터 (전체 데이터에서 검색)
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r =>
-        r.youtube_meta?.title?.toLowerCase().includes(query)
-      );
-    }
-
     return filtered;
-  }, [allRecords, selectedStatuses, evalFilters, searchQuery]);
+  }, [allRecords, searchResults, selectedStatuses, evalFilters]);
 
   // 더 많은 레코드 로드
   const loadMoreRecords = useCallback(() => {
@@ -628,7 +667,7 @@ export default function AdminEvaluationPage() {
                   onRegisterMissing={handleRegisterMissing}
                   onResolveConflict={handleResolveConflict}
                   onEdit={handleEdit}
-                  loading={loading}
+                  loading={loading || isSearching}
                   evalFilters={evalFilters}
                   isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
                   searchQuery={searchQuery}
