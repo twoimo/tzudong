@@ -50,6 +50,8 @@ export function RestaurantDetailPanel({
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
+    const [showAllYoutubeLinks, setShowAllYoutubeLinks] = useState(false);
+    const [showAllTzuyangReviews, setShowAllTzuyangReviews] = useState(false);
 
     // 카테고리 처리: categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -452,12 +454,24 @@ export function RestaurantDetailPanel({
                                     <>
                                         <Separator />
                                         <div className="space-y-3">
-                                            <h3 className="font-semibold text-sm flex items-center gap-2">
-                                                <Youtube className="h-4 w-4 text-red-500" />
-                                                쯔양 유튜브 영상
-                                            </h3>
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="font-semibold text-sm flex items-center gap-2">
+                                                    <Youtube className="h-4 w-4 text-red-500" />
+                                                    쯔양 유튜브 영상 ({restaurant.youtube_links.length})
+                                                </h3>
+                                                {restaurant.youtube_links.length > 1 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setShowAllYoutubeLinks(!showAllYoutubeLinks)}
+                                                        className="text-xs h-auto py-1"
+                                                    >
+                                                        {showAllYoutubeLinks ? '접기' : `전체보기 (${restaurant.youtube_links.length})`}
+                                                    </Button>
+                                                )}
+                                            </div>
                                             <div className="space-y-2">
-                                                {restaurant.youtube_links.map((link, index) => (
+                                                {(showAllYoutubeLinks ? restaurant.youtube_links : restaurant.youtube_links.slice(0, 1)).map((link, index) => (
                                                     <div
                                                         key={index}
                                                         className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
@@ -485,12 +499,24 @@ export function RestaurantDetailPanel({
                                     <>
                                         <Separator />
                                         <div className="space-y-2">
-                                            <h3 className="font-semibold text-sm flex items-center gap-2">
-                                                <Quote className="h-4 w-4 text-muted-foreground" />
-                                                쯔양의 리뷰
-                                            </h3>
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="font-semibold text-sm flex items-center gap-2">
+                                                    <Quote className="h-4 w-4 text-muted-foreground" />
+                                                    쯔양의 리뷰 ({restaurant.tzuyang_reviews.length})
+                                                </h3>
+                                                {restaurant.tzuyang_reviews.length > 1 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setShowAllTzuyangReviews(!showAllTzuyangReviews)}
+                                                        className="text-xs h-auto py-1"
+                                                    >
+                                                        {showAllTzuyangReviews ? '접기' : `전체보기 (${restaurant.tzuyang_reviews.length})`}
+                                                    </Button>
+                                                )}
+                                            </div>
                                             <div className="space-y-2">
-                                                {restaurant.tzuyang_reviews.map((reviewObj: any, index) => (
+                                                {(showAllTzuyangReviews ? restaurant.tzuyang_reviews : restaurant.tzuyang_reviews.slice(0, 1)).map((reviewObj: any, index) => (
                                                     <div key={index} className="p-4 bg-muted/50 rounded-lg">
                                                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                                                             {typeof reviewObj === 'string' ? reviewObj : reviewObj.review}
