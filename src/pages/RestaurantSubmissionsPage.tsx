@@ -137,6 +137,44 @@ export default function RestaurantSubmissionsPage() {
         return () => observer.disconnect();
     }, [loadMoreSubmissions]);
 
+    // 모달이 열릴 때 상태 초기화
+    useEffect(() => {
+        if (isSubmitModalOpen) {
+            if (submissionMode === 'new') {
+                // 신규 제보 모드 초기화
+                setFormData({
+                    restaurant_name: "",
+                    address: "",
+                    phone: "",
+                    categories: [],
+                    youtube_link: "",
+                    description: "",
+                    youtube_links: [],
+                    youtube_metas: [],
+                    tzuyang_reviews: [],
+                });
+                setSelectedRestaurant(null);
+                setOriginalData(null);
+            } else if (submissionMode === 'update') {
+                // 수정 요청 모드 초기화 - 맛집 선택만 초기화
+                setFormData({
+                    restaurant_name: "",
+                    address: "",
+                    phone: "",
+                    categories: [],
+                    youtube_link: "",
+                    description: "",
+                    youtube_links: [],
+                    youtube_metas: [],
+                    tzuyang_reviews: [],
+                });
+                setSelectedRestaurant(null);
+                setOriginalData(null);
+            }
+            setCategoryInput("");
+        }
+    }, [isSubmitModalOpen, submissionMode]);
+
     // 제보 제출
     const submitMutation = useMutation({
         mutationFn: async (data: typeof formData) => {
