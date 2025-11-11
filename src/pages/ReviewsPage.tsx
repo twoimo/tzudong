@@ -119,9 +119,9 @@ const ReviewsPage = () => {
                     return {
                         id: review.id,
                         restaurantName: restaurant?.name || '알 수 없음',
-                        restaurantCategories: Array.isArray(restaurant?.category)
-                            ? restaurant.category
-                            : [restaurant?.category || review.categories?.[0] || review.category || '기타'],
+                        restaurantCategories: Array.isArray(restaurant?.categories)
+                            ? restaurant.categories
+                            : (restaurant?.categories ? [restaurant.categories] : [review.categories?.[0] || review.category || '기타']),
                         userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',

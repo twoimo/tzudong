@@ -256,10 +256,13 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
                 const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
                 // 카테고리별 적절한 이모티콘으로 변경
-                const getCategoryIcon = (category: string | string[]) => {
+                const getCategoryIcon = (category: string | string[] | null | undefined) => {
+                    // category가 null이나 undefined면 기본값
+                    if (!category) return '⭐';
+
                     // category가 배열이면 첫 번째 값 사용
                     const categoryStr = Array.isArray(category) ? category[0] : category;
-                    
+
                     const iconMap: { [key: string]: string } = {
                         '고기': '🥩',
                         '치킨': '🍗',
@@ -281,7 +284,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     return iconMap[categoryStr] || '⭐'; // 기본값은 별표
                 };
 
-                const icon = getCategoryIcon(restaurant.category);
+                // categories 필드 사용 (호환성 속성인 category도 사용 가능)
+                const icon = getCategoryIcon(restaurant.categories || restaurant.category);
 
                 // 선택된 맛집은 더 큰 크기와 강조 효과 (조금 더 작게)
                 const markerSize = isSelected ? 32 : 24;
@@ -337,75 +341,75 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
     // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
     useEffect(() => {
-      if (!isLoaded || markersRef.current.length === 0) return;
-
-      markersRef.current.forEach((marker, index) => {
-        const restaurant = restaurants[index];
-        if (!restaurant) return;
-
-        const isSelected = selectedRestaurant?.id === restaurant.id;
-        const markerElement = marker.getIcon().content as HTMLElement;
-        if (!markerElement) return;
-
-        const innerDiv = markerElement.querySelector('div');
-        if (!innerDiv) return;
-
-        // 크기 업데이트
-        const markerSize = isSelected ? 32 : 24;
-        innerDiv.style.fontSize = `${markerSize}px`;
-
-        // 애니메이션 클래스 업데이트
-        if (isSelected) {
-          innerDiv.classList.add('animate-bounce');
-        } else {
-          innerDiv.classList.remove('animate-bounce');
-        }
-      });
-  }, [selectedRestaurant?.id, restaurants, isLoaded]);
-
-  // 줌 이벤트 시 마커 스타일 유지
-  useEffect(() => {
-    if (!mapInstanceRef.current || !isLoaded) return;
-
-    const handleZoomChange = () => {
-      // 줌 변경 후 약간의 지연을 주어 마커 스타일 재적용
-      setTimeout(() => {
         if (!isLoaded || markersRef.current.length === 0) return;
 
         markersRef.current.forEach((marker, index) => {
-          const restaurant = restaurants[index];
-          if (!restaurant) return;
+            const restaurant = restaurants[index];
+            if (!restaurant) return;
 
-          const isSelected = selectedRestaurant?.id === restaurant.id;
-          const markerElement = marker.getIcon().content as HTMLElement;
-          if (!markerElement) return;
+            const isSelected = selectedRestaurant?.id === restaurant.id;
+            const markerElement = marker.getIcon().content as HTMLElement;
+            if (!markerElement) return;
 
-          const innerDiv = markerElement.querySelector('div');
-          if (!innerDiv) return;
+            const innerDiv = markerElement.querySelector('div');
+            if (!innerDiv) return;
 
-          // 크기 업데이트
-          const markerSize = isSelected ? 32 : 24;
-          innerDiv.style.fontSize = `${markerSize}px`;
+            // 크기 업데이트
+            const markerSize = isSelected ? 32 : 24;
+            innerDiv.style.fontSize = `${markerSize}px`;
 
-          // 애니메이션 클래스 업데이트
-          if (isSelected) {
-            innerDiv.classList.add('animate-bounce');
-          } else {
-            innerDiv.classList.remove('animate-bounce');
-          }
+            // 애니메이션 클래스 업데이트
+            if (isSelected) {
+                innerDiv.classList.add('animate-bounce');
+            } else {
+                innerDiv.classList.remove('animate-bounce');
+            }
         });
-      }, 100);
-    };
+    }, [selectedRestaurant?.id, restaurants, isLoaded]);
 
-    // 줌 변경 이벤트 리스너 추가
-    naver.maps.Event.addListener(mapInstanceRef.current, 'zoom_changed', handleZoomChange);
+    // 줌 이벤트 시 마커 스타일 유지
+    useEffect(() => {
+        if (!mapInstanceRef.current || !isLoaded) return;
 
-    return () => {
-      // Naver Maps에서는 이벤트 리스너가 자동으로 정리됨
-    };
-  }, [isLoaded, selectedRestaurant?.id, restaurants]);
+        const handleZoomChange = () => {
+            // 줌 변경 후 약간의 지연을 주어 마커 스타일 재적용
+            setTimeout(() => {
+                if (!isLoaded || markersRef.current.length === 0) return;
 
-  // 로딩 에러 처리
+                markersRef.current.forEach((marker, index) => {
+                    const restaurant = restaurants[index];
+                    if (!restaurant) return;
+
+                    const isSelected = selectedRestaurant?.id === restaurant.id;
+                    const markerElement = marker.getIcon().content as HTMLElement;
+                    if (!markerElement) return;
+
+                    const innerDiv = markerElement.querySelector('div');
+                    if (!innerDiv) return;
+
+                    // 크기 업데이트
+                    const markerSize = isSelected ? 32 : 24;
+                    innerDiv.style.fontSize = `${markerSize}px`;
+
+                    // 애니메이션 클래스 업데이트
+                    if (isSelected) {
+                        innerDiv.classList.add('animate-bounce');
+                    } else {
+                        innerDiv.classList.remove('animate-bounce');
+                    }
+                });
+            }, 100);
+        };
+
+        // 줌 변경 이벤트 리스너 추가
+        naver.maps.Event.addListener(mapInstanceRef.current, 'zoom_changed', handleZoomChange);
+
+        return () => {
+            // Naver Maps에서는 이벤트 리스너가 자동으로 정리됨
+        };
+    }, [isLoaded, selectedRestaurant?.id, restaurants]);
+
+    // 로딩 에러 처리
     if (loadError) {
         return (
             <div className="flex items-center justify-center h-full bg-muted">

@@ -47,8 +47,8 @@ export async function checkDbConflict(params: {
     }
 
     // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
-    const nameMismatchConflicts = existingRestaurants.filter(restaurant => 
-      restaurant.youtube_links?.includes(trimmedYoutubeLink) && 
+    const nameMismatchConflicts = existingRestaurants.filter(restaurant =>
+      restaurant.youtube_links?.includes(trimmedYoutubeLink) &&
       restaurant.name.trim() !== trimmedRestaurantName
     );
 
@@ -62,7 +62,7 @@ export async function checkDbConflict(params: {
     }
 
     // 충돌 타입 2: 같은 주소 + 같은 음식점명 + 다른 youtube_link (병합 필요)
-    const mergeNeededRestaurants = existingRestaurants.filter(restaurant => 
+    const mergeNeededRestaurants = existingRestaurants.filter(restaurant =>
       restaurant.name.trim() === trimmedRestaurantName &&
       !restaurant.youtube_links?.includes(trimmedYoutubeLink)
     );
@@ -94,12 +94,12 @@ export async function mergeRestaurantData(params: {
   newTzuyangReview?: string;
   newCategory?: string;
 }): Promise<{ success: boolean; error?: string }> {
-  const { 
-    existingRestaurant, 
-    newYoutubeLink, 
-    newYoutubeMeta, 
+  const {
+    existingRestaurant,
+    newYoutubeLink,
+    newYoutubeMeta,
     newTzuyangReview,
-    newCategory 
+    newCategory
   } = params;
 
   try {
@@ -120,9 +120,13 @@ export async function mergeRestaurantData(params: {
     ];
 
     // 카테고리 병합 (중복 제거)
-    const updatedCategories = newCategory && !existingRestaurant.category.includes(newCategory)
-      ? [...existingRestaurant.category, newCategory]
-      : existingRestaurant.category;
+    const currentCategories = Array.isArray(existingRestaurant.categories)
+      ? existingRestaurant.categories
+      : (existingRestaurant.categories ? [existingRestaurant.categories] : []);
+
+    const updatedCategories = newCategory && !currentCategories.includes(newCategory)
+      ? [...currentCategories, newCategory]
+      : currentCategories;
 
     // Optimistic Locking으로 업데이트
     const { error: updateError } = await supabase
@@ -131,7 +135,7 @@ export async function mergeRestaurantData(params: {
         youtube_links: updatedYoutubeLinks,
         youtube_metas: updatedYoutubeMetas,
         tzuyang_reviews: updatedTzuyangReviews,
-        category: updatedCategories,
+        categories: updatedCategories,
         updated_at: new Date().toISOString(),
       })
       .eq('id', existingRestaurant.id)
@@ -139,9 +143,9 @@ export async function mergeRestaurantData(params: {
 
     if (updateError) {
       if (updateError.message.includes('updated_at')) {
-        return { 
-          success: false, 
-          error: '다른 관리자가 수정했습니다. 새로고침 후 다시 시도하세요.' 
+        return {
+          success: false,
+          error: '다른 관리자가 수정했습니다. 새로고침 후 다시 시도하세요.'
         };
       }
       throw updateError;

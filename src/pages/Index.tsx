@@ -74,11 +74,17 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     setRestaurantToEdit(restaurant);
     setEditFormData({
       name: restaurant.name,
-      address: restaurant.address,
+      address: restaurant.road_address || restaurant.jibun_address || '',
       phone: restaurant.phone || '',
-      category: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category],
-      youtube_link: restaurant.youtube_link || '',
-      tzuyang_review: restaurant.tzuyang_review || ''
+      category: Array.isArray(restaurant.categories)
+        ? restaurant.categories
+        : (restaurant.categories ? [restaurant.categories] : []),
+      youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
+        ? restaurant.youtube_links[0]
+        : (restaurant.youtube_links || ''),
+      tzuyang_review: Array.isArray(restaurant.tzuyang_reviews) && restaurant.tzuyang_reviews.length > 0
+        ? JSON.stringify(restaurant.tzuyang_reviews[0])
+        : ''
     });
     setIsEditModalOpen(true);
   };
@@ -95,11 +101,17 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
     const originalData = {
       name: restaurantToEdit.name,
-      address: restaurantToEdit.address,
+      address: restaurantToEdit.road_address || restaurantToEdit.jibun_address || '',
       phone: restaurantToEdit.phone || '',
-      category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
-      youtube_link: restaurantToEdit.youtube_link || '',
-      tzuyang_review: restaurantToEdit.tzuyang_review || ''
+      category: Array.isArray(restaurantToEdit.categories)
+        ? restaurantToEdit.categories
+        : (restaurantToEdit.categories ? [restaurantToEdit.categories] : []),
+      youtube_link: Array.isArray(restaurantToEdit.youtube_links) && restaurantToEdit.youtube_links.length > 0
+        ? restaurantToEdit.youtube_links[0]
+        : (restaurantToEdit.youtube_links || ''),
+      tzuyang_review: Array.isArray(restaurantToEdit.tzuyang_reviews) && restaurantToEdit.tzuyang_reviews.length > 0
+        ? JSON.stringify(restaurantToEdit.tzuyang_reviews[0])
+        : ''
     };
 
     return Object.entries(editFormData).filter(([key, value]) => {
@@ -279,7 +291,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                           {/* 주소 */}
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <MapPin className="h-4 w-4" />
-                            {selectedRestaurant.address}
+                            {selectedRestaurant.road_address || selectedRestaurant.jibun_address || selectedRestaurant.address}
                           </div>
 
                           {/* 방문 정보 */}
@@ -291,15 +303,16 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                           </div>
 
                           {/* 카테고리 */}
-                          {selectedRestaurant.category && selectedRestaurant.category.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {selectedRestaurant.category.map((cat, index) => (
-                                <Badge key={index} variant="secondary" className="text-xs">
-                                  {cat}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
+                          {((selectedRestaurant.categories && selectedRestaurant.categories.length > 0) ||
+                            (selectedRestaurant.category && selectedRestaurant.category.length > 0)) && (
+                              <div className="flex flex-wrap gap-1">
+                                {(selectedRestaurant.categories || selectedRestaurant.category)?.map((cat, index) => (
+                                  <Badge key={index} variant="secondary" className="text-xs">
+                                    {cat}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
 
                           {/* 설명 */}
                           {selectedRestaurant.description && (

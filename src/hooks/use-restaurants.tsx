@@ -1,6 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, Region } from "@/types/restaurant";
+import { Tables } from "@/integrations/supabase/types";
+
+type DBRestaurant = Tables<"restaurants">;
 
 
 interface UseRestaurantsOptions {
@@ -72,7 +75,21 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 throw error;
             }
 
-            return (data || []) as Restaurant[];
+            // 호환성을 위한 데이터 변환
+            const restaurants = (data || []).map((restaurant: DBRestaurant) => ({
+                ...restaurant,
+                // 호환성 속성 추가
+                address: restaurant.road_address || restaurant.jibun_address || '',
+                category: restaurant.categories,
+                youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
+                    ? restaurant.youtube_links[0]
+                    : null,
+                tzuyang_review: Array.isArray(restaurant.tzuyang_reviews) && restaurant.tzuyang_reviews.length > 0 && restaurant.tzuyang_reviews[0]
+                    ? (restaurant.tzuyang_reviews[0] as any).review
+                    : null,
+            }));
+
+            return restaurants as Restaurant[];
         },
         enabled,
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함
@@ -93,7 +110,24 @@ export function useRestaurant(id: string | null) {
                 .single();
 
             if (error) throw error;
-            return data as Restaurant;
+
+            if (!data) return null;
+
+            // 호환성을 위한 데이터 변환
+            const dbData = data as DBRestaurant;
+            const restaurant: Restaurant = {
+                ...dbData,
+                address: dbData.road_address || dbData.jibun_address || '',
+                category: dbData.categories,
+                youtube_link: Array.isArray(dbData.youtube_links) && dbData.youtube_links.length > 0
+                    ? dbData.youtube_links[0]
+                    : null,
+                tzuyang_review: Array.isArray(dbData.tzuyang_reviews) && dbData.tzuyang_reviews.length > 0 && dbData.tzuyang_reviews[0]
+                    ? (dbData.tzuyang_reviews[0] as any).review
+                    : null,
+            };
+
+            return restaurant;
         },
         enabled: !!id,
     });

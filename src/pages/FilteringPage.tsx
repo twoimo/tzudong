@@ -928,11 +928,11 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-wrap gap-1">
-                                                    {Array.isArray(restaurant.category)
-                                                        ? restaurant.category.map((cat, idx) => (
+                                                    {Array.isArray(restaurant.categories) && restaurant.categories.length > 0
+                                                        ? restaurant.categories.map((cat, idx) => (
                                                             <Badge key={idx} variant="outline">{cat}</Badge>
                                                         ))
-                                                        : <Badge variant="outline">{restaurant.category}</Badge>
+                                                        : (restaurant.categories && <Badge variant="outline">{restaurant.categories}</Badge>)
                                                     }
                                                 </div>
                                             </TableCell>
@@ -943,7 +943,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                             </TableCell>
                                             <TableCell>
                                                 <span className="text-sm text-muted-foreground truncate block">
-                                                    {restaurant.address}
+                                                    {restaurant.road_address || restaurant.jibun_address || restaurant.address}
                                                 </span>
                                             </TableCell>
                                         </TableRow>
