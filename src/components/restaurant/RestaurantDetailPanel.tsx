@@ -353,16 +353,42 @@ export function RestaurantDetailPanel({
                             )}
                             {viewMode === 'detail' && (
                                 <div className="flex-1">
-                                    <div className="flex flex-wrap gap-1 mb-1">
+                                    <div className="flex gap-1 mb-1 overflow-x-auto scrollbar-hide">
                                         {categories.map((cat, index) => (
                                             <Badge
                                                 key={index}
                                                 variant={index === 0 ? "default" : "secondary"}
-                                                className="text-xs"
+                                                className="text-xs whitespace-nowrap"
                                             >
                                                 {cat}
                                             </Badge>
                                         ))}
+
+                                        {/* 광고 태그 */}
+                                        {restaurant.youtube_metas && restaurant.youtube_metas.length > 0 && (() => {
+                                            const adsMetas = restaurant.youtube_metas
+                                                .map((meta: any) => meta?.ads_info)
+                                                .filter((adsInfo: any) => adsInfo?.is_ads === true);
+
+                                            if (adsMetas.length === 0) return null;
+
+                                            const allAds = adsMetas.flatMap((adsInfo: any) => adsInfo.what_ads || []);
+                                            const uniqueAds = Array.from(new Set(allAds));
+
+                                            return uniqueAds.length > 0 ? (
+                                                <>
+                                                    {uniqueAds.map((ad: string, index: number) => (
+                                                        <Badge
+                                                            key={index}
+                                                            variant="outline"
+                                                            className="text-xs bg-orange-50 text-orange-700 border-orange-300 whitespace-nowrap"
+                                                        >
+                                                            📢 {ad}
+                                                        </Badge>
+                                                    ))}
+                                                </>
+                                            ) : null;
+                                        })()}
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-2xl">{getCategoryEmoji(categories[0] || '')}</span>
