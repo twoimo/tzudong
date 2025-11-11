@@ -127,10 +127,15 @@ BEGIN
     VALUES (NEW.id);
 
     RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- 에러 로깅
+        RAISE WARNING 'Error in handle_new_user: %', SQLERRM;
+        RETURN NEW;
 END;
 $$;
 
-COMMENT ON FUNCTION public.handle_new_user IS '신규 사용자 가입 시 프로필, 역할, 통계 자동 생성';
+COMMENT ON FUNCTION public.handle_new_user IS '신규 사용자 가입 시 프로필, 역할, 통계 자동 생성 (에러 처리 포함)';
 
 -- 2.4 리뷰 개수 증가 함수
 DROP FUNCTION IF EXISTS public.increment_review_count(UUID);
@@ -2277,3 +2282,38 @@ ALTER DATABASE postgres SET log_min_duration_statement = '1000'; -- 1초 이상 
     - 맛집 이름 길이: 2-100자
     - 카테고리 개수: 1-5개
 */
+
+-- ========================================
+-- PART 15: 기존 사용자 데이터 복구
+-- ========================================
+
+-- 15.1 기존 사용자 중 프로필이 없는 사용자에게 프로필 생성
+INSERT INTO public.profiles (user_id, nickname, email)
+SELECT 
+    u.id,
+    'user_' || substr(u.id::text, 1, 8),
+    u.email
+FROM auth.users u
+LEFT JOIN public.profiles p ON u.id = p.user_id
+WHERE p.id IS NULL
+ON CONFLICT (user_id) DO NOTHING;
+
+-- 15.2 기존 사용자 중 역할이 없는 사용자에게 역할 부여
+INSERT INTO public.user_roles (user_id, role)
+SELECT u.id, 'user'::public.app_role
+FROM auth.users u
+LEFT JOIN public.user_roles ur ON u.id = ur.user_id
+WHERE ur.id IS NULL
+ON CONFLICT (user_id, role) DO NOTHING;
+
+-- 15.3 기존 사용자 중 통계가 없는 사용자에게 통계 초기화
+INSERT INTO public.user_stats (user_id)
+SELECT u.id
+FROM auth.users u
+LEFT JOIN public.user_stats us ON u.id = us.user_id
+WHERE us.id IS NULL
+ON CONFLICT (user_id) DO NOTHING;
+
+COMMENT ON TABLE public.profiles IS '사용자 프로필 정보 테이블 (이메일 중복 가능, 닉네임만 고유) - 회원가입 시 자동 생성';
+COMMENT ON TABLE public.user_roles IS '사용자 역할 관리 테이블 (admin, user) - 회원가입 시 자동 생성';
+COMMENT ON TABLE public.user_stats IS '사용자 활동 통계 테이블 - 회원가입 시 자동 생성';
