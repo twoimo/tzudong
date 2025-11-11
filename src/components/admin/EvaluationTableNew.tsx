@@ -411,7 +411,30 @@ export function EvaluationTable({
                   </TooltipContent>
                 </Tooltip>
               </TableHead>
-              <TableHead className="min-w-[350px] sticky left-12 bg-background z-10">영상 정보</TableHead>
+              <TableHead className="min-w-[350px] sticky left-12 bg-background z-10">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      type="text"
+                      placeholder="영상 제목 검색..."
+                      value={searchQuery}
+                      onChange={(e) => onSearchChange?.(e.target.value)}
+                      className="pl-8 pr-8 h-8 text-sm"
+                    />
+                    {searchQuery && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                        onClick={() => onSearchChange?.('')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </TableHead>
 
               {/* 평가 컬럼들 */}
               <TableHead className="min-w-[120px]">
