@@ -27,6 +27,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             let query = supabase
                 .from("restaurants")
                 .select("*")
+                .eq("status", "approved") // status가 approved인 것만 조회
                 .order("name"); // 이름순으로 정렬
 
             // Apply bounds filter if provided
@@ -38,10 +39,10 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     .lte("lng", bounds.east);
             }
 
-            // Apply category filter
+            // Apply category filter (categories는 배열 타입)
             if (category && category.length > 0) {
-                // 실제 데이터베이스에서 category는 TEXT[] 타입으로 저장됨
-                query = query.overlaps("category", category);
+                // categories는 TEXT[] 타입으로 저장됨
+                query = query.overlaps("categories", category);
             }
 
             // Apply region filter

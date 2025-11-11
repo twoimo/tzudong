@@ -2,7 +2,8 @@ import { Tables } from "@/integrations/supabase/types";
 
 export type Restaurant = Tables<"restaurants">;
 export type Review = Tables<"reviews">;
-export type RestaurantCategory = Tables<"restaurants">["category"];
+// categories는 배열 타입
+export type RestaurantCategory = string[];
 
 export interface RestaurantWithDetails extends Restaurant {
     reviews?: Review[];

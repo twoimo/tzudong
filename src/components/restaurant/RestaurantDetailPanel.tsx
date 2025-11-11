@@ -53,12 +53,12 @@ export function RestaurantDetailPanel({
 
     if (!restaurant) return null;
 
-    // 카테고리 처리: 배열로 저장됨
-    const categories: string[] = Array.isArray(restaurant.category)
-        ? restaurant.category
-        : restaurant.category
-        ? [restaurant.category]
-        : [];
+    // 카테고리 처리: categories 배열로 저장됨
+    const categories: string[] = Array.isArray(restaurant.categories)
+        ? restaurant.categories
+        : restaurant.categories
+            ? [restaurant.categories]
+            : [];
 
     // 실제 리뷰 데이터 가져오기
     const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
@@ -544,8 +544,8 @@ export function RestaurantDetailPanel({
                                                         >
                                                             <Heart
                                                                 className={`h-3 w-3 ${likedReviews.has(review.id)
-                                                                        ? 'fill-red-500 text-red-500'
-                                                                        : 'text-gray-400'
+                                                                    ? 'fill-red-500 text-red-500'
+                                                                    : 'text-gray-400'
                                                                     }`}
                                                             />
                                                         </Button>
@@ -641,8 +641,8 @@ export function RestaurantDetailPanel({
                                                         >
                                                             <Heart
                                                                 className={`h-4 w-4 ${likedReviews.has(review.id)
-                                                                        ? 'fill-red-500 text-red-500'
-                                                                        : 'text-gray-400'
+                                                                    ? 'fill-red-500 text-red-500'
+                                                                    : 'text-gray-400'
                                                                     }`}
                                                             />
                                                         </Button>

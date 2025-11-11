@@ -155,7 +155,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             name: restaurant.name,
             address: restaurant.address,
             phone: restaurant.phone || '',
-            category: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category],
+            category: Array.isArray(restaurant.categories) ? restaurant.categories : (restaurant.categories ? [restaurant.categories] : []),
             youtube_link: restaurant.youtube_link || '',
             tzuyang_review: restaurant.tzuyang_review || ''
         });
@@ -176,12 +176,10 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             name: restaurantToEdit.name,
             address: restaurantToEdit.address,
             phone: restaurantToEdit.phone || '',
-            category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
+            category: Array.isArray(restaurantToEdit.categories) ? restaurantToEdit.categories : (restaurantToEdit.categories ? [restaurantToEdit.categories] : []),
             youtube_link: restaurantToEdit.youtube_link || '',
             tzuyang_review: restaurantToEdit.tzuyang_review || ''
-        };
-
-        return Object.entries(editFormData).filter(([key, value]) => {
+        }; return Object.entries(editFormData).filter(([key, value]) => {
             const originalValue = originalData[key as keyof typeof originalData];
             if (key === 'category') {
                 // 카테고리는 배열 비교
@@ -211,7 +209,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 restaurant_name: restaurantToEdit.name,
                 address: restaurantToEdit.address,
                 phone: restaurantToEdit.phone || '',
-                category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
+                category: Array.isArray(restaurantToEdit.categories) ? restaurantToEdit.categories : (restaurantToEdit.categories ? [restaurantToEdit.categories] : []),
                 youtube_link: restaurantToEdit.youtube_link || '',
                 tzuyang_review: restaurantToEdit.tzuyang_review || ''
             };
