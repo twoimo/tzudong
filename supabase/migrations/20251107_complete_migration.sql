@@ -1104,9 +1104,9 @@ CREATE TABLE public.profiles (
     last_login TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
-COMMENT ON TABLE public.profiles IS '사용자 프로필 정보 테이블';
-COMMENT ON COLUMN public.profiles.nickname IS '사용자 닉네임 (고유값, 2-20자)';
-COMMENT ON COLUMN public.profiles.email IS '이메일 주소 (형식 검증)';
+COMMENT ON TABLE public.profiles IS '사용자 프로필 정보 테이블 (이메일 중복 가능, 닉네임만 고유)';
+COMMENT ON COLUMN public.profiles.nickname IS '사용자 닉네임 (고유값, 2-20자, 중복 불가)';
+COMMENT ON COLUMN public.profiles.email IS '이메일 주소 (형식 검증, 중복 가능 - 회원탈퇴 후 재가입 허용)';
 COMMENT ON COLUMN public.profiles.profile_picture IS '프로필 이미지 URL';
 COMMENT ON COLUMN public.profiles.last_login IS '마지막 로그인 시간';
 
@@ -1449,8 +1449,8 @@ CREATE INDEX IF NOT EXISTS idx_profiles_nickname ON public.profiles(nickname);
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles(email);
 CREATE INDEX IF NOT EXISTS idx_profiles_created_at ON public.profiles(created_at DESC);
 
-COMMENT ON INDEX idx_profiles_nickname IS '닉네임 검색 최적화';
-COMMENT ON INDEX idx_profiles_email IS '이메일 검색 최적화';
+COMMENT ON INDEX idx_profiles_nickname IS '닉네임 검색 최적화 (UNIQUE - 중복 불가)';
+COMMENT ON INDEX idx_profiles_email IS '이메일 검색 최적화 (중복 가능 - 회원탈퇴 후 재가입 허용)';
 
 -- 4.1 맛집 테이블 인덱스
 -- 기본 인덱스

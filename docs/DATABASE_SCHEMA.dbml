@@ -70,20 +70,20 @@ Table user_roles {
 Table profiles {
   id uuid [pk, default: `gen_random_uuid()`]
   user_id uuid [not null, unique, ref: > auth_users.id]
-  nickname text [not null, unique, note: '사용자 닉네임 (고유값, 2-20자)']
-  email text [not null, note: '이메일 주소 (형식 검증)']
+  nickname text [not null, unique, note: '사용자 닉네임 (고유값, 2-20자, 중복 불가)']
+  email text [not null, note: '이메일 주소 (형식 검증, 중복 가능 - 회원탈퇴 후 재가입 허용)']
   profile_picture text [note: '프로필 이미지 URL']
   created_at timestamptz [not null, default: `now()`]
   last_login timestamptz [not null, default: `now()`, note: '마지막 로그인 시간']
   
   indexes {
     user_id
-    nickname
-    email
+    nickname [note: 'UNIQUE - 중복 불가']
+    email [note: '중복 가능 - 회원탈퇴 후 재가입 허용']
     created_at [name: 'idx_profiles_created_at', type: btree]
   }
   
-  Note: '사용자 프로필 정보 테이블'
+  Note: '사용자 프로필 정보 테이블 (이메일 중복 가능, 닉네임만 고유)'
 }
 
 Table restaurants {
