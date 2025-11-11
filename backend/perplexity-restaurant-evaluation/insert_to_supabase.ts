@@ -119,10 +119,6 @@ async function insertRestaurants() {
         // categories 배열로 변환
         const categories = data.category ? [data.category] : [];
 
-        // is_missing 계산: 주소가 없으면 true
-        const hasAddress = !!(data.roadAddress || data.jibunAddress);
-        const isMissing = data.is_missing || !hasAddress;
-
         // 삽입할 데이터 준비 (컬럼 순서 정리)
         const restaurantData = {
           // 기본 식별 정보
@@ -152,7 +148,7 @@ async function insertRestaurants() {
           // 지오코딩 및 상태
           geocoding_success: data.geocoding_success,
           geocoding_false_stage: data.geocoding_false_stage,
-          is_missing: isMissing,
+          is_missing: data.is_missing,
           is_not_selected: data.is_notSelected || false,
           
           // 위치 좌표
