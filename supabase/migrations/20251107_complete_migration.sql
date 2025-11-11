@@ -127,10 +127,15 @@ BEGIN
     VALUES (NEW.id);
 
     RETURN NEW;
+EXCEPTION
+    WHEN OTHERS THEN
+        -- 에러 로깅
+        RAISE WARNING 'Error in handle_new_user: %', SQLERRM;
+        RETURN NEW;
 END;
 $$;
 
-COMMENT ON FUNCTION public.handle_new_user IS '신규 사용자 가입 시 프로필, 역할, 통계 자동 생성';
+COMMENT ON FUNCTION public.handle_new_user IS '신규 사용자 가입 시 프로필, 역할, 통계 자동 생성 (에러 처리 포함)';
 
 -- 2.4 리뷰 개수 증가 함수
 DROP FUNCTION IF EXISTS public.increment_review_count(UUID);
@@ -1116,8 +1121,8 @@ CREATE TABLE public.restaurants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- 기본 정보
-    name TEXT NOT NULL CHECK (length(name) >= 2 AND length(name) <= 100),
-    phone TEXT CHECK (phone IS NULL OR phone ~ '^\d{2,3}-\d{3,4}-\d{4}$'),
+    name TEXT NOT NULL CHECK (length(name) >= 1 AND length(name) <= 100),  -- 1자 이상으로 완화
+    phone TEXT,  -- 전화번호 제약 제거 (해외 번호 포함)
     description TEXT,
     categories TEXT[] CHECK (categories IS NULL OR (array_length(categories, 1) > 0 AND array_length(categories, 1) <= 5)), -- [수정]
     
@@ -1161,7 +1166,6 @@ CREATE TABLE public.restaurants (
     review_count INTEGER NOT NULL DEFAULT 0 CHECK (review_count >= 0),
     
     -- 관리자 정보
-    admin_notes TEXT,  -- 관리자 메모
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     updated_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     
@@ -1175,7 +1179,7 @@ CREATE TABLE public.restaurants (
         (status = 'approved' AND 
          lat IS NOT NULL AND 
          lng IS NOT NULL AND 
-         categories IS NOT NULL AND -- [수정]
+         categories IS NOT NULL AND
          (road_address IS NOT NULL OR jibun_address IS NOT NULL)) OR
         -- 그 외의 status는 제약 없음
         status IN ('pending', 'rejected')
@@ -1215,7 +1219,6 @@ COMMENT ON COLUMN public.restaurants.status IS '승인 상태 (pending: 대기, 
 COMMENT ON COLUMN public.restaurants.is_missing IS '맛집 정보 누락 여부';
 COMMENT ON COLUMN public.restaurants.is_not_selected IS '선택되지 않음 여부';
 COMMENT ON COLUMN public.restaurants.review_count IS '리뷰 개수 (0 이상)';
-COMMENT ON COLUMN public.restaurants.admin_notes IS '관리자 메모';
 
 -- 3.4 리뷰 테이블
 DROP TABLE IF EXISTS public.reviews CASCADE;
@@ -2277,3 +2280,38 @@ ALTER DATABASE postgres SET log_min_duration_statement = '1000'; -- 1초 이상 
     - 맛집 이름 길이: 2-100자
     - 카테고리 개수: 1-5개
 */
+
+-- ========================================
+-- PART 15: 기존 사용자 데이터 복구
+-- ========================================
+
+-- 15.1 기존 사용자 중 프로필이 없는 사용자에게 프로필 생성
+INSERT INTO public.profiles (user_id, nickname, email)
+SELECT 
+    u.id,
+    'user_' || substr(u.id::text, 1, 8),
+    u.email
+FROM auth.users u
+LEFT JOIN public.profiles p ON u.id = p.user_id
+WHERE p.id IS NULL
+ON CONFLICT (user_id) DO NOTHING;
+
+-- 15.2 기존 사용자 중 역할이 없는 사용자에게 역할 부여
+INSERT INTO public.user_roles (user_id, role)
+SELECT u.id, 'user'::public.app_role
+FROM auth.users u
+LEFT JOIN public.user_roles ur ON u.id = ur.user_id
+WHERE ur.id IS NULL
+ON CONFLICT (user_id, role) DO NOTHING;
+
+-- 15.3 기존 사용자 중 통계가 없는 사용자에게 통계 초기화
+INSERT INTO public.user_stats (user_id)
+SELECT u.id
+FROM auth.users u
+LEFT JOIN public.user_stats us ON u.id = us.user_id
+WHERE us.id IS NULL
+ON CONFLICT (user_id) DO NOTHING;
+
+COMMENT ON TABLE public.profiles IS '사용자 프로필 정보 테이블 (이메일 중복 가능, 닉네임만 고유) - 회원가입 시 자동 생성';
+COMMENT ON TABLE public.user_roles IS '사용자 역할 관리 테이블 (admin, user) - 회원가입 시 자동 생성';
+COMMENT ON TABLE public.user_stats IS '사용자 활동 통계 테이블 - 회원가입 시 자동 생성';

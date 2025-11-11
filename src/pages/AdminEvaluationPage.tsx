@@ -9,9 +9,8 @@ import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
-import { ClipboardCheck, Loader2, Search } from 'lucide-react';
+import { ClipboardCheck, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { checkDbConflict, mergeRestaurantData } from '@/lib/db-conflict-checker';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,7 +28,7 @@ export default function AdminEvaluationPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
-  
+
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
   const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
   const [loading, setLoading] = useState(true);
@@ -64,12 +63,15 @@ export default function AdminEvaluationPage() {
   const [selectedConflictRecord, setSelectedConflictRecord] = useState<EvaluationRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
-  
+
+  // 테이블 뷰 토글 상태
+  const [isAlternateView, setIsAlternateView] = useState(false);
+
   // DB 충돌 경고 다이얼로그
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictWarningData, setConflictWarningData] = useState<{
     record: EvaluationRecord;
-    conflicts: any[];
+    conflicts: Record<string, unknown>[];
   } | null>(null);
 
   // 무한 스크롤을 위한 scroll container ref
@@ -78,7 +80,7 @@ export default function AdminEvaluationPage() {
   // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
     if (authLoading) return; // 인증 로딩 중에는 대기
-    
+
     if (!user || !isAdmin) {
       toast({
         title: "접근 권한이 없습니다",
@@ -87,7 +89,8 @@ export default function AdminEvaluationPage() {
       });
       navigate('/login');
     }
-  }, [user, isAdmin, authLoading, navigate, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isAdmin, authLoading]);
 
   // 초기 데이터 로드
   useEffect(() => {
@@ -98,21 +101,28 @@ export default function AdminEvaluationPage() {
 
   // 필터링 + 검색된 레코드 (전체 데이터에서 검색)
   const filteredRecords = useMemo(() => {
-    let filtered = selectedStatuses.length === 0 
+    let filtered = selectedStatuses.length === 0
       ? allRecords.filter(r => r.status !== 'deleted') // 전체 탭일 때는 deleted 제외
       : allRecords.filter(r => {
-          // geocoding_failed 탭 클릭 시: status가 'geocoding_failed' 또는 (pending + 지오코딩 실패)
-          if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
-            return r.status === 'geocoding_failed' || 
-                   (r.status === 'pending' && !r.geocoding_success);
-          }
-          return selectedStatuses.includes(r.status);
-        });
+        // geocoding_failed 탭 클릭 시: geocoding_success가 false인 레코드
+        if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
+          return !r.geocoding_success;
+        }
+        // missing 탭: is_missing이 true인 레코드
+        if (selectedStatuses.includes('missing' as EvaluationRecordStatus)) {
+          return r.is_missing;
+        }
+        // not_selected 탭: is_not_selected가 true인 레코드
+        if (selectedStatuses.includes('not_selected' as EvaluationRecordStatus)) {
+          return r.is_not_selected;
+        }
+        return selectedStatuses.includes(r.status);
+      });
 
     // 1. Visit Authenticity 필터 (0-3점)
     if (evalFilters.visit_authenticity) {
       const targetScore = parseInt(evalFilters.visit_authenticity);
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.visit_authenticity?.eval_value === targetScore
       );
     }
@@ -120,7 +130,7 @@ export default function AdminEvaluationPage() {
     // 2. RB Inference Score 필터 (0-2점)
     if (evalFilters.rb_inference_score) {
       const targetScore = parseInt(evalFilters.rb_inference_score);
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.rb_inference_score?.eval_value === targetScore
       );
     }
@@ -128,7 +138,7 @@ export default function AdminEvaluationPage() {
     // 3. RB Grounding TF 필터 (T/F)
     if (evalFilters.rb_grounding_TF) {
       const targetValue = evalFilters.rb_grounding_TF === 'True';
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.rb_grounding_TF?.eval_value === targetValue
       );
     }
@@ -136,7 +146,7 @@ export default function AdminEvaluationPage() {
     // 4. Review Faithfulness Score 필터 (0-1점)
     if (evalFilters.review_faithfulness_score) {
       const targetScore = parseFloat(evalFilters.review_faithfulness_score);
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.review_faithfulness_score?.eval_value === targetScore
       );
     }
@@ -147,7 +157,7 @@ export default function AdminEvaluationPage() {
         filtered = filtered.filter(r => !r.geocoding_success);
       } else {
         const targetValue = evalFilters.location_match_TF === 'True';
-        filtered = filtered.filter(r => 
+        filtered = filtered.filter(r =>
           r.evaluation_results?.location_match_TF?.eval_value === targetValue
         );
       }
@@ -156,7 +166,7 @@ export default function AdminEvaluationPage() {
     // 6. Category Validity TF 필터 (T/F)
     if (evalFilters.category_validity_TF) {
       const targetValue = evalFilters.category_validity_TF === 'True';
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.category_validity_TF?.eval_value === targetValue
       );
     }
@@ -164,7 +174,7 @@ export default function AdminEvaluationPage() {
     // 7. Category TF 필터 (T/F)
     if (evalFilters.category_TF) {
       const targetValue = evalFilters.category_TF === 'True';
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.category_TF?.eval_value === targetValue
       );
     }
@@ -177,7 +187,7 @@ export default function AdminEvaluationPage() {
     // 9. 영상 제목 검색 필터 (전체 데이터에서 검색)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.youtube_meta?.title?.toLowerCase().includes(query)
       );
     }
@@ -193,7 +203,7 @@ export default function AdminEvaluationPage() {
     setTimeout(() => {
       const currentLength = displayedRecords.length;
       const newRecords = filteredRecords.slice(currentLength, currentLength + PAGE_SIZE);
-      
+
       setDisplayedRecords(prev => [...prev, ...newRecords]);
       setHasMore(currentLength + PAGE_SIZE < filteredRecords.length);
       setLoadingMore(false);
@@ -214,7 +224,7 @@ export default function AdminEvaluationPage() {
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
       const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
-      
+
       // 80% 이상 스크롤 시 다음 데이터 로드
       if (scrollPercentage > 0.8 && hasMore && !loadingMore) {
         console.log('Loading more records...', {
@@ -234,10 +244,10 @@ export default function AdminEvaluationPage() {
   const loadAllRecords = async () => {
     try {
       setLoading(true);
-      
-      // 모든 레코드 조회 (deleted 포함)
+
+      // 모든 레코드 조회 (restaurants 테이블에서)
       const { data, error } = await supabase
-        .from('evaluation_records')
+        .from('restaurants')
         .select('*')
         .order('created_at', { ascending: false });
 
@@ -247,7 +257,7 @@ export default function AdminEvaluationPage() {
       }
 
       if (!data) {
-        console.warn('No data returned from evaluation_records');
+        console.warn('No data returned from restaurants');
         setAllRecords([]);
         setDisplayedRecords([]);
         setStats({
@@ -264,35 +274,65 @@ export default function AdminEvaluationPage() {
         return;
       }
 
-      setAllRecords(data as EvaluationRecord[]);
-      
-      // 통계 계산 (deleted 포함)
-      const deletedCount = data.filter(r => r.status === 'deleted').length;
-      const activeData = data.filter(r => r.status !== 'deleted');
-      
+      // restaurants 테이블 데이터를 EvaluationRecord 형식으로 변환
+      const records = data.map((r: Record<string, unknown>) => ({
+        ...r,
+        // 호환성을 위한 별칭 추가
+        restaurant_name: r.name,
+        youtube_link: Array.isArray(r.youtube_links) ? r.youtube_links[0] : '',
+        // restaurant_info 생성
+        restaurant_info: r.origin_address ? {
+          name: r.name as string,
+          phone: r.phone as string | null,
+          category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
+          origin_address: (r.origin_address as Record<string, unknown>)?.address as string || '',
+          origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number,
+          origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number,
+          reasoning_basis: r.reasoning_basis as string || '',
+          tzuyang_review: Array.isArray(r.tzuyang_reviews) && r.tzuyang_reviews.length > 0
+            ? ((r.tzuyang_reviews[0] as Record<string, unknown>)?.review as string || '')
+            : '',
+          naver_address_info: r.road_address || r.jibun_address ? {
+            road_address: r.road_address as string | null,
+            jibun_address: r.jibun_address as string || '',
+            english_address: r.english_address as string | null,
+            address_elements: r.address_elements,
+            x: r.lng?.toString() || '',
+            y: r.lat?.toString() || '',
+          } : null,
+        } : null,
+      }));
+
+      setAllRecords(records as EvaluationRecord[]);
+
+      // 통계 계산 (deleted 제외, rejected 포함)
+      const typedRecords = records as EvaluationRecord[];
+      const deletedCount = typedRecords.filter(r => r.status === 'deleted').length;
+      const activeData = typedRecords.filter(r => r.status !== 'deleted');
+
       const newStats: CategoryStats = {
         total: activeData.length, // deleted 제외한 전체
-        pending: data.filter(r => r.status === 'pending').length,
-        approved: data.filter(r => r.status === 'approved').length,
-        hold: data.filter(r => r.status === 'hold').length,
-        missing: data.filter(r => r.status === 'missing').length,
-        db_conflict: data.filter(r => r.status === 'db_conflict').length,
-        geocoding_failed: data.filter(r => 
-          r.status === 'geocoding_failed' || 
+        pending: typedRecords.filter(r => r.status === 'pending').length,
+        approved: typedRecords.filter(r => r.status === 'approved').length,
+        hold: typedRecords.filter(r => r.status === 'hold').length,
+        missing: typedRecords.filter(r => r.is_missing).length,
+        db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
+        geocoding_failed: typedRecords.filter(r =>
+          r.status === 'geocoding_failed' ||
           (r.status === 'pending' && !r.geocoding_success) ||
           (r.status === 'not_selected' && !r.geocoding_success)
         ).length,
-        not_selected: data.filter(r => r.status === 'not_selected').length,
+        not_selected: typedRecords.filter(r => r.is_not_selected).length,
         deleted: deletedCount,
       };
       setStats(newStats);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('데이터 로드 실패:', error);
       toast({
         variant: 'destructive',
         title: '데이터 로드 실패',
-        description: error.message || '알 수 없는 오류가 발생했습니다.',
+        description: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
       });
       // 에러 발생 시에도 빈 배열로 설정하여 UI가 렌더링되도록
       setAllRecords([]);
@@ -315,7 +355,7 @@ export default function AdminEvaluationPage() {
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
-    setAllRecords(prev => 
+    setAllRecords(prev =>
       prev.map(r => r.id === recordId ? { ...r, ...updates } : r)
     );
   };
@@ -329,23 +369,23 @@ export default function AdminEvaluationPage() {
   const recalculateStats = () => {
     const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
     const activeData = allRecords.filter(r => r.status !== 'deleted');
-    
+
     const newStats: CategoryStats = {
       total: activeData.length,
       pending: allRecords.filter(r => r.status === 'pending').length,
       approved: allRecords.filter(r => r.status === 'approved').length,
       hold: allRecords.filter(r => r.status === 'hold').length,
-      missing: allRecords.filter(r => r.status === 'missing').length,
+      missing: allRecords.filter(r => r.is_missing).length,
       db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
-      geocoding_failed: allRecords.filter(r => 
-        r.status === 'geocoding_failed' || 
+      geocoding_failed: allRecords.filter(r =>
+        r.status === 'geocoding_failed' ||
         (r.status === 'pending' && !r.geocoding_success) ||
         (r.status === 'not_selected' && !r.geocoding_success)
       ).length,
-      not_selected: allRecords.filter(r => r.status === 'not_selected').length,
+      not_selected: allRecords.filter(r => r.is_not_selected).length,
       deleted: deletedCount,
     };
-    
+
     setStats(newStats);
   };
 
@@ -354,6 +394,7 @@ export default function AdminEvaluationPage() {
     if (allRecords.length > 0) {
       recalculateStats();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allRecords]);
 
   // 승인 핸들러 (DB 충돌 체크 포함)
@@ -369,7 +410,7 @@ export default function AdminEvaluationPage() {
     }
 
     // Missing 체크
-    if (record.status === 'missing') {
+    if (record.is_missing) {
       toast({
         variant: 'destructive',
         title: '승인 불가',
@@ -378,7 +419,7 @@ export default function AdminEvaluationPage() {
       return;
     }
 
-    if (!record.restaurant_info?.naver_address_info?.jibun_address) {
+    if (!record.jibun_address) {
       toast({
         variant: 'destructive',
         title: '승인 불가',
@@ -390,173 +431,78 @@ export default function AdminEvaluationPage() {
     try {
       setLoading(true);
 
-      const jibunAddress = record.restaurant_info.naver_address_info.jibun_address;
-      
-      // DB 충돌 체크 (새로운 로직)
-      const conflictCheck = await checkDbConflict({
-        jibunAddress,
-        restaurantName: record.restaurant_name,
-        youtubeLink: record.youtube_link,
+      // status를 'approved'로 업데이트
+      const { error } = await supabase
+        .from('restaurants')
+        .update({
+          status: 'approved',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', record.id);
+
+      if (error) throw error;
+
+      // 상태 업데이트 (새로고침 없이)
+      updateRecordInState(record.id, {
+        status: 'approved',
+        updated_at: new Date().toISOString(),
       });
 
-      if (conflictCheck.hasConflict) {
-        if (conflictCheck.conflictType === 'name_mismatch') {
-          // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
-          // → DB 충돌로 표시
-          await markAsDbConflict(record, conflictCheck.conflictingRestaurants![0]);
-          setLoading(false);
-          return;
-        } else if (conflictCheck.conflictType === 'merge_needed') {
-          // 충돌 타입 2: 같은 주소 + 같은 음식점명 + 다른 youtube_link
-          // → 자동 병합
-          await mergeToExisting(conflictCheck.conflictingRestaurants![0], record);
-          setLoading(false);
-          return;
-        }
-      }
+      toast({
+        title: '승인 완료',
+        description: `✅ "${record.restaurant_name || record.name}" 맛집이 승인되었습니다`,
+      });
 
-      // 충돌 없음 → 새 음식점 등록
-      await insertNewRestaurant(record);
-
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('승인 처리 실패:', error);
       toast({
         variant: 'destructive',
         title: '승인 처리 실패',
-        description: error.message,
+        description: error instanceof Error ? error.message : '알 수 없는 오류',
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // 병합 함수 (새로운 로직 사용)
-  const mergeToExisting = async (existing: any, newRecord: EvaluationRecord) => {
-    const mergeResult = await mergeRestaurantData({
-      existingRestaurant: existing,
-      newYoutubeLink: newRecord.youtube_link,
-      newYoutubeMeta: newRecord.youtube_meta,
-      newTzuyangReview: newRecord.restaurant_info?.tzuyang_review,
-      newCategory: newRecord.restaurant_info?.category,
-    });
-
-    if (!mergeResult.success) {
-      throw new Error(mergeResult.error);
-    }
-
-    // evaluation_records 상태 업데이트
-    const { error: statusError } = await supabase
-      .from('evaluation_records')
-      .update({
-        status: 'approved',
-        processed_at: new Date().toISOString(),
-      })
-      .eq('id', newRecord.id);
-
-    if (statusError) throw statusError;
-
-    // 상태 업데이트 (새로고침 없이)
-    updateRecordInState(newRecord.id, {
-      status: 'approved',
-      processed_at: new Date().toISOString(),
-    });
-
+  // 병합 함수 (더 이상 필요 없음 - 단순화)
+  const mergeToExisting = async (existing: Record<string, unknown>, newRecord: EvaluationRecord) => {
     toast({
-      title: '병합 완료',
-      description: `✅ "${newRecord.restaurant_name}"이(가) 기존 음식점에 병합되었습니다`,
+      title: '병합 불필요',
+      description: '새로운 스키마에서는 restaurants 테이블이 이미 통합되어 있습니다.',
     });
   };
 
-  // DB 충돌 표시
-  const markAsDbConflict = async (newRecord: EvaluationRecord, existing: any) => {
-    const { error } = await supabase
-      .from('evaluation_records')
-      .update({
-        status: 'db_conflict',
-        db_conflict_info: {
-          existing_restaurant: existing,
-          new_restaurant: newRecord.restaurant_info,
-        },
-      })
-      .eq('id', newRecord.id);
-
-    if (error) throw error;
-
-    // 상태 업데이트 (새로고침 없이)
-    updateRecordInState(newRecord.id, {
-      status: 'db_conflict',
-      db_conflict_info: {
-        existing_restaurant: existing,
-        new_restaurant: newRecord.restaurant_info,
-      },
-    });
-
+  // DB 충돌 표시 (더 이상 필요 없음 - 단순화)
+  const markAsDbConflict = async (newRecord: EvaluationRecord, existing: Record<string, unknown>) => {
     toast({
       variant: 'destructive',
-      title: 'DB 충돌 발생',
-      description: `⚠️ 같은 주소에 다른 음식점명: ${existing.name} vs ${newRecord.restaurant_name}`,
+      title: 'DB 충돌 처리 필요',
+      description: '관리자가 직접 확인하고 처리해주세요.',
     });
   };
 
-  // 새 음식점 등록
+  // 새 음식점 등록 (더 이상 필요 없음 - 이미 restaurants 테이블에 있음)
   const insertNewRestaurant = async (record: EvaluationRecord) => {
-    const naverInfo = record.restaurant_info!.naver_address_info!;
-
-    const { error: insertError } = await supabase
-      .from('restaurants')
-      .insert({
-        name: record.restaurant_name,
-        phone: record.restaurant_info!.phone,
-        road_address: naverInfo.road_address,
-        jibun_address: naverInfo.jibun_address,
-        english_address: naverInfo.english_address,
-        address_elements: naverInfo.address_elements,
-        lat: parseFloat(naverInfo.y), // Naver y → lat
-        lng: parseFloat(naverInfo.x), // Naver x → lng
-        category: [record.restaurant_info!.category],
-        youtube_links: [record.youtube_link],
-        tzuyang_reviews: [record.restaurant_info!.tzuyang_review],
-        youtube_metas: [record.youtube_meta],
-      });
-
-    if (insertError) throw insertError;
-
-    // evaluation_records 상태 업데이트
-    const { error: statusError } = await supabase
-      .from('evaluation_records')
-      .update({
-        status: 'approved',
-        processed_at: new Date().toISOString(),
-      })
-      .eq('id', record.id);
-
-    if (statusError) throw statusError;
-
-    // 상태 업데이트 (새로고침 없이)
-    updateRecordInState(record.id, {
-      status: 'approved',
-      processed_at: new Date().toISOString(),
-    });
-
     toast({
-      title: '등록 완료',
-      description: `✅ "${record.restaurant_name}" 새 음식점이 등록되었습니다`,
+      title: '등록 불필요',
+      description: '새로운 스키마에서는 이미 restaurants 테이블에 저장되어 있습니다.',
     });
   };
 
   // 삭제 핸들러 (Soft Delete)
   const handleDelete = async (record: EvaluationRecord) => {
-    if (!confirm(`"${record.restaurant_name}"을(를) 정말 삭제하시겠습니까?\n\n⚠️ 삭제된 레코드는 화면에서 숨겨지며, 데이터 재로드 시에도 복구되지 않습니다.`)) {
+    if (!confirm(`"${record.restaurant_name || record.name}"을(를) 정말 삭제하시겠습니까?\n\n⚠️ 삭제된 레코드는 화면에서 숨겨지며, 데이터 재로드 시에도 복구되지 않습니다.`)) {
       return;
     }
 
     try {
       // Soft Delete: status를 'deleted'로 변경
       const { error } = await supabase
-        .from('evaluation_records')
+        .from('restaurants')
         .update({
           status: 'deleted',
-          deleted_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq('id', record.id);
 
@@ -565,18 +511,18 @@ export default function AdminEvaluationPage() {
       // 상태 업데이트 (새로고침 없이)
       updateRecordInState(record.id, {
         status: 'deleted',
-        deleted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       } as Partial<EvaluationRecord>);
 
       toast({
         title: '삭제 완료',
-        description: `"${record.restaurant_name}"이(가) 삭제되었습니다 (복구 불가)`,
+        description: `"${record.restaurant_name || record.name}"이(가) 삭제되었습니다 (복구 불가)`,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         variant: 'destructive',
         title: '삭제 실패',
-        description: error.message,
+        description: error instanceof Error ? error.message : '알 수 없는 오류',
       });
     }
   };
@@ -614,46 +560,59 @@ export default function AdminEvaluationPage() {
     <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-              <ClipboardCheck className="h-6 w-6 text-primary" />
-              음식점 방문 데이터 평가 결과 검수
-            </h1>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-shrink-0">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                <ClipboardCheck className="h-6 w-6 text-primary" />
+                관리자 데이터 검수
+              </h1>
+              <button
+                onClick={() => setIsAlternateView(!isAlternateView)}
+                className="p-2 rounded-md hover:bg-accent transition-colors"
+                title={isAlternateView ? "기본 뷰로 전환" : "대체 뷰로 전환"}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={isAlternateView ? "text-primary" : "text-muted-foreground"}
+                >
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+              </button>
+            </div>
             <p className="text-muted-foreground text-sm mt-1">
               총 {stats.total}개 레코드 | 필터링: {filteredRecords.length}개
             </p>
+          </div>
+
+          {/* 우측: 카테고리 필터 */}
+          <div className="flex-1 flex justify-end">
+            <CategorySidebar
+              stats={stats}
+              selectedStatuses={selectedStatuses}
+              onSelectStatuses={setSelectedStatuses}
+            />
           </div>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* 상단: 카테고리 탭 + 검색 */}
-        <div className="p-4 border-b bg-background space-y-4">
-          <CategorySidebar
-            stats={stats}
-            selectedStatuses={selectedStatuses}
-            onSelectStatuses={setSelectedStatuses}
-          />
-          
-          {/* 검색 입력 */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="영상 제목으로 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
         {/* 테이블 영역 (무한 스크롤) */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div 
+          <div
             ref={scrollContainerRef}
-            className="flex-1 p-4 overflow-auto" 
+            className="flex-1 p-4 overflow-auto"
             id="scroll-container"
           >
             {loading ? (
@@ -672,6 +631,8 @@ export default function AdminEvaluationPage() {
                   loading={loading}
                   evalFilters={evalFilters}
                   isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
                   onFilterChange={(key, value) => {
                     setEvalFilters(prev => ({
                       ...prev,
@@ -680,14 +641,14 @@ export default function AdminEvaluationPage() {
                   }}
                   onResetFilters={() => setEvalFilters({})}
                 />
-                
+
                 {/* 로딩 인디케이터 */}
                 {loadingMore && (
                   <div className="flex justify-center py-4">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
                 )}
-                
+
                 {/* 모든 데이터 로드 완료 메시지 */}
                 {!hasMore && displayedRecords.length > 0 && (
                   <div className="text-center py-4 text-muted-foreground text-sm">

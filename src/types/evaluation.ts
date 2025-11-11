@@ -1,4 +1,4 @@
-// 평가 레코드 타입 정의
+// 평가 레코드 타입 정의 (restaurants 테이블 기반)
 
 export interface NaverAddressInfo {
   road_address: string | null;
@@ -77,6 +77,7 @@ export interface DbConflictInfo {
 export type EvaluationRecordStatus =
   | 'pending'
   | 'approved'
+  | 'rejected'
   | 'hold'
   | 'deleted'
   | 'missing'
@@ -84,11 +85,20 @@ export type EvaluationRecordStatus =
   | 'geocoding_failed'
   | 'not_selected';
 
+// restaurants 테이블 구조에 맞춘 EvaluationRecord
 export interface EvaluationRecord {
   id: string;
-  youtube_link: string;
-  restaurant_name: string;
-  status: EvaluationRecordStatus;
+  name: string; // restaurant_name 대신 name
+  phone: string | null;
+  categories: string[] | null; // category 배열
+  lat: number | null;
+  lng: number | null;
+  road_address: string | null;
+  jibun_address: string | null;
+  english_address: string | null;
+  address_elements: any;
+  origin_address: any; // JSONB
+  youtube_links: string[] | null; // 배열로 변경
   youtube_meta: {
     title: string;
     publishedAt: string;
@@ -99,16 +109,32 @@ export interface EvaluationRecord {
       what_ads: string | null;
     };
   } | null;
+  youtube_metas: any; // JSONB 배열
+  unique_id: string | null;
+  tzuyang_reviews: any; // JSONB 배열
+  reasoning_basis: string | null;
   evaluation_results: EvaluationResult | null;
-  restaurant_info: RestaurantInfo | null;
+  source_type: string | null;
   geocoding_success: boolean;
-  geocoding_fail_reason: string | null;
-  db_conflict_info: DbConflictInfo | null;
-  missing_message: string | null;
+  geocoding_false_stage: number | null;
+  status: EvaluationRecordStatus;
+  is_missing: boolean;
+  is_not_selected: boolean;
+  review_count: number;
+  created_by: string | null;
+  updated_by_admin_id: string | null;
   created_at: string;
   updated_at: string;
-  processed_by: string | null;
-  processed_at: string | null;
+
+  // 호환성을 위한 추가 필드 (기존 코드와의 호환)
+  restaurant_name?: string; // name의 별칭
+  youtube_link?: string; // youtube_links[0]의 별칭
+  restaurant_info?: RestaurantInfo | null;
+  geocoding_fail_reason?: string | null;
+  db_conflict_info?: DbConflictInfo | null;
+  missing_message?: string | null;
+  processed_by?: string | null;
+  processed_at?: string | null;
   deleted_at?: string | null;
 }
 

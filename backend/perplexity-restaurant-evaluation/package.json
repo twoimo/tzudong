@@ -10,9 +10,10 @@
     "dev": "tsx src/index.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.78.0",
     "dotenv": "^16.4.5",
-    "puppeteer": "^23.6.0",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^23.6.0"
   },
   "devDependencies": {
     "@types/node": "^22.16.5",
