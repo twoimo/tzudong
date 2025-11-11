@@ -460,14 +460,14 @@ export function RestaurantDetailPanel({
                                                 {restaurant.youtube_links.map((link, index) => (
                                                     <div
                                                         key={index}
-                                                        className="relative cursor-pointer rounded-lg overflow-hidden group"
+                                                        className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
                                                         onClick={() => window.open(link, '_blank')}
                                                     >
                                                         {getYouTubeThumbnailUrl(link) && (
                                                             <img
                                                                 src={getYouTubeThumbnailUrl(link)!}
                                                                 alt={`YouTube Thumbnail ${index + 1}`}
-                                                                className="w-full h-32 object-cover"
+                                                                className="w-full h-full object-cover"
                                                             />
                                                         )}
                                                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
