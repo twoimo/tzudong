@@ -1762,6 +1762,8 @@ CREATE POLICY "Users and admins can view roles"
     USING (user_id = (SELECT auth.uid()) OR public.has_role((SELECT auth.uid()), 'admin'));
 
 -- 7.2 프로필 테이블 정책
+-- 기존 정책 모두 제거 (깨끗한 상태에서 시작)
+DROP POLICY IF EXISTS "Admins can view all profiles" ON public.profiles;
 DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
 CREATE POLICY "Public profiles are viewable by everyone"
     ON public.profiles FOR SELECT
