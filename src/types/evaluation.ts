@@ -125,7 +125,7 @@ export interface EvaluationRecord {
   updated_by_admin_id: string | null;
   created_at: string;
   updated_at: string;
-  
+
   // 호환성을 위한 추가 필드 (기존 코드와의 호환)
   restaurant_name?: string; // name의 별칭
   youtube_link?: string; // youtube_links[0]의 별칭

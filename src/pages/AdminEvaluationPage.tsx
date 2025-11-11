@@ -289,7 +289,7 @@ export default function AdminEvaluationPage() {
           origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number,
           origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number,
           reasoning_basis: r.reasoning_basis as string || '',
-          tzuyang_review: Array.isArray(r.tzuyang_reviews) && r.tzuyang_reviews.length > 0 
+          tzuyang_review: Array.isArray(r.tzuyang_reviews) && r.tzuyang_reviews.length > 0
             ? ((r.tzuyang_reviews[0] as Record<string, unknown>)?.review as string || '')
             : '',
           naver_address_info: r.road_address || r.jibun_address ? {
