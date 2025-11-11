@@ -9,10 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube, ChevronDown, X, MessageSquare } from "lucide-react";
+import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube, X, MessageSquare } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -40,6 +38,7 @@ export default function RestaurantSubmissionsPage() {
     const [submissionMode, setSubmissionMode] = useState<'new' | 'update'>('new');
     const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
     const [originalData, setOriginalData] = useState<any>(null);
+    const [categoryInput, setCategoryInput] = useState("");
     const [formData, setFormData] = useState({
         restaurant_name: "",
         address: "",
@@ -809,90 +808,141 @@ export default function RestaurantSubmissionsPage() {
                             <Label>
                                 카테고리 <span className="text-red-500">*</span>
                             </Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-between"
-                                    >
-                                        <span className="truncate">
-                                            {formData.categories.length > 0
-                                                ? `${formData.categories.length}개 선택됨`
-                                                : "카테고리 선택"
-                                            }
-                                        </span>
-                                        <ChevronDown className="h-4 w-4 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-64" align="start">
-                                    <div className="space-y-2">
-                                        <h4 className="font-semibold text-sm">카테고리 선택</h4>
-                                        <div className="space-y-2 max-h-48 overflow-y-auto">
-                                            {RESTAURANT_CATEGORIES.map((category) => (
-                                                <div key={category} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`category-${category}`}
-                                                        checked={formData.categories.includes(category)}
-                                                        onCheckedChange={(checked) => {
-                                                            if (checked) {
-                                                                setFormData({
-                                                                    ...formData,
-                                                                    categories: [...formData.categories, category]
-                                                                });
-                                                            } else {
-                                                                setFormData({
-                                                                    ...formData,
-                                                                    categories: formData.categories.filter(c => c !== category)
-                                                                });
-                                                            }
-                                                        }}
-                                                    />
-                                                    <Label
-                                                        htmlFor={`category-${category}`}
-                                                        className="text-sm cursor-pointer flex-1"
-                                                    >
-                                                        {category}
-                                                    </Label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {formData.categories.length > 0 && (
-                                            <div className="pt-2 border-t">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setFormData({ ...formData, categories: [] })}
-                                                    className="w-full"
-                                                >
-                                                    선택 해제
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </div>
-                                </PopoverContent>
-                            </Popover>
+
+                            {/* 선택된 카테고리 표시 */}
                             {formData.categories.length > 0 && (
-                                <div className="flex flex-wrap gap-1 mt-2">
-                                    {formData.categories.map((category) => (
-                                        <Badge key={category} variant="secondary" className="text-xs">
-                                            {category}
-                                            <button
-                                                type="button"
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    categories: formData.categories.filter(c => c !== category)
-                                                })}
-                                                className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                            >
-                                                <X className="h-3 w-3" />
-                                            </button>
-                                        </Badge>
-                                    ))}
+                                <div className="flex flex-wrap gap-1.5 p-3 bg-muted/50 rounded-lg border">
+                                    {(() => {
+                                        // 기본 카테고리와 직접 입력 카테고리 분리
+                                        const standardCategories = formData.categories.filter(cat =>
+                                            RESTAURANT_CATEGORIES.includes(cat as any)
+                                        );
+                                        const customCategories = formData.categories.filter(cat =>
+                                            !RESTAURANT_CATEGORIES.includes(cat as any)
+                                        );
+
+                                        // 기본 카테고리 먼저, 직접 입력 카테고리는 마지막에 표시
+                                        const sortedCategories = [...standardCategories, ...customCategories];
+
+                                        return sortedCategories.map((category) => {
+                                            // 광고 관련 태그인지 확인
+                                            const isAdTag = ['광고', '협찬', 'PPL', 'AD', '광고협찬'].some(
+                                                ad => category.toLowerCase().includes(ad.toLowerCase())
+                                            );
+
+                                            // 직접 입력한 커스텀 카테고리인지 확인
+                                            const isCustomCategory = !RESTAURANT_CATEGORIES.includes(category as any);
+
+                                            // 광고 태그이거나 직접 입력한 카테고리면 오렌지 스타일
+                                            const isOrangeStyle = isAdTag || isCustomCategory;
+
+                                            return (
+                                                <Badge
+                                                    key={category}
+                                                    variant={isOrangeStyle ? "outline" : "secondary"}
+                                                    className={
+                                                        isOrangeStyle
+                                                            ? "text-xs px-2.5 py-1 bg-orange-50 text-orange-700 border-orange-300 hover:bg-orange-100 transition-colors"
+                                                            : "text-xs px-2.5 py-1 hover:bg-secondary/80 transition-colors"
+                                                    }
+                                                >
+                                                    {isAdTag && '📢 '}{category}
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({
+                                                            ...formData,
+                                                            categories: formData.categories.filter(c => c !== category)
+                                                        })}
+                                                        className="ml-1.5 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                                                    >
+                                                        <X className="h-3 w-3" />
+                                                    </button>
+                                                </Badge>
+                                            );
+                                        });
+                                    })()}
                                 </div>
                             )}
-                        </div>
 
-                        <div className="space-y-2">
+                            {/* 빠른 선택 */}
+                            <div className="space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground">빠른 선택</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {RESTAURANT_CATEGORIES.map((category) => (
+                                        <Button
+                                            key={category}
+                                            type="button"
+                                            variant={formData.categories.includes(category) ? "default" : "outline"}
+                                            size="sm"
+                                            onClick={() => {
+                                                if (formData.categories.includes(category)) {
+                                                    setFormData({
+                                                        ...formData,
+                                                        categories: formData.categories.filter(c => c !== category)
+                                                    });
+                                                } else {
+                                                    // 맨 앞에 추가 (빠른 선택)
+                                                    setFormData({
+                                                        ...formData,
+                                                        categories: [...formData.categories, category]
+                                                    });
+                                                }
+                                            }}
+                                            className="h-8 text-xs px-3"
+                                        >
+                                            {category}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* 직접 입력 */}
+                            <div className="space-y-2">
+                                <p className="text-xs font-medium text-muted-foreground">직접 입력 (광고, 협찬 등)</p>
+                                <div className="flex gap-2">
+                                    <Input
+                                        value={categoryInput}
+                                        onChange={(e) => setCategoryInput(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') {
+                                                e.preventDefault();
+                                                const trimmed = categoryInput.trim();
+                                                if (trimmed && !formData.categories.includes(trimmed)) {
+                                                    // 맨 마지막에 추가 (직접 입력)
+                                                    setFormData({
+                                                        ...formData,
+                                                        categories: [...formData.categories, trimmed]
+                                                    });
+                                                    setCategoryInput("");
+                                                }
+                                            }
+                                        }}
+                                        placeholder="예: 광고, 협찬, PPL"
+                                        className="flex-1 h-9"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => {
+                                            const trimmed = categoryInput.trim();
+                                            if (trimmed && !formData.categories.includes(trimmed)) {
+                                                // 맨 마지막에 추가 (직접 입력)
+                                                setFormData({
+                                                    ...formData,
+                                                    categories: [...formData.categories, trimmed]
+                                                });
+                                                setCategoryInput("");
+                                            }
+                                        }}
+                                        disabled={!categoryInput.trim()}
+                                        className="h-9 px-4"
+                                    >
+                                        추가
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>                        <div className="space-y-2">
                             <Label htmlFor="address">
                                 주소 <span className="text-red-500">*</span>
                             </Label>
@@ -1001,15 +1051,13 @@ export default function RestaurantSubmissionsPage() {
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => {
-                                                                if (confirm('이 영상을 삭제하시겠습니까?\n해당 영상의 리뷰도 함께 삭제됩니다.')) {
-                                                                    const newLinks = formData.youtube_links.filter((_, i) => i !== index);
-                                                                    const newReviews = formData.tzuyang_reviews.filter((_, i) => i !== index);
-                                                                    setFormData({
-                                                                        ...formData,
-                                                                        youtube_links: newLinks,
-                                                                        tzuyang_reviews: newReviews
-                                                                    });
-                                                                }
+                                                                const newLinks = formData.youtube_links.filter((_, i) => i !== index);
+                                                                const newReviews = formData.tzuyang_reviews.filter((_, i) => i !== index);
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    youtube_links: newLinks,
+                                                                    tzuyang_reviews: newReviews
+                                                                });
                                                             }}
                                                             className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950 h-8 px-2 shrink-0"
                                                             title="영상 및 리뷰 삭제"
