@@ -55,13 +55,18 @@ export default function RestaurantSubmissionsPage() {
     const { data: allRestaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: async () => {
+            console.log('🔍 맛집 조회 시작...');
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_links, youtube_metas, tzuyang_reviews, description')
+                .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_links, youtube_metas, tzuyang_reviews')
                 .eq('status', 'approved')
                 .order('name');
 
-            if (error) throw error;
+            if (error) {
+                console.error('❌ 맛집 조회 실패:', error);
+                throw error;
+            }
+            console.log('✅ 맛집 조회 성공:', data?.length, '개');
             return data || [];
         },
     });
@@ -236,15 +241,15 @@ export default function RestaurantSubmissionsPage() {
         const restaurantAddress = restaurant.road_address || restaurant.jibun_address || "";
 
         // youtube_links 배열 처리
-        const youtubeLinks = Array.isArray(restaurant.youtube_links) 
-            ? restaurant.youtube_links 
+        const youtubeLinks = Array.isArray(restaurant.youtube_links)
+            ? restaurant.youtube_links
             : [];
 
         // tzuyang_reviews 배열 처리
         const tzuyangReviews = Array.isArray(restaurant.tzuyang_reviews)
             ? restaurant.tzuyang_reviews
-            : (typeof restaurant.tzuyang_reviews === 'string' 
-                ? [{ review: restaurant.tzuyang_reviews }] 
+            : (typeof restaurant.tzuyang_reviews === 'string'
+                ? [{ review: restaurant.tzuyang_reviews }]
                 : []);
 
         setOriginalData({
@@ -255,7 +260,7 @@ export default function RestaurantSubmissionsPage() {
             youtube_link: youtubeLinks.length > 0 ? youtubeLinks[0] : "",
             youtube_links: youtubeLinks,
             tzuyang_reviews: tzuyangReviews,
-            description: restaurant.description || "",
+            description: "",
         });
         setFormData({
             restaurant_name: restaurant.name,
@@ -265,7 +270,7 @@ export default function RestaurantSubmissionsPage() {
             youtube_link: youtubeLinks.length > 0 ? youtubeLinks[0] : "",
             youtube_links: youtubeLinks,
             tzuyang_reviews: tzuyangReviews,
-            description: restaurant.description || "",
+            description: "",
         });
     };
 
@@ -933,7 +938,7 @@ export default function RestaurantSubmissionsPage() {
                                 placeholder="https://youtube.com/watch?v=..."
                             />
                             <p className="text-xs text-muted-foreground">
-                                {submissionMode === 'update' 
+                                {submissionMode === 'update'
                                     ? '새로운 유튜브 영상을 추가하려면 링크를 입력해주세요'
                                     : '쯔양이 방문한 맛집 유튜브 영상 링크를 입력해주세요'
                                 }
