@@ -48,6 +48,7 @@ export default function RestaurantSubmissionsPage() {
         youtube_link: "",
         description: "",
         youtube_links: [] as string[],
+        youtube_metas: [] as any[],
         tzuyang_reviews: [] as any[],
     });
 
@@ -239,13 +240,8 @@ export default function RestaurantSubmissionsPage() {
     const handleRestaurantSelect = (restaurant: any) => {
         // 동일한 상호명을 가진 모든 맛집 찾기
         const sameNameRestaurants = allRestaurants.filter(r => r.name === restaurant.name);
-        
+
         console.log(`🏪 "${restaurant.name}" 맛집 ${sameNameRestaurants.length}개 발견`);
-        
-        setSelectedRestaurant({
-            ...restaurant,
-            sameNameRestaurants, // 동일 상호명 맛집 목록 저장
-        });
 
         const safeCategories = Array.isArray(restaurant.categories)
             ? restaurant.categories
@@ -261,7 +257,7 @@ export default function RestaurantSubmissionsPage() {
 
         sameNameRestaurants.forEach((r, index) => {
             console.log(`  - 맛집 ${index + 1}: ID=${r.id.substring(0, 8)}, unique_id=${r.unique_id}`);
-            
+
             // youtube_links 통합
             if (Array.isArray(r.youtube_links)) {
                 r.youtube_links.forEach(link => {
@@ -292,7 +288,13 @@ export default function RestaurantSubmissionsPage() {
             }
         });
 
-        console.log(`✅ 통합 결과: 유튜브 ${allYoutubeLinks.length}개, 리뷰 ${allTzuyangReviews.length}개`);
+        console.log(`✅ 통합 결과: 유튜브 ${allYoutubeLinks.length}개, 메타 ${allYoutubeMetas.length}개, 리뷰 ${allTzuyangReviews.length}개`);
+
+        setSelectedRestaurant({
+            ...restaurant,
+            sameNameRestaurants, // 동일 상호명 맛집 목록 저장
+            allYoutubeMetas, // 통합된 메타데이터 저장
+        });
 
         setOriginalData({
             restaurant_name: restaurant.name,
@@ -301,6 +303,7 @@ export default function RestaurantSubmissionsPage() {
             categories: safeCategories,
             youtube_link: allYoutubeLinks.length > 0 ? allYoutubeLinks[0] : "",
             youtube_links: allYoutubeLinks,
+            youtube_metas: allYoutubeMetas,
             tzuyang_reviews: allTzuyangReviews,
             description: "",
         });
@@ -311,6 +314,7 @@ export default function RestaurantSubmissionsPage() {
             categories: safeCategories,
             youtube_link: allYoutubeLinks.length > 0 ? allYoutubeLinks[0] : "",
             youtube_links: allYoutubeLinks,
+            youtube_metas: allYoutubeMetas,
             tzuyang_reviews: allTzuyangReviews,
             description: "",
         });
@@ -682,7 +686,7 @@ export default function RestaurantSubmissionsPage() {
                                                 const categoryDisplay = Array.isArray(representative.categories) && representative.categories.length > 0
                                                     ? representative.categories[0]
                                                     : (representative.categories || "기타");
-                                                
+
                                                 return (
                                                     <SelectItem key={representative.id} value={representative.id}>
                                                         {name} - {categoryDisplay}
@@ -938,8 +942,8 @@ export default function RestaurantSubmissionsPage() {
                                     </div>
                                     <div className="space-y-2">
                                         {formData.youtube_links.map((link, index) => {
-                                            // youtube_metas에서 해당 링크의 메타데이터 찾기
-                                            const meta = selectedRestaurant.youtube_metas?.[index];
+                                            // 통합된 youtube_metas에서 해당 링크의 메타데이터 찾기
+                                            const meta = selectedRestaurant.allYoutubeMetas?.[index];
                                             return (
                                                 <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
                                                     <div className="flex items-start gap-2 mb-2">
@@ -1022,24 +1026,35 @@ export default function RestaurantSubmissionsPage() {
                                     </div>
                                     <div className="space-y-2">
                                         {formData.tzuyang_reviews.map((review, index) => {
-                                            const reviewText = typeof review === 'string' 
-                                                ? review 
+                                            const reviewText = typeof review === 'string'
+                                                ? review
                                                 : review.review || review.content || '';
-                                            
+
                                             return (
                                                 <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-pink-200 dark:border-pink-700">
                                                     <div className="flex items-start gap-2">
                                                         <Badge variant="outline" className="text-xs mt-1">리뷰 {index + 1}</Badge>
                                                         <div className="flex-1">
                                                             <Textarea
+                                                                ref={(el) => {
+                                                                    if (el) {
+                                                                        el.style.height = 'auto';
+                                                                        el.style.height = el.scrollHeight + 'px';
+                                                                    }
+                                                                }}
                                                                 value={reviewText}
                                                                 onChange={(e) => {
                                                                     const newReviews = [...formData.tzuyang_reviews];
                                                                     newReviews[index] = { review: e.target.value };
                                                                     setFormData({ ...formData, tzuyang_reviews: newReviews });
+                                                                    
+                                                                    // 자동 높이 조절
+                                                                    e.target.style.height = 'auto';
+                                                                    e.target.style.height = e.target.scrollHeight + 'px';
                                                                 }}
                                                                 placeholder="쯔양의 리뷰를 입력하세요..."
-                                                                className="min-h-[80px] text-sm"
+                                                                className="text-sm resize-none overflow-hidden"
+                                                                style={{ minHeight: '60px' }}
                                                             />
                                                         </div>
                                                         <Button
