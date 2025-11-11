@@ -618,7 +618,7 @@ export default function AdminEvaluationPage() {
           <div className="flex-shrink-0">
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
               <ClipboardCheck className="h-6 w-6 text-primary" />
-              음식점 방문 데이터 평가 결과 검수
+              관리자 데이터 검수
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
               총 {stats.total}개 레코드 | 필터링: {filteredRecords.length}개
