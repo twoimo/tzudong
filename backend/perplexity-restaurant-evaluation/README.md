@@ -203,6 +203,8 @@ Step 3: LAAJ 평가
 1. **visit_authenticity** (방문 여부 정확성)
    - 0~4점 척도로 실제 방문 여부 평가
    - `{values: [...], missing: []}` 형식
+   - `missing` 배열: 영상에서 식별되었지만 restaurants 리스트에 누락된 음식점들
+     - 문자열 형식 또는 `{name: "...", eval_basis: "..."}` 딕셔너리 형식
 
 2. **rb_inference_score** (추론 합리성)
    - 0~2점 척도로 reasoning_basis의 논리성 평가
@@ -268,8 +270,15 @@ python3 transform_evaluation_results.py
 ```
 - ✅ **평가 결과 통합**: evaluation_results.jsonl의 평가 결과를 youtube_link-restaurant_name 기준으로 변환
 - ✅ **평가 미대상 포함**: notSelection_with_addressNull.jsonl의 평가 미대상도 자동 통합
+- ✅ **Missing 항목 처리**: visit_authenticity.missing에 있는 음식점들도 자동 추출 (문자열/딕셔너리 형식 모두 지원)
 - ✅ **중복 방지**: 이미 transform.jsonl에 있는 레코드는 자동 스킵
 - ✅ **출력**: transform.jsonl (pending + missing + not_selected 통합)
+
+**Missing 항목 처리 로직:**
+- `visit_authenticity.missing` 배열에서 음식점 추출
+- 문자열 형식: 바로 음식점명으로 사용 (예: `"카페 오늘"`)
+- 딕셔너리 형식: `name` 속성 추출 (예: `{"name": "과일 가게", "eval_basis": "..."}`)
+- Missing 항목은 `is_missing: true`로 표시되어 수동 등록 대상이 됨
 
 ## 🎯 AI 평가 상세
 
