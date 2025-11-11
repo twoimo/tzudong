@@ -164,6 +164,11 @@ export default function RestaurantSubmissionsPage() {
                 submissionData.youtube_links = data.youtube_links; // 모든 유튜브 링크 배열
                 submissionData.tzuyang_reviews = data.tzuyang_reviews; // 모든 쯔양 리뷰 배열
 
+                // 동일 상호명 맛집들의 ID 목록 저장
+                if (selectedRestaurant.sameNameRestaurants && selectedRestaurant.sameNameRestaurants.length > 1) {
+                    submissionData.admin_notes = `동일 상호명 맛집 ${selectedRestaurant.sameNameRestaurants.length}개 일괄 수정 요청: ${selectedRestaurant.sameNameRestaurants.map((r: any) => r.id).join(', ')}`;
+                }
+
                 // 변경사항 계산
                 if (originalData) {
                     const changes_requested: Record<string, { from: any; to: any }> = {};
@@ -230,9 +235,18 @@ export default function RestaurantSubmissionsPage() {
         }
     };
 
-    // 기존 맛집 선택 핸들러
+    // 기존 맛집 선택 핸들러 - 동일한 상호명의 맛집들을 그룹화
     const handleRestaurantSelect = (restaurant: any) => {
-        setSelectedRestaurant(restaurant);
+        // 동일한 상호명을 가진 모든 맛집 찾기
+        const sameNameRestaurants = allRestaurants.filter(r => r.name === restaurant.name);
+        
+        console.log(`🏪 "${restaurant.name}" 맛집 ${sameNameRestaurants.length}개 발견`);
+        
+        setSelectedRestaurant({
+            ...restaurant,
+            sameNameRestaurants, // 동일 상호명 맛집 목록 저장
+        });
+
         const safeCategories = Array.isArray(restaurant.categories)
             ? restaurant.categories
             : (restaurant.categories ? [restaurant.categories] : []);
@@ -240,26 +254,54 @@ export default function RestaurantSubmissionsPage() {
         // 도로명 주소 우선, 없으면 지번 주소 사용
         const restaurantAddress = restaurant.road_address || restaurant.jibun_address || "";
 
-        // youtube_links 배열 처리
-        const youtubeLinks = Array.isArray(restaurant.youtube_links)
-            ? restaurant.youtube_links
-            : [];
+        // 동일한 상호명의 모든 맛집에서 youtube_links와 tzuyang_reviews 통합
+        const allYoutubeLinks: string[] = [];
+        const allYoutubeMetas: any[] = [];
+        const allTzuyangReviews: any[] = [];
 
-        // tzuyang_reviews 배열 처리
-        const tzuyangReviews = Array.isArray(restaurant.tzuyang_reviews)
-            ? restaurant.tzuyang_reviews
-            : (typeof restaurant.tzuyang_reviews === 'string'
-                ? [{ review: restaurant.tzuyang_reviews }]
-                : []);
+        sameNameRestaurants.forEach((r, index) => {
+            console.log(`  - 맛집 ${index + 1}: ID=${r.id.substring(0, 8)}, unique_id=${r.unique_id}`);
+            
+            // youtube_links 통합
+            if (Array.isArray(r.youtube_links)) {
+                r.youtube_links.forEach(link => {
+                    if (link && !allYoutubeLinks.includes(link)) {
+                        allYoutubeLinks.push(link);
+                    }
+                });
+            }
+
+            // youtube_metas 통합
+            if (Array.isArray(r.youtube_metas)) {
+                r.youtube_metas.forEach(meta => {
+                    if (meta) {
+                        allYoutubeMetas.push(meta);
+                    }
+                });
+            }
+
+            // tzuyang_reviews 통합
+            if (Array.isArray(r.tzuyang_reviews)) {
+                r.tzuyang_reviews.forEach(review => {
+                    if (review) {
+                        allTzuyangReviews.push(review);
+                    }
+                });
+            } else if (typeof r.tzuyang_reviews === 'string' && r.tzuyang_reviews) {
+                allTzuyangReviews.push({ review: r.tzuyang_reviews });
+            }
+        });
+
+        console.log(`✅ 통합 결과: 유튜브 ${allYoutubeLinks.length}개, 리뷰 ${allTzuyangReviews.length}개`);
 
         setOriginalData({
             restaurant_name: restaurant.name,
             address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: youtubeLinks.length > 0 ? youtubeLinks[0] : "",
-            youtube_links: youtubeLinks,
-            tzuyang_reviews: tzuyangReviews,
+            youtube_link: allYoutubeLinks.length > 0 ? allYoutubeLinks[0] : "",
+            youtube_links: allYoutubeLinks,
+            tzuyang_reviews: allTzuyangReviews,
             description: "",
         });
         setFormData({
@@ -267,9 +309,9 @@ export default function RestaurantSubmissionsPage() {
             address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: youtubeLinks.length > 0 ? youtubeLinks[0] : "",
-            youtube_links: youtubeLinks,
-            tzuyang_reviews: tzuyangReviews,
+            youtube_link: allYoutubeLinks.length > 0 ? allYoutubeLinks[0] : "",
+            youtube_links: allYoutubeLinks,
+            tzuyang_reviews: allTzuyangReviews,
             description: "",
         });
     };
@@ -623,18 +665,43 @@ export default function RestaurantSubmissionsPage() {
                                         <SelectValue placeholder="수정할 맛집을 선택해주세요" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {allRestaurants.map((restaurant) => {
-                                            const categoryDisplay = Array.isArray(restaurant.categories) && restaurant.categories.length > 0
-                                                ? restaurant.categories[0]
-                                                : (restaurant.categories || "기타");
-                                            return (
-                                                <SelectItem key={restaurant.id} value={restaurant.id}>
-                                                    {restaurant.name} - {categoryDisplay}
-                                                </SelectItem>
-                                            );
-                                        })}
+                                        {(() => {
+                                            // 상호명별로 그룹화
+                                            const groupedByName = allRestaurants.reduce((acc, restaurant) => {
+                                                if (!acc[restaurant.name]) {
+                                                    acc[restaurant.name] = [];
+                                                }
+                                                acc[restaurant.name].push(restaurant);
+                                                return acc;
+                                            }, {} as Record<string, typeof allRestaurants>);
+
+                                            // 각 그룹의 첫 번째 맛집만 표시 (대표)
+                                            return Object.entries(groupedByName).map(([name, restaurants]) => {
+                                                const representative = restaurants[0];
+                                                const count = restaurants.length;
+                                                const categoryDisplay = Array.isArray(representative.categories) && representative.categories.length > 0
+                                                    ? representative.categories[0]
+                                                    : (representative.categories || "기타");
+                                                
+                                                return (
+                                                    <SelectItem key={representative.id} value={representative.id}>
+                                                        {name} - {categoryDisplay}
+                                                        {count > 1 && (
+                                                            <span className="ml-2 text-xs text-muted-foreground">
+                                                                (동일 상호명 {count}개)
+                                                            </span>
+                                                        )}
+                                                    </SelectItem>
+                                                );
+                                            });
+                                        })()}
                                     </SelectContent>
                                 </Select>
+                                {selectedRestaurant?.sameNameRestaurants && selectedRestaurant.sameNameRestaurants.length > 1 && (
+                                    <p className="text-xs text-blue-600 dark:text-blue-400">
+                                        💡 이 상호명을 가진 맛집 {selectedRestaurant.sameNameRestaurants.length}개의 유튜브 영상과 리뷰를 함께 수정합니다
+                                    </p>
+                                )}
                             </div>
                         )}
 
