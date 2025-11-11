@@ -91,6 +91,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 const { data: maxReviewCountData, error: maxError } = await supabase
                     .from('restaurants')
                     .select('review_count')
+                    .eq('status', 'approved')
                     .order('review_count', { ascending: false })
                     .limit(1)
                     .single();
@@ -106,6 +107,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 const { data: topRestaurants, error: restaurantsError } = await supabase
                     .from('restaurants')
                     .select('*')
+                    .eq('status', 'approved')
                     .eq('review_count', maxReviewCount);
 
                 if (restaurantsError || !topRestaurants || topRestaurants.length === 0) {
@@ -175,6 +177,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 const { data: restaurants, error } = await supabase
                     .from('restaurants')
                     .select('*')
+                    .eq('status', 'approved')
                     .ilike('name', `%${searchQuery}%`) // 데이터베이스 레벨에서 검색
                     .order('review_count', { ascending: false });
 
@@ -206,6 +209,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 const { data: restaurants, error } = await supabase
                     .from('restaurants')
                     .select('*')
+                    .eq('status', 'approved')
                     .order('review_count', { ascending: false })
                     .range(pageParam, pageParam + 49); // 한 페이지당 50개씩
 
@@ -237,7 +241,58 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
 
 
     // 모든 페이지를 평탄화하여 하나의 배열로 만들기
-    const restaurants = restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+    const rawRestaurants = restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+
+    // 맛집 병합: 동일한 name + address를 가진 맛집들을 하나로 합침
+    const mergeRestaurants = useCallback((restaurantList: Restaurant[]) => {
+        const mergedMap = new Map<string, Restaurant>();
+
+        restaurantList.forEach(restaurant => {
+            const address = restaurant.road_address || restaurant.jibun_address || restaurant.address || '';
+            const key = `${restaurant.name}_${address}`;
+
+            if (mergedMap.has(key)) {
+                const existing = mergedMap.get(key)!;
+
+                // 배열 필드들 병합
+                const mergedYoutubeLinks = [
+                    ...(existing.youtube_links || []),
+                    ...(restaurant.youtube_links || [])
+                ];
+                const mergedYoutubeMetas = [
+                    ...(existing.youtube_metas || []),
+                    ...(restaurant.youtube_metas || [])
+                ];
+                const mergedTzuyangReviews = [
+                    ...(existing.tzuyang_reviews || []),
+                    ...(restaurant.tzuyang_reviews || [])
+                ];
+
+                mergedMap.set(key, {
+                    ...existing,
+                    youtube_links: mergedYoutubeLinks,
+                    youtube_metas: mergedYoutubeMetas,
+                    tzuyang_reviews: mergedTzuyangReviews,
+                    // review_count는 더 큰 값 사용
+                    review_count: Math.max(existing.review_count || 0, restaurant.review_count || 0),
+                });
+            } else {
+                mergedMap.set(key, restaurant);
+            }
+        });
+
+        return Array.from(mergedMap.values());
+    }, []);
+
+    // 병합된 맛집 데이터
+    const restaurants = useMemo(() => {
+        return mergeRestaurants(rawRestaurants);
+    }, [rawRestaurants, mergeRestaurants]);
+
+    // 검색된 맛집도 병합
+    const mergedAllRestaurants = useMemo(() => {
+        return mergeRestaurants(allRestaurants);
+    }, [allRestaurants, mergeRestaurants]);
 
     // 테이블 무한 스크롤을 위한 Intersection Observer
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
@@ -561,8 +616,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     };
 
     const filteredAndSortedRestaurants = useMemo(() => {
-        // 검색어가 있을 때는 전체 데이터를 사용, 없으면 페이징된 데이터를 사용
-        const sourceData = searchQuery.trim() ? allRestaurants : restaurants;
+        // 검색어가 있을 때는 병합된 검색 데이터를 사용, 없으면 병합된 페이징 데이터를 사용
+        const sourceData = searchQuery.trim() ? mergedAllRestaurants : restaurants;
         if (!sourceData || sourceData.length === 0) return [];
 
         let result = [...sourceData];
@@ -632,7 +687,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         }
 
         return result;
-    }, [restaurants, allRestaurants, searchQuery, filters, sortColumn, sortDirection]);
+    }, [restaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection]);
 
     const getStarEmoji = (rating: number) => {
         const count = Math.round(rating);
@@ -927,13 +982,38 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex flex-wrap gap-1">
+                                                <div className="flex gap-1 overflow-x-auto scrollbar-hide">
                                                     {Array.isArray(restaurant.categories) && restaurant.categories.length > 0
                                                         ? restaurant.categories.map((cat, idx) => (
-                                                            <Badge key={idx} variant="outline">{cat}</Badge>
+                                                            <Badge key={idx} variant="outline" className="whitespace-nowrap">{cat}</Badge>
                                                         ))
-                                                        : (restaurant.categories && <Badge variant="outline">{restaurant.categories}</Badge>)
+                                                        : (restaurant.categories && <Badge variant="outline" className="whitespace-nowrap">{restaurant.categories}</Badge>)
                                                     }
+                                                    {/* 광고 태그 */}
+                                                    {restaurant.youtube_metas && restaurant.youtube_metas.length > 0 && (() => {
+                                                        const adsMetas = restaurant.youtube_metas
+                                                            .map((meta: any) => meta?.ads_info)
+                                                            .filter((adsInfo: any) => adsInfo?.is_ads === true);
+
+                                                        if (adsMetas.length === 0) return null;
+
+                                                        const allAds = adsMetas.flatMap((adsInfo: any) => adsInfo.what_ads || []);
+                                                        const uniqueAds = Array.from(new Set(allAds));
+
+                                                        return uniqueAds.length > 0 ? (
+                                                            <>
+                                                                {uniqueAds.map((ad: string, index: number) => (
+                                                                    <Badge
+                                                                        key={`ad-${index}`}
+                                                                        variant="outline"
+                                                                        className="bg-orange-50 text-orange-700 border-orange-300 whitespace-nowrap"
+                                                                    >
+                                                                        📢 {ad}
+                                                                    </Badge>
+                                                                ))}
+                                                            </>
+                                                        ) : null;
+                                                    })()}
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-center">
