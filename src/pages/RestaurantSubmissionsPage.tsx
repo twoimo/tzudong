@@ -910,15 +910,31 @@ export default function RestaurantSubmissionsPage() {
                             />
                         </div>
 
-                        {/* 수정 요청일 때: 모든 유튜브 영상 표시 */}
+                        {/* 수정 요청일 때: 모든 유튜브 영상 표시 - 편집 가능 */}
                         {submissionMode === 'update' && selectedRestaurant && formData.youtube_links.length > 0 && (
                             <Card className="p-4 bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
                                 <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <Youtube className="h-5 w-5 text-purple-600" />
-                                        <Label className="text-sm font-medium text-purple-800 dark:text-purple-200">
-                                            등록된 유튜브 영상 ({formData.youtube_links.length}개)
-                                        </Label>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <Youtube className="h-5 w-5 text-purple-600" />
+                                            <Label className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                                                등록된 유튜브 영상 ({formData.youtube_links.length}개)
+                                            </Label>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setFormData({
+                                                    ...formData,
+                                                    youtube_links: [...formData.youtube_links, '']
+                                                });
+                                            }}
+                                            className="text-xs"
+                                        >
+                                            + 영상 추가
+                                        </Button>
                                     </div>
                                     <div className="space-y-2">
                                         {formData.youtube_links.map((link, index) => {
@@ -926,38 +942,50 @@ export default function RestaurantSubmissionsPage() {
                                             const meta = selectedRestaurant.youtube_metas?.[index];
                                             return (
                                                 <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
-                                                    <div className="flex items-start justify-between gap-2">
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <Badge variant="outline" className="text-xs">영상 {index + 1}</Badge>
-                                                                {meta?.title && (
-                                                                    <span className="text-xs text-muted-foreground truncate">
-                                                                        {meta.title}
-                                                                    </span>
-                                                                )}
-                                                            </div>
-                                                            <a
-                                                                href={link}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="text-sm text-blue-600 hover:underline break-all"
-                                                            >
-                                                                {link}
-                                                            </a>
+                                                    <div className="flex items-start gap-2 mb-2">
+                                                        <Badge variant="outline" className="text-xs mt-1">영상 {index + 1}</Badge>
+                                                        <div className="flex-1 space-y-2">
+                                                            {meta?.title && (
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {meta.title}
+                                                                </p>
+                                                            )}
+                                                            <Textarea
+                                                                value={link}
+                                                                onChange={(e) => {
+                                                                    const newLinks = [...formData.youtube_links];
+                                                                    newLinks[index] = e.target.value;
+                                                                    setFormData({ ...formData, youtube_links: newLinks });
+                                                                }}
+                                                                placeholder="https://youtube.com/watch?v=..."
+                                                                className="min-h-[60px] text-sm"
+                                                            />
                                                         </div>
                                                         <Button
                                                             type="button"
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => {
-                                                                const newLinks = formData.youtube_links.filter((_, i) => i !== index);
-                                                                setFormData({ ...formData, youtube_links: newLinks });
+                                                                if (confirm('이 영상을 삭제하시겠습니까?')) {
+                                                                    const newLinks = formData.youtube_links.filter((_, i) => i !== index);
+                                                                    setFormData({ ...formData, youtube_links: newLinks });
+                                                                }
                                                             }}
-                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 px-2"
                                                         >
                                                             <X className="h-4 w-4" />
                                                         </Button>
                                                     </div>
+                                                    {link && (
+                                                        <a
+                                                            href={link}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-xs text-blue-600 hover:underline ml-16"
+                                                        >
+                                                            🔗 링크 확인
+                                                        </a>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -966,29 +994,72 @@ export default function RestaurantSubmissionsPage() {
                             </Card>
                         )}
 
-                        {/* 수정 요청일 때: 모든 쯔양 리뷰 표시 */}
+                        {/* 수정 요청일 때: 모든 쯔양 리뷰 표시 - 편집 가능 */}
                         {submissionMode === 'update' && selectedRestaurant && formData.tzuyang_reviews.length > 0 && (
                             <Card className="p-4 bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800">
                                 <div className="space-y-3">
-                                    <div className="flex items-center gap-2">
-                                        <MessageSquare className="h-5 w-5 text-pink-600" />
-                                        <Label className="text-sm font-medium text-pink-800 dark:text-pink-200">
-                                            쯔양의 리뷰 ({formData.tzuyang_reviews.length}개)
-                                        </Label>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <MessageSquare className="h-5 w-5 text-pink-600" />
+                                            <Label className="text-sm font-medium text-pink-800 dark:text-pink-200">
+                                                쯔양의 리뷰 ({formData.tzuyang_reviews.length}개)
+                                            </Label>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => {
+                                                setFormData({
+                                                    ...formData,
+                                                    tzuyang_reviews: [...formData.tzuyang_reviews, { review: '' }]
+                                                });
+                                            }}
+                                            className="text-xs"
+                                        >
+                                            + 리뷰 추가
+                                        </Button>
                                     </div>
                                     <div className="space-y-2">
-                                        {formData.tzuyang_reviews.map((review, index) => (
-                                            <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-pink-200 dark:border-pink-700">
-                                                <div className="flex items-start gap-2">
-                                                    <Badge variant="outline" className="text-xs mt-1">리뷰 {index + 1}</Badge>
-                                                    <div className="flex-1">
-                                                        <p className="text-sm text-gray-700 dark:text-gray-300">
-                                                            {typeof review === 'string' ? review : review.review || review.content || JSON.stringify(review)}
-                                                        </p>
+                                        {formData.tzuyang_reviews.map((review, index) => {
+                                            const reviewText = typeof review === 'string' 
+                                                ? review 
+                                                : review.review || review.content || '';
+                                            
+                                            return (
+                                                <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-pink-200 dark:border-pink-700">
+                                                    <div className="flex items-start gap-2">
+                                                        <Badge variant="outline" className="text-xs mt-1">리뷰 {index + 1}</Badge>
+                                                        <div className="flex-1">
+                                                            <Textarea
+                                                                value={reviewText}
+                                                                onChange={(e) => {
+                                                                    const newReviews = [...formData.tzuyang_reviews];
+                                                                    newReviews[index] = { review: e.target.value };
+                                                                    setFormData({ ...formData, tzuyang_reviews: newReviews });
+                                                                }}
+                                                                placeholder="쯔양의 리뷰를 입력하세요..."
+                                                                className="min-h-[80px] text-sm"
+                                                            />
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                if (confirm('이 리뷰를 삭제하시겠습니까?')) {
+                                                                    const newReviews = formData.tzuyang_reviews.filter((_, i) => i !== index);
+                                                                    setFormData({ ...formData, tzuyang_reviews: newReviews });
+                                                                }
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 px-2"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             </Card>
