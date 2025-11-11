@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube, ChevronDown, X } from "lucide-react";
+import { Send, Loader2, CheckCircle2, XCircle, Clock, Trash2, Youtube, ChevronDown, X, MessageSquare } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
@@ -47,15 +47,18 @@ export default function RestaurantSubmissionsPage() {
         categories: [] as string[],
         youtube_link: "",
         description: "",
+        youtube_links: [] as string[],
+        tzuyang_reviews: [] as any[],
     });
 
-    // 모든 맛집 조회 (수정 요청용)
+    // 모든 맛집 조회 (수정 요청용) - youtube_links, youtube_metas, tzuyang_reviews 포함
     const { data: allRestaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, road_address, jibun_address, category, phone, youtube_links, description')
+                .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_links, youtube_metas, tzuyang_reviews, description')
+                .eq('status', 'approved')
                 .order('name');
 
             if (error) throw error;
@@ -134,61 +137,53 @@ export default function RestaurantSubmissionsPage() {
         mutationFn: async (data: typeof formData) => {
             if (!user) throw new Error('로그인이 필요합니다');
 
-            // 기본 제보 데이터
+            // 기본 제보 데이터 - DB 스키마에 맞게 수정
             const submissionData: any = {
                 user_id: user.id,
-                restaurant_name: data.restaurant_name.trim(),
-                address: data.address.trim(), // 사용자가 입력한 주소는 도로명 주소로 저장
-                phone: data.phone.trim() || null,
-                category: data.categories, // 항상 배열로 저장 (TEXT[])
+                // 사용자 입력 필드 (user_submitted_*)
+                user_submitted_name: data.restaurant_name.trim(),
+                user_submitted_categories: data.categories,
+                user_submitted_phone: data.phone.trim() || null,
+                user_raw_address: data.address.trim(),
+                // 추가 정보
                 youtube_link: data.youtube_link.trim(),
                 description: data.description.trim() || null,
                 status: 'pending',
+                submission_type: submissionMode, // 'new' 또는 'update'
             };
 
-            // 수정 요청인 경우 추가 데이터 (컬럼이 존재하는 경우에만)
+            // 수정 요청인 경우 추가 데이터
             if (submissionMode === 'update' && selectedRestaurant) {
-                try {
-                    // submission_type 컬럼 존재 확인
-                    const { error: testError } = await supabase
-                        .from('restaurant_submissions')
-                        .select('submission_type')
-                        .limit(1);
+                submissionData.restaurant_id = selectedRestaurant.id;
+                submissionData.unique_id = selectedRestaurant.unique_id; // unique_id 추가
+                submissionData.youtube_links = data.youtube_links; // 모든 유튜브 링크 배열
+                submissionData.tzuyang_reviews = data.tzuyang_reviews; // 모든 쯔양 리뷰 배열
 
-                    if (!testError) {
-                        submissionData.submission_type = submissionMode;
-                        submissionData.original_restaurant_id = selectedRestaurant.id;
+                // 변경사항 계산
+                if (originalData) {
+                    const changes_requested: Record<string, { from: any; to: any }> = {};
+                    Object.keys(data).forEach(key => {
+                        const originalValue = originalData[key as keyof typeof originalData];
+                        const newValue = data[key as keyof typeof data];
 
-                        // 변경사항 계산
-                        if (originalData) {
-                            const changes_requested: any = {};
-                            Object.keys(data).forEach(key => {
-                                const originalValue = originalData[key as keyof typeof originalData];
-                                const newValue = data[key as keyof typeof data];
-
-                                // 배열 비교 (categories)
-                                if (Array.isArray(originalValue) && Array.isArray(newValue)) {
-                                    if (JSON.stringify(originalValue.sort()) !== JSON.stringify(newValue.sort())) {
-                                        changes_requested[key] = {
-                                            from: originalValue,
-                                            to: newValue
-                                        };
-                                    }
-                                } else if (originalValue !== newValue) {
-                                    changes_requested[key] = {
-                                        from: originalValue || '',
-                                        to: newValue || ''
-                                    };
-                                }
-                            });
-                            if (Object.keys(changes_requested).length > 0) {
-                                submissionData.changes_requested = changes_requested;
+                        // 배열 비교 (categories, youtube_links, tzuyang_reviews)
+                        if (Array.isArray(originalValue) && Array.isArray(newValue)) {
+                            if (JSON.stringify(originalValue.sort()) !== JSON.stringify(newValue.sort())) {
+                                changes_requested[key] = {
+                                    from: originalValue,
+                                    to: newValue
+                                };
                             }
+                        } else if (originalValue !== newValue) {
+                            changes_requested[key] = {
+                                from: originalValue || '',
+                                to: newValue || ''
+                            };
                         }
+                    });
+                    if (Object.keys(changes_requested).length > 0) {
+                        submissionData.changes_requested = changes_requested;
                     }
-                } catch (error) {
-                    // 컬럼이 존재하지 않으면 그냥 신규 제보로 처리
-                    console.warn('수정 요청 관련 컬럼이 존재하지 않아 신규 제보로 처리합니다');
                 }
             }
 
@@ -222,6 +217,8 @@ export default function RestaurantSubmissionsPage() {
                 categories: [],
                 youtube_link: "",
                 description: "",
+                youtube_links: [],
+                tzuyang_reviews: [],
             });
             setSelectedRestaurant(null);
             setOriginalData(null);
@@ -238,14 +235,26 @@ export default function RestaurantSubmissionsPage() {
         // 도로명 주소 우선, 없으면 지번 주소 사용
         const restaurantAddress = restaurant.road_address || restaurant.jibun_address || "";
 
+        // youtube_links 배열 처리
+        const youtubeLinks = Array.isArray(restaurant.youtube_links) 
+            ? restaurant.youtube_links 
+            : [];
+
+        // tzuyang_reviews 배열 처리
+        const tzuyangReviews = Array.isArray(restaurant.tzuyang_reviews)
+            ? restaurant.tzuyang_reviews
+            : (typeof restaurant.tzuyang_reviews === 'string' 
+                ? [{ review: restaurant.tzuyang_reviews }] 
+                : []);
+
         setOriginalData({
             restaurant_name: restaurant.name,
             address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
-                ? restaurant.youtube_links[0]
-                : (restaurant.youtube_links || ""),
+            youtube_link: youtubeLinks.length > 0 ? youtubeLinks[0] : "",
+            youtube_links: youtubeLinks,
+            tzuyang_reviews: tzuyangReviews,
             description: restaurant.description || "",
         });
         setFormData({
@@ -253,9 +262,9 @@ export default function RestaurantSubmissionsPage() {
             address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
-                ? restaurant.youtube_links[0]
-                : (restaurant.youtube_links || ""),
+            youtube_link: youtubeLinks.length > 0 ? youtubeLinks[0] : "",
+            youtube_links: youtubeLinks,
+            tzuyang_reviews: tzuyangReviews,
             description: restaurant.description || "",
         });
     };
@@ -287,6 +296,8 @@ export default function RestaurantSubmissionsPage() {
             categories: [],
             youtube_link: "",
             description: "",
+            youtube_links: [],
+            tzuyang_reviews: [],
         });
     };
 
@@ -827,6 +838,90 @@ export default function RestaurantSubmissionsPage() {
                             />
                         </div>
 
+                        {/* 수정 요청일 때: 모든 유튜브 영상 표시 */}
+                        {submissionMode === 'update' && selectedRestaurant && formData.youtube_links.length > 0 && (
+                            <Card className="p-4 bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-800">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <Youtube className="h-5 w-5 text-purple-600" />
+                                        <Label className="text-sm font-medium text-purple-800 dark:text-purple-200">
+                                            등록된 유튜브 영상 ({formData.youtube_links.length}개)
+                                        </Label>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {formData.youtube_links.map((link, index) => {
+                                            // youtube_metas에서 해당 링크의 메타데이터 찾기
+                                            const meta = selectedRestaurant.youtube_metas?.[index];
+                                            return (
+                                                <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-purple-200 dark:border-purple-700">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <Badge variant="outline" className="text-xs">영상 {index + 1}</Badge>
+                                                                {meta?.title && (
+                                                                    <span className="text-xs text-muted-foreground truncate">
+                                                                        {meta.title}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <a
+                                                                href={link}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="text-sm text-blue-600 hover:underline break-all"
+                                                            >
+                                                                {link}
+                                                            </a>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                const newLinks = formData.youtube_links.filter((_, i) => i !== index);
+                                                                setFormData({ ...formData, youtube_links: newLinks });
+                                                            }}
+                                                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
+
+                        {/* 수정 요청일 때: 모든 쯔양 리뷰 표시 */}
+                        {submissionMode === 'update' && selectedRestaurant && formData.tzuyang_reviews.length > 0 && (
+                            <Card className="p-4 bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800">
+                                <div className="space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <MessageSquare className="h-5 w-5 text-pink-600" />
+                                        <Label className="text-sm font-medium text-pink-800 dark:text-pink-200">
+                                            쯔양의 리뷰 ({formData.tzuyang_reviews.length}개)
+                                        </Label>
+                                    </div>
+                                    <div className="space-y-2">
+                                        {formData.tzuyang_reviews.map((review, index) => (
+                                            <div key={index} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-pink-200 dark:border-pink-700">
+                                                <div className="flex items-start gap-2">
+                                                    <Badge variant="outline" className="text-xs mt-1">리뷰 {index + 1}</Badge>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                                                            {typeof review === 'string' ? review : review.review || review.content || JSON.stringify(review)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
+
                         <div className="space-y-2">
                             <Label htmlFor="youtube_link">
                                 유튜브 영상 링크 <span className="text-red-500">*</span>
@@ -838,7 +933,10 @@ export default function RestaurantSubmissionsPage() {
                                 placeholder="https://youtube.com/watch?v=..."
                             />
                             <p className="text-xs text-muted-foreground">
-                                쯔양이 방문한 맛집 유튜브 영상 링크를 입력해주세요
+                                {submissionMode === 'update' 
+                                    ? '새로운 유튜브 영상을 추가하려면 링크를 입력해주세요'
+                                    : '쯔양이 방문한 맛집 유튜브 영상 링크를 입력해주세요'
+                                }
                             </p>
                         </div>
 
