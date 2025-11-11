@@ -16,19 +16,49 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 interface RestaurantSubmission {
     id: string;
-    restaurant_name: string;
-    address: string;
-    phone: string | null;
-    category: string;
-    youtube_link: string;
-    description: string | null;
+    user_id: string;
+    submission_type: 'new' | 'edit';
+    restaurant_id: string | null;
     status: 'pending' | 'approved' | 'rejected';
+    
+    // 사용자 입력 필드
+    user_submitted_name: string | null;
+    user_submitted_categories: string[] | null;
+    user_submitted_phone: string | null;
+    user_raw_address: string | null;
+    
+    // 관리자 검토 후 필드
+    name: string | null;
+    phone: string | null;
+    categories: string[] | null;
+    lat: number | null;
+    lng: number | null;
+    road_address: string | null;
+    jibun_address: string | null;
+    english_address: string | null;
+    address_elements: any | null;
+    
+    // 유튜브 및 리뷰
+    youtube_link: string | null;
+    youtube_links: string[];
+    youtube_metas: any[];
+    description: string | null;
+    tzuyang_reviews: any[];
+    
+    // 수정 요청 관련
+    unique_id: string | null;
+    changes_requested: any | null;
+    
+    // 관리자 처리
+    admin_notes: string | null;
     rejection_reason: string | null;
-    created_at: string;
+    resolved_by_admin_id: string | null;
     reviewed_at: string | null;
-    submission_type?: 'new' | 'update';
-    original_restaurant_id?: string;
-    changes_requested?: any;
+    reviewed_by_admin_id: string | null;
+    approved_restaurant_id: string | null;
+    
+    created_at: string;
+    updated_at: string;
 }
 
 export default function RestaurantSubmissionsPage() {
@@ -215,7 +245,7 @@ export default function RestaurantSubmissionsPage() {
                 youtube_link: finalYoutubeLink,
                 description: finalDescription,
                 status: 'pending',
-                submission_type: submissionMode, // 'new' 또는 'update'
+                submission_type: submissionMode === 'update' ? 'edit' : submissionMode, // 'new' 또는 'edit' (DB 스키마에 맞게)
             };
 
             // 수정 요청인 경우 추가 데이터
@@ -662,35 +692,36 @@ export default function RestaurantSubmissionsPage() {
                                     <div className="flex-1 space-y-2">
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-lg font-semibold">
-                                                {submission.restaurant_name}
+                                                {submission.user_submitted_name || submission.name || '이름 없음'}
                                             </h3>
                                             {getStatusBadge(submission.status)}
                                             <div className="flex flex-wrap gap-1">
-                                                {Array.isArray(submission.category)
-                                                    ? submission.category.map((cat: string) => (
+                                                {submission.user_submitted_categories && submission.user_submitted_categories.length > 0 ? (
+                                                    submission.user_submitted_categories.map((cat: string) => (
                                                         <Badge key={cat} variant="outline" className="text-xs">
                                                             {cat}
                                                         </Badge>
                                                     ))
-                                                    : (
-                                                        <Badge variant="outline" className="text-xs">
-                                                            {submission.category}
+                                                ) : submission.categories && submission.categories.length > 0 ? (
+                                                    submission.categories.map((cat: string) => (
+                                                        <Badge key={cat} variant="outline" className="text-xs">
+                                                            {cat}
                                                         </Badge>
-                                                    )
-                                                }
+                                                    ))
+                                                ) : null}
                                             </div>
-                                            <Badge variant={submission.original_restaurant_id ? 'secondary' : 'default'}>
-                                                {submission.original_restaurant_id ? '수정 요청' : '신규 제보'}
+                                            <Badge variant={submission.submission_type === 'edit' ? 'secondary' : 'default'}>
+                                                {submission.submission_type === 'edit' ? '수정 요청' : '신규 제보'}
                                             </Badge>
                                         </div>
 
                                         <p className="text-sm text-muted-foreground">
-                                            📍 {submission.address}
+                                            📍 {submission.user_raw_address || submission.road_address || submission.jibun_address || '주소 없음'}
                                         </p>
 
-                                        {submission.phone && (
+                                        {(submission.user_submitted_phone || submission.phone) && (
                                             <p className="text-sm text-muted-foreground">
-                                                📞 {submission.phone}
+                                                📞 {submission.user_submitted_phone || submission.phone}
                                             </p>
                                         )}
 
