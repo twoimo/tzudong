@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,19 +50,21 @@ export function RestaurantDetailPanel({
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
+    const [showAllYoutubeLinks, setShowAllYoutubeLinks] = useState(false);
+    const [showAllTzuyangReviews, setShowAllTzuyangReviews] = useState(false);
+    const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | null>(null);
 
-    if (!restaurant) return null;
-
-    // 카테고리 처리: 배열로 저장됨
-    const categories: string[] = Array.isArray(restaurant.category)
-        ? restaurant.category
-        : restaurant.category
-        ? [restaurant.category]
-        : [];
+    // 카테고리 처리: categories 배열로 저장됨
+    const categories: string[] = restaurant && Array.isArray(restaurant.categories)
+        ? restaurant.categories
+        : restaurant?.categories
+            ? [restaurant.categories]
+            : [];
 
     // 실제 리뷰 데이터 가져오기
     const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
-        queryKey: ['restaurant-reviews', restaurant.id],
+        queryKey: ['restaurant-reviews', restaurant?.id],
+        enabled: !!restaurant,
         queryFn: async () => {
             try {
                 console.log('🔍 맛집 리뷰 데이터 가져오는 중...', restaurant.id);
@@ -213,6 +215,15 @@ export function RestaurantDetailPanel({
         setViewMode('detail');
     };
 
+    const handleCopyAddress = async (address: string, type: 'road' | 'jibun') => {
+        try {
+            await navigator.clipboard.writeText(address);
+            setCopiedAddress(type);
+            setTimeout(() => setCopiedAddress(null), 2000);
+        } catch (err) {
+            console.error('주소 복사 실패:', err);
+        }
+    };
 
     const extractYouTubeVideoId = (url: string) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -224,6 +235,9 @@ export function RestaurantDetailPanel({
         const videoId = extractYouTubeVideoId(url);
         return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
     };
+
+    // restaurant가 없으면 null 반환 (모든 Hook 호출 후)
+    if (!restaurant) return null;
 
     const handleGetDirections = () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
@@ -349,16 +363,42 @@ export function RestaurantDetailPanel({
                             )}
                             {viewMode === 'detail' && (
                                 <div className="flex-1">
-                                    <div className="flex flex-wrap gap-1 mb-1">
+                                    <div className="flex gap-1 mb-1 overflow-x-auto scrollbar-hide">
                                         {categories.map((cat, index) => (
                                             <Badge
                                                 key={index}
                                                 variant={index === 0 ? "default" : "secondary"}
-                                                className="text-xs"
+                                                className="text-xs whitespace-nowrap"
                                             >
                                                 {cat}
                                             </Badge>
                                         ))}
+
+                                        {/* 광고 태그 */}
+                                        {restaurant.youtube_metas && restaurant.youtube_metas.length > 0 && (() => {
+                                            const adsMetas = restaurant.youtube_metas
+                                                .map((meta: any) => meta?.ads_info)
+                                                .filter((adsInfo: any) => adsInfo?.is_ads === true);
+
+                                            if (adsMetas.length === 0) return null;
+
+                                            const allAds = adsMetas.flatMap((adsInfo: any) => adsInfo.what_ads || []);
+                                            const uniqueAds = Array.from(new Set(allAds));
+
+                                            return uniqueAds.length > 0 ? (
+                                                <>
+                                                    {uniqueAds.map((ad: string, index: number) => (
+                                                        <Badge
+                                                            key={index}
+                                                            variant="outline"
+                                                            className="text-xs bg-orange-50 text-orange-700 border-orange-300 whitespace-nowrap"
+                                                        >
+                                                            📢 {ad}
+                                                        </Badge>
+                                                    ))}
+                                                </>
+                                            ) : null;
+                                        })()}
                                     </div>
                                     <div className="flex items-center gap-2">
                                         <span className="text-2xl">{getCategoryEmoji(categories[0] || '')}</span>
@@ -401,22 +441,38 @@ export function RestaurantDetailPanel({
                                     </h3>
 
                                     {restaurant.road_address && (
-                                        <div className="flex gap-3">
+                                        <div
+                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            onClick={() => handleCopyAddress(restaurant.road_address!, 'road')}
+                                        >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
                                                 <p className="text-xs text-muted-foreground">도로명 주소</p>
                                                 <p className="text-sm">{restaurant.road_address}</p>
                                             </div>
+                                            {copiedAddress === 'road' ? (
+                                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                            ) : (
+                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            )}
                                         </div>
                                     )}
 
                                     {restaurant.jibun_address && (
-                                        <div className="flex gap-3">
+                                        <div
+                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            onClick={() => handleCopyAddress(restaurant.jibun_address!, 'jibun')}
+                                        >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
                                                 <p className="text-xs text-muted-foreground">지번 주소</p>
                                                 <p className="text-sm">{restaurant.jibun_address}</p>
                                             </div>
+                                            {copiedAddress === 'jibun' ? (
+                                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                            ) : (
+                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            )}
                                         </div>
                                     )}
 
@@ -450,22 +506,34 @@ export function RestaurantDetailPanel({
                                     <>
                                         <Separator />
                                         <div className="space-y-3">
-                                            <h3 className="font-semibold text-sm flex items-center gap-2">
-                                                <Youtube className="h-4 w-4 text-red-500" />
-                                                쯔양 유튜브 영상
-                                            </h3>
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="font-semibold text-sm flex items-center gap-2">
+                                                    <Youtube className="h-4 w-4 text-red-500" />
+                                                    쯔양 유튜브 영상 ({restaurant.youtube_links.length})
+                                                </h3>
+                                                {restaurant.youtube_links.length > 1 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setShowAllYoutubeLinks(!showAllYoutubeLinks)}
+                                                        className="text-xs h-auto py-1"
+                                                    >
+                                                        {showAllYoutubeLinks ? '접기' : `전체보기 (${restaurant.youtube_links.length})`}
+                                                    </Button>
+                                                )}
+                                            </div>
                                             <div className="space-y-2">
-                                                {restaurant.youtube_links.map((link, index) => (
+                                                {(showAllYoutubeLinks ? restaurant.youtube_links : restaurant.youtube_links.slice(0, 1)).map((link, index) => (
                                                     <div
                                                         key={index}
-                                                        className="relative cursor-pointer rounded-lg overflow-hidden group"
+                                                        className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
                                                         onClick={() => window.open(link, '_blank')}
                                                     >
                                                         {getYouTubeThumbnailUrl(link) && (
                                                             <img
                                                                 src={getYouTubeThumbnailUrl(link)!}
                                                                 alt={`YouTube Thumbnail ${index + 1}`}
-                                                                className="w-full h-32 object-cover"
+                                                                className="w-full h-full object-cover"
                                                             />
                                                         )}
                                                         <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
@@ -483,15 +551,27 @@ export function RestaurantDetailPanel({
                                     <>
                                         <Separator />
                                         <div className="space-y-2">
-                                            <h3 className="font-semibold text-sm flex items-center gap-2">
-                                                <Quote className="h-4 w-4 text-muted-foreground" />
-                                                쯔양의 리뷰
-                                            </h3>
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="font-semibold text-sm flex items-center gap-2">
+                                                    <Quote className="h-4 w-4 text-muted-foreground" />
+                                                    쯔양의 리뷰 ({restaurant.tzuyang_reviews.length})
+                                                </h3>
+                                                {restaurant.tzuyang_reviews.length > 1 && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setShowAllTzuyangReviews(!showAllTzuyangReviews)}
+                                                        className="text-xs h-auto py-1"
+                                                    >
+                                                        {showAllTzuyangReviews ? '접기' : `전체보기 (${restaurant.tzuyang_reviews.length})`}
+                                                    </Button>
+                                                )}
+                                            </div>
                                             <div className="space-y-2">
-                                                {restaurant.tzuyang_reviews.map((review, index) => (
+                                                {(showAllTzuyangReviews ? restaurant.tzuyang_reviews : restaurant.tzuyang_reviews.slice(0, 1)).map((reviewObj: any, index) => (
                                                     <div key={index} className="p-4 bg-muted/50 rounded-lg">
                                                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                            {review}
+                                                            {typeof reviewObj === 'string' ? reviewObj : reviewObj.review}
                                                         </p>
                                                     </div>
                                                 ))}
@@ -544,8 +624,8 @@ export function RestaurantDetailPanel({
                                                         >
                                                             <Heart
                                                                 className={`h-3 w-3 ${likedReviews.has(review.id)
-                                                                        ? 'fill-red-500 text-red-500'
-                                                                        : 'text-gray-400'
+                                                                    ? 'fill-red-500 text-red-500'
+                                                                    : 'text-gray-400'
                                                                     }`}
                                                             />
                                                         </Button>
@@ -641,8 +721,8 @@ export function RestaurantDetailPanel({
                                                         >
                                                             <Heart
                                                                 className={`h-4 w-4 ${likedReviews.has(review.id)
-                                                                        ? 'fill-red-500 text-red-500'
-                                                                        : 'text-gray-400'
+                                                                    ? 'fill-red-500 text-red-500'
+                                                                    : 'text-gray-400'
                                                                     }`}
                                                             />
                                                         </Button>

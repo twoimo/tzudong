@@ -232,10 +232,13 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       const isSelected = selectedRestaurant?.id === restaurant.id;
 
       // 카테고리별 적절한 이모티콘으로 변경
-      const getCategoryIcon = (category: string | string[]) => {
-        // category가 배열이면 첫 번째 값 사용
-        const categoryStr = Array.isArray(category) ? category[0] : category;
-        
+      const getCategoryIcon = (categories: string | string[] | null | undefined) => {
+        // categories가 null이나 undefined면 기본값
+        if (!categories) return '⭐';
+
+        // categories가 배열이면 첫 번째 값 사용, 아니면 그대로 사용
+        const categoryStr = Array.isArray(categories) ? categories[0] : categories;
+
         const iconMap: { [key: string]: string } = {
           '고기': '🥩',
           '치킨': '🍗',
@@ -257,7 +260,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         return iconMap[categoryStr] || '⭐'; // 기본값은 별표
       };
 
-      const icon = getCategoryIcon(restaurant.category);
+      const icon = getCategoryIcon(restaurant.categories);
 
       // 선택된 마커는 더 큰 크기와 강조 효과 (조금 더 작게)
       const markerSize = isSelected ? 32 : 24;

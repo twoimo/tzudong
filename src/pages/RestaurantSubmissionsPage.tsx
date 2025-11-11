@@ -231,8 +231,10 @@ export default function RestaurantSubmissionsPage() {
     // 기존 맛집 선택 핸들러
     const handleRestaurantSelect = (restaurant: any) => {
         setSelectedRestaurant(restaurant);
-        const safeCategories = Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category].filter(Boolean);
-        
+        const safeCategories = Array.isArray(restaurant.categories)
+            ? restaurant.categories
+            : (restaurant.categories ? [restaurant.categories] : []);
+
         // 도로명 주소 우선, 없으면 지번 주소 사용
         const restaurantAddress = restaurant.road_address || restaurant.jibun_address || "";
 
@@ -241,8 +243,8 @@ export default function RestaurantSubmissionsPage() {
             address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0 
-                ? restaurant.youtube_links[0] 
+            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
+                ? restaurant.youtube_links[0]
                 : (restaurant.youtube_links || ""),
             description: restaurant.description || "",
         });
@@ -251,8 +253,8 @@ export default function RestaurantSubmissionsPage() {
             address: restaurantAddress,
             phone: restaurant.phone || "",
             categories: safeCategories,
-            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0 
-                ? restaurant.youtube_links[0] 
+            youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
+                ? restaurant.youtube_links[0]
                 : (restaurant.youtube_links || ""),
             description: restaurant.description || "",
         });
@@ -606,9 +608,9 @@ export default function RestaurantSubmissionsPage() {
                                     </SelectTrigger>
                                     <SelectContent>
                                         {allRestaurants.map((restaurant) => {
-                                            const categoryDisplay = Array.isArray(restaurant.category) 
-                                                ? restaurant.category[0] 
-                                                : restaurant.category;
+                                            const categoryDisplay = Array.isArray(restaurant.categories) && restaurant.categories.length > 0
+                                                ? restaurant.categories[0]
+                                                : (restaurant.categories || "기타");
                                             return (
                                                 <SelectItem key={restaurant.id} value={restaurant.id}>
                                                     {restaurant.name} - {categoryDisplay}

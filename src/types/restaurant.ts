@@ -1,8 +1,20 @@
 import { Tables } from "@/integrations/supabase/types";
 
-export type Restaurant = Tables<"restaurants">;
+// DB에서 가져온 기본 Restaurant 타입
+type BaseRestaurant = Tables<"restaurants">;
+
+// 호환성을 위한 확장 Restaurant 타입
+export interface Restaurant extends BaseRestaurant {
+    // 호환성 속성들 (기존 코드와의 호환을 위해)
+    address?: string; // road_address 또는 jibun_address의 가상 속성
+    category?: string[]; // categories의 별칭
+    youtube_link?: string; // youtube_links[0]의 별칭
+    tzuyang_review?: string; // tzuyang_reviews[0].review의 별칭
+}
+
 export type Review = Tables<"reviews">;
-export type RestaurantCategory = Tables<"restaurants">["category"];
+// categories는 배열 타입
+export type RestaurantCategory = string[];
 
 export interface RestaurantWithDetails extends Restaurant {
     reviews?: Review[];

@@ -42,10 +42,12 @@ export function AdminRestaurantModal({
         if (restaurant) {
             setFormData({
                 name: restaurant.name || "",
-                address: restaurant.address || "",
+                address: restaurant.address || restaurant.road_address || restaurant.jibun_address || "",
                 phone: restaurant.phone || "",
-                categories: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category].filter(Boolean),
-                youtube_link: restaurant.youtube_link || "",
+                categories: Array.isArray(restaurant.categories)
+                    ? restaurant.categories
+                    : (restaurant.categories ? [restaurant.categories] : []),
+                youtube_link: restaurant.youtube_link || (Array.isArray(restaurant.youtube_links) ? restaurant.youtube_links[0] : "") || "",
                 tzuyang_review: restaurant.tzuyang_review || "",
                 lat: String(restaurant.lat || ""),
                 lng: String(restaurant.lng || ""),
