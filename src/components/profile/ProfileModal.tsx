@@ -30,7 +30,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
     // Nickname change
     const [newNickname, setNewNickname] = useState("");
-    const [nicknameChanged, setNicknameChanged] = useState(false);
 
     // Password change
     const [currentPassword, setCurrentPassword] = useState("");
@@ -67,12 +66,10 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 const profileData = data[0];
                 setProfile(profileData);
                 setNewNickname(profileData.nickname || "");
-                setNicknameChanged(profileData.nickname_changed || false);
             } else {
                 // 프로필이 없는 경우 기본값 설정
                 setProfile(null);
                 setNewNickname(user.email?.split('@')[0] || "사용자");
-                setNicknameChanged(false);
                 console.log('프로필이 존재하지 않아 기본값으로 설정합니다');
             }
         } catch (error: any) {
@@ -87,11 +84,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             return;
         }
 
-        if (nicknameChanged) {
-            toast.error('닉네임은 한 번만 변경할 수 있습니다');
-            return;
-        }
-
         if (newNickname.length < 2 || newNickname.length > 20) {
             toast.error('닉네임은 2-20자 사이여야 합니다');
             return;
@@ -102,18 +94,17 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             const { error } = await supabase
                 .from('profiles')
                 .update({
-                    nickname: newNickname.trim(),
-                    nickname_changed: true
+                    nickname: newNickname.trim()
                 })
                 .eq('user_id', user.id);
 
             if (error) throw error;
 
-            setProfile({ ...profile, nickname: newNickname.trim(), nickname_changed: true });
-            setNicknameChanged(true);
+            setProfile({ ...profile, nickname: newNickname.trim() });
             toast.success('닉네임이 성공적으로 변경되었습니다');
-        } catch (error: any) {
-            toast.error(error.message || '닉네임 변경에 실패했습니다');
+        } catch (error) {
+            const err = error as { message?: string };
+            toast.error(err.message || '닉네임 변경에 실패했습니다');
         } finally {
             setLoading(false);
         }
@@ -263,28 +254,19 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         id="nickname"
                                         value={newNickname}
                                         onChange={(e) => setNewNickname(e.target.value)}
-                                        disabled={nicknameChanged}
                                         placeholder="닉네임을 입력하세요"
-                                        className={nicknameChanged ? "bg-muted" : ""}
                                     />
                                     <Button
                                         onClick={handleNicknameChange}
-                                        disabled={loading || nicknameChanged || !newNickname.trim() || newNickname === profile?.nickname}
+                                        disabled={loading || !newNickname.trim() || newNickname === profile?.nickname}
                                         size="sm"
                                     >
-                                        {nicknameChanged ? "변경 완료" : "변경하기"}
+                                        변경하기
                                     </Button>
                                 </div>
-                                {nicknameChanged && (
-                                    <p className="text-sm text-muted-foreground">
-                                        ✅ 닉네임이 이미 변경되었습니다. (1회 변경 가능)
-                                    </p>
-                                )}
-                                {!nicknameChanged && (
-                                    <p className="text-sm text-muted-foreground">
-                                        ℹ️ 닉네임은 한 번만 변경할 수 있습니다.
-                                    </p>
-                                )}
+                                <p className="text-sm text-muted-foreground">
+                                    ℹ️ 닉네임은 언제든지 변경할 수 있습니다.
+                                </p>
                             </div>
                         </CardContent>
                     </Card>
