@@ -660,6 +660,8 @@ export default function AdminEvaluationPage() {
                   loading={loading}
                   evalFilters={evalFilters}
                   isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
                   onFilterChange={(key, value) => {
                     setEvalFilters(prev => ({
                       ...prev,
