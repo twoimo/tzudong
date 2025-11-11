@@ -29,7 +29,7 @@ export default function AdminEvaluationPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
-  
+
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
   const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
   const [loading, setLoading] = useState(true);
@@ -64,7 +64,7 @@ export default function AdminEvaluationPage() {
   const [selectedConflictRecord, setSelectedConflictRecord] = useState<EvaluationRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
-  
+
   // DB 충돌 경고 다이얼로그
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictWarningData, setConflictWarningData] = useState<{
@@ -78,7 +78,7 @@ export default function AdminEvaluationPage() {
   // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
     if (authLoading) return; // 인증 로딩 중에는 대기
-    
+
     if (!user || !isAdmin) {
       toast({
         title: "접근 권한이 없습니다",
@@ -98,21 +98,21 @@ export default function AdminEvaluationPage() {
 
   // 필터링 + 검색된 레코드 (전체 데이터에서 검색)
   const filteredRecords = useMemo(() => {
-    let filtered = selectedStatuses.length === 0 
+    let filtered = selectedStatuses.length === 0
       ? allRecords.filter(r => r.status !== 'deleted') // 전체 탭일 때는 deleted 제외
       : allRecords.filter(r => {
-          // geocoding_failed 탭 클릭 시: status가 'geocoding_failed' 또는 (pending + 지오코딩 실패)
-          if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
-            return r.status === 'geocoding_failed' || 
-                   (r.status === 'pending' && !r.geocoding_success);
-          }
-          return selectedStatuses.includes(r.status);
-        });
+        // geocoding_failed 탭 클릭 시: status가 'geocoding_failed' 또는 (pending + 지오코딩 실패)
+        if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
+          return r.status === 'geocoding_failed' ||
+            (r.status === 'pending' && !r.geocoding_success);
+        }
+        return selectedStatuses.includes(r.status);
+      });
 
     // 1. Visit Authenticity 필터 (0-3점)
     if (evalFilters.visit_authenticity) {
       const targetScore = parseInt(evalFilters.visit_authenticity);
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.visit_authenticity?.eval_value === targetScore
       );
     }
@@ -120,7 +120,7 @@ export default function AdminEvaluationPage() {
     // 2. RB Inference Score 필터 (0-2점)
     if (evalFilters.rb_inference_score) {
       const targetScore = parseInt(evalFilters.rb_inference_score);
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.rb_inference_score?.eval_value === targetScore
       );
     }
@@ -128,7 +128,7 @@ export default function AdminEvaluationPage() {
     // 3. RB Grounding TF 필터 (T/F)
     if (evalFilters.rb_grounding_TF) {
       const targetValue = evalFilters.rb_grounding_TF === 'True';
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.rb_grounding_TF?.eval_value === targetValue
       );
     }
@@ -136,7 +136,7 @@ export default function AdminEvaluationPage() {
     // 4. Review Faithfulness Score 필터 (0-1점)
     if (evalFilters.review_faithfulness_score) {
       const targetScore = parseFloat(evalFilters.review_faithfulness_score);
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.review_faithfulness_score?.eval_value === targetScore
       );
     }
@@ -147,7 +147,7 @@ export default function AdminEvaluationPage() {
         filtered = filtered.filter(r => !r.geocoding_success);
       } else {
         const targetValue = evalFilters.location_match_TF === 'True';
-        filtered = filtered.filter(r => 
+        filtered = filtered.filter(r =>
           r.evaluation_results?.location_match_TF?.eval_value === targetValue
         );
       }
@@ -156,7 +156,7 @@ export default function AdminEvaluationPage() {
     // 6. Category Validity TF 필터 (T/F)
     if (evalFilters.category_validity_TF) {
       const targetValue = evalFilters.category_validity_TF === 'True';
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.category_validity_TF?.eval_value === targetValue
       );
     }
@@ -164,7 +164,7 @@ export default function AdminEvaluationPage() {
     // 7. Category TF 필터 (T/F)
     if (evalFilters.category_TF) {
       const targetValue = evalFilters.category_TF === 'True';
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.evaluation_results?.category_TF?.eval_value === targetValue
       );
     }
@@ -177,7 +177,7 @@ export default function AdminEvaluationPage() {
     // 9. 영상 제목 검색 필터 (전체 데이터에서 검색)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(r => 
+      filtered = filtered.filter(r =>
         r.youtube_meta?.title?.toLowerCase().includes(query)
       );
     }
@@ -193,7 +193,7 @@ export default function AdminEvaluationPage() {
     setTimeout(() => {
       const currentLength = displayedRecords.length;
       const newRecords = filteredRecords.slice(currentLength, currentLength + PAGE_SIZE);
-      
+
       setDisplayedRecords(prev => [...prev, ...newRecords]);
       setHasMore(currentLength + PAGE_SIZE < filteredRecords.length);
       setLoadingMore(false);
@@ -214,7 +214,7 @@ export default function AdminEvaluationPage() {
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
       const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
-      
+
       // 80% 이상 스크롤 시 다음 데이터 로드
       if (scrollPercentage > 0.8 && hasMore && !loadingMore) {
         console.log('Loading more records...', {
@@ -234,7 +234,7 @@ export default function AdminEvaluationPage() {
   const loadAllRecords = async () => {
     try {
       setLoading(true);
-      
+
       // 모든 레코드 조회 (deleted 포함)
       const { data, error } = await supabase
         .from('evaluation_records')
@@ -265,11 +265,11 @@ export default function AdminEvaluationPage() {
       }
 
       setAllRecords(data as EvaluationRecord[]);
-      
+
       // 통계 계산 (deleted 포함)
       const deletedCount = data.filter(r => r.status === 'deleted').length;
       const activeData = data.filter(r => r.status !== 'deleted');
-      
+
       const newStats: CategoryStats = {
         total: activeData.length, // deleted 제외한 전체
         pending: data.filter(r => r.status === 'pending').length,
@@ -277,8 +277,8 @@ export default function AdminEvaluationPage() {
         hold: data.filter(r => r.status === 'hold').length,
         missing: data.filter(r => r.status === 'missing').length,
         db_conflict: data.filter(r => r.status === 'db_conflict').length,
-        geocoding_failed: data.filter(r => 
-          r.status === 'geocoding_failed' || 
+        geocoding_failed: data.filter(r =>
+          r.status === 'geocoding_failed' ||
           (r.status === 'pending' && !r.geocoding_success) ||
           (r.status === 'not_selected' && !r.geocoding_success)
         ).length,
@@ -315,7 +315,7 @@ export default function AdminEvaluationPage() {
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
-    setAllRecords(prev => 
+    setAllRecords(prev =>
       prev.map(r => r.id === recordId ? { ...r, ...updates } : r)
     );
   };
@@ -329,7 +329,7 @@ export default function AdminEvaluationPage() {
   const recalculateStats = () => {
     const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
     const activeData = allRecords.filter(r => r.status !== 'deleted');
-    
+
     const newStats: CategoryStats = {
       total: activeData.length,
       pending: allRecords.filter(r => r.status === 'pending').length,
@@ -337,15 +337,15 @@ export default function AdminEvaluationPage() {
       hold: allRecords.filter(r => r.status === 'hold').length,
       missing: allRecords.filter(r => r.status === 'missing').length,
       db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
-      geocoding_failed: allRecords.filter(r => 
-        r.status === 'geocoding_failed' || 
+      geocoding_failed: allRecords.filter(r =>
+        r.status === 'geocoding_failed' ||
         (r.status === 'pending' && !r.geocoding_success) ||
         (r.status === 'not_selected' && !r.geocoding_success)
       ).length,
       not_selected: allRecords.filter(r => r.status === 'not_selected').length,
       deleted: deletedCount,
     };
-    
+
     setStats(newStats);
   };
 
@@ -391,7 +391,7 @@ export default function AdminEvaluationPage() {
       setLoading(true);
 
       const jibunAddress = record.restaurant_info.naver_address_info.jibun_address;
-      
+
       // DB 충돌 체크 (새로운 로직)
       const conflictCheck = await checkDbConflict({
         jibunAddress,
@@ -614,8 +614,8 @@ export default function AdminEvaluationPage() {
     <div className="flex flex-col h-screen">
       {/* Header */}
       <div className="border-b border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-shrink-0">
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
               <ClipboardCheck className="h-6 w-6 text-primary" />
               음식점 방문 데이터 평가 결과 검수
@@ -624,36 +624,24 @@ export default function AdminEvaluationPage() {
               총 {stats.total}개 레코드 | 필터링: {filteredRecords.length}개
             </p>
           </div>
+
+          {/* 우측: 카테고리 필터 */}
+          <div className="flex-1 flex justify-end">
+            <CategorySidebar
+              stats={stats}
+              selectedStatuses={selectedStatuses}
+              onSelectStatuses={setSelectedStatuses}
+            />
+          </div>
         </div>
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* 상단: 카테고리 탭 + 검색 */}
-        <div className="p-4 border-b bg-background space-y-4">
-          <CategorySidebar
-            stats={stats}
-            selectedStatuses={selectedStatuses}
-            onSelectStatuses={setSelectedStatuses}
-          />
-          
-          {/* 검색 입력 */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="text"
-              placeholder="영상 제목으로 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
         {/* 테이블 영역 (무한 스크롤) */}
         <div className="flex-1 overflow-hidden flex flex-col">
-          <div 
+          <div
             ref={scrollContainerRef}
-            className="flex-1 p-4 overflow-auto" 
+            className="flex-1 p-4 overflow-auto"
             id="scroll-container"
           >
             {loading ? (
@@ -680,14 +668,14 @@ export default function AdminEvaluationPage() {
                   }}
                   onResetFilters={() => setEvalFilters({})}
                 />
-                
+
                 {/* 로딩 인디케이터 */}
                 {loadingMore && (
                   <div className="flex justify-center py-4">
                     <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
                   </div>
                 )}
-                
+
                 {/* 모든 데이터 로드 완료 메시지 */}
                 {!hasMore && displayedRecords.length > 0 && (
                   <div className="text-center py-4 text-muted-foreground text-sm">
