@@ -51,18 +51,17 @@ export function RestaurantDetailPanel({
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
 
-    if (!restaurant) return null;
-
     // 카테고리 처리: categories 배열로 저장됨
-    const categories: string[] = Array.isArray(restaurant.categories)
+    const categories: string[] = restaurant && Array.isArray(restaurant.categories)
         ? restaurant.categories
-        : restaurant.categories
+        : restaurant?.categories
             ? [restaurant.categories]
             : [];
 
     // 실제 리뷰 데이터 가져오기
     const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
-        queryKey: ['restaurant-reviews', restaurant.id],
+        queryKey: ['restaurant-reviews', restaurant?.id],
+        enabled: !!restaurant,
         queryFn: async () => {
             try {
                 console.log('🔍 맛집 리뷰 데이터 가져오는 중...', restaurant.id);
@@ -224,6 +223,9 @@ export function RestaurantDetailPanel({
         const videoId = extractYouTubeVideoId(url);
         return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
     };
+
+    // restaurant가 없으면 null 반환 (모든 Hook 호출 후)
+    if (!restaurant) return null;
 
     const handleGetDirections = () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
@@ -488,10 +490,10 @@ export function RestaurantDetailPanel({
                                                 쯔양의 리뷰
                                             </h3>
                                             <div className="space-y-2">
-                                                {restaurant.tzuyang_reviews.map((review, index) => (
+                                                {restaurant.tzuyang_reviews.map((reviewObj: any, index) => (
                                                     <div key={index} className="p-4 bg-muted/50 rounded-lg">
                                                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                            {review}
+                                                            {typeof reviewObj === 'string' ? reviewObj : reviewObj.review}
                                                         </p>
                                                     </div>
                                                 ))}
