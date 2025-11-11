@@ -29,17 +29,48 @@ BEGIN
     WHERE 
         r.youtube_meta IS NOT NULL
         AND r.youtube_meta->>'title' IS NOT NULL
-        -- 부분 문자열 매칭 또는 Trigram 유사도로 필터링
+        -- 매우 느슨한 필터링: 검색어의 글자 중 일부라도 포함되면 통과
         AND (
+            -- 기본 ILIKE 매칭
             (r.youtube_meta->>'title') ILIKE '%' || search_query || '%'
-            OR similarity((r.youtube_meta->>'title')::TEXT, search_query) > similarity_threshold
+            -- 유사도 매칭 (매우 낮은 threshold)
+            OR similarity((r.youtube_meta->>'title')::TEXT, search_query) > 0
+            OR word_similarity(search_query, (r.youtube_meta->>'title')::TEXT) > 0
+            -- 띄어쓰기 제거 후 매칭
+            OR replace(lower((r.youtube_meta->>'title')::TEXT), ' ', '') LIKE '%' || replace(lower(search_query), ' ', '') || '%'
+            -- 검색어의 각 글자를 분해해서 하나라도 포함되면 통과
+            OR EXISTS (
+                SELECT 1
+                FROM unnest(string_to_array(lower(search_query), NULL)) AS query_char
+                WHERE lower((r.youtube_meta->>'title')::TEXT) LIKE '%' || query_char || '%'
+            )
+        )
+        -- 필수 조건: 검색어의 최소 1글자는 반드시 포함되어야 함
+        AND EXISTS (
+            SELECT 1
+            FROM unnest(string_to_array(lower(search_query), NULL)) AS query_char
+            WHERE lower((r.youtube_meta->>'title')::TEXT) LIKE '%' || query_char || '%'
         )
     ORDER BY 
-        -- 1. 단방향 유사도 (검색어가 제목의 일부와 얼마나 비슷한지)
+        -- 1. 완전 일치 우선 (대소문자 무시)
+        CASE WHEN lower((r.youtube_meta->>'title')::TEXT) = lower(search_query) THEN 0 ELSE 1 END,
+        -- 2. 띄어쓰기 제거 후 완전 일치
+        CASE WHEN replace(lower((r.youtube_meta->>'title')::TEXT), ' ', '') = replace(lower(search_query), ' ', '') THEN 0 ELSE 1 END,
+        -- 3. 시작 부분 일치 우선
+        CASE WHEN lower((r.youtube_meta->>'title')::TEXT) LIKE lower(search_query) || '%' THEN 0 ELSE 1 END,
+        -- 4. 토큰 매칭 개수 계산 (검색어의 각 글자가 제목에 몇 개나 있는지)
+        (
+            SELECT COUNT(*)
+            FROM unnest(string_to_array(lower(search_query), NULL)) AS query_char
+            WHERE lower((r.youtube_meta->>'title')::TEXT) LIKE '%' || query_char || '%'
+        ) DESC,
+        -- 5. 단방향 유사도 (검색어가 제목의 일부와 얼마나 비슷한지)
         word_similarity(search_query, (r.youtube_meta->>'title')::TEXT) DESC,
-        -- 2. 전체 유사도 (높을수록 좋음)
+        -- 6. 전체 유사도 (높을수록 좋음)
         similarity((r.youtube_meta->>'title')::TEXT, search_query) DESC,
-        -- 3. 제목 길이 (짧을수록 좋음)
+        -- 7. Levenshtein 거리 (작을수록 좋음)
+        levenshtein(lower((r.youtube_meta->>'title')::TEXT), lower(search_query)) ASC,
+        -- 8. 제목 길이 (짧을수록 좋음)
         LENGTH((r.youtube_meta->>'title')::TEXT) ASC
     LIMIT max_results;
 END;
