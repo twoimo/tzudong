@@ -118,13 +118,15 @@ export function EvaluationTable({
     return <Badge variant={config.variant} className="whitespace-nowrap">{config.label}</Badge>;
   };
 
-  const getYoutubeVideoId = (url: string) => {
+  const getYoutubeVideoId = (url: string | undefined) => {
+    if (!url) return null;
     const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
     const match = url.match(regex);
     return match ? match[1] : null;
   };
 
-  const getThumbnailUrl = (youtubeLink: string) => {
+  const getThumbnailUrl = (youtubeLink: string | undefined) => {
+    if (!youtubeLink) return null;
     const videoId = getYoutubeVideoId(youtubeLink);
     return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
   };
