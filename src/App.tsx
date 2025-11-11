@@ -23,6 +23,7 @@ import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import AuthModal from "./components/auth/AuthModal";
 import { ProfileModal } from "./components/profile/ProfileModal";
+import { NicknameSetupModal } from "./components/profile/NicknameSetupModal";
 import { AdminRestaurantModal } from "./components/admin/AdminRestaurantModal";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -31,7 +32,7 @@ import { Restaurant } from "@/types/restaurant";
 const queryClient = new QueryClient();
 
 function AppLayout() {
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
   const queryClient = useQueryClient();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -116,6 +117,11 @@ function AppLayout() {
         onClose={() => setIsAdminModalOpen(false)}
         restaurant={selectedRestaurant}
         onSuccess={handleAdminSuccess}
+      />
+
+      <NicknameSetupModal
+        isOpen={needsNicknameSetup}
+        onComplete={completeNicknameSetup}
       />
 
     </div>
