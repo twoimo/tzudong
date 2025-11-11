@@ -1,8 +1,15 @@
 // ========================================
-// 쯔양 맛집 지도 - 데이터베이스 스키마 (v3.2)
+// 쯔양 맛집 지도 - 데이터베이스 스키마 (v3.3)
 // dbdiagram.io 형식
-// 작성일: 2025년 11월 7일
-// 버전: 3.2 - source_type 컬럼 추가
+// 작성일: 2025년 11월 7일 (최종 수정: 2025년 11월 11일)
+// 버전: 3.3 - 성능 및 보안 최적화
+// 
+// 주요 변경사항 (v3.3):
+// - RLS 정책 성능 최적화: auth.uid() → (SELECT auth.uid())
+// - Materialized View 보안 강화: 직접 접근 차단, 함수 래퍼로 접근
+// - Extension 스키마 분리: extensions 스키마로 이동 (pg_trgm, uuid-ossp, btree_gin)
+// - 모니터링 뷰 제거: v_table_sizes, v_index_usage → 함수로 변경
+// - 중복 인덱스 제거: idx_restaurants_category_gin 제거
 // 
 // 주요 변경사항 (v3.2):
 // - restaurants 테이블에 source_type 컬럼 추가
@@ -168,7 +175,6 @@ Table restaurants {
     origin_address [type: gin, name: 'idx_restaurants_origin_address']
     
     // 복합 인덱스
-    (category, lat, lng, name) [name: 'idx_restaurants_category_location', type: gin]
     (lat, lng, review_count) [name: 'idx_restaurants_location_review_count']
     (status, created_at) [name: 'idx_restaurants_status_created']
     
@@ -302,7 +308,7 @@ Table announcements {
 // - status = 'rejected': 거부됨
 
 // ========================================
-// Materialized Views
+// Materialized Views (함수를 통해서만 접근 가능)
 // ========================================
 
 Table mv_restaurant_stats {
@@ -327,7 +333,7 @@ Table mv_restaurant_stats {
     (lat, lng) [name: 'idx_mv_restaurant_stats_location']
   }
   
-  Note: '승인된 맛집 통계 Materialized View (status=approved만 포함, 주기적 REFRESH 필요)'
+  Note: '승인된 맛집 통계 Materialized View (status=approved만 포함, get_restaurant_stats() 함수로 접근)'
 }
 
 Table mv_user_leaderboard {
@@ -346,7 +352,7 @@ Table mv_user_leaderboard {
     trust_score [name: 'idx_mv_user_leaderboard_trust_score', type: btree]
   }
   
-  Note: '사용자 리더보드 Materialized View (주기적 REFRESH 필요)'
+  Note: '사용자 리더보드 Materialized View (get_user_leaderboard() 함수로 접근)'
 }
 
 Table mv_popular_reviews {
@@ -374,7 +380,7 @@ Table mv_popular_reviews {
     created_at [name: 'idx_mv_popular_reviews_created_at', type: btree]
   }
   
-  Note: '인기 리뷰 Materialized View (좋아요 수 포함)'
+  Note: '인기 리뷰 Materialized View (get_popular_reviews() 함수로 접근)'
 }
 
 // ========================================
@@ -413,7 +419,7 @@ Table auth_users {
 📊 통계 및 조회 함수:
 - get_restaurant_stats_by_status(): 상태별 맛집 통계 (approved, pending, rejected)
 - get_approved_restaurants(limit, offset): 승인된 맛집 목록 조회 (페이징)
-- search_restaurants(query): 맛집 검색 (이름, 주소 유사도)
+- search_restaurants(query, category, max_results, similarity_threshold): 맛집 검색 (이름, 주소 유사도)
 
 🔐 관리자 함수:
 - approve_restaurant(restaurant_id, admin_user_id): 맛집 승인 처리
@@ -422,6 +428,7 @@ Table auth_users {
 📥 JSONL 데이터 삽입 함수:
 - insert_restaurant_from_jsonl(jsonl_data): 단일 JSONL 레코드 삽입/업데이트
   * unique_id 기준 UPSERT
+  * source_type 자동 매핑 (기본값: 'perplexity')
   * camelCase → snake_case 자동 변환 (is_notSelected → is_not_selected)
   * youtube_links 배열 자동 관리
   * category 단일값 → 배열 자동 변환
@@ -439,7 +446,17 @@ Table auth_users {
 - refresh_user_leaderboard(): 리더보드 View 갱신
 - refresh_popular_reviews(): 인기 리뷰 View 갱신
 
-👤 사용자 통계:
+� Materialized View 접근 함수 (보안 강화):
+- get_restaurant_stats(): 맛집 통계 조회 (mv_restaurant_stats 래퍼)
+- get_user_leaderboard(): 사용자 리더보드 조회 (mv_user_leaderboard 래퍼)
+- get_popular_reviews(): 인기 리뷰 조회 (mv_popular_reviews 래퍼)
+⚠️ Materialized View에 직접 접근 불가, 함수를 통해서만 접근 가능
+
+🔧 모니터링 함수:
+- get_table_sizes(): 테이블 및 인덱스 크기 조회
+- get_index_usage(): 인덱스 사용 통계 조회
+
+�👤 사용자 통계:
 - update_user_stats_on_review(): 리뷰 작성/인증/삭제 시 통계 업데이트
 - calculate_user_trust_score(user_id): 신뢰도 점수 계산
 
@@ -452,6 +469,11 @@ Table auth_users {
 🧹 유지보수:
 - cleanup_old_notifications(days): 오래된 알림 정리
 - cleanup_old_announcements(days): 오래된 공지 정리
+
+🔒 성능 최적화 (v3.3):
+- 모든 RLS 정책: auth.uid() → (SELECT auth.uid()) 변환
+- Extension 분리: public → extensions 스키마로 이동
+- 중복 인덱스 제거: idx_restaurants_category_gin 삭제
 */
 
 // ========================================
@@ -460,6 +482,7 @@ Table auth_users {
 
 /*
 자동 변환되는 필드:
+- source_type → source_type ✅ (기본값: 'perplexity')
 - is_notSelected → is_not_selected ✅
 - roadAddress → road_address ✅
 - jibunAddress → jibun_address ✅
@@ -529,4 +552,13 @@ stats = result.data[0]
 print(f"신규: {stats['inserted_count']}")
 print(f"업데이트: {stats['updated_count']}")
 print(f"실패: {stats['failed_count']}")
+
+# Materialized View 조회 (함수를 통해서만 접근)
+restaurant_stats = supabase.rpc('get_restaurant_stats').execute()
+user_leaderboard = supabase.rpc('get_user_leaderboard').execute()
+popular_reviews = supabase.rpc('get_popular_reviews').execute()
+
+# 모니터링
+table_sizes = supabase.rpc('get_table_sizes').execute()
+index_usage = supabase.rpc('get_index_usage').execute()
 */
