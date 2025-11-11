@@ -75,8 +75,49 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 throw error;
             }
 
-            // 호환성을 위한 데이터 변환
-            const restaurants = (data || []).map((restaurant: DBRestaurant) => ({
+            // 상호명이 같은 맛집들을 통합
+            const restaurantMap = new Map<string, DBRestaurant>();
+
+            (data || []).forEach((restaurant: DBRestaurant) => {
+                const key = `${restaurant.name}_${restaurant.jibun_address || restaurant.road_address}`;
+
+                if (restaurantMap.has(key)) {
+                    // 이미 있는 맛집이면 youtube_links와 tzuyang_reviews를 병합
+                    const existing = restaurantMap.get(key)!;
+
+                    // youtube_links 병합 (중복 제거)
+                    const mergedYoutubeLinks = [
+                        ...(existing.youtube_links || []),
+                        ...(restaurant.youtube_links || [])
+                    ].filter((link, index, self) => self.indexOf(link) === index);
+
+                    // tzuyang_reviews 병합
+                    const mergedTzuyangReviews = [
+                        ...(Array.isArray(existing.tzuyang_reviews) ? existing.tzuyang_reviews : []),
+                        ...(Array.isArray(restaurant.tzuyang_reviews) ? restaurant.tzuyang_reviews : [])
+                    ];
+
+                    // youtube_metas 병합
+                    const mergedYoutubeMetas = [
+                        ...(Array.isArray(existing.youtube_metas) ? existing.youtube_metas : []),
+                        ...(Array.isArray(restaurant.youtube_metas) ? restaurant.youtube_metas : [])
+                    ];
+
+                    // 병합된 데이터로 업데이트
+                    restaurantMap.set(key, {
+                        ...existing,
+                        youtube_links: mergedYoutubeLinks,
+                        tzuyang_reviews: mergedTzuyangReviews,
+                        youtube_metas: mergedYoutubeMetas,
+                        review_count: (existing.review_count || 0) + (restaurant.review_count || 0),
+                    });
+                } else {
+                    restaurantMap.set(key, restaurant);
+                }
+            });
+
+            // Map을 배열로 변환하고 호환성 속성 추가
+            const restaurants = Array.from(restaurantMap.values()).map((restaurant: DBRestaurant) => ({
                 ...restaurant,
                 // 호환성 속성 추가
                 address: restaurant.road_address || restaurant.jibun_address || '',
