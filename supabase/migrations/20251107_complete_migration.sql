@@ -1188,10 +1188,6 @@ CREATE TABLE public.restaurants (
         (geocoding_success = true AND geocoding_false_stage IS NULL) OR
         (geocoding_success = false AND geocoding_false_stage IS NOT NULL) OR
         (geocoding_success = false AND geocoding_false_stage IS NULL)
-    ),
-    CONSTRAINT restaurants_missing_data_check CHECK (
-        (is_missing = false AND (road_address IS NOT NULL OR jibun_address IS NOT NULL)) OR
-        is_missing = true
     )
 );
 
