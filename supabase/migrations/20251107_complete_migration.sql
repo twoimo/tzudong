@@ -1166,7 +1166,6 @@ CREATE TABLE public.restaurants (
     review_count INTEGER NOT NULL DEFAULT 0 CHECK (review_count >= 0),
     
     -- 관리자 정보
-    admin_notes TEXT,  -- 관리자 메모
     created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     updated_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
     
@@ -1180,7 +1179,7 @@ CREATE TABLE public.restaurants (
         (status = 'approved' AND 
          lat IS NOT NULL AND 
          lng IS NOT NULL AND 
-         categories IS NOT NULL AND -- [수정]
+         categories IS NOT NULL AND
          (road_address IS NOT NULL OR jibun_address IS NOT NULL)) OR
         -- 그 외의 status는 제약 없음
         status IN ('pending', 'rejected')
@@ -1220,7 +1219,6 @@ COMMENT ON COLUMN public.restaurants.status IS '승인 상태 (pending: 대기, 
 COMMENT ON COLUMN public.restaurants.is_missing IS '맛집 정보 누락 여부';
 COMMENT ON COLUMN public.restaurants.is_not_selected IS '선택되지 않음 여부';
 COMMENT ON COLUMN public.restaurants.review_count IS '리뷰 개수 (0 이상)';
-COMMENT ON COLUMN public.restaurants.admin_notes IS '관리자 메모';
 
 -- 3.4 리뷰 테이블
 DROP TABLE IF EXISTS public.reviews CASCADE;
