@@ -65,6 +65,9 @@ export default function AdminEvaluationPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
 
+  // 테이블 뷰 토글 상태
+  const [isAlternateView, setIsAlternateView] = useState(false);
+
   // DB 충돌 경고 다이얼로그
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictWarningData, setConflictWarningData] = useState<{
@@ -616,10 +619,35 @@ export default function AdminEvaluationPage() {
       <div className="border-b border-border bg-card p-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
-              <ClipboardCheck className="h-6 w-6 text-primary" />
-              관리자 데이터 검수
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
+                <ClipboardCheck className="h-6 w-6 text-primary" />
+                관리자 데이터 검수
+              </h1>
+              <button
+                onClick={() => setIsAlternateView(!isAlternateView)}
+                className="p-2 rounded-md hover:bg-accent transition-colors"
+                title={isAlternateView ? "기본 뷰로 전환" : "대체 뷰로 전환"}
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={isAlternateView ? "text-primary" : "text-muted-foreground"}
+                >
+                  <rect x="3" y="3" width="7" height="7" />
+                  <rect x="14" y="3" width="7" height="7" />
+                  <rect x="14" y="14" width="7" height="7" />
+                  <rect x="3" y="14" width="7" height="7" />
+                </svg>
+              </button>
+            </div>
             <p className="text-muted-foreground text-sm mt-1">
               총 {stats.total}개 레코드 | 필터링: {filteredRecords.length}개
             </p>
