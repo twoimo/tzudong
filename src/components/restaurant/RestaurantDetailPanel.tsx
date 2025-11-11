@@ -1,4 +1,4 @@
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -52,6 +52,7 @@ export function RestaurantDetailPanel({
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
     const [showAllYoutubeLinks, setShowAllYoutubeLinks] = useState(false);
     const [showAllTzuyangReviews, setShowAllTzuyangReviews] = useState(false);
+    const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | null>(null);
 
     // 카테고리 처리: categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -214,6 +215,15 @@ export function RestaurantDetailPanel({
         setViewMode('detail');
     };
 
+    const handleCopyAddress = async (address: string, type: 'road' | 'jibun') => {
+        try {
+            await navigator.clipboard.writeText(address);
+            setCopiedAddress(type);
+            setTimeout(() => setCopiedAddress(null), 2000);
+        } catch (err) {
+            console.error('주소 복사 실패:', err);
+        }
+    };
 
     const extractYouTubeVideoId = (url: string) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -431,22 +441,38 @@ export function RestaurantDetailPanel({
                                     </h3>
 
                                     {restaurant.road_address && (
-                                        <div className="flex gap-3">
+                                        <div
+                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            onClick={() => handleCopyAddress(restaurant.road_address!, 'road')}
+                                        >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
                                                 <p className="text-xs text-muted-foreground">도로명 주소</p>
                                                 <p className="text-sm">{restaurant.road_address}</p>
                                             </div>
+                                            {copiedAddress === 'road' ? (
+                                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                            ) : (
+                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            )}
                                         </div>
                                     )}
 
                                     {restaurant.jibun_address && (
-                                        <div className="flex gap-3">
+                                        <div
+                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            onClick={() => handleCopyAddress(restaurant.jibun_address!, 'jibun')}
+                                        >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
                                                 <p className="text-xs text-muted-foreground">지번 주소</p>
                                                 <p className="text-sm">{restaurant.jibun_address}</p>
                                             </div>
+                                            {copiedAddress === 'jibun' ? (
+                                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                            ) : (
+                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            )}
                                         </div>
                                     )}
 
