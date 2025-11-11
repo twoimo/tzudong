@@ -1121,8 +1121,8 @@ CREATE TABLE public.restaurants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- 기본 정보
-    name TEXT NOT NULL CHECK (length(name) >= 2 AND length(name) <= 100),
-    phone TEXT CHECK (phone IS NULL OR phone ~ '^\d{2,3}-\d{3,4}-\d{4}$'),
+    name TEXT NOT NULL CHECK (length(name) >= 1 AND length(name) <= 100),  -- 1자 이상으로 완화
+    phone TEXT,  -- 전화번호 제약 제거 (해외 번호 포함)
     description TEXT,
     categories TEXT[] CHECK (categories IS NULL OR (array_length(categories, 1) > 0 AND array_length(categories, 1) <= 5)), -- [수정]
     
