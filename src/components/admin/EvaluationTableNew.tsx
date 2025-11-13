@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
   Table,
@@ -138,6 +138,83 @@ export function EvaluationTable({
 
     return null;
   };
+
+  // 썸네일 로딩 상태와 URL을 관리하는 훅
+  const [thumbnailStates, setThumbnailStates] = useState<Record<string, 'loading' | 'loaded' | 'error'>>({});
+  const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
+
+  const loadThumbnail = useCallback((videoId: string) => {
+    if (thumbnailStates[videoId] === 'loaded' || thumbnailStates[videoId] === 'error') {
+      return;
+    }
+
+    setThumbnailStates(prev => ({ ...prev, [videoId]: 'loading' }));
+
+    // 가장 확실한 썸네일부터 시도: default -> hqdefault -> mqdefault -> maxresdefault
+    const tryThumbnail = (quality: string) => {
+      const img = new Image();
+      const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+
+      img.onload = () => {
+        setThumbnailStates(prev => ({ ...prev, [videoId]: 'loaded' }));
+        setThumbnailUrls(prev => ({ ...prev, [videoId]: thumbnailUrl }));
+      };
+
+      img.onerror = () => {
+        // 다음 품질 시도
+        if (quality === 'default') {
+          tryThumbnail('hqdefault');
+        } else if (quality === 'hqdefault') {
+          tryThumbnail('mqdefault');
+        } else if (quality === 'mqdefault') {
+          tryThumbnail('maxresdefault');
+        } else {
+          // 모든 시도 실패
+          setThumbnailStates(prev => ({ ...prev, [videoId]: 'error' }));
+        }
+      };
+
+      img.src = thumbnailUrl;
+    };
+
+    // default부터 시작 (모든 영상에 존재)
+    tryThumbnail('default');
+  }, [thumbnailStates]);
+
+  // 레코드가 변경될 때 썸네일 상태 초기화
+  useEffect(() => {
+    if (records && records.length > 0) {
+      const currentVideoIds = new Set<string>();
+      records.forEach(record => {
+        const videoId = getYoutubeVideoId(record.youtube_link);
+        if (videoId) {
+          currentVideoIds.add(videoId);
+        }
+      });
+
+      // 기존 상태에서 현재 표시되지 않는 썸네일 상태 제거
+      setThumbnailStates(prev => {
+        const newStates: Record<string, 'loading' | 'loaded' | 'error'> = {};
+        Object.keys(prev).forEach(videoId => {
+          if (currentVideoIds.has(videoId)) {
+            newStates[videoId] = prev[videoId];
+          }
+        });
+        return newStates;
+      });
+
+      // 기존 URL에서 현재 표시되지 않는 썸네일 URL 제거
+      setThumbnailUrls(prev => {
+        const newUrls: Record<string, string> = {};
+        Object.keys(prev).forEach(videoId => {
+          if (currentVideoIds.has(videoId)) {
+            newUrls[videoId] = prev[videoId];
+          }
+        });
+        return newUrls;
+      });
+    }
+  }, [records]);
 
 
   const canApprove = (record: EvaluationRecord) => {
@@ -577,7 +654,13 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
           <TableBody>
             {records.flatMap((record) => {
               const videoId = getYoutubeVideoId(record.youtube_link);
-              const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
+
+              // 썸네일 로딩 상태 확인 및 로드
+              const thumbnailState = videoId ? thumbnailStates[videoId] : null;
+              const thumbnailUrl = videoId ? thumbnailUrls[videoId] : null;
+              if (videoId && !thumbnailState) {
+                loadThumbnail(videoId);
+              }
 
               const mainRow = (
                 <TableRow key={record.id} className="hover:bg-muted/50">
@@ -597,36 +680,43 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
 
                   <TableCell className="sticky left-12 bg-background">
                     <div className="flex items-center gap-3">
-                      {thumbnailUrl && (
+                      {videoId && (
                         <a
                           href={record.youtube_link}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-shrink-0"
                         >
-                          <img
-                            src={thumbnailUrl}
-                            alt="유튜브 썸네일"
-                            className="w-24 h-16 object-cover rounded hover:opacity-80 transition-opacity"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              if (!videoId) return;
+                          <div className="w-24 h-16 bg-muted rounded flex items-center justify-center hover:opacity-80 transition-opacity relative overflow-hidden">
+                            {/* 로딩 상태 */}
+                            {thumbnailState === 'loading' && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                            )}
 
-                              // maxresdefault 실패 시 hqdefault 시도
-                              if (target.src.includes('maxresdefault')) {
-                                target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                              }
-                              // hqdefault 실패 시 mqdefault 시도
-                              else if (target.src.includes('hqdefault')) {
-                                target.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
-                              }
-                              // mqdefault 실패 시 default 시도
-                              else if (target.src.includes('mqdefault')) {
-                                target.src = `https://img.youtube.com/vi/${videoId}/default.jpg`;
-                              }
-                              // 모든 썸네일이 실패하면 더 이상 시도하지 않음
-                            }}
-                          />
+                            {/* 성공 상태 - 썸네일 표시 */}
+                            {thumbnailState === 'loaded' && thumbnailUrl && (
+                              <img
+                                src={thumbnailUrl}
+                                alt="유튜브 썸네일"
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+
+                            {/* 에러 상태 또는 기본 상태 - YouTube 아이콘 표시 */}
+                            {(thumbnailState === 'error' || !thumbnailState) && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                <svg
+                                  className="w-6 h-6 text-muted-foreground"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                         </a>
                       )}
                       <div className="flex-1 min-w-0">
@@ -849,3 +939,4 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
     </TooltipProvider>
   );
 }
+

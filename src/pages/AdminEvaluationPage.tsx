@@ -89,7 +89,7 @@ export default function AdminEvaluationPage() {
         description: "관리자만 접근할 수 있는 페이지입니다.",
         variant: "destructive",
       });
-      navigate('/login');
+      navigate('/');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, authLoading]);
