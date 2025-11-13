@@ -148,23 +148,55 @@ export default function AdminEvaluationPage() {
     // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
     const baseRecords = searchResults || allRecords;
 
-    let filtered = selectedStatuses.length === 0
-      ? baseRecords.filter(r => r.status !== 'deleted') // 전체 탭일 때는 deleted 제외
-      : baseRecords.filter(r => {
-        // geocoding_failed 탭 클릭 시: geocoding_success가 false인 레코드
-        if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
-          return !r.geocoding_success;
+    console.log('🔍 필터링 시작:', {
+      selectedStatuses,
+      baseRecordsCount: baseRecords?.length || 0,
+      searchResultsCount: searchResults?.length || 0
+    });
+
+    let filtered = baseRecords.filter(r => r.status !== 'deleted'); // deleted는 항상 제외
+
+    // 상태 필터링 (evalFilters.status)
+    if (evalFilters.status) {
+      console.log('🎯 상태 필터링 적용:', evalFilters.status);
+
+      filtered = filtered.filter(r => {
+        let match = false;
+
+        switch (evalFilters.status) {
+          case 'geocoding_failed':
+            // 지오코딩 실패: geocoding_success가 false인 모든 레코드
+            match = !r.geocoding_success;
+            break;
+          case 'missing':
+            // Missing: is_missing이 true인 레코드
+            match = r.is_missing === true;
+            break;
+          case 'not_selected':
+            // 평가미대상: is_not_selected가 true인 레코드
+            match = r.is_not_selected === true;
+            break;
+          case 'db_conflict':
+            // DB 충돌: status가 'db_conflict'인 레코드
+            match = r.status === 'db_conflict';
+            break;
+          default:
+            // 일반 상태: status 필드와 일치하는 레코드
+            match = r.status === evalFilters.status;
+            break;
         }
-        // missing 탭: is_missing이 true인 레코드
-        if (selectedStatuses.includes('missing' as EvaluationRecordStatus)) {
-          return r.is_missing;
+
+        if (match) {
+          console.log(`✅ 필터링 통과: ${r.name}, status: ${r.status}, geocoding_success: ${r.geocoding_success}, is_missing: ${r.is_missing}, is_not_selected: ${r.is_not_selected}`);
+        } else {
+          console.log(`❌ 필터링 제외: ${r.name}, status: ${r.status}, geocoding_success: ${r.geocoding_success}, is_missing: ${r.is_missing}, is_not_selected: ${r.is_not_selected}`);
         }
-        // not_selected 탭: is_not_selected가 true인 레코드
-        if (selectedStatuses.includes('not_selected' as EvaluationRecordStatus)) {
-          return r.is_not_selected;
-        }
-        return selectedStatuses.includes(r.status);
+
+        return match;
       });
+
+      console.log('📊 필터링 결과:', filtered.length, '개');
+    }
 
     // 1. Visit Authenticity 필터 (0-3점)
     if (evalFilters.visit_authenticity) {
@@ -228,10 +260,7 @@ export default function AdminEvaluationPage() {
       );
     }
 
-    // 8. Status 필터
-    if (evalFilters.status) {
-      filtered = filtered.filter(r => r.status === evalFilters.status);
-    }
+    // 8. Status 필터는 위에서 이미 처리됨
 
     return filtered;
   }, [allRecords, searchResults, selectedStatuses, evalFilters]);
@@ -359,9 +388,7 @@ export default function AdminEvaluationPage() {
         missing: typedRecords.filter(r => r.is_missing).length,
         db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
         geocoding_failed: typedRecords.filter(r =>
-          r.status === 'geocoding_failed' ||
-          (r.status === 'pending' && !r.geocoding_success) ||
-          (r.status === 'not_selected' && !r.geocoding_success)
+          !r.geocoding_success  // 지오코딩이 실패한 모든 레코드 (deleted 제외)
         ).length,
         not_selected: typedRecords.filter(r => r.is_not_selected).length,
         deleted: deletedCount,
@@ -419,9 +446,7 @@ export default function AdminEvaluationPage() {
       missing: allRecords.filter(r => r.is_missing).length,
       db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
       geocoding_failed: allRecords.filter(r =>
-        r.status === 'geocoding_failed' ||
-        (r.status === 'pending' && !r.geocoding_success) ||
-        (r.status === 'not_selected' && !r.geocoding_success)
+        !r.geocoding_success  // 지오코딩이 실패한 모든 레코드
       ).length,
       not_selected: allRecords.filter(r => r.is_not_selected).length,
       deleted: deletedCount,
