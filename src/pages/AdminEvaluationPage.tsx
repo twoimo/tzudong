@@ -356,19 +356,18 @@ export default function AdminEvaluationPage() {
       }
 
       // restaurants 테이블 데이터를 EvaluationRecord 형식으로 변환
-      const records = data.map((r: Record<string, unknown>) => ({
-        ...r,
-        // 호환성을 위한 별칭 추가
-        restaurant_name: r.name,
-        youtube_link: Array.isArray(r.youtube_links) ? r.youtube_links[0] : '',
-        // restaurant_info 생성
-        restaurant_info: r.origin_address ? {
+      const records = data.map((r: Record<string, unknown>) => {
+        // evaluation_results 변환
+        const evaluationResults = r.evaluation_results as any;
+
+        // restaurant_info 생성 (항상 생성)
+        const restaurantInfo = {
           name: r.name as string,
           phone: r.phone as string | null,
           category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
-          origin_address: (r.origin_address as Record<string, unknown>)?.address as string || '',
-          origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number,
-          origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number,
+          origin_address: (r.origin_address as Record<string, unknown>)?.address as string || r.road_address as string || r.jibun_address as string || '',
+          origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number || 0,
+          origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number || 0,
           reasoning_basis: r.reasoning_basis as string || '',
           tzuyang_review: Array.isArray(r.tzuyang_reviews) && r.tzuyang_reviews.length > 0
             ? ((r.tzuyang_reviews[0] as Record<string, unknown>)?.review as string || '')
@@ -381,8 +380,43 @@ export default function AdminEvaluationPage() {
             x: r.lng?.toString() || '',
             y: r.lat?.toString() || '',
           } : null,
-        } : null,
-      }));
+        };
+
+        // 디버깅: 모든 레코드의 구조 확인 (최대 3개)
+        const index = data.indexOf(r);
+        if (index < 3) {
+          console.log(`🔍 레코드 ${index + 1} 데이터 구조:`, {
+            id: r.id,
+            name: r.name,
+            status: r.status,
+            evaluation_results: evaluationResults,
+            evaluation_results_type: typeof evaluationResults,
+            evaluation_results_keys: evaluationResults ? Object.keys(evaluationResults) : 'null',
+            restaurant_info: restaurantInfo,
+            youtube_meta: r.youtube_meta,
+            youtube_meta_type: typeof r.youtube_meta,
+            youtube_meta_keys: r.youtube_meta ? Object.keys(r.youtube_meta as any) : 'null',
+            origin_address: r.origin_address,
+            road_address: r.road_address,
+            jibun_address: r.jibun_address,
+            reasoning_basis: r.reasoning_basis,
+            tzuyang_reviews: r.tzuyang_reviews,
+          });
+        }
+
+        return {
+          ...r,
+          // 호환성을 위한 별칭 추가
+          restaurant_name: r.name,
+          youtube_link: Array.isArray(r.youtube_links) ? r.youtube_links[0] : '',
+          // evaluation_results는 그대로 사용 (JSONB 데이터)
+          evaluation_results: evaluationResults,
+          // restaurant_info 생성
+          restaurant_info: restaurantInfo,
+          // youtube_meta 처리
+          youtube_meta: r.youtube_meta || null,
+        };
+      });
 
       setAllRecords(records as EvaluationRecord[]);
 

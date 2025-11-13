@@ -10,6 +10,20 @@ interface EvaluationRowDetailsProps {
 export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
   const { youtube_meta, evaluation_results, restaurant_info, missing_message } = record;
 
+  // 디버깅: 데이터 구조 확인
+  console.log('📊 EvaluationRowDetails 데이터:', {
+    record_id: record.id,
+    status: record.status,
+    evaluation_results: evaluation_results,
+    evaluation_results_type: typeof evaluation_results,
+    evaluation_results_keys: evaluation_results ? Object.keys(evaluation_results) : 'null',
+    restaurant_info: restaurant_info,
+    youtube_meta: youtube_meta,
+    has_evaluation_results: !!evaluation_results,
+    has_restaurant_info: !!restaurant_info,
+    evaluation_results_is_empty: evaluation_results && typeof evaluation_results === 'object' && Object.keys(evaluation_results).length === 0,
+  });
+
   // Missing 음식점인 경우
   if (record.status === 'missing') {
     return (
@@ -118,10 +132,8 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
     );
   }
 
-  // 정상 음식점인 경우
-  if (!evaluation_results || !restaurant_info) {
-    return <div className="p-4 text-muted-foreground">평가 데이터가 없습니다</div>;
-  }
+  // 정상 음식점인 경우 - evaluation_results가 없어도 기본 정보 표시
+  const hasEvaluationData = evaluation_results && typeof evaluation_results === 'object' && Object.keys(evaluation_results).length > 0;
 
   return (
     <div className="p-6 space-y-6">
@@ -145,11 +157,27 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
       {/* 평가 상세 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">📊 평가 상세</CardTitle>
+          <CardTitle className="text-lg">
+            📊 평가 상세
+            {!hasEvaluationData && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                (평가 데이터 없음)
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!hasEvaluationData && (
+            <div className="text-sm text-muted-foreground bg-muted p-3 rounded">
+              평가 데이터가 아직 생성되지 않았습니다.
+              <br />
+              <code className="text-xs">
+                evaluation_results: {evaluation_results ? JSON.stringify(evaluation_results) : 'null'}
+              </code>
+            </div>
+          )}
           {/* 1. 방문 여부 정확성 */}
-          {evaluation_results.visit_authenticity && (
+          {evaluation_results?.visit_authenticity && (
             <div className="border-l-4 border-blue-500 pl-4">
               <h4 className="font-semibold mb-1">
                 1️⃣ 방문 여부 정확성: {evaluation_results.visit_authenticity.eval_value}점
@@ -159,9 +187,16 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
               </p>
             </div>
           )}
+          {!evaluation_results?.visit_authenticity && hasEvaluationData && (
+            <div className="border-l-4 border-gray-300 pl-4">
+              <h4 className="font-semibold mb-1 text-muted-foreground">
+                1️⃣ 방문 여부 정확성: 데이터 없음
+              </h4>
+            </div>
+          )}
 
           {/* 2. 추론 합리성 */}
-          {evaluation_results.rb_inference_score && (
+          {evaluation_results?.rb_inference_score && (
             <div className="border-l-4 border-purple-500 pl-4">
               <h4 className="font-semibold mb-1">
                 2️⃣ 추론 합리성 (reasoning_basis): {evaluation_results.rb_inference_score.eval_value}점
@@ -171,9 +206,16 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
               </p>
             </div>
           )}
+          {!evaluation_results?.rb_inference_score && hasEvaluationData && (
+            <div className="border-l-4 border-gray-300 pl-4">
+              <h4 className="font-semibold mb-1 text-muted-foreground">
+                2️⃣ 추론 합리성: 데이터 없음
+              </h4>
+            </div>
+          )}
 
           {/* 3. 실제 근거 일치도 */}
-          {evaluation_results.rb_grounding_TF && (
+          {evaluation_results?.rb_grounding_TF && (
             <div className="border-l-4 border-green-500 pl-4">
               <h4 className="font-semibold mb-1 flex items-center gap-2">
                 3️⃣ 실제 근거 일치도 (reasoning_basis):
@@ -194,9 +236,16 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
               </p>
             </div>
           )}
+          {!evaluation_results?.rb_grounding_TF && hasEvaluationData && (
+            <div className="border-l-4 border-gray-300 pl-4">
+              <h4 className="font-semibold mb-1 text-muted-foreground">
+                3️⃣ 실제 근거 일치도: 데이터 없음
+              </h4>
+            </div>
+          )}
 
           {/* 4. 리뷰 충실도 */}
-          {evaluation_results.review_faithfulness_score && (
+          {evaluation_results?.review_faithfulness_score && (
             <div className="border-l-4 border-orange-500 pl-4">
               <h4 className="font-semibold mb-1">
                 4️⃣ 리뷰 충실도 (음식 리뷰): {evaluation_results.review_faithfulness_score.eval_value}점
@@ -206,9 +255,16 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
               </p>
             </div>
           )}
+          {!evaluation_results?.review_faithfulness_score && hasEvaluationData && (
+            <div className="border-l-4 border-gray-300 pl-4">
+              <h4 className="font-semibold mb-1 text-muted-foreground">
+                4️⃣ 리뷰 충실도: 데이터 없음
+              </h4>
+            </div>
+          )}
 
           {/* 5. 주소 정합성 */}
-          {evaluation_results.location_match_TF && (
+          {evaluation_results?.location_match_TF && (
             <div className={`border-l-4 ${evaluation_results.location_match_TF.eval_value ? 'border-green-500' : 'border-red-500'} pl-4`}>
               <h4 className="font-semibold mb-1 flex items-center gap-2">
                 5️⃣ 주소 정합성:
@@ -234,9 +290,16 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
               </p>
             </div>
           )}
+          {!evaluation_results?.location_match_TF && hasEvaluationData && (
+            <div className="border-l-4 border-gray-300 pl-4">
+              <h4 className="font-semibold mb-1 text-muted-foreground">
+                5️⃣ 주소 정합성: 데이터 없음
+              </h4>
+            </div>
+          )}
 
           {/* 6. 카테고리 유효성 */}
-          {evaluation_results.category_validity_TF && (
+          {evaluation_results?.category_validity_TF && (
             <div className="border-l-4 border-gray-500 pl-4">
               <h4 className="font-semibold mb-1 flex items-center gap-2">
                 6️⃣ 카테고리 유효성 (파싱 문제):
@@ -254,9 +317,16 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
               </h4>
             </div>
           )}
+          {!evaluation_results?.category_validity_TF && hasEvaluationData && (
+            <div className="border-l-4 border-gray-300 pl-4">
+              <h4 className="font-semibold mb-1 text-muted-foreground">
+                6️⃣ 카테고리 유효성: 데이터 없음
+              </h4>
+            </div>
+          )}
 
           {/* 7. 카테고리 정합성 */}
-          {evaluation_results.category_TF && (
+          {evaluation_results?.category_TF && (
             <div className="border-l-4 border-yellow-500 pl-4">
               <h4 className="font-semibold mb-1 flex items-center gap-2">
                 7️⃣ 카테고리 정합성:
@@ -280,6 +350,13 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
               )}
             </div>
           )}
+          {!evaluation_results?.category_TF && hasEvaluationData && (
+            <div className="border-l-4 border-gray-300 pl-4">
+              <h4 className="font-semibold mb-1 text-muted-foreground">
+                7️⃣ 카테고리 정합성: 데이터 없음
+              </h4>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -290,11 +367,11 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
         </CardHeader>
         <CardContent className="space-y-3">
           <p><strong>음식점명:</strong> {record.restaurant_name}</p>
-          <p><strong>카테고리:</strong> {restaurant_info.category}</p>
-          <p><strong>전화번호:</strong> {restaurant_info.phone || '-'}</p>
-          <p><strong>원본 주소:</strong> {restaurant_info.origin_address}</p>
+          <p><strong>카테고리:</strong> {restaurant_info?.category || '-'}</p>
+          <p><strong>전화번호:</strong> {restaurant_info?.phone || '-'}</p>
+          <p><strong>원본 주소:</strong> {restaurant_info?.origin_address || '-'}</p>
 
-          {restaurant_info.naver_address_info ? (
+          {restaurant_info?.naver_address_info ? (
             <>
               <p className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-green-600" />
@@ -318,12 +395,12 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
 
           <div className="mt-4 p-3 bg-muted rounded">
             <h5 className="font-semibold mb-1">reasoning_basis:</h5>
-            <p className="text-sm">{restaurant_info.reasoning_basis}</p>
+            <p className="text-sm">{restaurant_info?.reasoning_basis || '-'}</p>
           </div>
 
           <div className="mt-4 p-3 bg-muted rounded">
             <h5 className="font-semibold mb-1">tzuyang_review:</h5>
-            <p className="text-sm whitespace-pre-wrap">{restaurant_info.tzuyang_review}</p>
+            <p className="text-sm whitespace-pre-wrap">{restaurant_info?.tzuyang_review || '-'}</p>
           </div>
         </CardContent>
       </Card>
