@@ -120,16 +120,25 @@ export function EvaluationTable({
 
   const getYoutubeVideoId = (url: string | undefined) => {
     if (!url) return null;
-    const regex = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/s]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : null;
+
+    // 더 포괄적인 YouTube URL 정규식 패턴들
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,  // watch?v=VIDEO_ID, youtu.be/VIDEO_ID (파라미터 무시)
+      /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,  // embed/VIDEO_ID, v/VIDEO_ID
+      /(?:m\.youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/, // 모바일 및 복잡한 URL
+      /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/, // shorts/VIDEO_ID (YouTube Shorts)
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1] && match[1].length === 11) {
+        return match[1];
+      }
+    }
+
+    return null;
   };
 
-  const getThumbnailUrl = (youtubeLink: string | undefined) => {
-    if (!youtubeLink) return null;
-    const videoId = getYoutubeVideoId(youtubeLink);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-  };
 
   const canApprove = (record: EvaluationRecord) => {
     return record.geocoding_success &&
@@ -567,7 +576,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
           </TableHeader>
           <TableBody>
             {records.flatMap((record) => {
-              const thumbnailUrl = getThumbnailUrl(record.youtube_link);
+              const videoId = getYoutubeVideoId(record.youtube_link);
+              const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : null;
 
               const mainRow = (
                 <TableRow key={record.id} className="hover:bg-muted/50">
@@ -598,6 +608,24 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                             src={thumbnailUrl}
                             alt="유튜브 썸네일"
                             className="w-24 h-16 object-cover rounded hover:opacity-80 transition-opacity"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              if (!videoId) return;
+
+                              // maxresdefault 실패 시 hqdefault 시도
+                              if (target.src.includes('maxresdefault')) {
+                                target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                              }
+                              // hqdefault 실패 시 mqdefault 시도
+                              else if (target.src.includes('hqdefault')) {
+                                target.src = `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+                              }
+                              // mqdefault 실패 시 default 시도
+                              else if (target.src.includes('mqdefault')) {
+                                target.src = `https://img.youtube.com/vi/${videoId}/default.jpg`;
+                              }
+                              // 모든 썸네일이 실패하면 더 이상 시도하지 않음
+                            }}
                           />
                         </a>
                       )}
