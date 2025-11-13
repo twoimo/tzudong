@@ -59,8 +59,8 @@
   - 로딩 상태 표시 및 완료 메시지
 - **상단 카테고리 탭**:
   - `전체` / `삭제`: 클릭하여 필터링 전환
-  - 통계 표시: 미처리, 승인됨, 보류, Missing, DB충돌, 지오코딩실패, 평가미대상 (클릭 불가)
-  - **지오코딩 실패**: pending 또는 평가미대상 상태에서 지오코딩이 실패한 모든 레코드 포함
+  - 통계 표시: 미처리, 승인됨, 보류, Missing, DB충돌, 지오코딩실패, 평가 미대상 (클릭 불가)
+  - **지오코딩 실패**: pending 또는 평가 미대상 상태에서 지오코딩이 실패한 모든 레코드 포함
 - **영상 제목 검색**:
   - **Fuzzy Search (퍼지 검색)** 기반 지능형 검색
   - PostgreSQL의 **pg_trgm** (Trigram) + **word_similarity** 사용
@@ -92,7 +92,7 @@
 - `missing`: 정보 누락
 - `db_conflict`: DB 충돌
 - `geocoding_failed`: 지오코딩 실패 (명시적 실패 상태)
-- `not_selected`: 평가미대상 (주소 정보 없음)
+- `not_selected`: 평가 미대상 (주소 정보 없음)
 - `deleted`: 삭제됨 (Soft Delete)
 
 > 💡 **지오코딩 실패 통계**: `geocoding_failed` 상태 + `pending` 상태에서 지오코딩 실패 + `not_selected` 상태에서 지오코딩 실패를 모두 포함하여 집계

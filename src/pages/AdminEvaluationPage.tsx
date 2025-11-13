@@ -121,7 +121,7 @@ export default function AdminEvaluationPage() {
           console.error('RPC 에러:', error);
           throw error;
         }
-        
+
         console.log('검색 결과:', data?.length || 0, '개');
         console.log('검색 결과 샘플:', data?.slice(0, 3));
         setSearchResults(data || []);
@@ -172,18 +172,18 @@ export default function AdminEvaluationPage() {
             match = r.is_missing === true;
             break;
           case 'not_selected':
-            // 평가미대상: is_not_selected가 true인 레코드
+            // 평가 미대상: is_not_selected가 true인 레코드
             match = r.is_not_selected === true;
             break;
           case 'ready_for_approval':
             // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드
             match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
-                    r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
-                    r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
-                    r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
-                    r.geocoding_success === true &&
-                    r.evaluation_results?.category_validity_TF?.eval_value === true &&
-                    r.evaluation_results?.category_TF?.eval_value === true;
+              r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+              r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+              r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+              r.geocoding_success === true &&
+              r.evaluation_results?.category_validity_TF?.eval_value === true &&
+              r.evaluation_results?.category_TF?.eval_value === true;
             break;
           default:
             // 일반 상태: status 필드와 일치하는 레코드

@@ -110,7 +110,7 @@ export function EvaluationTable({
       hold: { label: '보류', variant: 'outline' },
       missing: { label: 'Missing', variant: 'destructive' },
       geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
-      not_selected: { label: '평가미대상', variant: 'outline' },
+      not_selected: { label: '평가 미대상', variant: 'outline' },
     };
 
     const config = variants[status] || { label: status, variant: 'default' };
@@ -449,7 +449,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         { value: 'approved', label: '승인됨' },
                         { value: 'ready_for_approval', label: '승인 대기' },
                         { value: 'missing', label: 'Missing' },
-                        { value: 'not_selected', label: '평가미대상' },
+                        { value: 'not_selected', label: '평가 미대상' },
                         { value: 'geocoding_failed', label: '지오코딩 실패' },
                       ]}
                     />
@@ -639,7 +639,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                       { value: 'approved', label: '승인됨' },
                       { value: 'ready_for_approval', label: '승인 대기' },
                       { value: 'missing', label: 'Missing' },
-                      { value: 'not_selected', label: '평가미대상' },
+                      { value: 'not_selected', label: '평가 미대상' },
                       { value: 'geocoding_failed', label: '지오코딩 실패' },
                     ]}
                   />
@@ -784,67 +784,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   {/* 고정 컬럼: 액션 */}
                   <TableCell className="sticky right-0 bg-background">
                     <div className="flex gap-2 justify-center">
-                      {record.status === 'missing' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => onRegisterMissing?.(record)}
-                            disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            수동 등록
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onDelete(record)}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : record.status === 'not_selected' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => onRegisterMissing?.(record)}
-                            disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            수동 등록
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onDelete(record)}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : record.status === 'db_conflict' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => onResolveConflict?.(record)}
-                            disabled={loading}
-                            className="bg-yellow-600 hover:bg-yellow-700"
-                          >
-                            충돌 해결
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onDelete(record)}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : record.status === 'hold' ? (
+                      {record.is_missing || record.is_not_selected || !record.geocoding_success ? (
+                        // 지오코딩 실패한 케이스 (Missing, 평가 미대상, 지오코딩 실패)
                         <>
                           <Button
                             size="sm"
@@ -853,16 +794,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                             variant="outline"
                           >
                             <Edit className="w-4 h-4 mr-1" />
-                            편집
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            onClick={() => onApprove(record)}
-                            disabled={loading || !canApprove(record)}
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            승인
+                            수정
                           </Button>
 
                           <Button
@@ -872,6 +804,19 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                             disabled={loading}
                           >
                             <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      ) : record.status === 'deleted' ? (
+                        // 삭제된 레코드
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => onEdit?.(record)}
+                            disabled={loading}
+                            variant="outline"
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            수정
                           </Button>
                         </>
                       ) : (
