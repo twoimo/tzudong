@@ -152,6 +152,7 @@ export interface CategoryStats {
   pending: number;
   approved: number;
   hold: number;
+  ready_for_approval: number;
   missing: number;
   db_conflict: number;
   geocoding_failed: number;

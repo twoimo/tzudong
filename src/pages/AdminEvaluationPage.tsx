@@ -39,6 +39,7 @@ export default function AdminEvaluationPage() {
     pending: 0,
     approved: 0,
     hold: 0,
+    ready_for_approval: 0,
     missing: 0,
     db_conflict: 0,
     geocoding_failed: 0,
@@ -179,6 +180,16 @@ export default function AdminEvaluationPage() {
           case 'db_conflict':
             // DB 충돌: status가 'db_conflict'인 레코드
             match = r.status === 'db_conflict';
+            break;
+          case 'ready_for_approval':
+            // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드
+            match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+                    r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+                    r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+                    r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+                    r.geocoding_success === true &&
+                    r.evaluation_results?.category_validity_TF?.eval_value === true &&
+                    r.evaluation_results?.category_TF?.eval_value === true;
             break;
           default:
             // 일반 상태: status 필드와 일치하는 레코드
@@ -443,6 +454,15 @@ export default function AdminEvaluationPage() {
       pending: allRecords.filter(r => r.status === 'pending').length,
       approved: allRecords.filter(r => r.status === 'approved').length,
       hold: allRecords.filter(r => r.status === 'hold').length,
+      ready_for_approval: allRecords.filter(r =>
+        r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+        r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+        r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+        r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+        r.geocoding_success === true &&
+        r.evaluation_results?.category_validity_TF?.eval_value === true &&
+        r.evaluation_results?.category_TF?.eval_value === true
+      ).length,
       missing: allRecords.filter(r => r.is_missing).length,
       db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
       geocoding_failed: allRecords.filter(r =>
