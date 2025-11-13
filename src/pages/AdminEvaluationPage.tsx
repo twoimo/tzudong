@@ -54,7 +54,7 @@ export default function AdminEvaluationPage() {
     rb_inference_score?: string;
     rb_grounding_TF?: string;
     review_faithfulness_score?: string;
-    location_match_TF?: string;
+    geocoding_success?: string;
     category_validity_TF?: string;
     category_TF?: string;
     status?: string;
@@ -198,15 +198,17 @@ export default function AdminEvaluationPage() {
       );
     }
 
-    // 5. Location Match TF 필터 (T/F/geocoding_failed)
-    if (evalFilters.location_match_TF) {
-      if (evalFilters.location_match_TF === 'geocoding_failed') {
-        filtered = filtered.filter(r => !r.geocoding_success);
-      } else {
-        const targetValue = evalFilters.location_match_TF === 'True';
-        filtered = filtered.filter(r =>
-          r.evaluation_results?.location_match_TF?.eval_value === targetValue
-        );
+    // 5. Geocoding Success 필터 (true/false_match/false_geocode)
+    if (evalFilters.geocoding_success) {
+      if (evalFilters.geocoding_success === 'true') {
+        // 지오코딩 성공
+        filtered = filtered.filter(r => r.geocoding_success === true);
+      } else if (evalFilters.geocoding_success === 'false_match') {
+        // 지오코딩 성공했으나 주소 매칭 실패
+        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage !== null);
+      } else if (evalFilters.geocoding_success === 'false_geocode') {
+        // 지오코딩 자체 실패
+        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage === null);
       }
     }
 

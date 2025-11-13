@@ -43,7 +43,7 @@ interface EvaluationTableProps {
     rb_inference_score?: string;
     rb_grounding_TF?: string;
     review_faithfulness_score?: string;
-    location_match_TF?: string;
+    geocoding_success?: string;
     category_validity_TF?: string;
     category_TF?: string;
   };
@@ -68,9 +68,9 @@ False = 핵심 근거(매장 위치나 간판 확인 등)가 영상에서 전혀
   review_faithfulness_score: `0점 = 과장/없는 말 지어냄, 위험하게 틀림
 1점 = 실제 멘트 기반으로 충실하게 요약됨, 큰 누락 없음`,
 
-  location_match_TF: `True = 지번주소 일치 또는 거리 30m 이내로 매칭 성공
-False = 네이버 지도 API와 지오코딩으로 위치 매칭 실패
-geocoding_failed = 지오코딩 자체가 실패`,
+  geocoding_success: `True = 지오코딩 성공 (geocoding_success = true)
+False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
 
   category_validity_TF: `True = category가 유효 카테고리 목록에 포함되고 null이 아님
 False = category가 목록에 없거나 null`,
@@ -104,7 +104,7 @@ export function EvaluationTable({
   const hasActiveFilters = Object.values(evalFilters).some(value => value !== undefined && value !== '');
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; variant: any }> = {
+    const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       pending: { label: '미처리', variant: 'secondary' },
       approved: { label: '승인됨', variant: 'default' },
       hold: { label: '보류', variant: 'outline' },
@@ -120,7 +120,7 @@ export function EvaluationTable({
 
   const getYoutubeVideoId = (url: string | undefined) => {
     if (!url) return null;
-    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+    const regex = /(?:youtube\.com\/(?:[^/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?/s]{11})/;
     const match = url.match(regex);
     return match ? match[1] : null;
   };
@@ -308,14 +308,16 @@ export function EvaluationTable({
 
                 <TableHead className="min-w-[100px]">
                   <FilterDropdown
-                    filterKey="location_match_TF"
+                    filterKey="geocoding_success"
                     label="주소 정합성"
-                    tooltip={FILTER_TOOLTIPS.location_match_TF}
+                    tooltip={`True = 지오코딩 성공 (geocoding_success = true)
+False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`}
                     options={[
                       { value: 'all', label: '모두' },
-                      { value: 'True', label: 'True' },
-                      { value: 'False', label: 'False' },
-                      { value: 'geocoding_failed', label: 'Failed' },
+                      { value: 'true', label: 'True' },
+                      { value: 'false_match', label: 'False' },
+                      { value: 'false_geocode', label: 'Failed' },
                     ]}
                   />
                 </TableHead>
@@ -497,14 +499,16 @@ export function EvaluationTable({
 
               <TableHead className="min-w-[100px]">
                 <FilterDropdown
-                  filterKey="location_match_TF"
+                  filterKey="geocoding_success"
                   label="주소 정합성"
-                  tooltip={FILTER_TOOLTIPS.location_match_TF}
+                  tooltip={`True = 지오코딩 성공 (geocoding_success = true)
+False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`}
                   options={[
                     { value: 'all', label: '모두' },
-                    { value: 'True', label: 'True' },
-                    { value: 'False', label: 'False' },
-                    { value: 'geocoding_failed', label: 'Failed' },
+                    { value: 'true', label: 'True' },
+                    { value: 'false_match', label: 'False' },
+                    { value: 'false_geocode', label: 'Failed' },
                   ]}
                 />
               </TableHead>
@@ -630,13 +634,15 @@ export function EvaluationTable({
                   </TableCell>
 
                   <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (record.evaluation_results?.location_match_TF?.eval_value !== undefined
-                      ? (typeof record.evaluation_results.location_match_TF.eval_value === 'string'
-                        ? <Badge variant="outline" className="bg-yellow-100">Failed</Badge>
-                        : (record.evaluation_results.location_match_TF.eval_value
-                          ? <Badge variant="default" className="bg-green-600">True</Badge>
-                          : <Badge variant="destructive">False</Badge>))
-                      : '-')}
+                    {record.status === 'not_selected' ? '-' : (
+                      record.geocoding_success === true
+                        ? <Badge variant="default" className="bg-green-600">True</Badge>
+                        : record.geocoding_success === false && record.geocoding_false_stage === null
+                          ? <Badge variant="outline" className="bg-yellow-100">Failed</Badge>
+                          : record.geocoding_success === false && record.geocoding_false_stage !== null
+                            ? <Badge variant="destructive">False</Badge>
+                            : '-'
+                    )}
                   </TableCell>
 
                   <TableCell className="text-center text-sm">
