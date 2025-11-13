@@ -19,7 +19,7 @@ export function CategorySidebar({
     { label: '보류', count: stats.hold },
     { label: '승인 대기', count: stats.ready_for_approval },
     { label: 'Missing', count: stats.missing },
-    { label: 'DB충돌', count: stats.db_conflict },
+    { label: '오류', count: stats.db_conflict },
     { label: '지오코딩실패', count: stats.geocoding_failed },
     { label: '평가미대상', count: stats.not_selected },
   ];

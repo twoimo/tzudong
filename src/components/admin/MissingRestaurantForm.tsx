@@ -93,7 +93,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     error?: string;
   } | null>(null);
   
-  // DB 충돌 경고 다이얼로그 상태
+  // 오류 경고 다이얼로그 상태
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictData, setConflictData] = useState<any>(null);
   const [pendingGeocodingData, setPendingGeocodingData] = useState<any>(null);
@@ -191,7 +191,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
         return;
       }
 
-      // DB 충돌 체크 (새로운 로직) - trim된 값 사용
+      // 오류 체크 (새로운 로직) - trim된 값 사용
       const conflictCheck = await checkDbConflict({
         jibunAddress: geocodingResult.data!.jibun_address,
         restaurantName: trimmedName,
@@ -337,7 +337,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     }
   };
 
-  // DB 충돌 경고 후 강제 등록
+  // 오류 경고 후 강제 등록
   const handleForceRegister = async () => {
     setShowConflictWarning(false);
     if (pendingGeocodingData && pendingFormData) {
@@ -611,7 +611,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     <AlertDialog open={showConflictWarning} onOpenChange={setShowConflictWarning}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>⚠️ DB 충돌 감지</AlertDialogTitle>
+          <AlertDialogTitle>⚠️ 오류 감지</AlertDialogTitle>
           <AlertDialogDescription className="space-y-4">
             <p className="font-semibold text-destructive">
               음식점의 주소와 영상 링크(youtube_link)가 같지만, 음식점명이 다릅니다.

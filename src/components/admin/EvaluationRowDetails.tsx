@@ -90,9 +90,15 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
     );
   }
 
-  // DB 충돌인 경우
+  // 오류인 경우 (기존 DB 충돌)
   if (record.status === 'db_conflict' && record.db_conflict_info) {
     const { existing_restaurant, new_restaurant } = record.db_conflict_info;
+
+    // 오류 케이스 판별
+    const isSameName = existing_restaurant.name === new_restaurant.name;
+    const isSameGeocodingAddress = existing_restaurant.jibun_address === new_restaurant.naver_address_info?.jibun_address;
+    const isDuplicateCase = isSameName && isSameGeocodingAddress; // 케이스 1: 중복
+    const isAddressIssueCase = isSameName && !isSameGeocodingAddress; // 케이스 2: 주소 문제
 
     return (
       <Card className="border-red-500">
@@ -103,7 +109,20 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="mb-4">같은 지번주소에 다른 음식점명이 발견되었습니다.</p>
+          <div className="mb-4">
+            {isDuplicateCase && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded">
+                <p className="text-red-800 font-semibold">🔄 중복 데이터</p>
+                <p className="text-sm text-red-700">영상 URL, 음식점명, 지오코딩 주소가 모두 같습니다.</p>
+              </div>
+            )}
+            {isAddressIssueCase && (
+              <div className="p-3 bg-orange-50 border border-orange-200 rounded">
+                <p className="text-orange-800 font-semibold">📍 주소 정보 문제</p>
+                <p className="text-sm text-orange-700">영상 URL과 음식점명은 같지만 지오코딩 주소가 다릅니다.</p>
+              </div>
+            )}
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="border p-4 rounded">

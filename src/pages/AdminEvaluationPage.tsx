@@ -70,7 +70,7 @@ export default function AdminEvaluationPage() {
   // 테이블 뷰 토글 상태
   const [isAlternateView, setIsAlternateView] = useState(false);
 
-  // DB 충돌 경고 다이얼로그
+  // 오류 경고 다이얼로그
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictWarningData, setConflictWarningData] = useState<{
     record: EvaluationRecord;
@@ -178,7 +178,7 @@ export default function AdminEvaluationPage() {
             match = r.is_not_selected === true;
             break;
           case 'db_conflict':
-            // DB 충돌: status가 'db_conflict'인 레코드
+            // 오류: status가 'db_conflict'인 레코드
             match = r.status === 'db_conflict';
             break;
           case 'ready_for_approval':
@@ -517,7 +517,7 @@ export default function AdminEvaluationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allRecords]);
 
-  // 승인 핸들러 (DB 충돌 체크 포함)
+  // 승인 핸들러 (오류 체크 포함)
   const handleApprove = async (record: EvaluationRecord) => {
     // 지오코딩 실패 체크
     if (!record.geocoding_success) {
@@ -593,11 +593,11 @@ export default function AdminEvaluationPage() {
     });
   };
 
-  // DB 충돌 표시 (더 이상 필요 없음 - 단순화)
-  const markAsDbConflict = async (newRecord: EvaluationRecord, existing: Record<string, unknown>) => {
+  // 오류 표시 (더 이상 필요 없음 - 단순화)
+  const markAsError = async (newRecord: EvaluationRecord, existing: Record<string, unknown>) => {
     toast({
       variant: 'destructive',
-      title: 'DB 충돌 처리 필요',
+      title: '오류 처리 필요',
       description: '관리자가 직접 확인하고 처리해주세요.',
     });
   };
@@ -791,7 +791,7 @@ export default function AdminEvaluationPage() {
         }}
       />
 
-      {/* DB 충돌 해결 패널 */}
+      {/* 오류 해결 패널 */}
       <DbConflictResolutionPanel
         record={selectedConflictRecord}
         open={conflictPanelOpen}
