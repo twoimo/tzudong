@@ -101,14 +101,14 @@ JSONL 파일의 각 레코드는 다음과 같이 변환됩니다:
 - `origin_address.lng` → `lng`
 - `geocoding_success` → `geocoding_success`
 - `geocoding_false_stage` → `geocoding_false_stage`
-- `is_missing` → `is_missing` (주소 없으면 자동으로 true)
+- `is_missing` → `is_missing` (JSONL 원본 값 그대로 사용)
 - `is_notSelected` → `is_not_selected`
 
 ## 주요 변경 사항
 
 1. **전화번호 제약 제거**: 한국 형식뿐만 아니라 해외 전화번호(+61, +90 등)도 허용
 2. **이름 길이 완화**: 2자 이상 → 1자 이상으로 변경 (예: "독")
-3. **is_missing 자동 계산**: 주소가 없으면 자동으로 `is_missing = true` 설정
+3. **is_missing 원본 유지**: JSONL 파일의 `is_missing` 값을 그대로 사용
 4. **description 제거**: 불필요한 필드 제거
 
 ## 주의사항

@@ -29,13 +29,14 @@ const StampPage = () => {
         return userReviews.has(restaurantId);
     };
 
-    // 전체 맛집 개수 조회
+    // 전체 맛집 개수 조회 (승인된 맛집만)
     const { data: totalRestaurantsCount = 0 } = useQuery({
         queryKey: ['stamp-restaurants-total-count'],
         queryFn: async () => {
             const { count, error } = await supabase
                 .from('restaurants')
                 .select('*', { count: 'exact', head: true })
+                .eq('status', 'approved')
                 .not('youtube_links', 'is', null);
 
             if (error) throw error;
@@ -43,13 +44,14 @@ const StampPage = () => {
         },
     });
 
-    // 쯔양이 방문한 모든 맛집 조회 (전체 데이터 한 번에 가져오기)
+    // 쯔양이 방문한 모든 맛집 조회 (승인된 맛집만)
     const { data: restaurantsData, isLoading } = useQuery({
         queryKey: ['stamp-restaurants-all'],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
                 .select('id, name, youtube_links, review_count')
+                .eq('status', 'approved')
                 .not('youtube_links', 'is', null)
                 .order('created_at', { ascending: true });
 

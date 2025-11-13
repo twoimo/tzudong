@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 
@@ -38,6 +39,7 @@ interface NaverGeocodingResponse {
 
 export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: EditRestaurantModalProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -46,47 +48,27 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     phone: '',
     tzuyang_review: '',
   });
-  const [geocodingResult, setGeocodingResult] = useState<{
-    success: boolean;
-    data?: {
-      road_address: string;
-      jibun_address: string;
-      english_address: string;
-      address_elements: any;
-      x: string;
-      y: string;
-    };
-    error?: string;
-  } | null>(null);
+  const [initialAddress, setInitialAddress] = useState<string>(''); // 원본 주소 저장
+  const [addressChanged, setAddressChanged] = useState<boolean>(false); // 주소 변경 여부
+  
+  // 지오코딩 결과 목록 (여러 개)
+  const [geocodingResults, setGeocodingResults] = useState<Array<{
+    road_address: string;
+    jibun_address: string;
+    english_address: string;
+    address_elements: any;
+    x: string;
+    y: string;
+  }>>([]);
+  
+  // 선택된 지오코딩 결과
+  const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
+  const [geocodingError, setGeocodingError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (record && record.restaurant_info) {
-      setFormData({
-        name: record.restaurant_info.name,
-        address: record.restaurant_info.naver_address_info?.jibun_address || record.restaurant_info.origin_address,
-        phone: record.restaurant_info.phone || '',
-        tzuyang_review: record.restaurant_info.tzuyang_review || '',
-      });
-      
-      // 기존 지오코딩 결과가 있다면 표시
-      if (record.restaurant_info.naver_address_info) {
-        setGeocodingResult({
-          success: true,
-          data: {
-            road_address: record.restaurant_info.naver_address_info.road_address || '',
-            jibun_address: record.restaurant_info.naver_address_info.jibun_address,
-            english_address: record.restaurant_info.naver_address_info.english_address || '',
-            address_elements: record.restaurant_info.naver_address_info.address_elements,
-            x: record.restaurant_info.naver_address_info.x,
-            y: record.restaurant_info.naver_address_info.y,
-          },
-        });
-      }
-    }
-  }, [record]);
 
   const handleReGeocode = async () => {
     const trimmedAddress = formData.address.trim();
+    const trimmedName = formData.name.trim();
     
     if (!trimmedAddress) {
       toast({
@@ -96,24 +78,59 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       return;
     }
 
+    if (!trimmedName) {
+      toast({
+        variant: 'destructive',
+        title: '음식점명을 입력해주세요',
+      });
+      return;
+    }
+
     try {
       setGeocoding(true);
-      const result = await geocodeAddress(trimmedAddress);
-      setGeocodingResult(result);
+      setGeocodingError(null);
+      setGeocodingResults([]);
+      setSelectedGeocodingIndex(null);
 
-      if (result.success) {
+      // 1. name + 전체 주소로 지오코딩 (최대 3개)
+      const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
+
+      // 2. name + 주소의 시/군/구까지만 잘라서 지오코딩 (최대 3개)
+      const shortAddress = extractCityDistrictGu(trimmedAddress);
+      const shortAddressResults = shortAddress 
+        ? await geocodeAddressMultiple(trimmedName, shortAddress, 3)
+        : [];
+
+      // 3. 두 결과를 합치고 중복 제거 (지번 주소 기준)
+      const allResults = [...fullAddressResults, ...shortAddressResults];
+      const uniqueResults = removeDuplicateAddresses(allResults);
+
+      console.log('🗺️ 지오코딩 결과:', {
+        fullAddressResults: fullAddressResults.length,
+        shortAddressResults: shortAddressResults.length,
+        uniqueResults: uniqueResults.length,
+        results: uniqueResults,
+      });
+
+      if (uniqueResults.length > 0) {
+        setGeocodingResults(uniqueResults);
+        setAddressChanged(false); // 지오코딩 성공 시 플래그 초기화
+        setInitialAddress(trimmedAddress); // 새로운 주소를 초기 주소로 설정
+        
         toast({
           title: '지오코딩 성공',
-          description: '주소가 성공적으로 변환되었습니다.',
+          description: `${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`,
         });
       } else {
+        setGeocodingError('주소를 찾을 수 없습니다.');
         toast({
           variant: 'destructive',
           title: '지오코딩 실패',
-          description: result.error || '주소를 좌표로 변환할 수 없습니다.',
+          description: '주소를 찾을 수 없습니다. 주소를 다시 확인해주세요.',
         });
       }
     } catch (error: any) {
+      setGeocodingError(error.message);
       toast({
         variant: 'destructive',
         title: '지오코딩 실패',
@@ -124,28 +141,63 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     }
   };
 
-  const geocodeAddress = async (address: string): Promise<{
-    success: boolean;
-    data?: {
-      road_address: string;
-      jibun_address: string;
-      english_address: string;
-      address_elements: any;
-      x: string;
-      y: string;
-    };
-    error?: string;
+  // 시/군/구까지만 추출하는 함수
+  const extractCityDistrictGu = (address: string): string | null => {
+    // 서울특별시 마포구, 경기도 성남시 분당구 등 추출
+    const regex = /(.*?[시도]\s+.*?[시군구])/;
+    const match = address.match(regex);
+    return match ? match[1] : null;
+  };
+
+  // 중복 제거 함수 (지번 주소 기준)
+  const removeDuplicateAddresses = (addresses: Array<{
+    road_address: string;
+    jibun_address: string;
+    english_address: string;
+    address_elements: any;
+    x: string;
+    y: string;
+  }>): Array<{
+    road_address: string;
+    jibun_address: string;
+    english_address: string;
+    address_elements: any;
+    x: string;
+    y: string;
   }> => {
+    const seen = new Set<string>();
+    return addresses.filter(addr => {
+      if (seen.has(addr.jibun_address)) {
+        return false;
+      }
+      seen.add(addr.jibun_address);
+      return true;
+    });
+  };
+
+  // 지오코딩 함수 (여러 개 결과 반환)
+  const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3): Promise<Array<{
+    road_address: string;
+    jibun_address: string;
+    english_address: string;
+    address_elements: any;
+    x: string;
+    y: string;
+  }>> => {
     try {
       // 관리자 재지오코딩용 - 본인의 NCP Maps API 키 사용
       const clientId = import.meta.env.VITE_NCP_MAPS_KEY_ID;
       const clientSecret = import.meta.env.VITE_NCP_MAPS_KEY;
 
       if (!clientId || !clientSecret) {
-        return { success: false, error: 'Naver 지오코딩 API 키가 설정되지 않았습니다.' };
+        throw new Error('Naver 지오코딩 API 키가 설정되지 않았습니다.');
       }
 
-      const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`;
+      // name과 address를 함께 보내서 더 정확한 지오코딩
+      const combinedQuery = `${name} ${address}`;
+      console.log('🗺️ 지오코딩 쿼리:', { name, address, combinedQuery });
+
+      const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(combinedQuery)}&count=${limit}`;
 
       const response = await fetch(url, {
         headers: {
@@ -157,38 +209,47 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const data: NaverGeocodingResponse = await response.json();
 
       if (data.errorMessage) {
-        return { success: false, error: data.errorMessage };
+        throw new Error(data.errorMessage);
       }
 
       if (!data.addresses || data.addresses.length === 0) {
-        return { success: false, error: '주소를 찾을 수 없습니다.' };
+        return [];
       }
 
-      const address_data = data.addresses[0];
-      return {
-        success: true,
-        data: {
-          road_address: address_data.roadAddress,
-          jibun_address: address_data.jibunAddress,
-          english_address: address_data.englishAddress,
-          address_elements: address_data.addressElements,
-          x: address_data.x,
-          y: address_data.y,
-        },
-      };
+      // 최대 limit개까지만 반환
+      return data.addresses.slice(0, limit).map(addr => ({
+        road_address: addr.roadAddress,
+        jibun_address: addr.jibunAddress,
+        english_address: addr.englishAddress,
+        address_elements: addr.addressElements,
+        x: addr.x,
+        y: addr.y,
+      }));
     } catch (error: any) {
-      return { success: false, error: error.message };
+      console.error('지오코딩 에러:', error);
+      return [];
     }
   };
 
   const handleApprove = async () => {
     if (!record) return;
 
-    if (!geocodingResult || !geocodingResult.success) {
+    // 주소가 변경되었는데 재지오코딩하지 않은 경우 경고
+    if (addressChanged) {
       toast({
         variant: 'destructive',
         title: '승인 불가',
-        description: '먼저 주소를 지오코딩해주세요.',
+        description: '⚠️ 주소가 변경되었습니다. 재지오코딩을 먼저 진행해주세요.',
+      });
+      return;
+    }
+
+    // 지오코딩 결과가 없거나 선택하지 않은 경우
+    if (geocodingResults.length === 0 || selectedGeocodingIndex === null) {
+      toast({
+        variant: 'destructive',
+        title: '승인 불가',
+        description: '먼저 주소를 지오코딩하고 하나를 선택해주세요.',
       });
       return;
     }
@@ -196,23 +257,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     try {
       setLoading(true);
 
-      const { data: existingRestaurants, error: searchError } = await supabase
-        .from('restaurants')
-        .select('id, name, jibun_address')
-        .eq('jibun_address', geocodingResult.data!.jibun_address);
-
-      if (searchError) throw searchError;
-
-      if (existingRestaurants && existingRestaurants.length > 0) {
-        toast({
-          variant: 'destructive',
-          title: '중복 레스토랑 존재',
-          description: `같은 주소(${geocodingResult.data!.jibun_address})의 레스토랑이 이미 존재합니다: ${existingRestaurants[0].name}`,
-        });
-        return;
-      }
-
-      // 새 레스토랑 등록
+      // 기존 레스토랑 업데이트 (승인 처리)
       if (!record.restaurant_info) {
         toast({
           variant: 'destructive',
@@ -233,35 +278,33 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         return;
       }
 
-      const { data: newRestaurant, error: insertError } = await supabase
+      // 선택된 지오코딩 결과 가져오기
+      const selectedResult = geocodingResults[selectedGeocodingIndex];
+
+      // restaurants 테이블에 업데이트 (evaluation_records와 통합됨)
+      const { data: updatedRestaurant, error: updateError } = await supabase
         .from('restaurants')
-        .insert({
+        .update({
           name: trimmedName,
-          road_address: geocodingResult.data!.road_address,
-          jibun_address: geocodingResult.data!.jibun_address,
-          english_address: geocodingResult.data!.english_address,
-          address_elements: geocodingResult.data!.address_elements,
-          lat: parseFloat(geocodingResult.data!.y),
-          lng: parseFloat(geocodingResult.data!.x),
+          road_address: selectedResult.road_address,
+          jibun_address: selectedResult.jibun_address,
+          english_address: selectedResult.english_address,
+          address_elements: selectedResult.address_elements,
+          lat: parseFloat(selectedResult.y),
+          lng: parseFloat(selectedResult.x),
           phone: trimmedPhone || null,
-          category: record.restaurant_info.category ? [record.restaurant_info.category] : [],
+          categories: record.restaurant_info.category ? [record.restaurant_info.category] : [],
           youtube_links: [record.youtube_link],
           youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
-          tzuyang_reviews: trimmedTzuyangReview ? [trimmedTzuyangReview] : (record.restaurant_info.tzuyang_review ? [record.restaurant_info.tzuyang_review] : []),
+          tzuyang_reviews: trimmedTzuyangReview ? [{ review: trimmedTzuyangReview }] : (record.restaurant_info.tzuyang_review ? [{ review: record.restaurant_info.tzuyang_review }] : []),
+          status: 'approved', // 승인 상태로 변경
+          geocoding_success: true, // 지오코딩 성공으로 설정
+          updated_by_admin_id: user?.id || null, // 현재 로그인한 관리자 ID
+          updated_at: new Date().toISOString(),
         })
+        .eq('id', record.id) // restaurants 테이블의 ID로 업데이트
         .select()
         .single();
-
-      if (insertError) throw insertError;
-
-      // evaluation_record 상태 업데이트
-      const { error: updateError } = await supabase
-        .from('evaluation_records')
-        .update({
-          status: 'approved',
-          processed_at: new Date().toISOString(),
-        })
-        .eq('id', record.id);
 
       if (updateError) throw updateError;
 
@@ -272,7 +315,16 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       onSuccess(record.id, {
         status: 'approved',
-        processed_at: new Date().toISOString(),
+        name: trimmedName,
+        road_address: selectedResult.road_address,
+        jibun_address: selectedResult.jibun_address,
+        english_address: selectedResult.english_address,
+        address_elements: selectedResult.address_elements,
+        lat: parseFloat(selectedResult.y),
+        lng: parseFloat(selectedResult.x),
+        phone: trimmedPhone || null,
+        geocoding_success: true,
+        updated_at: new Date().toISOString(),
       });
       onOpenChange(false);
       resetForm();
@@ -296,7 +348,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       phone: '',
       tzuyang_review: '',
     });
-    setGeocodingResult(null);
+    setGeocodingResults([]);
+    setSelectedGeocodingIndex(null);
+    setGeocodingError(null);
+    setInitialAddress('');
+    setAddressChanged(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -305,6 +361,50 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     }
     onOpenChange(newOpen);
   };
+
+  // Modal이 열릴 때 초기화
+  useEffect(() => {
+    if (open && record && record.restaurant_info) {
+      // 주소 초기값 설정 (우선순위: naver 지번주소 > naver 도로명주소 > origin_address)
+      const address = record.restaurant_info.naver_address_info?.jibun_address ||
+                      record.restaurant_info.naver_address_info?.road_address ||
+                      record.restaurant_info.origin_address ||
+                      '';
+
+      console.log('🔄 Modal 초기화:', {
+        record_id: record.id,
+        address,
+        has_naver_info: !!record.restaurant_info.naver_address_info
+      });
+
+      setInitialAddress(address); // 원본 주소 저장
+      setAddressChanged(false); // 주소 변경 여부 초기화
+
+      setFormData({
+        name: record.restaurant_info.name,
+        address: address,
+        phone: record.restaurant_info.phone || '',
+        tzuyang_review: record.restaurant_info.tzuyang_review || '',
+      });
+
+      // 기존 지오코딩 결과가 있다면 표시
+      if (record.restaurant_info.naver_address_info) {
+        const existingResult = {
+          road_address: record.restaurant_info.naver_address_info.road_address || '',
+          jibun_address: record.restaurant_info.naver_address_info.jibun_address,
+          english_address: record.restaurant_info.naver_address_info.english_address || '',
+          address_elements: record.restaurant_info.naver_address_info.address_elements,
+          x: record.restaurant_info.naver_address_info.x,
+          y: record.restaurant_info.naver_address_info.y,
+        };
+        setGeocodingResults([existingResult]);
+        setSelectedGeocodingIndex(0); // 기존 결과를 자동 선택
+      } else {
+        setGeocodingResults([]);
+        setSelectedGeocodingIndex(null);
+      }
+    }
+  }, [open, record]);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -356,6 +456,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                 variant="outline"
                 onClick={handleReGeocode}
                 disabled={geocoding || !formData.address.trim()}
+                title={
+                  geocoding
+                    ? '지오코딩 진행 중...'
+                    : !formData.address.trim()
+                    ? '주소를 입력해주세요'
+                    : '재지오코딩 실행'
+                }
               >
                 {geocoding && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
                 {!geocoding && <RefreshCw className="mr-2 h-3 w-3" />}
@@ -366,50 +473,98 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               id="edit-address"
               value={formData.address}
               onChange={(e) => {
-                setFormData(prev => ({ ...prev, address: e.target.value }));
-                // 주소가 변경되면 지오코딩 결과 초기화
-                setGeocodingResult(null);
+                const newAddress = e.target.value;
+                setFormData(prev => ({ ...prev, address: newAddress }));
+                
+                // 주소가 변경되었는지 확인
+                if (newAddress.trim() !== initialAddress.trim()) {
+                  setAddressChanged(true);
+                  // 주소가 변경되면 지오코딩 결과 초기화
+                  setGeocodingResults([]);
+                  setSelectedGeocodingIndex(null);
+                  setGeocodingError(null);
+                } else {
+                  setAddressChanged(false);
+                }
               }}
               placeholder="예: 서울특별시 마포구 양화로 160"
               rows={2}
             />
           </div>
 
-          {/* 지오코딩 결과 */}
-          {geocodingResult && (
-            <div className={`rounded-lg p-3 ${geocodingResult.success ? 'bg-green-50 dark:bg-green-950 border border-green-200' : 'bg-red-50 dark:bg-red-950 border border-red-200'}`}>
+          {/* 지오코딩 에러 메시지 */}
+          {geocodingError && (
+            <div className="rounded-lg p-3 bg-red-50 dark:bg-red-950 border border-red-200">
               <div className="flex items-center gap-2 mb-2">
-                <Label className="text-sm font-medium">
-                  지오코딩 결과
-                </Label>
-                {geocodingResult.success ? (
-                  <Badge variant="default" className="bg-green-600">성공</Badge>
-                ) : (
-                  <Badge variant="destructive">실패</Badge>
-                )}
+                <Label className="text-sm font-medium">지오코딩 결과</Label>
+                <Badge variant="destructive">실패</Badge>
               </div>
-              
-              {geocodingResult.success && geocodingResult.data ? (
-                <div className="space-y-1 text-sm text-muted-foreground">
-                  <div>
-                    <span className="font-medium">도로명: </span>
-                    {geocodingResult.data.road_address}
+              <p className="text-sm text-destructive">{geocodingError}</p>
+            </div>
+          )}
+
+          {/* 지오코딩 결과 목록 (선택 UI) */}
+          {geocodingResults.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">
+                  지오코딩 결과 ({geocodingResults.length}개)
+                </Label>
+                <Badge variant="default" className="bg-green-600">성공</Badge>
+              </div>
+
+              <div className="space-y-2">
+                {geocodingResults.map((result, index) => (
+                  <div
+                    key={index}
+                    onClick={() => setSelectedGeocodingIndex(index)}
+                    className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      selectedGeocodingIndex === index
+                        ? 'border-primary bg-primary/5'
+                        : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant={selectedGeocodingIndex === index ? 'default' : 'outline'}>
+                          옵션 {index + 1}
+                        </Badge>
+                        {selectedGeocodingIndex === index && (
+                          <Badge variant="default" className="bg-green-600">
+                            선택됨
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">도로명: </span>
+                        <span className="text-gray-600 dark:text-gray-400">{result.road_address}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">지번: </span>
+                        <span className="text-gray-600 dark:text-gray-400">{result.jibun_address}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">영어: </span>
+                        <span className="text-gray-600 dark:text-gray-400">{result.english_address}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700 dark:text-gray-300">좌표: </span>
+                        <span className="text-gray-600 dark:text-gray-400">
+                          위도 {result.y}, 경도 {result.x}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-medium">지번: </span>
-                    {geocodingResult.data.jibun_address}
-                  </div>
-                  <div>
-                    <span className="font-medium">영어 주소: </span>
-                    {geocodingResult.data.english_address}
-                  </div>
-                  <div>
-                    <span className="font-medium">좌표: </span>
-                    위도 {geocodingResult.data.y}, 경도 {geocodingResult.data.x}
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-destructive">{geocodingResult.error}</p>
+                ))}
+              </div>
+
+              {selectedGeocodingIndex === null && (
+                <p className="text-sm text-muted-foreground text-center py-2">
+                  ⬆️ 위 옵션 중 하나를 클릭해서 선택해주세요
+                </p>
               )}
             </div>
           )}
@@ -449,7 +604,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           </Button>
           <Button
             onClick={handleApprove}
-            disabled={loading || !geocodingResult?.success}
+            disabled={loading || geocodingResults.length === 0 || selectedGeocodingIndex === null}
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             승인

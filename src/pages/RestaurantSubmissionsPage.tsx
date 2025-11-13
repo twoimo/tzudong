@@ -500,9 +500,9 @@ export default function RestaurantSubmissionsPage() {
             }
         } else {
             // 수정 요청일 때는 기존 로직 유지
-            if (!formData.restaurant_name.trim() || !formData.address.trim() || !formData.youtube_link.trim() || formData.categories.length === 0) {
-                toast.error('필수 항목을 모두 입력해주세요');
-                return;
+        if (!formData.restaurant_name.trim() || !formData.address.trim() || !formData.youtube_link.trim() || formData.categories.length === 0) {
+            toast.error('필수 항목을 모두 입력해주세요');
+            return;
             }
         }
 
@@ -1173,42 +1173,42 @@ export default function RestaurantSubmissionsPage() {
 
                                                 <div className="space-y-4">
                                                     {/* 유튜브 링크 입력 */}
-                                                    <div className="space-y-2">
+                                <div className="space-y-2">
                                                         <Label className="text-xs font-medium text-purple-700 dark:text-purple-300">
-                                                            유튜브 영상 링크 <span className="text-red-500">*</span>
-                                                        </Label>
+                                        유튜브 영상 링크 <span className="text-red-500">*</span>
+                                    </Label>
                                                         <Textarea
-                                                            value={formData.youtube_link}
-                                                            onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
-                                                            placeholder="https://youtube.com/watch?v=..."
+                                        value={formData.youtube_link}
+                                        onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
+                                        placeholder="https://youtube.com/watch?v=..."
                                                             className="min-h-[60px] text-sm resize-none border-purple-200 focus:border-purple-400"
-                                                        />
-                                                    </div>
+                                    />
+                                </div>
 
                                                     {/* 쯔양 리뷰 입력 */}
-                                                    <div className="space-y-2">
+                                <div className="space-y-2">
                                                         <Label className="text-xs font-medium text-pink-700 dark:text-pink-300">
                                                             쯔양의 리뷰
                                                         </Label>
-                                                        <Textarea
+                                    <Textarea
                                                             ref={(el) => {
                                                                 if (el) {
                                                                     el.style.height = 'auto';
                                                                     el.style.height = el.scrollHeight + 'px';
                                                                 }
                                                             }}
-                                                            value={formData.description}
+                                        value={formData.description}
                                                             onChange={(e) => {
                                                                 setFormData({ ...formData, description: e.target.value });
                                                                 // 자동 높이 조절
                                                                 e.target.style.height = 'auto';
                                                                 e.target.style.height = e.target.scrollHeight + 'px';
                                                             }}
-                                                            placeholder="쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요... (팩트 체크 예정)"
+                                        placeholder="쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요... (팩트 체크 예정)"
                                                             className="text-sm resize-none overflow-hidden border-pink-200 focus:border-pink-400"
                                                             style={{ minHeight: '80px' }}
-                                                        />
-                                                    </div>
+                                    />
+                                </div>
                                                 </div>
                                             </div>
                                         ) : (
@@ -1351,8 +1351,8 @@ export default function RestaurantSubmissionsPage() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <div className="flex items-center gap-2">
-                                                <Youtube className="h-5 w-5 text-purple-600" />
+                                        <div className="flex items-center gap-2">
+                                            <Youtube className="h-5 w-5 text-purple-600" />
                                                 <MessageSquare className="h-5 w-5 text-pink-600" />
                                             </div>
                                             <Label className="text-sm font-medium text-purple-800 dark:text-purple-200">
@@ -1431,7 +1431,7 @@ export default function RestaurantSubmissionsPage() {
                                                         <div className="space-y-2">
                                                             <Label className="text-xs font-medium text-purple-700 dark:text-purple-300">
                                                                 유튜브 영상 링크
-                                                            </Label>
+                                            </Label>
                                                             <Textarea
                                                                 value={videoReview.youtube_link}
                                                                 onChange={(e) => {
@@ -1452,7 +1452,7 @@ export default function RestaurantSubmissionsPage() {
                                                                 placeholder="https://youtube.com/watch?v=..."
                                                                 className="min-h-[60px] text-sm resize-none border-purple-200 focus:border-purple-400"
                                                             />
-                                                        </div>
+                                        </div>
 
                                                         {/* 쯔양 리뷰 입력 */}
                                                         <div className="space-y-2">

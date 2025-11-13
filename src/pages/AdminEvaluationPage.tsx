@@ -38,9 +38,8 @@ export default function AdminEvaluationPage() {
     total: 0,
     pending: 0,
     approved: 0,
-    hold: 0,
+    ready_for_approval: 0,
     missing: 0,
-    db_conflict: 0,
     geocoding_failed: 0,
     not_selected: 0,
     deleted: 0,
@@ -54,7 +53,7 @@ export default function AdminEvaluationPage() {
     rb_inference_score?: string;
     rb_grounding_TF?: string;
     review_faithfulness_score?: string;
-    location_match_TF?: string;
+    geocoding_success?: string;
     category_validity_TF?: string;
     category_TF?: string;
     status?: string;
@@ -69,7 +68,7 @@ export default function AdminEvaluationPage() {
   // 테이블 뷰 토글 상태
   const [isAlternateView, setIsAlternateView] = useState(false);
 
-  // DB 충돌 경고 다이얼로그
+  // 오류 경고 다이얼로그
   const [showConflictWarning, setShowConflictWarning] = useState(false);
   const [conflictWarningData, setConflictWarningData] = useState<{
     record: EvaluationRecord;
@@ -89,7 +88,7 @@ export default function AdminEvaluationPage() {
         description: "관리자만 접근할 수 있는 페이지입니다.",
         variant: "destructive",
       });
-      navigate('/login');
+      navigate('/');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, authLoading]);
@@ -122,7 +121,7 @@ export default function AdminEvaluationPage() {
           console.error('RPC 에러:', error);
           throw error;
         }
-        
+
         console.log('검색 결과:', data?.length || 0, '개');
         console.log('검색 결과 샘플:', data?.slice(0, 3));
         setSearchResults(data || []);
@@ -148,23 +147,61 @@ export default function AdminEvaluationPage() {
     // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
     const baseRecords = searchResults || allRecords;
 
-    let filtered = selectedStatuses.length === 0
-      ? baseRecords.filter(r => r.status !== 'deleted') // 전체 탭일 때는 deleted 제외
-      : baseRecords.filter(r => {
-        // geocoding_failed 탭 클릭 시: geocoding_success가 false인 레코드
-        if (selectedStatuses.includes('geocoding_failed' as EvaluationRecordStatus)) {
-          return !r.geocoding_success;
+    console.log('🔍 필터링 시작:', {
+      selectedStatuses,
+      baseRecordsCount: baseRecords?.length || 0,
+      searchResultsCount: searchResults?.length || 0
+    });
+
+    let filtered = baseRecords.filter(r => r.status !== 'deleted'); // deleted는 항상 제외
+
+    // 상태 필터링 (evalFilters.status)
+    if (evalFilters.status) {
+      console.log('🎯 상태 필터링 적용:', evalFilters.status);
+
+      filtered = filtered.filter(r => {
+        let match = false;
+
+        switch (evalFilters.status) {
+          case 'geocoding_failed':
+            // 지오코딩 실패: geocoding_success가 false인 모든 레코드
+            match = !r.geocoding_success;
+            break;
+          case 'missing':
+            // Missing: is_missing이 true인 레코드
+            match = r.is_missing === true;
+            break;
+          case 'not_selected':
+            // 평가 미대상: is_not_selected가 true인 레코드
+            match = r.is_not_selected === true;
+            break;
+          case 'ready_for_approval':
+            // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드
+            match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+              r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+              r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+              r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+              r.geocoding_success === true &&
+              r.evaluation_results?.category_validity_TF?.eval_value === true &&
+              r.evaluation_results?.category_TF?.eval_value === true;
+            break;
+          default:
+            // 일반 상태: status 필드와 일치하는 레코드
+            match = r.status === evalFilters.status;
+            break;
         }
-        // missing 탭: is_missing이 true인 레코드
-        if (selectedStatuses.includes('missing' as EvaluationRecordStatus)) {
-          return r.is_missing;
+
+        if (match) {
+          console.log(`✅ 필터링 통과: ${r.name}, status: ${r.status}, geocoding_success: ${r.geocoding_success}, is_missing: ${r.is_missing}, is_not_selected: ${r.is_not_selected}`);
+        } else {
+          console.log(`❌ 필터링 제외: ${r.name}, status: ${r.status}, geocoding_success: ${r.geocoding_success}, is_missing: ${r.is_missing}, is_not_selected: ${r.is_not_selected}`);
         }
-        // not_selected 탭: is_not_selected가 true인 레코드
-        if (selectedStatuses.includes('not_selected' as EvaluationRecordStatus)) {
-          return r.is_not_selected;
-        }
-        return selectedStatuses.includes(r.status);
+
+        return match;
       });
+
+      console.log('📊 필터링 결과:', filtered.length, '개');
+    }
 
     // 1. Visit Authenticity 필터 (0-3점)
     if (evalFilters.visit_authenticity) {
@@ -198,15 +235,17 @@ export default function AdminEvaluationPage() {
       );
     }
 
-    // 5. Location Match TF 필터 (T/F/geocoding_failed)
-    if (evalFilters.location_match_TF) {
-      if (evalFilters.location_match_TF === 'geocoding_failed') {
-        filtered = filtered.filter(r => !r.geocoding_success);
-      } else {
-        const targetValue = evalFilters.location_match_TF === 'True';
-        filtered = filtered.filter(r =>
-          r.evaluation_results?.location_match_TF?.eval_value === targetValue
-        );
+    // 5. Geocoding Success 필터 (true/false_match/false_geocode)
+    if (evalFilters.geocoding_success) {
+      if (evalFilters.geocoding_success === 'true') {
+        // 지오코딩 성공
+        filtered = filtered.filter(r => r.geocoding_success === true);
+      } else if (evalFilters.geocoding_success === 'false_match') {
+        // 지오코딩 성공했으나 주소 매칭 실패
+        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage !== null);
+      } else if (evalFilters.geocoding_success === 'false_geocode') {
+        // 지오코딩 자체 실패
+        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage === null);
       }
     }
 
@@ -226,10 +265,7 @@ export default function AdminEvaluationPage() {
       );
     }
 
-    // 8. Status 필터
-    if (evalFilters.status) {
-      filtered = filtered.filter(r => r.status === evalFilters.status);
-    }
+    // 8. Status 필터는 위에서 이미 처리됨
 
     return filtered;
   }, [allRecords, searchResults, selectedStatuses, evalFilters]);
@@ -303,9 +339,8 @@ export default function AdminEvaluationPage() {
           total: 0,
           pending: 0,
           approved: 0,
-          hold: 0,
+          ready_for_approval: 0,
           missing: 0,
-          db_conflict: 0,
           geocoding_failed: 0,
           not_selected: 0,
           deleted: 0,
@@ -314,19 +349,18 @@ export default function AdminEvaluationPage() {
       }
 
       // restaurants 테이블 데이터를 EvaluationRecord 형식으로 변환
-      const records = data.map((r: Record<string, unknown>) => ({
-        ...r,
-        // 호환성을 위한 별칭 추가
-        restaurant_name: r.name,
-        youtube_link: Array.isArray(r.youtube_links) ? r.youtube_links[0] : '',
-        // restaurant_info 생성
-        restaurant_info: r.origin_address ? {
+      const records = data.map((r: Record<string, unknown>) => {
+        // evaluation_results 변환
+        const evaluationResults = r.evaluation_results as any;
+
+        // restaurant_info 생성 (항상 생성)
+        const restaurantInfo = {
           name: r.name as string,
           phone: r.phone as string | null,
           category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
-          origin_address: (r.origin_address as Record<string, unknown>)?.address as string || '',
-          origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number,
-          origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number,
+          origin_address: (r.origin_address as Record<string, unknown>)?.address as string || r.road_address as string || r.jibun_address as string || '',
+          origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number || 0,
+          origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number || 0,
           reasoning_basis: r.reasoning_basis as string || '',
           tzuyang_review: Array.isArray(r.tzuyang_reviews) && r.tzuyang_reviews.length > 0
             ? ((r.tzuyang_reviews[0] as Record<string, unknown>)?.review as string || '')
@@ -339,8 +373,43 @@ export default function AdminEvaluationPage() {
             x: r.lng?.toString() || '',
             y: r.lat?.toString() || '',
           } : null,
-        } : null,
-      }));
+        };
+
+        // 디버깅: 모든 레코드의 구조 확인 (최대 3개)
+        const index = data.indexOf(r);
+        if (index < 3) {
+          console.log(`🔍 레코드 ${index + 1} 데이터 구조:`, {
+            id: r.id,
+            name: r.name,
+            status: r.status,
+            evaluation_results: evaluationResults,
+            evaluation_results_type: typeof evaluationResults,
+            evaluation_results_keys: evaluationResults ? Object.keys(evaluationResults) : 'null',
+            restaurant_info: restaurantInfo,
+            youtube_meta: r.youtube_meta,
+            youtube_meta_type: typeof r.youtube_meta,
+            youtube_meta_keys: r.youtube_meta ? Object.keys(r.youtube_meta as any) : 'null',
+            origin_address: r.origin_address,
+            road_address: r.road_address,
+            jibun_address: r.jibun_address,
+            reasoning_basis: r.reasoning_basis,
+            tzuyang_reviews: r.tzuyang_reviews,
+          });
+        }
+
+        return {
+          ...r,
+          // 호환성을 위한 별칭 추가
+          restaurant_name: r.name,
+          youtube_link: Array.isArray(r.youtube_links) ? r.youtube_links[0] : '',
+          // evaluation_results는 그대로 사용 (JSONB 데이터)
+          evaluation_results: evaluationResults,
+          // restaurant_info 생성
+          restaurant_info: restaurantInfo,
+          // youtube_meta 처리
+          youtube_meta: r.youtube_meta || null,
+        };
+      });
 
       setAllRecords(records as EvaluationRecord[]);
 
@@ -357,9 +426,7 @@ export default function AdminEvaluationPage() {
         missing: typedRecords.filter(r => r.is_missing).length,
         db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
         geocoding_failed: typedRecords.filter(r =>
-          r.status === 'geocoding_failed' ||
-          (r.status === 'pending' && !r.geocoding_success) ||
-          (r.status === 'not_selected' && !r.geocoding_success)
+          !r.geocoding_success  // 지오코딩이 실패한 모든 레코드 (deleted 제외)
         ).length,
         not_selected: typedRecords.filter(r => r.is_not_selected).length,
         deleted: deletedCount,
@@ -414,12 +481,18 @@ export default function AdminEvaluationPage() {
       pending: allRecords.filter(r => r.status === 'pending').length,
       approved: allRecords.filter(r => r.status === 'approved').length,
       hold: allRecords.filter(r => r.status === 'hold').length,
+      ready_for_approval: allRecords.filter(r =>
+        r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+        r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+        r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+        r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+        r.geocoding_success === true &&
+        r.evaluation_results?.category_validity_TF?.eval_value === true &&
+        r.evaluation_results?.category_TF?.eval_value === true
+      ).length,
       missing: allRecords.filter(r => r.is_missing).length,
-      db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
       geocoding_failed: allRecords.filter(r =>
-        r.status === 'geocoding_failed' ||
-        (r.status === 'pending' && !r.geocoding_success) ||
-        (r.status === 'not_selected' && !r.geocoding_success)
+        !r.geocoding_success  // 지오코딩이 실패한 모든 레코드
       ).length,
       not_selected: allRecords.filter(r => r.is_not_selected).length,
       deleted: deletedCount,
@@ -436,7 +509,7 @@ export default function AdminEvaluationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allRecords]);
 
-  // 승인 핸들러 (DB 충돌 체크 포함)
+  // 승인 핸들러 (오류 체크 포함)
   const handleApprove = async (record: EvaluationRecord) => {
     // 지오코딩 실패 체크
     if (!record.geocoding_success) {
@@ -512,11 +585,11 @@ export default function AdminEvaluationPage() {
     });
   };
 
-  // DB 충돌 표시 (더 이상 필요 없음 - 단순화)
-  const markAsDbConflict = async (newRecord: EvaluationRecord, existing: Record<string, unknown>) => {
+  // 오류 표시 (더 이상 필요 없음 - 단순화)
+  const markAsError = async (newRecord: EvaluationRecord, existing: Record<string, unknown>) => {
     toast({
       variant: 'destructive',
-      title: 'DB 충돌 처리 필요',
+      title: '오류 처리 필요',
       description: '관리자가 직접 확인하고 처리해주세요.',
     });
   };
@@ -710,7 +783,7 @@ export default function AdminEvaluationPage() {
         }}
       />
 
-      {/* DB 충돌 해결 패널 */}
+      {/* 오류 해결 패널 */}
       <DbConflictResolutionPanel
         record={selectedConflictRecord}
         open={conflictPanelOpen}

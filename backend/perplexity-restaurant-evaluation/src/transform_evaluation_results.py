@@ -191,7 +191,14 @@ def transform_json_object(original_data, source_file_type):
         if original_eval_results:
             missing_list = original_eval_results.get('visit_authenticity', {}).get('missing', [])
             for missing_item in missing_list:
-                missing_name = missing_item.get('name')
+                # missing_item이 문자열인지 딕셔너리인지 확인
+                if isinstance(missing_item, str):
+                    missing_name = missing_item
+                elif isinstance(missing_item, dict):
+                    missing_name = missing_item.get('name')
+                else:
+                    continue
+                
                 if not missing_name or missing_name in processed_names:
                     continue
                 

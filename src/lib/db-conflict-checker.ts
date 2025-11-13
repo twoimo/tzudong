@@ -8,10 +8,10 @@ export interface ConflictCheckResult {
 }
 
 /**
- * DB 충돌 체크 함수
+ * 오류 체크 함수
  * 
  * 충돌 조건:
- * 1. 같은 지번주소 + 같은 youtube_link + 다른 음식점명 → DB 충돌 (name_mismatch)
+ * 1. 같은 지번주소 + 같은 youtube_link + 다른 음식점명 → 오류 (name_mismatch)
  * 2. 같은 지번주소 + 같은 음식점명 + 다른 youtube_link → 병합 필요 (merge_needed)
  */
 export async function checkDbConflict(params: {
@@ -79,7 +79,7 @@ export async function checkDbConflict(params: {
     return { hasConflict: false };
 
   } catch (error) {
-    console.error('DB 충돌 체크 실패:', error);
+    console.error('오류 체크 실패:', error);
     throw error;
   }
 }

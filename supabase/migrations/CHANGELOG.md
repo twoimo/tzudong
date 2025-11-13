@@ -88,9 +88,6 @@ result = supabase.rpc('insert_restaurant_from_jsonl', {'jsonl_data': data})
 ✅ restaurants_geocoding_stage_check
    - 성공 시: geocoding_false_stage = NULL
    - 실패 시: geocoding_false_stage = 0, 1, 2 중 하나
-
-✅ restaurants_missing_data_check
-   - 누락이 아닌 경우 주소 필수
 ```
 
 **추가된 인덱스 (총 18개 추가):**
