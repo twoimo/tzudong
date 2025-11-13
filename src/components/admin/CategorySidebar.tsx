@@ -16,11 +16,9 @@ export function CategorySidebar({
   const statCategories = [
     { label: '미처리', count: stats.pending },
     { label: '승인됨', count: stats.approved },
-    { label: '보류', count: stats.hold },
     { label: '승인 대기', count: stats.ready_for_approval },
     { label: 'Missing', count: stats.missing },
-    { label: '오류', count: stats.db_conflict },
-    { label: '지오코딩실패', count: stats.geocoding_failed },
+    { label: '지오코딩 실패', count: stats.geocoding_failed },
     { label: '평가미대상', count: stats.not_selected },
   ];
 

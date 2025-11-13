@@ -38,10 +38,8 @@ export default function AdminEvaluationPage() {
     total: 0,
     pending: 0,
     approved: 0,
-    hold: 0,
     ready_for_approval: 0,
     missing: 0,
-    db_conflict: 0,
     geocoding_failed: 0,
     not_selected: 0,
     deleted: 0,
@@ -176,10 +174,6 @@ export default function AdminEvaluationPage() {
           case 'not_selected':
             // 평가미대상: is_not_selected가 true인 레코드
             match = r.is_not_selected === true;
-            break;
-          case 'db_conflict':
-            // 오류: status가 'db_conflict'인 레코드
-            match = r.status === 'db_conflict';
             break;
           case 'ready_for_approval':
             // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드
@@ -345,9 +339,8 @@ export default function AdminEvaluationPage() {
           total: 0,
           pending: 0,
           approved: 0,
-          hold: 0,
+          ready_for_approval: 0,
           missing: 0,
-          db_conflict: 0,
           geocoding_failed: 0,
           not_selected: 0,
           deleted: 0,
@@ -498,7 +491,6 @@ export default function AdminEvaluationPage() {
         r.evaluation_results?.category_TF?.eval_value === true
       ).length,
       missing: allRecords.filter(r => r.is_missing).length,
-      db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
       geocoding_failed: allRecords.filter(r =>
         !r.geocoding_success  // 지오코딩이 실패한 모든 레코드
       ).length,

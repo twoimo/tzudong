@@ -109,7 +109,6 @@ export function EvaluationTable({
       approved: { label: '승인됨', variant: 'default' },
       hold: { label: '보류', variant: 'outline' },
       missing: { label: 'Missing', variant: 'destructive' },
-      db_conflict: { label: '오류', variant: 'destructive' },
       geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
       not_selected: { label: '평가미대상', variant: 'outline' },
     };
@@ -448,11 +447,9 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         { value: 'all', label: '모두' },
                         { value: 'pending', label: '미처리' },
                         { value: 'approved', label: '승인됨' },
-                        { value: 'hold', label: '보류' },
                         { value: 'ready_for_approval', label: '승인 대기' },
                         { value: 'missing', label: 'Missing' },
                         { value: 'not_selected', label: '평가미대상' },
-                        { value: 'db_conflict', label: '오류' },
                         { value: 'geocoding_failed', label: '지오코딩 실패' },
                       ]}
                     />
@@ -640,11 +637,9 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                       { value: 'all', label: '모두' },
                       { value: 'pending', label: '미처리' },
                       { value: 'approved', label: '승인됨' },
-                      { value: 'hold', label: '보류' },
                       { value: 'ready_for_approval', label: '승인 대기' },
                       { value: 'missing', label: 'Missing' },
                       { value: 'not_selected', label: '평가미대상' },
-                      { value: 'db_conflict', label: 'DB 충돌' },
                       { value: 'geocoding_failed', label: '지오코딩 실패' },
                     ]}
                   />
