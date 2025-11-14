@@ -588,7 +588,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                 {geocodingResults.map((result, index) => (
                   <div
                     key={index}
-                    onClick={() => setSelectedGeocodingIndex(index)}
+                    onClick={() => {
+                      setSelectedGeocodingIndex(index);
+                      // 선택된 옵션의 지번 주소로 실시간 업데이트
+                      setFormData(prev => ({ ...prev, address: result.jibun_address }));
+                      setInitialAddress(result.jibun_address);
+                      setAddressChanged(false);
+                    }}
                     className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedGeocodingIndex === index
                       ? 'border-primary bg-primary/5'
                       : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
