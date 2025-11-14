@@ -349,34 +349,55 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       }
 
       // restaurants 테이블에 업데이트 (evaluation_records와 통합됨)
+      console.log('🔄 DB 업데이트 시작:', {
+        id: record.id,
+        name: trimmedName,
+        selectedResult,
+      });
+
+      const updateData = {
+        name: trimmedName,
+        road_address: selectedResult.road_address,
+        jibun_address: selectedResult.jibun_address,
+        english_address: selectedResult.english_address,
+        address_elements: selectedResult.address_elements,
+        lat: parseFloat(selectedResult.y),
+        lng: parseFloat(selectedResult.x),
+        phone: trimmedPhone || null,
+        categories: record.restaurant_info.category ? [record.restaurant_info.category] : [],
+        youtube_links: [record.youtube_link],
+        youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
+        tzuyang_reviews: trimmedTzuyangReview ? [{ review: trimmedTzuyangReview }] : (record.restaurant_info.tzuyang_review ? [{ review: record.restaurant_info.tzuyang_review }] : []),
+        status: 'approved', // 승인 상태로 변경
+        geocoding_success: true, // 지오코딩 성공으로 설정
+        geocoding_false_stage: null, // 지오코딩 성공 시 NULL (체크 제약 준수)
+        db_error_message: null, // 에러 메시지 초기화
+        db_error_details: null, // 에러 상세 초기화
+        updated_by_admin_id: user?.id || null, // 현재 로그인한 관리자 ID
+        updated_at: new Date().toISOString(),
+      };
+
+      console.log('📝 업데이트 데이터:', updateData);
+
       const { data: updatedRestaurant, error: updateError } = await supabase
         .from('restaurants')
         // @ts-expect-error - Supabase 자동 생성 타입 문제
-        .update({
-          name: trimmedName,
-          road_address: selectedResult.road_address,
-          jibun_address: selectedResult.jibun_address,
-          english_address: selectedResult.english_address,
-          address_elements: selectedResult.address_elements,
-          lat: parseFloat(selectedResult.y),
-          lng: parseFloat(selectedResult.x),
-          phone: trimmedPhone || null,
-          categories: record.restaurant_info.category ? [record.restaurant_info.category] : [],
-          youtube_links: [record.youtube_link],
-          youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
-          tzuyang_reviews: trimmedTzuyangReview ? [{ review: trimmedTzuyangReview }] : (record.restaurant_info.tzuyang_review ? [{ review: record.restaurant_info.tzuyang_review }] : []),
-          status: 'approved', // 승인 상태로 변경
-          geocoding_success: true, // 지오코딩 성공으로 설정
-          db_error_message: null, // 에러 메시지 초기화
-          db_error_details: null, // 에러 상세 초기화
-          updated_by_admin_id: user?.id || null, // 현재 로그인한 관리자 ID
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', record.id) // restaurants 테이블의 ID로 업데이트
         .select()
         .single();
 
-      if (updateError) throw updateError;
+      console.log('📥 DB 응답:', { data: updatedRestaurant, error: updateError });
+
+      if (updateError) {
+        console.error('❌ DB 업데이트 에러 상세:', {
+          message: updateError.message,
+          details: updateError.details,
+          hint: updateError.hint,
+          code: updateError.code,
+        });
+        throw updateError;
+      }
 
       toast({
         title: '승인 완료',
