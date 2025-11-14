@@ -43,6 +43,8 @@ interface NaverGeocodingResponse {
   errorMessage?: string;
 }
 
+type NaverGeocodingAddress = NonNullable<NaverGeocodingResponse['addresses']>[number];
+
 export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: EditRestaurantModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -192,39 +194,50 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     y: string;
   }>> => {
     try {
-      // 관리자 재지오코딩용 - 본인의 NCP Maps API 키 사용
-      const clientId = import.meta.env.VITE_NCP_MAPS_KEY_ID;
-      const clientSecret = import.meta.env.VITE_NCP_MAPS_KEY;
+      // 주소만 사용 (이름 제외) - Geocoding API는 주소만 필요
+      console.log('🗺️ 지오코딩 쿼리:', { name, address });
 
-      if (!clientId || !clientSecret) {
-        throw new Error('Naver 지오코딩 API 키가 설정되지 않았습니다.');
-      }
-
-      // name과 address를 함께 보내서 더 정확한 지오코딩
-      const combinedQuery = `${name} ${address}`;
-      console.log('🗺️ 지오코딩 쿼리:', { name, address, combinedQuery });
-
-      const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(combinedQuery)}&count=${limit}`;
-
-      const response = await fetch(url, {
-        headers: {
-          'X-NCP-APIGW-API-KEY-ID': clientId,
-          'X-NCP-APIGW-API-KEY': clientSecret,
-        },
+      // Supabase Edge Function을 통해 지오코딩 호출 (CORS 우회)
+      const { data, error } = await supabase.functions.invoke('naver-geocode', {
+        body: { query: address, count: limit }
       });
 
-      const data: NaverGeocodingResponse = await response.json();
+      console.log('📡 Edge Function 응답:', { data, error });
+      console.log('📡 data 전체:', JSON.stringify(data, null, 2));
 
-      if (data.errorMessage) {
-        throw new Error(data.errorMessage);
+      if (error) {
+        console.error('❌ Edge Function 에러:', error);
+        throw new Error(error.message || JSON.stringify(error));
       }
 
-      if (!data.addresses || data.addresses.length === 0) {
+      if (!data) {
+        console.error('❌ 응답 데이터 없음');
         return [];
       }
 
+      if (data.error) {
+        console.error('❌ API 에러:', data.error);
+        throw new Error(data.error);
+      }
+
+      // 📊 디버깅: Naver API의 실제 응답 구조 확인
+      console.log('🔍 data 구조 분석:', {
+        hasAddresses: 'addresses' in data,
+        addressesType: typeof data.addresses,
+        addressesLength: data.addresses?.length,
+        dataKeys: Object.keys(data),
+        fullData: data
+      });
+
+      if (!data.addresses || data.addresses.length === 0) {
+        console.warn('⚠️ 주소 결과 없음');
+        return [];
+      }
+
+      console.log('✅ 지오코딩 성공:', data.addresses.length, '개 결과');
+
       // 최대 limit개까지만 반환
-      return data.addresses.slice(0, limit).map(addr => ({
+      return data.addresses.slice(0, limit).map((addr: NaverGeocodingAddress) => ({
         road_address: addr.roadAddress,
         jibun_address: addr.jibunAddress,
         english_address: addr.englishAddress,
@@ -233,8 +246,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         y: addr.y,
       }));
     } catch (error) {
-      console.error('지오코딩 에러:', error);
-      return [];
+      console.error('💥 지오코딩 에러:', error);
+      throw error; // 에러를 다시 throw하여 상위에서 처리
     }
   };
 

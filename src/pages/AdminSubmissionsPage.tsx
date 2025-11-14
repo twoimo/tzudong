@@ -451,30 +451,18 @@ export default function AdminSubmissionsPage() {
         y: string;
     }>> => {
         try {
-            const clientId = import.meta.env.VITE_NCP_MAPS_KEY_ID;
-            const clientSecret = import.meta.env.VITE_NCP_MAPS_KEY;
-
-            if (!clientId || !clientSecret) {
-                throw new Error('Naver 지오코딩 API 키가 설정되지 않았습니다.');
-            }
-
+            // Supabase Edge Function을 통해 지오코딩 호출 (CORS 우회)
             const combinedQuery = `${name} ${address}`;
-            const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(combinedQuery)}&count=${limit}`;
 
-            const response = await fetch(url, {
-                headers: {
-                    'X-NCP-APIGW-API-KEY-ID': clientId,
-                    'X-NCP-APIGW-API-KEY': clientSecret,
-                },
+            const { data, error } = await supabase.functions.invoke('naver-geocode', {
+                body: { query: combinedQuery, count: limit }
             });
 
-            const data = await response.json();
-
-            if (data.errorMessage) {
-                throw new Error(data.errorMessage);
+            if (error) {
+                throw new Error(error.message);
             }
 
-            if (!data.addresses || data.addresses.length === 0) {
+            if (!data || !data.addresses || data.addresses.length === 0) {
                 return [];
             }
 
@@ -1058,8 +1046,8 @@ export default function AdminSubmissionsPage() {
                                                         key={index}
                                                         onClick={() => handleSelectGeocodingResult(index)}
                                                         className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedGeocodingIndex === index
-                                                                ? 'border-primary bg-primary/5'
-                                                                : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
+                                                            ? 'border-primary bg-primary/5'
+                                                            : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
                                                             }`}
                                                     >
                                                         <div className="flex items-start justify-between mb-2">
