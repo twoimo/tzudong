@@ -479,7 +479,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>보류 레스토랑 편집 및 승인</DialogTitle>
           <DialogDescription>
@@ -487,7 +487,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-4 overflow-y-auto flex-1">
           {/* 유튜브 링크 표시 */}
           {record && (
             <div className="rounded-lg bg-muted p-3">
