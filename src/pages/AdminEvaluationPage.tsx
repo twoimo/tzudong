@@ -153,7 +153,10 @@ export default function AdminEvaluationPage() {
       searchResultsCount: searchResults?.length || 0
     });
 
-    let filtered = baseRecords.filter(r => r.status !== 'deleted'); // deleted는 항상 제외
+    // selectedStatuses에 'deleted'가 포함되어 있으면 deleted만 보여줌
+    let filtered = selectedStatuses.includes('deleted' as EvaluationRecordStatus)
+      ? baseRecords.filter(r => r.status === 'deleted')
+      : baseRecords.filter(r => r.status !== 'deleted'); // deleted는 기본적으로 제외
 
     // 상태 필터링 (evalFilters.status)
     if (evalFilters.status) {
