@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState, memo } from "react";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
@@ -184,7 +185,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
         mapInstanceRef.current.setCenter(new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]));
         mapInstanceRef.current.setZoom(regionConfig.zoom);
-    }, [selectedRegion]);  
+    }, [selectedRegion]);
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
@@ -337,7 +338,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant]);
+    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant, isGridMode, gridSelectedRestaurant, onRestaurantSelect]);
 
     // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
     useEffect(() => {

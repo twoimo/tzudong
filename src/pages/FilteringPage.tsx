@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -240,8 +241,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     });
 
 
-    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
-    const rawRestaurants = restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기 (useMemo로 최적화)
+    const rawRestaurants = useMemo(() => {
+        return restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+    }, [restaurantsData]);
 
     // 맛집 병합: 동일한 name + address를 가진 맛집들을 하나로 합침
     const mergeRestaurants = useCallback((restaurantList: Restaurant[]) => {

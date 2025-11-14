@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useCallback, useEffect, forwardRef } from "react";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -513,7 +514,7 @@ export default function AdminSubmissionsPage() {
 
             // 2. name + 주소의 시/군/구까지만 잘라서 지오코딩 (최대 3개)
             const shortAddress = extractCityDistrictGu(trimmedAddress);
-            const shortAddressResults = shortAddress 
+            const shortAddressResults = shortAddress
                 ? await geocodeAddressMultiple(trimmedName, shortAddress, 3)
                 : [];
 
@@ -600,7 +601,7 @@ export default function AdminSubmissionsPage() {
             if (submissionError) throw submissionError;
 
             toast.success('삭제된 레코드가 복원되고 새 데이터로 업데이트되었습니다!');
-            
+
             // 신규 맛집 등록 알림 생성
             createNewRestaurantNotification(submission.restaurant_name, submission.address, {
                 category: submission.category,
@@ -672,7 +673,7 @@ export default function AdminSubmissionsPage() {
             if (submissionError) throw submissionError;
 
             toast.success('새로운 맛집이 생성되었습니다!');
-            
+
             // 신규 맛집 등록 알림 생성
             createNewRestaurantNotification(submission.restaurant_name, submission.address, {
                 category: submission.category,
@@ -1056,11 +1057,10 @@ export default function AdminSubmissionsPage() {
                                                     <div
                                                         key={index}
                                                         onClick={() => handleSelectGeocodingResult(index)}
-                                                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${
-                                                            selectedGeocodingIndex === index
+                                                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedGeocodingIndex === index
                                                                 ? 'border-primary bg-primary/5'
                                                                 : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         <div className="flex items-start justify-between mb-2">
                                                             <div className="flex items-center gap-2">
@@ -1192,8 +1192,8 @@ export default function AdminSubmissionsPage() {
                                 <Button
                                     onClick={handleReview}
                                     disabled={
-                                        approveMutation.isPending || 
-                                        rejectMutation.isPending || 
+                                        approveMutation.isPending ||
+                                        rejectMutation.isPending ||
                                         (reviewAction === 'approve' && selectedGeocodingIndex === null)
                                     }
                                     className={

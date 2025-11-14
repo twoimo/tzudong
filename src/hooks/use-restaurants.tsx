@@ -126,7 +126,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     ? restaurant.youtube_links[0]
                     : null,
                 tzuyang_review: Array.isArray(restaurant.tzuyang_reviews) && restaurant.tzuyang_reviews.length > 0 && restaurant.tzuyang_reviews[0]
-                    ? (restaurant.tzuyang_reviews[0] as any).review
+                    ? (restaurant.tzuyang_reviews[0] as Record<string, unknown>).review as string
                     : null,
             }));
 
@@ -164,7 +164,7 @@ export function useRestaurant(id: string | null) {
                     ? dbData.youtube_links[0]
                     : null,
                 tzuyang_review: Array.isArray(dbData.tzuyang_reviews) && dbData.tzuyang_reviews.length > 0 && dbData.tzuyang_reviews[0]
-                    ? (dbData.tzuyang_reviews[0] as any).review
+                    ? (dbData.tzuyang_reviews[0] as Record<string, unknown>).review as string
                     : null,
             };
 
