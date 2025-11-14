@@ -149,7 +149,7 @@ function askUser(question: string): Promise<string> {
 async function main() {
   console.log('🍽️ Perplexity 식당 평가 시스템 시작\n');
 
-  let evaluators: PerplexityEvaluator[] = [];
+  const evaluators: PerplexityEvaluator[] = [];
 
   try {
     // 입력 파일에서 데이터 읽기

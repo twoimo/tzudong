@@ -1,9 +1,21 @@
 import { AlertCircle, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+interface DuplicateErrorDetails {
+    error_type: 'duplicate';
+    conflicting_restaurant: {
+        id: string;
+        name: string;
+        jibun_address: string;
+        road_address?: string;
+    };
+    similarity_score: number;
+    detected_at: string;
+}
+
 interface RestaurantErrorAlertProps {
     errorMessage: string | null;
-    errorDetails: any;
+    errorDetails: DuplicateErrorDetails | null;
     onResolve: () => void;
     onViewConflict?: () => void;
 }

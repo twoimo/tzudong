@@ -3,13 +3,23 @@ import { supabase } from '@/integrations/supabase/client';
 export interface ConflictCheckResult {
   hasConflict: boolean;
   conflictType?: 'name_mismatch' | 'merge_needed';
-  conflictingRestaurants?: any[];
+  conflictingRestaurants?: Array<{
+    id: string;
+    name: string;
+    jibun_address: string | null;
+    youtube_links: string[] | null;
+  }>;
   message?: string;
 }
 
 export interface DuplicateCheckResult {
   isDuplicate: boolean;
-  matchedRestaurant?: any;
+  matchedRestaurant?: {
+    id: string;
+    name: string;
+    jibun_address: string;
+    road_address: string | null;
+  };
   similarityScore: number;
   reason?: string;
 }
@@ -100,13 +110,20 @@ export async function checkRestaurantDuplicate(
     }
 
     // 각 맛집과 유사도 비교
-    for (const restaurant of existingRestaurants) {
+    for (const restaurant of existingRestaurants as Array<{ id: string; name: string; jibun_address: string | null; road_address: string | null }>) {
+      if (!restaurant.name) continue;
+
       const similarity = calculateSimilarity(name, restaurant.name);
 
       if (similarity >= NAME_SIMILARITY_THRESHOLD) {
         return {
           isDuplicate: true,
-          matchedRestaurant: restaurant,
+          matchedRestaurant: {
+            id: restaurant.id,
+            name: restaurant.name,
+            jibun_address: restaurant.jibun_address || '',
+            road_address: restaurant.road_address || null,
+          },
           similarityScore: similarity,
           reason: `"${restaurant.name}"와 이름이 ${(similarity * 100).toFixed(0)}% 유사하며 같은 주소입니다.`
         };
@@ -159,8 +176,18 @@ export async function checkDbConflict(params: {
       return { hasConflict: false };
     }
 
+    // 타입 단언으로 Supabase 타입 문제 해결
+    type RestaurantRecord = {
+      id: string;
+      name: string;
+      jibun_address: string | null;
+      youtube_links: string[] | null;
+    };
+
+    const typedRestaurants = existingRestaurants as RestaurantRecord[];
+
     // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
-    const nameMismatchConflicts = existingRestaurants.filter(restaurant =>
+    const nameMismatchConflicts = typedRestaurants.filter(restaurant =>
       restaurant.youtube_links?.includes(trimmedYoutubeLink) &&
       restaurant.name.trim() !== trimmedRestaurantName
     );
@@ -175,7 +202,7 @@ export async function checkDbConflict(params: {
     }
 
     // 충돌 타입 2: 같은 주소 + 같은 음식점명 + 다른 youtube_link (병합 필요)
-    const mergeNeededRestaurants = existingRestaurants.filter(restaurant =>
+    const mergeNeededRestaurants = typedRestaurants.filter(restaurant =>
       restaurant.name.trim() === trimmedRestaurantName &&
       !restaurant.youtube_links?.includes(trimmedYoutubeLink)
     );
@@ -201,9 +228,16 @@ export async function checkDbConflict(params: {
  * 병합 처리 함수
  */
 export async function mergeRestaurantData(params: {
-  existingRestaurant: any;
+  existingRestaurant: {
+    id: string;
+    youtube_links: string[];
+    youtube_metas: unknown[];
+    tzuyang_reviews: unknown[];
+    categories: string[] | string;
+    updated_at: string;
+  };
   newYoutubeLink: string;
-  newYoutubeMeta?: any;
+  newYoutubeMeta?: Record<string, unknown>;
   newTzuyangReview?: string;
   newCategory?: string;
 }): Promise<{ success: boolean; error?: string }> {
@@ -244,6 +278,7 @@ export async function mergeRestaurantData(params: {
     // Optimistic Locking으로 업데이트
     const { error: updateError } = await supabase
       .from('restaurants')
+      // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update({
         youtube_links: updatedYoutubeLinks,
         youtube_metas: updatedYoutubeMetas,
@@ -266,8 +301,9 @@ export async function mergeRestaurantData(params: {
 
     return { success: true };
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('병합 실패:', error);
-    return { success: false, error: error.message };
+    const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+    return { success: false, error: errorMessage };
   }
 }

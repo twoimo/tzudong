@@ -4,7 +4,7 @@ export interface NaverAddressInfo {
   road_address: string | null;
   jibun_address: string;
   english_address: string | null;
-  address_elements: any;
+  address_elements: Record<string, unknown>;
   x: string; // lng
   y: string; // lat
 }
@@ -56,7 +56,7 @@ export interface EvaluationResult {
     name: string;
     eval_value: boolean;
     origin_address: string;
-    naver_address: any[] | null;
+    naver_address: Array<Record<string, unknown>> | null;
     falseMessage?: string;
   } | null;
 }
@@ -96,8 +96,8 @@ export interface EvaluationRecord {
   road_address: string | null;
   jibun_address: string | null;
   english_address: string | null;
-  address_elements: any;
-  origin_address: any; // JSONB
+  address_elements: Record<string, unknown>;
+  origin_address: Record<string, unknown>; // JSONB
   youtube_links: string[] | null; // 배열로 변경
   youtube_meta: {
     title: string;
@@ -109,9 +109,9 @@ export interface EvaluationRecord {
       what_ads: string | null;
     };
   } | null;
-  youtube_metas: any; // JSONB 배열
+  youtube_metas: Array<Record<string, unknown>>; // JSONB 배열
   unique_id: string | null;
-  tzuyang_reviews: any; // JSONB 배열
+  tzuyang_reviews: Array<Record<string, unknown>>; // JSONB 배열
   reasoning_basis: string | null;
   evaluation_results: EvaluationResult | null;
   source_type: string | null;
@@ -165,7 +165,9 @@ export interface CategoryStats {
   total: number;
   pending: number;
   approved: number;
-  ready_for_approval: number;
+  ready_for_approval?: number;
+  hold: number;
+  db_conflict: number;
   missing: number;
   geocoding_failed: number;
   not_selected: number;

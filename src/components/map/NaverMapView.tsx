@@ -184,7 +184,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
         mapInstanceRef.current.setCenter(new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]));
         mapInstanceRef.current.setZoom(regionConfig.zoom);
-    }, [selectedRegion]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [selectedRegion]);  
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {

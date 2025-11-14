@@ -31,7 +31,12 @@ interface NaverGeocodingResponse {
     roadAddress: string;
     jibunAddress: string;
     englishAddress: string;
-    addressElements: any[];
+    addressElements: Array<{
+      types: string[];
+      longName: string;
+      shortName: string;
+      code: string;
+    }>;
     x: string;
     y: string;
   }>;
@@ -57,7 +62,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     road_address: string;
     jibun_address: string;
     english_address: string;
-    address_elements: any;
+    address_elements: Record<string, unknown>;
     x: string;
     y: string;
   }>>([]);
@@ -130,12 +135,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           description: '주소를 찾을 수 없습니다. 주소를 다시 확인해주세요.',
         });
       }
-    } catch (error: any) {
-      setGeocodingError(error.message);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      setGeocodingError(errorMessage);
       toast({
         variant: 'destructive',
         title: '지오코딩 실패',
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setGeocoding(false);
@@ -155,14 +161,14 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     road_address: string;
     jibun_address: string;
     english_address: string;
-    address_elements: any;
+    address_elements: Record<string, unknown>;
     x: string;
     y: string;
   }>): Array<{
     road_address: string;
     jibun_address: string;
     english_address: string;
-    address_elements: any;
+    address_elements: Record<string, unknown>;
     x: string;
     y: string;
   }> => {
@@ -181,7 +187,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     road_address: string;
     jibun_address: string;
     english_address: string;
-    address_elements: any;
+    address_elements: Record<string, unknown>;
     x: string;
     y: string;
   }>> => {
@@ -222,11 +228,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         road_address: addr.roadAddress,
         jibun_address: addr.jibunAddress,
         english_address: addr.englishAddress,
-        address_elements: addr.addressElements,
+        address_elements: addr.addressElements as unknown as Record<string, unknown>,
         x: addr.x,
         y: addr.y,
       }));
-    } catch (error: any) {
+    } catch (error) {
       console.error('지오코딩 에러:', error);
       return [];
     }
@@ -292,12 +298,12 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       if (duplicateCheck.isDuplicate) {
         // 중복 발견 시 에러 정보 저장
         const errorDetails = {
-          error_type: 'duplicate',
+          error_type: 'duplicate' as const,
           conflicting_restaurant: {
-            id: duplicateCheck.matchedRestaurant.id,
-            name: duplicateCheck.matchedRestaurant.name,
-            jibun_address: duplicateCheck.matchedRestaurant.jibun_address,
-            road_address: duplicateCheck.matchedRestaurant.road_address,
+            id: duplicateCheck.matchedRestaurant!.id,
+            name: duplicateCheck.matchedRestaurant!.name,
+            jibun_address: duplicateCheck.matchedRestaurant!.jibun_address,
+            road_address: duplicateCheck.matchedRestaurant!.road_address || undefined,
           },
           similarity_score: duplicateCheck.similarityScore,
           detected_at: new Date().toISOString(),
@@ -306,6 +312,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         // status는 유지하고 에러 메시지만 저장
         await supabase
           .from('restaurants')
+          // @ts-expect-error - Supabase 자동 생성 타입 문제
           .update({
             db_error_message: duplicateCheck.reason,
             db_error_details: errorDetails,
@@ -331,6 +338,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       // restaurants 테이블에 업데이트 (evaluation_records와 통합됨)
       const { data: updatedRestaurant, error: updateError } = await supabase
         .from('restaurants')
+        // @ts-expect-error - Supabase 자동 생성 타입 문제
         .update({
           name: trimmedName,
           road_address: selectedResult.road_address,
@@ -378,12 +386,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       onOpenChange(false);
       resetForm();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('승인 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
       toast({
         variant: 'destructive',
         title: '승인 실패',
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -568,8 +577,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                     key={index}
                     onClick={() => setSelectedGeocodingIndex(index)}
                     className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedGeocodingIndex === index
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
+                      ? 'border-primary bg-primary/5'
+                      : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
                       }`}
                   >
                     <div className="flex items-start justify-between mb-2">
