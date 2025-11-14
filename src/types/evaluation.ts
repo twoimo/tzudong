@@ -136,6 +136,20 @@ export interface EvaluationRecord {
   processed_by?: string | null;
   processed_at?: string | null;
   deleted_at?: string | null;
+
+  // 중복 검사 에러 추적
+  db_error_message?: string | null;
+  db_error_details?: {
+    error_type: 'duplicate';
+    conflicting_restaurant: {
+      id: string;
+      name: string;
+      jibun_address: string;
+      road_address?: string;
+    };
+    similarity_score: number;
+    detected_at: string;
+  } | null;
 }
 
 export interface EvaluationFilter {

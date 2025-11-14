@@ -11,6 +11,7 @@ import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResoluti
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { ClipboardCheck, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -546,11 +547,59 @@ export default function AdminEvaluationPage() {
     try {
       setLoading(true);
 
+      // 🔥 중복 검사 추가
+      const duplicateCheck = await checkRestaurantDuplicate(
+        record.restaurant_name || record.name || '',
+        record.jibun_address,
+        record.id
+      );
+
+      if (duplicateCheck.isDuplicate) {
+        // 중복 발견 시 에러 정보 저장
+        const errorDetails = {
+          error_type: 'duplicate',
+          conflicting_restaurant: {
+            id: duplicateCheck.matchedRestaurant.id,
+            name: duplicateCheck.matchedRestaurant.name,
+            jibun_address: duplicateCheck.matchedRestaurant.jibun_address,
+            road_address: duplicateCheck.matchedRestaurant.road_address,
+          },
+          similarity_score: duplicateCheck.similarityScore,
+          detected_at: new Date().toISOString(),
+        };
+
+        // status는 유지하고 에러 메시지만 저장
+        await supabase
+          .from('restaurants')
+          .update({
+            db_error_message: duplicateCheck.reason,
+            db_error_details: errorDetails,
+          })
+          .eq('id', record.id);
+
+        // 상태 업데이트 (새로고침 없이)
+        updateRecordInState(record.id, {
+          db_error_message: duplicateCheck.reason,
+          db_error_details: errorDetails,
+        });
+
+        toast({
+          variant: 'destructive',
+          title: '중복 오류',
+          description: duplicateCheck.reason,
+        });
+
+        setLoading(false);
+        return;
+      }
+
       // status를 'approved'로 업데이트
       const { error } = await supabase
         .from('restaurants')
         .update({
           status: 'approved',
+          db_error_message: null, // 에러 메시지 초기화
+          db_error_details: null, // 에러 상세 초기화
           updated_at: new Date().toISOString(),
         })
         .eq('id', record.id);
@@ -560,6 +609,8 @@ export default function AdminEvaluationPage() {
       // 상태 업데이트 (새로고침 없이)
       updateRecordInState(record.id, {
         status: 'approved',
+        db_error_message: null,
+        db_error_details: null,
         updated_at: new Date().toISOString(),
       });
 

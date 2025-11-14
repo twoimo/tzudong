@@ -2,12 +2,14 @@ import { EvaluationRecord } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Check, X, AlertCircle } from 'lucide-react';
+import { RestaurantErrorAlert } from './RestaurantErrorAlert';
 
 interface EvaluationRowDetailsProps {
   record: EvaluationRecord;
+  onEdit?: () => void;
 }
 
-export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
+export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
   const { youtube_meta, evaluation_results, restaurant_info, missing_message } = record;
 
   // 디버깅: 데이터 구조 확인
@@ -22,7 +24,55 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
     has_evaluation_results: !!evaluation_results,
     has_restaurant_info: !!restaurant_info,
     evaluation_results_is_empty: evaluation_results && typeof evaluation_results === 'object' && Object.keys(evaluation_results).length === 0,
+    db_error_message: record.db_error_message,
+    db_error_details: record.db_error_details,
   });
+
+  // 🔥 중복 에러 알림 표시
+  const showErrorAlert = record.db_error_message && record.db_error_details;
+
+  // Missing 음식점인 경우
+  if (record.status === 'missing') {
+    return (
+      <>
+        {showErrorAlert && (
+          <div className="p-4 bg-gray-50 dark:bg-gray-900">
+            <RestaurantErrorAlert
+              errorMessage={record.db_error_message || null}
+              errorDetails={record.db_error_details || null}
+              onResolve={() => {
+                if (onEdit) {
+                  onEdit();
+                }
+              }}
+            />
+          </div>
+        )}
+        <Card className="border-yellow-500">
+          <CardHeader>
+            <CardTitle className="text-yellow-600 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5" />
+              Missing 음식점: {record.restaurant_name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p><strong>메시지:</strong> {missing_message}</p>
+              <p><strong>영상 제목:</strong> {youtube_meta?.title}</p>
+              <p><strong>YouTube 링크:</strong>
+                <a href={record.youtube_link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">
+                  {record.youtube_link}
+                </a>
+              </p>
+              <p className="text-sm text-muted-foreground">
+                이 음식점은 evaluation_target에는 있지만 restaurants 배열에서 누락되었습니다.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </>
+    );
+  }
 
   // Missing 음식점인 경우
   if (record.status === 'missing') {
@@ -156,6 +206,19 @@ export function EvaluationRowDetails({ record }: EvaluationRowDetailsProps) {
 
   return (
     <div className="p-6 space-y-6">
+      {/* 🔥 에러 알림 - 최상단 표시 */}
+      {showErrorAlert && (
+        <RestaurantErrorAlert
+          errorMessage={record.db_error_message || null}
+          errorDetails={record.db_error_details || null}
+          onResolve={() => {
+            if (onEdit) {
+              onEdit();
+            }
+          }}
+        />
+      )}
+
       {/* 영상 정보 */}
       <Card>
         <CardHeader>
