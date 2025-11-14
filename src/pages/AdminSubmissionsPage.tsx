@@ -18,7 +18,17 @@ import {
     Shield,
     User,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -61,6 +71,18 @@ export default function AdminSubmissionsPage() {
         lat: "",
         lng: "",
     });
+
+    // 복원 제안 다이얼로그 상태
+    const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+    const [deletedRecordInfo, setDeletedRecordInfo] = useState<{
+        id: string;
+        name: string;
+        road_address: string;
+    } | null>(null);
+    const [pendingSubmissionData, setPendingSubmissionData] = useState<{
+        submissionId: string;
+        submission: SubmissionWithUser;
+    } | null>(null);
 
     // 모든 제보 조회 (관리자만) - 무한 스크롤 방식
     const {
@@ -199,17 +221,30 @@ export default function AdminSubmissionsPage() {
                 if (updateError) throw updateError;
                 restaurantId = submission.original_restaurant_id;
             } else {
-                // 신규 제보: 중복 체크 먼저 수행
+                // 신규 제보: 중복 체크 먼저 수행 (deleted 레코드 포함)
                 const { data: existingRestaurants, error: checkError } = await supabase
                     .from('restaurants')
-                    .select('id, name, road_address')
+                    .select('id, name, road_address, status')
                     .eq('name', submission.restaurant_name)
                     .eq('road_address', submission.address);
 
                 if (checkError) throw checkError;
 
                 if (existingRestaurants && existingRestaurants.length > 0) {
-                    throw new Error(`이미 등록된 맛집입니다: "${submission.restaurant_name}" (${submission.address})`);
+                    // deleted 레코드 찾기
+                    const deletedRecord = existingRestaurants.find(r => r.status === 'deleted');
+                    const activeRecord = existingRestaurants.find(r => r.status !== 'deleted');
+
+                    if (activeRecord) {
+                        // active 레코드가 있으면 차단
+                        throw new Error(`이미 등록된 맛집입니다: "${submission.restaurant_name}" (${submission.address})`);
+                    }
+
+                    if (deletedRecord) {
+                        // deleted 레코드만 있는 경우 → 복원 제안 필요
+                        // 이 경우는 별도 처리 필요 (다이얼로그로 확인)
+                        throw new Error(`DELETED_RECORD_FOUND:${deletedRecord.id}`);
+                    }
                 }
 
                 // 새로운 맛집 생성
@@ -266,8 +301,24 @@ export default function AdminSubmissionsPage() {
             setIsReviewModalOpen(false);
             resetApprovalData();
         },
-        onError: (error: any) => {
-            toast.error(error.message || '승인에 실패했습니다');
+        onError: (error: any, variables) => {
+            // deleted 레코드 발견 시 복원 다이얼로그 표시
+            if (error.message && error.message.startsWith('DELETED_RECORD_FOUND:')) {
+                const deletedId = error.message.split(':')[1];
+                setDeletedRecordInfo({
+                    id: deletedId,
+                    name: variables.submission.restaurant_name,
+                    road_address: variables.submission.address,
+                });
+                setPendingSubmissionData({
+                    submissionId: variables.submissionId,
+                    submission: variables.submission,
+                });
+                setShowRestoreDialog(true);
+                setIsReviewModalOpen(false); // 승인 모달 닫기
+            } else {
+                toast.error(error.message || '승인에 실패했습니다');
+            }
         },
     });
 
@@ -324,6 +375,142 @@ export default function AdminSubmissionsPage() {
             lat: "",
             lng: "",
         });
+    };
+
+    // 삭제된 레코드 복원 및 새 데이터로 업데이트
+    const handleRestoreAndUpdate = async () => {
+        if (!deletedRecordInfo || !pendingSubmissionData || !user) return;
+
+        try {
+            const { submission, submissionId } = pendingSubmissionData;
+            const lat = parseFloat(approvalData.lat);
+            const lng = parseFloat(approvalData.lng);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                toast.error('올바른 좌표를 입력해주세요');
+                return;
+            }
+
+            // 삭제된 레코드를 pending 상태로 복원 + 새 제보 데이터로 업데이트
+            const { error: updateError } = await supabase
+                .from('restaurants')
+                .update({
+                    name: submission.restaurant_name,
+                    road_address: submission.address,
+                    phone: submission.phone,
+                    category: Array.isArray(submission.category) ? submission.category : [submission.category],
+                    youtube_links: [submission.youtube_link],
+                    description: submission.description,
+                    lat,
+                    lng,
+                    status: 'approved', // 바로 approved로 설정
+                    updated_at: new Date().toISOString(),
+                    updated_by_admin_id: user.id,
+                })
+                .eq('id', deletedRecordInfo.id);
+
+            if (updateError) throw updateError;
+
+            // 제보 상태 업데이트
+            const { error: submissionError } = await supabase
+                .from('restaurant_submissions')
+                .update({
+                    status: 'approved',
+                    reviewed_by_admin_id: user.id,
+                    reviewed_at: new Date().toISOString(),
+                    approved_restaurant_id: deletedRecordInfo.id,
+                })
+                .eq('id', submissionId);
+
+            if (submissionError) throw submissionError;
+
+            toast.success('삭제된 레코드가 복원되고 새 데이터로 업데이트되었습니다!');
+            
+            // 신규 맛집 등록 알림 생성
+            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
+                category: submission.category,
+                submissionId: submission.id
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+
+            // 다이얼로그 닫기
+            setShowRestoreDialog(false);
+            setDeletedRecordInfo(null);
+            setPendingSubmissionData(null);
+            setIsReviewModalOpen(false);
+            resetApprovalData();
+        } catch (error: any) {
+            toast.error(error.message || '복원 및 업데이트에 실패했습니다');
+        }
+    };
+
+    // 새 레코드 생성 (deleted 레코드 무시)
+    const handleCreateNew = async () => {
+        if (!pendingSubmissionData || !user) return;
+
+        try {
+            const { submission, submissionId } = pendingSubmissionData;
+            const lat = parseFloat(approvalData.lat);
+            const lng = parseFloat(approvalData.lng);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                toast.error('올바른 좌표를 입력해주세요');
+                return;
+            }
+
+            // 새로운 맛집 생성 (deleted 레코드 무시하고)
+            const { data: restaurant, error: restaurantError } = await supabase
+                .from('restaurants')
+                .insert({
+                    name: submission.restaurant_name,
+                    road_address: submission.address,
+                    phone: submission.phone,
+                    category: Array.isArray(submission.category) ? submission.category : [submission.category],
+                    youtube_links: [submission.youtube_link],
+                    description: submission.description,
+                    lat,
+                    lng,
+                })
+                .select()
+                .single();
+
+            if (restaurantError) throw restaurantError;
+
+            // 제보 상태 업데이트
+            const { error: submissionError } = await supabase
+                .from('restaurant_submissions')
+                .update({
+                    status: 'approved',
+                    reviewed_by_admin_id: user.id,
+                    reviewed_at: new Date().toISOString(),
+                    approved_restaurant_id: restaurant.id,
+                })
+                .eq('id', submissionId);
+
+            if (submissionError) throw submissionError;
+
+            toast.success('새로운 맛집이 생성되었습니다!');
+            
+            // 신규 맛집 등록 알림 생성
+            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
+                category: submission.category,
+                submissionId: submission.id
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+
+            // 다이얼로그 닫기
+            setShowRestoreDialog(false);
+            setDeletedRecordInfo(null);
+            setPendingSubmissionData(null);
+            setIsReviewModalOpen(false);
+            resetApprovalData();
+        } catch (error: any) {
+            toast.error(error.message || '맛집 생성에 실패했습니다');
+        }
     };
 
     const openReviewModal = (submission: SubmissionWithUser, action: 'approve' | 'reject') => {
@@ -755,6 +942,63 @@ export default function AdminSubmissionsPage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* 복원 제안 다이얼로그 */}
+            <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>🔄 삭제된 레코드 발견</AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-4">
+                            <p className="font-semibold text-orange-600 dark:text-orange-400">
+                                같은 이름과 주소의 삭제된 맛집이 데이터베이스에 있습니다.
+                            </p>
+
+                            {deletedRecordInfo && (
+                                <div className="p-3 bg-muted rounded space-y-1 text-sm">
+                                    <div><strong>맛집명:</strong> {deletedRecordInfo.name}</div>
+                                    <div><strong>주소:</strong> {deletedRecordInfo.road_address}</div>
+                                    <div className="text-destructive"><strong>상태:</strong> 삭제됨</div>
+                                </div>
+                            )}
+
+                            <div className="space-y-2 text-sm">
+                                <p className="font-medium">다음 중 하나를 선택하세요:</p>
+                                <div className="space-y-2 pl-4">
+                                    <div>
+                                        <strong className="text-blue-600">✅ 복원 및 업데이트 (권장):</strong>
+                                        <p className="text-muted-foreground">삭제된 레코드를 복원하고 새 제보 내용으로 업데이트합니다. 중복 데이터가 생기지 않습니다.</p>
+                                    </div>
+                                    <div>
+                                        <strong className="text-gray-600">➕ 새로 생성:</strong>
+                                        <p className="text-muted-foreground">삭제된 레코드를 무시하고 새로운 레코드를 생성합니다. (중복 발생 주의)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setShowRestoreDialog(false);
+                            setDeletedRecordInfo(null);
+                            setPendingSubmissionData(null);
+                        }}>
+                            취소
+                        </AlertDialogCancel>
+                        <Button
+                            variant="outline"
+                            onClick={handleCreateNew}
+                        >
+                            새로 생성
+                        </Button>
+                        <AlertDialogAction
+                            onClick={handleRestoreAndUpdate}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            복원 및 업데이트 (권장)
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
