@@ -23,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ChevronDown, ChevronUp, Check, Pause, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, Pause, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
 
@@ -31,6 +31,7 @@ interface EvaluationTableProps {
   records: EvaluationRecord[];
   onApprove: (record: EvaluationRecord) => void;
   onDelete: (record: EvaluationRecord) => void;
+  onRestore?: (record: EvaluationRecord) => void; // 삭제된 레코드 복원 함수
   onRegisterMissing?: (record: EvaluationRecord) => void;
   onResolveConflict?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
@@ -83,6 +84,7 @@ export function EvaluationTable({
   records,
   onApprove,
   onDelete,
+  onRestore,
   onRegisterMissing,
   onResolveConflict,
   onEdit,
@@ -111,6 +113,7 @@ export function EvaluationTable({
       missing: { label: 'Missing', variant: 'destructive' },
       geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
       not_selected: { label: '평가 미대상', variant: 'outline' },
+      deleted: { label: '삭제됨', variant: 'destructive' },
     };
 
     const config = variants[status] || { label: status, variant: 'default' };
@@ -784,7 +787,20 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   {/* 고정 컬럼: 액션 */}
                   <TableCell className="sticky right-0 bg-background">
                     <div className="flex gap-2 justify-center">
-                      {record.is_missing || record.is_not_selected || !record.geocoding_success ? (
+                      {record.status === 'deleted' ? (
+                        // 삭제된 레코드 - 되돌리기 버튼만 표시
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => onRestore?.(record)}
+                            disabled={loading}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Undo2 className="w-4 h-4 mr-1" />
+                            되돌리기
+                          </Button>
+                        </>
+                      ) : record.is_missing || record.is_not_selected || !record.geocoding_success ? (
                         // 지오코딩 실패한 케이스 (Missing, 평가 미대상, 지오코딩 실패)
                         <>
                           <Button
@@ -804,19 +820,6 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                             disabled={loading}
                           >
                             <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : record.status === 'deleted' ? (
-                        // 삭제된 레코드
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => onEdit?.(record)}
-                            disabled={loading}
-                            variant="outline"
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            수정
                           </Button>
                         </>
                       ) : (

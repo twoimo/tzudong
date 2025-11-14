@@ -631,7 +631,7 @@ export default function AdminEvaluationPage() {
 
       toast({
         title: '삭제 완료',
-        description: `"${record.restaurant_name || record.name}"이(가) 삭제되었습니다 (복구 불가)`,
+        description: `"${record.restaurant_name || record.name}"이(가) 삭제되었습니다`,
       });
     } catch (error: unknown) {
       toast({
@@ -655,6 +655,48 @@ export default function AdminEvaluationPage() {
   const handleEdit = (record: EvaluationRecord) => {
     setSelectedEditRecord(record);
     setEditModalOpen(true);
+  };
+
+  // 삭제된 레코드 복원 (pending 상태로 되돌리기)
+  const handleRestore = async (record: EvaluationRecord) => {
+    if (!confirm(`"${record.restaurant_name || record.name}"을(를) 복원하시겠습니까?\n\n복원하면 미처리(pending) 상태로 돌아갑니다.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // status를 'pending'으로 업데이트
+      const { error } = await supabase
+        .from('restaurants')
+        .update({
+          status: 'pending',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', record.id);
+
+      if (error) throw error;
+
+      // 상태 업데이트 (새로고침 없이)
+      updateRecordInState(record.id, {
+        status: 'pending',
+        updated_at: new Date().toISOString(),
+      } as Partial<EvaluationRecord>);
+
+      toast({
+        title: '복원 완료',
+        description: `"${record.restaurant_name || record.name}"이(가) 미처리 상태로 복원되었습니다`,
+      });
+    } catch (error: unknown) {
+      console.error('복원 실패:', error);
+      toast({
+        variant: 'destructive',
+        title: '복원 실패',
+        description: error instanceof Error ? error.message : '알 수 없는 오류',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 인증 로딩 중이거나 권한 확인 중일 때
@@ -740,6 +782,7 @@ export default function AdminEvaluationPage() {
                   records={displayedRecords}
                   onApprove={handleApprove}
                   onDelete={handleDelete}
+                  onRestore={handleRestore}
                   onRegisterMissing={handleRegisterMissing}
                   onResolveConflict={handleResolveConflict}
                   onEdit={handleEdit}
