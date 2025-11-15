@@ -82,7 +82,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   // 선택된 지오코딩 결과
   const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
-  
+
   // 승인 확인 모달 상태
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
   const [conflictingRestaurantInfo, setConflictingRestaurantInfo] = useState<{
@@ -355,7 +355,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         // 유튜브 링크가 다른 경우: 확인 모달 표시
         if (currentYoutubeLink !== matchedYoutubeLink) {
           console.log('✅ 유튜브 링크가 다름 → 확인 모달 표시');
-          
+
           setConflictingRestaurantInfo({
             name: duplicateCheck.matchedRestaurant!.name,
             address: duplicateCheck.matchedRestaurant!.jibun_address || duplicateCheck.matchedRestaurant!.road_address || '',
@@ -448,9 +448,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       lng: parseFloat(selectedResult.x),
       phone: trimmedPhone || null,
       categories: record.restaurant_info?.category ? [record.restaurant_info.category] : [],
-      youtube_links: [record.youtube_link],
-      youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
-      tzuyang_reviews: trimmedTzuyangReview ? [{ review: trimmedTzuyangReview }] : (record.restaurant_info?.tzuyang_review ? [{ review: record.restaurant_info.tzuyang_review }] : []),
+      youtube_link: record.youtube_link,
+      tzuyang_review: trimmedTzuyangReview || record.restaurant_info?.tzuyang_review || null,
       status: 'approved', // 승인 상태로 변경
       geocoding_success: true, // 지오코딩 성공으로 설정
       geocoding_false_stage: null, // 지오코딩 성공 시 NULL (체크 제약 준수)
@@ -518,7 +517,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         },
       } : undefined,
     });
-    
+
     onOpenChange(false);
     resetForm();
   };
@@ -564,7 +563,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updateData.geocoding_false_stage = null;
       }
 
-      // 🔥 수정: tzuyang_reviews → tzuyang_review (단일 값)
+      // 쯔양 리뷰 업데이트 (text 타입)
       if (trimmedTzuyangReview) {
         updateData.tzuyang_review = trimmedTzuyangReview;
       }
@@ -934,7 +933,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           </Button>
         </DialogFooter>
       </DialogContent>
-      
+
       {/* 승인 확인 모달 */}
       <AlertDialog open={showApprovalConfirm} onOpenChange={setShowApprovalConfirm}>
         <AlertDialogContent>

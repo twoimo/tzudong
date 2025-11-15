@@ -93,7 +93,7 @@ Table restaurants {
   name text [not null, note: '맛집 이름 (2-100자)']
   phone text [note: '전화번호 (형식: 02-1234-5678 또는 010-1234-5678)']
   description text
-  category text[] [note: '맛집 카테고리 배열 (1-5개, status=approved일 때 필수)']
+  categories text[] [note: '맛집 카테고리 배열 (1-5개, status=approved일 때 필수)']
   
   // 위치 정보
   lat numeric [note: '위도 (범위: -90 ~ 90, status=approved일 때 필수)']
@@ -107,13 +107,12 @@ Table restaurants {
   origin_address jsonb [note: 'AI 크롤링 원본 주소 정보 (JSON: {address, lat, lng})']
   
   // 유튜브 관련 정보
-  youtube_links text[] [default: '{}', note: '유튜브 영상 링크 배열']
+  youtube_link text [note: '유튜브 영상 링크 (단일)']
   youtube_meta jsonb [note: '개별 유튜브 메타데이터 (AI 크롤링용)']
-  youtube_metas jsonb [default: '[]', note: '복수 유튜브 메타데이터 배열']
   unique_id text [unique, note: 'AI 크롤링 고유 식별자 (youtube_link 기반)']
   
   // 쯔양 리뷰 정보
-  tzuyang_reviews jsonb [default: '[]', note: '쯔양 리뷰 정보 (JSONB 배열)']
+  tzuyang_review text [note: '쯔양 리뷰 내용 (텍스트)']
   reasoning_basis text [note: 'AI 평가 근거']
   
   // AI 평가 정보
@@ -146,7 +145,7 @@ Table restaurants {
   indexes {
     name
     (lat, lng) [name: 'idx_restaurants_lat_lng']
-    category [type: gin]
+    categories [type: gin]
     created_at [name: 'idx_restaurants_created_at', type: btree]
     review_count [name: 'idx_restaurants_review_count', type: btree]
     
@@ -168,8 +167,6 @@ Table restaurants {
     
     // JSONB 인덱스
     address_elements [type: gin]
-    youtube_metas [type: gin]
-    tzuyang_reviews [type: gin]
     youtube_meta [type: gin, name: 'idx_restaurants_youtube_meta']
     evaluation_results [type: gin, name: 'idx_restaurants_evaluation_results']
     origin_address [type: gin, name: 'idx_restaurants_origin_address']
@@ -314,7 +311,7 @@ Table announcements {
 Table mv_restaurant_stats {
   id uuid [pk]
   name text
-  category text[]
+  categories text[]
   lat numeric
   lng numeric
   road_address text
