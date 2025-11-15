@@ -87,7 +87,6 @@ export default function RestaurantSubmissionsPage() {
     const { data: allRestaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: async () => {
-            console.log('🔍 맛집 조회 시작...');
             const { data, error } = await supabase
                 .from('restaurants')
                 .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_links, youtube_metas, tzuyang_reviews')
@@ -98,7 +97,6 @@ export default function RestaurantSubmissionsPage() {
                 console.error('❌ 맛집 조회 실패:', error);
                 throw error;
             }
-            console.log('✅ 맛집 조회 성공:', data?.length, '개');
             return data || [];
         },
     });
@@ -352,8 +350,6 @@ export default function RestaurantSubmissionsPage() {
         // 동일한 상호명을 가진 모든 맛집 찾기
         const sameNameRestaurants = allRestaurants.filter(r => r.name === restaurant.name);
 
-        console.log(`🏪 "${restaurant.name}" 맛집 ${sameNameRestaurants.length}개 발견`);
-
         const safeCategories = Array.isArray(restaurant.categories)
             ? restaurant.categories
             : (restaurant.categories ? [restaurant.categories] : []);
@@ -367,8 +363,6 @@ export default function RestaurantSubmissionsPage() {
         const allTzuyangReviews: any[] = [];
 
         sameNameRestaurants.forEach((r, index) => {
-            console.log(`  - 맛집 ${index + 1}: ID=${r.id.substring(0, 8)}, unique_id=${r.unique_id}`);
-
             // youtube_links 통합
             if (Array.isArray(r.youtube_links)) {
                 r.youtube_links.forEach(link => {
@@ -398,8 +392,6 @@ export default function RestaurantSubmissionsPage() {
                 allTzuyangReviews.push({ review: r.tzuyang_reviews });
             }
         });
-
-        console.log(`✅ 통합 결과: 유튜브 ${allYoutubeLinks.length}개, 메타 ${allYoutubeMetas.length}개, 리뷰 ${allTzuyangReviews.length}개`);
 
         // 배열 길이 동기화
         const { youtubeLinks: syncedLinks, tzuyangReviews: syncedReviews } = syncArrays(allYoutubeLinks, allTzuyangReviews);

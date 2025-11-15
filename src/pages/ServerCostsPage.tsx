@@ -43,6 +43,24 @@ interface ServerCost {
     updated_at: string | null;
 }
 
+// 더미 데이터 (실제 데이터가 없을 때 표시)
+const DUMMY_SERVER_COSTS: ServerCost[] = [
+    {
+        id: 'dummy-1',
+        item_name: 'Supabase Pro',
+        monthly_cost: 25,
+        description: 'Database and Authentication',
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: 'dummy-2',
+        item_name: 'Vercel Pro',
+        monthly_cost: 20,
+        description: 'Frontend Hosting',
+        updated_at: new Date().toISOString(),
+    },
+];
+
 
 const ServerCostsPage = () => {
     const { isAdmin } = useAuth();

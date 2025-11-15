@@ -75,7 +75,7 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
   }
 
   // Missing 음식점인 경우
-  if (record.status === 'missing') {
+  if (record.is_missing || (record.status as string) === 'missing') {
     return (
       <Card className="border-yellow-500">
         <CardHeader>
@@ -346,7 +346,7 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
           )}
 
           {/* 5. 주소 정합성 */}
-          {evaluation_results?.location_match_TF && (
+          {evaluation_results?.location_match_TF ? (
             <div className={`border-l-4 ${evaluation_results.location_match_TF.eval_value ? 'border-green-500' : 'border-red-500'} pl-4`}>
               <h4 className="font-semibold mb-1 flex items-center gap-2">
                 5️⃣ 주소 정합성:
@@ -371,12 +371,37 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
                 <strong>원본 주소:</strong> {evaluation_results.location_match_TF.origin_address}
               </p>
             </div>
-          )}
-          {!evaluation_results?.location_match_TF && hasEvaluationData && (
-            <div className="border-l-4 border-gray-300 pl-4">
-              <h4 className="font-semibold mb-1 text-muted-foreground">
-                5️⃣ 주소 정합성: 데이터 없음
+          ) : (
+            <div className={`border-l-4 ${record.geocoding_success ? 'border-green-500' : 'border-red-500'} pl-4`}>
+              <h4 className="font-semibold mb-1 flex items-center gap-2">
+                5️⃣ 주소 정합성 (지오코딩 기반):
+                {record.geocoding_success ? (
+                  <Badge variant="default" className="gap-1">
+                    <Check className="w-3 h-3" />
+                    성공
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="gap-1">
+                    <X className="w-3 h-3" />
+                    실패
+                  </Badge>
+                )}
               </h4>
+              {!record.geocoding_success && record.geocoding_false_stage !== null && (
+                <p className="text-sm text-destructive">
+                  <strong>실패 단계:</strong> Stage {record.geocoding_false_stage}
+                </p>
+              )}
+              {record.jibun_address && (
+                <p className="text-sm mt-1">
+                  <strong>지번 주소:</strong> {record.jibun_address}
+                </p>
+              )}
+              {record.road_address && (
+                <p className="text-sm">
+                  <strong>도로명 주소:</strong> {record.road_address}
+                </p>
+              )}
             </div>
           )}
 

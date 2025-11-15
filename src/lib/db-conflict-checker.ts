@@ -90,11 +90,12 @@ export async function checkRestaurantDuplicate(
   const normalizedAddress = jibunAddress.trim().substring(0, ADDRESS_MATCH_LENGTH);
 
   try {
-    // 같은 지역의 맛집들 조회
+    // 같은 지역의 승인된 맛집들 조회 (status = 'approved'만 대상)
     let query = supabase
       .from('restaurants')
-      .select('id, name, jibun_address, road_address')
-      .ilike('jibun_address', `${normalizedAddress}%`);
+      .select('id, name, jibun_address, road_address, status')
+      .ilike('jibun_address', `${normalizedAddress}%`)
+      .eq('status', 'approved'); // 승인된 것만 검사
 
     // 수정 시 자기 자신 제외
     if (restaurantId) {
@@ -110,7 +111,7 @@ export async function checkRestaurantDuplicate(
     }
 
     // 각 맛집과 유사도 비교
-    for (const restaurant of existingRestaurants as Array<{ id: string; name: string; jibun_address: string | null; road_address: string | null }>) {
+    for (const restaurant of existingRestaurants as Array<{ id: string; name: string; jibun_address: string | null; road_address: string | null; status: string }>) {
       if (!restaurant.name) continue;
 
       const similarity = calculateSimilarity(name, restaurant.name);
@@ -158,11 +159,12 @@ export async function checkDbConflict(params: {
   const trimmedYoutubeLink = youtubeLink.trim();
 
   try {
-    // 같은 지번주소의 모든 음식점 검색
+    // 같은 지번주소의 승인된 음식점만 검색 (status = 'approved')
     let query = supabase
       .from('restaurants')
       .select('*')
-      .eq('jibun_address', trimmedJibunAddress);
+      .eq('jibun_address', trimmedJibunAddress)
+      .eq('status', 'approved'); // 승인된 것만 검사
 
     // 수정 시 본인 제외
     if (excludeRestaurantId) {

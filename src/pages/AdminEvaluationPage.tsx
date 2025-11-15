@@ -24,11 +24,27 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const PAGE_SIZE = 50; // 한 번에 로드할 레코드 수
+const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
 
 export default function AdminEvaluationPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+
+  // localStorage에서 초기 상태 복원
+  const getInitialState = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Failed to parse saved state:', error);
+    }
+    return null;
+  };
+
+  const savedState = getInitialState();
 
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
   const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
@@ -47,8 +63,8 @@ export default function AdminEvaluationPage() {
     not_selected: 0,
     deleted: 0,
   });
-  const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
+  const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>(savedState?.selectedStatuses || []);
+  const [searchQuery, setSearchQuery] = useState<string>(savedState?.searchQuery || ''); // 검색어 상태
   const [searchResults, setSearchResults] = useState<EvaluationRecord[] | null>(null); // 검색 결과
   const [isSearching, setIsSearching] = useState(false); // 검색 로딩 상태
   const [evalFilters, setEvalFilters] = useState<{
@@ -60,7 +76,7 @@ export default function AdminEvaluationPage() {
     category_validity_TF?: string;
     category_TF?: string;
     status?: string;
-  }>({});
+  }>(savedState?.evalFilters || {});
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
   const [conflictPanelOpen, setConflictPanelOpen] = useState(false);
@@ -69,7 +85,7 @@ export default function AdminEvaluationPage() {
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
 
   // 테이블 뷰 토글 상태
-  const [isAlternateView, setIsAlternateView] = useState(false);
+  const [isAlternateView, setIsAlternateView] = useState(savedState?.isAlternateView || false);
 
   // 오류 경고 다이얼로그
   const [showConflictWarning, setShowConflictWarning] = useState(false);
@@ -81,23 +97,72 @@ export default function AdminEvaluationPage() {
   // 무한 스크롤을 위한 scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // 첫 마운트 여부를 추적 (검색 자동 실행 방지)
+  const isInitialMount = useRef(true);
+
+  // 데이터 로드 여부 추적 (세션 동안 한 번만 로드)
+  const hasLoadedData = useRef(false);
+
+  // 권한 체크 완료 여부 추적 (초기 로드 시 한 번만 체크)
+  const hasCheckedAuth = useRef(false);
+
+  // 상태 변경 시 localStorage에 저장
+  useEffect(() => {
+    const stateToSave = {
+      selectedStatuses,
+      searchQuery,
+      evalFilters,
+      isAlternateView,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error('Failed to save state:', error);
+    }
+  }, [selectedStatuses, searchQuery, evalFilters, isAlternateView]);
+
   // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
-    if (authLoading) return; // 인증 로딩 중에는 대기
+    // 인증 로딩 중에는 아무것도 하지 않음 (로딩 완료 후 권한 체크)
+    if (authLoading) {
+      return;
+    }
 
-    if (!user || !isAdmin) {
+    // 이미 권한 체크를 완료했으면 다시 체크하지 않음 (재마운트 시 중복 체크 방지)
+    if (hasCheckedAuth.current) {
+      return;
+    }
+
+    // 인증 로딩이 완료된 후 권한 체크
+    if (!user) {
+      hasCheckedAuth.current = true;
       toast({
         title: "접근 권한이 없습니다",
         description: "관리자만 접근할 수 있는 페이지입니다.",
         variant: "destructive",
       });
       navigate('/');
+      return;
     }
+
+    // user는 있지만 isAdmin이 false인 경우 - 비동기 체크가 완료될 때까지 대기
+    if (!isAdmin) {
+      return;
+    }
+
+    // user도 있고 isAdmin도 true인 경우
+    hasCheckedAuth.current = true;
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, authLoading]);
 
   // YouTube 제목 퍼지 검색
   useEffect(() => {
+    // 첫 마운트 시에는 검색 실행하지 않음 (localStorage 복원으로 인한 자동 실행 방지)
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     const performFuzzySearch = async () => {
       if (!searchQuery.trim()) {
         setSearchResults(null);
@@ -106,7 +171,6 @@ export default function AdminEvaluationPage() {
 
       setIsSearching(true);
       try {
-        console.log('검색 시작:', searchQuery.trim());
         // @ts-expect-error - Supabase RPC 타입 문제
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
@@ -118,9 +182,6 @@ export default function AdminEvaluationPage() {
           console.error('RPC 에러:', error);
           throw error;
         }
-
-        console.log('검색 결과:', (data ?? []).length, '개');
-        console.log('검색 결과 샘플:', (data ?? []).slice(0, 3));
 
         // 검색 결과를 EvaluationRecord 형식으로 변환
         const convertedData = (data || []).map((r: Record<string, unknown>) => {
@@ -188,12 +249,6 @@ export default function AdminEvaluationPage() {
     // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
     const baseRecords = searchResults || allRecords;
 
-    console.log('🔍 필터링 시작:', {
-      selectedStatuses,
-      baseRecordsCount: baseRecords?.length || 0,
-      searchResultsCount: searchResults?.length || 0
-    });
-
     // selectedStatuses에 'deleted'가 포함되어 있으면 deleted만 보여줌
     let filtered = selectedStatuses.includes('deleted' as EvaluationRecordStatus)
       ? baseRecords.filter(r => r.status === 'deleted')
@@ -201,8 +256,6 @@ export default function AdminEvaluationPage() {
 
     // 상태 필터링 (evalFilters.status)
     if (evalFilters.status) {
-      console.log('🎯 상태 필터링 적용:', evalFilters.status);
-
       filtered = filtered.filter(r => {
         let match = false;
 
@@ -220,14 +273,15 @@ export default function AdminEvaluationPage() {
             match = r.is_not_selected === true;
             break;
           case 'ready_for_approval':
-            // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드
+            // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드 + status가 pending이거나 hold인 경우만
             match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
               r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
               r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
               r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
               r.geocoding_success === true &&
               r.evaluation_results?.category_validity_TF?.eval_value === true &&
-              r.evaluation_results?.category_TF?.eval_value === true;
+              r.evaluation_results?.category_TF?.eval_value === true &&
+              (r.status === 'pending' || r.status === 'hold'); // 승인되지 않은 것만
             break;
           default:
             // 일반 상태: status 필드와 일치하는 레코드
@@ -235,16 +289,8 @@ export default function AdminEvaluationPage() {
             break;
         }
 
-        if (match) {
-          console.log(`✅ 필터링 통과: ${r.name}, status: ${r.status}, geocoding_success: ${r.geocoding_success}, is_missing: ${r.is_missing}, is_not_selected: ${r.is_not_selected}`);
-        } else {
-          console.log(`❌ 필터링 제외: ${r.name}, status: ${r.status}, geocoding_success: ${r.geocoding_success}, is_missing: ${r.is_missing}, is_not_selected: ${r.is_not_selected}`);
-        }
-
         return match;
       });
-
-      console.log('📊 필터링 결과:', filtered.length, '개');
     }
 
     // 1. Visit Authenticity 필터 (0-3점)
@@ -346,11 +392,6 @@ export default function AdminEvaluationPage() {
 
       // 80% 이상 스크롤 시 다음 데이터 로드
       if (scrollPercentage > 0.8 && hasMore && !loadingMore) {
-        console.log('Loading more records...', {
-          scrollPercentage,
-          displayedLength: displayedRecords.length,
-          filteredLength: filteredRecords.length
-        });
         loadMoreRecords();
       }
     };
@@ -421,28 +462,6 @@ export default function AdminEvaluationPage() {
           } : null,
         };
 
-        // 디버깅: 모든 레코드의 구조 확인 (최대 3개)
-        const index = data.findIndex((item: Record<string, unknown>) => item.id === r.id);
-        if (index < 3) {
-          console.log(`🔍 레코드 ${index + 1} 데이터 구조:`, {
-            id: r.id,
-            name: r.name,
-            status: r.status,
-            evaluation_results: evaluationResults,
-            evaluation_results_type: typeof evaluationResults,
-            evaluation_results_keys: evaluationResults ? Object.keys(evaluationResults) : 'null',
-            restaurant_info: restaurantInfo,
-            youtube_meta: r.youtube_meta,
-            youtube_meta_type: typeof r.youtube_meta,
-            youtube_meta_keys: r.youtube_meta ? Object.keys(r.youtube_meta as Record<string, unknown>) : 'null',
-            origin_address: r.origin_address,
-            road_address: r.road_address,
-            jibun_address: r.jibun_address,
-            reasoning_basis: r.reasoning_basis,
-            tzuyang_reviews: r.tzuyang_reviews,
-          });
-        }
-
         return {
           ...r,
           // 호환성을 위한 별칭 추가
@@ -471,6 +490,16 @@ export default function AdminEvaluationPage() {
         hold: typedRecords.filter(r => r.status === 'hold').length,
         missing: typedRecords.filter(r => r.is_missing).length,
         db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
+        ready_for_approval: typedRecords.filter(r =>
+          r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+          r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+          r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+          r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+          r.geocoding_success === true &&
+          r.evaluation_results?.category_validity_TF?.eval_value === true &&
+          r.evaluation_results?.category_TF?.eval_value === true &&
+          (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
+        ).length,
         geocoding_failed: typedRecords.filter(r =>
           !r.geocoding_success  // 지오코딩이 실패한 모든 레코드 (deleted 제외)
         ).length,
@@ -496,6 +525,7 @@ export default function AdminEvaluationPage() {
         hold: 0,
         missing: 0,
         db_conflict: 0,
+        ready_for_approval: 0,
         geocoding_failed: 0,
         not_selected: 0,
         deleted: 0,
@@ -507,10 +537,18 @@ export default function AdminEvaluationPage() {
 
   // 초기 데이터 로드
   useEffect(() => {
+    // 이미 데이터를 로드했으면 건너뛰기 (컴포넌트 재마운트 시 중복 로드 방지)
+    if (hasLoadedData.current) {
+      return;
+    }
+
     if (user && isAdmin && !authLoading) {
+      hasLoadedData.current = true;
       loadAllRecords();
     }
-  }, [user, isAdmin, authLoading, loadAllRecords]);
+    // loadAllRecords는 의존성에서 제외 (무한 루프 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isAdmin, authLoading]);
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
@@ -542,7 +580,8 @@ export default function AdminEvaluationPage() {
         r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
         r.geocoding_success === true &&
         r.evaluation_results?.category_validity_TF?.eval_value === true &&
-        r.evaluation_results?.category_TF?.eval_value === true
+        r.evaluation_results?.category_TF?.eval_value === true &&
+        (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
       ).length,
       missing: allRecords.filter(r => r.is_missing).length,
       geocoding_failed: allRecords.filter(r =>

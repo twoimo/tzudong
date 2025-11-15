@@ -68,8 +68,6 @@ export function RestaurantDetailPanel({
         enabled: !!restaurant,
         queryFn: async () => {
             try {
-                console.log('🔍 맛집 리뷰 데이터 가져오는 중...', restaurant.id);
-
                 // 1. 해당 맛집의 승인된 리뷰 조회
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
@@ -85,21 +83,17 @@ export function RestaurantDetailPanel({
                 }
 
                 if (!reviewsData || reviewsData.length === 0) {
-                    console.log('⚠️ 해당 맛집의 리뷰가 없음');
                     return [];
                 }
 
                 // 2. 필요한 user_id 수집
                 const userIds = [...new Set(reviewsData.map(r => r.user_id))];
-                console.log('👥 User IDs:', userIds);
 
                 // 3. Profiles 가져오기
                 const { data: profilesData } = await supabase
                     .from('profiles')
                     .select('user_id, nickname')
                     .in('user_id', userIds);
-
-                console.log('👥 Profiles:', profilesData);
 
                 // 4. Map으로 변환 (빠른 조회)
                 const profilesMap = new Map(
@@ -145,7 +139,6 @@ export function RestaurantDetailPanel({
                     };
                 }) as Review[];
 
-                console.log(`✅ 총 ${reviews.length}개 리뷰 매핑 완료`);
                 return reviews;
             } catch (error) {
                 console.error('❌ 리뷰 데이터 조회 중 오류:', error);

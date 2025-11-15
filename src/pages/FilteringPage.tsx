@@ -151,15 +151,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     return bLikes - aLikes; // 내림차순 정렬
                 });
 
-                // 디버깅 정보 출력
-                console.log('최대 리뷰수:', maxReviewCount);
-                console.log('후보 맛집들:', topRestaurants.map(r => ({
-                    name: r.name,
-                    reviewCount: r.review_count,
-                    totalLikes: likeCounts.get(r.id) || 0
-                })));
-                console.log('선택된 맛집:', sortedRestaurants[0]?.name, '좋아요 총합:', likeCounts.get(sortedRestaurants[0]?.id) || 0);
-
                 return sortedRestaurants[0];
             } catch (error) {
                 console.error('리뷰수 가장 많은 맛집 조회 중 오류:', error);
@@ -718,7 +709,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         <PanelGroup direction="horizontal" className="h-full bg-background">
             {/* Left Panel - Filtering */}
             <Panel
-                defaultSize={isRightPanelVisible ? 60 : 100}
+                defaultSize={isRightPanelVisible ? 70 : 100}
                 minSize={30}
                 maxSize={80}
                 className="flex flex-col min-w-0"
@@ -1061,7 +1052,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             {/* Right Panel - Reviews */}
             {isRightPanelVisible && (
                 <Panel
-                    defaultSize={20}
+                    defaultSize={30}
                     minSize={20}
                     maxSize={70}
                     className="flex flex-col bg-card"

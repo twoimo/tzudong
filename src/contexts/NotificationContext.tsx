@@ -74,7 +74,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log('새 알림 수신:', payload);
                     const newNotification: Notification = {
                         id: payload.new.id,
                         type: payload.new.type as NotificationType,
@@ -89,9 +88,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             )
             .subscribe((status) => {
                 // 알림 테이블이 존재하지 않는 경우 경고 로그만 출력
-                if (status === 'SUBSCRIBED' && channel.state === 'joined') {
-                    console.log('알림 실시간 구독 활성화됨');
-                } else if (status === 'CHANNEL_ERROR') {
+                if (status === 'CHANNEL_ERROR') {
                     console.warn('알림 실시간 구독 실패 - 테이블이 존재하지 않을 수 있습니다.');
                 }
             });
@@ -152,7 +149,6 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             if (error) throw error;
 
             // 실시간 구독으로 인해 자동으로 추가될 것이므로 여기서는 추가하지 않음
-            console.log('알림 생성됨:', data);
         } catch (error) {
             console.error('알림 생성 실패:', error);
             // 서버 함수가 없는 경우 로컬에서만 처리
@@ -206,7 +202,6 @@ export const createAdminAnnouncement = async (title: string, message: string, cu
             p_data: customData || {}
         });
         if (error) throw error;
-        console.log('관리자 공지사항 알림 생성 완료');
     } catch (error) {
         console.error('관리자 공지사항 알림 생성 실패:', error);
         console.warn('알림 시스템이 아직 설정되지 않았습니다.');
@@ -229,7 +224,6 @@ export const createNewRestaurantNotification = async (restaurantName: string, ad
             }
         });
         if (error) throw error;
-        console.log('신규 맛집 알림 생성 완료');
     } catch (error) {
         console.error('신규 맛집 알림 생성 실패:', error);
         console.warn('알림 시스템이 아직 설정되지 않았습니다.');
@@ -245,7 +239,6 @@ export const createUserRankingNotification = async (userId: string, ranking: num
             p_period: period
         });
         if (error) throw error;
-        console.log('사용자 랭킹 알림 생성 완료');
     } catch (error) {
         console.error('사용자 랭킹 알림 생성 실패:', error);
         console.warn('알림 시스템이 아직 설정되지 않았습니다.');
@@ -269,7 +262,6 @@ export const createUserNotification = async (
             p_data: customData || {}
         });
         if (error) throw error;
-        console.log('사용자 알림 생성 완료');
     } catch (error) {
         console.error('사용자 알림 생성 실패:', error);
         console.warn('알림 시스템이 아직 설정되지 않았습니다.');

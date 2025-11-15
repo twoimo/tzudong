@@ -407,6 +407,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       onSuccess(record.id, {
         status: 'approved',
         name: trimmedName,
+        restaurant_name: trimmedName, // 별칭도 업데이트
         road_address: selectedResult.road_address,
         jibun_address: selectedResult.jibun_address,
         english_address: selectedResult.english_address,
@@ -415,7 +416,24 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         lng: parseFloat(selectedResult.x),
         phone: trimmedPhone || null,
         geocoding_success: true,
+        geocoding_false_stage: null,
+        db_error_message: null,
+        db_error_details: null,
         updated_at: new Date().toISOString(),
+        restaurant_info: record.restaurant_info ? {
+          ...record.restaurant_info,
+          name: trimmedName,
+          phone: trimmedPhone || null,
+          tzuyang_review: trimmedTzuyangReview || record.restaurant_info.tzuyang_review,
+          naver_address_info: {
+            road_address: selectedResult.road_address,
+            jibun_address: selectedResult.jibun_address,
+            english_address: selectedResult.english_address,
+            address_elements: selectedResult.address_elements,
+            x: selectedResult.x,
+            y: selectedResult.y,
+          },
+        } : undefined,
       });
       onOpenChange(false);
       resetForm();
@@ -426,6 +444,129 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       toast({
         variant: 'destructive',
         title: '승인 실패',
+        description: errorMessage,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 저장만 하는 함수 (승인하지 않고 수정 사항만 저장)
+  const handleSave = async () => {
+    if (!record) return;
+
+    try {
+      setLoading(true);
+
+      const trimmedName = formData.name.trim();
+      const trimmedPhone = formData.phone.trim();
+      const trimmedAddress = formData.address.trim();
+      const trimmedTzuyangReview = formData.tzuyang_review.trim();
+
+      if (!trimmedName) {
+        toast({
+          variant: 'destructive',
+          title: '음식점명을 입력해주세요',
+        });
+        return;
+      }
+
+      // 수정 사항만 업데이트 (status는 변경하지 않음)
+      const updateData: Record<string, unknown> = {
+        name: trimmedName,
+        phone: trimmedPhone || null,
+        updated_by_admin_id: user?.id || null,
+        updated_at: new Date().toISOString(),
+      };
+
+      // 지오코딩 결과가 있고 선택된 경우에만 주소 정보 업데이트
+      if (geocodingResults.length > 0 && selectedGeocodingIndex !== null) {
+        const selectedResult = geocodingResults[selectedGeocodingIndex];
+        updateData.road_address = selectedResult.road_address;
+        updateData.jibun_address = selectedResult.jibun_address;
+        updateData.english_address = selectedResult.english_address;
+        updateData.address_elements = selectedResult.address_elements;
+        updateData.lat = parseFloat(selectedResult.y);
+        updateData.lng = parseFloat(selectedResult.x);
+        updateData.geocoding_success = true;
+        updateData.geocoding_false_stage = null;
+      }
+
+      // 쯔양 리뷰 업데이트
+      if (trimmedTzuyangReview) {
+        updateData.tzuyang_reviews = [{ review: trimmedTzuyangReview }];
+      }
+
+      const { error: updateError } = await supabase
+        .from('restaurants')
+        // @ts-expect-error - Supabase 자동 생성 타입 문제
+        .update(updateData)
+        .eq('id', record.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      toast({
+        title: '저장 완료',
+        description: `${formData.name} 레스토랑 정보가 저장되었습니다.`,
+      });
+
+      // 업데이트된 정보를 부모 컴포넌트에 전달
+      const updates: Partial<EvaluationRecord> = {
+        name: trimmedName,
+        phone: trimmedPhone || null,
+        updated_at: new Date().toISOString(),
+        restaurant_name: trimmedName, // 별칭도 업데이트
+      };
+
+      // restaurant_info 객체도 업데이트
+      if (record.restaurant_info) {
+        updates.restaurant_info = {
+          ...record.restaurant_info,
+          name: trimmedName,
+          phone: trimmedPhone || null,
+          tzuyang_review: trimmedTzuyangReview || record.restaurant_info.tzuyang_review,
+        };
+      }
+
+      if (geocodingResults.length > 0 && selectedGeocodingIndex !== null) {
+        const selectedResult = geocodingResults[selectedGeocodingIndex];
+        updates.road_address = selectedResult.road_address;
+        updates.jibun_address = selectedResult.jibun_address;
+        updates.english_address = selectedResult.english_address;
+        updates.address_elements = selectedResult.address_elements;
+        updates.lat = parseFloat(selectedResult.y);
+        updates.lng = parseFloat(selectedResult.x);
+        updates.geocoding_success = true;
+        updates.geocoding_false_stage = null;
+
+        // restaurant_info의 naver_address_info도 업데이트
+        if (record.restaurant_info) {
+          updates.restaurant_info = {
+            ...updates.restaurant_info!,
+            naver_address_info: {
+              road_address: selectedResult.road_address,
+              jibun_address: selectedResult.jibun_address,
+              english_address: selectedResult.english_address,
+              address_elements: selectedResult.address_elements,
+              x: selectedResult.x,
+              y: selectedResult.y,
+            },
+          };
+        }
+      }
+
+      onSuccess(record.id, updates);
+      onOpenChange(false);
+      resetForm();
+
+    } catch (error) {
+      console.error('저장 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      toast({
+        variant: 'destructive',
+        title: '저장 실패',
         description: errorMessage,
       });
     } finally {
@@ -685,7 +826,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               value={formData.tzuyang_review}
               onChange={(e) => setFormData(prev => ({ ...prev, tzuyang_review: e.target.value }))}
               placeholder="리뷰 내용을 입력하세요"
-              rows={3}
+              rows={5}
+              className="leading-relaxed resize-none"
             />
           </div>
         </div>
@@ -698,6 +840,15 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
             disabled={loading}
           >
             취소
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={handleSave}
+            disabled={loading}
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            저장
           </Button>
           <Button
             onClick={handleApprove}

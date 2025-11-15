@@ -116,8 +116,6 @@ export default function AdminSubmissionsPage() {
         queryFn: async ({ pageParam = 0 }) => {
             if (!user || !isAdmin) return { submissions: [], nextCursor: null };
 
-            console.log('🔍 제보 데이터 조회 시작... 페이지:', pageParam);
-
             // 1. 제보 데이터 가져오기 (페이지별)
             const { data: submissionsData, error: submissionsError } = await supabase
                 .from('restaurant_submissions')
@@ -131,7 +129,6 @@ export default function AdminSubmissionsPage() {
             }
 
             if (!submissionsData || submissionsData.length === 0) {
-                console.log('✅ 제보 데이터 없음');
                 return { submissions: [], nextCursor: null };
             }
 
@@ -160,7 +157,6 @@ export default function AdminSubmissionsPage() {
             // 다음 페이지 커서 계산
             const nextCursor = submissionsData.length === 20 ? pageParam + 20 : null;
 
-            console.log('✅ 제보 데이터 조회 성공:', submissions.length, '개 (다음 커서:', nextCursor, ')');
             return {
                 submissions,
                 nextCursor,
@@ -719,8 +715,6 @@ export default function AdminSubmissionsPage() {
 
             const data = await response.json();
 
-            console.log('Geocoding 응답:', data);
-
             if (data.status === 'OK' && data.addresses && data.addresses.length > 0) {
                 const item = data.addresses[0];
                 const lat = item.y; // 위도
@@ -787,15 +781,6 @@ export default function AdminSubmissionsPage() {
     const pendingSubmissions = submissions.filter(s => s.status === 'pending');
     const approvedSubmissions = submissions.filter(s => s.status === 'approved');
     const rejectedSubmissions = submissions.filter(s => s.status === 'rejected');
-
-    console.log('📊 제보 통계:', {
-        total: submissions.length,
-        pending: pendingSubmissions.length,
-        approved: approvedSubmissions.length,
-        rejected: rejectedSubmissions.length,
-        isAdmin: isAdmin,
-        userId: user?.id,
-    });
 
     return (
         <div className="flex flex-col h-full bg-background">

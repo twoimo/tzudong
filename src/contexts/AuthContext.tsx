@@ -81,20 +81,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .eq("user_id", userId)
                 .maybeSingle();
 
-            console.log("Profile check:", { data, error });
-
             // 프로필이 없거나 닉네임이 "탈퇴한 사용자"인 경우
             if (error) {
                 console.error("Profile check error:", error);
                 setNeedsNicknameSetup(false);
             } else if (!data) {
-                console.log("No profile found, needs setup");
                 setNeedsNicknameSetup(true);
             } else if (data.nickname === "탈퇴한 사용자") {
-                console.log("Deactivated user, needs setup");
                 setNeedsNicknameSetup(true);
             } else {
-                console.log("Profile OK, nickname:", data.nickname);
                 setNeedsNicknameSetup(false);
             }
         } catch (error) {

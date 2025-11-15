@@ -29,7 +29,15 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false, // 윈도우 포커스 시 자동 refetch 비활성화
+      refetchOnMount: false, // 컴포넌트 마운트 시 자동 refetch 비활성화 (필요시 수동으로)
+      refetchOnReconnect: false, // 네트워크 재연결 시 자동 refetch 비활성화
+    },
+  },
+});
 
 function AppLayout() {
   const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
@@ -150,7 +158,12 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
             <AppLayout />
           </BrowserRouter>
         </TooltipProvider>

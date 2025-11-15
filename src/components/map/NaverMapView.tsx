@@ -484,7 +484,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     return (
         <PanelGroup direction="horizontal" className="h-full">
             {/* 지도 패널 */}
-            <Panel defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80} className="relative">
+            <Panel defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} className="relative">
                 {/* 지도 컨테이너 */}
                 <div ref={mapRef} className="w-full h-full" />
 

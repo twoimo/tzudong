@@ -83,13 +83,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   // 맛집으로 지도 이동하는 함수
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
     if (googleMapRef.current) {
-      console.log('MapView: Moving to restaurant:', restaurant.name);
       const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
 
       try {
         googleMapRef.current.setCenter(position);
         googleMapRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
-        console.log('MapView: Successfully moved to restaurant position');
       } catch (error) {
         console.error('MapView: Error moving to restaurant position:', error);
       }
@@ -209,7 +207,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   // Retry map initialization if Google Maps becomes available later
   useEffect(() => {
     if (!isLoaded && window.google && window.google.maps && window.google.maps.Map && mapRef.current && !googleMapRef.current) {
-      console.log("Google Maps became available, initializing map...");
       // Force re-run of map initialization
       setTimeout(() => {
         window.location.reload();

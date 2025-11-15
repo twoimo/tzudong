@@ -77,7 +77,6 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 // 프로필이 없는 경우 기본값 설정
                 setProfile(null);
                 setNewNickname(user.email?.split('@')[0] || "사용자");
-                console.log('프로필이 존재하지 않아 기본값으로 설정합니다');
             }
         } catch (error) {
             toast.error('프로필 정보를 불러오는데 실패했습니다');
