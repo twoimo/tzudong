@@ -1,4 +1,4 @@
-import { Menu, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck } from "lucide-react";
+import { Menu, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/contexts/NotificationContext";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -22,9 +23,11 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   onProfileClick?: () => void;
+  isCenteredLayout?: boolean;
+  onToggleCenteredLayout?: () => void;
 }
 
-const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick }: HeaderProps) => {
+const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, isCenteredLayout = false, onToggleCenteredLayout }: HeaderProps) => {
   const [isDark, setIsDark] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
 
@@ -193,6 +196,21 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
             </ScrollArea>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Centered Layout 버튼 */}
+        {onToggleCenteredLayout && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "hover:bg-accent",
+              isCenteredLayout && "bg-accent"
+            )}
+            onClick={onToggleCenteredLayout}
+          >
+            <AlignCenter className="h-5 w-5" />
+          </Button>
+        )}
 
         <Button
           variant="ghost"
