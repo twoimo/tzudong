@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState, memo } from "react";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
@@ -44,6 +45,15 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+
+    // selectedRestaurant가 설정되면 자동으로 패널 열기
+    useEffect(() => {
+        if (selectedRestaurant && !isGridMode) {
+            setIsPanelOpen(true);
+        } else if (!selectedRestaurant) {
+            setIsPanelOpen(false);
+        }
+    }, [selectedRestaurant, isGridMode]);
 
     // 선택된 맛집이 변경될 때 지도 중앙 재조정
     useEffect(() => {
@@ -184,7 +194,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
         mapInstanceRef.current.setCenter(new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]));
         mapInstanceRef.current.setZoom(regionConfig.zoom);
-    }, [selectedRegion]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [selectedRegion]);
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
@@ -337,7 +347,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant]);
+    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant, isGridMode, gridSelectedRestaurant, onRestaurantSelect]);
 
     // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
     useEffect(() => {
@@ -483,7 +493,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     return (
         <PanelGroup direction="horizontal" className="h-full">
             {/* 지도 패널 */}
-            <Panel defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80} className="relative">
+            <Panel defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} className="relative">
                 {/* 지도 컨테이너 */}
                 <div ref={mapRef} className="w-full h-full" />
 

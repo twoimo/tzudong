@@ -27,15 +27,16 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
       const trimmedQuery = searchQuery.trim();
 
       // 1. 맛집 이름으로 검색 (RPC 함수 사용 - Trigram 유사도 기반)
-      let nameResults: any = null;
+      let nameResults: unknown = null;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const rpcResult = await (supabase as any).rpc("search_restaurants_by_name", {
           search_query: trimmedQuery,
           similarity_threshold: 0.001,  // SQL 기본값과 동일하게 낮춤
           max_results: 50,
         });
         nameResults = rpcResult.data;
-        
+
         if (rpcResult.error) {
           console.warn("맛집 이름 검색 실패:", rpcResult.error);
         }
@@ -47,15 +48,16 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
       const nameResultsArray = (nameResults || []) as Restaurant[];
 
       // 2. YouTube 제목으로 검색 (RPC 함수 사용)
-      let youtubeResults: any = null;
+      let youtubeResults: unknown = null;
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const rpcResult = await (supabase as any).rpc("search_restaurants_by_youtube_title", {
           search_query: trimmedQuery,
           similarity_threshold: 0.01,  // 일관성을 위해 동일하게 설정
           max_results: 50,
         });
         youtubeResults = rpcResult.data;
-        
+
         if (rpcResult.error) {
           console.warn("YouTube 제목 검색 실패:", rpcResult.error);
         }
@@ -66,9 +68,9 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
       // 3. 두 결과 병합 (ID 기준 중복 제거)
       const youtubeResultsArray = ((youtubeResults || []) as Restaurant[])
         .filter(r => r.status === "approved"); // YouTube 결과도 approved만
-      
+
       const restaurantMap = new Map<string, Restaurant>();
-      
+
       // 이름 검색 결과 추가
       nameResultsArray.forEach(restaurant => {
         restaurantMap.set(restaurant.id, restaurant);

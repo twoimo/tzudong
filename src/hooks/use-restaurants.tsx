@@ -5,6 +5,48 @@ import { Tables } from "@/integrations/supabase/types";
 
 type DBRestaurant = Tables<"restaurants">;
 
+// 레벤슈타인 거리 계산 (문자열 유사도)
+function levenshteinDistance(str1: string, str2: string): number {
+    const len1 = str1.length;
+    const len2 = str2.length;
+    const dp: number[][] = Array(len1 + 1).fill(null).map(() => Array(len2 + 1).fill(0));
+
+    for (let i = 0; i <= len1; i++) dp[i][0] = i;
+    for (let j = 0; j <= len2; j++) dp[0][j] = j;
+
+    for (let i = 1; i <= len1; i++) {
+        for (let j = 1; j <= len2; j++) {
+            if (str1[i - 1] === str2[j - 1]) {
+                dp[i][j] = dp[i - 1][j - 1];
+            } else {
+                dp[i][j] = Math.min(
+                    dp[i - 1][j] + 1,    // 삭제
+                    dp[i][j - 1] + 1,    // 삽입
+                    dp[i - 1][j - 1] + 1 // 치환
+                );
+            }
+        }
+    }
+
+    return dp[len1][len2];
+}
+
+// 문자열 유사도 계산 (0~1, 1에 가까울수록 유사)
+function calculateSimilarity(str1: string, str2: string): number {
+    const maxLen = Math.max(str1.length, str2.length);
+    if (maxLen === 0) return 1.0;
+    const distance = levenshteinDistance(str1, str2);
+    return 1 - distance / maxLen;
+}
+
+// 정규화된 주소 비교 (공백, 특수문자 제거)
+function normalizeAddress(address: string): string {
+    return address
+        .replace(/\s+/g, '') // 공백 제거
+        .replace(/[^\w가-힣]/g, '') // 특수문자 제거
+        .toLowerCase();
+}
+
 
 interface UseRestaurantsOptions {
     bounds?: {
@@ -75,43 +117,86 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 throw error;
             }
 
-            // 상호명이 같은 맛집들을 통합
-            const restaurantMap = new Map<string, DBRestaurant>();
+            // 비슷한 이름과 같은 주소를 가진 맛집들을 통합 (표시용)
+            const restaurantMap = new Map<string, DBRestaurant & { mergedRestaurants?: DBRestaurant[] }>();
 
             (data || []).forEach((restaurant: DBRestaurant) => {
-                const key = `${restaurant.name}_${restaurant.jibun_address || restaurant.road_address}`;
+                const currentName = restaurant.name || '';
+                const currentAddress = normalizeAddress(restaurant.jibun_address || restaurant.road_address || '');
 
-                if (restaurantMap.has(key)) {
-                    // 이미 있는 맛집이면 youtube_links와 tzuyang_reviews를 병합
-                    const existing = restaurantMap.get(key)!;
+                // 이미 처리된 레스토랑 중에서 유사한 것 찾기
+                let merged = false;
 
-                    // youtube_links 병합 (중복 제거)
-                    const mergedYoutubeLinks = [
-                        ...(existing.youtube_links || []),
-                        ...(restaurant.youtube_links || [])
-                    ].filter((link, index, self) => self.indexOf(link) === index);
+                for (const [existingKey, existingRestaurant] of restaurantMap.entries()) {
+                    const existingName = existingRestaurant.name || '';
+                    const existingAddress = normalizeAddress(existingRestaurant.jibun_address || existingRestaurant.road_address || '');
 
-                    // tzuyang_reviews 병합
-                    const mergedTzuyangReviews = [
-                        ...(Array.isArray(existing.tzuyang_reviews) ? existing.tzuyang_reviews : []),
-                        ...(Array.isArray(restaurant.tzuyang_reviews) ? restaurant.tzuyang_reviews : [])
-                    ];
+                    // 이름 유사도 계산 (85% 이상 유사하면 같은 맛집으로 판단)
+                    const nameSimilarity = calculateSimilarity(currentName, existingName);
 
-                    // youtube_metas 병합
-                    const mergedYoutubeMetas = [
-                        ...(Array.isArray(existing.youtube_metas) ? existing.youtube_metas : []),
-                        ...(Array.isArray(restaurant.youtube_metas) ? restaurant.youtube_metas : [])
-                    ];
+                    // 주소가 같고 이름이 85% 이상 유사하면 병합
+                    if (currentAddress === existingAddress && nameSimilarity >= 0.85) {
+                        const mergedRestaurants = existingRestaurant.mergedRestaurants || [existingRestaurant];
+                        mergedRestaurants.push(restaurant);
 
-                    // 병합된 데이터로 업데이트
-                    restaurantMap.set(key, {
-                        ...existing,
-                        youtube_links: mergedYoutubeLinks,
-                        tzuyang_reviews: mergedTzuyangReviews,
-                        youtube_metas: mergedYoutubeMetas,
-                        review_count: (existing.review_count || 0) + (restaurant.review_count || 0),
-                    });
-                } else {
+                        // 이름 길이순으로 정렬
+                        const sortedByNameLength = [...mergedRestaurants].sort((a, b) =>
+                            (b.name?.length || 0) - (a.name?.length || 0)
+                        );
+
+                        // 가장 긴 이름
+                        const longestName = sortedByNameLength[0]?.name || currentName;
+
+                        // 가장 긴 이름의 좌표 (없으면 다음으로 긴 이름의 좌표)
+                        let coordinates = { latitude: 0, longitude: 0 };
+                        for (const r of sortedByNameLength) {
+                            if (r.latitude && r.longitude) {
+                                coordinates = { latitude: r.latitude, longitude: r.longitude };
+                                break;
+                            }
+                        }
+
+                        // 모든 카테고리 수집 (중복 제거) - 모든 배열을 펼쳐서 Set으로 중복 제거
+                        const allCategories = Array.from(new Set(
+                            mergedRestaurants.flatMap(r => r.categories || [])
+                        ));
+
+                        // youtube_links 병합 (중복 제거)
+                        const mergedYoutubeLinks = mergedRestaurants
+                            .flatMap(r => r.youtube_links || [])
+                            .filter((link, index, self) => self.indexOf(link) === index);
+
+                        // tzuyang_reviews 병합
+                        const mergedTzuyangReviews = mergedRestaurants
+                            .flatMap(r => Array.isArray(r.tzuyang_reviews) ? r.tzuyang_reviews : []);
+
+                        // youtube_meta는 각 레코드에 하나씩만 있으므로 배열로 수집
+                        const mergedYoutubeMetas = mergedRestaurants
+                            .map(r => r.youtube_meta)
+                            .filter((meta): meta is NonNullable<typeof meta> => meta != null);
+
+                        // 병합된 데이터로 업데이트
+                        restaurantMap.set(existingKey, {
+                            ...existingRestaurant,
+                            name: longestName,
+                            latitude: coordinates.latitude,
+                            longitude: coordinates.longitude,
+                            categories: allCategories, // 모든 카테고리 배열
+                            youtube_links: mergedYoutubeLinks,
+                            tzuyang_reviews: mergedTzuyangReviews,
+                            youtube_meta: mergedYoutubeMetas[0] || null, // 가장 첫 번째 메타 사용
+                            review_count: mergedRestaurants.reduce((sum, r) => sum + (r.review_count || 0), 0),
+                            mergedRestaurants: mergedRestaurants,
+                        });
+
+                        merged = true;
+                        break;
+                    }
+                }
+
+                // 병합되지 않았으면 새로운 항목으로 추가
+                if (!merged) {
+                    const key = `${currentName}_${currentAddress}_${restaurantMap.size}`;
                     restaurantMap.set(key, restaurant);
                 }
             });
@@ -126,7 +211,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     ? restaurant.youtube_links[0]
                     : null,
                 tzuyang_review: Array.isArray(restaurant.tzuyang_reviews) && restaurant.tzuyang_reviews.length > 0 && restaurant.tzuyang_reviews[0]
-                    ? (restaurant.tzuyang_reviews[0] as any).review
+                    ? (restaurant.tzuyang_reviews[0] as Record<string, unknown>).review as string
                     : null,
             }));
 
@@ -164,7 +249,7 @@ export function useRestaurant(id: string | null) {
                     ? dbData.youtube_links[0]
                     : null,
                 tzuyang_review: Array.isArray(dbData.tzuyang_reviews) && dbData.tzuyang_reviews.length > 0 && dbData.tzuyang_reviews[0]
-                    ? (dbData.tzuyang_reviews[0] as any).review
+                    ? (dbData.tzuyang_reviews[0] as Record<string, unknown>).review as string
                     : null,
             };
 

@@ -456,7 +456,7 @@ export class PerplexityEvaluator {
       // Library 클릭 시도 (data-testid 우선, 없으면 텍스트로 찾기)
       const libraryClicked = await this.page!.evaluate(() => {
         // 1순위: data-testid="library-tab" 속성으로 찾기 (가장 안정적)
-        let libraryLink = document.querySelector('a[data-testid="library-tab"]') as HTMLElement;
+        const libraryLink = document.querySelector('a[data-testid="library-tab"]') as HTMLElement;
         
         if (libraryLink) {
           const rect = libraryLink.getBoundingClientRect();

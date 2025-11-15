@@ -263,8 +263,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 if (isNaN(testDate.getTime())) {
                     throw new Error("유효하지 않은 날짜/시간 형식입니다");
                 }
-
-                console.log('방문 날짜/시간:', visitedAtDateTime); // 디버깅용
             } catch (error) {
                 throw new Error(`날짜/시간 형식 오류: ${visitedDate} ${visitedTime}`);
             }
@@ -505,13 +503,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 </Label>
                                 <Card
                                     ref={verificationDropRef}
-                                    className={`p-6 border-dashed transition-colors cursor-pointer ${
-                                        isVerificationDragging
+                                    className={`p-6 border-dashed transition-colors cursor-pointer ${isVerificationDragging
                                             ? 'border-primary bg-primary/5'
                                             : verificationPhoto
-                                            ? 'border-green-300 bg-green-50/50'
-                                            : 'border-gray-300 hover:border-primary/50'
-                                    }`}
+                                                ? 'border-green-300 bg-green-50/50'
+                                                : 'border-gray-300 hover:border-primary/50'
+                                        }`}
                                     onDragOver={handleDragOver}
                                     onDragEnter={handleVerificationDragEnter}
                                     onDragLeave={handleVerificationDragLeave}
@@ -560,12 +557,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                             </div>
                                         ) : (
                                             <div className="w-full text-center space-y-3">
-                                                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
-                                                    isVerificationDragging ? 'bg-primary/10' : 'bg-gray-100'
-                                                }`}>
-                                                    <Image className={`h-8 w-8 transition-colors ${
-                                                        isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
-                                                    }`} />
+                                                <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-gray-100'
+                                                    }`}>
+                                                    <Image className={`h-8 w-8 transition-colors ${isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
+                                                        }`} />
                                                 </div>
                                                 <div>
                                                     <p className="font-medium mb-1">
@@ -649,13 +644,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 {/* 드래그 앤 드롭 영역 */}
                                 <Card
                                     ref={foodPhotosDropRef}
-                                    className={`p-6 border-dashed transition-colors cursor-pointer ${
-                                        isFoodPhotosDragging
+                                    className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
                                             ? 'border-primary bg-primary/5'
                                             : foodPhotos.length > 0
-                                            ? 'border-green-300 bg-green-50/50'
-                                            : 'border-gray-300 hover:border-primary/50'
-                                    }`}
+                                                ? 'border-green-300 bg-green-50/50'
+                                                : 'border-gray-300 hover:border-primary/50'
+                                        }`}
                                     onDragOver={handleDragOver}
                                     onDragEnter={handleFoodPhotosDragEnter}
                                     onDragLeave={handleFoodPhotosDragLeave}
@@ -663,12 +657,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                     onClick={openFoodPhotosFileDialog}
                                 >
                                     <div className="flex flex-col items-center gap-4">
-                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${
-                                            isFoodPhotosDragging ? 'bg-primary/10' : 'bg-gray-100'
-                                        }`}>
-                                            <Upload className={`h-8 w-8 transition-colors ${
-                                                isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'
-                                            }`} />
+                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-gray-100'
+                                            }`}>
+                                            <Upload className={`h-8 w-8 transition-colors ${isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'
+                                                }`} />
                                         </div>
                                         <div className="text-center space-y-2">
                                             <p className="font-medium">

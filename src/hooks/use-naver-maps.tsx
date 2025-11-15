@@ -3,7 +3,9 @@ import { NAVER_MAPS_CONFIG } from "@/config/maps";
 
 declare global {
     interface Window {
-        naver: any;
+        naver: {
+            maps: Record<string, unknown>;
+        };
     }
 }
 
@@ -53,7 +55,6 @@ export function useNaverMaps() {
 
         script.onload = () => {
             if (window.naver && window.naver.maps) {
-                console.log("✅ 네이버 지도 API 로드 성공!");
                 setIsLoaded(true);
             } else {
                 console.error("❌ 네이버 지도 API 초기화 실패");

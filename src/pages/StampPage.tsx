@@ -29,13 +29,14 @@ const StampPage = () => {
         return userReviews.has(restaurantId);
     };
 
-    // 전체 맛집 개수 조회
+    // 전체 맛집 개수 조회 (승인된 맛집만)
     const { data: totalRestaurantsCount = 0 } = useQuery({
         queryKey: ['stamp-restaurants-total-count'],
         queryFn: async () => {
             const { count, error } = await supabase
                 .from('restaurants')
                 .select('*', { count: 'exact', head: true })
+                .eq('status', 'approved')
                 .not('youtube_links', 'is', null);
 
             if (error) throw error;
@@ -43,13 +44,14 @@ const StampPage = () => {
         },
     });
 
-    // 쯔양이 방문한 모든 맛집 조회 (전체 데이터 한 번에 가져오기)
+    // 쯔양이 방문한 모든 맛집 조회 (승인된 맛집만)
     const { data: restaurantsData, isLoading } = useQuery({
         queryKey: ['stamp-restaurants-all'],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
                 .select('id, name, youtube_links, review_count')
+                .eq('status', 'approved')
                 .not('youtube_links', 'is', null)
                 .order('created_at', { ascending: true });
 
@@ -192,8 +194,8 @@ const StampPage = () => {
                 <div className="grid grid-cols-5 gap-4">
                     {restaurants.map((restaurant, index) => {
                         // youtube_links 배열에서 첫 번째 링크 사용
-                        const youtubeLink = restaurant.youtube_links && restaurant.youtube_links.length > 0 
-                            ? restaurant.youtube_links[0] 
+                        const youtubeLink = restaurant.youtube_links && restaurant.youtube_links.length > 0
+                            ? restaurant.youtube_links[0]
                             : '';
                         const thumbnailUrl = youtubeLink ? getYouTubeThumbnailUrl(youtubeLink) : null;
                         const visited = isVisited(restaurant.id);
@@ -207,7 +209,6 @@ const StampPage = () => {
                                 )}
                                 onClick={() => {
                                     // 클릭 시 상세 페이지로 이동하거나 모달 열기
-                                    console.log('Restaurant clicked:', restaurant.name);
                                 }}
                             >
                                 {/* YouTube Thumbnail */}

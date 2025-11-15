@@ -163,6 +163,53 @@ async function insertRestaurants() {
           review_count: 0
         };
 
+        // 중복 체크 (unique_id 기준 + deleted 레코드 포함)
+        const { data: existingRecords, error: checkError } = await supabase
+          .from('restaurants')
+          .select('id, name, status, unique_id')
+          .eq('unique_id', data.unique_id);
+
+        if (checkError) {
+          failCount++;
+          errors.push({ name: data.name, error: checkError.message });
+          console.log(`❌ [${i + 1}/${lines.length}] ${data.name} - 중복 체크 실패: ${checkError.message}`);
+          continue;
+        }
+
+        if (existingRecords && existingRecords.length > 0) {
+          const deletedRecord = existingRecords.find(r => r.status === 'deleted');
+          const activeRecord = existingRecords.find(r => r.status !== 'deleted');
+
+          if (activeRecord) {
+            // active 레코드가 있으면 스킵
+            console.log(`⏭️  [${i + 1}/${lines.length}] ${data.name} - 이미 존재 (스킵)`);
+            continue;
+          }
+
+          if (deletedRecord) {
+            // deleted 레코드만 있으면 복원 및 업데이트
+            const { error: updateError } = await supabase
+              .from('restaurants')
+              .update({
+                ...restaurantData,
+                status: data.status || 'pending', // 원본 상태 유지
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', deletedRecord.id);
+
+            if (updateError) {
+              failCount++;
+              errors.push({ name: data.name, error: updateError.message });
+              console.log(`❌ [${i + 1}/${lines.length}] ${data.name} - 복원 실패: ${updateError.message}`);
+            } else {
+              successCount++;
+              console.log(`🔄 [${i + 1}/${lines.length}] ${data.name} - 복원 및 업데이트 성공`);
+            }
+            continue;
+          }
+        }
+
+        // 새 레코드 삽입
         const { error } = await supabase
           .from('restaurants')
           .insert(restaurantData);

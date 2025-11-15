@@ -77,10 +77,6 @@ const LeaderboardPage = () => {
                     console.warn('좋아요 데이터 조회 실패:', likesError.message);
                 }
 
-                // 디버깅: 데이터 확인
-                console.log('All reviews data sample:', allReviewsData?.slice(0, 3));
-                console.log('Likes data sample:', likesData?.slice(0, 3));
-
                 // Create review stats maps
                 const reviewCountMap = new Map<string, number>();
                 const verifiedReviewCountMap = new Map<string, number>();
@@ -111,12 +107,6 @@ const LeaderboardPage = () => {
                         const reviewLikes = reviewLikesMap.get(review.id) || 0;
                         const currentLikes = totalLikesMap.get(review.user_id) || 0;
                         totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
-                    });
-
-                    console.log('Review stats calculated:', {
-                        totalReviews: reviewCountMap.size,
-                        verifiedReviews: verifiedReviewCountMap.size,
-                        totalLikes: Array.from(totalLikesMap.values()).reduce((sum, likes) => sum + likes, 0)
                     });
                 }
 

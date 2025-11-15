@@ -172,9 +172,10 @@ export function AdminRestaurantModal({
             onSuccess(updatedRestaurant);
             resetForm();
             onClose();
-        } catch (error: any) {
+        } catch (error) {
             console.error("Restaurant submission error:", error);
-            toast.error(error.message || "작업에 실패했습니다");
+            const errorMessage = error instanceof Error ? error.message : "작업에 실패했습니다";
+            toast.error(errorMessage);
         } finally {
             setIsSubmitting(false);
         }
@@ -215,9 +216,10 @@ export function AdminRestaurantModal({
             toast.success("맛집이 삭제되었습니다");
             onSuccess();
             onClose();
-        } catch (error: any) {
+        } catch (error) {
             console.error("Restaurant deletion error:", error);
-            toast.error(error.message || "삭제에 실패했습니다");
+            const errorMessage = error instanceof Error ? error.message : "삭제에 실패했습니다";
+            toast.error(errorMessage);
         } finally {
             setIsSubmitting(false);
         }

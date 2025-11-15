@@ -43,6 +43,24 @@ interface ServerCost {
     updated_at: string | null;
 }
 
+// 더미 데이터 (실제 데이터가 없을 때 표시)
+const DUMMY_SERVER_COSTS: ServerCost[] = [
+    {
+        id: 'dummy-1',
+        item_name: 'Supabase Pro',
+        monthly_cost: 25,
+        description: 'Database and Authentication',
+        updated_at: new Date().toISOString(),
+    },
+    {
+        id: 'dummy-2',
+        item_name: 'Vercel Pro',
+        monthly_cost: 20,
+        description: 'Frontend Hosting',
+        updated_at: new Date().toISOString(),
+    },
+];
+
 
 const ServerCostsPage = () => {
     const { isAdmin } = useAuth();
@@ -105,7 +123,7 @@ const ServerCostsPage = () => {
             setIsCreating(false);
             setFormData({ item_name: "", monthly_cost: "", description: "" });
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             toast({
                 title: "추가 실패",
                 description: error.message,
@@ -137,7 +155,7 @@ const ServerCostsPage = () => {
             setIsEditing(false);
             setEditingCost(null);
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             toast({
                 title: "수정 실패",
                 description: error.message,
@@ -163,7 +181,7 @@ const ServerCostsPage = () => {
                 description: "비용 항목이 삭제되었습니다",
             });
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             toast({
                 title: "삭제 실패",
                 description: error.message,

@@ -20,7 +20,7 @@ interface EvaluationFiltersProps {
     rb_inference_score?: string;
     rb_grounding_TF?: string;
     review_faithfulness_score?: string;
-    location_match_TF?: string;
+    geocoding_success?: string;
     category_validity_TF?: string;
     category_TF?: string;
     category?: string;
@@ -45,9 +45,9 @@ False = 핵심 근거(매장 위치나 간판 확인 등)가 영상에서 전혀
   review_faithfulness_score: `0점 = 과장/없는 말 지어냄, 위험하게 틀림
 1점 = 실제 멘트 기반으로 충실하게 요약됨, 큰 누락 없음`,
   
-  location_match_TF: `True = 지번주소 일치 또는 거리 30m 이내로 매칭 성공
-False = 네이버 지도 API와 지오코딩으로 위치 매칭 실패
-geocoding_failed = 지오코딩 자체가 실패`,
+  geocoding_success: `True = 지오코딩 성공 (geocoding_success = true)
+False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
   
   category_validity_TF: `True = category가 유효 카테고리 목록에 포함되고 null이 아님
 False = category가 목록에 없거나 null`,
@@ -179,7 +179,7 @@ export function EvaluationFilters({ filters, onFilterChange }: EvaluationFilters
           </Select>
         </div>
 
-        {/* 5. 주소 정합성 (True/False/geocoding_failed) */}
+        {/* 5. 주소 정합성 (true/false_match/false_geocode) */}
         <div className="space-y-2">
           <div className="flex items-center gap-1">
             <Label className="text-xs font-medium">주소 정합성</Label>
@@ -188,22 +188,22 @@ export function EvaluationFilters({ filters, onFilterChange }: EvaluationFilters
                 <HelpCircle className="w-3.5 h-3.5 text-muted-foreground " />
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
-                <p className="whitespace-pre-line text-xs">{FILTER_TOOLTIPS.location_match_TF}</p>
+                <p className="whitespace-pre-line text-xs">{FILTER_TOOLTIPS.geocoding_success}</p>
               </TooltipContent>
             </Tooltip>
           </div>
           <Select
-            value={filters.location_match_TF || 'all'}
-            onValueChange={(value) => onFilterChange('location_match_TF', value === 'all' ? '' : value)}
+            value={filters.geocoding_success || 'all'}
+            onValueChange={(value) => onFilterChange('geocoding_success', value === 'all' ? '' : value)}
           >
             <SelectTrigger className="h-9 text-sm">
               <SelectValue placeholder="모두" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">모두</SelectItem>
-              <SelectItem value="True">True</SelectItem>
-              <SelectItem value="False">False</SelectItem>
-              <SelectItem value="geocoding_failed">Geocoding Failed</SelectItem>
+              <SelectItem value="true">True</SelectItem>
+              <SelectItem value="false_match">False</SelectItem>
+              <SelectItem value="false_geocode">Failed</SelectItem>
             </SelectContent>
           </Select>
         </div>

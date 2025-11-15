@@ -5,7 +5,7 @@ export interface Notification {
   message: string;
   createdAt: Date;
   isRead: boolean;
-  data?: Record<string, any>; // 추가 데이터 (맛집 ID, 리뷰 ID 등)
+  data?: Record<string, unknown>; // 추가 데이터 (맛집 ID, 리뷰 ID 등)
 }
 
 export type NotificationType =

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MessageSquare, User, Calendar, CheckCircle, XCircle, Clock, Pin, Heart, Menu } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -150,15 +151,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     return bLikes - aLikes; // 내림차순 정렬
                 });
 
-                // 디버깅 정보 출력
-                console.log('최대 리뷰수:', maxReviewCount);
-                console.log('후보 맛집들:', topRestaurants.map(r => ({
-                    name: r.name,
-                    reviewCount: r.review_count,
-                    totalLikes: likeCounts.get(r.id) || 0
-                })));
-                console.log('선택된 맛집:', sortedRestaurants[0]?.name, '좋아요 총합:', likeCounts.get(sortedRestaurants[0]?.id) || 0);
-
                 return sortedRestaurants[0];
             } catch (error) {
                 console.error('리뷰수 가장 많은 맛집 조회 중 오류:', error);
@@ -240,8 +232,10 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
     });
 
 
-    // 모든 페이지를 평탄화하여 하나의 배열로 만들기
-    const rawRestaurants = restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+    // 모든 페이지를 평탄화하여 하나의 배열로 만들기 (useMemo로 최적화)
+    const rawRestaurants = useMemo(() => {
+        return restaurantsData?.pages.flatMap(page => page.restaurants) || [];
+    }, [restaurantsData]);
 
     // 맛집 병합: 동일한 name + address를 가진 맛집들을 하나로 합침
     const mergeRestaurants = useCallback((restaurantList: Restaurant[]) => {
@@ -259,10 +253,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     ...(existing.youtube_links || []),
                     ...(restaurant.youtube_links || [])
                 ];
-                const mergedYoutubeMetas = [
-                    ...(existing.youtube_metas || []),
-                    ...(restaurant.youtube_metas || [])
-                ];
                 const mergedTzuyangReviews = [
                     ...(existing.tzuyang_reviews || []),
                     ...(restaurant.tzuyang_reviews || [])
@@ -271,7 +261,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 mergedMap.set(key, {
                     ...existing,
                     youtube_links: mergedYoutubeLinks,
-                    youtube_metas: mergedYoutubeMetas,
+                    youtube_meta: existing.youtube_meta || restaurant.youtube_meta, // 첫 번째 값 사용
                     tzuyang_reviews: mergedTzuyangReviews,
                     // review_count는 더 큰 값 사용
                     review_count: Math.max(existing.review_count || 0, restaurant.review_count || 0),
@@ -715,7 +705,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         <PanelGroup direction="horizontal" className="h-full bg-background">
             {/* Left Panel - Filtering */}
             <Panel
-                defaultSize={isRightPanelVisible ? 60 : 100}
+                defaultSize={isRightPanelVisible ? 70 : 100}
                 minSize={30}
                 maxSize={80}
                 className="flex flex-col min-w-0"
@@ -990,15 +980,9 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                         : (restaurant.categories && <Badge variant="outline" className="whitespace-nowrap">{restaurant.categories}</Badge>)
                                                     }
                                                     {/* 광고 태그 */}
-                                                    {restaurant.youtube_metas && restaurant.youtube_metas.length > 0 && (() => {
-                                                        const adsMetas = restaurant.youtube_metas
-                                                            .map((meta: any) => meta?.ads_info)
-                                                            .filter((adsInfo: any) => adsInfo?.is_ads === true);
-
-                                                        if (adsMetas.length === 0) return null;
-
-                                                        const allAds = adsMetas.flatMap((adsInfo: any) => adsInfo.what_ads || []);
-                                                        const uniqueAds = Array.from(new Set(allAds));
+                                                    {restaurant.youtube_meta?.ads_info?.is_ads === true && (() => {
+                                                        const adsInfo = restaurant.youtube_meta.ads_info;
+                                                        const uniqueAds = Array.from(new Set(adsInfo.what_ads || []));
 
                                                         return uniqueAds.length > 0 ? (
                                                             <>
@@ -1058,7 +1042,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             {/* Right Panel - Reviews */}
             {isRightPanelVisible && (
                 <Panel
-                    defaultSize={20}
+                    defaultSize={30}
                     minSize={20}
                     maxSize={70}
                     className="flex flex-col bg-card"

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
   Table,
@@ -23,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ChevronDown, ChevronUp, Check, Pause, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, Pause, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
 
@@ -31,6 +31,7 @@ interface EvaluationTableProps {
   records: EvaluationRecord[];
   onApprove: (record: EvaluationRecord) => void;
   onDelete: (record: EvaluationRecord) => void;
+  onRestore?: (record: EvaluationRecord) => void; // 삭제된 레코드 복원 함수
   onRegisterMissing?: (record: EvaluationRecord) => void;
   onResolveConflict?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
@@ -43,7 +44,7 @@ interface EvaluationTableProps {
     rb_inference_score?: string;
     rb_grounding_TF?: string;
     review_faithfulness_score?: string;
-    location_match_TF?: string;
+    geocoding_success?: string;
     category_validity_TF?: string;
     category_TF?: string;
   };
@@ -68,9 +69,9 @@ False = 핵심 근거(매장 위치나 간판 확인 등)가 영상에서 전혀
   review_faithfulness_score: `0점 = 과장/없는 말 지어냄, 위험하게 틀림
 1점 = 실제 멘트 기반으로 충실하게 요약됨, 큰 누락 없음`,
 
-  location_match_TF: `True = 지번주소 일치 또는 거리 30m 이내로 매칭 성공
-False = 네이버 지도 API와 지오코딩으로 위치 매칭 실패
-geocoding_failed = 지오코딩 자체가 실패`,
+  geocoding_success: `True = 지오코딩 성공 (geocoding_success = true)
+False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
 
   category_validity_TF: `True = category가 유효 카테고리 목록에 포함되고 null이 아님
 False = category가 목록에 없거나 null`,
@@ -83,6 +84,7 @@ export function EvaluationTable({
   records,
   onApprove,
   onDelete,
+  onRestore,
   onRegisterMissing,
   onResolveConflict,
   onEdit,
@@ -104,14 +106,14 @@ export function EvaluationTable({
   const hasActiveFilters = Object.values(evalFilters).some(value => value !== undefined && value !== '');
 
   const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; variant: any }> = {
+    const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       pending: { label: '미처리', variant: 'secondary' },
       approved: { label: '승인됨', variant: 'default' },
       hold: { label: '보류', variant: 'outline' },
       missing: { label: 'Missing', variant: 'destructive' },
-      db_conflict: { label: 'DB 충돌', variant: 'destructive' },
       geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
-      not_selected: { label: '평가미대상', variant: 'outline' },
+      not_selected: { label: '평가 미대상', variant: 'outline' },
+      deleted: { label: '삭제됨', variant: 'destructive' },
     };
 
     const config = variants[status] || { label: status, variant: 'default' };
@@ -120,16 +122,102 @@ export function EvaluationTable({
 
   const getYoutubeVideoId = (url: string | undefined) => {
     if (!url) return null;
-    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-    const match = url.match(regex);
-    return match ? match[1] : null;
+
+    // 더 포괄적인 YouTube URL 정규식 패턴들
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,  // watch?v=VIDEO_ID, youtu.be/VIDEO_ID (파라미터 무시)
+      /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,  // embed/VIDEO_ID, v/VIDEO_ID
+      /(?:m\.youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/, // 모바일 및 복잡한 URL
+      /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/, // shorts/VIDEO_ID (YouTube Shorts)
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1] && match[1].length === 11) {
+        return match[1];
+      }
+    }
+
+    return null;
   };
 
-  const getThumbnailUrl = (youtubeLink: string | undefined) => {
-    if (!youtubeLink) return null;
-    const videoId = getYoutubeVideoId(youtubeLink);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-  };
+  // 썸네일 로딩 상태와 URL을 관리하는 훅
+  const [thumbnailStates, setThumbnailStates] = useState<Record<string, 'loading' | 'loaded' | 'error'>>({});
+  const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
+
+  const loadThumbnail = useCallback((videoId: string) => {
+    if (thumbnailStates[videoId] === 'loaded' || thumbnailStates[videoId] === 'error') {
+      return;
+    }
+
+    setThumbnailStates(prev => ({ ...prev, [videoId]: 'loading' }));
+
+    // 가장 확실한 썸네일부터 시도: default -> hqdefault -> mqdefault -> maxresdefault
+    const tryThumbnail = (quality: string) => {
+      const img = new Image();
+      const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+
+      img.onload = () => {
+        setThumbnailStates(prev => ({ ...prev, [videoId]: 'loaded' }));
+        setThumbnailUrls(prev => ({ ...prev, [videoId]: thumbnailUrl }));
+      };
+
+      img.onerror = () => {
+        // 다음 품질 시도
+        if (quality === 'default') {
+          tryThumbnail('hqdefault');
+        } else if (quality === 'hqdefault') {
+          tryThumbnail('mqdefault');
+        } else if (quality === 'mqdefault') {
+          tryThumbnail('maxresdefault');
+        } else {
+          // 모든 시도 실패
+          setThumbnailStates(prev => ({ ...prev, [videoId]: 'error' }));
+        }
+      };
+
+      img.src = thumbnailUrl;
+    };
+
+    // default부터 시작 (모든 영상에 존재)
+    tryThumbnail('default');
+  }, [thumbnailStates]);
+
+  // 레코드가 변경될 때 썸네일 상태 초기화
+  useEffect(() => {
+    if (records && records.length > 0) {
+      const currentVideoIds = new Set<string>();
+      records.forEach(record => {
+        const videoId = getYoutubeVideoId(record.youtube_link);
+        if (videoId) {
+          currentVideoIds.add(videoId);
+        }
+      });
+
+      // 기존 상태에서 현재 표시되지 않는 썸네일 상태 제거
+      setThumbnailStates(prev => {
+        const newStates: Record<string, 'loading' | 'loaded' | 'error'> = {};
+        Object.keys(prev).forEach(videoId => {
+          if (currentVideoIds.has(videoId)) {
+            newStates[videoId] = prev[videoId];
+          }
+        });
+        return newStates;
+      });
+
+      // 기존 URL에서 현재 표시되지 않는 썸네일 URL 제거
+      setThumbnailUrls(prev => {
+        const newUrls: Record<string, string> = {};
+        Object.keys(prev).forEach(videoId => {
+          if (currentVideoIds.has(videoId)) {
+            newUrls[videoId] = prev[videoId];
+          }
+        });
+        return newUrls;
+      });
+    }
+  }, [records]);
+
 
   const canApprove = (record: EvaluationRecord) => {
     return record.geocoding_success &&
@@ -308,14 +396,16 @@ export function EvaluationTable({
 
                 <TableHead className="min-w-[100px]">
                   <FilterDropdown
-                    filterKey="location_match_TF"
+                    filterKey="geocoding_success"
                     label="주소 정합성"
-                    tooltip={FILTER_TOOLTIPS.location_match_TF}
+                    tooltip={`True = 지오코딩 성공 (geocoding_success = true)
+False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`}
                     options={[
                       { value: 'all', label: '모두' },
-                      { value: 'True', label: 'True' },
-                      { value: 'False', label: 'False' },
-                      { value: 'geocoding_failed', label: 'Failed' },
+                      { value: 'true', label: 'True' },
+                      { value: 'false_match', label: 'False' },
+                      { value: 'false_geocode', label: 'Failed' },
                     ]}
                   />
                 </TableHead>
@@ -360,10 +450,9 @@ export function EvaluationTable({
                         { value: 'all', label: '모두' },
                         { value: 'pending', label: '미처리' },
                         { value: 'approved', label: '승인됨' },
-                        { value: 'hold', label: '보류' },
+                        { value: 'ready_for_approval', label: '승인 대기' },
                         { value: 'missing', label: 'Missing' },
-                        { value: 'not_selected', label: '평가미대상' },
-                        { value: 'db_conflict', label: 'DB 충돌' },
+                        { value: 'not_selected', label: '평가 미대상' },
                         { value: 'geocoding_failed', label: '지오코딩 실패' },
                       ]}
                     />
@@ -497,14 +586,16 @@ export function EvaluationTable({
 
               <TableHead className="min-w-[100px]">
                 <FilterDropdown
-                  filterKey="location_match_TF"
+                  filterKey="geocoding_success"
                   label="주소 정합성"
-                  tooltip={FILTER_TOOLTIPS.location_match_TF}
+                  tooltip={`True = 지오코딩 성공 (geocoding_success = true)
+False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`}
                   options={[
                     { value: 'all', label: '모두' },
-                    { value: 'True', label: 'True' },
-                    { value: 'False', label: 'False' },
-                    { value: 'geocoding_failed', label: 'Failed' },
+                    { value: 'true', label: 'True' },
+                    { value: 'false_match', label: 'False' },
+                    { value: 'false_geocode', label: 'Failed' },
                   ]}
                 />
               </TableHead>
@@ -549,10 +640,9 @@ export function EvaluationTable({
                       { value: 'all', label: '모두' },
                       { value: 'pending', label: '미처리' },
                       { value: 'approved', label: '승인됨' },
-                      { value: 'hold', label: '보류' },
+                      { value: 'ready_for_approval', label: '승인 대기' },
                       { value: 'missing', label: 'Missing' },
-                      { value: 'not_selected', label: '평가미대상' },
-                      { value: 'db_conflict', label: 'DB 충돌' },
+                      { value: 'not_selected', label: '평가 미대상' },
                       { value: 'geocoding_failed', label: '지오코딩 실패' },
                     ]}
                   />
@@ -563,7 +653,14 @@ export function EvaluationTable({
           </TableHeader>
           <TableBody>
             {records.flatMap((record) => {
-              const thumbnailUrl = getThumbnailUrl(record.youtube_link);
+              const videoId = getYoutubeVideoId(record.youtube_link);
+
+              // 썸네일 로딩 상태 확인 및 로드
+              const thumbnailState = videoId ? thumbnailStates[videoId] : null;
+              const thumbnailUrl = videoId ? thumbnailUrls[videoId] : null;
+              if (videoId && !thumbnailState) {
+                loadThumbnail(videoId);
+              }
 
               const mainRow = (
                 <TableRow key={record.id} className="hover:bg-muted/50">
@@ -583,18 +680,43 @@ export function EvaluationTable({
 
                   <TableCell className="sticky left-12 bg-background">
                     <div className="flex items-center gap-3">
-                      {thumbnailUrl && (
+                      {videoId && (
                         <a
                           href={record.youtube_link}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-shrink-0"
                         >
-                          <img
-                            src={thumbnailUrl}
-                            alt="유튜브 썸네일"
-                            className="w-24 h-16 object-cover rounded hover:opacity-80 transition-opacity"
-                          />
+                          <div className="w-24 h-16 bg-muted rounded flex items-center justify-center hover:opacity-80 transition-opacity relative overflow-hidden">
+                            {/* 로딩 상태 */}
+                            {thumbnailState === 'loading' && (
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                            )}
+
+                            {/* 성공 상태 - 썸네일 표시 */}
+                            {thumbnailState === 'loaded' && thumbnailUrl && (
+                              <img
+                                src={thumbnailUrl}
+                                alt="유튜브 썸네일"
+                                className="w-full h-full object-cover"
+                              />
+                            )}
+
+                            {/* 에러 상태 또는 기본 상태 - YouTube 아이콘 표시 */}
+                            {(thumbnailState === 'error' || !thumbnailState) && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                                <svg
+                                  className="w-6 h-6 text-muted-foreground"
+                                  fill="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                         </a>
                       )}
                       <div className="flex-1 min-w-0">
@@ -630,13 +752,15 @@ export function EvaluationTable({
                   </TableCell>
 
                   <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (record.evaluation_results?.location_match_TF?.eval_value !== undefined
-                      ? (typeof record.evaluation_results.location_match_TF.eval_value === 'string'
-                        ? <Badge variant="outline" className="bg-yellow-100">Failed</Badge>
-                        : (record.evaluation_results.location_match_TF.eval_value
-                          ? <Badge variant="default" className="bg-green-600">True</Badge>
-                          : <Badge variant="destructive">False</Badge>))
-                      : '-')}
+                    {record.status === 'not_selected' ? '-' : (
+                      record.geocoding_success === true
+                        ? <Badge variant="default" className="bg-green-600">True</Badge>
+                        : record.geocoding_success === false && record.geocoding_false_stage === null
+                          ? <Badge variant="outline" className="bg-yellow-100">Failed</Badge>
+                          : record.geocoding_success === false && record.geocoding_false_stage !== null
+                            ? <Badge variant="destructive">False</Badge>
+                            : '-'
+                    )}
                   </TableCell>
 
                   <TableCell className="text-center text-sm">
@@ -663,67 +787,21 @@ export function EvaluationTable({
                   {/* 고정 컬럼: 액션 */}
                   <TableCell className="sticky right-0 bg-background">
                     <div className="flex gap-2 justify-center">
-                      {record.status === 'missing' ? (
+                      {record.status === 'deleted' ? (
+                        // 삭제된 레코드 - 되돌리기 버튼만 표시
                         <>
                           <Button
                             size="sm"
-                            onClick={() => onRegisterMissing?.(record)}
+                            onClick={() => onRestore?.(record)}
                             disabled={loading}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
-                            수동 등록
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onDelete(record)}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
+                            <Undo2 className="w-4 h-4 mr-1" />
+                            되돌리기
                           </Button>
                         </>
-                      ) : record.status === 'not_selected' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => onRegisterMissing?.(record)}
-                            disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            수동 등록
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onDelete(record)}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : record.status === 'db_conflict' ? (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => onResolveConflict?.(record)}
-                            disabled={loading}
-                            className="bg-yellow-600 hover:bg-yellow-700"
-                          >
-                            충돌 해결
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onDelete(record)}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : record.status === 'hold' ? (
+                      ) : record.is_missing || record.is_not_selected || !record.geocoding_success ? (
+                        // 지오코딩 실패한 케이스 (Missing, 평가 미대상, 지오코딩 실패)
                         <>
                           <Button
                             size="sm"
@@ -732,16 +810,7 @@ export function EvaluationTable({
                             variant="outline"
                           >
                             <Edit className="w-4 h-4 mr-1" />
-                            편집
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            onClick={() => onApprove(record)}
-                            disabled={loading || !canApprove(record)}
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            승인
+                            수정
                           </Button>
 
                           <Button
@@ -801,7 +870,10 @@ export function EvaluationTable({
               const detailRow = expandedId === record.id ? (
                 <TableRow key={`${record.id}-details`}>
                   <TableCell colSpan={11} className="bg-muted/30">
-                    <EvaluationRowDetails record={record} />
+                    <EvaluationRowDetails
+                      record={record}
+                      onEdit={() => onEdit?.(record)}
+                    />
                   </TableCell>
                 </TableRow>
               ) : null;
@@ -815,3 +887,4 @@ export function EvaluationTable({
     </TooltipProvider>
   );
 }
+
