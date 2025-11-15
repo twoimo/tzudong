@@ -9,8 +9,10 @@
   - 🔴 MANDATORY: ALL commit messages MUST be written in Korean (한국어).
   - 🔴 MANDATORY: ALL pull request titles MUST be written in Korean (한국어).
   - 🔴 MANDATORY: ALL pull request descriptions MUST be written in Korean (한국어).
+  - 🔴 MANDATORY: ALL code reviews MUST be written in Korean (한국어).
   - When generating PR titles and descriptions with "Generate with Copilot", ALWAYS use Korean.
-  - Never use English for commit messages or PR titles/descriptions under any circumstances.
+  - When performing code reviews, suggestions, and feedback, ALWAYS use Korean.
+  - Never use English for commit messages, PR titles/descriptions, or code reviews under any circumstances.
   - Follow conventional commit format in Korean:
     - 기능: (feat) - 새로운 기능 추가
     - 수정: (fix) - 버그 수정
