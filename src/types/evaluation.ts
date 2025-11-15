@@ -109,7 +109,7 @@ export interface EvaluationRecord {
       what_ads: string | null;
     };
   } | null;
-    youtube_meta: Record<string, unknown> | null; // JSONB
+  youtube_meta: Record<string, unknown> | null; // JSONB
   unique_id: string | null;
   tzuyang_reviews: Array<Record<string, unknown>>; // JSONB 배열
   reasoning_basis: string | null;
