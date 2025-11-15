@@ -1138,13 +1138,12 @@ CREATE TABLE public.restaurants (
     origin_address JSONB,  -- AI 크롤링 원본 주소 정보 (JSON: {address, lat, lng})
     
     -- 유튜브 관련 정보
-    youtube_links TEXT[] DEFAULT ARRAY[]::TEXT[],
+    youtube_link TEXT,  -- 유튜브 영상 링크 (단일)
     youtube_meta JSONB,  -- 개별 유튜브 메타데이터 (AI 크롤링용)
-    youtube_metas JSONB DEFAULT '[]'::JSONB,  -- 복수 유튜브 메타데이터 배열
     unique_id TEXT UNIQUE,  -- AI 크롤링 고유 식별자 (youtube_link 기반)
     
     -- 쯔양 리뷰 정보
-    tzuyang_reviews JSONB DEFAULT '[]'::JSONB,  -- 쯔양 리뷰 정보 (JSONB 배열)
+    tzuyang_review TEXT,  -- 쯔양 리뷰 내용 (텍스트)
     reasoning_basis TEXT,  -- AI 평가 근거
     
     -- AI 평가 정보
@@ -1202,11 +1201,10 @@ COMMENT ON COLUMN public.restaurants.jibun_address IS '지번 주소';
 COMMENT ON COLUMN public.restaurants.english_address IS '영문 주소';
 COMMENT ON COLUMN public.restaurants.address_elements IS '주소 상세 정보 (JSONB)';
 COMMENT ON COLUMN public.restaurants.origin_address IS 'AI 크롤링 원본 주소 정보 (JSON: {address, lat, lng})';
-COMMENT ON COLUMN public.restaurants.youtube_links IS '유튜브 영상 링크 배열';
+COMMENT ON COLUMN public.restaurants.youtube_link IS '유튜브 영상 링크 (단일)';
 COMMENT ON COLUMN public.restaurants.youtube_meta IS '개별 유튜브 메타데이터 (AI 크롤링용)';
-COMMENT ON COLUMN public.restaurants.youtube_metas IS '복수 유튜브 메타데이터 배열';
 COMMENT ON COLUMN public.restaurants.unique_id IS 'AI 크롤링 고유 식별자 (youtube_link 기반)';
-COMMENT ON COLUMN public.restaurants.tzuyang_reviews IS '쯔양 리뷰 정보 (JSONB 배열)';
+COMMENT ON COLUMN public.restaurants.tzuyang_review IS '쯔양 리뷰 내용 (텍스트)';
 COMMENT ON COLUMN public.restaurants.reasoning_basis IS 'AI 평가 근거';
 COMMENT ON COLUMN public.restaurants.evaluation_results IS 'AI 평가 결과 (JSON)';
 COMMENT ON COLUMN public.restaurants.geocoding_success IS '지오코딩 성공 여부';
@@ -1509,8 +1507,6 @@ CREATE INDEX IF NOT EXISTS idx_restaurants_not_selected ON public.restaurants(cr
 
 -- JSONB 인덱스 (빠른 검색을 위한 GIN 인덱스)
 CREATE INDEX IF NOT EXISTS idx_restaurants_address_elements ON public.restaurants USING GIN(address_elements);
-CREATE INDEX IF NOT EXISTS idx_restaurants_youtube_metas ON public.restaurants USING GIN(youtube_metas);
-CREATE INDEX IF NOT EXISTS idx_restaurants_tzuyang_reviews ON public.restaurants USING GIN(tzuyang_reviews);
 CREATE INDEX IF NOT EXISTS idx_restaurants_youtube_meta ON public.restaurants USING GIN(youtube_meta);
 CREATE INDEX IF NOT EXISTS idx_restaurants_evaluation_results ON public.restaurants USING GIN(evaluation_results);
 CREATE INDEX IF NOT EXISTS idx_restaurants_origin_address ON public.restaurants USING GIN(origin_address);
