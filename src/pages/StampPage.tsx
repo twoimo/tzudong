@@ -194,8 +194,8 @@ const StampPage = () => {
                 <div className="grid grid-cols-5 gap-4">
                     {restaurants.map((restaurant, index) => {
                         // youtube_links 배열에서 첫 번째 링크 사용
-                        const youtubeLink = restaurant.youtube_links && restaurant.youtube_links.length > 0 
-                            ? restaurant.youtube_links[0] 
+                        const youtubeLink = restaurant.youtube_links && restaurant.youtube_links.length > 0
+                            ? restaurant.youtube_links[0]
                             : '';
                         const thumbnailUrl = youtubeLink ? getYouTubeThumbnailUrl(youtubeLink) : null;
                         const visited = isVisited(restaurant.id);
@@ -209,7 +209,6 @@ const StampPage = () => {
                                 )}
                                 onClick={() => {
                                     // 클릭 시 상세 페이지로 이동하거나 모달 열기
-                                    console.log('Restaurant clicked:', restaurant.name);
                                 }}
                             >
                                 {/* YouTube Thumbnail */}

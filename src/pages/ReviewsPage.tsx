@@ -60,8 +60,6 @@ const ReviewsPage = () => {
         queryKey: ['reviews', filterCategory, filterStatus],
         queryFn: async ({ pageParam = 0 }) => {
             try {
-                console.log('🔍 리뷰 데이터 가져오는 중... 페이지:', pageParam);
-
                 // 1. 승인된 리뷰 페이지별 조회 (공개 리뷰)
                 const { data: reviewsData, error: reviewsError } = await supabase
                     .from('reviews')
@@ -81,14 +79,9 @@ const ReviewsPage = () => {
                     return { reviews: [], nextCursor: null };
                 }
 
-                console.log(`📊 ${reviewsData.length}개 리뷰 조회됨 (페이지: ${pageParam})`);
-
                 // 2. 필요한 user_id와 restaurant_id 수집
                 const userIds = [...new Set(reviewsData.map(r => r.user_id))];
                 const restaurantIds = [...new Set(reviewsData.map(r => r.restaurant_id))];
-
-                console.log('👥 User IDs:', userIds);
-                console.log('🏪 Restaurant IDs:', restaurantIds);
 
                 // 3. Profiles 가져오기
                 const { data: profilesData } = await supabase
@@ -101,9 +94,6 @@ const ReviewsPage = () => {
                     .from('restaurants')
                     .select('id, name, category')
                     .in('id', restaurantIds);
-
-                console.log('👥 Profiles:', profilesData);
-                console.log('🏪 Restaurants:', restaurantsData);
 
                 // 5. Map으로 변환 (빠른 조회)
                 const profilesMap = new Map(
@@ -137,8 +127,6 @@ const ReviewsPage = () => {
 
                 // 다음 페이지 커서 계산
                 const nextCursor = reviewsData.length === 50 ? pageParam + 50 : null;
-
-                console.log(`✅ 총 ${reviews.length}개 리뷰 매핑 완료 (다음 커서: ${nextCursor})`);
 
                 return {
                     reviews,

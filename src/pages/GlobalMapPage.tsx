@@ -95,17 +95,13 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     }, [setSelectedRestaurant]);
 
     const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
-        console.log('GlobalMapPage: Restaurant searched:', restaurant.name);
         // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
         setSearchedRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
 
         // 지도 이동 함수가 준비되었다면 즉시 이동
         if (moveToRestaurant) {
-            console.log('GlobalMapPage: Moving to restaurant immediately');
             moveToRestaurant(restaurant);
-        } else {
-            console.log('GlobalMapPage: Map move function not ready yet');
         }
 
         // 그리드 모드에서 검색 시 단일 모드로 전환
@@ -124,7 +120,6 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     }, [isGridMode]);
 
     const handleMapReady = useCallback((moveFunction: (restaurant: Restaurant) => void) => {
-        console.log('GlobalMapPage: Map ready, storing move function');
         setMoveToRestaurant(() => moveFunction);
     }, []);
 

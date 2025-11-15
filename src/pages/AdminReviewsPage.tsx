@@ -75,8 +75,6 @@ export default function AdminReviewsPage() {
         queryFn: async ({ pageParam = 0 }) => {
             if (!user || !isAdmin) return { reviews: [], nextCursor: null };
 
-            console.log('🔍 리뷰 데이터 조회 시작... 페이지:', pageParam);
-
             // 1. 리뷰 데이터 가져오기 (페이지별)
             const { data: reviewsData, error: reviewsError } = await supabase
                 .from('reviews')
@@ -90,7 +88,6 @@ export default function AdminReviewsPage() {
             }
 
             if (!reviewsData || reviewsData.length === 0) {
-                console.log('✅ 리뷰 데이터 없음');
                 return { reviews: [], nextCursor: null };
             }
 
@@ -130,7 +127,6 @@ export default function AdminReviewsPage() {
             // 다음 페이지 커서 계산
             const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
 
-            console.log('✅ 리뷰 데이터 조회 성공:', reviews.length, '개 (다음 커서:', nextCursor, ')');
             return {
                 reviews,
                 nextCursor,
@@ -525,100 +521,100 @@ export default function AdminReviewsPage() {
                                             ref={index === pendingReviews.length - 1 ? loadMoreRef : null}
                                             className="p-4"
                                         >
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2">
-                                                    <h3 className="text-lg font-semibold">{review.title}</h3>
-                                                    {getStatusBadge(review.is_verified)}
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <h3 className="text-lg font-semibold">{review.title}</h3>
+                                                        {getStatusBadge(review.is_verified)}
+                                                    </div>
+                                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                        <span className="flex items-center gap-1">
+                                                            <Avatar className="h-6 w-6">
+                                                                <AvatarFallback className="text-xs">
+                                                                    {review.profiles?.nickname?.[0] || '익'}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            {review.profiles?.nickname || '익명'}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <MapPin className="h-4 w-4" />
+                                                            {review.restaurants?.name}
+                                                        </span>
+                                                        <span className="flex items-center gap-1">
+                                                            <Calendar className="h-4 w-4" />
+                                                            {new Date(review.visited_at).toLocaleDateString('ko-KR')}
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span className="flex items-center gap-1">
-                                                        <Avatar className="h-6 w-6">
-                                                            <AvatarFallback className="text-xs">
-                                                                {review.profiles?.nickname?.[0] || '익'}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        {review.profiles?.nickname || '익명'}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <MapPin className="h-4 w-4" />
-                                                        {review.restaurants?.name}
-                                                    </span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar className="h-4 w-4" />
-                                                        {new Date(review.visited_at).toLocaleDateString('ko-KR')}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="flex gap-1">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleReviewAction('approve', review)}
-                                                    className="text-green-600 hover:text-green-700"
-                                                >
-                                                    <CheckCircle2 className="h-4 w-4 mr-1" />
-                                                    승인
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => handleReviewAction('reject', review)}
-                                                    className="text-red-600 hover:text-red-700"
-                                                >
-                                                    <XCircle className="h-4 w-4 mr-1" />
-                                                    거부
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(review.id)}
-                                                    className="text-destructive hover:text-destructive"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <p className="text-sm text-muted-foreground line-clamp-3">
-                                                {review.content}
-                                            </p>
-
-                                            {review.verification_photo && (
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <Badge variant="outline">📸 인증 사진</Badge>
-                                                    <span className="text-muted-foreground">업로드됨</span>
-                                                </div>
-                                            )}
-
-                                            {review.food_photos && review.food_photos.length > 0 && (
-                                                <div className="flex items-center gap-2 text-sm">
-                                                    <Badge variant="outline">🍽️ 음식 사진</Badge>
-                                                    <span className="text-muted-foreground">{review.food_photos.length}장</span>
-                                                </div>
-                                            )}
-
-                                            <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                                <span>작성일: {new Date(review.created_at).toLocaleString('ko-KR')}</span>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {Array.isArray(review.category)
-                                                        ? review.category.map((cat: string) => (
-                                                            <Badge key={cat} variant="outline" className="text-xs">
-                                                                {cat}
-                                                            </Badge>
-                                                        ))
-                                                        : (
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {review.category}
-                                                            </Badge>
-                                                        )
-                                                    }
+                                                <div className="flex gap-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleReviewAction('approve', review)}
+                                                        className="text-green-600 hover:text-green-700"
+                                                    >
+                                                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                                                        승인
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleReviewAction('reject', review)}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <XCircle className="h-4 w-4 mr-1" />
+                                                        거부
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(review.id)}
+                                                        className="text-destructive hover:text-destructive"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </Card>
-                                ))}
+
+                                            <div className="space-y-3">
+                                                <p className="text-sm text-muted-foreground line-clamp-3">
+                                                    {review.content}
+                                                </p>
+
+                                                {review.verification_photo && (
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <Badge variant="outline">📸 인증 사진</Badge>
+                                                        <span className="text-muted-foreground">업로드됨</span>
+                                                    </div>
+                                                )}
+
+                                                {review.food_photos && review.food_photos.length > 0 && (
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <Badge variant="outline">🍽️ 음식 사진</Badge>
+                                                        <span className="text-muted-foreground">{review.food_photos.length}장</span>
+                                                    </div>
+                                                )}
+
+                                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                                    <span>작성일: {new Date(review.created_at).toLocaleString('ko-KR')}</span>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {Array.isArray(review.category)
+                                                            ? review.category.map((cat: string) => (
+                                                                <Badge key={cat} variant="outline" className="text-xs">
+                                                                    {cat}
+                                                                </Badge>
+                                                            ))
+                                                            : (
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {review.category}
+                                                                </Badge>
+                                                            )
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    ))}
                                 </div>
 
                                 {/* 추가 로딩 표시 */}
