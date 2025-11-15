@@ -97,6 +97,12 @@ export default function AdminEvaluationPage() {
   // 무한 스크롤을 위한 scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // 첫 마운트 여부를 추적 (검색 자동 실행 방지)
+  const isInitialMount = useRef(true);
+
+  // 데이터 로드 여부 추적 (세션 동안 한 번만 로드)
+  const hasLoadedData = useRef(false);
+
   // 상태 변경 시 localStorage에 저장
   useEffect(() => {
     const stateToSave = {
@@ -114,6 +120,7 @@ export default function AdminEvaluationPage() {
 
   // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
+    console.log('🔐 인증 체크 useEffect 실행', { authLoading, hasUser: !!user, isAdmin });
     if (authLoading) return; // 인증 로딩 중에는 대기
 
     if (!user || !isAdmin) {
@@ -129,6 +136,16 @@ export default function AdminEvaluationPage() {
 
   // YouTube 제목 퍼지 검색
   useEffect(() => {
+    console.log('🔍 검색 useEffect 실행', {
+      isInitialMount: isInitialMount.current,
+      searchQuery: searchQuery.substring(0, 20)
+    });
+    // 첫 마운트 시에는 검색 실행하지 않음 (localStorage 복원으로 인한 자동 실행 방지)
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      console.log('✅ 첫 마운트 - 검색 건너뜀');
+      return;
+    }
     const performFuzzySearch = async () => {
       if (!searchQuery.trim()) {
         setSearchResults(null);
@@ -137,7 +154,7 @@ export default function AdminEvaluationPage() {
 
       setIsSearching(true);
       try {
-        console.log('검색 시작:', searchQuery.trim());
+        console.log('🔎 검색 시작:', searchQuery.trim());
         // @ts-expect-error - Supabase RPC 타입 문제
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
@@ -393,6 +410,7 @@ export default function AdminEvaluationPage() {
 
   // 전체 데이터 로드 (한 번만)
   const loadAllRecords = useCallback(async () => {
+    console.log('🔄 loadAllRecords 호출됨');
     try {
       setLoading(true);
 
@@ -550,10 +568,26 @@ export default function AdminEvaluationPage() {
 
   // 초기 데이터 로드
   useEffect(() => {
+    console.log('📍 초기 데이터 로드 useEffect 실행', {
+      user: !!user,
+      isAdmin,
+      authLoading,
+      hasLoadedData: hasLoadedData.current
+    });
+
+    // 이미 데이터를 로드했으면 건너뛰기 (컴포넌트 재마운트 시 중복 로드 방지)
+    if (hasLoadedData.current) {
+      console.log('✅ 데이터 이미 로드됨 - 스킵');
+      return;
+    }
+
     if (user && isAdmin && !authLoading) {
+      hasLoadedData.current = true;
       loadAllRecords();
     }
-  }, [user, isAdmin, authLoading, loadAllRecords]);
+    // loadAllRecords는 의존성에서 제외 (무한 루프 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isAdmin, authLoading]);
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
