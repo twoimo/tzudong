@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 interface Restaurant {
     id: string;
     name: string;
-    youtube_links: string[];
+    youtube_link: string | null;
     review_count: number;
 }
 
@@ -37,7 +37,7 @@ const StampPage = () => {
                 .from('restaurants')
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'approved')
-                .not('youtube_links', 'is', null);
+                .not('youtube_link', 'is', null);
 
             if (error) throw error;
             return count || 0;
@@ -50,9 +50,9 @@ const StampPage = () => {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, youtube_links, review_count')
+                .select('id, name, youtube_link, review_count')
                 .eq('status', 'approved')
-                .not('youtube_links', 'is', null)
+                .not('youtube_link', 'is', null)
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
@@ -193,10 +193,8 @@ const StampPage = () => {
             <div className="flex-1 overflow-auto p-6">
                 <div className="grid grid-cols-5 gap-4">
                     {restaurants.map((restaurant, index) => {
-                        // youtube_links 배열에서 첫 번째 링크 사용
-                        const youtubeLink = restaurant.youtube_links && restaurant.youtube_links.length > 0
-                            ? restaurant.youtube_links[0]
-                            : '';
+                        // youtube_link 단일 값 사용
+                        const youtubeLink = restaurant.youtube_link || '';
                         const thumbnailUrl = youtubeLink ? getYouTubeThumbnailUrl(youtubeLink) : null;
                         const visited = isVisited(restaurant.id);
 

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Restaurant, Region } from "@/types/restaurant";
+import { Restaurant, Region, YoutubeMeta } from "@/types/restaurant";
 import { Tables } from "@/integrations/supabase/types";
 
 type DBRestaurant = Tables<"restaurants">;
@@ -150,8 +150,8 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                         // 가장 긴 이름의 좌표 (없으면 다음으로 긴 이름의 좌표)
                         let coordinates = { latitude: 0, longitude: 0 };
                         for (const r of sortedByNameLength) {
-                            if (r.latitude && r.longitude) {
-                                coordinates = { latitude: r.latitude, longitude: r.longitude };
+                            if (r.lat && r.lng) {
+                                coordinates = { latitude: r.lat, longitude: r.lng };
                                 break;
                             }
                         }
@@ -161,33 +161,48 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                             mergedRestaurants.flatMap(r => r.categories || [])
                         ));
 
-                        // youtube_links 병합 (중복 제거)
+                        // youtube_link 병합 (중복 제거) - 단일 문자열을 배열로 수집
                         const mergedYoutubeLinks = mergedRestaurants
-                            .flatMap(r => r.youtube_links || [])
+                            .map(r => r.youtube_link)
+                            .filter((link): link is string => link != null)
                             .filter((link, index, self) => self.indexOf(link) === index);
 
-                        // tzuyang_reviews 병합
+                        // tzuyang_review 병합 - 단일 문자열을 배열로 수집
                         const mergedTzuyangReviews = mergedRestaurants
-                            .flatMap(r => Array.isArray(r.tzuyang_reviews) ? r.tzuyang_reviews : []);
+                            .map(r => r.tzuyang_review)
+                            .filter((review): review is string => review != null);
 
                         // youtube_meta는 각 레코드에 하나씩만 있으므로 배열로 수집
                         const mergedYoutubeMetas = mergedRestaurants
-                            .map(r => r.youtube_meta)
-                            .filter((meta): meta is NonNullable<typeof meta> => meta != null);
+                            .map(r => r.youtube_meta as YoutubeMeta | null)
+                            .filter((meta): meta is YoutubeMeta => meta != null);
+
+                        // 디버깅: 병합된 데이터 확인
+                        console.log('🔍 병합된 레스토랑:', {
+                            name: longestName,
+                            groupSize: mergedRestaurants.length,
+                            mergedYoutubeLinks,
+                            mergedTzuyangReviews,
+                            mergedYoutubeMetas,
+                        });
 
                         // 병합된 데이터로 업데이트
                         restaurantMap.set(existingKey, {
                             ...existingRestaurant,
                             name: longestName,
-                            latitude: coordinates.latitude,
-                            longitude: coordinates.longitude,
+                            lat: coordinates.latitude,
+                            lng: coordinates.longitude,
                             categories: allCategories, // 모든 카테고리 배열
-                            youtube_links: mergedYoutubeLinks,
-                            tzuyang_reviews: mergedTzuyangReviews,
-                            youtube_meta: mergedYoutubeMetas[0] || null, // 가장 첫 번째 메타 사용
+                            youtube_link: mergedYoutubeLinks[0] || null, // 첫 번째 링크 (DB 저장용)
+                            tzuyang_review: mergedTzuyangReviews[0] || null, // 첫 번째 리뷰 (DB 저장용)
+                            youtube_meta: mergedYoutubeMetas[0] || null, // 가장 첫 번째 메타 (DB 저장용)
+                            // 병합된 전체 배열 (UI 표시용)
+                            mergedYoutubeLinks: mergedYoutubeLinks,
+                            mergedTzuyangReviews: mergedTzuyangReviews,
+                            mergedYoutubeMetas: mergedYoutubeMetas,
                             review_count: mergedRestaurants.reduce((sum, r) => sum + (r.review_count || 0), 0),
                             mergedRestaurants: mergedRestaurants,
-                        });
+                        } as any);
 
                         merged = true;
                         break;
@@ -207,12 +222,6 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 // 호환성 속성 추가
                 address: restaurant.road_address || restaurant.jibun_address || '',
                 category: restaurant.categories,
-                youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
-                    ? restaurant.youtube_links[0]
-                    : null,
-                tzuyang_review: Array.isArray(restaurant.tzuyang_reviews) && restaurant.tzuyang_reviews.length > 0 && restaurant.tzuyang_reviews[0]
-                    ? (restaurant.tzuyang_reviews[0] as Record<string, unknown>).review as string
-                    : null,
             }));
 
             return restaurants as Restaurant[];
@@ -245,12 +254,6 @@ export function useRestaurant(id: string | null) {
                 ...dbData,
                 address: dbData.road_address || dbData.jibun_address || '',
                 category: dbData.categories,
-                youtube_link: Array.isArray(dbData.youtube_links) && dbData.youtube_links.length > 0
-                    ? dbData.youtube_links[0]
-                    : null,
-                tzuyang_review: Array.isArray(dbData.tzuyang_reviews) && dbData.tzuyang_reviews.length > 0 && dbData.tzuyang_reviews[0]
-                    ? (dbData.tzuyang_reviews[0] as Record<string, unknown>).review as string
-                    : null,
             };
 
             return restaurant;

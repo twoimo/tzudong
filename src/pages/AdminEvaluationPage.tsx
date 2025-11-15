@@ -83,6 +83,14 @@ export default function AdminEvaluationPage() {
   const [selectedConflictRecord, setSelectedConflictRecord] = useState<EvaluationRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
+  
+  // 승인 확인 모달 상태
+  const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
+  const [pendingApprovalRecord, setPendingApprovalRecord] = useState<EvaluationRecord | null>(null);
+  const [conflictingRestaurantInfo, setConflictingRestaurantInfo] = useState<{
+    name: string;
+    address: string;
+  } | null>(null);
 
   // 테이블 뷰 토글 상태
   const [isAlternateView, setIsAlternateView] = useState(savedState?.isAlternateView || false);
@@ -197,9 +205,7 @@ export default function AdminEvaluationPage() {
             origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number || 0,
             origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number || 0,
             reasoning_basis: r.reasoning_basis as string || '',
-            tzuyang_review: Array.isArray(r.tzuyang_reviews) && r.tzuyang_reviews.length > 0
-              ? ((r.tzuyang_reviews[0] as Record<string, unknown>)?.review as string || '')
-              : '',
+            tzuyang_review: r.tzuyang_review as string || '',
             naver_address_info: r.road_address || r.jibun_address ? {
               road_address: r.road_address as string | null,
               jibun_address: r.jibun_address as string || '',
@@ -214,7 +220,7 @@ export default function AdminEvaluationPage() {
             ...r,
             // 호환성을 위한 별칭 추가
             restaurant_name: r.name,
-            youtube_link: Array.isArray(r.youtube_links) ? r.youtube_links[0] : '',
+            youtube_link: r.youtube_link as string || '',
             // evaluation_results는 그대로 사용
             evaluation_results: evaluationResults,
             // restaurant_info 생성
@@ -447,9 +453,7 @@ export default function AdminEvaluationPage() {
           origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number || 0,
           origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number || 0,
           reasoning_basis: r.reasoning_basis as string || '',
-          tzuyang_review: Array.isArray(r.tzuyang_reviews) && r.tzuyang_reviews.length > 0
-            ? ((r.tzuyang_reviews[0] as Record<string, unknown>)?.review as string || '')
-            : '',
+          tzuyang_review: r.tzuyang_review as string || '',
           naver_address_info: r.road_address || r.jibun_address ? {
             road_address: r.road_address as string | null,
             jibun_address: r.jibun_address as string || '',
@@ -464,7 +468,7 @@ export default function AdminEvaluationPage() {
           ...r,
           // 호환성을 위한 별칭 추가
           restaurant_name: r.name,
-          youtube_link: Array.isArray(r.youtube_links) ? r.youtube_links[0] : '',
+          youtube_link: r.youtube_link as string || '',
           // evaluation_results는 그대로 사용 (JSONB 데이터)
           evaluation_results: evaluationResults,
           // restaurant_info 생성
@@ -634,10 +638,15 @@ export default function AdminEvaluationPage() {
     try {
       setLoading(true);
 
-      // YouTube 링크 추출
-      const youtubeLink = Array.isArray(record.youtube_links) && record.youtube_links.length > 0
-        ? record.youtube_links[0]
-        : (record.youtube_link || '');
+      // YouTube 링크 추출 (단일 값)
+      const youtubeLink = record.youtube_link || '';
+
+      console.log('🔍 중복 검사 시작:', {
+        name: record.restaurant_name || record.name,
+        jibun_address: record.jibun_address,
+        record_id: record.id,
+        youtube_link: youtubeLink,
+      });
 
       // 🔥 중복 검사 추가 (YouTube 링크 포함)
       const duplicateCheck = await checkRestaurantDuplicate(
@@ -647,7 +656,43 @@ export default function AdminEvaluationPage() {
         youtubeLink // YouTube 링크 전달
       );
 
+      console.log('📊 중복 검사 결과:', duplicateCheck);
+
       if (duplicateCheck.isDuplicate) {
+        console.log('⚠️ 중복 감지!', {
+          matchedRestaurant: duplicateCheck.matchedRestaurant,
+          currentYoutubeLink: youtubeLink,
+          matchedYoutubeLink: duplicateCheck.matchedRestaurant?.youtube_link,
+        });
+
+        // 🔥 수정: 유튜브 링크 비교 로직 개선
+        const currentYoutubeLink = youtubeLink?.trim() || null;
+        const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
+
+        console.log('🔗 유튜브 링크 비교:', {
+          current: currentYoutubeLink,
+          matched: matchedYoutubeLink,
+          isDifferent: currentYoutubeLink !== matchedYoutubeLink,
+        });
+
+        // 유튜브 링크가 다른 경우: 확인 모달 표시
+        if (currentYoutubeLink !== matchedYoutubeLink) {
+          console.log('✅ 유튜브 링크가 다름 → 확인 모달 표시');
+          
+          // 모달 상태 설정
+          setPendingApprovalRecord(record);
+          setConflictingRestaurantInfo({
+            name: duplicateCheck.matchedRestaurant!.name,
+            address: duplicateCheck.matchedRestaurant!.jibun_address || duplicateCheck.matchedRestaurant!.road_address || '',
+          });
+          setShowApprovalConfirm(true);
+          setLoading(false);
+          return;
+        }
+
+        console.log('❌ 유튜브 링크가 같음 → 중복 오류 처리');
+
+        // 유튜브 링크가 같은 경우: 중복 오류 처리 (기존 로직)
         // 중복 발견 시 에러 정보 저장
         const errorDetails = {
           error_type: 'duplicate' as const,
@@ -687,32 +732,8 @@ export default function AdminEvaluationPage() {
         return;
       }
 
-      // status를  'approved'로 업데이트
-      const { error } = await supabase
-        .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
-        .update({
-          status: 'approved',
-          db_error_message: null, // 에러 메시지 초기화
-          db_error_details: null, // 에러 상세 초기화
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', record.id);
-
-      if (error) throw error;
-
-      // 상태 업데이트 (새로고침 없이)
-      updateRecordInState(record.id, {
-        status: 'approved',
-        db_error_message: null,
-        db_error_details: null,
-        updated_at: new Date().toISOString(),
-      });
-
-      toast({
-        title: '승인 완료',
-        description: `✅ "${record.restaurant_name || record.name}" 맛집이 승인되었습니다`,
-      });
+      // 실제 승인 처리 실행
+      await performApproval(record);
 
     } catch (error: unknown) {
       console.error('승인 처리 실패:', error);
@@ -724,6 +745,36 @@ export default function AdminEvaluationPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // 실제 승인 처리 실행 (중복 확인 후 재사용)
+  const performApproval = async (record: EvaluationRecord) => {
+    // status를  'approved'로 업데이트
+    const { error } = await supabase
+      .from('restaurants')
+      // @ts-expect-error - Supabase 자동 생성 타입 문제
+      .update({
+        status: 'approved',
+        db_error_message: null, // 에러 메시지 초기화
+        db_error_details: null, // 에러 상세 초기화
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', record.id);
+
+    if (error) throw error;
+
+    // 상태 업데이트 (새로고침 없이)
+    updateRecordInState(record.id, {
+      status: 'approved',
+      db_error_message: null,
+      db_error_details: null,
+      updated_at: new Date().toISOString(),
+    });
+
+    toast({
+      title: '승인 완료',
+      description: `✅ "${record.restaurant_name || record.name}" 맛집이 승인되었습니다`,
+    });
   };
 
   // 병합 함수 (더 이상 필요 없음 - 단순화)
@@ -840,103 +891,6 @@ export default function AdminEvaluationPage() {
       toast({
         variant: 'destructive',
         title: '복원 실패',
-        description: error instanceof Error ? error.message : '알 수 없는 오류',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 중복 레코드 데이터 병합 핸들러
-  const handleMergeData = async (
-    targetRestaurantId: string,
-    sourceData: { youtube_links: string[]; youtube_metas: Record<string, unknown>[]; tzuyang_reviews: Record<string, unknown>[] },
-    sourceRecordId: string
-  ) => {
-    try {
-      setLoading(true);
-
-      // 1. 기존 맛집 데이터 가져오기
-      const { data: targetRestaurant, error: fetchError } = await supabase
-        .from('restaurants')
-        .select('youtube_links, youtube_metas, tzuyang_reviews')
-        .eq('id', targetRestaurantId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      // 2. 데이터 병합 (중복 제거)
-      const existingYoutubeLinks = (targetRestaurant.youtube_links || []) as string[];
-      const existingYoutubeMetas = (targetRestaurant.youtube_metas || []) as Record<string, unknown>[];
-      const existingTzuyangReviews = (targetRestaurant.tzuyang_reviews || []) as Record<string, unknown>[];
-
-      // YouTube 링크 병합 (중복 제거)
-      const newYoutubeLinks = sourceData.youtube_links.filter(
-        link => !existingYoutubeLinks.includes(link)
-      );
-      const mergedYoutubeLinks = [...existingYoutubeLinks, ...newYoutubeLinks];
-
-      // YouTube 메타 병합 (중복 제거 - URL 기준)
-      const existingMetaUrls = existingYoutubeMetas
-        .map((meta: Record<string, unknown>) => meta.url as string)
-        .filter(Boolean);
-      const newYoutubeMetas = sourceData.youtube_metas.filter(
-        (meta: Record<string, unknown>) => !existingMetaUrls.includes(meta.url as string)
-      );
-      const mergedYoutubeMetas = [...existingYoutubeMetas, ...newYoutubeMetas];
-
-      // 쯔양 리뷰 병합 (중복 제거 - review 내용 기준)
-      const existingReviewContents = existingTzuyangReviews
-        .map((r: Record<string, unknown>) => typeof r === 'string' ? r : r.review as string)
-        .filter(Boolean);
-      const newTzuyangReviews = sourceData.tzuyang_reviews.filter((r: Record<string, unknown>) => {
-        const reviewContent = typeof r === 'string' ? r : r.review as string;
-        return !existingReviewContents.includes(reviewContent);
-      });
-      const mergedTzuyangReviews = [...existingTzuyangReviews, ...newTzuyangReviews];
-
-      // 3. 기존 맛집 업데이트
-      const { error: updateError } = await supabase
-        .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
-        .update({
-          youtube_links: mergedYoutubeLinks,
-          youtube_metas: mergedYoutubeMetas,
-          tzuyang_reviews: mergedTzuyangReviews,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', targetRestaurantId);
-
-      if (updateError) throw updateError;
-
-      // 4. 중복 레코드 삭제 (soft delete)
-      const { error: deleteError } = await supabase
-        .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
-        .update({
-          status: 'deleted',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', sourceRecordId);
-
-      if (deleteError) throw deleteError;
-
-      // 5. 상태 업데이트
-      updateRecordInState(sourceRecordId, {
-        status: 'deleted',
-        updated_at: new Date().toISOString(),
-      } as Partial<EvaluationRecord>);
-
-      toast({
-        title: '중복 데이터 병합 완료',
-        description: `✅ 기존 맛집에 유튜브 링크 ${newYoutubeLinks.length}개, 리뷰 ${newTzuyangReviews.length}개가 추가되었습니다.\n❌ 중복 레코드는 삭제 상태로 변경되었습니다.`,
-      });
-
-    } catch (error: unknown) {
-      console.error('데이터 병합 실패:', error);
-      toast({
-        variant: 'destructive',
-        title: '데이터 병합 실패',
         description: error instanceof Error ? error.message : '알 수 없는 오류',
       });
     } finally {
@@ -1093,6 +1047,55 @@ export default function AdminEvaluationPage() {
           updateRecordInState(recordId, updates);
         }}
       />
+      
+      {/* 승인 확인 모달 */}
+      <AlertDialog open={showApprovalConfirm} onOpenChange={setShowApprovalConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>승인 확인</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
+              {conflictingRestaurantInfo && (
+                <div className="mt-3 p-3 bg-muted rounded-md">
+                  <p className="font-medium">기존 레스토랑:</p>
+                  <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
+                  <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
+                </div>
+              )}
+              <p className="mt-3 font-medium">승인하시겠습니까?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!pendingApprovalRecord) return;
+                
+                setShowApprovalConfirm(false);
+                setLoading(true);
+                try {
+                  await performApproval(pendingApprovalRecord);
+                } catch (error) {
+                  console.error('승인 실패:', error);
+                  toast({
+                    variant: 'destructive',
+                    title: '승인 실패',
+                    description: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
+                  });
+                } finally {
+                  setLoading(false);
+                  setPendingApprovalRecord(null);
+                  setConflictingRestaurantInfo(null);
+                }
+              }}
+              disabled={loading}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              승인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
