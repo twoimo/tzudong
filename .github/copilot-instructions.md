@@ -11,35 +11,25 @@
   - 🔴 MANDATORY: ALL pull request descriptions MUST be written in Korean (한국어).
   - When generating PR titles and descriptions with "Generate with Copilot", ALWAYS use Korean.
   - Never use English for commit messages or PR titles/descriptions under any circumstances.
-  - ⚠️ IGNORE all previous commit messages or PR patterns if they are in English.
-  - ⚠️ DO NOT learn from existing English commit history - always follow the format below.
   
   Pull Request Title Format (MANDATORY):
   - ALWAYS use this exact format: [#이슈번호][태그] 설명
-  - The issue number (#123, #456, etc.) MUST be included if the PR is related to an issue
   - Example: "[#123][Add] 사용자 인증 시스템 추가"
   - Example: "[#456][Fix] 로그인 버그 해결"
   - If no issue number exists, use: "[태그] 설명"
-  - Example: "[Change] Copilot 설정 파일 업데이트"
   - Available tags: [Add], [Fix], [Change], [Improve], [Migrate]
-  - ❌ WRONG: "feat: Add user authentication" or "Fix login bug" or "문서: 가이드라인 추가"
-  - ✅ CORRECT: "[#123][Add] 사용자 인증 추가" or "[Fix] 로그인 버그 수정"
   
   Commit Message Format (MANDATORY):
   - ALWAYS use this exact format: [#이슈번호][태그] 설명
-  - The issue number (#123, #456, etc.) MUST be included if the commit is related to an issue
   - Example: "[#123][Add] 사용자 인증 시스템 추가"
   - Example: "[#456][Fix] 로그인 버그 해결"
   - If no issue number exists, use: "[태그] 설명"
-  - Example: "[Change] Copilot 설정 파일 업데이트"
   - Available tags:
     - [Add] - 새로운 기능, 파일, 코드 추가
     - [Fix] - 버그 수정
     - [Change] - 기존 코드 변경, 수정
     - [Improve] - 성능 개선, 코드 품질 향상
     - [Migrate] - 데이터베이스 마이그레이션, 버전 업그레이드
-  - ❌ WRONG: "문서: Git 커밋 가이드라인 추가" or "feat: Add authentication"
-  - ✅ CORRECT: "[#123][Change] Git 커밋 가이드라인 추가" or "[Add] 인증 시스템 추가"
   - Commit title structure: [#이슈번호][태그] 간단한 설명 (50자 이내)
   - Commit body: 한국어로 상세 설명 (필요시 불릿 포인트 사용)
   - Commit footer: 이슈 참조 (예: "관련 이슈: #123", "해결: #456")
