@@ -843,6 +843,103 @@ export default function AdminEvaluationPage() {
     }
   };
 
+  // 중복 레코드 데이터 병합 핸들러
+  const handleMergeData = async (
+    targetRestaurantId: string,
+    sourceData: { youtube_links: string[]; youtube_metas: Record<string, unknown>[]; tzuyang_reviews: Record<string, unknown>[] },
+    sourceRecordId: string
+  ) => {
+    try {
+      setLoading(true);
+
+      // 1. 기존 맛집 데이터 가져오기
+      const { data: targetRestaurant, error: fetchError } = await supabase
+        .from('restaurants')
+        .select('youtube_links, youtube_metas, tzuyang_reviews')
+        .eq('id', targetRestaurantId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // 2. 데이터 병합 (중복 제거)
+      const existingYoutubeLinks = (targetRestaurant.youtube_links || []) as string[];
+      const existingYoutubeMetas = (targetRestaurant.youtube_metas || []) as Record<string, unknown>[];
+      const existingTzuyangReviews = (targetRestaurant.tzuyang_reviews || []) as Record<string, unknown>[];
+
+      // YouTube 링크 병합 (중복 제거)
+      const newYoutubeLinks = sourceData.youtube_links.filter(
+        link => !existingYoutubeLinks.includes(link)
+      );
+      const mergedYoutubeLinks = [...existingYoutubeLinks, ...newYoutubeLinks];
+
+      // YouTube 메타 병합 (중복 제거 - URL 기준)
+      const existingMetaUrls = existingYoutubeMetas
+        .map((meta: Record<string, unknown>) => meta.url as string)
+        .filter(Boolean);
+      const newYoutubeMetas = sourceData.youtube_metas.filter(
+        (meta: Record<string, unknown>) => !existingMetaUrls.includes(meta.url as string)
+      );
+      const mergedYoutubeMetas = [...existingYoutubeMetas, ...newYoutubeMetas];
+
+      // 쯔양 리뷰 병합 (중복 제거 - review 내용 기준)
+      const existingReviewContents = existingTzuyangReviews
+        .map((r: Record<string, unknown>) => typeof r === 'string' ? r : r.review as string)
+        .filter(Boolean);
+      const newTzuyangReviews = sourceData.tzuyang_reviews.filter((r: Record<string, unknown>) => {
+        const reviewContent = typeof r === 'string' ? r : r.review as string;
+        return !existingReviewContents.includes(reviewContent);
+      });
+      const mergedTzuyangReviews = [...existingTzuyangReviews, ...newTzuyangReviews];
+
+      // 3. 기존 맛집 업데이트
+      const { error: updateError } = await supabase
+        .from('restaurants')
+        // @ts-expect-error - Supabase 자동 생성 타입 문제
+        .update({
+          youtube_links: mergedYoutubeLinks,
+          youtube_metas: mergedYoutubeMetas,
+          tzuyang_reviews: mergedTzuyangReviews,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', targetRestaurantId);
+
+      if (updateError) throw updateError;
+
+      // 4. 중복 레코드 삭제 (soft delete)
+      const { error: deleteError } = await supabase
+        .from('restaurants')
+        // @ts-expect-error - Supabase 자동 생성 타입 문제
+        .update({
+          status: 'deleted',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', sourceRecordId);
+
+      if (deleteError) throw deleteError;
+
+      // 5. 상태 업데이트
+      updateRecordInState(sourceRecordId, {
+        status: 'deleted',
+        updated_at: new Date().toISOString(),
+      } as Partial<EvaluationRecord>);
+
+      toast({
+        title: '데이터 병합 완료',
+        description: `기존 맛집에 유튜브 링크 ${newYoutubeLinks.length}개, 리뷰 ${newTzuyangReviews.length}개가 추가되었습니다.`,
+      });
+
+    } catch (error: unknown) {
+      console.error('데이터 병합 실패:', error);
+      toast({
+        variant: 'destructive',
+        title: '데이터 병합 실패',
+        description: error instanceof Error ? error.message : '알 수 없는 오류',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 인증 로딩 중이거나 권한 확인 중일 때
   if (authLoading || (loading && allRecords.length === 0)) {
     return (
@@ -930,6 +1027,7 @@ export default function AdminEvaluationPage() {
                   onRegisterMissing={handleRegisterMissing}
                   onResolveConflict={handleResolveConflict}
                   onEdit={handleEdit}
+                  onMergeData={handleMergeData}
                   loading={loading || isSearching}
                   evalFilters={evalFilters}
                   isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}

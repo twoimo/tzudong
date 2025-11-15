@@ -18,6 +18,8 @@ interface RestaurantErrorAlertProps {
     errorDetails: DuplicateErrorDetails | null;
     onResolve: () => void;
     onViewConflict?: () => void;
+    onMergeData?: (targetRestaurantId: string, sourceData: { youtube_links: string[]; youtube_metas: any[]; tzuyang_reviews: any[] }) => void;
+    currentRecord?: { youtube_links?: string[] | null; youtube_metas?: any[] | null; tzuyang_reviews?: any[] | null };
 }
 
 export function RestaurantErrorAlert({
@@ -25,6 +27,8 @@ export function RestaurantErrorAlert({
     errorDetails,
     onResolve,
     onViewConflict,
+    onMergeData,
+    currentRecord,
 }: RestaurantErrorAlertProps) {
     if (!errorMessage) return null;
 
@@ -60,7 +64,7 @@ export function RestaurantErrorAlert({
                         </div>
                     )}
 
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-wrap gap-2">
                         <Button
                             size="sm"
                             variant="outline"
@@ -70,18 +74,39 @@ export function RestaurantErrorAlert({
                             오류 확인 및 수정
                         </Button>
                         {isDuplicate && errorDetails.conflicting_restaurant?.id && (
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                    // 기존 맛집으로 이동
-                                    window.open(`/restaurant/${errorDetails.conflicting_restaurant.id}`, '_blank');
-                                }}
-                                className="text-xs"
-                            >
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                기존 맛집 보기
-                            </Button>
+                            <>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                        // 기존 맛집으로 이동
+                                        window.open(`/restaurant/${errorDetails.conflicting_restaurant.id}`, '_blank');
+                                    }}
+                                    className="text-xs"
+                                >
+                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                    기존 맛집 보기
+                                </Button>
+                                {onMergeData && currentRecord && (
+                                    <Button
+                                        size="sm"
+                                        variant="default"
+                                        onClick={() => {
+                                            onMergeData(
+                                                errorDetails.conflicting_restaurant.id,
+                                                {
+                                                    youtube_links: currentRecord.youtube_links || [],
+                                                    youtube_metas: currentRecord.youtube_metas || [],
+                                                    tzuyang_reviews: currentRecord.tzuyang_reviews || [],
+                                                }
+                                            );
+                                        }}
+                                        className="text-xs bg-blue-600 hover:bg-blue-700"
+                                    >
+                                        기존 맛집에 데이터 추가
+                                    </Button>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

@@ -35,6 +35,7 @@ interface EvaluationTableProps {
   onRegisterMissing?: (record: EvaluationRecord) => void;
   onResolveConflict?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
+  onMergeData?: (targetRestaurantId: string, sourceData: { youtube_links: string[]; youtube_metas: any[]; tzuyang_reviews: any[] }, sourceRecordId: string) => void;
   loading?: boolean;
   isDeletedFilterActive?: boolean; // 삭제 필터 활성화 여부
   searchQuery?: string; // 검색어
@@ -88,6 +89,7 @@ export function EvaluationTable({
   onRegisterMissing,
   onResolveConflict,
   onEdit,
+  onMergeData,
   loading,
   isDeletedFilterActive = false,
   searchQuery = '',
@@ -873,6 +875,9 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     <EvaluationRowDetails
                       record={record}
                       onEdit={() => onEdit?.(record)}
+                      onMergeData={onMergeData ? (targetRestaurantId, sourceData) => {
+                        onMergeData(targetRestaurantId, sourceData, record.id);
+                      } : undefined}
                     />
                   </TableCell>
                 </TableRow>

@@ -7,9 +7,10 @@ import { RestaurantErrorAlert } from './RestaurantErrorAlert';
 interface EvaluationRowDetailsProps {
   record: EvaluationRecord;
   onEdit?: () => void;
+  onMergeData?: (targetRestaurantId: string, sourceData: { youtube_links: string[]; youtube_metas: any[]; tzuyang_reviews: any[] }) => void;
 }
 
-export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
+export function EvaluationRowDetails({ record, onEdit, onMergeData }: EvaluationRowDetailsProps) {
   const { youtube_meta, evaluation_results, restaurant_info, missing_message } = record;
 
   // 디버깅: 데이터 구조 확인
@@ -44,6 +45,12 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
                 if (onEdit) {
                   onEdit();
                 }
+              }}
+              onMergeData={onMergeData}
+              currentRecord={{
+                youtube_links: record.youtube_links,
+                youtube_metas: record.youtube_metas,
+                tzuyang_reviews: record.tzuyang_reviews,
               }}
             />
           </div>
@@ -215,6 +222,12 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
             if (onEdit) {
               onEdit();
             }
+          }}
+          onMergeData={onMergeData}
+          currentRecord={{
+            youtube_links: record.youtube_links,
+            youtube_metas: record.youtube_metas,
+            tzuyang_reviews: record.tzuyang_reviews,
           }}
         />
       )}
