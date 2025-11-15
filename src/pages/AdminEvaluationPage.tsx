@@ -24,11 +24,27 @@ import {
 } from '@/components/ui/alert-dialog';
 
 const PAGE_SIZE = 50; // 한 번에 로드할 레코드 수
+const STORAGE_KEY = 'adminEvaluationPageState'; // localStorage 키
 
 export default function AdminEvaluationPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
+
+  // localStorage에서 초기 상태 복원
+  const getInitialState = () => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Failed to parse saved state:', error);
+    }
+    return null;
+  };
+
+  const savedState = getInitialState();
 
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
   const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
@@ -47,8 +63,8 @@ export default function AdminEvaluationPage() {
     not_selected: 0,
     deleted: 0,
   });
-  const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
+  const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>(savedState?.selectedStatuses || []);
+  const [searchQuery, setSearchQuery] = useState<string>(savedState?.searchQuery || ''); // 검색어 상태
   const [searchResults, setSearchResults] = useState<EvaluationRecord[] | null>(null); // 검색 결과
   const [isSearching, setIsSearching] = useState(false); // 검색 로딩 상태
   const [evalFilters, setEvalFilters] = useState<{
@@ -60,7 +76,7 @@ export default function AdminEvaluationPage() {
     category_validity_TF?: string;
     category_TF?: string;
     status?: string;
-  }>({});
+  }>(savedState?.evalFilters || {});
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
   const [conflictPanelOpen, setConflictPanelOpen] = useState(false);
@@ -69,7 +85,7 @@ export default function AdminEvaluationPage() {
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
 
   // 테이블 뷰 토글 상태
-  const [isAlternateView, setIsAlternateView] = useState(false);
+  const [isAlternateView, setIsAlternateView] = useState(savedState?.isAlternateView || false);
 
   // 오류 경고 다이얼로그
   const [showConflictWarning, setShowConflictWarning] = useState(false);
@@ -80,6 +96,21 @@ export default function AdminEvaluationPage() {
 
   // 무한 스크롤을 위한 scroll container ref
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 상태 변경 시 localStorage에 저장
+  useEffect(() => {
+    const stateToSave = {
+      selectedStatuses,
+      searchQuery,
+      evalFilters,
+      isAlternateView,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error('Failed to save state:', error);
+    }
+  }, [selectedStatuses, searchQuery, evalFilters, isAlternateView]);
 
   // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
