@@ -11,6 +11,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface EditRestaurantModalProps {
   record: EvaluationRecord | null;
@@ -72,6 +82,13 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   // 선택된 지오코딩 결과
   const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
   const [geocodingError, setGeocodingError] = useState<string | null>(null);
+  
+  // 승인 확인 모달 상태
+  const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
+  const [conflictingRestaurantInfo, setConflictingRestaurantInfo] = useState<{
+    name: string;
+    address: string;
+  } | null>(null);
 
 
   const handleReGeocode = async () => {
@@ -301,15 +318,56 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       // 선택된 지오코딩 결과 가져오기
       const selectedResult = geocodingResults[selectedGeocodingIndex];
 
+      console.log('🔍 중복 검사 시작:', {
+        name: trimmedName,
+        jibun_address: selectedResult.jibun_address,
+        record_id: record.id,
+        youtube_link: record.youtube_link,
+      });
+
       // 🔥 중복 검사 추가
       const duplicateCheck = await checkRestaurantDuplicate(
         trimmedName,
         selectedResult.jibun_address,
-        record.id
+        record.id,
+        record.youtube_link // YouTube 링크도 함께 전달
       );
 
+      console.log('📊 중복 검사 결과:', duplicateCheck);
+
       if (duplicateCheck.isDuplicate) {
-        // 중복 발견 시 에러 정보 저장
+        console.log('⚠️ 중복 감지!', {
+          matchedRestaurant: duplicateCheck.matchedRestaurant,
+          currentYoutubeLink: record.youtube_link,
+          matchedYoutubeLink: duplicateCheck.matchedRestaurant?.youtube_link,
+        });
+
+        // 🔥 수정: 유튜브 링크 비교 로직 개선
+        const currentYoutubeLink = record.youtube_link?.trim() || null;
+        const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
+
+        console.log('🔗 유튜브 링크 비교:', {
+          current: currentYoutubeLink,
+          matched: matchedYoutubeLink,
+          isDifferent: currentYoutubeLink !== matchedYoutubeLink,
+        });
+
+        // 유튜브 링크가 다른 경우: 확인 모달 표시
+        if (currentYoutubeLink !== matchedYoutubeLink) {
+          console.log('✅ 유튜브 링크가 다름 → 확인 모달 표시');
+          
+          setConflictingRestaurantInfo({
+            name: duplicateCheck.matchedRestaurant!.name,
+            address: duplicateCheck.matchedRestaurant!.jibun_address || duplicateCheck.matchedRestaurant!.road_address || '',
+          });
+          setShowApprovalConfirm(true);
+          setLoading(false);
+          return;
+        }
+
+        console.log('❌ 유튜브 링크가 같음 → 중복 오류 처리');
+
+        // 유튜브 링크가 같은 경우: 중복 오류 처리 (기존 로직)
         const errorDetails = {
           error_type: 'duplicate' as const,
           conflicting_restaurant: {
@@ -348,95 +406,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         return;
       }
 
-      // restaurants 테이블에 업데이트 (evaluation_records와 통합됨)
-      console.log('🔄 DB 업데이트 시작:', {
-        id: record.id,
-        name: trimmedName,
-        selectedResult,
-      });
-
-      const updateData = {
-        name: trimmedName,
-        road_address: selectedResult.road_address,
-        jibun_address: selectedResult.jibun_address,
-        english_address: selectedResult.english_address,
-        address_elements: selectedResult.address_elements,
-        lat: parseFloat(selectedResult.y),
-        lng: parseFloat(selectedResult.x),
-        phone: trimmedPhone || null,
-        categories: record.restaurant_info.category ? [record.restaurant_info.category] : [],
-        youtube_links: [record.youtube_link],
-        youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
-        tzuyang_reviews: trimmedTzuyangReview ? [{ review: trimmedTzuyangReview }] : (record.restaurant_info.tzuyang_review ? [{ review: record.restaurant_info.tzuyang_review }] : []),
-        status: 'approved', // 승인 상태로 변경
-        geocoding_success: true, // 지오코딩 성공으로 설정
-        geocoding_false_stage: null, // 지오코딩 성공 시 NULL (체크 제약 준수)
-        db_error_message: null, // 에러 메시지 초기화
-        db_error_details: null, // 에러 상세 초기화
-        updated_by_admin_id: user?.id || null, // 현재 로그인한 관리자 ID
-        updated_at: new Date().toISOString(),
-      };
-
-      console.log('📝 업데이트 데이터:', updateData);
-
-      const { data: updatedRestaurant, error: updateError } = await supabase
-        .from('restaurants')
-        // @ts-expect-error - Supabase 자동 생성 타입 문제
-        .update(updateData)
-        .eq('id', record.id) // restaurants 테이블의 ID로 업데이트
-        .select()
-        .single();
-
-      console.log('📥 DB 응답:', { data: updatedRestaurant, error: updateError });
-
-      if (updateError) {
-        console.error('❌ DB 업데이트 에러 상세:', {
-          message: updateError.message,
-          details: updateError.details,
-          hint: updateError.hint,
-          code: updateError.code,
-        });
-        throw updateError;
-      }
-
-      toast({
-        title: '승인 완료',
-        description: `${formData.name} 레스토랑이 성공적으로 등록되었습니다.`,
-      });
-
-      onSuccess(record.id, {
-        status: 'approved',
-        name: trimmedName,
-        restaurant_name: trimmedName, // 별칭도 업데이트
-        road_address: selectedResult.road_address,
-        jibun_address: selectedResult.jibun_address,
-        english_address: selectedResult.english_address,
-        address_elements: selectedResult.address_elements,
-        lat: parseFloat(selectedResult.y),
-        lng: parseFloat(selectedResult.x),
-        phone: trimmedPhone || null,
-        geocoding_success: true,
-        geocoding_false_stage: null,
-        db_error_message: null,
-        db_error_details: null,
-        updated_at: new Date().toISOString(),
-        restaurant_info: record.restaurant_info ? {
-          ...record.restaurant_info,
-          name: trimmedName,
-          phone: trimmedPhone || null,
-          tzuyang_review: trimmedTzuyangReview || record.restaurant_info.tzuyang_review,
-          naver_address_info: {
-            road_address: selectedResult.road_address,
-            jibun_address: selectedResult.jibun_address,
-            english_address: selectedResult.english_address,
-            address_elements: selectedResult.address_elements,
-            x: selectedResult.x,
-            y: selectedResult.y,
-          },
-        } : undefined,
-      });
-      onOpenChange(false);
-      resetForm();
+      // 실제 승인 처리 실행
+      await performApproval();
 
     } catch (error) {
       console.error('승인 실패:', error);
@@ -449,6 +420,107 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     } finally {
       setLoading(false);
     }
+  };
+
+  // 실제 승인 처리 실행 (중복 확인 후 재사용)
+  const performApproval = async () => {
+    if (!record) return;
+
+    const trimmedName = formData.name.trim();
+    const trimmedPhone = formData.phone.trim();
+    const trimmedTzuyangReview = formData.tzuyang_review.trim();
+    const selectedResult = geocodingResults[selectedGeocodingIndex!];
+
+    // restaurants 테이블에 업데이트 (evaluation_records와 통합됨)
+    console.log('🔄 DB 업데이트 시작:', {
+      id: record.id,
+      name: trimmedName,
+      selectedResult,
+    });
+
+    const updateData = {
+      name: trimmedName,
+      road_address: selectedResult.road_address,
+      jibun_address: selectedResult.jibun_address,
+      english_address: selectedResult.english_address,
+      address_elements: selectedResult.address_elements,
+      lat: parseFloat(selectedResult.y),
+      lng: parseFloat(selectedResult.x),
+      phone: trimmedPhone || null,
+      categories: record.restaurant_info?.category ? [record.restaurant_info.category] : [],
+      youtube_links: [record.youtube_link],
+      youtube_metas: record.youtube_meta ? [record.youtube_meta] : [],
+      tzuyang_reviews: trimmedTzuyangReview ? [{ review: trimmedTzuyangReview }] : (record.restaurant_info?.tzuyang_review ? [{ review: record.restaurant_info.tzuyang_review }] : []),
+      status: 'approved', // 승인 상태로 변경
+      geocoding_success: true, // 지오코딩 성공으로 설정
+      geocoding_false_stage: null, // 지오코딩 성공 시 NULL (체크 제약 준수)
+      db_error_message: null, // 에러 메시지 초기화
+      db_error_details: null, // 에러 상세 초기화
+      updated_by_admin_id: user?.id || null, // 현재 로그인한 관리자 ID
+      updated_at: new Date().toISOString(),
+    };
+
+    console.log('📝 업데이트 데이터:', updateData);
+
+    const { data: updatedRestaurant, error: updateError } = await supabase
+      .from('restaurants')
+      // @ts-expect-error - Supabase 자동 생성 타입 문제
+      .update(updateData)
+      .eq('id', record.id) // restaurants 테이블의 ID로 업데이트
+      .select()
+      .single();
+
+    console.log('📥 DB 응답:', { data: updatedRestaurant, error: updateError });
+
+    if (updateError) {
+      console.error('❌ DB 업데이트 에러 상세:', {
+        message: updateError.message,
+        details: updateError.details,
+        hint: updateError.hint,
+        code: updateError.code,
+      });
+      throw updateError;
+    }
+
+    toast({
+      title: '승인 완료',
+      description: `${formData.name} 레스토랑이 성공적으로 등록되었습니다.`,
+    });
+
+    onSuccess(record.id, {
+      status: 'approved',
+      name: trimmedName,
+      restaurant_name: trimmedName, // 별칭도 업데이트
+      road_address: selectedResult.road_address,
+      jibun_address: selectedResult.jibun_address,
+      english_address: selectedResult.english_address,
+      address_elements: selectedResult.address_elements,
+      lat: parseFloat(selectedResult.y),
+      lng: parseFloat(selectedResult.x),
+      phone: trimmedPhone || null,
+      geocoding_success: true,
+      geocoding_false_stage: null,
+      db_error_message: null,
+      db_error_details: null,
+      updated_at: new Date().toISOString(),
+      restaurant_info: record.restaurant_info ? {
+        ...record.restaurant_info,
+        name: trimmedName,
+        phone: trimmedPhone || null,
+        tzuyang_review: trimmedTzuyangReview || record.restaurant_info.tzuyang_review,
+        naver_address_info: {
+          road_address: selectedResult.road_address,
+          jibun_address: selectedResult.jibun_address,
+          english_address: selectedResult.english_address,
+          address_elements: selectedResult.address_elements,
+          x: selectedResult.x,
+          y: selectedResult.y,
+        },
+      } : undefined,
+    });
+    
+    onOpenChange(false);
+    resetForm();
   };
 
   // 저장만 하는 함수 (승인하지 않고 수정 사항만 저장)
@@ -492,10 +564,12 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updateData.geocoding_false_stage = null;
       }
 
-      // 쯔양 리뷰 업데이트
+      // 🔥 수정: tzuyang_reviews → tzuyang_review (단일 값)
       if (trimmedTzuyangReview) {
-        updateData.tzuyang_reviews = [{ review: trimmedTzuyangReview }];
+        updateData.tzuyang_review = trimmedTzuyangReview;
       }
+
+      console.log('💾 저장 데이터:', updateData);
 
       const { error: updateError } = await supabase
         .from('restaurants')
@@ -504,6 +578,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         .eq('id', record.id);
 
       if (updateError) {
+        console.error('❌ DB 업데이트 에러:', updateError);
         throw updateError;
       }
 
@@ -562,7 +637,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       resetForm();
 
     } catch (error) {
-      console.error('저장 실패:', error);
+      console.error('💥 저장 실패:', error);
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
       toast({
         variant: 'destructive',
@@ -859,6 +934,51 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           </Button>
         </DialogFooter>
       </DialogContent>
+      
+      {/* 승인 확인 모달 */}
+      <AlertDialog open={showApprovalConfirm} onOpenChange={setShowApprovalConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>승인 확인</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
+              {conflictingRestaurantInfo && (
+                <div className="mt-3 p-3 bg-muted rounded-md">
+                  <p className="font-medium">기존 레스토랑:</p>
+                  <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
+                  <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
+                </div>
+              )}
+              <p className="mt-3 font-medium">승인하시겠습니까?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={loading}>취소</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                setShowApprovalConfirm(false);
+                setLoading(true);
+                try {
+                  await performApproval();
+                } catch (error) {
+                  console.error('승인 실패:', error);
+                  toast({
+                    variant: 'destructive',
+                    title: '승인 실패',
+                    description: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
+                  });
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              승인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }

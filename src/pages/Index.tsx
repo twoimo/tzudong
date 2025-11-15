@@ -116,12 +116,8 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
       category: Array.isArray(restaurant.categories)
         ? restaurant.categories
         : (restaurant.categories ? [restaurant.categories] : []),
-      youtube_link: Array.isArray(restaurant.youtube_links) && restaurant.youtube_links.length > 0
-        ? restaurant.youtube_links[0]
-        : (restaurant.youtube_links || ''),
-      tzuyang_review: Array.isArray(restaurant.tzuyang_reviews) && restaurant.tzuyang_reviews.length > 0
-        ? JSON.stringify(restaurant.tzuyang_reviews[0])
-        : ''
+      youtube_link: restaurant.youtube_link || '',
+      tzuyang_review: restaurant.tzuyang_review || ''
     });
     setIsEditModalOpen(true);
   };
@@ -143,12 +139,8 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
       category: Array.isArray(restaurantToEdit.categories)
         ? restaurantToEdit.categories
         : (restaurantToEdit.categories ? [restaurantToEdit.categories] : []),
-      youtube_link: Array.isArray(restaurantToEdit.youtube_links) && restaurantToEdit.youtube_links.length > 0
-        ? restaurantToEdit.youtube_links[0]
-        : (restaurantToEdit.youtube_links || ''),
-      tzuyang_review: Array.isArray(restaurantToEdit.tzuyang_reviews) && restaurantToEdit.tzuyang_reviews.length > 0
-        ? JSON.stringify(restaurantToEdit.tzuyang_reviews[0])
-        : ''
+      youtube_link: restaurantToEdit.youtube_link || '',
+      tzuyang_review: restaurantToEdit.tzuyang_review || ''
     };
 
     return Object.entries(editFormData).filter(([key, value]) => {

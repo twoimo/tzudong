@@ -3,28 +3,42 @@ import { Tables } from "@/integrations/supabase/types";
 // DB에서 가져온 기본 Restaurant 타입
 type BaseRestaurant = Tables<"restaurants">;
 
+// YouTube Meta 타입 정의 (DB에 저장된 실제 구조)
+export interface YoutubeMeta {
+    title?: string;
+    ads_info?: {
+        is_ads: boolean;
+        what_ads: string[] | null;
+    };
+    duration?: number;
+    is_shorts?: boolean;
+    publishedAt?: string; // ISO 8601 날짜 문자열
+}
+
 // 호환성을 위한 확장 Restaurant 타입
 export interface Restaurant extends BaseRestaurant {
     // 호환성 속성들 (기존 코드와의 호환을 위해)
     address?: string; // road_address 또는 jibun_address의 가상 속성
     category?: string[]; // categories의 별칭
-    youtube_link?: string; // youtube_links[0]의 별칭
-    tzuyang_review?: string; // tzuyang_reviews[0].review의 별칭
+    
+    // 마커 그룹화 시 병합된 데이터 (배열)
+    mergedYoutubeLinks?: string[]; // 병합된 모든 유튜브 링크
+    mergedTzuyangReviews?: string[]; // 병합된 모든 쯔양 리뷰
+    mergedYoutubeMetas?: YoutubeMeta[]; // 병합된 모든 유튜브 메타
 }
 
 export type Review = Tables<"reviews">;
 // categories는 배열 타입
 export type RestaurantCategory = string[];
 
-export interface RestaurantWithDetails extends Restaurant {
+export interface RestaurantWithDetails extends Omit<Restaurant, 'visit_count'> {
     reviews?: Review[];
-    review_count?: number;
     visit_count?: number;
 }
 
 export interface MapMarker {
     id: string;
-    position: google.maps.LatLngLiteral;
+    position: { lat: number; lng: number };
     restaurant: Restaurant;
     markerType: "fire" | "star";
 }

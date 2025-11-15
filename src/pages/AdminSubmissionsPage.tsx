@@ -225,7 +225,7 @@ export default function AdminSubmissionsPage() {
                         road_address: submission.address, // 도로명 주소로 저장
                         phone: submission.phone,
                         category: Array.isArray(submission.category) ? submission.category : [submission.category],
-                        youtube_links: [submission.youtube_link], // 배열로 저장
+                        youtube_link: submission.youtube_link, // 단일 값으로 저장
                         description: submission.description,
                         lat,
                         lng,
@@ -281,7 +281,7 @@ export default function AdminSubmissionsPage() {
                         address_elements: approvalData.address_elements, // 주소 요소
                         phone: submission.phone,
                         categories: Array.isArray(submission.category) ? submission.category : [submission.category],
-                        youtube_links: [submission.youtube_link], // 배열로 저장
+                        youtube_link: submission.youtube_link, // 단일 값으로 저장
                         description: submission.description,
                         lat,
                         lng,
@@ -558,7 +558,7 @@ export default function AdminSubmissionsPage() {
                     address_elements: approvalData.address_elements, // 주소 요소
                     phone: submission.phone,
                     categories: Array.isArray(submission.category) ? submission.category : [submission.category],
-                    youtube_links: [submission.youtube_link],
+                    youtube_link: submission.youtube_link, // 단일 값으로 저장
                     description: submission.description,
                     lat,
                     lng,
@@ -631,7 +631,7 @@ export default function AdminSubmissionsPage() {
                     address_elements: approvalData.address_elements, // 주소 요소
                     phone: submission.phone,
                     categories: Array.isArray(submission.category) ? submission.category : [submission.category],
-                    youtube_links: [submission.youtube_link],
+                    youtube_link: submission.youtube_link, // 단일 값으로 저장
                     description: submission.description,
                     lat,
                     lng,
