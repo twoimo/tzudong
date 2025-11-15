@@ -123,23 +123,18 @@ export default function AdminEvaluationPage() {
 
   // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
-    console.log('🔐 인증 체크 useEffect 실행', { authLoading, hasUser: !!user, isAdmin, hasCheckedAuth: hasCheckedAuth.current });
-
     // 인증 로딩 중에는 아무것도 하지 않음 (로딩 완료 후 권한 체크)
     if (authLoading) {
-      console.log('⏳ 인증 로딩 중 - 대기');
       return;
     }
 
     // 이미 권한 체크를 완료했으면 다시 체크하지 않음 (재마운트 시 중복 체크 방지)
     if (hasCheckedAuth.current) {
-      console.log('✅ 권한 체크 이미 완료됨 - 스킵');
       return;
     }
 
     // 인증 로딩이 완료된 후 권한 체크
     if (!user) {
-      console.log('❌ 로그인되지 않음 - 홈으로 리다이렉트');
       hasCheckedAuth.current = true;
       toast({
         title: "접근 권한이 없습니다",
@@ -152,12 +147,10 @@ export default function AdminEvaluationPage() {
 
     // user는 있지만 isAdmin이 false인 경우 - 비동기 체크가 완료될 때까지 대기
     if (!isAdmin) {
-      console.log('⏳ 관리자 권한 체크 중 - 대기');
       return;
     }
 
     // user도 있고 isAdmin도 true인 경우
-    console.log('✅ 권한 확인 완료');
     hasCheckedAuth.current = true;
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -165,14 +158,9 @@ export default function AdminEvaluationPage() {
 
   // YouTube 제목 퍼지 검색
   useEffect(() => {
-    console.log('🔍 검색 useEffect 실행', {
-      isInitialMount: isInitialMount.current,
-      searchQuery: searchQuery.substring(0, 20)
-    });
     // 첫 마운트 시에는 검색 실행하지 않음 (localStorage 복원으로 인한 자동 실행 방지)
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      console.log('✅ 첫 마운트 - 검색 건너뜀');
       return;
     }
     const performFuzzySearch = async () => {
@@ -183,7 +171,6 @@ export default function AdminEvaluationPage() {
 
       setIsSearching(true);
       try {
-        console.log('🔎 검색 시작:', searchQuery.trim());
         // @ts-expect-error - Supabase RPC 타입 문제
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
@@ -195,9 +182,6 @@ export default function AdminEvaluationPage() {
           console.error('RPC 에러:', error);
           throw error;
         }
-
-        console.log('검색 결과:', (data ?? []).length, '개');
-        console.log('검색 결과 샘플:', (data ?? []).slice(0, 3));
 
         // 검색 결과를 EvaluationRecord 형식으로 변환
         const convertedData = (data || []).map((r: Record<string, unknown>) => {
@@ -265,12 +249,6 @@ export default function AdminEvaluationPage() {
     // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
     const baseRecords = searchResults || allRecords;
 
-    console.log('🔍 필터링 시작:', {
-      selectedStatuses,
-      baseRecordsCount: baseRecords?.length || 0,
-      searchResultsCount: searchResults?.length || 0
-    });
-
     // selectedStatuses에 'deleted'가 포함되어 있으면 deleted만 보여줌
     let filtered = selectedStatuses.includes('deleted' as EvaluationRecordStatus)
       ? baseRecords.filter(r => r.status === 'deleted')
@@ -278,8 +256,6 @@ export default function AdminEvaluationPage() {
 
     // 상태 필터링 (evalFilters.status)
     if (evalFilters.status) {
-      console.log('🎯 상태 필터링 적용:', evalFilters.status);
-
       filtered = filtered.filter(r => {
         let match = false;
 
@@ -313,16 +289,8 @@ export default function AdminEvaluationPage() {
             break;
         }
 
-        if (match) {
-          console.log(`✅ 필터링 통과: ${r.name}, status: ${r.status}, geocoding_success: ${r.geocoding_success}, is_missing: ${r.is_missing}, is_not_selected: ${r.is_not_selected}`);
-        } else {
-          console.log(`❌ 필터링 제외: ${r.name}, status: ${r.status}, geocoding_success: ${r.geocoding_success}, is_missing: ${r.is_missing}, is_not_selected: ${r.is_not_selected}`);
-        }
-
         return match;
       });
-
-      console.log('📊 필터링 결과:', filtered.length, '개');
     }
 
     // 1. Visit Authenticity 필터 (0-3점)
@@ -424,11 +392,6 @@ export default function AdminEvaluationPage() {
 
       // 80% 이상 스크롤 시 다음 데이터 로드
       if (scrollPercentage > 0.8 && hasMore && !loadingMore) {
-        console.log('Loading more records...', {
-          scrollPercentage,
-          displayedLength: displayedRecords.length,
-          filteredLength: filteredRecords.length
-        });
         loadMoreRecords();
       }
     };
@@ -439,7 +402,6 @@ export default function AdminEvaluationPage() {
 
   // 전체 데이터 로드 (한 번만)
   const loadAllRecords = useCallback(async () => {
-    console.log('🔄 loadAllRecords 호출됨');
     try {
       setLoading(true);
 
@@ -499,28 +461,6 @@ export default function AdminEvaluationPage() {
             y: r.lat?.toString() || '',
           } : null,
         };
-
-        // 디버깅: 모든 레코드의 구조 확인 (최대 3개)
-        const index = data.findIndex((item: Record<string, unknown>) => item.id === r.id);
-        if (index < 3) {
-          console.log(`🔍 레코드 ${index + 1} 데이터 구조:`, {
-            id: r.id,
-            name: r.name,
-            status: r.status,
-            evaluation_results: evaluationResults,
-            evaluation_results_type: typeof evaluationResults,
-            evaluation_results_keys: evaluationResults ? Object.keys(evaluationResults) : 'null',
-            restaurant_info: restaurantInfo,
-            youtube_meta: r.youtube_meta,
-            youtube_meta_type: typeof r.youtube_meta,
-            youtube_meta_keys: r.youtube_meta ? Object.keys(r.youtube_meta as Record<string, unknown>) : 'null',
-            origin_address: r.origin_address,
-            road_address: r.road_address,
-            jibun_address: r.jibun_address,
-            reasoning_basis: r.reasoning_basis,
-            tzuyang_reviews: r.tzuyang_reviews,
-          });
-        }
 
         return {
           ...r,
@@ -597,16 +537,8 @@ export default function AdminEvaluationPage() {
 
   // 초기 데이터 로드
   useEffect(() => {
-    console.log('📍 초기 데이터 로드 useEffect 실행', {
-      user: !!user,
-      isAdmin,
-      authLoading,
-      hasLoadedData: hasLoadedData.current
-    });
-
     // 이미 데이터를 로드했으면 건너뛰기 (컴포넌트 재마운트 시 중복 로드 방지)
     if (hasLoadedData.current) {
-      console.log('✅ 데이터 이미 로드됨 - 스킵');
       return;
     }
 
