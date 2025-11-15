@@ -103,6 +103,9 @@ export default function AdminEvaluationPage() {
   // 데이터 로드 여부 추적 (세션 동안 한 번만 로드)
   const hasLoadedData = useRef(false);
 
+  // 권한 체크 완료 여부 추적 (초기 로드 시 한 번만 체크)
+  const hasCheckedAuth = useRef(false);
+
   // 상태 변경 시 localStorage에 저장
   useEffect(() => {
     const stateToSave = {
@@ -120,17 +123,43 @@ export default function AdminEvaluationPage() {
 
   // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
-    console.log('🔐 인증 체크 useEffect 실행', { authLoading, hasUser: !!user, isAdmin });
-    if (authLoading) return; // 인증 로딩 중에는 대기
+    console.log('🔐 인증 체크 useEffect 실행', { authLoading, hasUser: !!user, isAdmin, hasCheckedAuth: hasCheckedAuth.current });
 
-    if (!user || !isAdmin) {
+    // 인증 로딩 중에는 아무것도 하지 않음 (로딩 완료 후 권한 체크)
+    if (authLoading) {
+      console.log('⏳ 인증 로딩 중 - 대기');
+      return;
+    }
+
+    // 이미 권한 체크를 완료했으면 다시 체크하지 않음 (재마운트 시 중복 체크 방지)
+    if (hasCheckedAuth.current) {
+      console.log('✅ 권한 체크 이미 완료됨 - 스킵');
+      return;
+    }
+
+    // 인증 로딩이 완료된 후 권한 체크
+    if (!user) {
+      console.log('❌ 로그인되지 않음 - 홈으로 리다이렉트');
+      hasCheckedAuth.current = true;
       toast({
         title: "접근 권한이 없습니다",
         description: "관리자만 접근할 수 있는 페이지입니다.",
         variant: "destructive",
       });
       navigate('/');
+      return;
     }
+
+    // user는 있지만 isAdmin이 false인 경우 - 비동기 체크가 완료될 때까지 대기
+    if (!isAdmin) {
+      console.log('⏳ 관리자 권한 체크 중 - 대기');
+      return;
+    }
+
+    // user도 있고 isAdmin도 true인 경우
+    console.log('✅ 권한 확인 완료');
+    hasCheckedAuth.current = true;
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, authLoading]);
 
