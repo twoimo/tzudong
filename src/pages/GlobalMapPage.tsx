@@ -97,7 +97,6 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
         // 개발 환경에서만 구조화된 상태 로그 출력
         if (process.env.NODE_ENV === "development") {
-            // eslint-disable-next-line no-console
             console.log("[handleRestaurantSearch] 호출", {
                 restaurant,
                 moveToRestaurantExists: !!moveToRestaurant,
@@ -112,7 +111,6 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         // 지도 이동 함수가 준비되었다면 즉시 이동
         if (moveToRestaurant) {
             if (process.env.NODE_ENV === "development") {
-                // eslint-disable-next-line no-console
                 console.log("[handleRestaurantSearch] moveToRestaurant 실행", { restaurant });
             }
             moveToRestaurant(restaurant);
@@ -121,7 +119,6 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         // 그리드 모드에서 검색 시 단일 모드로 전환
         if (isGridMode) {
             if (process.env.NODE_ENV === "development") {
-                // eslint-disable-next-line no-console
                 console.log("[handleRestaurantSearch] 그리드 모드에서 단일 모드로 전환");
             }
             setIsGridMode(false);
