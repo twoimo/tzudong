@@ -251,14 +251,15 @@ export default function AdminEvaluationPage() {
             match = r.is_not_selected === true;
             break;
           case 'ready_for_approval':
-            // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드
+            // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드 + status가 pending이거나 hold인 경우만
             match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
               r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
               r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
               r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
               r.geocoding_success === true &&
               r.evaluation_results?.category_validity_TF?.eval_value === true &&
-              r.evaluation_results?.category_TF?.eval_value === true;
+              r.evaluation_results?.category_TF?.eval_value === true &&
+              (r.status === 'pending' || r.status === 'hold'); // 승인되지 않은 것만
             break;
           default:
             // 일반 상태: status 필드와 일치하는 레코드
@@ -502,6 +503,16 @@ export default function AdminEvaluationPage() {
         hold: typedRecords.filter(r => r.status === 'hold').length,
         missing: typedRecords.filter(r => r.is_missing).length,
         db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
+        ready_for_approval: typedRecords.filter(r =>
+          r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+          r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+          r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+          r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+          r.geocoding_success === true &&
+          r.evaluation_results?.category_validity_TF?.eval_value === true &&
+          r.evaluation_results?.category_TF?.eval_value === true &&
+          (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
+        ).length,
         geocoding_failed: typedRecords.filter(r =>
           !r.geocoding_success  // 지오코딩이 실패한 모든 레코드 (deleted 제외)
         ).length,
@@ -527,6 +538,7 @@ export default function AdminEvaluationPage() {
         hold: 0,
         missing: 0,
         db_conflict: 0,
+        ready_for_approval: 0,
         geocoding_failed: 0,
         not_selected: 0,
         deleted: 0,
@@ -573,7 +585,8 @@ export default function AdminEvaluationPage() {
         r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
         r.geocoding_success === true &&
         r.evaluation_results?.category_validity_TF?.eval_value === true &&
-        r.evaluation_results?.category_TF?.eval_value === true
+        r.evaluation_results?.category_TF?.eval_value === true &&
+        (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
       ).length,
       missing: allRecords.filter(r => r.is_missing).length,
       geocoding_failed: allRecords.filter(r =>
