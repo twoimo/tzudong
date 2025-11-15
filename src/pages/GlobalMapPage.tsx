@@ -409,7 +409,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     </div>
                 }>
                     <PanelGroup direction="horizontal" className="w-full h-full">
-                        <Panel defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>
+                        <Panel defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40}>
                             <MapView
                                 filters={filters}
                                 selectedCountry={selectedCountry}
