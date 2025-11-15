@@ -113,12 +113,13 @@ export function DbConflictResolutionPanel({
       });
       onOpenChange(false);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('병합 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '병합에 실패했습니다';
       toast({
         variant: 'destructive',
         title: '병합 실패',
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -150,12 +151,13 @@ export function DbConflictResolutionPanel({
       });
       onOpenChange(false);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error('보류 처리 실패:', error);
+      const errorMessage = error instanceof Error ? error.message : '보류 처리에 실패했습니다';
       toast({
         variant: 'destructive',
         title: '보류 처리 실패',
-        description: error.message,
+        description: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -314,7 +316,7 @@ export function DbConflictResolutionPanel({
           >
             취소
           </Button>
-          
+
           <Button
             variant="secondary"
             onClick={handleHoldNew}
@@ -323,7 +325,7 @@ export function DbConflictResolutionPanel({
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             새 데이터 보류
           </Button>
-          
+
           <Button
             onClick={handleUpdateExisting}
             disabled={loading}

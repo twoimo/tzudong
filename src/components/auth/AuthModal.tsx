@@ -46,9 +46,10 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
       toast.success("로그인 성공!");
       resetForm();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Login error:", error);
-      toast.error(error.message || "로그인에 실패했습니다");
+      const errorMessage = error instanceof Error ? error.message : "로그인에 실패했습니다";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -75,9 +76,10 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
       toast.success("회원가입 성공! 로그인해주세요.");
       resetForm();
       onClose();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Signup error:", error);
-      toast.error(error.message || "회원가입에 실패했습니다");
+      const errorMessage = error instanceof Error ? error.message : "회원가입에 실패했습니다";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -23,9 +23,15 @@ interface ProfileModalProps {
     onClose: () => void;
 }
 
+interface Profile {
+    nickname: string;
+    avatar_url?: string;
+    [key: string]: unknown;
+}
+
 export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
     const { user } = useAuth();
-    const [profile, setProfile] = useState<any>(null);
+    const [profile, setProfile] = useState<Profile | null>(null);
     const [loading, setLoading] = useState(false);
 
     // Nickname change
@@ -48,6 +54,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             // 모달이 열릴 때 삭제 확인 이메일 초기화
             setDeleteConfirmationEmail("");
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isOpen, user]);
 
     const loadProfile = async () => {
@@ -72,7 +79,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 setNewNickname(user.email?.split('@')[0] || "사용자");
                 console.log('프로필이 존재하지 않아 기본값으로 설정합니다');
             }
-        } catch (error: any) {
+        } catch (error) {
             toast.error('프로필 정보를 불러오는데 실패했습니다');
             console.error('Profile load error:', error);
         }
@@ -140,8 +147,9 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
             setNewPassword("");
             setConfirmPassword("");
             toast.success('비밀번호가 성공적으로 변경되었습니다');
-        } catch (error: any) {
-            toast.error(error.message || '비밀번호 변경에 실패했습니다');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : '비밀번호 변경에 실패했습니다';
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }
@@ -196,8 +204,9 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                 }
             }, 2000);
 
-        } catch (error: any) {
-            toast.error(error.message || '계정 삭제 중 오류가 발생했습니다');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : '계정 삭제 중 오류가 발생했습니다';
+            toast.error(errorMessage);
         } finally {
             setLoading(false);
         }

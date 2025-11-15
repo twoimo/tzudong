@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useRef, useCallback, useEffect, forwardRef } from "react";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,8 +18,20 @@ import {
     Youtube,
     Shield,
     User,
+    RefreshCw,
+    MapPin,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -60,7 +73,35 @@ export default function AdminSubmissionsPage() {
     const [approvalData, setApprovalData] = useState({
         lat: "",
         lng: "",
+        road_address: "",
+        jibun_address: "",
+        english_address: "",
+        address_elements: null as any,
     });
+
+    // 재지오코딩 관련 상태
+    const [geocoding, setGeocoding] = useState(false);
+    const [geocodingResults, setGeocodingResults] = useState<Array<{
+        road_address: string;
+        jibun_address: string;
+        english_address: string;
+        address_elements: any;
+        x: string;
+        y: string;
+    }>>([]);
+    const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
+
+    // 복원 제안 다이얼로그 상태
+    const [showRestoreDialog, setShowRestoreDialog] = useState(false);
+    const [deletedRecordInfo, setDeletedRecordInfo] = useState<{
+        id: string;
+        name: string;
+        road_address: string;
+    } | null>(null);
+    const [pendingSubmissionData, setPendingSubmissionData] = useState<{
+        submissionId: string;
+        submission: SubmissionWithUser;
+    } | null>(null);
 
     // 모든 제보 조회 (관리자만) - 무한 스크롤 방식
     const {
@@ -199,17 +240,31 @@ export default function AdminSubmissionsPage() {
                 if (updateError) throw updateError;
                 restaurantId = submission.original_restaurant_id;
             } else {
-                // 신규 제보: 중복 체크 먼저 수행
+                // 신규 제보: 중복 체크 먼저 수행 (deleted 레코드 포함)
+                // name + jibun_address 기준으로 비교 (재지오코딩된 표준화 주소)
                 const { data: existingRestaurants, error: checkError } = await supabase
                     .from('restaurants')
-                    .select('id, name, road_address')
+                    .select('id, name, jibun_address, status')
                     .eq('name', submission.restaurant_name)
-                    .eq('road_address', submission.address);
+                    .eq('jibun_address', approvalData.jibun_address);
 
                 if (checkError) throw checkError;
 
                 if (existingRestaurants && existingRestaurants.length > 0) {
-                    throw new Error(`이미 등록된 맛집입니다: "${submission.restaurant_name}" (${submission.address})`);
+                    // deleted 레코드 찾기
+                    const deletedRecord = existingRestaurants.find(r => r.status === 'deleted');
+                    const activeRecord = existingRestaurants.find(r => r.status !== 'deleted');
+
+                    if (activeRecord) {
+                        // active 레코드가 있으면 차단
+                        throw new Error(`이미 등록된 맛집입니다: "${submission.restaurant_name}" (${submission.address})`);
+                    }
+
+                    if (deletedRecord) {
+                        // deleted 레코드만 있는 경우 → 복원 제안 필요
+                        // 이 경우는 별도 처리 필요 (다이얼로그로 확인)
+                        throw new Error(`DELETED_RECORD_FOUND:${deletedRecord.id}`);
+                    }
                 }
 
                 // 새로운 맛집 생성
@@ -224,13 +279,18 @@ export default function AdminSubmissionsPage() {
                     .from('restaurants')
                     .insert({
                         name: submission.restaurant_name,
-                        road_address: submission.address, // 도로명 주소로 저장
+                        road_address: approvalData.road_address, // 재지오코딩된 도로명 주소
+                        jibun_address: approvalData.jibun_address, // 재지오코딩된 지번 주소
+                        english_address: approvalData.english_address, // 재지오코딩된 영문 주소
+                        address_elements: approvalData.address_elements, // 주소 요소
                         phone: submission.phone,
-                        category: Array.isArray(submission.category) ? submission.category : [submission.category],
+                        categories: Array.isArray(submission.category) ? submission.category : [submission.category],
                         youtube_links: [submission.youtube_link], // 배열로 저장
                         description: submission.description,
                         lat,
                         lng,
+                        geocoding_success: true, // 지오코딩 성공
+                        status: 'approved', // 바로 승인 상태로
                     })
                     .select()
                     .single();
@@ -266,8 +326,24 @@ export default function AdminSubmissionsPage() {
             setIsReviewModalOpen(false);
             resetApprovalData();
         },
-        onError: (error: any) => {
-            toast.error(error.message || '승인에 실패했습니다');
+        onError: (error: any, variables) => {
+            // deleted 레코드 발견 시 복원 다이얼로그 표시
+            if (error.message && error.message.startsWith('DELETED_RECORD_FOUND:')) {
+                const deletedId = error.message.split(':')[1];
+                setDeletedRecordInfo({
+                    id: deletedId,
+                    name: variables.submission.restaurant_name,
+                    road_address: variables.submission.address,
+                });
+                setPendingSubmissionData({
+                    submissionId: variables.submissionId,
+                    submission: variables.submission,
+                });
+                setShowRestoreDialog(true);
+                setIsReviewModalOpen(false); // 승인 모달 닫기
+            } else {
+                toast.error(error.message || '승인에 실패했습니다');
+            }
         },
     });
 
@@ -323,7 +399,287 @@ export default function AdminSubmissionsPage() {
         setApprovalData({
             lat: "",
             lng: "",
+            road_address: "",
+            jibun_address: "",
+            english_address: "",
+            address_elements: null,
         });
+        setGeocodingResults([]);
+        setSelectedGeocodingIndex(null);
+    };
+
+    // 시/군/구까지만 추출하는 함수
+    const extractCityDistrictGu = (address: string): string | null => {
+        const regex = /(.*?[시도]\s+.*?[시군구])/;
+        const match = address.match(regex);
+        return match ? match[1] : null;
+    };
+
+    // 중복 제거 함수 (지번 주소 기준)
+    const removeDuplicateAddresses = (addresses: Array<{
+        road_address: string;
+        jibun_address: string;
+        english_address: string;
+        address_elements: any;
+        x: string;
+        y: string;
+    }>): Array<{
+        road_address: string;
+        jibun_address: string;
+        english_address: string;
+        address_elements: any;
+        x: string;
+        y: string;
+    }> => {
+        const seen = new Set<string>();
+        return addresses.filter(addr => {
+            if (seen.has(addr.jibun_address)) {
+                return false;
+            }
+            seen.add(addr.jibun_address);
+            return true;
+        });
+    };
+
+    // 재지오코딩 함수 (여러 개 결과 반환)
+    const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3): Promise<Array<{
+        road_address: string;
+        jibun_address: string;
+        english_address: string;
+        address_elements: any;
+        x: string;
+        y: string;
+    }>> => {
+        try {
+            // Supabase Edge Function을 통해 지오코딩 호출 (CORS 우회)
+            const combinedQuery = `${name} ${address}`;
+
+            const { data, error } = await supabase.functions.invoke('naver-geocode', {
+                body: { query: combinedQuery, count: limit }
+            });
+
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            if (!data || !data.addresses || data.addresses.length === 0) {
+                return [];
+            }
+
+            return data.addresses.slice(0, limit).map((addr: any) => ({
+                road_address: addr.roadAddress,
+                jibun_address: addr.jibunAddress,
+                english_address: addr.englishAddress,
+                address_elements: addr.addressElements,
+                x: addr.x,
+                y: addr.y,
+            }));
+        } catch (error: any) {
+            console.error('지오코딩 에러:', error);
+            return [];
+        }
+    };
+
+    // 재지오코딩 핸들러
+    const handleReGeocode = async () => {
+        if (!selectedSubmission) return;
+
+        const trimmedName = selectedSubmission.restaurant_name.trim();
+        const trimmedAddress = selectedSubmission.address.trim();
+
+        if (!trimmedName || !trimmedAddress) {
+            toast.error('맛집명과 주소가 필요합니다');
+            return;
+        }
+
+        try {
+            setGeocoding(true);
+            setGeocodingResults([]);
+            setSelectedGeocodingIndex(null);
+
+            // 1. name + 전체 주소로 지오코딩 (최대 3개)
+            const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
+
+            // 2. name + 주소의 시/군/구까지만 잘라서 지오코딩 (최대 3개)
+            const shortAddress = extractCityDistrictGu(trimmedAddress);
+            const shortAddressResults = shortAddress
+                ? await geocodeAddressMultiple(trimmedName, shortAddress, 3)
+                : [];
+
+            // 3. 두 결과를 합치고 중복 제거 (지번 주소 기준)
+            const allResults = [...fullAddressResults, ...shortAddressResults];
+            const uniqueResults = removeDuplicateAddresses(allResults);
+
+            if (uniqueResults.length > 0) {
+                setGeocodingResults(uniqueResults);
+                toast.success(`${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`);
+            } else {
+                toast.error('주소를 찾을 수 없습니다. 주소를 다시 확인해주세요.');
+            }
+        } catch (error: any) {
+            toast.error(error.message || '지오코딩에 실패했습니다');
+        } finally {
+            setGeocoding(false);
+        }
+    };
+
+    // 지오코딩 결과 선택 핸들러
+    const handleSelectGeocodingResult = (index: number) => {
+        setSelectedGeocodingIndex(index);
+        const selected = geocodingResults[index];
+        setApprovalData({
+            lat: selected.y,
+            lng: selected.x,
+            road_address: selected.road_address,
+            jibun_address: selected.jibun_address,
+            english_address: selected.english_address,
+            address_elements: selected.address_elements,
+        });
+    };
+
+    // 삭제된 레코드 복원 및 새 데이터로 업데이트
+    const handleRestoreAndUpdate = async () => {
+        if (!deletedRecordInfo || !pendingSubmissionData || !user) return;
+
+        try {
+            const { submission, submissionId } = pendingSubmissionData;
+            const lat = parseFloat(approvalData.lat);
+            const lng = parseFloat(approvalData.lng);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                toast.error('올바른 좌표를 입력해주세요');
+                return;
+            }
+
+            // 삭제된 레코드를 approved 상태로 복원 + 새 제보 데이터로 업데이트
+            const { error: updateError } = await supabase
+                .from('restaurants')
+                .update({
+                    name: submission.restaurant_name,
+                    road_address: approvalData.road_address, // 재지오코딩된 도로명 주소
+                    jibun_address: approvalData.jibun_address, // 재지오코딩된 지번 주소
+                    english_address: approvalData.english_address, // 재지오코딩된 영문 주소
+                    address_elements: approvalData.address_elements, // 주소 요소
+                    phone: submission.phone,
+                    categories: Array.isArray(submission.category) ? submission.category : [submission.category],
+                    youtube_links: [submission.youtube_link],
+                    description: submission.description,
+                    lat,
+                    lng,
+                    geocoding_success: true, // 지오코딩 성공
+                    status: 'approved', // 바로 approved로 설정
+                    updated_at: new Date().toISOString(),
+                    updated_by_admin_id: user.id,
+                })
+                .eq('id', deletedRecordInfo.id);
+
+            if (updateError) throw updateError;
+
+            // 제보 상태 업데이트
+            const { error: submissionError } = await supabase
+                .from('restaurant_submissions')
+                .update({
+                    status: 'approved',
+                    reviewed_by_admin_id: user.id,
+                    reviewed_at: new Date().toISOString(),
+                    approved_restaurant_id: deletedRecordInfo.id,
+                })
+                .eq('id', submissionId);
+
+            if (submissionError) throw submissionError;
+
+            toast.success('삭제된 레코드가 복원되고 새 데이터로 업데이트되었습니다!');
+
+            // 신규 맛집 등록 알림 생성
+            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
+                category: submission.category,
+                submissionId: submission.id
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+
+            // 다이얼로그 닫기
+            setShowRestoreDialog(false);
+            setDeletedRecordInfo(null);
+            setPendingSubmissionData(null);
+            setIsReviewModalOpen(false);
+            resetApprovalData();
+        } catch (error: any) {
+            toast.error(error.message || '복원 및 업데이트에 실패했습니다');
+        }
+    };
+
+    // 새 레코드 생성 (deleted 레코드 무시)
+    const handleCreateNew = async () => {
+        if (!pendingSubmissionData || !user) return;
+
+        try {
+            const { submission, submissionId } = pendingSubmissionData;
+            const lat = parseFloat(approvalData.lat);
+            const lng = parseFloat(approvalData.lng);
+
+            if (isNaN(lat) || isNaN(lng)) {
+                toast.error('올바른 좌표를 입력해주세요');
+                return;
+            }
+
+            // 새로운 맛집 생성 (deleted 레코드 무시하고)
+            const { data: restaurant, error: restaurantError } = await supabase
+                .from('restaurants')
+                .insert({
+                    name: submission.restaurant_name,
+                    road_address: approvalData.road_address, // 재지오코딩된 도로명 주소
+                    jibun_address: approvalData.jibun_address, // 재지오코딩된 지번 주소
+                    english_address: approvalData.english_address, // 재지오코딩된 영문 주소
+                    address_elements: approvalData.address_elements, // 주소 요소
+                    phone: submission.phone,
+                    categories: Array.isArray(submission.category) ? submission.category : [submission.category],
+                    youtube_links: [submission.youtube_link],
+                    description: submission.description,
+                    lat,
+                    lng,
+                    geocoding_success: true, // 지오코딩 성공
+                    status: 'approved', // 바로 승인 상태로
+                })
+                .select()
+                .single();
+
+            if (restaurantError) throw restaurantError;
+
+            // 제보 상태 업데이트
+            const { error: submissionError } = await supabase
+                .from('restaurant_submissions')
+                .update({
+                    status: 'approved',
+                    reviewed_by_admin_id: user.id,
+                    reviewed_at: new Date().toISOString(),
+                    approved_restaurant_id: restaurant.id,
+                })
+                .eq('id', submissionId);
+
+            if (submissionError) throw submissionError;
+
+            toast.success('새로운 맛집이 생성되었습니다!');
+
+            // 신규 맛집 등록 알림 생성
+            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
+                category: submission.category,
+                submissionId: submission.id
+            });
+
+            queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+
+            // 다이얼로그 닫기
+            setShowRestoreDialog(false);
+            setDeletedRecordInfo(null);
+            setPendingSubmissionData(null);
+            setIsReviewModalOpen(false);
+            resetApprovalData();
+        } catch (error: any) {
+            toast.error(error.message || '맛집 생성에 실패했습니다');
+        }
     };
 
     const openReviewModal = (submission: SubmissionWithUser, action: 'approve' | 'reject') => {
@@ -651,20 +1007,97 @@ export default function AdminSubmissionsPage() {
 
                             {reviewAction === 'approve' ? (
                                 <div className="space-y-4">
-                                    <div className="flex gap-2">
+                                    {/* 재지오코딩 버튼 */}
+                                    <div className="flex items-center justify-between">
+                                        <Label className="text-base font-semibold">주소 지오코딩</Label>
                                         <Button
                                             type="button"
                                             variant="outline"
-                                            onClick={() => geocodeAddress(selectedSubmission.address)}
-                                            className="flex-1"
+                                            size="sm"
+                                            onClick={handleReGeocode}
+                                            disabled={geocoding}
                                         >
-                                            📍 주소로 좌표 자동 입력
+                                            {geocoding && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
+                                            {!geocoding && <RefreshCw className="mr-2 h-3 w-3" />}
+                                            재지오코딩
                                         </Button>
                                     </div>
 
+                                    <div className="p-3 bg-muted rounded text-sm">
+                                        <div><strong>사용자 입력 주소:</strong> {selectedSubmission.address}</div>
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                            👆 위 버튼을 클릭하여 정확한 주소로 변환해주세요
+                                        </div>
+                                    </div>
+
+                                    {/* 지오코딩 결과 목록 (선택 UI) */}
+                                    {geocodingResults.length > 0 && (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <Label className="text-sm font-medium">
+                                                    지오코딩 결과 ({geocodingResults.length}개)
+                                                </Label>
+                                                <Badge variant="default" className="bg-green-600">성공</Badge>
+                                            </div>
+
+                                            <div className="space-y-2 max-h-96 overflow-y-auto">
+                                                {geocodingResults.map((result, index) => (
+                                                    <div
+                                                        key={index}
+                                                        onClick={() => handleSelectGeocodingResult(index)}
+                                                        className={`p-3 rounded-lg border-2 cursor-pointer transition-all ${selectedGeocodingIndex === index
+                                                            ? 'border-primary bg-primary/5'
+                                                            : 'border-gray-200 hover:border-gray-300 bg-white dark:bg-gray-800'
+                                                            }`}
+                                                    >
+                                                        <div className="flex items-start justify-between mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge variant={selectedGeocodingIndex === index ? 'default' : 'outline'}>
+                                                                    옵션 {index + 1}
+                                                                </Badge>
+                                                                {selectedGeocodingIndex === index && (
+                                                                    <Badge variant="default" className="bg-green-600">
+                                                                        선택됨
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="space-y-1 text-sm">
+                                                            <div>
+                                                                <span className="font-medium text-gray-700 dark:text-gray-300">도로명: </span>
+                                                                <span className="text-gray-600 dark:text-gray-400">{result.road_address}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-medium text-gray-700 dark:text-gray-300">지번: </span>
+                                                                <span className="text-gray-600 dark:text-gray-400">{result.jibun_address}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-medium text-gray-700 dark:text-gray-300">영어: </span>
+                                                                <span className="text-gray-600 dark:text-gray-400">{result.english_address}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-medium text-gray-700 dark:text-gray-300">좌표: </span>
+                                                                <span className="text-gray-600 dark:text-gray-400">
+                                                                    위도 {result.y}, 경도 {result.x}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {selectedGeocodingIndex === null && (
+                                                <p className="text-sm text-muted-foreground text-center py-2">
+                                                    ⬆️ 위 옵션 중 하나를 클릭해서 선택해주세요
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <div className="space-y-2">
                                         <div className="flex items-center justify-between mb-2">
-                                            <Label>좌표 입력 *</Label>
+                                            <Label>선택된 좌표 정보</Label>
                                             <a
                                                 href={`https://map.naver.com/p/search/${encodeURIComponent(selectedSubmission.address)}`}
                                                 target="_blank"
@@ -676,7 +1109,7 @@ export default function AdminSubmissionsPage() {
                                         </div>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <Label htmlFor="lat">위도</Label>
+                                                <Label htmlFor="lat">위도 (자동 입력됨)</Label>
                                                 <Input
                                                     id="lat"
                                                     type="number"
@@ -684,11 +1117,12 @@ export default function AdminSubmissionsPage() {
                                                     value={approvalData.lat}
                                                     onChange={(e) => setApprovalData({ ...approvalData, lat: e.target.value })}
                                                     placeholder="37.5665"
+                                                    disabled
                                                 />
                                             </div>
 
                                             <div className="space-y-2">
-                                                <Label htmlFor="lng">경도</Label>
+                                                <Label htmlFor="lng">경도 (자동 입력됨)</Label>
                                                 <Input
                                                     id="lng"
                                                     type="number"
@@ -696,11 +1130,24 @@ export default function AdminSubmissionsPage() {
                                                     value={approvalData.lng}
                                                     onChange={(e) => setApprovalData({ ...approvalData, lng: e.target.value })}
                                                     placeholder="126.9780"
+                                                    disabled
                                                 />
                                             </div>
                                         </div>
+
+                                        {approvalData.jibun_address && (
+                                            <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 rounded text-sm">
+                                                <div className="font-semibold text-green-800 dark:text-green-200 mb-2">✅ 선택된 주소 정보</div>
+                                                <div className="space-y-1 text-green-700 dark:text-green-300">
+                                                    <div><strong>도로명:</strong> {approvalData.road_address}</div>
+                                                    <div><strong>지번:</strong> {approvalData.jibun_address}</div>
+                                                    <div><strong>영어:</strong> {approvalData.english_address}</div>
+                                                </div>
+                                            </div>
+                                        )}
+
                                         <p className="text-xs text-muted-foreground">
-                                            💡 위 버튼으로 자동 입력하거나, 네이버 지도에서 직접 확인하여 입력하세요
+                                            💡 재지오코딩 버튼을 클릭하여 정확한 주소를 선택해주세요
                                         </p>
                                     </div>
 
@@ -732,7 +1179,11 @@ export default function AdminSubmissionsPage() {
                                 </Button>
                                 <Button
                                     onClick={handleReview}
-                                    disabled={approveMutation.isPending || rejectMutation.isPending}
+                                    disabled={
+                                        approveMutation.isPending ||
+                                        rejectMutation.isPending ||
+                                        (reviewAction === 'approve' && selectedGeocodingIndex === null)
+                                    }
                                     className={
                                         reviewAction === 'approve'
                                             ? 'bg-green-500 hover:bg-green-600'
@@ -755,6 +1206,63 @@ export default function AdminSubmissionsPage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* 복원 제안 다이얼로그 */}
+            <AlertDialog open={showRestoreDialog} onOpenChange={setShowRestoreDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>🔄 삭제된 레코드 발견</AlertDialogTitle>
+                        <AlertDialogDescription className="space-y-4">
+                            <p className="font-semibold text-orange-600 dark:text-orange-400">
+                                같은 이름과 주소의 삭제된 맛집이 데이터베이스에 있습니다.
+                            </p>
+
+                            {deletedRecordInfo && (
+                                <div className="p-3 bg-muted rounded space-y-1 text-sm">
+                                    <div><strong>맛집명:</strong> {deletedRecordInfo.name}</div>
+                                    <div><strong>주소:</strong> {deletedRecordInfo.road_address}</div>
+                                    <div className="text-destructive"><strong>상태:</strong> 삭제됨</div>
+                                </div>
+                            )}
+
+                            <div className="space-y-2 text-sm">
+                                <p className="font-medium">다음 중 하나를 선택하세요:</p>
+                                <div className="space-y-2 pl-4">
+                                    <div>
+                                        <strong className="text-blue-600">✅ 복원 및 업데이트 (권장):</strong>
+                                        <p className="text-muted-foreground">삭제된 레코드를 복원하고 새 제보 내용으로 업데이트합니다. 중복 데이터가 생기지 않습니다.</p>
+                                    </div>
+                                    <div>
+                                        <strong className="text-gray-600">➕ 새로 생성:</strong>
+                                        <p className="text-muted-foreground">삭제된 레코드를 무시하고 새로운 레코드를 생성합니다. (중복 발생 주의)</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel onClick={() => {
+                            setShowRestoreDialog(false);
+                            setDeletedRecordInfo(null);
+                            setPendingSubmissionData(null);
+                        }}>
+                            취소
+                        </AlertDialogCancel>
+                        <Button
+                            variant="outline"
+                            onClick={handleCreateNew}
+                        >
+                            새로 생성
+                        </Button>
+                        <AlertDialogAction
+                            onClick={handleRestoreAndUpdate}
+                            className="bg-blue-600 hover:bg-blue-700"
+                        >
+                            복원 및 업데이트 (권장)
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

@@ -11,6 +11,7 @@ import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResoluti
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { ClipboardCheck, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +40,8 @@ export default function AdminEvaluationPage() {
     pending: 0,
     approved: 0,
     ready_for_approval: 0,
+    hold: 0,
+    db_conflict: 0,
     missing: 0,
     geocoding_failed: 0,
     not_selected: 0,
@@ -93,13 +96,6 @@ export default function AdminEvaluationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAdmin, authLoading]);
 
-  // 초기 데이터 로드
-  useEffect(() => {
-    if (user && isAdmin && !authLoading) {
-      loadAllRecords();
-    }
-  }, [user, isAdmin, authLoading]);
-
   // YouTube 제목 퍼지 검색
   useEffect(() => {
     const performFuzzySearch = async () => {
@@ -111,6 +107,7 @@ export default function AdminEvaluationPage() {
       setIsSearching(true);
       try {
         console.log('검색 시작:', searchQuery.trim());
+        // @ts-expect-error - Supabase RPC 타입 문제
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
           similarity_threshold: 0.02,
@@ -122,9 +119,53 @@ export default function AdminEvaluationPage() {
           throw error;
         }
 
-        console.log('검색 결과:', data?.length || 0, '개');
-        console.log('검색 결과 샘플:', data?.slice(0, 3));
-        setSearchResults(data || []);
+        console.log('검색 결과:', (data ?? []).length, '개');
+        console.log('검색 결과 샘플:', (data ?? []).slice(0, 3));
+
+        // 검색 결과를 EvaluationRecord 형식으로 변환
+        const convertedData = (data || []).map((r: Record<string, unknown>) => {
+          // evaluation_results 변환
+          const evaluationResults = r.evaluation_results as Record<string, unknown> | null;
+
+          // restaurant_info 생성
+          const restaurantInfo = {
+            name: r.name as string,
+            phone: r.phone as string | null,
+            category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
+            origin_address: (r.origin_address as Record<string, unknown>)?.address as string || r.road_address as string || r.jibun_address as string || '',
+            origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number || 0,
+            origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number || 0,
+            reasoning_basis: r.reasoning_basis as string || '',
+            tzuyang_review: Array.isArray(r.tzuyang_reviews) && r.tzuyang_reviews.length > 0
+              ? ((r.tzuyang_reviews[0] as Record<string, unknown>)?.review as string || '')
+              : '',
+            naver_address_info: r.road_address || r.jibun_address ? {
+              road_address: r.road_address as string | null,
+              jibun_address: r.jibun_address as string || '',
+              english_address: r.english_address as string | null,
+              address_elements: r.address_elements,
+              x: r.lng?.toString() || '',
+              y: r.lat?.toString() || '',
+            } : null,
+          };
+
+          return {
+            ...r,
+            // 호환성을 위한 별칭 추가
+            restaurant_name: r.name,
+            youtube_link: Array.isArray(r.youtube_links) ? r.youtube_links[0] : '',
+            // evaluation_results는 그대로 사용
+            evaluation_results: evaluationResults,
+            // restaurant_info 생성
+            restaurant_info: restaurantInfo,
+            // youtube_meta 처리 (youtube_metas 배열의 첫 번째 항목)
+            youtube_meta: Array.isArray(r.youtube_metas) && r.youtube_metas.length > 0
+              ? r.youtube_metas[0]
+              : (r.youtube_meta || null),
+          };
+        });
+
+        setSearchResults(convertedData as unknown as EvaluationRecord[]);
       } catch (error) {
         console.error('YouTube 제목 검색 실패:', error);
         toast({
@@ -153,7 +194,10 @@ export default function AdminEvaluationPage() {
       searchResultsCount: searchResults?.length || 0
     });
 
-    let filtered = baseRecords.filter(r => r.status !== 'deleted'); // deleted는 항상 제외
+    // selectedStatuses에 'deleted'가 포함되어 있으면 deleted만 보여줌
+    let filtered = selectedStatuses.includes('deleted' as EvaluationRecordStatus)
+      ? baseRecords.filter(r => r.status === 'deleted')
+      : baseRecords.filter(r => r.status !== 'deleted'); // deleted는 기본적으로 제외
 
     // 상태 필터링 (evalFilters.status)
     if (evalFilters.status) {
@@ -316,7 +360,7 @@ export default function AdminEvaluationPage() {
   }, [hasMore, loadingMore, loadMoreRecords, displayedRecords.length, filteredRecords.length]);
 
   // 전체 데이터 로드 (한 번만)
-  const loadAllRecords = async () => {
+  const loadAllRecords = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -340,6 +384,8 @@ export default function AdminEvaluationPage() {
           pending: 0,
           approved: 0,
           ready_for_approval: 0,
+          hold: 0,
+          db_conflict: 0,
           missing: 0,
           geocoding_failed: 0,
           not_selected: 0,
@@ -351,7 +397,7 @@ export default function AdminEvaluationPage() {
       // restaurants 테이블 데이터를 EvaluationRecord 형식으로 변환
       const records = data.map((r: Record<string, unknown>) => {
         // evaluation_results 변환
-        const evaluationResults = r.evaluation_results as any;
+        const evaluationResults = r.evaluation_results as Record<string, unknown> | null;
 
         // restaurant_info 생성 (항상 생성)
         const restaurantInfo = {
@@ -376,7 +422,7 @@ export default function AdminEvaluationPage() {
         };
 
         // 디버깅: 모든 레코드의 구조 확인 (최대 3개)
-        const index = data.indexOf(r);
+        const index = data.findIndex((item: Record<string, unknown>) => item.id === r.id);
         if (index < 3) {
           console.log(`🔍 레코드 ${index + 1} 데이터 구조:`, {
             id: r.id,
@@ -388,7 +434,7 @@ export default function AdminEvaluationPage() {
             restaurant_info: restaurantInfo,
             youtube_meta: r.youtube_meta,
             youtube_meta_type: typeof r.youtube_meta,
-            youtube_meta_keys: r.youtube_meta ? Object.keys(r.youtube_meta as any) : 'null',
+            youtube_meta_keys: r.youtube_meta ? Object.keys(r.youtube_meta as Record<string, unknown>) : 'null',
             origin_address: r.origin_address,
             road_address: r.road_address,
             jibun_address: r.jibun_address,
@@ -411,10 +457,10 @@ export default function AdminEvaluationPage() {
         };
       });
 
-      setAllRecords(records as EvaluationRecord[]);
+      setAllRecords(records as unknown as EvaluationRecord[]);
 
       // 통계 계산 (deleted 제외, rejected 포함)
-      const typedRecords = records as EvaluationRecord[];
+      const typedRecords = records as unknown as EvaluationRecord[];
       const deletedCount = typedRecords.filter(r => r.status === 'deleted').length;
       const activeData = typedRecords.filter(r => r.status !== 'deleted');
 
@@ -457,7 +503,14 @@ export default function AdminEvaluationPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    if (user && isAdmin && !authLoading) {
+      loadAllRecords();
+    }
+  }, [user, isAdmin, authLoading, loadAllRecords]);
 
   // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
   const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
@@ -481,6 +534,7 @@ export default function AdminEvaluationPage() {
       pending: allRecords.filter(r => r.status === 'pending').length,
       approved: allRecords.filter(r => r.status === 'approved').length,
       hold: allRecords.filter(r => r.status === 'hold').length,
+      db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
       ready_for_approval: allRecords.filter(r =>
         r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
         r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
@@ -543,11 +597,61 @@ export default function AdminEvaluationPage() {
     try {
       setLoading(true);
 
-      // status를 'approved'로 업데이트
+      // 🔥 중복 검사 추가
+      const duplicateCheck = await checkRestaurantDuplicate(
+        record.restaurant_name || record.name || '',
+        record.jibun_address,
+        record.id
+      );
+
+      if (duplicateCheck.isDuplicate) {
+        // 중복 발견 시 에러 정보 저장
+        const errorDetails = {
+          error_type: 'duplicate' as const,
+          conflicting_restaurant: {
+            id: duplicateCheck.matchedRestaurant!.id,
+            name: duplicateCheck.matchedRestaurant!.name,
+            jibun_address: duplicateCheck.matchedRestaurant!.jibun_address,
+            road_address: duplicateCheck.matchedRestaurant!.road_address || undefined,
+          },
+          similarity_score: duplicateCheck.similarityScore,
+          detected_at: new Date().toISOString(),
+        };
+
+        // status는 유지하고 에러 메시지만 저장
+        await supabase
+          .from('restaurants')
+          // @ts-expect-error - Supabase 자동 생성 타입 문제
+          .update({
+            db_error_message: duplicateCheck.reason,
+            db_error_details: errorDetails,
+          })
+          .eq('id', record.id);
+
+        // 상태 업데이트 (새로고침 없이)
+        updateRecordInState(record.id, {
+          db_error_message: duplicateCheck.reason,
+          db_error_details: errorDetails,
+        });
+
+        toast({
+          variant: 'destructive',
+          title: '중복 오류',
+          description: duplicateCheck.reason,
+        });
+
+        setLoading(false);
+        return;
+      }
+
+      // status를  'approved'로 업데이트
       const { error } = await supabase
         .from('restaurants')
+        // @ts-expect-error - Supabase 자동 생성 타입 문제
         .update({
           status: 'approved',
+          db_error_message: null, // 에러 메시지 초기화
+          db_error_details: null, // 에러 상세 초기화
           updated_at: new Date().toISOString(),
         })
         .eq('id', record.id);
@@ -557,6 +661,8 @@ export default function AdminEvaluationPage() {
       // 상태 업데이트 (새로고침 없이)
       updateRecordInState(record.id, {
         status: 'approved',
+        db_error_message: null,
+        db_error_details: null,
         updated_at: new Date().toISOString(),
       });
 
@@ -612,6 +718,7 @@ export default function AdminEvaluationPage() {
       // Soft Delete: status를 'deleted'로 변경
       const { error } = await supabase
         .from('restaurants')
+        // @ts-expect-error - Supabase 자동 생성 타입 문제
         .update({
           status: 'deleted',
           updated_at: new Date().toISOString(),
@@ -628,7 +735,7 @@ export default function AdminEvaluationPage() {
 
       toast({
         title: '삭제 완료',
-        description: `"${record.restaurant_name || record.name}"이(가) 삭제되었습니다 (복구 불가)`,
+        description: `"${record.restaurant_name || record.name}"이(가) 삭제되었습니다`,
       });
     } catch (error: unknown) {
       toast({
@@ -652,6 +759,49 @@ export default function AdminEvaluationPage() {
   const handleEdit = (record: EvaluationRecord) => {
     setSelectedEditRecord(record);
     setEditModalOpen(true);
+  };
+
+  // 삭제된 레코드 복원 (pending 상태로 되돌리기)
+  const handleRestore = async (record: EvaluationRecord) => {
+    if (!confirm(`"${record.restaurant_name || record.name}"을(를) 복원하시겠습니까?\n\n복원하면 미처리(pending) 상태로 돌아갑니다.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // status를 'pending'으로 업데이트
+      const { error } = await supabase
+        .from('restaurants')
+        // @ts-expect-error - Supabase 자동 생성 타입 문제
+        .update({
+          status: 'pending',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', record.id);
+
+      if (error) throw error;
+
+      // 상태 업데이트 (새로고침 없이)
+      updateRecordInState(record.id, {
+        status: 'pending',
+        updated_at: new Date().toISOString(),
+      } as Partial<EvaluationRecord>);
+
+      toast({
+        title: '복원 완료',
+        description: `"${record.restaurant_name || record.name}"이(가) 미처리 상태로 복원되었습니다`,
+      });
+    } catch (error: unknown) {
+      console.error('복원 실패:', error);
+      toast({
+        variant: 'destructive',
+        title: '복원 실패',
+        description: error instanceof Error ? error.message : '알 수 없는 오류',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 인증 로딩 중이거나 권한 확인 중일 때
@@ -737,6 +887,7 @@ export default function AdminEvaluationPage() {
                   records={displayedRecords}
                   onApprove={handleApprove}
                   onDelete={handleDelete}
+                  onRestore={handleRestore}
                   onRegisterMissing={handleRegisterMissing}
                   onResolveConflict={handleResolveConflict}
                   onEdit={handleEdit}

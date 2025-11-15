@@ -6,7 +6,7 @@ interface UseGoogleMapsOptions {
 }
 
 // 전역 로드 상태 캐시 (중복 로드 방지)
-let globalLoadState: { isLoaded: boolean; error: Error | null; isLoading: boolean } = {
+const globalLoadState: { isLoaded: boolean; error: Error | null; isLoading: boolean } = {
     isLoaded: false,
     error: null,
     isLoading: false

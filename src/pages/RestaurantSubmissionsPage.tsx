@@ -1,4 +1,5 @@
-﻿import { useState, useRef, useCallback, useEffect } from "react";
+﻿/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,13 +21,13 @@ interface RestaurantSubmission {
     submission_type: 'new' | 'edit';
     restaurant_id: string | null;
     status: 'pending' | 'approved' | 'rejected';
-    
+
     // 사용자 입력 필드
     user_submitted_name: string | null;
     user_submitted_categories: string[] | null;
     user_submitted_phone: string | null;
     user_raw_address: string | null;
-    
+
     // 관리자 검토 후 필드
     name: string | null;
     phone: string | null;
@@ -37,18 +38,18 @@ interface RestaurantSubmission {
     jibun_address: string | null;
     english_address: string | null;
     address_elements: any | null;
-    
+
     // 유튜브 및 리뷰
     youtube_link: string | null;
     youtube_links: string[];
     youtube_metas: any[];
     description: string | null;
     tzuyang_reviews: any[];
-    
+
     // 수정 요청 관련
     unique_id: string | null;
     changes_requested: any | null;
-    
+
     // 관리자 처리
     admin_notes: string | null;
     rejection_reason: string | null;
@@ -56,7 +57,7 @@ interface RestaurantSubmission {
     reviewed_at: string | null;
     reviewed_by_admin_id: string | null;
     approved_restaurant_id: string | null;
-    
+
     created_at: string;
     updated_at: string;
 }
@@ -79,7 +80,7 @@ export default function RestaurantSubmissionsPage() {
         youtube_links: [] as string[],
         youtube_metas: [] as any[],
         tzuyang_reviews: [] as any[],
-        video_reviews: [] as Array<{id: string, youtube_link: string, review: string}>,
+        video_reviews: [] as Array<{ id: string, youtube_link: string, review: string }>,
     });
 
     // 모든 맛집 조회 (수정 요청용) - youtube_links, youtube_metas, tzuyang_reviews 포함
@@ -217,12 +218,12 @@ export default function RestaurantSubmissionsPage() {
             // 신규 제보일 때는 video_reviews 배열의 데이터를 사용
             let finalYoutubeLink = data.youtube_link.trim();
             let finalDescription = data.description.trim() || null;
-            
+
             if (submissionMode === 'new' && data.video_reviews.length > 0) {
                 // video_reviews의 첫 번째 항목을 메인으로 사용
                 finalYoutubeLink = data.video_reviews[0].youtube_link.trim();
                 finalDescription = data.video_reviews[0].review.trim() || null;
-                
+
                 // 추가 영상이 있으면 description에 포함
                 if (data.video_reviews.length > 1) {
                     const additionalVideos = data.video_reviews.slice(1).map((vr, index) => {
@@ -493,16 +494,16 @@ export default function RestaurantSubmissionsPage() {
             } else {
                 hasValidVideo = formData.youtube_link.trim() !== '';
             }
-            
+
             if (!formData.restaurant_name.trim() || !formData.address.trim() || !hasValidVideo || formData.categories.length === 0) {
                 toast.error('필수 항목을 모두 입력해주세요');
                 return;
             }
         } else {
             // 수정 요청일 때는 기존 로직 유지
-        if (!formData.restaurant_name.trim() || !formData.address.trim() || !formData.youtube_link.trim() || formData.categories.length === 0) {
-            toast.error('필수 항목을 모두 입력해주세요');
-            return;
+            if (!formData.restaurant_name.trim() || !formData.address.trim() || !formData.youtube_link.trim() || formData.categories.length === 0) {
+                toast.error('필수 항목을 모두 입력해주세요');
+                return;
             }
         }
 
@@ -1173,42 +1174,42 @@ export default function RestaurantSubmissionsPage() {
 
                                                 <div className="space-y-4">
                                                     {/* 유튜브 링크 입력 */}
-                                <div className="space-y-2">
+                                                    <div className="space-y-2">
                                                         <Label className="text-xs font-medium text-purple-700 dark:text-purple-300">
-                                        유튜브 영상 링크 <span className="text-red-500">*</span>
-                                    </Label>
+                                                            유튜브 영상 링크 <span className="text-red-500">*</span>
+                                                        </Label>
                                                         <Textarea
-                                        value={formData.youtube_link}
-                                        onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
-                                        placeholder="https://youtube.com/watch?v=..."
+                                                            value={formData.youtube_link}
+                                                            onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
+                                                            placeholder="https://youtube.com/watch?v=..."
                                                             className="min-h-[60px] text-sm resize-none border-purple-200 focus:border-purple-400"
-                                    />
-                                </div>
+                                                        />
+                                                    </div>
 
                                                     {/* 쯔양 리뷰 입력 */}
-                                <div className="space-y-2">
+                                                    <div className="space-y-2">
                                                         <Label className="text-xs font-medium text-pink-700 dark:text-pink-300">
                                                             쯔양의 리뷰
                                                         </Label>
-                                    <Textarea
+                                                        <Textarea
                                                             ref={(el) => {
                                                                 if (el) {
                                                                     el.style.height = 'auto';
                                                                     el.style.height = el.scrollHeight + 'px';
                                                                 }
                                                             }}
-                                        value={formData.description}
+                                                            value={formData.description}
                                                             onChange={(e) => {
                                                                 setFormData({ ...formData, description: e.target.value });
                                                                 // 자동 높이 조절
                                                                 e.target.style.height = 'auto';
                                                                 e.target.style.height = e.target.scrollHeight + 'px';
                                                             }}
-                                        placeholder="쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요... (팩트 체크 예정)"
+                                                            placeholder="쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요... (팩트 체크 예정)"
                                                             className="text-sm resize-none overflow-hidden border-pink-200 focus:border-pink-400"
                                                             style={{ minHeight: '80px' }}
-                                    />
-                                </div>
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
                                         ) : (
@@ -1351,8 +1352,8 @@ export default function RestaurantSubmissionsPage() {
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                        <div className="flex items-center gap-2">
-                                            <Youtube className="h-5 w-5 text-purple-600" />
+                                            <div className="flex items-center gap-2">
+                                                <Youtube className="h-5 w-5 text-purple-600" />
                                                 <MessageSquare className="h-5 w-5 text-pink-600" />
                                             </div>
                                             <Label className="text-sm font-medium text-purple-800 dark:text-purple-200">
@@ -1431,7 +1432,7 @@ export default function RestaurantSubmissionsPage() {
                                                         <div className="space-y-2">
                                                             <Label className="text-xs font-medium text-purple-700 dark:text-purple-300">
                                                                 유튜브 영상 링크
-                                            </Label>
+                                                            </Label>
                                                             <Textarea
                                                                 value={videoReview.youtube_link}
                                                                 onChange={(e) => {
@@ -1452,7 +1453,7 @@ export default function RestaurantSubmissionsPage() {
                                                                 placeholder="https://youtube.com/watch?v=..."
                                                                 className="min-h-[60px] text-sm resize-none border-purple-200 focus:border-purple-400"
                                                             />
-                                        </div>
+                                                        </div>
 
                                                         {/* 쯔양 리뷰 입력 */}
                                                         <div className="space-y-2">

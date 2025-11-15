@@ -421,7 +421,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   tzuyang_review: restaurantToEdit.tzuyang_review || ''
                 };
 
-                const changes_requested: Record<string, { from: any; to: any }> = {};
+                const changes_requested: Record<string, { from: unknown; to: unknown }> = {};
                 Object.entries(updatedData).forEach(([key, value]) => {
                   const originalValue = originalData[key === 'name' ? 'restaurant_name' : key as keyof typeof originalData];
                   const hasChanged = key === 'category'

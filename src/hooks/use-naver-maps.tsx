@@ -3,7 +3,9 @@ import { NAVER_MAPS_CONFIG } from "@/config/maps";
 
 declare global {
     interface Window {
-        naver: any;
+        naver: {
+            maps: Record<string, unknown>;
+        };
     }
 }
 

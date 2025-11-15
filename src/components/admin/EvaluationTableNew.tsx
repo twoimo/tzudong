@@ -23,7 +23,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { ChevronDown, ChevronUp, Check, Pause, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Check, Pause, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
 
@@ -31,6 +31,7 @@ interface EvaluationTableProps {
   records: EvaluationRecord[];
   onApprove: (record: EvaluationRecord) => void;
   onDelete: (record: EvaluationRecord) => void;
+  onRestore?: (record: EvaluationRecord) => void; // 삭제된 레코드 복원 함수
   onRegisterMissing?: (record: EvaluationRecord) => void;
   onResolveConflict?: (record: EvaluationRecord) => void;
   onEdit?: (record: EvaluationRecord) => void;
@@ -83,6 +84,7 @@ export function EvaluationTable({
   records,
   onApprove,
   onDelete,
+  onRestore,
   onRegisterMissing,
   onResolveConflict,
   onEdit,
@@ -111,6 +113,7 @@ export function EvaluationTable({
       missing: { label: 'Missing', variant: 'destructive' },
       geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
       not_selected: { label: '평가 미대상', variant: 'outline' },
+      deleted: { label: '삭제됨', variant: 'destructive' },
     };
 
     const config = variants[status] || { label: status, variant: 'default' };
@@ -709,7 +712,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                                   fill="currentColor"
                                   viewBox="0 0 24 24"
                                 >
-                                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
+                                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
                                 </svg>
                               </div>
                             )}
@@ -784,7 +787,20 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   {/* 고정 컬럼: 액션 */}
                   <TableCell className="sticky right-0 bg-background">
                     <div className="flex gap-2 justify-center">
-                      {record.is_missing || record.is_not_selected || !record.geocoding_success ? (
+                      {record.status === 'deleted' ? (
+                        // 삭제된 레코드 - 되돌리기 버튼만 표시
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() => onRestore?.(record)}
+                            disabled={loading}
+                            className="bg-blue-600 hover:bg-blue-700"
+                          >
+                            <Undo2 className="w-4 h-4 mr-1" />
+                            되돌리기
+                          </Button>
+                        </>
+                      ) : record.is_missing || record.is_not_selected || !record.geocoding_success ? (
                         // 지오코딩 실패한 케이스 (Missing, 평가 미대상, 지오코딩 실패)
                         <>
                           <Button
@@ -804,19 +820,6 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                             disabled={loading}
                           >
                             <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : record.status === 'deleted' ? (
-                        // 삭제된 레코드
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() => onEdit?.(record)}
-                            disabled={loading}
-                            variant="outline"
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            수정
                           </Button>
                         </>
                       ) : (
@@ -867,7 +870,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
               const detailRow = expandedId === record.id ? (
                 <TableRow key={`${record.id}-details`}>
                   <TableCell colSpan={11} className="bg-muted/30">
-                    <EvaluationRowDetails record={record} />
+                    <EvaluationRowDetails
+                      record={record}
+                      onEdit={() => onEdit?.(record)}
+                    />
                   </TableCell>
                 </TableRow>
               ) : null;
