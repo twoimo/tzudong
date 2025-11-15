@@ -219,10 +219,8 @@ export default function AdminEvaluationPage() {
             evaluation_results: evaluationResults,
             // restaurant_info 생성
             restaurant_info: restaurantInfo,
-            // youtube_meta 처리 (youtube_metas 배열의 첫 번째 항목)
-            youtube_meta: Array.isArray(r.youtube_metas) && r.youtube_metas.length > 0
-              ? r.youtube_metas[0]
-              : (r.youtube_meta || null),
+            // youtube_meta 처리 (JSON 직접 사용)
+            youtube_meta: r.youtube_meta || null,
           };
         });
 
@@ -636,11 +634,17 @@ export default function AdminEvaluationPage() {
     try {
       setLoading(true);
 
-      // 🔥 중복 검사 추가
+      // YouTube 링크 추출
+      const youtubeLink = Array.isArray(record.youtube_links) && record.youtube_links.length > 0
+        ? record.youtube_links[0]
+        : (record.youtube_link || '');
+
+      // 🔥 중복 검사 추가 (YouTube 링크 포함)
       const duplicateCheck = await checkRestaurantDuplicate(
         record.restaurant_name || record.name || '',
         record.jibun_address,
-        record.id
+        record.id,
+        youtubeLink // YouTube 링크 전달
       );
 
       if (duplicateCheck.isDuplicate) {
@@ -924,8 +928,8 @@ export default function AdminEvaluationPage() {
       } as Partial<EvaluationRecord>);
 
       toast({
-        title: '데이터 병합 완료',
-        description: `기존 맛집에 유튜브 링크 ${newYoutubeLinks.length}개, 리뷰 ${newTzuyangReviews.length}개가 추가되었습니다.`,
+        title: '중복 데이터 병합 완료',
+        description: `✅ 기존 맛집에 유튜브 링크 ${newYoutubeLinks.length}개, 리뷰 ${newTzuyangReviews.length}개가 추가되었습니다.\n❌ 중복 레코드는 삭제 상태로 변경되었습니다.`,
       });
 
     } catch (error: unknown) {
@@ -1027,7 +1031,6 @@ export default function AdminEvaluationPage() {
                   onRegisterMissing={handleRegisterMissing}
                   onResolveConflict={handleResolveConflict}
                   onEdit={handleEdit}
-                  onMergeData={handleMergeData}
                   loading={loading || isSearching}
                   evalFilters={evalFilters}
                   isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}

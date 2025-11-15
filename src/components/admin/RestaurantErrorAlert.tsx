@@ -18,8 +18,6 @@ interface RestaurantErrorAlertProps {
     errorDetails: DuplicateErrorDetails | null;
     onResolve: () => void;
     onViewConflict?: () => void;
-    onMergeData?: (targetRestaurantId: string, sourceData: { youtube_links: string[]; youtube_metas: any[]; tzuyang_reviews: any[] }) => void;
-    currentRecord?: { youtube_links?: string[] | null; youtube_metas?: any[] | null; tzuyang_reviews?: any[] | null };
 }
 
 export function RestaurantErrorAlert({
@@ -27,8 +25,6 @@ export function RestaurantErrorAlert({
     errorDetails,
     onResolve,
     onViewConflict,
-    onMergeData,
-    currentRecord,
 }: RestaurantErrorAlertProps) {
     if (!errorMessage) return null;
 
@@ -64,6 +60,17 @@ export function RestaurantErrorAlert({
                         </div>
                     )}
 
+                    <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded border border-yellow-200 dark:border-yellow-800">
+                        <p className="text-xs text-yellow-800 dark:text-yellow-200 font-semibold mb-1">
+                            ⚠️ 처리 방법
+                        </p>
+                        <ul className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1 list-disc list-inside">
+                            <li><strong>YouTube 링크가 다르면</strong> → 승인 ✅ (같은 맛집, 다른 영상)</li>
+                            <li><strong>YouTube 링크가 같으면</strong> → 삭제 ❌ (진짜 중복)</li>
+                            <li>승인된 같은 맛집들은 프론트엔드에서 자동으로 병합되어 표시됩니다</li>
+                        </ul>
+                    </div>
+
                     <div className="mt-3 flex flex-wrap gap-2">
                         <Button
                             size="sm"
@@ -87,25 +94,6 @@ export function RestaurantErrorAlert({
                                     <ExternalLink className="h-3 w-3 mr-1" />
                                     기존 맛집 보기
                                 </Button>
-                                {onMergeData && currentRecord && (
-                                    <Button
-                                        size="sm"
-                                        variant="default"
-                                        onClick={() => {
-                                            onMergeData(
-                                                errorDetails.conflicting_restaurant.id,
-                                                {
-                                                    youtube_links: currentRecord.youtube_links || [],
-                                                    youtube_metas: currentRecord.youtube_metas || [],
-                                                    tzuyang_reviews: currentRecord.tzuyang_reviews || [],
-                                                }
-                                            );
-                                        }}
-                                        className="text-xs bg-blue-600 hover:bg-blue-700"
-                                    >
-                                        기존 맛집에 데이터 추가
-                                    </Button>
-                                )}
                             </>
                         )}
                     </div>

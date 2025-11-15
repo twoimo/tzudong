@@ -253,10 +253,6 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                     ...(existing.youtube_links || []),
                     ...(restaurant.youtube_links || [])
                 ];
-                const mergedYoutubeMetas = [
-                    ...(existing.youtube_metas || []),
-                    ...(restaurant.youtube_metas || [])
-                ];
                 const mergedTzuyangReviews = [
                     ...(existing.tzuyang_reviews || []),
                     ...(restaurant.tzuyang_reviews || [])
@@ -265,7 +261,7 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                 mergedMap.set(key, {
                     ...existing,
                     youtube_links: mergedYoutubeLinks,
-                    youtube_metas: mergedYoutubeMetas,
+                    youtube_meta: existing.youtube_meta || restaurant.youtube_meta, // 첫 번째 값 사용
                     tzuyang_reviews: mergedTzuyangReviews,
                     // review_count는 더 큰 값 사용
                     review_count: Math.max(existing.review_count || 0, restaurant.review_count || 0),
@@ -984,15 +980,9 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
                                                         : (restaurant.categories && <Badge variant="outline" className="whitespace-nowrap">{restaurant.categories}</Badge>)
                                                     }
                                                     {/* 광고 태그 */}
-                                                    {restaurant.youtube_metas && restaurant.youtube_metas.length > 0 && (() => {
-                                                        const adsMetas = restaurant.youtube_metas
-                                                            .map((meta: any) => meta?.ads_info)
-                                                            .filter((adsInfo: any) => adsInfo?.is_ads === true);
-
-                                                        if (adsMetas.length === 0) return null;
-
-                                                        const allAds = adsMetas.flatMap((adsInfo: any) => adsInfo.what_ads || []);
-                                                        const uniqueAds = Array.from(new Set(allAds));
+                                                    {restaurant.youtube_meta?.ads_info?.is_ads === true && (() => {
+                                                        const adsInfo = restaurant.youtube_meta.ads_info;
+                                                        const uniqueAds = Array.from(new Set(adsInfo.what_ads || []));
 
                                                         return uniqueAds.length > 0 ? (
                                                             <>

@@ -77,11 +77,13 @@ function calculateSimilarity(str1: string, str2: string): number {
  * 검사 로직:
  * 1. 지번주소 앞 20자로 같은 지역 필터링
  * 2. 이름 유사도 85% 이상이면 중복으로 판정
+ * 3. YouTube 링크가 다르면 중복이 아님 (같은 맛집, 다른 영상)
  */
 export async function checkRestaurantDuplicate(
   name: string,
   jibunAddress: string,
-  restaurantId?: string
+  restaurantId?: string,
+  youtubeLink?: string
 ): Promise<DuplicateCheckResult> {
   const NAME_SIMILARITY_THRESHOLD = 0.85; // 이름 유사도 85% 이상
   const ADDRESS_MATCH_LENGTH = 20; // 지번주소 앞 20자 비교
@@ -93,7 +95,7 @@ export async function checkRestaurantDuplicate(
     // 같은 지역의 승인된 맛집들 조회 (status = 'approved'만 대상)
     let query = supabase
       .from('restaurants')
-      .select('id, name, jibun_address, road_address, status')
+      .select('id, name, jibun_address, road_address, status, youtube_links')
       .ilike('jibun_address', `${normalizedAddress}%`)
       .eq('status', 'approved'); // 승인된 것만 검사
 
@@ -111,12 +113,21 @@ export async function checkRestaurantDuplicate(
     }
 
     // 각 맛집과 유사도 비교
-    for (const restaurant of existingRestaurants as Array<{ id: string; name: string; jibun_address: string | null; road_address: string | null; status: string }>) {
+    for (const restaurant of existingRestaurants as Array<{ id: string; name: string; jibun_address: string | null; road_address: string | null; status: string; youtube_links: string[] | null }>) {
       if (!restaurant.name) continue;
 
       const similarity = calculateSimilarity(name, restaurant.name);
 
       if (similarity >= NAME_SIMILARITY_THRESHOLD) {
+        // YouTube 링크가 제공되었고, 기존 레스토랑의 링크와 다르면 중복이 아님
+        if (youtubeLink && restaurant.youtube_links) {
+          const hasSameLink = restaurant.youtube_links.includes(youtubeLink);
+          if (!hasSameLink) {
+            // 같은 맛집이지만 다른 영상 → 중복 아님
+            continue;
+          }
+        }
+
         return {
           isDuplicate: true,
           matchedRestaurant: {
