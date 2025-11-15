@@ -42,7 +42,7 @@ interface RestaurantSubmission {
     // 유튜브 및 리뷰
     youtube_link: string | null;
     youtube_links: string[];
-    youtube_metas: any[];
+    youtube_meta: any | null;
     description: string | null;
     tzuyang_reviews: any[];
 
@@ -78,18 +78,18 @@ export default function RestaurantSubmissionsPage() {
         youtube_link: "",
         description: "",
         youtube_links: [] as string[],
-        youtube_metas: [] as any[],
+        youtube_meta: null,
         tzuyang_reviews: [] as any[],
         video_reviews: [] as Array<{ id: string, youtube_link: string, review: string }>,
     });
 
-    // 모든 맛집 조회 (수정 요청용) - youtube_links, youtube_metas, tzuyang_reviews 포함
+    // 모든 맛집 조회 (수정 요청용) - youtube_links, youtube_meta, tzuyang_reviews 포함
     const { data: allRestaurants = [] } = useQuery({
         queryKey: ['all-restaurants'],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_links, youtube_metas, tzuyang_reviews')
+                .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_links, youtube_meta, tzuyang_reviews')
                 .eq('status', 'approved')
                 .order('name');
 
@@ -180,7 +180,7 @@ export default function RestaurantSubmissionsPage() {
                     youtube_link: "",
                     description: "",
                     youtube_links: [],
-                    youtube_metas: [],
+                    youtube_meta: null,
                     tzuyang_reviews: [],
                     video_reviews: [],
                 });
@@ -196,7 +196,7 @@ export default function RestaurantSubmissionsPage() {
                     youtube_link: "",
                     description: "",
                     youtube_links: [],
-                    youtube_metas: [],
+                    youtube_meta: null,
                     tzuyang_reviews: [],
                     video_reviews: [],
                 });
@@ -337,6 +337,7 @@ export default function RestaurantSubmissionsPage() {
                 youtube_link: "",
                 description: "",
                 youtube_links: [],
+                youtube_meta: null,
                 tzuyang_reviews: [],
                 video_reviews: [],
             });
@@ -359,7 +360,7 @@ export default function RestaurantSubmissionsPage() {
 
         // 동일한 상호명의 모든 맛집에서 youtube_links와 tzuyang_reviews 통합
         const allYoutubeLinks: string[] = [];
-        const allYoutubeMetas: any[] = [];
+        let youtubeMeta: any = null;
         const allTzuyangReviews: any[] = [];
 
         sameNameRestaurants.forEach((r, index) => {
@@ -372,13 +373,9 @@ export default function RestaurantSubmissionsPage() {
                 });
             }
 
-            // youtube_metas 통합
-            if (Array.isArray(r.youtube_metas)) {
-                r.youtube_metas.forEach(meta => {
-                    if (meta) {
-                        allYoutubeMetas.push(meta);
-                    }
-                });
+            // youtube_meta는 각 레코드에 하나씩만 있으므로 첫 번째 값 저장
+            if (r.youtube_meta && !youtubeMeta) {
+                youtubeMeta = r.youtube_meta;
             }
 
             // tzuyang_reviews 통합
@@ -413,7 +410,7 @@ export default function RestaurantSubmissionsPage() {
         setSelectedRestaurant({
             ...restaurant,
             sameNameRestaurants, // 동일 상호명 맛집 목록 저장
-            allYoutubeMetas, // 통합된 메타데이터 저장
+            youtubeMeta, // 메타데이터 저장
         });
 
         setOriginalData({
@@ -423,7 +420,7 @@ export default function RestaurantSubmissionsPage() {
             categories: safeCategories,
             youtube_link: syncedLinks.length > 0 ? syncedLinks[0] : "",
             youtube_links: syncedLinks,
-            youtube_metas: allYoutubeMetas,
+            youtube_meta: youtubeMeta,
             tzuyang_reviews: syncedReviews,
             video_reviews: videoReviews,
             description: "",
@@ -435,7 +432,7 @@ export default function RestaurantSubmissionsPage() {
             categories: safeCategories,
             youtube_link: syncedLinks.length > 0 ? syncedLinks[0] : "",
             youtube_links: syncedLinks,
-            youtube_metas: allYoutubeMetas,
+            youtube_meta: youtubeMeta,
             tzuyang_reviews: syncedReviews,
             video_reviews: videoReviews,
             description: "",
@@ -470,6 +467,7 @@ export default function RestaurantSubmissionsPage() {
             youtube_link: "",
             description: "",
             youtube_links: [],
+            youtube_meta: null,
             tzuyang_reviews: [],
             video_reviews: [],
         });

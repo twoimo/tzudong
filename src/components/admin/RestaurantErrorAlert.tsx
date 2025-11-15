@@ -60,7 +60,18 @@ export function RestaurantErrorAlert({
                         </div>
                     )}
 
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded border border-yellow-200 dark:border-yellow-800">
+                        <p className="text-xs text-yellow-800 dark:text-yellow-200 font-semibold mb-1">
+                            ⚠️ 처리 방법
+                        </p>
+                        <ul className="text-xs text-yellow-700 dark:text-yellow-300 space-y-1 list-disc list-inside">
+                            <li><strong>YouTube 링크가 다르면</strong> → 승인 ✅ (같은 맛집, 다른 영상)</li>
+                            <li><strong>YouTube 링크가 같으면</strong> → 삭제 ❌ (진짜 중복)</li>
+                            <li>승인된 같은 맛집들은 프론트엔드에서 자동으로 병합되어 표시됩니다</li>
+                        </ul>
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-2">
                         <Button
                             size="sm"
                             variant="outline"
@@ -70,18 +81,20 @@ export function RestaurantErrorAlert({
                             오류 확인 및 수정
                         </Button>
                         {isDuplicate && errorDetails.conflicting_restaurant?.id && (
-                            <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                    // 기존 맛집으로 이동
-                                    window.open(`/restaurant/${errorDetails.conflicting_restaurant.id}`, '_blank');
-                                }}
-                                className="text-xs"
-                            >
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                기존 맛집 보기
-                            </Button>
+                            <>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                        // 메인 페이지로 이동하면서 맛집 ID를 쿼리 파라미터로 전달
+                                        window.open(`/?restaurant=${errorDetails.conflicting_restaurant.id}`, '_blank');
+                                    }}
+                                    className="text-xs"
+                                >
+                                    <ExternalLink className="h-3 w-3 mr-1" />
+                                    기존 맛집 보기
+                                </Button>
+                            </>
                         )}
                     </div>
                 </div>

@@ -51,9 +51,16 @@ export function RestaurantDetailPanel({
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
-    const [showAllYoutubeLinks, setShowAllYoutubeLinks] = useState(false);
-    const [showAllTzuyangReviews, setShowAllTzuyangReviews] = useState(false);
     const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | null>(null);
+
+    // 디버깅: 전달받은 데이터 확인
+    console.log('📋 RestaurantDetailPanel 받은 데이터:', {
+        name: restaurant.name,
+        mergedYoutubeLinks: restaurant.mergedYoutubeLinks,
+        mergedTzuyangReviews: restaurant.mergedTzuyangReviews,
+        youtube_link: restaurant.youtube_link,
+        tzuyang_review: restaurant.tzuyang_review,
+    });
 
     // 카테고리 처리: categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -369,15 +376,14 @@ export function RestaurantDetailPanel({
                                         ))}
 
                                         {/* 광고 태그 */}
-                                        {restaurant.youtube_metas && restaurant.youtube_metas.length > 0 && (() => {
-                                            const adsMetas = restaurant.youtube_metas
-                                                .map((meta: any) => meta?.ads_info)
-                                                .filter((adsInfo: any) => adsInfo?.is_ads === true);
+                                        {restaurant.youtube_meta && (() => {
+                                            const meta = restaurant.youtube_meta as any;
+                                            const adsInfo = meta?.ads_info;
 
-                                            if (adsMetas.length === 0) return null;
+                                            if (!adsInfo || adsInfo.is_ads !== true) return null;
 
-                                            const allAds = adsMetas.flatMap((adsInfo: any) => adsInfo.what_ads || []);
-                                            const uniqueAds = Array.from(new Set(allAds));
+                                            const ads = adsInfo.what_ads || [];
+                                            const uniqueAds = Array.from(new Set(ads));
 
                                             return uniqueAds.length > 0 ? (
                                                 <>
@@ -495,84 +501,90 @@ export function RestaurantDetailPanel({
                                     </div>
                                 </div>
 
-                                {/* YouTube Links */}
-                                {restaurant.youtube_links && restaurant.youtube_links.length > 0 && (
-                                    <>
-                                        <Separator />
-                                        <div className="space-y-3">
-                                            <div className="flex items-center justify-between">
-                                                <h3 className="font-semibold text-sm flex items-center gap-2">
-                                                    <Youtube className="h-4 w-4 text-red-500" />
-                                                    쯔양 유튜브 영상 ({restaurant.youtube_links.length})
-                                                </h3>
-                                                {restaurant.youtube_links.length > 1 && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setShowAllYoutubeLinks(!showAllYoutubeLinks)}
-                                                        className="text-xs h-auto py-1"
-                                                    >
-                                                        {showAllYoutubeLinks ? '접기' : `전체보기 (${restaurant.youtube_links.length})`}
-                                                    </Button>
-                                                )}
-                                            </div>
-                                            <div className="space-y-2">
-                                                {(showAllYoutubeLinks ? restaurant.youtube_links : restaurant.youtube_links.slice(0, 1)).map((link, index) => (
-                                                    <div
-                                                        key={index}
-                                                        className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                        onClick={() => window.open(link, '_blank')}
-                                                    >
-                                                        {getYouTubeThumbnailUrl(link) && (
-                                                            <img
-                                                                src={getYouTubeThumbnailUrl(link)!}
-                                                                alt={`YouTube Thumbnail ${index + 1}`}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        )}
-                                                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                            <Youtube className="h-8 w-8 text-white" />
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {/* 쯔양 리뷰들 */}
-                                {restaurant.tzuyang_reviews && restaurant.tzuyang_reviews.length > 0 && (
-                                    <>
-                                        <Separator />
+                                {/* YouTube Links - fallback 로직으로 일단 표시 */}
+                                <Separator />
+                                {(restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) ? (
+                                    <div className="space-y-3">
+                                        <h3 className="font-semibold text-sm flex items-center gap-2">
+                                            <Youtube className="h-4 w-4 text-red-500" />
+                                            쯔양 유튜브 영상 ({restaurant.mergedYoutubeLinks.length})
+                                        </h3>
                                         <div className="space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <h3 className="font-semibold text-sm flex items-center gap-2">
-                                                    <Quote className="h-4 w-4 text-muted-foreground" />
-                                                    쯔양의 리뷰 ({restaurant.tzuyang_reviews.length})
-                                                </h3>
-                                                {restaurant.tzuyang_reviews.length > 1 && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => setShowAllTzuyangReviews(!showAllTzuyangReviews)}
-                                                        className="text-xs h-auto py-1"
-                                                    >
-                                                        {showAllTzuyangReviews ? '접기' : `전체보기 (${restaurant.tzuyang_reviews.length})`}
-                                                    </Button>
-                                                )}
-                                            </div>
-                                            <div className="space-y-2">
-                                                {(showAllTzuyangReviews ? restaurant.tzuyang_reviews : restaurant.tzuyang_reviews.slice(0, 1)).map((reviewObj: any, index) => (
-                                                    <div key={index} className="p-4 bg-muted/50 rounded-lg">
-                                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                            {typeof reviewObj === 'string' ? reviewObj : reviewObj.review}
-                                                        </p>
+                                            {restaurant.mergedYoutubeLinks.map((link, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                                    onClick={() => window.open(link, '_blank')}
+                                                >
+                                                    {getYouTubeThumbnailUrl(link) && (
+                                                        <img
+                                                            src={getYouTubeThumbnailUrl(link)!}
+                                                            alt={`YouTube Thumbnail ${index + 1}`}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    )}
+                                                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                                                        <Youtube className="h-8 w-8 text-white" />
                                                     </div>
-                                                ))}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : restaurant.youtube_link ? (
+                                    <div className="space-y-3">
+                                        <h3 className="font-semibold text-sm flex items-center gap-2">
+                                            <Youtube className="h-4 w-4 text-red-500" />
+                                            쯔양 유튜브 영상
+                                        </h3>
+                                        <div
+                                            className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                            onClick={() => window.open(restaurant.youtube_link, '_blank')}
+                                        >
+                                            {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
+                                                <img
+                                                    src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
+                                                    alt="YouTube Thumbnail"
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            )}
+                                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                                                <Youtube className="h-8 w-8 text-white" />
                                             </div>
                                         </div>
-                                    </>
-                                )}
+                                    </div>
+                                ) : null}
+
+                                {/* 쯔양 리뷰 섹션 - fallback 로직으로 일단 표시 */}
+                                <Separator />
+                                {(restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 0) ? (
+                                    <div className="space-y-2">
+                                        <h3 className="font-semibold text-sm flex items-center gap-2">
+                                            <Quote className="h-4 w-4 text-muted-foreground" />
+                                            쯔양의 리뷰 ({restaurant.mergedTzuyangReviews.length})
+                                        </h3>
+                                        <div className="space-y-2">
+                                            {restaurant.mergedTzuyangReviews.map((review, index) => (
+                                                <div key={index} className="p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                        {review}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : restaurant.tzuyang_review ? (
+                                    <div className="space-y-2">
+                                        <h3 className="font-semibold text-sm flex items-center gap-2">
+                                            <Quote className="h-4 w-4 text-muted-foreground" />
+                                            쯔양의 리뷰
+                                        </h3>
+                                        <div className="p-4 bg-muted/50 rounded-lg">
+                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                {restaurant.tzuyang_review}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : null}
 
                                 {/* Recent Reviews Preview */}
                                 <Separator />

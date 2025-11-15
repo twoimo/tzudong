@@ -21,7 +21,7 @@ export interface Database {
                     youtube_meta: Json | null
                     evaluation_results: Json | null
                     reasoning_basis: string | null
-                    tzuyang_reviews: Json[]
+                    tzuyang_review: string | null
                     origin_address: Json | null
                     road_address: string | null
                     jibun_address: string | null
@@ -33,8 +33,7 @@ export interface Database {
                     is_not_selected: boolean
                     lat: number | null
                     lng: number | null
-                    youtube_links: string[]
-                    youtube_metas: Json[]
+                    youtube_link: string | null
                     ai_rating: number | null
                     visit_count: number | null
                     review_count: number | null
@@ -53,7 +52,7 @@ export interface Database {
                     youtube_meta?: Json | null
                     evaluation_results?: Json | null
                     reasoning_basis?: string | null
-                    tzuyang_reviews?: Json[]
+                    tzuyang_review?: string | null
                     origin_address?: Json | null
                     road_address?: string | null
                     jibun_address?: string | null
@@ -65,8 +64,7 @@ export interface Database {
                     is_not_selected?: boolean
                     lat?: number | null
                     lng?: number | null
-                    youtube_links?: string[]
-                    youtube_metas?: Json[]
+                    youtube_link?: string | null
                     ai_rating?: number | null
                     visit_count?: number | null
                     review_count?: number | null
@@ -85,7 +83,7 @@ export interface Database {
                     youtube_meta?: Json | null
                     evaluation_results?: Json | null
                     reasoning_basis?: string | null
-                    tzuyang_reviews?: Json[]
+                    tzuyang_review?: string | null
                     origin_address?: Json | null
                     road_address?: string | null
                     jibun_address?: string | null
@@ -97,8 +95,7 @@ export interface Database {
                     is_not_selected?: boolean
                     lat?: number | null
                     lng?: number | null
-                    youtube_links?: string[]
-                    youtube_metas?: Json[]
+                    youtube_link?: string | null
                     ai_rating?: number | null
                     visit_count?: number | null
                     review_count?: number | null
@@ -189,73 +186,64 @@ export interface Database {
             restaurant_submissions: {
                 Row: {
                     id: string
-                    user_id: string | null
+                    user_id: string
                     submission_type: string
-                    restaurant_id: string | null
-                    status: string
-                    user_submitted_name: string | null
-                    user_submitted_categories: string[]
-                    user_submitted_phone: string | null
-                    user_raw_address: string | null
-                    name: string | null
+                    restaurant_name: string
+                    address: string
                     phone: string | null
-                    categories: string[]
-                    lat: number | null
-                    lng: number | null
-                    road_address: string | null
-                    jibun_address: string | null
-                    english_address: string | null
-                    address_elements: Json | null
-                    admin_notes: string | null
-                    resolved_by_admin_id: string | null
+                    category: string[]
+                    youtube_link: string
+                    tzuyang_review: string | null
+                    description: string | null
+                    status: string
+                    rejection_reason: string | null
+                    original_restaurant_id: string | null
+                    approved_restaurant_id: string | null
+                    changes_requested: Json | null
+                    reviewed_by_admin_id: string | null
+                    reviewed_at: string | null
                     created_at: string
                     updated_at: string
                 }
                 Insert: {
                     id?: string
-                    user_id?: string | null
+                    user_id: string
                     submission_type: string
-                    restaurant_id?: string | null
-                    status?: string
-                    user_submitted_name?: string | null
-                    user_submitted_categories?: string[]
-                    user_submitted_phone?: string | null
-                    user_raw_address?: string | null
-                    name?: string | null
+                    restaurant_name: string
+                    address: string
                     phone?: string | null
-                    categories?: string[]
-                    lat?: number | null
-                    lng?: number | null
-                    road_address?: string | null
-                    jibun_address?: string | null
-                    english_address?: string | null
-                    address_elements?: Json | null
-                    admin_notes?: string | null
-                    resolved_by_admin_id?: string | null
+                    category?: string[]
+                    youtube_link: string
+                    tzuyang_review?: string | null
+                    description?: string | null
+                    status?: string
+                    rejection_reason?: string | null
+                    original_restaurant_id?: string | null
+                    approved_restaurant_id?: string | null
+                    changes_requested?: Json | null
+                    reviewed_by_admin_id?: string | null
+                    reviewed_at?: string | null
                     created_at?: string
                     updated_at?: string
                 }
                 Update: {
                     id?: string
-                    user_id?: string | null
+                    user_id?: string
                     submission_type?: string
-                    restaurant_id?: string | null
-                    status?: string
-                    user_submitted_name?: string | null
-                    user_submitted_categories?: string[]
-                    user_submitted_phone?: string | null
-                    user_raw_address?: string | null
-                    name?: string | null
+                    restaurant_name?: string
+                    address?: string
                     phone?: string | null
-                    categories?: string[]
-                    lat?: number | null
-                    lng?: number | null
-                    road_address?: string | null
-                    jibun_address?: string | null
-                    english_address?: string | null
-                    address_elements?: Json | null
-                    admin_notes?: string | null
-                    resolved_by_admin_id?: string | null
+                    category?: string[]
+                    youtube_link?: string
+                    tzuyang_review?: string | null
+                    description?: string | null
+                    status?: string
+                    rejection_reason?: string | null
+                    original_restaurant_id?: string | null
+                    approved_restaurant_id?: string | null
+                    changes_requested?: Json | null
+                    reviewed_by_admin_id?: string | null
+                    reviewed_at?: string | null
                     created_at?: string
                     updated_at?: string
                 }
@@ -265,6 +253,7 @@ export interface Database {
                     id: string
                     user_id: string
                     username: string
+                    nickname: string
                     avatar_url: string | null
                     role: string
                     created_at: string
@@ -274,6 +263,7 @@ export interface Database {
                     id?: string
                     user_id: string
                     username: string
+                    nickname: string
                     avatar_url?: string | null
                     role?: string
                     created_at?: string
@@ -283,6 +273,7 @@ export interface Database {
                     id?: string
                     user_id?: string
                     username?: string
+                    nickname?: string
                     avatar_url?: string | null
                     role?: string
                     created_at?: string

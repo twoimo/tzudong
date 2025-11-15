@@ -7,7 +7,7 @@ export interface ConflictCheckResult {
     id: string;
     name: string;
     jibun_address: string | null;
-    youtube_links: string[] | null;
+    youtube_link: string | null;
   }>;
   message?: string;
 }
@@ -19,6 +19,7 @@ export interface DuplicateCheckResult {
     name: string;
     jibun_address: string;
     road_address: string | null;
+    youtube_link: string | null;
   };
   similarityScore: number;
   reason?: string;
@@ -75,27 +76,33 @@ function calculateSimilarity(str1: string, str2: string): number {
  * 맛집 중복 체크 (Levenshtein Distance 기반)
  * 
  * 검사 로직:
- * 1. 지번주소 앞 20자로 같은 지역 필터링
- * 2. 이름 유사도 85% 이상이면 중복으로 판정
+ * 1. status가 'approved'인 레스토랑 중에서만 검사
+ * 2. 같은 지번주소 조회 (정확히 일치)
+ * 3. 이름 유사도 85% 이상이면 중복으로 판정
+ * 4. YouTube 링크는 중복 판단에 사용하지 않음 (상위에서 별도 처리)
  */
 export async function checkRestaurantDuplicate(
   name: string,
   jibunAddress: string,
-  restaurantId?: string
+  restaurantId?: string,
+  youtubeLink?: string
 ): Promise<DuplicateCheckResult> {
   const NAME_SIMILARITY_THRESHOLD = 0.85; // 이름 유사도 85% 이상
-  const ADDRESS_MATCH_LENGTH = 20; // 지번주소 앞 20자 비교
-
-  // 지번주소 정규화 (앞 20자만 사용)
-  const normalizedAddress = jibunAddress.trim().substring(0, ADDRESS_MATCH_LENGTH);
 
   try {
-    // 같은 지역의 승인된 맛집들 조회 (status = 'approved'만 대상)
+    console.log('🔍 중복 검사 시작:', {
+      name,
+      jibunAddress,
+      restaurantId,
+      youtubeLink,
+    });
+
+    // 같은 지번주소의 승인된 맛집들 조회 (status = 'approved'만 대상)
     let query = supabase
       .from('restaurants')
-      .select('id, name, jibun_address, road_address, status')
-      .ilike('jibun_address', `${normalizedAddress}%`)
-      .eq('status', 'approved'); // 승인된 것만 검사
+      .select('id, name, jibun_address, road_address, status, youtube_link')
+      .eq('jibun_address', jibunAddress) // 정확히 같은 지번주소만
+      .eq('status', 'approved'); // ✅ approved 상태만 검사
 
     // 수정 시 자기 자신 제외
     if (restaurantId) {
@@ -104,19 +111,34 @@ export async function checkRestaurantDuplicate(
 
     const { data: existingRestaurants, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('❌ DB 조회 에러:', error);
+      throw error;
+    }
+
+    console.log('📊 같은 지번주소 approved 레스토랑:', existingRestaurants?.length || 0, '개');
 
     if (!existingRestaurants || existingRestaurants.length === 0) {
+      console.log('✅ 중복 없음 (같은 지번주소에 approved 레스토랑 없음)');
       return { isDuplicate: false, similarityScore: 0 };
     }
 
     // 각 맛집과 유사도 비교
-    for (const restaurant of existingRestaurants as Array<{ id: string; name: string; jibun_address: string | null; road_address: string | null; status: string }>) {
+    for (const restaurant of existingRestaurants as Array<{ id: string; name: string; jibun_address: string | null; road_address: string | null; status: string; youtube_link: string | null }>) {
       if (!restaurant.name) continue;
 
       const similarity = calculateSimilarity(name, restaurant.name);
 
+      console.log('🔍 유사도 비교:', {
+        current: name,
+        existing: restaurant.name,
+        similarity: Math.round(similarity * 100) + '%',
+      });
+
+      // 🔥 85% 이상 유사하면 중복으로 판단 (YouTube 링크 무관)
       if (similarity >= NAME_SIMILARITY_THRESHOLD) {
+        console.log('⚠️ 중복 감지! (유사도 85% 이상)');
+        
         return {
           isDuplicate: true,
           matchedRestaurant: {
@@ -124,16 +146,18 @@ export async function checkRestaurantDuplicate(
             name: restaurant.name,
             jibun_address: restaurant.jibun_address || '',
             road_address: restaurant.road_address || null,
+            youtube_link: restaurant.youtube_link || null, // ✅ 반환만 함 (비교는 상위에서)
           },
           similarityScore: similarity,
-          reason: `"${restaurant.name}"와 이름이 ${(similarity * 100).toFixed(0)}% 유사하며 같은 주소입니다.`
+          reason: `같은 지번주소에 유사한 이름의 맛집이 이미 존재합니다 (유사도: ${Math.round(similarity * 100)}%)`
         };
       }
     }
 
+    console.log('✅ 중복 없음 (유사도 85% 미만)');
     return { isDuplicate: false, similarityScore: 0 };
   } catch (error) {
-    console.error('중복 검사 실패:', error);
+    console.error('💥 중복 검사 에러:', error);
     throw error;
   }
 }
@@ -183,14 +207,14 @@ export async function checkDbConflict(params: {
       id: string;
       name: string;
       jibun_address: string | null;
-      youtube_links: string[] | null;
+      youtube_link: string | null;
     };
 
     const typedRestaurants = existingRestaurants as RestaurantRecord[];
 
     // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
     const nameMismatchConflicts = typedRestaurants.filter(restaurant =>
-      restaurant.youtube_links?.includes(trimmedYoutubeLink) &&
+      restaurant.youtube_link === trimmedYoutubeLink &&
       restaurant.name.trim() !== trimmedRestaurantName
     );
 
@@ -206,7 +230,7 @@ export async function checkDbConflict(params: {
     // 충돌 타입 2: 같은 주소 + 같은 음식점명 + 다른 youtube_link (병합 필요)
     const mergeNeededRestaurants = typedRestaurants.filter(restaurant =>
       restaurant.name.trim() === trimmedRestaurantName &&
-      !restaurant.youtube_links?.includes(trimmedYoutubeLink)
+      restaurant.youtube_link !== trimmedYoutubeLink
     );
 
     if (mergeNeededRestaurants.length > 0) {
@@ -227,14 +251,14 @@ export async function checkDbConflict(params: {
 }
 
 /**
- * 병합 처리 함수
+ * 병합 처리 함수 (단일 값 처리)
  */
 export async function mergeRestaurantData(params: {
   existingRestaurant: {
     id: string;
-    youtube_links: string[];
-    youtube_metas: unknown[];
-    tzuyang_reviews: unknown[];
+    youtube_link: string | null;
+    youtube_meta: Record<string, unknown> | null;
+    tzuyang_review: string | null;
     categories: string[] | string;
     updated_at: string;
   };
@@ -252,21 +276,10 @@ export async function mergeRestaurantData(params: {
   } = params;
 
   try {
-    // 중복 방지하면서 추가
-    const updatedYoutubeLinks = [
-      ...existingRestaurant.youtube_links,
-      ...(existingRestaurant.youtube_links.includes(newYoutubeLink) ? [] : [newYoutubeLink])
-    ];
-
-    const updatedYoutubeMetas = [
-      ...existingRestaurant.youtube_metas,
-      ...(newYoutubeMeta ? [newYoutubeMeta] : [])
-    ];
-
-    const updatedTzuyangReviews = [
-      ...existingRestaurant.tzuyang_reviews,
-      ...(newTzuyangReview ? [newTzuyangReview] : [])
-    ];
+    // 단일 값 처리: 기존 값 유지, 없으면 새 값 사용
+    const updatedYoutubeLink = existingRestaurant.youtube_link || newYoutubeLink;
+    const updatedYoutubeMeta = existingRestaurant.youtube_meta || newYoutubeMeta || null;
+    const updatedTzuyangReview = existingRestaurant.tzuyang_review || newTzuyangReview || null;
 
     // 카테고리 병합 (중복 제거)
     const currentCategories = Array.isArray(existingRestaurant.categories)
@@ -282,9 +295,9 @@ export async function mergeRestaurantData(params: {
       .from('restaurants')
       // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update({
-        youtube_links: updatedYoutubeLinks,
-        youtube_metas: updatedYoutubeMetas,
-        tzuyang_reviews: updatedTzuyangReviews,
+        youtube_link: updatedYoutubeLink,
+        youtube_meta: updatedYoutubeMeta,
+        tzuyang_review: updatedTzuyangReview,
         categories: updatedCategories,
         updated_at: new Date().toISOString(),
       })
