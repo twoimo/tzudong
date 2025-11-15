@@ -5,6 +5,15 @@
   - Use technical terms in English when appropriate, but provide explanations in Korean.
   - All comments in code should be in Korean unless it's a widely-used English term.
   
+  Git Commit and Pull Request Guidelines
+  - ALWAYS write commit messages in Korean (한국어).
+  - ALWAYS write pull request titles and descriptions in Korean (한국어).
+  - Follow conventional commit format in Korean (e.g., "기능: 사용자 로그인 추가", "수정: 버그 해결", "문서: README 업데이트").
+  - Commit message structure:
+    - Title: Brief summary in Korean (50 characters or less)
+    - Body: Detailed explanation in Korean (if needed)
+    - Footer: Reference issues in Korean (e.g., "관련 이슈: #123")
+  
   Code Style and Structure
   - Write concise, technical TypeScript code with accurate examples.
   - Use functional and declarative programming patterns; avoid classes.
