@@ -46,6 +46,15 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
 
+    // selectedRestaurant가 설정되면 자동으로 패널 열기
+    useEffect(() => {
+        if (selectedRestaurant && !isGridMode) {
+            setIsPanelOpen(true);
+        } else if (!selectedRestaurant) {
+            setIsPanelOpen(false);
+        }
+    }, [selectedRestaurant, isGridMode]);
+
     // 선택된 맛집이 변경될 때 지도 중앙 재조정
     useEffect(() => {
         if (selectedRestaurant && mapInstanceRef.current && !isGridMode) {

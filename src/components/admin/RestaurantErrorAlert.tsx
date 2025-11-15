@@ -79,8 +79,8 @@ export function RestaurantErrorAlert({
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => {
-                                        // 기존 맛집으로 이동
-                                        window.open(`/restaurant/${errorDetails.conflicting_restaurant.id}`, '_blank');
+                                        // 메인 페이지로 이동하면서 맛집 ID를 쿼리 파라미터로 전달
+                                        window.open(`/?restaurant=${errorDetails.conflicting_restaurant.id}`, '_blank');
                                     }}
                                     className="text-xs"
                                 >
