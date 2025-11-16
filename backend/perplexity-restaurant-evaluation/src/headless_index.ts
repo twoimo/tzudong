@@ -1,4 +1,4 @@
-import { PerplexityEvaluator } from './src/headless-perplexity-evaluator.js';
+import { PerplexityEvaluator } from './headless-perplexity-evaluator.js';
 import { readFileSync, existsSync, appendFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { config } from 'dotenv';

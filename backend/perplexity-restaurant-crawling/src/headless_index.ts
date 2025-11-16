@@ -1,6 +1,6 @@
-import { PerplexityCrawler } from './src/headless-perplexity-crawler.js';
-import { JsonlProcessor } from './src/jsonl-processor.js';
-import { ProcessingResult } from './src/types.js';
+import { PerplexityCrawler } from './headless-perplexity-crawler.js';
+import { JsonlProcessor } from './jsonl-processor.js';
+import { ProcessingResult } from './types.js';
 
 // Headless 모드 병렬 처리 설정 (1개 고정)
 const PARALLEL_WORKERS = 1;
@@ -307,7 +307,7 @@ async function processInParallel(youtubeLinks: string[], processor: JsonlProcess
   try {
     // 세션 파일 존재 여부 확인
     const fs = await import('fs');
-    const sessionExists = fs.existsSync('./perplexity-session.json');
+    const sessionExists = fs.existsSync('../perplexity-session.json');
 
     if (sessionExists) {
       console.log('📂 세션 파일 발견: 병렬 처리 시 세션 공유를 위해 각 브라우저가 세션을 복원합니다');

@@ -67,6 +67,40 @@ def print_info(message: str):
     print(f"{Colors.OKBLUE}ℹ️  {message}{Colors.ENDC}")
 
 
+def install_python_packages():
+    """필요한 Python 패키지 자동 설치"""
+    print_info("Python 패키지 확인 중...")
+    
+    required_packages = ['requests']
+    missing_packages = []
+    
+    for package in required_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing_packages.append(package)
+    
+    if missing_packages:
+        print_info(f"누락된 패키지 발견: {', '.join(missing_packages)}")
+        print_info("자동으로 패키지를 설치합니다...")
+        
+        try:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install"] + missing_packages,
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            print_success(f"패키지 설치 완료: {', '.join(missing_packages)}")
+        except subprocess.CalledProcessError as e:
+            print_error(f"패키지 설치 실패: {e.stderr}")
+            return False
+    else:
+        print_success("모든 필수 Python 패키지가 설치되어 있습니다")
+    
+    return True
+
+
 def run_command(command: list, description: str, cwd: Path = None) -> Tuple[bool, int]:
     """
     명령어 실행
@@ -177,6 +211,13 @@ def main():
     print_header("🤖 HEADLESS RESTAURANT PIPELINE")
     print_info("수집 → 평가 전체 프로세스를 Headless 모드로 자동 실행합니다.")
     
+    # Python 패키지 자동 설치
+    if not install_python_packages():
+        print_error("Python 패키지 설치 실패로 파이프라인을 중단합니다.")
+        return 1
+    
+    print()
+    
     # 경로 설정
     backend_dir = Path(__file__).parent.absolute()
     crawling_dir = backend_dir / "perplexity-restaurant-crawling"
@@ -206,7 +247,7 @@ def main():
     print_phase(1, 2, "CRAWLING PIPELINE")
     
     success, _ = run_command(
-        ["python3", "headless-crawling-pipeline.py"],
+        ["python3", "src/headless-crawling-pipeline.py"],
         "Headless 크롤링 파이프라인 실행",
         cwd=crawling_dir
     )
@@ -223,7 +264,7 @@ def main():
     print_phase(2, 2, "EVALUATION PIPELINE")
     
     success, _ = run_command(
-        ["python3", "headless-evaluation-pipeline.py"],
+        ["python3", "src/headless-evaluation-pipeline.py"],
         "Headless 평가 파이프라인 실행",
         cwd=evaluation_dir
     )

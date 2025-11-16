@@ -400,6 +400,12 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_KEY=your_supabase_service_key
 ```
 
+**세션 파일 공유 (선택사항)**
+- 수집과 평가 시스템은 동일한 Chrome 프로필 디렉토리 사용 (`~/.puppeteer-chrome-profile-perplexity`)
+- 한쪽에서 로그인하면 다른 쪽에서도 세션 자동 공유
+- 세션 파일 (`perplexity-session.json`)은 자동 생성되며 로그인 정보 저장
+- Google 로그인 차단 시 세션 파일 복사로 해결 가능
+
 ### 6. 설치 확인
 
 ```bash
@@ -424,7 +430,12 @@ ls perplexity-restaurant-evaluation/dist/
 
 ```bash
 cd backend
+
+# 일반 모드 (브라우저 표시)
 python restaurant-pipeline.py
+
+# 헤드리스 모드 (백그라운드 - 서버 환경)
+python headless-restaurant-pipeline.py
 ```
 
 자동으로 다음 순서로 실행됩니다:
@@ -433,6 +444,10 @@ python restaurant-pipeline.py
 3. ✅ 에러 재평가 (Phase 3)
 4. ✅ 데이터 변환 (Phase 4)
 5. ✅ DB 삽입 (Phase 5)
+
+**모드 선택 가이드:**
+- **일반 모드**: 로컬 개발 환경, 실시간 확인 필요 시
+- **헤드리스 모드**: 서버 환경, 자동화, 백그라운드 실행
 
 ---
 
@@ -468,14 +483,32 @@ python crawling-pipeline.py
 # 1. YouTube URL 수집
 python api-tzuyang-youtubeVideo-urls.py
 
-# 2. Perplexity 크롤링
+# 2. Perplexity 크롤링 (일반 모드 - 브라우저 표시)
 cd ..
 npm run start
+# 또는
+node dist/index.js
+
+# 2-1. Perplexity 크롤링 (헤드리스 모드 - 백그라운드)
+npm run headless
+# 또는
+node dist/headless-index.js
+
+# 2-2. Perplexity 크롤링 (Python 파이프라인 - 헤드리스)
+cd ../backend
+python headless-restaurant-pipeline.py
 
 # 3. 메타데이터 추가
-cd src
+cd perplexity-restaurant-crawling/src
 python api-youtube-meta.py
 ```
+
+**크롤링 모드 선택**:
+- **일반 모드**: 브라우저 창 표시, 실시간 확인 가능
+  - 단일 모드: 1개 브라우저 (안정적)
+  - 병렬 모드: 3개 브라우저 (빠름)
+  - 고속 모드: 5개 브라우저 (가장 빠름)
+- **헤드리스 모드**: 백그라운드 실행, 서버 환경에 적합
 
 #### Phase 2: 평가
 
@@ -492,10 +525,25 @@ python evaluation-target-selection.py
 # 2. Rule 평가
 python evaluation-rule.py
 
-# 3. LAAJ 평가
+# 3. LAAJ 평가 (일반 모드 - 브라우저 표시)
 cd ..
 npm run eval
+# 또는
+node dist/index.js
+
+# 3-1. LAAJ 평가 (헤드리스 모드 - 백그라운드)
+npm run eval:headless
+# 또는
+node dist/headless_index.js
+
+# 3-2. LAAJ 평가 (Python 파이프라인 - 헤드리스)
+cd ../backend
+python headless-evaluation-pipeline.py
 ```
+
+**평가 모드 선택**:
+- **일반 모드**: 브라우저 창 표시, 실시간 확인 가능
+- **헤드리스 모드**: 백그라운드 실행, 서버 환경에 적합
 
 #### Phase 3: 에러 재평가
 
@@ -549,6 +597,48 @@ error TS6059: File is not under 'rootDir'
 
 ---
 
+### 2-1. Google 로그인 차단
+
+**증상:**
+```
+Couldn't sign you in - This browser or app may not be secure
+```
+
+**해결:**
+1. 세션 파일 및 프로필 삭제
+```bash
+rm -f perplexity-session.json
+rm -rf ~/.puppeteer-chrome-profile-perplexity
+```
+
+2. 평가 시스템의 세션 복사 (이미 로그인된 경우)
+```bash
+# 수집 시스템에서
+cp ../perplexity-restaurant-evaluation/perplexity-session.json .
+# 또는 평가 시스템에서
+cp ../perplexity-restaurant-crawling/perplexity-session.json .
+```
+
+3. 재실행 후 수동 로그인
+
+---
+
+### 2-2. Cloudflare CAPTCHA
+
+**증상:**
+```
+Please unblock challenges.cloudflare.com
+Verify you are human
+```
+
+**해결:**
+- 평가 시스템과 동일한 Chrome 설정 자동 사용됨
+- 고정 프로필 디렉토리로 세션 유지
+- Stealth 플러그인으로 봇 탐지 우회
+- 문제 지속 시 세션 파일 재생성 (수동 로그인)
+
+---
+
 ### 3. YouTube API Quota 초과
 
 **증상:**
@@ -591,33 +681,92 @@ Error 403: quotaExceeded
 
 ### `tzuyang_restaurant_transforms.jsonl`
 
+DB 삽입용 최종 포맷 (평가 완료 및 미대상 음식점 통합)
+
 ```json
 {
-  "unique_id": "c85c537...",
-  "youtube_link": "https://youtube.com/watch?v=...",
-  "youtube_title": "제목",
-  "youtube_published_at": "2024-01-01",
-  "youtube_view_count": 1000000,
-  "youtube_like_count": 50000,
-  "youtube_comment_count": 5000,
-  "youtube_duration_seconds": 1200,
-  "video_category": "음식점",
-  "ad_brands": ["브랜드1", "브랜드2"],
-  "name": "음식점 이름",
-  "address": "서울특별시...",
-  "latitude": 37.5665,
-  "longitude": 126.9780,
-  "naver_rating": 4.5,
-  "category": "한식",
-  "business_hours": "영업시간",
-  "contact": "전화번호",
-  "menu": "대표 메뉴",
-  "tzuyang_review": "리뷰 내용",
-  "visit_authenticity": 1,
-  "location_accuracy": 1,
-  "menu_match": 1,
-  "information_accuracy": 1,
-  "overall_reliability": 1
+  "youtube_link": "https://www.youtube.com/watch?v=zGtW8tdjqNE",
+  "unique_id": "c5bd7a15740c36a4f24103e706f4fc7db7a11d52e7d3081583ad9af44b9d22f0",
+  "status": "pending",
+  "youtube_meta": {
+    "title": "먹방유튜버가 배달가면 생기는일.. 구독자분 놀라심 ㅋㅋ Korean mukbang eating show",
+    "publishedAt": "2019-12-01T09:01:09Z",
+    "is_shorts": false,
+    "duration": 644,
+    "ads_info": {
+      "is_ads": true,
+      "what_ads": ["한솥도시락", "핑크퐁", "키즈캐슬", "이든레코즈"]
+    }
+  },
+  "name": "한솥도시락",
+  "phone": null,
+  "category": "도시락",
+  "reasoning_basis": "본 영상은 한솥도시락의 유료 광고 영상으로, 영상 설명에 해당 내용이 명시되어 있습니다...",
+  "tzuyang_review": "쯔양은 한솥도시락의 '메가 치킨마요', '스팸 직화구이 덮밥', '칠리치킨마요'를 직접 만들어...",
+  "origin_address": {
+    "address": null,
+    "lat": null,
+    "lng": null
+  },
+  "roadAddress": null,
+  "jibunAddress": null,
+  "englishAddress": null,
+  "addressElements": null,
+  "geocoding_success": false,
+  "geocoding_false_stage": 0,
+  "is_missing": false,
+  "is_notSelected": true,
+  "evaluation_results": null,
+  "source_type": "perplexity"
+}
+```
+
+**평가 대상 음식점 예시 (evaluation_results 있음):**
+
+```json
+{
+  "youtube_link": "https://www.youtube.com/watch?v=Mm76nsEkOIM",
+  "unique_id": "a1b2c3d4e5f67890...",
+  "status": "approved",
+  "youtube_meta": {
+    "title": "대구 만두 투어",
+    "publishedAt": "2024-01-15T10:00:00Z",
+    "is_shorts": false,
+    "duration": 1200,
+    "ads_info": {
+      "is_ads": false,
+      "what_ads": null
+    }
+  },
+  "name": "영생덕",
+  "phone": "053-255-5777",
+  "category": "중식",
+  "reasoning_basis": "유튜버 쯔양이 영상에서 '영생덕'이라는 상호를 언급하고...",
+  "tzuyang_review": "60년 전통의 중식 만두 전문점으로, 꾼만두, 물만두, 찐교스를 주문함...",
+  "origin_address": {
+    "address": "대구 중구 종로 39",
+    "lat": 35.8693928,
+    "lng": 128.5913992
+  },
+  "roadAddress": "대구광역시 중구 종로 39",
+  "jibunAddress": "대구광역시 중구 공평동 23",
+  "englishAddress": "39 Jongno, Jung-gu, Daegu",
+  "addressElements": [...],
+  "geocoding_success": true,
+  "geocoding_false_stage": null,
+  "is_missing": false,
+  "is_notSelected": false,
+  "evaluation_results": {
+    "visit_authenticity": {
+      "values": [3],
+      "missing": []
+    },
+    "rb_inference_score": {"values": [2]},
+    "rb_grounding_TF": {"values": [true]},
+    "review_faithfulness_score": {"values": [0.9]},
+    "category_TF": {"values": [true]}
+  },
+  "source_type": "perplexity"
 }
 ```
 

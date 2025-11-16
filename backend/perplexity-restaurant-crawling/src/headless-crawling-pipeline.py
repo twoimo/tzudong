@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 """
-🍜 Headless 평가 파이프라인
+🍜 Headless 크롤링 파이프라인
 
-Headless 모드로 수집된 레스토랑 정보를 평가합니다.
+Headless 모드로 YouTube URL에서 레스토랑 정보를 수집합니다.
 GitHub Actions 및 서버 환경에서 자동 실행하기 위한 스크립트입니다.
 
 사용법:
-    python headless-evaluation-pipeline.py
+    python headless-crawling-pipeline.py
 
 전제조건:
     - Python 3.8+
     - Node.js 16+
     - npm install 완료
     - Puppeteer headless 모드 지원
-    - 크롤링 완료 (tzuyang_restaurant_results.jsonl)
 """
 
 import sys
@@ -94,12 +93,12 @@ def run_command(command: list, description: str, cwd: Path = None) -> Tuple[bool
         return False, -1
 
 
-def collect_statistics(evaluation_dir: Path, output_file: Path) -> Dict[str, Any]:
+def collect_statistics(crawling_dir: Path, output_file: Path) -> Dict[str, Any]:
     """
-    평가 결과 통계 수집
+    크롤링 결과 통계 수집
     
     Args:
-        evaluation_dir: 평가 디렉토리
+        crawling_dir: 크롤링 디렉토리
         output_file: 통계 저장 파일
     
     Returns:
@@ -107,49 +106,46 @@ def collect_statistics(evaluation_dir: Path, output_file: Path) -> Dict[str, Any
     """
     stats = {
         "timestamp": datetime.now().isoformat(),
+        "total_urls": 0,
+        "processed_urls": 0,
+        "failed_urls": 0,
         "total_restaurants": 0,
-        "evaluated_restaurants": 0,
-        "failed_evaluations": 0,
-        "selection_count": 0,
         "output_file": str(output_file)
     }
     
     try:
-        # 평가 선정 파일
-        selection_file = evaluation_dir / "tzuyang_restaurant_evaluation_selection.jsonl"
-        if selection_file.exists():
-            with open(selection_file, 'r', encoding='utf-8') as f:
-                lines = [line for line in f if line.strip()]
-                stats["total_restaurants"] = len(lines)
+        # input 파일 (YouTube URLs)
+        input_file = crawling_dir / "tzuyang_youtubeVideo_urls.txt"
+        if input_file.exists():
+            with open(input_file, 'r', encoding='utf-8') as f:
+                stats["total_urls"] = len([line for line in f if line.strip()])
         
-        # 평가 결과 파일
-        result_file = evaluation_dir / "tzuyang_restaurant_evaluation_results.jsonl"
+        # output 파일 (레스토랑 정보)
+        result_file = crawling_dir / "tzuyang_restaurant_results.jsonl"
         if result_file.exists():
             with open(result_file, 'r', encoding='utf-8') as f:
                 lines = [line for line in f if line.strip()]
-                stats["evaluated_restaurants"] = len(lines)
+                stats["processed_urls"] = len(lines)
                 
-                # 선정된 레스토랑 개수
-                selection_count = 0
+                # 레스토랑 개수 집계
+                total_restaurants = 0
                 for line in lines:
                     try:
                         data = json.loads(line)
-                        if data.get("selection") == True:
-                            selection_count += 1
+                        if "data" in data and isinstance(data["data"], list):
+                            total_restaurants += len(data["data"])
                     except json.JSONDecodeError:
                         pass
                 
-                stats["selection_count"] = selection_count
+                stats["total_restaurants"] = total_restaurants
         
-        stats["failed_evaluations"] = stats["total_restaurants"] - stats["evaluated_restaurants"]
+        stats["failed_urls"] = stats["total_urls"] - stats["processed_urls"]
         
         # 성공률 계산
-        if stats["total_restaurants"] > 0:
-            stats["success_rate"] = (stats["evaluated_restaurants"] / stats["total_restaurants"]) * 100
-            stats["selection_rate"] = (stats["selection_count"] / stats["total_restaurants"]) * 100
+        if stats["total_urls"] > 0:
+            stats["success_rate"] = (stats["processed_urls"] / stats["total_urls"]) * 100
         else:
             stats["success_rate"] = 0.0
-            stats["selection_rate"] = 0.0
         
         return stats
         
@@ -161,7 +157,7 @@ def collect_statistics(evaluation_dir: Path, output_file: Path) -> Dict[str, Any
 def save_statistics(stats: Dict[str, Any], stats_dir: Path):
     """통계를 JSON 파일로 저장"""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    stats_file = stats_dir / f"evaluation_stats_{timestamp}.json"
+    stats_file = stats_dir / f"crawling_stats_{timestamp}.json"
     
     try:
         with open(stats_file, 'w', encoding='utf-8') as f:
@@ -173,16 +169,17 @@ def save_statistics(stats: Dict[str, Any], stats_dir: Path):
 
 def main():
     """메인 실행 함수"""
-    print_header("🤖 HEADLESS EVALUATION PIPELINE")
+    print_header("🤖 HEADLESS CRAWLING PIPELINE")
     
-    # 경로 설정
-    evaluation_dir = Path(__file__).parent.absolute()
-    backend_dir = evaluation_dir.parent
+    # 경로 설정 (src 디렉토리에서 실행되므로 상위 디렉토리 참조)
+    current_dir = Path(__file__).parent.absolute()  # src 디렉토리
+    crawling_dir = current_dir.parent.absolute()  # perplexity-restaurant-crawling 디렉토리
+    backend_dir = crawling_dir.parent
     stats_dir = backend_dir / "headless_stats"
     
     # 디렉토리 존재 확인
-    if not evaluation_dir.exists():
-        print_error(f"평가 디렉토리를 찾을 수 없습니다: {evaluation_dir}")
+    if not crawling_dir.exists():
+        print_error(f"크롤링 디렉토리를 찾을 수 없습니다: {crawling_dir}")
         return 1
     
     if not stats_dir.exists():
@@ -193,17 +190,17 @@ def main():
     print_info(f"시작 시간: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print()
     
-    # 1단계: Headless 평가 실행
-    print_header("STEP 1: Headless Evaluation")
+    # 1단계: Headless 크롤링 실행
+    print_header("STEP 1: Headless Crawling")
     
     success, code = run_command(
         ["npx", "tsx", "src/headless_index.ts"],
-        "Headless 모드로 레스토랑 평가",
-        cwd=evaluation_dir
+        "Headless 모드로 YouTube URL 크롤링",
+        cwd=crawling_dir
     )
     
     if not success:
-        print_error("평가 실패!")
+        print_error("크롤링 실패!")
         return 1
     
     print()
@@ -215,40 +212,31 @@ def main():
     duration = (end_time - start_time).total_seconds()
     
     stats = collect_statistics(
-        evaluation_dir=evaluation_dir,
-        output_file=evaluation_dir / "tzuyang_restaurant_evaluation_results.jsonl"
+        crawling_dir=crawling_dir,
+        output_file=crawling_dir / "tzuyang_restaurant_results.jsonl"
     )
     
     stats["start_time"] = start_time.isoformat()
     stats["end_time"] = end_time.isoformat()
     stats["duration_seconds"] = duration
     
-    # 평균 평가 시간 계산
-    if stats["evaluated_restaurants"] > 0:
-        stats["average_evaluation_time"] = duration / stats["evaluated_restaurants"]
-    else:
-        stats["average_evaluation_time"] = 0.0
-    
     # 통계 출력
     print()
-    print(f"{Colors.BOLD}📊 평가 통계{Colors.ENDC}")
-    print(f"  총 레스토랑 수: {stats['total_restaurants']}")
-    print(f"  평가 완료: {stats['evaluated_restaurants']}")
-    print(f"  실패: {stats['failed_evaluations']}")
-    print(f"  선정 레스토랑: {stats['selection_count']}")
-    print(f"  평가 성공률: {stats['success_rate']:.2f}%")
-    print(f"  선정률: {stats['selection_rate']:.2f}%")
-    print(f"  평균 평가 시간: {stats['average_evaluation_time']:.2f}초")
-    print(f"  총 소요 시간: {duration:.2f}초 ({duration/60:.2f}분)")
+    print(f"{Colors.BOLD}📊 크롤링 통계{Colors.ENDC}")
+    print(f"  총 URL 수: {stats['total_urls']}")
+    print(f"  처리 완료: {stats['processed_urls']}")
+    print(f"  실패: {stats['failed_urls']}")
+    print(f"  레스토랑 수: {stats['total_restaurants']}")
+    print(f"  성공률: {stats['success_rate']:.2f}%")
+    print(f"  소요 시간: {duration:.2f}초 ({duration/60:.2f}분)")
     print()
     
     # 통계 저장
     save_statistics(stats, stats_dir)
     
     # 최종 성공 메시지
-    print_header("✅ EVALUATION PIPELINE 완료!")
-    print_success(f"총 {stats['evaluated_restaurants']}개의 레스토랑 평가 완료")
-    print_success(f"선정된 레스토랑: {stats['selection_count']}개")
+    print_header("✅ CRAWLING PIPELINE 완료!")
+    print_success(f"총 {stats['total_restaurants']}개의 레스토랑 정보 수집 완료")
     print_success(f"소요 시간: {duration/60:.2f}분")
     
     return 0
