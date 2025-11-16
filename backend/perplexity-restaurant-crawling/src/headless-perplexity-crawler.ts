@@ -7,7 +7,7 @@ export class PerplexityCrawler {
   private page: Page | null = null;
   private hasProcessedAnyItem: boolean = false;
   private modelSelected: boolean = false;
-  private sessionPath: string = './perplexity-session.json';
+  private sessionPath: string = './headless-perplexity-session.json';
   private sessionRestored: boolean = false;
   private browserId: number = 0;
 
@@ -16,7 +16,7 @@ export class PerplexityCrawler {
   }
 
   async initialize(): Promise<void> {
-    console.log('🚀 브라우저 초기화 시작...');
+    console.log('🚀 브라우저 초기화 시작 (Headless Mode)...');
 
     try {
       // 저장된 세션 복원 시도
@@ -53,7 +53,7 @@ export class PerplexityCrawler {
       }
 
       this.browser = await puppeteer.launch({
-        headless: false, // 디버깅을 위해 헤드리스 모드 해제
+        headless: true, // Headless 모드 활성화 (GitHub Actions 호환)
         executablePath, // 찾은 Chrome 경로 사용
         defaultViewport: null, // 기본 뷰포트 설정 해제 (전체 화면 사용)
         args: [

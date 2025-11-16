@@ -859,6 +859,53 @@ description = description[:1000]  # 1000자로 제한
 
 ---
 
+## 🤖 Headless 모드 실행 가이드
+
+### Headless 모드란?
+
+GitHub Actions 및 서버 환경에서 브라우저 UI 없이 백그라운드로 실행하는 모드입니다.
+
+### 실행 방법
+
+#### 1. TypeScript 직접 실행
+```bash
+npx tsx headless_index.ts
+```
+
+#### 2. Python Pipeline 실행 (권장)
+```bash
+python3 headless-crawling-pipeline.py
+```
+
+### 일반 모드 vs Headless 모드
+
+| 항목 | 일반 모드 (`npm run start`) | Headless 모드 (`headless_index.ts`) |
+|------|---------------------------|----------------------------------|
+| 브라우저 UI | ✅ 있음 (디버깅 가능) | ❌ 없음 (백그라운드) |
+| 세션 파일 | `perplexity-session.json` | `headless-perplexity-session.json` |
+| 사용자 입력 | ✅ 필요 (로그인, 확인) | ❌ 불필요 (자동 처리) |
+| 서버 환경 | ❌ 부적합 | ✅ 최적화 |
+| 통계 수집 | ❌ 없음 | ✅ 자동 (`backend/headless_stats/`) |
+| 실행 속도 | 🐢 느림 (UI 렌더링) | ⚡ 빠름 (UI 생략) |
+
+### Headless 모드 특징
+
+- 🤖 **완전 자동화**: 브라우저 UI 없이 백그라운드 실행
+- 🔄 **세션 자동 복원**: `headless-perplexity-session.json` 자동 로드
+- 📊 **통계 자동 수집**: `backend/headless_stats/` 폴더에 JSON 저장
+- 🎯 **CI/CD 최적화**: GitHub Actions 등에서 바로 실행 가능
+
+### 통계 파일 위치
+
+```
+backend/headless_stats/
+├── crawling_stats_20250116_123456.json  # 수집 통계
+├── evaluation_stats_20250116_130000.json  # 평가 통계
+└── pipeline_stats_20250116_140000.json  # 통합 통계
+```
+
+---
+
 ## 🔗 관련 문서
 
 - [Backend 전체 시스템](../README.md)

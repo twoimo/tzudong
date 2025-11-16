@@ -1,60 +1,10 @@
-import { PerplexityCrawler } from './perplexity-crawler.js';
-import { JsonlProcessor } from './jsonl-processor.js';
+import { PerplexityCrawler } from './src/headless-perplexity-crawler.js';
+import { JsonlProcessor } from './src/jsonl-processor.js';
+import { ProcessingResult } from './src/types.js';
 
-// 병렬 처리 설정 (런타임에 동적 결정)
-let PARALLEL_WORKERS = 1; // 기본값: 단일 모드
+// Headless 모드 병렬 처리 설정 (1개 고정)
+const PARALLEL_WORKERS = 1;
 const DELAY_BETWEEN_STARTS = 5000; // 브라우저 시작 간격 (5초)
-import { ProcessingResult } from './types.js';
-
-/**
- * 터미널에서 사용자 입력을 받는 함수
- */
-function askUser(question: string): Promise<string> {
-  return new Promise((resolve) => {
-    console.log(question);
-
-    process.stdin.setRawMode(false);
-    process.stdin.resume();
-    process.stdin.setEncoding('utf8');
-
-    process.stdin.once('data', (key: string) => {
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-      resolve(key.trim());
-    });
-  });
-}
-
-/**
- * 처리 모드를 선택하는 함수
- */
-async function selectProcessingMode(): Promise<'single' | 'parallel'> {
-  console.log('\n🎯 처리 모드를 선택해주세요:');
-  console.log('1. 단일 모드 (1개의 브라우저, 순차 처리) - 안정적');
-  console.log('2. 병렬 모드 (3개의 브라우저, 동시 처리) - 빠름');
-  console.log('3. 고속 병렬 모드 (5개의 브라우저, 동시 처리) - 가장 빠름\n');
-
-  while (true) {
-    const choice = await askUser('선택 (1/2/3): ');
-
-    switch (choice) {
-      case '1':
-        PARALLEL_WORKERS = 1;
-        console.log('✅ 단일 모드로 설정되었습니다.\n');
-        return 'single';
-      case '2':
-        PARALLEL_WORKERS = 3;
-        console.log('✅ 병렬 모드(3개)로 설정되었습니다.\n');
-        return 'parallel';
-      case '3':
-        PARALLEL_WORKERS = 5;
-        console.log('✅ 고속 병렬 모드(5개)로 설정되었습니다.\n');
-        return 'parallel';
-      default:
-        console.log('❌ 잘못된 선택입니다. 1, 2, 또는 3을 입력해주세요.');
-    }
-  }
-}
 
 // 프롬프트 템플릿
 const PROMPT_TEMPLATE = `당신은 유튜브 URL에서 맛집 정보를 추출하는 AI입니다.
@@ -288,12 +238,9 @@ async function processSequentially(youtubeLinks: string[], processor: JsonlProce
 }
 
 async function main() {
-  console.log('🍜 쯔양 맛집 크롤러 시작!\n');
+  console.log('🍜 쯔양 맛집 크롤러 시작! (Headless 모드 - 단일 처리)\n');
 
   try {
-    // 처리 모드 선택
-    const processingMode = await selectProcessingMode();
-
     // JSONL 파일 프로세서 생성
     const processor = new JsonlProcessor('./tzuyang_restaurant_results.jsonl');
     
@@ -342,24 +289,9 @@ async function main() {
 
     console.log(`📋 전체 URL: ${allUrls.length}개, 미처리: ${unprocessedUrls.length}개`);
 
-    if (processingMode === 'single') {
-      console.log('🔄 단일 모드: 순차 처리 시작\n');
-      // 단일 모드: 미처리 URL 순차 처리
-      await processSequentially(unprocessedUrls, processor);
-    } else {
-      console.log(`🔄 병렬 모드: ${PARALLEL_WORKERS}개 동시 처리`);
-      console.log(`⏱️  브라우저 시작 간격: ${DELAY_BETWEEN_STARTS / 1000}초\n`);
-
-      // 병렬 처리 실행
-      const results = await processInParallel(unprocessedUrls, processor);
-
-      // 결과 요약
-      const successCount = results.filter(r => r.success).length;
-      const errorCount = results.filter(r => !r.success).length;
-
-      console.log('\n🎉 병렬 처리 완료!');
-      console.log(`📊 최종 결과: ${successCount}개 성공, ${errorCount}개 실패`);
-    }
+    // Headless 모드는 단일 처리만 지원
+    console.log('🔄 단일 모드: 순차 처리 시작\n');
+    await processSequentially(unprocessedUrls, processor);
 
   } catch (error) {
     console.error('💥 치명적 오류:', error);

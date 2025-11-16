@@ -623,11 +623,144 @@ Error 403: quotaExceeded
 
 ---
 
-## 📖 추가 문서
+## 🤖 Headless 모드 실행 가이드
+
+### Headless 모드란?
+
+GitHub Actions 및 서버 환경에서 브라우저 UI 없이 자동으로 전체 파이프라인을 실행하는 모드입니다.
+
+### 실행 방법
+
+#### 1. 전체 파이프라인 실행 (수집 → 평가)
+```bash
+cd backend
+python3 headless-restaurant-pipeline.py
+```
+
+#### 2. 개별 파이프라인 실행
+
+**크롤링만 실행:**
+```bash
+cd backend/perplexity-restaurant-crawling
+python3 headless-crawling-pipeline.py
+```
+
+**평가만 실행:**
+```bash
+cd backend/perplexity-restaurant-evaluation
+python3 headless-evaluation-pipeline.py
+```
+
+### 일반 모드 vs Headless 모드
+
+| 항목 | 일반 모드 (`restaurant-pipeline.py`) | Headless 모드 (`headless-restaurant-pipeline.py`) |
+|------|-----------------------------------|------------------------------------------------|
+| 브라우저 UI | ✅ 있음 (디버깅 가능) | ❌ 없음 (백그라운드) |
+| 세션 파일 | `perplexity-session.json` | `headless-perplexity-session.json` |
+| 사용자 입력 | ✅ 필요 (로그인, 확인) | ❌ 불필요 (자동 처리) |
+| 서버 환경 | ❌ 부적합 | ✅ 최적화 |
+| 통계 수집 | ❌ 없음 | ✅ 자동 (`headless_stats/`) |
+| 실행 속도 | 🐢 느림 (UI 렌더링) | ⚡ 빠름 (UI 생략) |
+| CI/CD | ❌ 불가능 | ✅ GitHub Actions 지원 |
+
+### Headless 모드 특징
+
+- 🤖 **완전 자동화**: 브라우저 UI 없이 전체 프로세스 실행
+- 🔄 **세션 자동 복원**: 세션 파일 자동 로드 및 재사용
+- � **통계 자동 수집**: `headless_stats/` 폴더에 JSON 형식 저장
+- 🎯 **CI/CD 최적화**: GitHub Actions, Jenkins 등에서 바로 실행
+- 🏆 **서버 환경**: 백그라운드 실행 및 로그 자동 저장
+
+### 통계 파일 구조
+
+```
+backend/headless_stats/
+├── crawling_stats_20250116_123456.json  # 수집 통계
+│   ├── total_urls: 100
+│   ├── processed_urls: 95
+│   ├── total_restaurants: 285
+│   └── success_rate: 95%
+│
+├── evaluation_stats_20250116_130000.json  # 평가 통계
+│   ├── evaluated_restaurants: 280
+│   ├── selection_count: 245
+│   └── selection_rate: 87.5%
+│
+└── pipeline_stats_20250116_140000.json  # 통합 통계
+    ├── crawling: {...}
+    ├── evaluation: {...}
+    └── overall_success_rate: 96.5%
+```
+
+### 서버 환경 설정 가이드
+
+#### 1. 시스템 요구사항
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y chromium-browser chromium-chromedriver
+
+# macOS
+brew install --cask google-chrome
+
+# Python 3.8+
+python3 --version
+
+# Node.js 16+
+node --version
+```
+
+#### 2. 의존성 설치
+```bash
+cd backend/perplexity-restaurant-crawling
+npm install
+
+cd ../perplexity-restaurant-evaluation
+npm install
+```
+
+#### 3. 세션 파일 준비
+
+첫 실행 전에 로컬에서 세션을 생성하고 서버로 복사:
+
+```bash
+# 로컬에서 일반 모드로 실행 (로그인 후 세션 저장)
+npm run start
+
+# 세션 파일을 headless 세션으로 복사
+cp perplexity-session.json headless-perplexity-session.json
+
+# 서버로 세션 파일 전송
+scp headless-perplexity-session.json user@server:/path/to/backend/perplexity-restaurant-crawling/
+scp headless-perplexity-session.json user@server:/path/to/backend/perplexity-restaurant-evaluation/
+```
+
+#### 4. 환경 변수 설정
+
+`.env` 파일 준비:
+```env
+PERPLEXITY_SESSION_PATH=headless-perplexity-session.json
+YOUTUBE_API_KEY=your_key
+SUPABASE_URL=your_url
+SUPABASE_SERVICE_KEY=your_key
+```
+
+#### 5. Cron 자동화 (선택)
+
+매일 자동 실행:
+```bash
+# crontab -e
+0 2 * * * cd /path/to/backend && python3 headless-restaurant-pipeline.py >> /var/log/tzudong.log 2>&1
+```
+
+---
+
+## �📖 추가 문서
 
 - [크롤링 시스템 상세](./perplexity-restaurant-crawling/README.md)
 - [평가 시스템 상세](./perplexity-restaurant-evaluation/README.md)
 - [공통 유틸리티](./utils/README.md)
+- [Headless Stats README](./headless_stats/README.md)
 
 ---
 
