@@ -6,6 +6,31 @@ import { config } from 'dotenv';
 // 환경 변수 로드
 config();
 
+// 유틸리티 함수: 여러 파일에서 처리된 URL 로드
+function loadMultipleProcessedUrls(...filePaths: string[]): Set<string> {
+  const allUrls = new Set<string>();
+  
+  for (const filePath of filePaths) {
+    if (!existsSync(filePath)) continue;
+    
+    const content = readFileSync(filePath, 'utf-8');
+    const lines = content.trim().split('\n').filter(line => line.trim());
+    
+    for (const line of lines) {
+      try {
+        const data = JSON.parse(line);
+        if (data.youtube_link) {
+          allUrls.add(data.youtube_link);
+        }
+      } catch (e) {
+        // 파싱 실패 무시
+      }
+    }
+  }
+  
+  return allUrls;
+}
+
 // 평가 프롬프트 템플릿
 const EVALUATION_PROMPT_TEMPLATE = `당신은 유튜버의 음식점 방문 관련 AI 기반 생성 데이터를 평가하는 전문가입니다.  
 입력으로 주어지는 <평가할 데이터>는 한 유튜브 영상에서 유튜버가 방문한 음식점 데이터(restaurant 리스트 포함)입니다.  
@@ -187,46 +212,12 @@ async function main() {
 
     console.log(`📋 총 ${lines.length}개의 레코드를 발견했습니다.`);
     
-    // 이미 처리된 youtube_link 수집 (성공 + 실패 모두)
-    const processedLinks = new Set<string>();
-    
-    // 성공 파일 확인
-    if (existsSync(outputFilePath)) {
-      console.log(`📂 기존 성공 파일 발견 - 이미 처리된 youtube_link 확인 중...`);
-      const outputContent = readFileSync(outputFilePath, 'utf-8');
-      const outputLines = outputContent.trim().split('\n').filter(line => line.trim());
-      for (const line of outputLines) {
-        try {
-          const data = JSON.parse(line);
-          if (data.youtube_link) {
-            processedLinks.add(data.youtube_link);
-          }
-        } catch (e) {
-          // 파싱 실패 무시
-        }
-      }
-    }
-    
-    // 실패 파일 확인
-    if (existsSync(errorFilePath)) {
-      console.log(`📂 기존 오류 파일 발견 - 이미 처리된 youtube_link 확인 중...`);
-      const errorContent = readFileSync(errorFilePath, 'utf-8');
-      const errorLines = errorContent.trim().split('\n').filter(line => line.trim());
-      for (const line of errorLines) {
-        try {
-          const data = JSON.parse(line);
-          if (data.youtube_link) {
-            processedLinks.add(data.youtube_link);
-          }
-        } catch (e) {
-          // 파싱 실패 무시
-        }
-      }
-    }
-    
+    // 1. 이미 처리된 youtube_link 로드 (유틸리티 함수 사용)
+    console.log(`� 기존 처리 내역 확인 중...`);
+    const processedLinks = loadMultipleProcessedUrls(outputFilePath, errorFilePath);
     console.log(`✅ 이미 처리된 레코드: ${processedLinks.size}개\n`);
 
-    // 미처리 레코드만 필터링
+    // 2. 미처리 레코드만 필터링
     const recordsToProcess: string[] = [];
     let skippedCount = 0;
     

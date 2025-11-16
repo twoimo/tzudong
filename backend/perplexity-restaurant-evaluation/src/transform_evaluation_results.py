@@ -1,6 +1,11 @@
 import json
 import os
 import hashlib
+import sys
+
+# 공통 유틸리티 함수 import
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
+from duplicate_checker import load_processed_unique_ids
 
 # --- 파일 경로 설정 ---
 # (필요시 이 경로를 실제 파일 위치에 맞게 수정하세요.)
@@ -268,14 +273,23 @@ def transform_json_object(original_data, source_file_type):
 
 # --- 메인 실행 로직 ---
 def main():
-    written_ids = set()
+    # 기존 output 파일에서 unique_id 로드 (append 모드를 위해)
+    print(f"📂 기존 파일 확인 중: {OUTPUT_FILE}")
+    written_ids = load_processed_unique_ids(OUTPUT_FILE)
+    
     stats = {
         "results_lines": 0,
         "notselection_lines": 0,
         "total_processed": 0,
         "total_written": 0,
-        "total_skipped": 0
+        "total_skipped": 0,
+        "already_existed": len(written_ids)  # 이미 존재하는 항목 수
     }
+    
+    if stats["already_existed"] > 0:
+        print(f"✅ 기존 파일에서 {stats['already_existed']}개의 unique_id 로드됨\n")
+    else:
+        print("📝 새 파일 생성 예정\n")
     
     # 출력 디렉토리 생성 (필요한 경우)
     try:
@@ -284,9 +298,9 @@ def main():
         print(f"출력 디렉토리 생성 실패: {e}")
         return
 
-    # 1. & 2. 파일 처리 및 쓰기 (하나의 'w' 컨텍스트에서)
+    # 1. & 2. 파일 처리 및 쓰기 (append 모드로 변경)
     try:
-        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f_out:
+        with open(OUTPUT_FILE, 'a', encoding='utf-8') as f_out:
             
             # --- 1. 'results' 파일 처리 ---
             print(f"'{INPUT_FILE_RESULTS}' 파일 처리 시작...")
@@ -357,10 +371,12 @@ def main():
     print(f"  'results' 파일 처리 라인: {stats['results_lines']} 개")
     print(f"  'notSelection' 파일 처리 라인: {stats['notselection_lines']} 개")
     print("-" * 30)
+    print(f"  기존에 있던 항목: {stats['already_existed']} 개")
     print(f"  총 변환 시도 항목: {stats['total_processed']} 개")
-    print(f"  ✅ 최종 파일에 쓰인 항목: {stats['total_written']} 개")
+    print(f"  ✅ 새로 추가된 항목: {stats['total_written']} 개")
     print(f"  ⏭️ 중복으로 건너뛴 항목: {stats['total_skipped']} 개")
     print(f"\n결과가 '{OUTPUT_FILE}' 파일에 저장되었습니다.")
+    print(f"💾 총 항목 수: {stats['already_existed'] + stats['total_written']} 개")
 
 if __name__ == "__main__":
     main()

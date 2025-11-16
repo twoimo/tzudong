@@ -7,7 +7,12 @@ tzuyang_restaurant_evaluation_target.jsonl 파일을 생성합니다.
 
 import json
 import os
+import sys
 from pathlib import Path
+
+# 공통 유틸리티 함수 import
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
+from duplicate_checker import load_processed_urls, append_to_jsonl
 
 def create_evaluation_targets():
     """
@@ -27,28 +32,23 @@ def create_evaluation_targets():
     if not input_file.exists():
         raise FileNotFoundError(f"입력 파일이 존재하지 않습니다: {input_file}")
 
-    # 이미 처리된 youtube_link 수집
-    processed_links = set()
-    if output_file.exists():
-        print(f"📂 기존 출력 파일 발견 - 이미 처리된 youtube_link 확인 중...")
-        with open(output_file, 'r', encoding='utf-8') as f_existing:
-            for line in f_existing:
-                try:
-                    existing_data = json.loads(line.strip())
-                    youtube_link = existing_data.get('youtube_link')
-                    if youtube_link:
-                        processed_links.add(youtube_link)
-                except:
-                    continue
-        print(f"✅ 이미 처리된 레코드: {len(processed_links)}개")
+    # 1. 이미 처리된 youtube_link 수집 (유틸리티 함수 사용)
+    print(f"� 기존 처리 내역 확인 중...")
+    processed_links = load_processed_urls(str(output_file))
+    processed_links_null = load_processed_urls(str(address_null_file))
+    all_processed = processed_links | processed_links_null  # 합집합
+    
+    print(f"✅ 이미 처리된 레코드:")
+    print(f"   - Selection: {len(processed_links)}개")
+    print(f"   - NotSelection: {len(processed_links_null)}개")
+    print(f"   - 총합: {len(all_processed)}개\n")
 
     processed_count = 0
     skipped_count = 0
     address_null_count = 0
 
-    with open(input_file, 'r', encoding='utf-8') as f_in, \
-         open(output_file, 'a', encoding='utf-8') as f_out, \
-         open(address_null_file, 'a', encoding='utf-8') as f_null:
+    # 2. append 모드로 파일 열기
+    with open(input_file, 'r', encoding='utf-8') as f_in:
 
         for line_num, line in enumerate(f_in, 1):
             try:
@@ -58,10 +58,10 @@ def create_evaluation_targets():
                 youtube_link = data.get('youtube_link')
                 
                 # 이미 처리된 youtube_link인지 확인
-                if youtube_link in processed_links:
+                if youtube_link in all_processed:
                     skipped_count += 1
-                    if skipped_count % 10 == 1:  # 10개마다 한 번씩만 로그
-                        print(f"⏭️  라인 {line_num} 건너뛰기 (이미 처리됨): {youtube_link}")
+                    if skipped_count % 100 == 1:  # 100개마다 한 번씩만 로그
+                        print(f"⏭️  라인 {line_num} 건너뛰기 (이미 처리됨)")
                     continue
 
                 # evaluation_target 생성
@@ -88,17 +88,18 @@ def create_evaluation_targets():
                     'youtube_meta': data.get('youtube_meta', {})
                 }
 
-                # JSONL 형식으로 저장 (기존 파일)
-                f_out.write(json.dumps(new_data, ensure_ascii=False) + '\n')
+                # append 모드로 즉시 저장 (유틸리티 함수 사용)
+                append_to_jsonl(str(output_file), new_data)
+                all_processed.add(youtube_link)  # 처리 완료 후 추가
 
                 # address가 null인 데이터만 별도 파일에 저장
                 if has_null_address:
-                    f_null.write(json.dumps(new_data, ensure_ascii=False) + '\n')
+                    append_to_jsonl(str(address_null_file), new_data)
                     address_null_count += 1
 
                 processed_count += 1
-                processed_links.add(youtube_link)  # 처리 완료 후 추가
-                print(f"✓ 라인 {line_num} 처리 완료 - {len(restaurants)}개 음식점")
+                if processed_count % 10 == 0:  # 10개마다 진행 상황 출력
+                    print(f"✓ 진행 중... {processed_count}개 처리 완료")
 
             except json.JSONDecodeError as e:
                 print(f"❌ 라인 {line_num} JSON 파싱 오류: {e}")
@@ -114,6 +115,7 @@ def create_evaluation_targets():
     print(f"📊 Address Null 레코드 수: {address_null_count}")
     print(f"📁 결과 파일 저장됨: {output_file}")
     print(f"📁 Address Null 파일 저장됨: {address_null_file}")
+    print(f"{'='*50}\n")
 
     return output_file, address_null_file
 
