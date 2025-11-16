@@ -104,8 +104,35 @@ async function insertRestaurants() {
     
     console.log(`📊 총 ${lines.length}개의 레스토랑 데이터를 읽었습니다.\n`);
 
+    // DB에서 모든 unique_id를 한번에 로드 (성능 개선)
+    console.log('🔍 DB에서 기존 unique_id를 로드하는 중...');
+    const { data: existingRecords, error: fetchError } = await supabase
+      .from('restaurants')
+      .select('unique_id, status');
+
+    if (fetchError) {
+      console.error('❌ DB 조회 실패:', fetchError.message);
+      throw fetchError;
+    }
+
+    // 메모리에서 중복 체크를 위한 Set 생성
+    const existingUniqueIds = new Set<string>();
+    const deletedUniqueIds = new Set<string>();
+
+    if (existingRecords) {
+      for (const record of existingRecords) {
+        existingUniqueIds.add(record.unique_id);
+        if (record.status === 'deleted') {
+          deletedUniqueIds.add(record.unique_id);
+        }
+      }
+    }
+
+    console.log(`✅ 기존 레코드: ${existingUniqueIds.size}개 (삭제됨: ${deletedUniqueIds.size}개)\n`);
+
     let successCount = 0;
     let failCount = 0;
+    let skippedCount = 0;
     const errors: Array<{ name: string; error: string }> = [];
 
     // 데이터 삽입
@@ -163,39 +190,18 @@ async function insertRestaurants() {
           review_count: 0
         };
 
-        // 중복 체크 (unique_id 기준 + deleted 레코드 포함)
-        const { data: existingRecords, error: checkError } = await supabase
-          .from('restaurants')
-          .select('id, name, status, unique_id')
-          .eq('unique_id', data.unique_id);
-
-        if (checkError) {
-          failCount++;
-          errors.push({ name: data.name, error: checkError.message });
-          console.log(`❌ [${i + 1}/${lines.length}] ${data.name} - 중복 체크 실패: ${checkError.message}`);
-          continue;
-        }
-
-        if (existingRecords && existingRecords.length > 0) {
-          const deletedRecord = existingRecords.find(r => r.status === 'deleted');
-          const activeRecord = existingRecords.find(r => r.status !== 'deleted');
-
-          if (activeRecord) {
-            // active 레코드가 있으면 스킵
-            console.log(`⏭️  [${i + 1}/${lines.length}] ${data.name} - 이미 존재 (스킵)`);
-            continue;
-          }
-
-          if (deletedRecord) {
-            // deleted 레코드만 있으면 복원 및 업데이트
+        // 중복 체크 (메모리에서 빠르게 처리)
+        if (existingUniqueIds.has(data.unique_id)) {
+          // deleted 레코드인 경우에만 복원
+          if (deletedUniqueIds.has(data.unique_id)) {
             const { error: updateError } = await supabase
               .from('restaurants')
               .update({
                 ...restaurantData,
-                status: data.status || 'pending', // 원본 상태 유지
+                status: data.status || 'pending',
                 updated_at: new Date().toISOString(),
               })
-              .eq('id', deletedRecord.id);
+              .eq('unique_id', data.unique_id);
 
             if (updateError) {
               failCount++;
@@ -205,8 +211,12 @@ async function insertRestaurants() {
               successCount++;
               console.log(`🔄 [${i + 1}/${lines.length}] ${data.name} - 복원 및 업데이트 성공`);
             }
-            continue;
+          } else {
+            // 이미 active 레코드가 있으면 스킵
+            skippedCount++;
+            console.log(`⏭️  [${i + 1}/${lines.length}] ${data.name} - 이미 존재 (스킵)`);
           }
+          continue;
         }
 
         // 새 레코드 삽입
@@ -241,6 +251,7 @@ async function insertRestaurants() {
     console.log('📊 데이터 삽입 완료!');
     console.log('='.repeat(60));
     console.log(`✅ 성공: ${successCount}개`);
+    console.log(`⏭️  스킵: ${skippedCount}개 (이미 존재)`);
     console.log(`❌ 실패: ${failCount}개`);
     console.log('='.repeat(60));
 

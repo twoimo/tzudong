@@ -2,6 +2,31 @@ import { PerplexityEvaluator } from './perplexity-evaluator.js';
 import { readFileSync, writeFileSync, existsSync, appendFileSync } from 'fs';
 import { join } from 'path';
 
+// 유틸리티 함수: 여러 파일에서 처리된 URL 로드
+function loadMultipleProcessedUrls(...filePaths: string[]): Set<string> {
+  const allUrls = new Set<string>();
+  
+  for (const filePath of filePaths) {
+    if (!existsSync(filePath)) continue;
+    
+    const content = readFileSync(filePath, 'utf-8');
+    const lines = content.trim().split('\n').filter(line => line.trim());
+    
+    for (const line of lines) {
+      try {
+        const data = JSON.parse(line);
+        if (data.youtube_link) {
+          allUrls.add(data.youtube_link);
+        }
+      } catch (e) {
+        // 파싱 실패 무시
+      }
+    }
+  }
+  
+  return allUrls;
+}
+
 // 평가 프롬프트 템플릿 (index.ts와 동일)
 const EVALUATION_PROMPT_TEMPLATE = `당신은 유튜버의 음식점 방문 관련 AI 기반 생성 데이터를 평가하는 전문가입니다.  
 입력으로 주어지는 <평가할 데이터>는 한 유튜브 영상에서 유튜버가 방문한 음식점 데이터(restaurant 리스트 포함)입니다.  
@@ -190,26 +215,12 @@ async function main() {
       process.exit(0);
     }
 
-    // 이미 성공한 youtube_link 수집 (아웃풋 파일에서)
-    const alreadySuccessful = new Set<string>();
-    if (existsSync(outputFilePath)) {
-      console.log(`📂 기존 성공 파일 발견 - 이미 처리된 youtube_link 확인 중...`);
-      const outputContent = readFileSync(outputFilePath, 'utf-8');
-      const outputLines = outputContent.trim().split('\n').filter(line => line.trim());
-      for (const line of outputLines) {
-        try {
-          const data = JSON.parse(line);
-          if (data.youtube_link) {
-            alreadySuccessful.add(data.youtube_link);
-          }
-        } catch (e) {
-          // 파싱 실패 무시
-        }
-      }
-      console.log(`✅ 이미 성공한 레코드: ${alreadySuccessful.size}개`);
-    }
+    // 1. 이미 성공한 youtube_link 로드 (유틸리티 함수 사용)
+    console.log(`� 기존 성공 내역 확인 중...`);
+    const alreadySuccessful = loadMultipleProcessedUrls(outputFilePath);
+    console.log(`✅ 이미 성공한 레코드: ${alreadySuccessful.size}개\n`);
 
-    // 에러 파일에서 이미 성공한 것들 제거
+    // 2. 에러 파일에서 이미 성공한 것들 제거
     const linesToProcess = errorLines.filter(line => {
       try {
         const record = JSON.parse(line.trim());

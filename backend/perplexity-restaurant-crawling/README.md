@@ -1,278 +1,349 @@
-# Tzudong Restaurant Info Crawler
+# 🍜 쯔양 레스토랑 정보 수집 시스템
 
 TypeScript + Puppeteer를 사용하여 Perplexity AI에서 유튜브 맛집 정보를 자동으로 추출하는 크롤러입니다.
 
 ## 주요 특징
 
-- 🤖 **자동화된 크롤링**: Perplexity AI를 활용한 지능적인 맛집 정보 추출 (하나의 영상에서 여러 식당 동시 추출, AI 모델 자동 감지, 다중 JSON 파싱 개선)
-- 🔐 **지능적 세션 관리**: 로그인 세션 자동 저장/복원으로 장시간 크롤링 지원 (세션 복원 성공 시 바로 크롤링 시작, 크롤링 중 로그인 풀릴 시 자동 감지 및 사용자 대기)
-- 🔄 **자동 로그인 유지**: 세션 만료 시 자동 재로그인으로 중단 없는 작업
-- 🧹 **깔끔한 데이터**: 출처 인용구 및 빈 괄호 자동 제거 ([1], [web:7], {ts:670}, [ts:286], {ts:27, ts:94}, ({ts:904-915}), (web:42), (web:6, web:21, web:23, web:24), ({ts:243, ts:250-296, ts:422}), {ts:526-563, ts:845}, {attached_file:1(ts:176, ts:514, ts:579)}, {ts:613, 643}, (ts:59) 등)로 완벽하게 깔끔한 JSON 데이터 생성
-- 🌍 **다국어 주소 지원**: 국내(네이버 지도) 및 해외(구글 지도) 주소 좌표 자동 확보 (기존 좌표 있어도 강제 재확보)
-- 📊 **배치 처리**: 대량의 유튜브 링크를 효율적으로 처리
-- 🎯 **정확한 데이터 추출**: 영상 분석, 검색, 지도 검증을 통한 고품질 데이터
+- 🤖 **자동화된 크롤링**: Perplexity AI를 활용한 지능적인 맛집 정보 추출
+- 🔐 **세션 관리**: 로그인 세션 자동 저장/복원으로 장시간 크롤링 지원
+- 🔄 **자동 로그인 유지**: 세션 만료 시 자동 재로그인
+- 🧹 **데이터 정제**: 출처 인용구 자동 제거 및 좌표 보완
+- 🌍 **다국어 지원**: 국내(네이버) 및 해외(구글) 주소 좌표 자동 확보
+- 📊 **병렬 처리**: 단일/병렬/고속 병렬 모드 지원
+- 🎯 **AI 모델 선택**: Gemini 2.5 Pro 자동 선택
+- 🗑️ **라이브러리 관리**: 각 수집 완료 후 자동 삭제
+- 🔐 **중복 방지**: 이미 처리된 URL 자동 스킵
+
+## 크롤링 파이프라인
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  🍜 크롤링 파이프라인 (3단계)                      │
+└─────────────────────────────────────────────────────────────────┘
+
+┌──────────────────┐
+│  YouTube Channel │
+│    (쯔양 채널)    │
+└────────┬─────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 1: YouTube URL 수집                                       │
+│  📄 api-tzuyang-youtubeVideo-urls.py                            │
+├─────────────────────────────────────────────────────────────────┤
+│  • YouTube Data API로 채널의 모든 영상 URL 수집                  │
+│  • 중복 검사: 기존 파일과 비교하여 새 URL만 추가                  │
+│  • 출력: tzuyang_youtubeVideo_urls.txt                          │
+└────────┬────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 2: Perplexity AI 크롤링                                   │
+│  📄 index.ts / headless-index.js (TypeScript + Puppeteer)       │
+├─────────────────────────────────────────────────────────────────┤
+│  • Perplexity AI로 영상별 레스토랑 정보 추출                      │
+│  • 중복 검사: youtube_link 기반 (Set)                            │
+│  • AI 모델: Gemini 2.5 Pro 자동 선택                            │
+│  • 좌표 보완: 네이버/구글 지도 API                               │
+│  • 출처 인용구 제거: [1], {ts:670}, (web:42) 등                 │
+│  • 병렬 처리: 단일/병렬(3)/고속(5) 모드                           │
+│  • 라이브러리 관리: 각 수집 완료 후 자동 삭제                     │
+│  • 출력: tzuyang_restaurant_results.jsonl                       │
+└────────┬────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 3: YouTube 메타데이터 추가                                 │
+│  📄 api-youtube-meta.py                                         │
+├─────────────────────────────────────────────────────────────────┤
+│  • YouTube API로 조회수, 좋아요, 댓글 수 추가                     │
+│  • OpenAI로 광고 브랜드 자동 탐지                                │
+│  • 중복 검사: 기존 파일과 비교                                    │
+│  • 출력: tzuyang_restaurant_results_with_meta.jsonl             │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 중복 검사 시스템
+
+### 검사 메커니즘
+
+**1단계: 입력 파일 로드**
+```typescript
+// 파일: src/process-remaining.ts
+const inputFilePath = 'tzuyang_youtubeVideo_urls.txt';
+const allUrls = fs.readFileSync(inputFilePath, 'utf-8').split('\n');
+```
+
+**2단계: 이미 처리된 URL 로드**
+```typescript
+function loadProcessedUrls(filePath: string): Set<string> {
+  const urls = new Set<string>();
+  const content = fs.readFileSync(filePath, 'utf-8');
+  const lines = content.split('\n');
+  
+  for (const line of lines) {
+    const data = JSON.parse(line);
+    if (data.youtube_link) {
+      urls.add(data.youtube_link);  // Set에 추가
+    }
+  }
+  return urls;  // O(1) 조회 속도
+}
+
+// 처리된 URL 로드
+const processedUrls = loadProcessedUrls('tzuyang_restaurant_results.jsonl');
+```
+
+**3단계: 미처리 URL 필터링**
+```typescript
+// 중복 제외
+const remainingUrls = allUrls.filter(url => !processedUrls.has(url));
+console.log(`미처리: ${remainingUrls.length}개`);
+```
+
+**4단계: 처리 및 즉시 저장**
+```typescript
+for (const url of remainingUrls) {
+  const result = await crawler.processYouTubeLink(url);
+  
+  // Append 모드로 즉시 저장
+  fs.appendFileSync('tzuyang_restaurant_results.jsonl', 
+    JSON.stringify(result) + '\n'
+  );
+}
+```
+
+**5단계: 라이브러리 자동 삭제**
+```typescript
+// 각 URL 처리 완료 후
+if (this.browserId === 0) {
+  await this.deleteAllThreads();  // Library 삭제 + 홈으로 이동
+}
+```
+
+### 중복 검사 특징
+
+- **검사 대상**: `tzuyang_restaurant_results.jsonl`
+- **검사 키**: `youtube_link` (YouTube URL)
+- **자료구조**: `Set<string>` (O(1) 조회)
+- **저장 방식**: Append 모드 (기존 데이터 보존)
+- **중단 안전**: 각 항목 처리 후 즉시 저장
+- **재실행 가능**: 이미 처리된 URL 자동 스킵
 
 ## 설치 및 설정
 
 ```bash
-cd backend
+cd backend/perplexity-restaurant-crawling
 npm install
+npx tsc  # TypeScript 컴파일
+```
+
+### 환경 변수 설정
+
+`.env` 파일 생성:
+
+```env
+YOUTUBE_API_KEY_BYEON=your_youtube_api_key
+OPENAI_API_KEY_BYEON=your_openai_api_key
+PERPLEXITY_EMAIL=your_perplexity_email
+PERPLEXITY_PASSWORD=your_perplexity_password
 ```
 
 ## 사용법
 
-### 1. 전체 처리 (reasoning_basis 없는 항목만 처리 - 추천)
+### 1. 일반 모드 (브라우저 표시)
+
 ```bash
 npm run start
+# 또는
+node dist/index.js
 ```
-**모든 개선사항 적용됨**: 전체화면 브라우저, Shift+Enter 입력, Gemini 2.5 Pro 자동 선택, 정확한 필터링 등 모든 최신 기능 포함
 
-### 1.5. 수동 시작 모드 (각 항목마다 확인)
+**처리 모드 선택**:
+- **단일 모드**: 1개 브라우저, 순차 처리 (안정적)
+- **병렬 모드**: 3개 브라우저, 동시 처리 (빠름)
+- **고속 병렬 모드**: 5개 브라우저, 동시 처리 (가장 빠름)
+
+### 2. 헤드리스 모드 (백그라운드)
+
 ```bash
-npm run manual-start
+npm run headless
+# 또는
+node dist/headless-index.js
 ```
-**수동 모드**: 각 항목 처리 전에 사용자 확인을 받음
 
-### 1.6. 데이터 초기화 (reasoning_basis 재처리용)
+백그라운드에서 브라우저 없이 실행됩니다.
+
+### 3. Python 파이프라인 (헤드리스)
+
+```bash
+cd backend
+conda activate tzudong
+python headless-restaurant-pipeline.py
+```
+
+### 4. 데이터 초기화
+
 ```bash
 npm run reset
 ```
-**데이터 초기화**: youtube_link 유지하고 restaurants 배열을 빈 배열로 초기화 (다중 레스토랑 정보 저장용)
 
-### 1.7. 좌표 정보 보완 (Naver/Google Maps API)
+### 5. 좌표 정보 보완
+
 ```bash
 npm run enrich-coordinates
 ```
-**좌표 보완**: 기존 데이터 중 좌표가 없는 항목들의 주소를 지도 API로 조회하여 lat/lng 정보를 채워줍니다
-- **국내 주소**: 네이버 지도 API 사용
-- **해외 주소**: 구글 지도 자동 검색 및 좌표 추출 (터키, 일본, 미국 등 지원)
 
-### 1.8. 로그인 상태 테스트
+## 출력 파일
+
+- `tzuyang_restaurant_results.jsonl`: 수집된 레스토랑 정보
+- `perplexity-session.json`: 로그인 세션 데이터 (자동 생성)
+
+## 데이터 구조
+
+### `tzuyang_restaurant_results.jsonl`
+
+크롤링 완료 후 출력 (메타데이터 없음)
+
+```json
+{
+  "youtube_link": "https://www.youtube.com/watch?v=Mm76nsEkOIM",
+  "restaurants": [
+    {
+      "name": "영생덕",
+      "phone": "053-255-5777",
+      "address": "대구 중구 종로 39",
+      "lat": 35.8693928,
+      "lng": 128.5913992,
+      "category": "중식",
+      "youtube_link": "https://www.youtube.com/watch?v=Mm76nsEkOIM",
+      "reasoning_basis": "유튜버 쯔양이 영상에서 '영생덕'이라는 상호를 언급하고, '대구 중구 종로 39'라는 주소 자막을 통해 방문한 것을 확인함...",
+      "tzuyang_review": "60년 전통의 중식 만두 전문점으로, 꾼만두, 물만두, 찐교스를 주문함..."
+    },
+    {
+      "name": "삼화만두",
+      "phone": "0507-1354-5651",
+      "address": "대구 중구 남성로 58-1",
+      "lat": 35.8670763,
+      "lng": 128.5930564,
+      "category": "분식",
+      "youtube_link": "https://www.youtube.com/watch?v=Mm76nsEkOIM",
+      "reasoning_basis": "영상에서 '삼화만두'라는 상호와 '대구 중구 남성로 58-1'라는 주소 자막을 통해 방문을 확인함...",
+      "tzuyang_review": "우리나라 최초로 비빔만두를 개발한 원조집으로, 비빔만두, 찐만두, 쫄면을 주문함..."
+    }
+  ]
+}
+```
+
+### `tzuyang_restaurant_results_with_meta.jsonl`
+
+YouTube 메타데이터 추가 후 출력
+
+```json
+{
+  "youtube_link": "https://www.youtube.com/watch?v=x6CqjKYFyiU",
+  "restaurants": [
+    {
+      "name": "부산안면옥",
+      "phone": "053-424-9389",
+      "address": "대구광역시 중구 국채보상로125길 4-1",
+      "lat": 35.8705982,
+      "lng": 128.598939,
+      "category": "한식",
+      "youtube_link": "https://www.youtube.com/watch?v=x6CqjKYFyiU",
+      "reasoning_basis": "유튜버 쯔양이 대구 공평동에 위치한 120년 전통의 냉면집을 방문했습니다...",
+      "tzuyang_review": "쯔양은 이 식당의 여러 메뉴를 맛보고 극찬했습니다. 특히 평양냉면에 대해 입문자도 먹기 좋은 맛으로..."
+    }
+  ],
+  "youtube_meta": {
+    "title": "대구3) 6개월만 영업하는 120년 전통 냉면집?!😨 사장님이 이런사람은 처음이래요🤣",
+    "publishedAt": "2025-08-19T12:02:00Z",
+    "is_shorts": false,
+    "duration": 944,
+    "ads_info": {
+      "is_ads": false,
+      "what_ads": null
+    }
+  }
+}
+```
+
+## 주요 기능
+
+### 세션 관리
+- 초기 로그인 후 세션 자동 저장
+- 재실행 시 자동 세션 복원
+- 세션 만료 시 자동 재로그인 프롬프트
+- Chrome 프로필 공유: `~/.puppeteer-chrome-profile-perplexity`
+
+### 데이터 정제
+- 출처 인용구 제거: `[1]`, `{ts:670}`, `(web:42)` 등
+- 빈 괄호 제거: `()`, `{}`, `[]`
+- 좌표 자동 확보 (네이버/구글 지도 API)
+
+### 병렬 처리
+- 단일 모드: 1개 브라우저 (안정적)
+- 병렬 모드: 3개 브라우저 (3배 속도)
+- 고속 모드: 5개 브라우저 (5배 속도)
+
+### 중복 방지
+- `youtube_link` 기반 중복 검사
+- JSONL 파일에서 처리된 URL 로드
+- `Set<string>` 자료구조로 O(1) 조회
+- Append 모드로 중단 시에도 데이터 손실 없음
+
+## 트러블슈팅
+
+### Google 로그인 차단
+
+```
+Couldn't sign you in - This browser or app may not be secure
+```
+
+**해결 방법**:
+
+1. 세션 파일 및 프로필 삭제
 ```bash
-npm run test-login
+rm -f perplexity-session.json
+rm -rf ~/.puppeteer-chrome-profile-perplexity
 ```
-**로그인 테스트**: 퍼플렉시티의 현재 로그인 상태를 확인하고 자동 재로그인을 시도합니다.
 
-### 1.9. 세션 관리 테스트
+2. 평가 시스템의 세션 복사 (이미 로그인된 경우)
 ```bash
-npm run test-session
-```
-**세션 테스트**: 브라우저 세션 저장/복원 기능을 테스트합니다.
-
-### 1.10. 출처 인용구 제거
-```bash
-npm run clean-citations
-```
-**인용구 정리**: 기존 데이터에서 모든 출처 인용구와 빈 괄호를 자동 제거합니다.
-- **기존 패턴**: [attached_file:1], [attached-file:1], [web:7], [2], [3], {ts:670}, (, , , )
-- **새로운 패턴**: [ts:286], {ts:27, ts:94}, {ts:310, ts:343, ts:424}, ({ts:904-915}), {ts:196-228}, {ts:1037, ts:1047}, [attached_file:1(ts:715, ts:754)], (web:42), (web:6, web:21, web:23, web:24), ({ts:243, ts:250-296, ts:422}), {ts:526-563, ts:845}, {attached_file:1(ts:176, ts:514, ts:579)}, {ts:613, 643}, (ts:59)
-- **범위 패턴**: {ts:196-228}, ({ts:904-915}), ts:250-296, ts:526-563 등 타임스탬프 범위 표기 지원
-- **복수 패턴**: {ts:27, ts:94}, {ts:1037, ts:1047}, (web:6, web:21, web:23, web:24), {ts:526-563, ts:845}, {ts:613, 643} 등 여러 참조 동시 표기 지원
-- **복합 패턴**: ({ts:243, ts:250-296, ts:422}), {attached_file:1(ts:176, ts:514, ts:579)}처럼 괄호+중괄호 조합에 범위까지 포함된 복잡한 패턴 지원
-
-## 세션 관리
-
-크롤러는 브라우저 세션을 자동으로 관리하여 장시간 크롤링 시 로그인 세션 만료 문제를 해결합니다.
-
-### 세션 저장/복원 기능
-
-- **자동 세션 저장**: 크롤링 종료 시 쿠키, 로컬 스토리지, 세션 스토리지를 `perplexity-session.json` 파일로 저장
-- **자동 세션 복원**: 다음 실행 시 저장된 세션을 복원하여 재로그인 불필요
-- **세션 유효성 검사**: 24시간 이상 경과된 세션은 자동 폐기
-- **안전한 폴백**: 세션 복원 실패 시 새 세션으로 시작
-- **빠른 시작**: 세션 복원 성공 시 안전 확인 단계 생략하고 바로 크롤링 시작
-
-### 로그인 유지 메커니즘
-
-1. **프로그램 시작 시**: 저장된 세션 자동 복원
-2. **크롤링 중**: 각 항목 처리 전후로 로그인 상태 실시간 확인
-3. **세션 만료 자동 감지**: 로그인 모달이 나타나면 즉시 사용자에게 알림
-4. **사용자 대기 모드**: 로그인이 풀리면 터미널에서 아무 키 입력 대기
-5. **프로그램 종료 시**: 현재 세션 자동 저장
-
-### 크롤링 중 로그인 풀림 대응
-
-크롤링 진행 중 Google 로그인이 만료되면 자동으로 감지하여 사용자에게 알려줍니다:
-
-```
-🚨 [로그인 필요] Perplexity AI 로그인 상태가 풀렸습니다!
-📋 다음을 확인하세요:
-   1. Chrome 브라우저가 열려 있는지 확인
-   2. 브라우저에서 Google 로그인을 완료해주세요
-   3. Perplexity AI 페이지가 정상적으로 로드되었는지 확인
-   4. 모든 준비가 완료되었으면 터미널로 돌아와서 아무 키나 누르세요
-
-⌨️  로그인 완료 후 아무 키나 눌러서 크롤링을 계속하세요...
+cp ../perplexity-restaurant-evaluation/perplexity-session.json .
 ```
 
-사용자가 브라우저에서 로그인을 완료한 후 터미널로 돌아와 아무 키나 누르면 크롤링이 자동으로 계속됩니다. 이로써 수시간 동안 크롤링을 해도 로그인 세션으로 인한 중단이 발생하지 않습니다.
+3. 재실행 후 수동 로그인
 
-### 세션 관리 팁
-
-- **최초 실행**: 브라우저에서 수동으로 로그인한 후 프로그램을 종료하면 세션이 저장됩니다
-- **이후 실행**: 자동으로 로그인 세션이 복원되어 재로그인 필요 없습니다
-- **세션 삭제**: `perplexity-session.json` 파일을 삭제하면 새 세션으로 시작합니다
-- **긴급 상황**: 브라우저 창이 보이므로 직접 로그인할 수도 있습니다
-
-### 2. 남은 항목만 배치 처리 (최대 10개씩)
-```bash
-npm run process
-```
-
-### 3. 개발 모드 실행
-```bash
-npm run dev
-```
-
-### 4. 로그인 감지 테스트
-```bash
-npm run test-login
-```
-
-### 5. 테스트 모드 (1개 항목만 처리)
-```bash
-npm run test-process
-```
-
-### 6. 입력 방식 테스트
-```bash
-npm run test-input
-```
-
-## 파일 구조
+### Cloudflare CAPTCHA
 
 ```
-backend/
-├── src/
-│   ├── index.ts              # 메인 크롤러 (전체 처리)
-│   ├── process-remaining.ts  # 배치 처리 (남은 항목만)
-│   ├── perplexity-crawler.ts # 퍼플렉시티 크롤링 로직
-│   ├── jsonl-processor.ts    # JSONL 파일 처리 유틸리티
-│   └── types.ts              # TypeScript 타입 정의
-├── package.json
-├── tsconfig.json
-└── README.md
+Please unblock challenges.cloudflare.com
+Verify you are human
 ```
 
-## 개선사항 (최신)
+**해결 방법**:
+- 평가 시스템과 동일한 Chrome 설정 사용 (자동)
+- 고정 프로필 디렉토리로 세션 유지
+- Stealth 플러그인으로 봇 탐지 우회
+- 문제 지속 시 세션 파일 재생성
 
-- **다중 레스토랑 추출**: 하나의 YouTube 영상에서 여러 개의 레스토랑 정보를 모두 저장
-- **쯔양 리뷰 요약**: 각 음식점마다 쯔양의 리뷰 내용을 상세하게 요약하여 저장
-- **네이버 지도 좌표 보완**: 주소 정보를 네이버 지도 API로 조회하여 정확한 위도/경도 정보 추가 (항상 재확보하여 최신 좌표 보장)
-- **JSON 구조 변경**: RestaurantData 구조로 다중 레스토랑 정보 저장 지원
-- **다중 JSON 파싱 개선**: 복잡한 HTML 구조에서도 모든 JSON 응답을 정확하게 추출 (백업 파싱 로직 포함)
-- **AI 모델 자동 감지/선택**: Gemini 2.5 Pro 모델이 이미 선택되어 있으면 건너뛰고, 아니면 자동 선택 (세션당 한 번만)
-- **Shift+Enter 줄바꿈 입력**: Perplexity AI 방식대로 줄바꿈하여 정확한 입력
-- **정확한 필터링**: reasoning_basis 유무로만 처리 여부 결정 (name 등 다른 필드는 null 허용)
-- **향상된 로그인 감지**: 다중 지표를 활용한 정확한 로그인 상태 판별
-- **전체화면 브라우저**: 크롬 브라우저가 최대화된 상태로 실행 (1920x1080)
-- **확장된 타임아웃**: 브라우저 안정성을 위한 타임아웃 증가 (60s → 120s)
-- **디버깅 정보**: 로그인 감지 상태 상세 출력으로 문제 해결 용이
-- **입력창 안정성**: 로그인 중에도 안전하게 입력창 대기 및 검증
+### 라이브러리 삭제 실패
 
-## 동작 방식
+**해결 방법**:
+- 홈 버튼 클릭 로직 개선됨
+- URL 직접 이동 fallback 자동 실행
+- `deleteAllThreads()` 함수에서 자동 처리
 
-1. **브라우저 초기화**: 최대화된 Chrome 브라우저 실행 (1920x1080)
-2. **페이지 이동**: Perplexity AI 메인 페이지 접속
-3. **입력창 확인**: 로그인 상태와 입력창 로드 상태 확인 (60초 대기)
-4. **사용자 확인**: 브라우저 상태 확인 후 수동 시작 (안전한 크롤링)
-5. **AI 모델 감지/선택**: Gemini 2.5 Pro 모델이 이미 선택되어 있으면 건너뛰고, 아니면 자동 선택 (첫 번째 항목에서만)
-6. **프롬프트 입력**: Shift+Enter로 줄바꿈하여 Perplexity AI 방식대로 입력
-7. **응답 대기**: JSON 응답이 나타날 때까지 최대 10분 대기
-8. **데이터 추출**: JSON 코드 블록에서 다중 레스토랑 데이터 및 쯔양 리뷰를 파싱
-9. **좌표 보완**: 주소 정보를 네이버 지도 API로 조회하여 위도/경도 정보 추가
-10. **파일 업데이트**: `tzuyang_restaurant_results.jsonl` 파일의 restaurants 배열에 데이터 추가
-11. **반복**: 다음 reasoning_basis 없는 항목을 찾아서 전체 처리 완료까지 반복
+## 기술 스택
 
-## 로그인 설정 (중요!)
+- **TypeScript**: 타입 안전성
+- **Puppeteer Extra**: 브라우저 자동화
+- **Stealth Plugin**: 봇 탐지 우회
+- **Perplexity AI**: 맛집 정보 추출
+- **Naver Maps API**: 국내 주소 좌표화
+- **Google Maps**: 해외 주소 좌표화
 
-### 안전한 수동 확인 시스템 ✅
+## 라이센스
 
-크롤링 시작 전에 **항상 사용자 확인**을 받습니다:
-
-- **브라우저 상태 확인**: 로그인 상태와 페이지 로드 상태를 표시
-- **수동 시작 제어**: 사용자가 준비될 때까지 대기
-- **안전한 진행**: 자동 시작을 방지하여 안정성 확보
-
-### 확인 절차 (첫 번째 항목만):
-
-1. 크롤러 실행 시 Chrome 브라우저가 열립니다
-2. 브라우저에서 Perplexity AI 페이지가 로드됩니다
-3. **터미널에 로그인 상태 및 입력창 상태 정보가 표시됩니다**
-4. 필요한 경우 브라우저에서 수동으로 로그인하세요
-5. 입력창이 나타날 때까지 기다렸다가 준비되면 **터미널로 돌아와 아무 키나 누르세요**
-6. **AI 모델이 Gemini 2.5 Pro로 자동 감지/설정됩니다** (이미 선택되어 있으면 건너뜀, 첫 번째 항목에서만)
-7. 첫 번째 크롤링이 시작되고, 이후 항목들은 **자동으로 연속 처리**됩니다
-
-### 로그인 감지 테스트:
-
-로그인 감지 로직을 테스트하려면:
-```bash
-npm run test-login
-```
-
-이 명령은 브라우저를 열고 현재 로그인 상태를 분석하여 결과를 출력합니다.
-
-### 테스트 실행 방법:
-
-```bash
-# 로그인 감지 기능 테스트
-cd backend
-npm run build
-node test-login.js
-
-# 실제 크롤링 (첫 번째 항목만)
-set TEST_MODE=true && npx tsx src/process-remaining.ts
-
-# 배치 크롤링 (최대 10개씩)
-npx tsx src/process-remaining.ts
-```
-
-**참고**: 로그인 정보는 저장되지 않으며, 각 세션마다 수동 로그인이 필요할 수 있습니다.
-
-## 주의사항
-
-- **헤드리스 모드**: 디버깅을 위해 헤드리스 모드를 해제했음 (필요시 수정 가능)
-- **요청 간격**: 서버 부하 방지를 위해 각 요청 사이에 5-10초 대기
-- **타임아웃**: 응답 대기 시간은 최대 10분으로 설정
-- **오류 처리**: 개별 항목 처리 실패 시 다음 항목으로 계속 진행
-
-## HTML 구조 기반 구현
-
-크롤러는 제공된 HTML 구조를 기반으로 구현되었습니다:
-
-- **입력창**: `#ask-input` (contenteditable div)
-- **제출**: Enter 키 입력
-- **응답**: `pre code` 요소 내 JSON 데이터
-- **검색 모드**: 기본적으로 "search" 모드 사용
-
-## 오류 해결
-
-### 브라우저 실행 실패
-```bash
-# Windows에서 추가 인자 필요할 수 있음
-# src/perplexity-crawler.ts의 launch 옵션 확인
-```
-
-### 파일 경로 문제
-```bash
-# JSONL 파일 경로가 맞는지 확인
-# 기본값: ../../../tzuyang_restaurant_results.jsonl
-```
-
-### 네트워크 타임아웃
-```bash
-# 인터넷 연결 상태 확인
-# VPN이나 프록시 설정 확인
-```
-
-## 확장 및 커스터마이징
-
-### 새로운 프롬프트 템플릿
-`src/index.ts` 또는 `src/process-remaining.ts`의 `PROMPT_TEMPLATE` 변수 수정
-
-### 다른 AI 서비스 연동
-`src/perplexity-crawler.ts`의 `processYouTubeLink` 메서드 수정
-
-### 배치 크기 조정
-`src/process-remaining.ts`의 `maxToProcess` 변수 수정
+MIT
