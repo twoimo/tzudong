@@ -19,6 +19,7 @@ const USA_ZOOM = 4; // 미국 줌 레벨
 const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
   "미국": { lat: 39.8283, lng: -98.5795, zoom: 4 },
   "일본": { lat: 35.1815, lng: 136.9066, zoom: 10 }, // 나고야시 중심으로 변경
+  "대만": { lat: 25.0330, lng: 121.5654, zoom: 10 }, // 타이베이 중심
   "태국": { lat: 13.7563, lng: 100.5018, zoom: 10 }, // 방콕 중심으로 확대
   "인도네시아": { lat: -6.9667, lng: 110.4167, zoom: 7 }, // 줌아웃 -3
   "튀르키예": { lat: 41.0082, lng: 28.9784, zoom: 10 }, // 이스탄불 더 확대
