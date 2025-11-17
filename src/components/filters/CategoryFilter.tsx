@@ -13,7 +13,8 @@ import { Region } from "@/types/restaurant";
 interface CategoryFilterProps {
     selectedCategories: string[];
     onCategoryChange: (categories: string[]) => void;
-    selectedRegion: Region | null;
+    selectedRegion?: Region | null; // 글로벌에서는 선택적
+    selectedCountry?: string | null; // 글로벌용
     className?: string;
 }
 
@@ -35,20 +36,21 @@ const CATEGORIES = [
     "도시락"
 ];
 
-const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, className }: CategoryFilterProps) => {
+const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, selectedCountry, className }: CategoryFilterProps) => {
     const [isOpen, setIsOpen] = useState(false);
 
-    // 선택된 지역에 따른 맛집 데이터 가져오기 (카테고리 정보만 필요)
+    // 선택된 지역/국가에 따른 맛집 데이터 가져오기 (카테고리 정보만 필요)
     const { data: restaurants = [] } = useQuery({
-        queryKey: ['restaurants-categories', selectedRegion],
+        queryKey: ['restaurants-categories', selectedRegion, selectedCountry],
         queryFn: async () => {
             let query = supabase
                 .from('restaurants')
-                .select('categories, road_address, jibun_address')
+                .select('categories, road_address, jibun_address, english_address')
                 .eq('status', 'approved');
 
-            // 지역 필터링 적용
+            // 지역 또는 국가 필터링 적용
             if (selectedRegion) {
+                // 국내 지역 필터링
                 if (selectedRegion === "울릉도") {
                     query = query.or(`road_address.ilike.%울릉%,jibun_address.ilike.%울릉%`);
                 } else if (selectedRegion === "욕지도") {
@@ -56,6 +58,9 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
                 } else {
                     query = query.or(`road_address.ilike.%${selectedRegion}%,jibun_address.ilike.%${selectedRegion}%`);
                 }
+            } else if (selectedCountry) {
+                // 글로벌 국가 필터링 (영어 주소에서 국가명 검색)
+                query = query.ilike('english_address', `%${selectedCountry}%`);
             }
 
             const { data, error } = await query;
