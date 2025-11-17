@@ -118,7 +118,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             }
 
             if (existingRestaurant && existingRestaurant.id !== selectedRestaurant.id) {
-                console.log('🔍 selectedRestaurant을 기존 데이터로 교체:', existingRestaurant.name, existingRestaurant.id);
                 if (onRestaurantSelect) {
                     onRestaurantSelect(existingRestaurant);
                 }
@@ -258,14 +257,11 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     Math.abs(r.lng - searchedRestaurant.lng) < 0.0001)
             );
             if (existingRestaurant) {
-                console.log('🔍 기존 레스토랑으로 교체:', existingRestaurant.name, existingRestaurant.id);
                 actualSearchedRestaurant = existingRestaurant;
                 // 부모 컴포넌트의 selectedRestaurant도 업데이트
                 if (onRestaurantSelect) {
                     onRestaurantSelect(existingRestaurant);
                 }
-            } else {
-                console.log('🔍 기존 레스토랑을 찾지 못함, 검색된 데이터 사용');
             }
         }
 
@@ -300,9 +296,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
         const { naver } = window;
 
-        // requestAnimationFrame을 사용하여 렌더링 최적화
-        requestAnimationFrame(() => {
-            // 기존 마커 제거 (배치로 처리)
+        // 기존 마커 제거 (배치로 처리)
             const oldMarkers = markersRef.current;
             oldMarkers.forEach(marker => marker.setMap(null));
             markersRef.current = [];
@@ -313,8 +307,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             // 검색된 맛집이 기존 목록에 없는 경우 추가
             // searchedRestaurant이 교체된 경우에도 기존 데이터와 일치하도록 보장
             if (searchedRestaurant) {
-                console.log('🔍 searchedRestaurant (마커 추가 시점):', searchedRestaurant);
-                console.log('🔍 displayRestaurants.length:', displayRestaurants.length);
 
                 // 병합된 데이터의 경우 mergedRestaurants로 확인
                 let alreadyExists = false;
@@ -325,13 +317,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
                 }
 
-                console.log('🔍 alreadyExists (마커 추가 시점):', alreadyExists);
-
                 if (!alreadyExists) {
                     restaurantsToShow.push(searchedRestaurant);
-                    console.log('🔍 추가된 searchedRestaurant:', searchedRestaurant);
-                } else {
-                    console.log('🔍 searchedRestaurant은 이미 restaurants에 존재하므로 추가하지 않음');
                 }
             }
 
@@ -416,29 +403,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
                 // 마커 클릭 이벤트
                 naver.maps.Event.addListener(marker, "click", () => {
-                    // restaurantsRef.current에서 병합된 레스토랑 찾기
-                    // restaurant.id로 찾되, 없으면 이름과 좌표로 찾기 (병합된 경우 다른 ID일 수 있음)
-                    // 병합된 데이터의 경우 mergedRestaurants 속성으로도 확인
-                    let currentRestaurant = restaurantsRef.current.find(r =>
-                        r.id === restaurant.id ||
-                        (r.name === restaurant.name && Math.abs(r.lat - restaurant.lat) < 0.0001 && Math.abs(r.lng - restaurant.lng) < 0.0001)
-                    );
-
-                    // 병합된 데이터의 경우 mergedRestaurants로 확인
-                    if (!currentRestaurant && restaurant.mergedRestaurants) {
-                        const mergedIds = restaurant.mergedRestaurants.map(r => r.id);
-                        currentRestaurant = restaurantsRef.current.find(r =>
-                            mergedIds.includes(r.id) ||
-                            (r.name === restaurant.name && Math.abs(r.lat - restaurant.lat) < 0.0001 && Math.abs(r.lng - restaurant.lng) < 0.0001)
-                        );
-                    }
-
-                    // 찾지 못한 경우 원본 restaurant 사용
-                    currentRestaurant = currentRestaurant || restaurant;
-
-                    // 모든 모드에서 부모 컴포넌트로 맛집 선택 전달 (단일 모드에서도 상태 일관성 유지)
+                    // restaurant 객체를 직접 사용하여 성능 최적화
                     if (onRestaurantSelect) {
-                        onRestaurantSelect(currentRestaurant);
+                        onRestaurantSelect(restaurant);
                     }
 
                     // 패널 열기 (마커 클릭 시에만)
@@ -450,7 +417,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
             // 모든 마커를 한 번에 할당
             markersRef.current = newMarkers;
-        });
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
@@ -638,7 +604,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     return (
         <PanelGroup direction="horizontal" className="h-full">
             {/* 지도 패널 */}
-            <Panel defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} className="relative">
+            <Panel id="map-panel" order={1} defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} className="relative">
                 {/* 지도 컨테이너 */}
                 <div ref={mapRef} className="w-full h-full" />
 
@@ -671,7 +637,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
             {/* 레스토랑 상세 패널 */}
             {selectedRestaurant && isPanelOpen && (
-                <Panel defaultSize={25} minSize={20} maxSize={60}>
+                <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={60}>
                     <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
                         onClose={() => setIsPanelOpen(false)}

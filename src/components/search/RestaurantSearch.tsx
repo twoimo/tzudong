@@ -102,8 +102,8 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside, { passive: true });
+    return () => document.removeEventListener("mousedown", handleClickOutside, { passive: true });
   }, []);
 
   const handleSelect = (restaurant: Restaurant) => {
