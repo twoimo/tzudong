@@ -485,10 +485,12 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     onWriteReview={() => {
                                         setIsReviewModalOpen(true);
                                     }}
-                                    onEditRestaurant={handleAdminEditRestaurant && panelRestaurant ? (() => {
-                                        handleAdminEditRestaurant(panelRestaurant);
-                                    }) : undefined}
-                                    onRequestEditRestaurant={handleRequestEditRestaurant}
+                                    onEditRestaurant={onAdminEditRestaurant ? () => {
+                                        onAdminEditRestaurant(panelRestaurant);
+                                    } : undefined}
+                                    onRequestEditRestaurant={() => {
+                                        handleRequestEditRestaurant(panelRestaurant);
+                                    }}
                                 />
                             </Panel>
                         )}
