@@ -104,16 +104,16 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 existingRestaurant = displayRestaurants.find(r =>
                     mergedIds.includes(r.id) ||
                     (r.name === selectedRestaurant.name &&
-                     Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
-                     Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
+                        Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
+                        Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
                 );
             } else {
                 // 일반 데이터의 경우
                 existingRestaurant = displayRestaurants.find(r =>
                     r.id === selectedRestaurant.id ||
                     (r.name === selectedRestaurant.name &&
-                     Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
-                     Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
+                        Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
+                        Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
                 );
             }
 
@@ -254,8 +254,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             const existingRestaurant = restaurants.find(r =>
                 mergedIds.includes(r.id) ||
                 (r.name === searchedRestaurant.name &&
-                 Math.abs(r.lat - searchedRestaurant.lat) < 0.0001 &&
-                 Math.abs(r.lng - searchedRestaurant.lng) < 0.0001)
+                    Math.abs(r.lat - searchedRestaurant.lat) < 0.0001 &&
+                    Math.abs(r.lng - searchedRestaurant.lng) < 0.0001)
             );
             if (existingRestaurant) {
                 console.log('🔍 기존 레스토랑으로 교체:', existingRestaurant.name, existingRestaurant.id);
@@ -473,8 +473,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 // 병합된 데이터의 경우 이름과 좌표로도 비교
                 if (!isSelected) {
                     isSelected = selectedRestaurant.name === restaurant.name &&
-                               Math.abs(selectedRestaurant.lat - restaurant.lat) < 0.0001 &&
-                               Math.abs(selectedRestaurant.lng - restaurant.lng) < 0.0001;
+                        Math.abs(selectedRestaurant.lat - restaurant.lat) < 0.0001 &&
+                        Math.abs(selectedRestaurant.lng - restaurant.lng) < 0.0001;
                 }
 
                 // 병합된 데이터의 경우 mergedRestaurants로 확인
@@ -483,8 +483,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     isSelected = mergedIds.includes(restaurant.id);
                 }
             }
-
-            console.log('🎯 마커 선택 상태:', restaurant.name, 'isSelected:', isSelected, 'selectedRestaurant:', selectedRestaurant?.name);
 
             const markerElement = marker.getIcon().content as HTMLElement;
             if (!markerElement) return;
@@ -527,8 +525,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         // 병합된 데이터의 경우 이름과 좌표로도 비교
                         if (!isSelected) {
                             isSelected = selectedRestaurant.name === restaurant.name &&
-                                       Math.abs(selectedRestaurant.lat - restaurant.lat) < 0.0001 &&
-                                       Math.abs(selectedRestaurant.lng - restaurant.lng) < 0.0001;
+                                Math.abs(selectedRestaurant.lat - restaurant.lat) < 0.0001 &&
+                                Math.abs(selectedRestaurant.lng - restaurant.lng) < 0.0001;
                         }
 
                         // 병합된 데이터의 경우 mergedRestaurants로 확인
