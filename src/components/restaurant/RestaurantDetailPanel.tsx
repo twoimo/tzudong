@@ -524,7 +524,7 @@ export function RestaurantDetailPanel({
                                                         />
                                                     )}
                                                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                        <Youtube className="h-8 w-8 text-white" />
+                                                        <Youtube className="h-12 w-12 text-white" />
                                                     </div>
                                                 </div>
                                             ))}
@@ -548,7 +548,7 @@ export function RestaurantDetailPanel({
                                                 />
                                             )}
                                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                <Youtube className="h-8 w-8 text-white" />
+                                                <Youtube className="h-12 w-12 text-white" />
                                             </div>
                                         </div>
                                     </div>
