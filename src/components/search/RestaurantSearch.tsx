@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Restaurant } from "@/types/restaurant";
+import { Restaurant, YoutubeMeta } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -208,8 +208,17 @@ const RestaurantSearch = ({
                 className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
               >
                 <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex flex-col min-w-0">
-                  <span className="font-medium truncate">{restaurant.name}</span>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <div className="flex items-baseline gap-2 min-w-0">
+                    <span className="font-medium flex-shrink-0">{restaurant.name}</span>
+                    {searchType === 'youtube' && restaurant.youtube_meta && 
+                     typeof restaurant.youtube_meta === 'object' && 
+                     'title' in restaurant.youtube_meta && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        ({(restaurant.youtube_meta as YoutubeMeta).title})
+                      </span>
+                    )}
+                  </div>
                   <span className="text-sm text-muted-foreground truncate">
                     {restaurant.address}
                   </span>
