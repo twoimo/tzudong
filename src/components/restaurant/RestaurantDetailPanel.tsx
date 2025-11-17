@@ -53,15 +53,6 @@ export function RestaurantDetailPanel({
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
     const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | null>(null);
 
-    // 디버깅: 전달받은 데이터 확인
-    console.log('📋 RestaurantDetailPanel 받은 데이터:', {
-        name: restaurant.name,
-        mergedYoutubeLinks: restaurant.mergedYoutubeLinks,
-        mergedTzuyangReviews: restaurant.mergedTzuyangReviews,
-        youtube_link: restaurant.youtube_link,
-        tzuyang_review: restaurant.tzuyang_review,
-    });
-
     // 카테고리 처리: categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
         ? restaurant.categories

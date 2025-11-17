@@ -41,6 +41,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
+    const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const { isLoaded, loadError } = useNaverMaps();
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -249,6 +250,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 restaurantsToShow.push(searchedRestaurant);
             }
 
+            // restaurantsRef 업데이트 (마커 클릭 핸들러에서 사용)
+            restaurantsRef.current = restaurantsToShow;
+
             // restaurants가 없으면 마커만 제거하고 종료
             if (restaurantsToShow.length === 0) {
                 return;
@@ -327,18 +331,23 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
                 // 마커 클릭 이벤트
                 naver.maps.Event.addListener(marker, "click", () => {
+                    // restaurantsRef.current에서 병합된 레스토랑 찾기
+                    // restaurant.id로 찾되, 없으면 이름과 좌표로 찾기 (병합된 경우 다른 ID일 수 있음)
+                    const currentRestaurant = restaurantsRef.current.find(r =>
+                        r.id === restaurant.id ||
+                        (r.name === restaurant.name && Math.abs(r.lat - restaurant.lat) < 0.0001 && Math.abs(r.lng - restaurant.lng) < 0.0001)
+                    ) || restaurant;
+
                     // 모든 모드에서 부모 컴포넌트로 맛집 선택 전달 (단일 모드에서도 상태 일관성 유지)
                     if (onRestaurantSelect) {
-                        onRestaurantSelect(restaurant);
+                        onRestaurantSelect(currentRestaurant);
                     }
 
                     // 패널 열기 (마커 클릭 시에만)
                     setIsPanelOpen(true);
 
                     // 마커 클릭 시 지도 이동 제거 - 상세 패널 열릴 때 이동 수행
-                });
-
-                newMarkers.push(marker);
+                }); newMarkers.push(marker);
             });
 
             // 모든 마커를 한 번에 할당

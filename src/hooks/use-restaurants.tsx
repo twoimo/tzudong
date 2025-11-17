@@ -131,11 +131,16 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     const existingName = existingRestaurant.name || '';
                     const existingAddress = normalizeAddress(existingRestaurant.jibun_address || existingRestaurant.road_address || '');
 
-                    // 이름 유사도 계산 (85% 이상 유사하면 같은 맛집으로 판단)
+                    // 이름 유사도 계산
                     const nameSimilarity = calculateSimilarity(currentName, existingName);
 
-                    // 주소가 같고 이름이 85% 이상 유사하면 병합
-                    if (currentAddress === existingAddress && nameSimilarity >= 0.85) {
+                    // 동일한 이름 (100% 일치) 또는 주소가 같고 이름이 95% 이상 유사하면 병합
+                    const isSameName = currentName === existingName;
+                    const isSimilarNameAndAddress = currentAddress === existingAddress && nameSimilarity >= 0.95;
+
+                    if (isSameName || isSimilarNameAndAddress) {
+                        console.log(`  ✅ 병합 대상 발견! existing: ${existingName} (${existingRestaurant.id.substring(0, 8)})`);
+
                         const mergedRestaurants = existingRestaurant.mergedRestaurants || [existingRestaurant];
                         mergedRestaurants.push(restaurant);
 
@@ -161,33 +166,39 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                             mergedRestaurants.flatMap(r => r.categories || [])
                         ));
 
-                        // youtube_link 병합 (중복 제거) - 단일 문자열을 배열로 수집
-                        const mergedYoutubeLinks = mergedRestaurants
+                        // 날짜순 정렬을 위해 restaurant와 youtube_meta를 페어로 관리
+                        const restaurantPairs = mergedRestaurants.map(r => ({
+                            restaurant: r,
+                            publishedAt: (r.youtube_meta as YoutubeMeta | null)?.publishedAt || ''
+                        }));
+
+                        // publishedAt 날짜 기준 오름차순 정렬 (오래된 영상이 먼저)
+                        restaurantPairs.sort((a, b) => {
+                            if (!a.publishedAt) return 1;
+                            if (!b.publishedAt) return -1;
+                            return a.publishedAt.localeCompare(b.publishedAt);
+                        });
+
+                        const sortedRestaurants = restaurantPairs.map(p => p.restaurant);
+
+                        // youtube_link 병합 (중복 제거) - 정렬된 순서로 수집
+                        const mergedYoutubeLinks = sortedRestaurants
                             .map(r => r.youtube_link)
                             .filter((link): link is string => link != null)
                             .filter((link, index, self) => self.indexOf(link) === index);
 
-                        // tzuyang_review 병합 - 단일 문자열을 배열로 수집
-                        const mergedTzuyangReviews = mergedRestaurants
+                        // tzuyang_review 병합 - 정렬된 순서로 수집
+                        const mergedTzuyangReviews = sortedRestaurants
                             .map(r => r.tzuyang_review)
                             .filter((review): review is string => review != null);
 
-                        // youtube_meta는 각 레코드에 하나씩만 있으므로 배열로 수집
-                        const mergedYoutubeMetas = mergedRestaurants
+                        // youtube_meta는 각 레코드에 하나씩만 있으므로 정렬된 순서로 수집
+                        const mergedYoutubeMetas = sortedRestaurants
                             .map(r => r.youtube_meta as YoutubeMeta | null)
                             .filter((meta): meta is YoutubeMeta => meta != null);
 
-                        // 디버깅: 병합된 데이터 확인
-                        console.log('🔍 병합된 레스토랑:', {
-                            name: longestName,
-                            groupSize: mergedRestaurants.length,
-                            mergedYoutubeLinks,
-                            mergedTzuyangReviews,
-                            mergedYoutubeMetas,
-                        });
-
                         // 병합된 데이터로 업데이트
-                        restaurantMap.set(existingKey, {
+                        const updatedRestaurant = {
                             ...existingRestaurant,
                             name: longestName,
                             lat: coordinates.latitude,
@@ -202,7 +213,9 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                             mergedYoutubeMetas: mergedYoutubeMetas,
                             review_count: mergedRestaurants.reduce((sum, r) => sum + (r.review_count || 0), 0),
                             mergedRestaurants: mergedRestaurants,
-                        } as any);
+                        };
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        restaurantMap.set(existingKey, updatedRestaurant as any);
 
                         merged = true;
                         break;
@@ -217,14 +230,15 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             });
 
             // Map을 배열로 변환하고 호환성 속성 추가
-            const restaurants = Array.from(restaurantMap.values()).map((restaurant: DBRestaurant) => ({
+            const restaurants = Array.from(restaurantMap.values()).map((restaurant: DBRestaurant & { mergedRestaurants?: DBRestaurant[] }) => ({
                 ...restaurant,
                 // 호환성 속성 추가
                 address: restaurant.road_address || restaurant.jibun_address || '',
                 category: restaurant.categories,
-            }));
+                // 병합된 데이터는 spread로 자동 포함됨
+            })) as Restaurant[];
 
-            return restaurants as Restaurant[];
+            return restaurants;
         },
         enabled,
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함
