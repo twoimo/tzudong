@@ -19,6 +19,7 @@ const USA_ZOOM = 4; // 미국 줌 레벨
 const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
   "미국": { lat: 39.8283, lng: -98.5795, zoom: 4 },
   "일본": { lat: 35.1815, lng: 136.9066, zoom: 10 }, // 나고야시 중심으로 변경
+  "대만": { lat: 25.0330, lng: 121.5654, zoom: 10 }, // 타이베이 중심
   "태국": { lat: 13.7563, lng: 100.5018, zoom: 10 }, // 방콕 중심으로 확대
   "인도네시아": { lat: -6.9667, lng: 110.4167, zoom: 7 }, // 줌아웃 -3
   "튀르키예": { lat: 41.0082, lng: 28.9784, zoom: 10 }, // 이스탄불 더 확대
@@ -104,6 +105,85 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [onMapReady, moveToRestaurant]);
 
+  // 검색된 맛집으로 지도 이동
+  useEffect(() => {
+    if (!searchedRestaurant || !isLoaded || !googleMapRef.current) {
+      return;
+    }
+
+    console.log('🗺️ MapView: 검색된 맛집으로 지도 이동 시도', {
+      restaurant: searchedRestaurant.name,
+      lat: searchedRestaurant.lat,
+      lng: searchedRestaurant.lng,
+      mapReady: !!googleMapRef.current,
+      isLoaded
+    });
+
+    const lat = Number(searchedRestaurant.lat);
+    const lng = Number(searchedRestaurant.lng);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      console.error('MapView: 잘못된 좌표값', { lat: searchedRestaurant.lat, lng: searchedRestaurant.lng });
+      return;
+    }
+
+    // 지도가 완전히 준비되었는지 추가 확인
+    if (!googleMapRef.current.getBounds || !googleMapRef.current.getZoom) {
+      console.warn('MapView: 지도가 아직 완전히 초기화되지 않았습니다');
+      return;
+    }
+
+    const position = { lat, lng };
+
+    // 비동기로 실행하여 지도 준비를 기다림
+    const performMapMove = () => {
+      try {
+        // 현재 줌 레벨 확인
+        const currentZoom = googleMapRef.current?.getZoom();
+        console.log('MapView: 현재 줌 레벨:', currentZoom);
+
+        // 지도 중심 이동
+        googleMapRef.current?.setCenter(position);
+        console.log('MapView: 지도 중심 이동 완료');
+
+        // 약간의 지연 후 줌 레벨 설정 (지도 안정화를 위해)
+        setTimeout(() => {
+          if (googleMapRef.current) {
+            googleMapRef.current.setZoom(20);
+            console.log('MapView: 줌 레벨 설정 완료: 20');
+
+            // 검색된 맛집 선택 상태로 설정
+            if (onRestaurantSelect) {
+              onRestaurantSelect(searchedRestaurant);
+              console.log('MapView: 맛집 선택 상태 설정 완료');
+            }
+
+            console.log('🗺️ MapView: 지도 이동 완료');
+          }
+        }, 100);
+
+      } catch (error) {
+        console.error('MapView: Error moving to searched restaurant position:', error);
+        // 재시도 로직 (한 번 더 시도)
+        setTimeout(() => {
+          if (googleMapRef.current && searchedRestaurant) {
+            try {
+              googleMapRef.current.setCenter(position);
+              googleMapRef.current.setZoom(20);
+              console.log('MapView: 재시도 성공');
+            } catch (retryError) {
+              console.error('MapView: 재시도 실패:', retryError);
+            }
+          }
+        }, 500);
+      }
+    };
+
+    // 지연 실행으로 지도 안정화 대기
+    setTimeout(performMapMove, 50);
+
+  }, [searchedRestaurant, onRestaurantSelect]);
+
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
@@ -122,6 +202,29 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }), [mapBounds, memoizedFilters, selectedCountry, isLoaded]);
 
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantsOptions);
+
+  // 마커를 표시할 맛집 목록 (기존 restaurants + 검색된 맛집)
+  const restaurantsToShow = useMemo(() => {
+    const result = [...restaurants];
+
+    // 검색된 맛집이 기존 목록에 없는 경우 추가
+    if (searchedRestaurant) {
+      // 병합된 데이터의 경우
+      let alreadyExists = false;
+      if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
+        const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
+        alreadyExists = restaurants.some(r => mergedIds.includes(r.id));
+      } else {
+        alreadyExists = restaurants.some(r => r.id === searchedRestaurant.id);
+      }
+
+      if (!alreadyExists) {
+        result.push(searchedRestaurant);
+      }
+    }
+
+    return result;
+  }, [restaurants, searchedRestaurant]);
 
 
   // Refetch when refreshTrigger changes
@@ -225,7 +328,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     markersRef.current = [];
 
     // Create new markers
-    restaurants.forEach((restaurant) => {
+    restaurantsToShow.forEach((restaurant) => {
       const isSelected = selectedRestaurant?.id === restaurant.id;
 
       // 카테고리별 적절한 이모티콘으로 변경
@@ -302,7 +405,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     if (!isLoaded || markersRef.current.length === 0) return;
 
     markersRef.current.forEach((marker, index) => {
-      const restaurant = restaurants[index];
+      const restaurant = restaurantsToShow[index];
       if (!restaurant) return;
 
       const isSelected = selectedRestaurant?.id === restaurant.id;
@@ -323,7 +426,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         innerDiv.classList.remove('animate-bounce');
       }
     });
-  }, [selectedRestaurant?.id, restaurants, isLoaded]);
+  }, [selectedRestaurant?.id, restaurantsToShow, isLoaded]);
 
   // 줌 이벤트 시 마커 스타일 유지
   useEffect(() => {
@@ -335,7 +438,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         if (!isLoaded || markersRef.current.length === 0) return;
 
         markersRef.current.forEach((marker, index) => {
-          const restaurant = restaurants[index];
+          const restaurant = restaurantsToShow[index];
           if (!restaurant) return;
 
           const isSelected = selectedRestaurant?.id === restaurant.id;
@@ -367,7 +470,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         google.maps.event.removeListener(zoomListener);
       }
     };
-  }, [isLoaded, selectedRestaurant?.id, restaurants]);
+  }, [isLoaded, selectedRestaurant?.id, restaurantsToShow]);
 
   if (loadError) {
     return (

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -51,16 +51,9 @@ export function RestaurantDetailPanel({
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
-    const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | null>(null);
-
-    // 디버깅: 전달받은 데이터 확인
-    console.log('📋 RestaurantDetailPanel 받은 데이터:', {
-        name: restaurant.name,
-        mergedYoutubeLinks: restaurant.mergedYoutubeLinks,
-        mergedTzuyangReviews: restaurant.mergedTzuyangReviews,
-        youtube_link: restaurant.youtube_link,
-        tzuyang_review: restaurant.tzuyang_review,
-    });
+    const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | 'english' | null>(null);
+    const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
+    const [isReviewExpanded, setIsReviewExpanded] = useState(false);
 
     // 카테고리 처리: categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -216,7 +209,7 @@ export function RestaurantDetailPanel({
         setViewMode('detail');
     };
 
-    const handleCopyAddress = async (address: string, type: 'road' | 'jibun') => {
+    const handleCopyAddress = async (address: string, type: 'road' | 'jibun' | 'english') => {
         try {
             await navigator.clipboard.writeText(address);
             setCopiedAddress(type);
@@ -476,6 +469,24 @@ export function RestaurantDetailPanel({
                                         </div>
                                     )}
 
+                                    {restaurant.english_address && (
+                                        <div
+                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            onClick={() => handleCopyAddress(restaurant.english_address!, 'english')}
+                                        >
+                                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="text-xs text-muted-foreground">영어 주소</p>
+                                                <p className="text-sm">{restaurant.english_address}</p>
+                                            </div>
+                                            {copiedAddress === 'english' ? (
+                                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                            ) : (
+                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            )}
+                                        </div>
+                                    )}
+
                                     {restaurant.phone && (
                                         <div className="flex gap-3">
                                             <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -501,87 +512,147 @@ export function RestaurantDetailPanel({
                                     </div>
                                 </div>
 
-                                {/* YouTube Links - fallback 로직으로 일단 표시 */}
+                                {/* YouTube Links */}
                                 <Separator />
-                                {(restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) ? (
+                                {(restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) || restaurant.youtube_link ? (
                                     <div className="space-y-3">
-                                        <h3 className="font-semibold text-sm flex items-center gap-2">
-                                            <Youtube className="h-4 w-4 text-red-500" />
-                                            쯔양 유튜브 영상 ({restaurant.mergedYoutubeLinks.length})
-                                        </h3>
-                                        <div className="space-y-2">
-                                            {restaurant.mergedYoutubeLinks.map((link, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                    onClick={() => window.open(link, '_blank')}
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="font-semibold text-sm flex items-center gap-2">
+                                                <Youtube className="h-4 w-4 text-red-500" />
+                                                쯔양 유튜브 영상 ({restaurant.mergedYoutubeLinks?.length || 1})
+                                            </h3>
+                                            {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 1 && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setIsYoutubeExpanded(!isYoutubeExpanded)}
+                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                                                 >
-                                                    {getYouTubeThumbnailUrl(link) && (
+                                                    {isYoutubeExpanded ? (
+                                                        <ChevronUp className="h-4 w-4" />
+                                                    ) : (
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {/* 첫 번째 항목은 항상 보임 */}
+                                        <div className="space-y-2">
+                                            {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0 ? (
+                                                <div
+                                                    className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                                    onClick={() => window.open(restaurant.mergedYoutubeLinks[0], '_blank')}
+                                                >
+                                                    {getYouTubeThumbnailUrl(restaurant.mergedYoutubeLinks[0]) && (
                                                         <img
-                                                            src={getYouTubeThumbnailUrl(link)!}
-                                                            alt={`YouTube Thumbnail ${index + 1}`}
+                                                            src={getYouTubeThumbnailUrl(restaurant.mergedYoutubeLinks[0])!}
+                                                            alt={`YouTube Thumbnail 1`}
                                                             className="w-full h-full object-cover"
                                                         />
                                                     )}
                                                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                        <Youtube className="h-8 w-8 text-white" />
+                                                        <Youtube className="h-12 w-12 text-white" />
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : restaurant.youtube_link ? (
-                                    <div className="space-y-3">
-                                        <h3 className="font-semibold text-sm flex items-center gap-2">
-                                            <Youtube className="h-4 w-4 text-red-500" />
-                                            쯔양 유튜브 영상
-                                        </h3>
-                                        <div
-                                            className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                            onClick={() => window.open(restaurant.youtube_link, '_blank')}
-                                        >
-                                            {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
-                                                <img
-                                                    src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
-                                                    alt="YouTube Thumbnail"
-                                                    className="w-full h-full object-cover"
-                                                />
+                                            ) : restaurant.youtube_link ? (
+                                                <div
+                                                    className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                                    onClick={() => window.open(restaurant.youtube_link, '_blank')}
+                                                >
+                                                    {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
+                                                        <img
+                                                            src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
+                                                            alt="YouTube Thumbnail"
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    )}
+                                                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                                                        <Youtube className="h-12 w-12 text-white" />
+                                                    </div>
+                                                </div>
+                                            ) : null}
+
+                                            {/* 추가 항목들은 조건부로 표시 */}
+                                            {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 1 && isYoutubeExpanded && (
+                                                <div className="space-y-2">
+                                                    {restaurant.mergedYoutubeLinks.slice(1).map((link, index) => (
+                                                        <div
+                                                            key={index + 1}
+                                                            className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
+                                                            onClick={() => window.open(link, '_blank')}
+                                                        >
+                                                            {getYouTubeThumbnailUrl(link) && (
+                                                                <img
+                                                                    src={getYouTubeThumbnailUrl(link)!}
+                                                                    alt={`YouTube Thumbnail ${index + 2}`}
+                                                                    className="w-full h-full object-cover"
+                                                                />
+                                                            )}
+                                                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
+                                                                <Youtube className="h-12 w-12 text-white" />
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             )}
-                                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
-                                                <Youtube className="h-8 w-8 text-white" />
-                                            </div>
                                         </div>
                                     </div>
                                 ) : null}
 
-                                {/* 쯔양 리뷰 섹션 - fallback 로직으로 일단 표시 */}
+                                {/* 쯔양 리뷰 섹션 */}
                                 <Separator />
-                                {(restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 0) ? (
-                                    <div className="space-y-2">
-                                        <h3 className="font-semibold text-sm flex items-center gap-2">
-                                            <Quote className="h-4 w-4 text-muted-foreground" />
-                                            쯔양의 리뷰 ({restaurant.mergedTzuyangReviews.length})
-                                        </h3>
+                                {(restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 0) || restaurant.tzuyang_review ? (
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="font-semibold text-sm flex items-center gap-2">
+                                                <Quote className="h-4 w-4 text-muted-foreground" />
+                                                쯔양의 리뷰 ({restaurant.mergedTzuyangReviews?.length || 1})
+                                            </h3>
+                                            {restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 1 && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setIsReviewExpanded(!isReviewExpanded)}
+                                                    className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                                >
+                                                    {isReviewExpanded ? (
+                                                        <ChevronUp className="h-4 w-4" />
+                                                    ) : (
+                                                        <ChevronDown className="h-4 w-4" />
+                                                    )}
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {/* 첫 번째 리뷰는 항상 보임 */}
                                         <div className="space-y-2">
-                                            {restaurant.mergedTzuyangReviews.map((review, index) => (
-                                                <div key={index} className="p-4 bg-muted/50 rounded-lg">
+                                            {restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 0 ? (
+                                                <div className="p-4 bg-muted/50 rounded-lg">
                                                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                        {review}
+                                                        {restaurant.mergedTzuyangReviews[0]}
                                                     </p>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                ) : restaurant.tzuyang_review ? (
-                                    <div className="space-y-2">
-                                        <h3 className="font-semibold text-sm flex items-center gap-2">
-                                            <Quote className="h-4 w-4 text-muted-foreground" />
-                                            쯔양의 리뷰
-                                        </h3>
-                                        <div className="p-4 bg-muted/50 rounded-lg">
-                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                                                {restaurant.tzuyang_review}
-                                            </p>
+                                            ) : restaurant.tzuyang_review ? (
+                                                <div className="p-4 bg-muted/50 rounded-lg">
+                                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                        {restaurant.tzuyang_review}
+                                                    </p>
+                                                </div>
+                                            ) : null}
+
+                                            {/* 추가 리뷰들은 조건부로 표시 */}
+                                            {restaurant.mergedTzuyangReviews && restaurant.mergedTzuyangReviews.length > 1 && isReviewExpanded && (
+                                                <div className="space-y-2">
+                                                    {restaurant.mergedTzuyangReviews.slice(1).map((review, index) => (
+                                                        <div key={index + 1} className="p-4 bg-muted/50 rounded-lg">
+                                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                                                {review}
+                                                            </p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 ) : null}

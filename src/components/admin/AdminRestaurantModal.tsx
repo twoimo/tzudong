@@ -27,6 +27,7 @@ export function AdminRestaurantModal({
     onSuccess,
 }: AdminRestaurantModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [customCategory, setCustomCategory] = useState(""); // 커스텀 카테고리 입력용
     const [formData, setFormData] = useState({
         name: "",
         address: "",
@@ -129,9 +130,9 @@ export function AdminRestaurantModal({
         try {
             const restaurantData = {
                 name: formData.name.trim(),
-                address: formData.address.trim(),
+                road_address: formData.address.trim(), // address 대신 road_address 사용
                 phone: formData.phone.trim() || null,
-                category: formData.categories, // TEXT[] 배열로 저장
+                categories: formData.categories, // category 대신 categories 사용
                 youtube_link: formData.youtube_link.trim() || null,
                 tzuyang_review: formData.tzuyang_review.trim() || null,
                 lat,
@@ -266,6 +267,47 @@ export function AdminRestaurantModal({
                                 <PopoverContent className="w-64" align="start">
                                     <div className="space-y-2">
                                         <h4 className="font-semibold text-sm">카테고리 선택</h4>
+
+                                        {/* 커스텀 카테고리 입력 */}
+                                        <div className="flex gap-2 pb-2 border-b">
+                                            <Input
+                                                placeholder="새 카테고리 입력"
+                                                value={customCategory}
+                                                onChange={(e) => setCustomCategory(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && customCategory.trim()) {
+                                                        e.preventDefault();
+                                                        const newCategory = customCategory.trim();
+                                                        if (!formData.categories.includes(newCategory)) {
+                                                            setFormData({
+                                                                ...formData,
+                                                                categories: [...formData.categories, newCategory]
+                                                            });
+                                                        }
+                                                        setCustomCategory("");
+                                                    }
+                                                }}
+                                                className="flex-1"
+                                            />
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                onClick={() => {
+                                                    const newCategory = customCategory.trim();
+                                                    if (newCategory && !formData.categories.includes(newCategory)) {
+                                                        setFormData({
+                                                            ...formData,
+                                                            categories: [...formData.categories, newCategory]
+                                                        });
+                                                        setCustomCategory("");
+                                                    }
+                                                }}
+                                                disabled={!customCategory.trim()}
+                                            >
+                                                추가
+                                            </Button>
+                                        </div>
+
                                         <div className="space-y-2 max-h-48 overflow-y-auto">
                                             {RESTAURANT_CATEGORIES.map((category) => (
                                                 <div key={category} className="flex items-center space-x-2">

@@ -20,7 +20,7 @@ export interface Restaurant extends BaseRestaurant {
     // 호환성 속성들 (기존 코드와의 호환을 위해)
     address?: string; // road_address 또는 jibun_address의 가상 속성
     category?: string[]; // categories의 별칭
-    
+
     // 마커 그룹화 시 병합된 데이터 (배열)
     mergedYoutubeLinks?: string[]; // 병합된 모든 유튜브 링크
     mergedTzuyangReviews?: string[]; // 병합된 모든 쯔양 리뷰
@@ -92,6 +92,7 @@ export const REGIONS = [
 export const GLOBAL_REGIONS = [
     "미국",
     "일본",
+    "대만",
     "태국",
     "인도네시아",
     "튀르키예",
