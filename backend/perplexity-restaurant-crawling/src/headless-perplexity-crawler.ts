@@ -12,7 +12,7 @@ export class PerplexityCrawler {
   private page: Page | null = null;
   private hasProcessedAnyItem: boolean = false;
   private modelSelected: boolean = false;
-  private sessionPath: string = './perplexity-session.json';
+  private sessionPath: string = './headless-perplexity-session.json';
   private sessionRestored: boolean = false;
   private browserId: number = 0;
 
@@ -21,7 +21,7 @@ export class PerplexityCrawler {
   }
 
   async initialize(): Promise<void> {
-    console.log('🚀 브라우저 초기화 시작...');
+    console.log('🚀 브라우저 초기화 시작 (Headless Mode)...');
 
     try {
       // 저장된 세션 복원 시도
@@ -57,22 +57,22 @@ export class PerplexityCrawler {
         }
       }
 
-      // ✅ 전용 프로필 디렉토리 사용 (실제 Chrome과 충돌 방지)
-      const path = await import('path');
+      // ✅ Puppeteer 전용 고정 프로필 디렉토리 (세션 유지)
       const os = await import('os');
+      const path = await import('path');
       
       // Puppeteer 전용 프로필 (고정 홈 디렉토리 - 평가와 동일)
       const userDataDir = path.join(
         os.homedir(), 
         '.puppeteer-chrome-profile-perplexity'
       );
-
+      
       console.log(`📂 Puppeteer 전용 Chrome 프로필 사용: ${userDataDir}`);
 
       this.browser = await puppeteer.launch({
-        headless: false, // 구글 로그인 등 상호작용을 위해 헤드리스 모드 해제
+        headless: true, // Headless 모드 활성화
         executablePath, // 찾은 Chrome 경로 사용
-        userDataDir, // 고정 프로필 디렉토리
+        userDataDir, // ✅ 고정 프로필 디렉토리 (세션 유지)
         defaultViewport: null, // 기본 뷰포트 설정 해제
         args: [
           '--no-sandbox',
@@ -110,33 +110,12 @@ export class PerplexityCrawler {
         ignoreDefaultArgs: ['--disable-extensions'],
         timeout: 120000,
         protocolTimeout: 300000,
-        handleSIGHUP: false,
-        handleSIGTERM: false,
-        handleSIGINT: false
       });
 
       console.log('✅ 브라우저 실행 성공');
 
       this.page = await this.browser.newPage();
       console.log('✅ 새 페이지 생성');
-
-      // 브라우저 창이 완전히 열릴 때까지 잠시 대기
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // 브라우저 창 최대화 시도
-      try {
-        await this.page.evaluate(() => {
-          if (window && window.resizeTo) {
-            const screenWidth = window.screen.availWidth;
-            const screenHeight = window.screen.availHeight;
-            window.moveTo(0, 0);
-            window.resizeTo(screenWidth, screenHeight);
-          }
-        });
-        console.log('✅ 브라우저 창 최대화 시도 완료');
-      } catch (error) {
-        console.log('⚠️ 브라우저 창 최대화 중 오류 (무시):', error);
-      }
 
       // 뷰포트 설정
       try {
@@ -488,7 +467,7 @@ export class PerplexityCrawler {
         
         // 로그인 후 세션 저장
         await this.saveSession();
-        console.log('� 로그인 세션 저장 완료');
+        console.log('💾 로그인 세션 저장 완료');
       }
 
       // 입력창 상태 확인
@@ -499,7 +478,7 @@ export class PerplexityCrawler {
 
       console.log(`📝 입력창 상태: ${inputFieldExists ? '✅ 준비됨' : '⚠️  확인 필요'}`);
       
-      console.log('🚀 크롤링을 시작합니다!\n');
+      console.log('� 크롤링을 시작합니다!\n');
 
       // 첫 번째 항목 처리 표시
       this.hasProcessedAnyItem = true;

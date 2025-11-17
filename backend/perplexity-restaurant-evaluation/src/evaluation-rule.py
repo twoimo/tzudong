@@ -4,6 +4,10 @@ from typing import Dict, Any, List, Optional, Tuple
 import requests
 from dotenv import load_dotenv
 
+# 공통 유틸리티 함수 import
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
+from duplicate_checker import load_processed_urls, append_to_jsonl
+
 load_dotenv('../.env')
 
 # ========= 설정 =========
@@ -399,27 +403,19 @@ def main():
 
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     
-    # 이미 처리된 youtube_link 수집
-    processed_links = set()
-    if OUTPUT_PATH.exists():
-        print(f"[INFO] 기존 출력 파일 발견 - 이미 처리된 youtube_link 확인 중...")
-        with OUTPUT_PATH.open("r", encoding="utf-8") as f_existing:
-            for line in f_existing:
-                try:
-                    existing_data = json.loads(line.strip())
-                    youtube_link = existing_data.get("youtube_link")
-                    if youtube_link:
-                        processed_links.add(youtube_link)
-                except:
-                    continue
-        print(f"[OK] 이미 처리된 레코드: {len(processed_links)}개")
+    # 1. 이미 처리된 youtube_link 로드 (유틸리티 함수 사용)
+    print(f"🔍 기존 처리 내역 확인 중...")
+    processed_links = load_processed_urls(str(OUTPUT_PATH))
+    print(f"✅ 이미 처리된 레코드: {len(processed_links)}개\n")
     
-    count = 0  # 테스트용 카운터
+    count = 0
     skipped_count = 0
     total_restaurants = 0
     success_restaurants = []
     fail_restaurants = []
-    with INPUT_PATH.open("r", encoding="utf-8") as fin, OUTPUT_PATH.open("a", encoding="utf-8") as fout:
+    
+    # 2. 입력 파일 읽기
+    with INPUT_PATH.open("r", encoding="utf-8") as fin:
         for line in fin:
             line = line.strip()
             if not line:
@@ -431,22 +427,22 @@ def main():
 
             youtube_link = obj.get("youtube_link")
             
-            # 이미 처리된 youtube_link인지 확인
+            # 3. 이미 처리된 youtube_link 확인
             if youtube_link in processed_links:
                 skipped_count += 1
-                if skipped_count % 10 == 1:  # 10개마다 한 번씩만 로그
-                    print(f"[SKIP] 이미 처리됨: {youtube_link}")
+                if skipped_count % 100 == 1:
+                    print(f"⏭️  {skipped_count}개 건너뜀 (중복)")
                 continue
 
             # evaluation_target에 true 값이 있는 경우에만 평가 진행
             evaluation_target = obj.get("evaluation_target", {})
             if not any(value for value in evaluation_target.values() if value is True):
-                continue  # 평가 대상이 아니면 건너뜀
+                continue
 
             result = process_one_line(obj)
-            fout.write(json.dumps(result, ensure_ascii=False) + "\n")
             
-            # 처리 완료 후 추가
+            # 4. append 모드로 즉시 저장 (유틸리티 함수)
+            append_to_jsonl(str(OUTPUT_PATH), result)
             processed_links.add(youtube_link)
             
             # 통계 계산
@@ -459,12 +455,17 @@ def main():
                     fail_restaurants.append(eval_item["name"])
             
             count += 1
+            if count % 10 == 0:
+                print(f"✓ 진행 중... {count}개 처리 완료")
 
-    print(f"[OK] 테스트 완료: {count}개 객체 처리 → {OUTPUT_PATH}")
-    print(f"[INFO] 건너뛴 레코드: {skipped_count}개")
-    print(f"[통계] 총 음식점: {total_restaurants}개")
-    print(f"[성공] {len(success_restaurants)}개: {', '.join(success_restaurants)}")
-    print(f"[실패] {len(fail_restaurants)}개: {', '.join(fail_restaurants)}")
+    print(f"\n{'='*50}")
+    print(f"✅ 처리 완료: {count}개 객체 처리")
+    print(f"⏭️  건너뛴 레코드: {skipped_count}개")
+    print(f"📊 총 음식점: {total_restaurants}개")
+    print(f"✅ 성공: {len(success_restaurants)}개")
+    print(f"❌ 실패: {len(fail_restaurants)}개")
+    print(f"💾 결과 저장: {OUTPUT_PATH}")
+    print(f"{'='*50}\n")
 
 if __name__ == "__main__":
     main()

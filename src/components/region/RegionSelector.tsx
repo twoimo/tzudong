@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/select";
 import { REGIONS, Region } from "@/types/restaurant";
 import { MapPin } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface RegionSelectorProps {
   selectedRegion: Region | null;
@@ -18,6 +20,54 @@ interface RegionSelectorProps {
 }
 
 const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, className }: RegionSelectorProps) => {
+  // 모든 맛집 데이터 가져오기 (주소 정보만 필요)
+  const { data: restaurants = [] } = useQuery({
+    queryKey: ['restaurants-count'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('road_address, jibun_address')
+        .eq('status', 'approved');
+
+      if (error) {
+        console.error('맛집 데이터 조회 실패:', error);
+        return [];
+      }
+      return data || [];
+    },
+  });
+
+  // 지역별 맛집 수 계산
+  const regionCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+
+    restaurants.forEach((restaurant) => {
+      const address = restaurant.road_address || restaurant.jibun_address || '';
+
+      // 각 지역에 대해 확인
+      REGIONS.forEach((region) => {
+        if (region === "울릉도") {
+          if (address.includes('울릉')) {
+            counts[region] = (counts[region] || 0) + 1;
+          }
+        } else if (region === "욕지도") {
+          if (address.includes('욕지')) {
+            counts[region] = (counts[region] || 0) + 1;
+          }
+        } else {
+          if (address.includes(region)) {
+            counts[region] = (counts[region] || 0) + 1;
+          }
+        }
+      });
+    });
+
+    return counts;
+  }, [restaurants]);
+
+  // 전체 맛집 수
+  const totalCount = restaurants.length;
+
   const handleRegionChange = (value: string) => {
     const newRegion = value === "all" ? null : (value as Region);
 
@@ -38,12 +88,23 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
         </div>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="all">전국</SelectItem>
-        {REGIONS.map((region) => (
-          <SelectItem key={region} value={region}>
-            {region}
-          </SelectItem>
-        ))}
+        <SelectItem value="all">
+          <div className="flex items-center justify-between w-full">
+            <span>전국</span>
+            <span className="ml-2 text-xs text-muted-foreground">({totalCount}개)</span>
+          </div>
+        </SelectItem>
+        {REGIONS.map((region) => {
+          const count = regionCounts[region] || 0;
+          return (
+            <SelectItem key={region} value={region}>
+              <div className="flex items-center justify-between w-full">
+                <span>{region}</span>
+                <span className="ml-2 text-xs text-muted-foreground">({count}개)</span>
+              </div>
+            </SelectItem>
+          );
+        })}
       </SelectContent>
     </Select>
   );

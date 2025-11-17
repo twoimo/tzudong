@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
 import json
@@ -6,7 +7,10 @@ from datetime import datetime
 import re
 from openai import OpenAI
 
-# Load environment variables
+# 공통 유틸리티 함수 import
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
+from duplicate_checker import load_processed_urls, append_to_jsonl
+
 # Load environment variables
 load_dotenv('../.env')
 
@@ -191,18 +195,20 @@ def get_video_info(video_id, existing_meta=None):
 def process_jsonl_file(input_file, output_file):
     """
     JSONL 파일의 각 레코드에 대해 YouTube 메타데이터를 처리하는 함수
-    임시 파일을 사용하여 안전하게 처리하고, 모든 처리가 성공적으로 완료된 후에만 
-    원래 파일을 대체합니다.
+    중복된 youtube_link는 건너뛰고 새로운 항목만 append 모드로 추가합니다.
     """
     import time
     import os
-    from tempfile import NamedTemporaryFile
-    import shutil
 
-    # 기존 출력 파일이 있는 경우 먼저 읽어서 메타데이터 캐시 구성
+    # 1. 기존 output 파일에서 처리된 URL 로드
+    print(f"🔍 기존 처리 내역 확인 중...")
+    processed_urls = load_processed_urls(output_file)
+    print(f"✅ 이미 처리된 URL: {len(processed_urls)}개\n")
+
+    # 2. 기존 출력 파일이 있는 경우 메타데이터 캐시 구성
     existing_data = {}
     if os.path.exists(output_file):
-        print(f"Found existing metadata file: {output_file}")
+        print(f"📂 기존 메타데이터 파일 발견: {output_file}")
         with open(output_file, 'r', encoding='utf-8') as f:
             for line in f:
                 record = json.loads(line.strip())
@@ -210,26 +216,40 @@ def process_jsonl_file(input_file, output_file):
                     video_id = extract_video_id(record['youtube_link'])
                     if video_id and 'youtube_meta' in record:
                         existing_data[video_id] = record['youtube_meta']
-        print(f"Loaded {len(existing_data)} existing video metadata records")
+        print(f"📊 로드된 비디오 메타데이터: {len(existing_data)}개\n")
 
-    # 입력 파일 읽기
+    # 3. 입력 파일 읽기
     with open(input_file, 'r', encoding='utf-8') as f:
         lines = f.readlines()
-
-    # 임시 파일 생성 (원본 파일과 같은 위치에)
-    output_dir = os.path.dirname(output_file)
-    output_basename = os.path.basename(output_file)
-    base, ext = os.path.splitext(output_basename)
-    temp_output_path = os.path.join(output_dir, f"temp_{base}{ext}")
-    success = False
     
-    # 이전 임시 파일이 있다면 삭제
-    if os.path.exists(temp_output_path):
-        os.remove(temp_output_path)
+    # 4. 중복 제외한 새로운 레코드만 필터링
+    new_records = []
+    duplicate_count = 0
+    
+    for line in lines:
+        record = json.loads(line.strip())
+        youtube_link = record.get('youtube_link')
+        
+        if youtube_link and youtube_link not in processed_urls:
+            new_records.append(record)
+        elif youtube_link:
+            duplicate_count += 1
+    
+    print(f"📋 처리 대상:")
+    print(f"   - 전체 입력 항목: {len(lines)}개")
+    print(f"   - 중복 제외: {duplicate_count}개")
+    print(f"   - 새로 처리할 항목: {len(new_records)}개\n")
+    
+    if len(new_records) == 0:
+        print("✅ 모든 항목이 이미 처리되었습니다!")
+        return
+    
+    # 5. 새로운 레코드 처리 및 append
+    processed_count = 0
+    failed_count = 0
     
     try:
-        for i, line in enumerate(lines):
-            record = json.loads(line.strip())
+        for i, record in enumerate(new_records):
             if 'youtube_link' in record and record['youtube_link']:
                 video_id = extract_video_id(record['youtube_link'])
                 if video_id:
@@ -237,31 +257,35 @@ def process_jsonl_file(input_file, output_file):
                     existing_meta = existing_data.get(video_id, record.get('youtube_meta', {}))
                     if i > 0:
                         time.sleep(1)  # API 호출 간 1초 간격 유지
-                    print(f"Processing video {i+1}/{len(lines)}: {video_id}")
+                    
+                    print(f"🎬 처리 중 {i+1}/{len(new_records)}: {video_id}")
                     video_info = get_video_info(video_id, existing_meta)
+                    
                     if video_info:
                         record['youtube_meta'] = video_info
-                        print("Video info:", video_info)
-            
-            # 임시 파일에 현재 레코드 저장
-            with open(temp_output_path, 'a' if i > 0 else 'w', encoding='utf-8') as f:
-                f.write(json.dumps(record, ensure_ascii=False) + '\n')
+                        print(f"   ✅ 메타데이터: {video_info.get('title', 'N/A')[:50]}...")
+                        
+                        # 즉시 append (안전성 보장)
+                        append_to_jsonl(output_file, record)
+                        processed_urls.add(record['youtube_link'])
+                        processed_count += 1
+                    else:
+                        print(f"   ⚠️  메타데이터 가져오기 실패")
+                        failed_count += 1
 
-        # 모든 처리가 성공적으로 완료됨
-        success = True
-        
-        # 임시 파일을 실제 출력 파일로 이동
-        shutil.move(temp_output_path, output_file)
-        print(f"\nProcessing completed successfully. Results saved to: {output_file}")
+        # 6. 최종 통계
+        print(f"\n{'='*60}")
+        print(f"📊 처리 완료!")
+        print(f"{'='*60}")
+        print(f"✅ 성공: {processed_count}개")
+        print(f"❌ 실패: {failed_count}개")
+        print(f"💾 결과 저장: {output_file}")
+        print(f"{'='*60}\n")
     
     except Exception as e:
-        print(f"Error during processing: {str(e)}")
+        print(f"\n❌ 처리 중 오류 발생: {str(e)}")
+        print(f"📊 처리 완료: {processed_count}개")
         raise
-    finally:
-        # 에러 발생 시 임시 파일 삭제
-        if not success and os.path.exists(temp_output_path):
-            os.remove(temp_output_path)
-            print("Temporary file deleted due to processing error.")
 
 if __name__ == "__main__":
     input_file = "../tzuyang_restaurant_results.jsonl"

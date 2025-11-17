@@ -21,11 +21,11 @@ export class PerplexityEvaluator {
 
   constructor(browserId: number = 0) {
     this.browserId = browserId;
-    this.sessionPath = join(process.cwd(), 'perplexity-session.json');
+    this.sessionPath = join(process.cwd(), 'headless-perplexity-session.json');
   }
 
   async initialize(): Promise<void> {
-    console.log('🚀 브라우저 초기화 시작...');
+    console.log('🚀 브라우저 초기화 시작 (Headless Mode)...');
 
     try {
       // 저장된 세션 복원 시도
@@ -61,70 +61,104 @@ export class PerplexityEvaluator {
         }
       }
 
-      // Puppeteer 전용 고정 프로필 디렉토리 (CAPTCHA 최소화)
+      // 임시 디렉토리 설정 (macOS /private/tmp 오류 방지)
+      // 각 브라우저마다 고유한 디렉토리 사용
       const os = await import('os');
-      const path = await import('path');
-      const userDataDir = path.join(
-        os.homedir(), 
-        '.puppeteer-chrome-profile-perplexity'
-      );
-      
-      console.log(`📂 Puppeteer 전용 Chrome 프로필 사용: ${userDataDir}`);
+      const userDataDir = join(os.tmpdir(), `puppeteer_dev_profile_${this.browserId}`);
 
       this.browser = await puppeteer.launch({
-        headless: false, // 구글 로그인 등 상호작용을 위해 헤드리스 모드 해제
+        headless: true, // Headless 모드 활성화
         executablePath, // 찾은 Chrome 경로 사용
         userDataDir, // 고정 프로필 디렉토리
         defaultViewport: null, // 기본 뷰포트 설정 해제
         args: [
-          '--no-sandbox',
-          '--disable-setuid-sandbox',
+          // ✅ 안전한 자동화 탐지 우회
+          '--disable-blink-features=AutomationControlled',
+          
+          // ✅ 성능 최적화 (안전)
           '--disable-dev-shm-usage',
-          '--disable-accelerated-2d-canvas',
+          '--disable-gpu',
           '--no-first-run',
           '--no-zygote',
-          '--disable-gpu',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--disable-ipc-flooding-protection',
+          
+          // ✅ UI 설정
+          '--window-size=1440,900',
+          '--disable-infobars',
+          '--disable-session-crashed-bubble',
+          
+          // ✅ 백그라운드 프로세스 최적화
           '--disable-background-timer-throttling',
           '--disable-backgrounding-occluded-windows',
           '--disable-renderer-backgrounding',
-          '--disable-background-networking',
-          '--disable-default-apps',
-          '--disable-sync',
-          '--disable-translate',
-          '--disable-component-update',
-          '--disable-background-timer-throttling',
-          '--disable-low-end-device-mode',
-          '--window-size=1440,900', // macOS에 적합한 창 크기로 설정
-          '--disable-infobars', // 정보 표시줄 비활성화
-          '--disable-session-crashed-bubble', // 세션 충돌 버블 비활성화
-          // 구글 로그인 보안 우회를 위한 추가 플래그
-          '--disable-blink-features=AutomationControlled',
-          '--disable-web-security',
-          '--disable-features=VizDisplayCompositor',
-          '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          '--accept-lang=en-US,en',
-          '--disable-plugins',
-          '--disable-images', // 이미지 로딩 비활성화로 속도 향상
-          '--disable-javascript-harmony-shipping',
-          '--disable-background-media-download',
-          '--disable-print-preview',
-          '--disable-component-extensions-with-background-pages'
+          
+          // ✅ User-Agent 설정
+          '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          '--accept-lang=ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
         ],
-        ignoreDefaultArgs: ['--disable-extensions'],
+        ignoreDefaultArgs: ['--enable-automation'],
         timeout: 120000,
         protocolTimeout: 300000,
-        handleSIGHUP: false,
-        handleSIGTERM: false,
-        handleSIGINT: false
       });
 
       console.log('✅ 브라우저 실행 성공');
 
       this.page = await this.browser.newPage();
       console.log('✅ 새 페이지 생성');
+      
+      // Stealth 추가 설정 (webdriver 제거, 플러그인 시뮬레이션)
+      await this.page.evaluateOnNewDocument(() => {
+        // webdriver 완전 제거
+        Object.defineProperty(navigator, 'webdriver', {
+          get: () => undefined,
+        });
+        
+        // Chrome 플러그인 시뮬레이션
+        Object.defineProperty(navigator, 'plugins', {
+          get: () => [
+            { 
+              name: 'Chrome PDF Plugin',
+              description: 'Portable Document Format',
+              filename: 'internal-pdf-viewer',
+              length: 1
+            },
+            {
+              name: 'Chrome PDF Viewer',
+              description: '',
+              filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+              length: 1
+            },
+            {
+              name: 'Native Client',
+              description: '',
+              filename: 'internal-nacl-plugin',
+              length: 1
+            }
+          ],
+        });
+        
+        // 언어 설정
+        Object.defineProperty(navigator, 'languages', {
+          get: () => ['ko-KR', 'ko', 'en-US', 'en'],
+        });
+        
+        // Permissions API 시뮬레이션
+        const originalQuery = window.navigator.permissions.query;
+        window.navigator.permissions.query = (parameters: any) => (
+          parameters.name === 'notifications' ?
+            Promise.resolve({ state: Notification.permission } as PermissionStatus) :
+            originalQuery(parameters)
+        );
+        
+        // Chrome 객체 시뮬레이션
+        (window as any).chrome = {
+          runtime: {},
+          loadTimes: function() {},
+          csi: function() {},
+          app: {}
+        };
+      });
+      
+      console.log('✅ Stealth 설정 완료');
 
       // 브라우저 창이 완전히 열릴 때까지 잠시 대기
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -1313,31 +1347,30 @@ export class PerplexityEvaluator {
       const initialValue = await this.page!.$eval(inputSelector, el => (el as HTMLTextAreaElement).value || (el as HTMLElement).textContent || '');
       console.log(`📝 초기 입력 필드 값: "${initialValue}"`);
 
-      // 프롬프트를 줄 단위로 나누기
-      const lines = prompt.split('\n');
+      // 기존 내용 클리어 (Ctrl+A, Delete)
+      await this.page!.keyboard.down('Control');
+      await this.page!.keyboard.press('a');
+      await this.page!.keyboard.up('Control');
+      await this.page!.keyboard.press('Delete');
 
-      // 각 줄을 Shift+Enter로 입력 (첫 줄 제외)
+      // 프롬프트를 줄 단위로 나누어 Shift+Enter로 입력
+      const lines = prompt.split('\n');
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
+        // 각 줄의 내용을 입력 (빈 줄 포함) - delay: 0으로 즉시 입력
+        await this.page!.type(inputSelector, line, { delay: 0 });
 
-        // 첫 줄이 아니면 Shift+Enter로 줄바꿈
-        if (i > 0) {
+        // 마지막 줄이 아니면 Shift+Enter로 줄바꿈
+        if (i < lines.length - 1) {
           await this.page!.keyboard.down('Shift');
           await this.page!.keyboard.press('Enter');
           await this.page!.keyboard.up('Shift');
-          await new Promise(resolve => setTimeout(resolve, 50)); // 200ms → 50ms
+          await new Promise(resolve => setTimeout(resolve, 50)); // 줄바꿈 후 짧은 대기
         }
-
-        // 현재 줄 입력 (빠르게 타이핑)
-        for (let j = 0; j < line.length; j++) {
-          await this.page!.type(inputSelector, line[j]);
-          // 10-20ms 랜덤 간격 (훨씬 빠르게)
-          await new Promise(resolve => setTimeout(resolve, Math.random() * 10 + 10));
-        }
-
-        // 줄 입력 완료 후 잠시 대기
-        await new Promise(resolve => setTimeout(resolve, 50)); // 200ms → 50ms
       }
+
+      // 타이핑 완료 후 잠시 대기
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // 입력 완료 후 값 확인
       const finalValue = await this.page!.$eval(inputSelector, el => (el as HTMLTextAreaElement).value || (el as HTMLElement).textContent || '');
@@ -1436,9 +1469,9 @@ export class PerplexityEvaluator {
       
       console.log('✅ JSON 코드 블록 발견!');
       
-      // 응답이 완전히 생성될 때까지 대기 (2-3초)
-      const waitTime = Math.floor(Math.random() * 1000) + 2000; // 2000-3000ms
-      console.log(`✅ 응답 완료 대기 중 (${Math.floor(waitTime/1000)}초)...`);
+      // 응답이 완전히 생성될 때까지 충분히 대기 (헤드리스는 렌더링 시간 필요)
+      const waitTime = Math.floor(Math.random() * 3000) + 8000; // 8000-11000ms (헤드리스 최적화)
+      console.log(`⏳ 응답 완료 대기 중 (${Math.floor(waitTime/1000)}초)...`);
       await new Promise(resolve => setTimeout(resolve, waitTime));
       
       // 사람처럼 여러 번 스크롤하여 동적 로딩 콘텐츠까지 모두 로드
@@ -1489,117 +1522,43 @@ export class PerplexityEvaluator {
         console.log(`✅ 전체 스크롤 완료 (${startScrollTop} → ${mainContainer.scrollHeight})`);
       });
       
-      console.log('⏱️ 스크롤 후 콘텐츠 안정화 대기 (1초)...');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log('⏱️ 스크롤 후 콘텐츠 안정화 대기 (3초)...');
+      await new Promise(resolve => setTimeout(resolve, 3000)); // 헤드리스는 DOM 안정화 시간 필요
       
-      // JSON 추출 시도 (방법 1: code 블록, 방법 2: Answer 내 일반 텍스트)
+      // JSON 추출 시도 (간단한 로직으로 변경)
       console.log('🔍 JSON 데이터 추출 시도...');
       
-      const extractResult = await this.page!.evaluate(() => {
-        // 방법 1: code 블록에서 찾기
-        console.log('📦 방법 1: code 블록에서 JSON 찾기...');
-        const codeElements = Array.from(document.querySelectorAll('code'));
-        console.log(`발견된 code 요소: ${codeElements.length}개`);
+      const result = await this.page!.evaluate(() => {
+        const answerContainers = Array.from(
+          document.querySelectorAll('div[id^="markdown-content-"]')
+        );
         
-        const validCodeBlocks = codeElements.filter(code => {
-          const inlineStyle = code.getAttribute('style') || '';
-          const computedStyle = window.getComputedStyle(code);
-          const hasPreStyle = inlineStyle.includes('white-space: pre') || 
-                             inlineStyle.includes('white-space:pre') ||
-                             computedStyle.whiteSpace === 'pre';
-          
-          const spanCount = code.querySelectorAll('span').length;
-          const hasEnoughSpans = spanCount > 10;
-          
-          const firstSpan = code.querySelector('span');
-          const looksLikeJSON = firstSpan?.textContent?.trim().startsWith('{');
-          
-          return hasPreStyle && hasEnoughSpans && looksLikeJSON;
-        });
-        
-        console.log(`유효한 code 블록: ${validCodeBlocks.length}개`);
-        
-        if (validCodeBlocks.length === 1) {
-          // code 블록에서 JSON 추출 (전체 textContent를 한 번에 가져옴)
-          const codeBlock = validCodeBlocks[0];
-          const jsonText = codeBlock.textContent || '';
-          
-          console.log(`✅ code 블록에서 JSON 추출 성공 (${jsonText.length}자)`);
-          return { success: true, jsonText, method: 'code_block' };
-        }
-        
-        // 방법 2: Answer 영역에서 일반 텍스트로 JSON 찾기
-        console.log('📄 방법 2: Answer 영역에서 일반 텍스트 JSON 찾기...');
-        
-        // 전체 페이지 텍스트에서 JSON 패턴 찾기
-        const bodyText = document.body.textContent || '';
-        
-        // visit_authenticity를 포함하는 JSON 객체 추출 (중첩 객체 고려)
-        // { 부터 시작해서 마지막 } 까지 찾되, visit_authenticity 포함 확인
-        let braceCount = 0;
-        let jsonStart = -1;
-        let jsonEnd = -1;
-        
-        for (let i = 0; i < bodyText.length; i++) {
-          const char = bodyText[i];
-          
-          if (char === '{') {
-            if (braceCount === 0) {
-              jsonStart = i;
-            }
-            braceCount++;
-          } else if (char === '}') {
-            braceCount--;
-            if (braceCount === 0 && jsonStart >= 0) {
-              jsonEnd = i + 1;
-              // visit_authenticity 포함 여부 확인
-              const candidate = bodyText.substring(jsonStart, jsonEnd);
-              if (candidate.includes('visit_authenticity') && 
-                  candidate.includes('rb_inference_score') &&
-                  candidate.includes('category_TF')) {
-                console.log(`✅ Answer 영역에서 JSON 추출 성공 (${candidate.length}자)`);
-                return { success: true, jsonText: candidate, method: 'answer_text' };
+        for (const container of answerContainers) {
+          const codeBlocks = container.querySelectorAll('pre code');
+          for (const codeBlock of Array.from(codeBlocks)) {
+            const text = codeBlock.textContent || '';
+            if (text.includes('category_TF') && text.includes('visit_authenticity')) {
+              const jsonMatch = text.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                try {
+                  return JSON.parse(jsonMatch[0]);
+                } catch {
+                  continue;
+                }
               }
-              // 일치하지 않으면 계속 탐색
-              jsonStart = -1;
             }
           }
         }
-        
-        // 모든 방법 실패
-        console.log('❌ 모든 방법으로 JSON을 찾지 못함');
-        return { 
-          success: false, 
-          error: 'JSON을 찾을 수 없음 (code 블록 및 Answer 텍스트 모두 실패)', 
-          codeCount: codeElements.length
-        };
+        return null;
       });
-
-      if (!extractResult.success) {
-        console.log(`❌ ${extractResult.error}`);
-        console.log(`📊 디버깅 정보: code=${extractResult.codeCount}`);
-        return null;
-      }
-
-      if (!extractResult.jsonText) {
-        console.log('❌ JSON 텍스트가 비어있음');
-        return null;
-      }
-
-      console.log(`✅ JSON 추출 완료 (방법: ${extractResult.method}, ${extractResult.jsonText.length}자)`);
       
-      // JSON 파싱 시도
-      console.log('🔄 JSON 파싱 중...');
-      let parsedData: any;
-      
-      try {
-        parsedData = JSON.parse(extractResult.jsonText);
-        console.log('✅ JSON 파싱 성공');
-      } catch (parseError) {
-        console.log(`❌ JSON 파싱 실패: ${parseError}`);
-        console.log(`📄 추출된 텍스트:\n${extractResult.jsonText}`);
+      if (!result) {
+        console.log('❌ JSON 추출 실패');
         return null;
       }
+      
+      console.log('✅ JSON 추출 및 파싱 성공');
+      const parsedData = result;
       
       // 필수 키 5개 존재 확인
       const requiredKeys = [

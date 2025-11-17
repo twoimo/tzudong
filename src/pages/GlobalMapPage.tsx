@@ -20,6 +20,7 @@ import { toast } from "sonner";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { useQuery } from "@tanstack/react-query";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -43,6 +44,42 @@ const GRID_COUNTRIES: GlobalCountry[] = ["미국", "일본", "태국", "인도�
 
 const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: GlobalMapPageProps) => {
     const { isAdmin } = useAuth();
+
+    // 글로벌 맛집 데이터 가져오기 (주소 정보만 필요)
+    const { data: globalRestaurants = [] } = useQuery({
+        queryKey: ['global-restaurants-count'],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('restaurants')
+                .select('road_address, jibun_address, english_address')
+                .eq('status', 'approved');
+
+            if (error) {
+                console.error('글로벌 맛집 데이터 조회 실패:', error);
+                return [];
+            }
+            return data || [];
+        },
+    });
+
+    // 국가별 맛집 수 계산
+    const countryCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+
+        globalRestaurants.forEach((restaurant) => {
+            const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
+
+            // 각 국가에 대해 확인
+            GLOBAL_COUNTRIES.forEach((country) => {
+                // 영문 주소나 한글 주소에 국가명이 포함되어 있는지 확인
+                if (address.includes(country)) {
+                    counts[country] = (counts[country] || 0) + 1;
+                }
+            });
+        });
+
+        return counts;
+    }, [globalRestaurants]);
 
     // 관리자 수정 콜백 래핑 - 수정 후 패널 즉각 반영
     const handleAdminEditRestaurant = useCallback((restaurant: Restaurant) => {
@@ -295,11 +332,17 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                             </div>
                         </SelectTrigger>
                         <SelectContent>
-                            {GLOBAL_COUNTRIES.map((country) => (
-                                <SelectItem key={country} value={country}>
-                                    {country}
-                                </SelectItem>
-                            ))}
+                            {GLOBAL_COUNTRIES.map((country) => {
+                                const count = countryCounts[country] || 0;
+                                return (
+                                    <SelectItem key={country} value={country}>
+                                        <div className="flex items-center justify-between w-full">
+                                            <span>{country}</span>
+                                            <span className="ml-2 text-xs text-muted-foreground">({count}개)</span>
+                                        </div>
+                                    </SelectItem>
+                                );
+                            })}
                         </SelectContent>
                     </Select>
 
@@ -442,10 +485,12 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     onWriteReview={() => {
                                         setIsReviewModalOpen(true);
                                     }}
-                                    onEditRestaurant={handleAdminEditRestaurant && panelRestaurant ? (() => {
-                                        handleAdminEditRestaurant(panelRestaurant);
-                                    }) : undefined}
-                                    onRequestEditRestaurant={handleRequestEditRestaurant}
+                                    onEditRestaurant={onAdminEditRestaurant ? () => {
+                                        onAdminEditRestaurant(panelRestaurant);
+                                    } : undefined}
+                                    onRequestEditRestaurant={() => {
+                                        handleRequestEditRestaurant(panelRestaurant);
+                                    }}
                                 />
                             </Panel>
                         )}
