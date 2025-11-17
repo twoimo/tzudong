@@ -51,7 +51,7 @@ export function RestaurantDetailPanel({
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
-    const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | null>(null);
+    const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | 'english' | null>(null);
     const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
 
@@ -209,7 +209,7 @@ export function RestaurantDetailPanel({
         setViewMode('detail');
     };
 
-    const handleCopyAddress = async (address: string, type: 'road' | 'jibun') => {
+    const handleCopyAddress = async (address: string, type: 'road' | 'jibun' | 'english') => {
         try {
             await navigator.clipboard.writeText(address);
             setCopiedAddress(type);
@@ -462,6 +462,24 @@ export function RestaurantDetailPanel({
                                                 <p className="text-sm">{restaurant.jibun_address}</p>
                                             </div>
                                             {copiedAddress === 'jibun' ? (
+                                                <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                            ) : (
+                                                <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {restaurant.english_address && (
+                                        <div
+                                            className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
+                                            onClick={() => handleCopyAddress(restaurant.english_address!, 'english')}
+                                        >
+                                            <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                                            <div className="flex-1">
+                                                <p className="text-xs text-muted-foreground">영어 주소</p>
+                                                <p className="text-sm">{restaurant.english_address}</p>
+                                            </div>
+                                            {copiedAddress === 'english' ? (
                                                 <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
                                             ) : (
                                                 <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />

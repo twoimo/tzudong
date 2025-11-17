@@ -107,10 +107,6 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
   }, []);
 
   const handleSelect = (restaurant: Restaurant) => {
-    console.log('🔍 RestaurantSearch - 선택된 맛집:', restaurant);
-    console.log('🔍 RestaurantSearch - 병합된 데이터 확인:', restaurant.mergedRestaurants ? '병합됨' : '병합안됨');
-    console.log('🔍 RestaurantSearch - 병합된 맛집 개수:', restaurant.mergedRestaurants?.length || 0);
-
     // 검색 시에는 별도 콜백 호출 (지도 재조정용)
     if (onRestaurantSearch) {
       onRestaurantSearch(restaurant);
