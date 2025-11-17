@@ -112,8 +112,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         address: '',
         phone: '',
         category: [] as string[],
-        youtube_link: '',
-        tzuyang_review: ''
+        youtube_links: [] as { unique_id: string; youtube_link: string; }[],
+        tzuyang_reviews: [] as { unique_id: string; review: string; }[]
     });
     const [filters, setFilters] = useState<FilterState>({
         categories: [],
@@ -222,6 +222,18 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
 
     const handleRequestEditRestaurant = useCallback((restaurant: Restaurant) => {
         setRestaurantToEdit(restaurant);
+        
+        // youtube_links와 tzuyang_reviews를 unique_id와 함께 저장
+        const youtubeLinks = (restaurant.youtube_links || []).map((link, index) => ({
+            unique_id: `${restaurant.id}-youtube-${index}`,
+            youtube_link: link
+        }));
+
+        const tzuyangReviews = (restaurant.tzuyang_reviews || []).map((review, index) => ({
+            unique_id: `${restaurant.id}-review-${index}`,
+            review: review
+        }));
+
         setEditFormData({
             name: restaurant.name,
             address: restaurant.road_address || restaurant.jibun_address || '',
@@ -229,8 +241,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             category: Array.isArray(restaurant.categories)
                 ? restaurant.categories
                 : (restaurant.categories ? [restaurant.categories] : []),
-            youtube_link: restaurant.youtube_link || '',
-            tzuyang_review: restaurant.tzuyang_review || ''
+            youtube_links: youtubeLinks,
+            tzuyang_reviews: tzuyangReviews
         });
         setIsEditModalOpen(true);
     }, []);
@@ -275,8 +287,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 address: editFormData.address,
                 phone: editFormData.phone,
                 category: editFormData.category,
-                youtube_link: editFormData.youtube_link,
-                tzuyang_review: editFormData.tzuyang_review,
+                youtube_links: editFormData.youtube_links,
+                tzuyang_reviews: editFormData.tzuyang_reviews,
             };
 
             // 변경사항 계산
@@ -285,14 +297,20 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 address: restaurantToEdit.address,
                 phone: restaurantToEdit.phone || '',
                 category: Array.isArray(restaurantToEdit.categories) ? restaurantToEdit.categories : (restaurantToEdit.categories ? [restaurantToEdit.categories] : []),
-                youtube_link: restaurantToEdit.youtube_link || '',
-                tzuyang_review: restaurantToEdit.tzuyang_review || ''
+                youtube_links: (restaurantToEdit.youtube_links || []).map((link, index) => ({
+                    unique_id: `${restaurantToEdit.id}-youtube-${index}`,
+                    youtube_link: link
+                })),
+                tzuyang_reviews: (restaurantToEdit.tzuyang_reviews || []).map((review, index) => ({
+                    unique_id: `${restaurantToEdit.id}-review-${index}`,
+                    review: review
+                }))
             };
 
-            const changes_requested: Record<string, { from: string | string[]; to: string | string[] }> = {};
+            const changes_requested: Record<string, { from: any; to: any }> = {};
             Object.entries(updatedData).forEach(([key, value]) => {
                 const originalValue = originalData[key === 'name' ? 'restaurant_name' : key as keyof typeof originalData];
-                const hasChanged = key === 'category'
+                const hasChanged = key === 'category' || key === 'youtube_links' || key === 'tzuyang_reviews'
                     ? JSON.stringify(originalValue) !== JSON.stringify(value)
                     : originalValue !== value;
 
@@ -319,12 +337,12 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     address: updatedData.address.trim(),
                     phone: updatedData.phone?.trim() || null,
                     category: updatedData.category,
-                    youtube_link: updatedData.youtube_link.trim(),
-                    tzuyang_review: updatedData.tzuyang_review?.trim(),
-                    changes_requested,
+                    youtube_link: JSON.stringify(updatedData.youtube_links),
+                    tzuyang_review: JSON.stringify(updatedData.tzuyang_reviews),
+                    changes_requested: changes_requested,
                     user_id: user.id,
                     submission_type: 'edit'
-                });
+                } as any);
 
             if (error) throw error;
 
@@ -384,6 +402,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                             onRestaurantSelect={handleRestaurantSelect}
                             onRestaurantSearch={handleRestaurantSearch}
                             onSearchExecute={switchToSingleMap}
+                            filters={filters}
+                            selectedRegion={selectedCountry}
                         />
                     </Suspense>
 
@@ -636,27 +656,41 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="youtube_link">쯔양 유튜브 영상 링크</Label>
-                                    <Input
-                                        id="youtube_link"
-                                        name="youtube_link"
-                                        value={editFormData.youtube_link}
-                                        onChange={(e) => handleEditFormChange('youtube_link', e.target.value)}
-                                        placeholder="https://www.youtube.com/watch?v=..."
-                                    />
-                                </div>
+                                {/* 유튜브 링크 & 쯔양 리뷰 매칭 섹션 */}
+                                <div className="space-y-4">
+                                    <Label>유튜브 영상 & 쯔양 리뷰</Label>
+                                    {editFormData.youtube_links.map((linkData, index) => (
+                                        <div key={linkData.unique_id} className="border p-4 rounded-lg space-y-3 bg-gray-50">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium">영상 {index + 1}</span>
+                                            </div>
+                                            
+                                            {/* 유튜브 링크 */}
+                                            <div>
+                                                <Label htmlFor={`youtube_link_${index}`} className="text-xs">유튜브 링크</Label>
+                                                <Input
+                                                    id={`youtube_link_${index}`}
+                                                    value={linkData.youtube_link}
+                                                    readOnly
+                                                    className="bg-white text-sm"
+                                                />
+                                            </div>
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="tzuyang_review">쯔양의 리뷰</Label>
-                                    <Textarea
-                                        id="tzuyang_review"
-                                        name="tzuyang_review"
-                                        value={editFormData.tzuyang_review}
-                                        onChange={(e) => handleEditFormChange('tzuyang_review', e.target.value)}
-                                        placeholder="쯔양의 리뷰 내용을 입력해주세요"
-                                        rows={4}
-                                    />
+                                            {/* 쯔양 리뷰 */}
+                                            {editFormData.tzuyang_reviews[index] && (
+                                                <div>
+                                                    <Label htmlFor={`review_${index}`} className="text-xs">쯔양 리뷰</Label>
+                                                    <Textarea
+                                                        id={`review_${index}`}
+                                                        value={editFormData.tzuyang_reviews[index].review}
+                                                        readOnly
+                                                        rows={3}
+                                                        className="bg-white text-sm"
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
 
@@ -678,8 +712,14 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                                     address: restaurantToEdit.address,
                                                     phone: restaurantToEdit.phone || '',
                                                     category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
-                                                    youtube_link: restaurantToEdit.youtube_link || '',
-                                                    tzuyang_review: restaurantToEdit.tzuyang_review || ''
+                                                    youtube_links: (restaurantToEdit.youtube_links || []).map((link, index) => ({
+                                                        unique_id: `${restaurantToEdit.id}-youtube-${index}`,
+                                                        youtube_link: link
+                                                    })),
+                                                    tzuyang_reviews: (restaurantToEdit.tzuyang_reviews || []).map((review, index) => ({
+                                                        unique_id: `${restaurantToEdit.id}-review-${index}`,
+                                                        review: review
+                                                    }))
                                                 }[key as keyof typeof restaurantToEdit] || '' : '';
 
                                                 const fieldName = {
@@ -687,8 +727,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                                     address: '주소',
                                                     phone: '전화번호',
                                                     category: '카테고리',
-                                                    youtube_link: '유튜브 링크',
-                                                    tzuyang_review: '쯔양의 리뷰'
+                                                    youtube_links: '유튜브 링크',
+                                                    tzuyang_reviews: '쯔양 리뷰'
                                                 }[key] || key;
 
                                                 return (
@@ -704,10 +744,22 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                                         </div>
                                                         <div className="space-y-1">
                                                             <div className="text-xs text-red-600 line-through">
-                                                                기존: {key === 'category' ? (Array.isArray(originalValue) ? originalValue.join(', ') : originalValue) : (originalValue || '없음')}
+                                                                기존: {
+                                                                    key === 'category' 
+                                                                        ? (Array.isArray(originalValue) ? originalValue.join(', ') : String(originalValue))
+                                                                        : key === 'youtube_links' || key === 'tzuyang_reviews'
+                                                                        ? `${Array.isArray(originalValue) ? originalValue.length : 0}개`
+                                                                        : (String(originalValue) || '없음')
+                                                                }
                                                             </div>
                                                             <div className="text-xs text-green-600 font-medium">
-                                                                변경: {key === 'category' ? (Array.isArray(value) ? value.join(', ') : value) : (value || '없음')}
+                                                                변경: {
+                                                                    key === 'category' 
+                                                                        ? (Array.isArray(value) ? value.join(', ') : String(value))
+                                                                        : key === 'youtube_links' || key === 'tzuyang_reviews'
+                                                                        ? `${Array.isArray(value) ? value.length : 0}개`
+                                                                        : (String(value) || '없음')
+                                                                }
                                                             </div>
                                                         </div>
                                                     </div>
