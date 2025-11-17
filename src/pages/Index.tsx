@@ -23,6 +23,7 @@ import { Grid3X3, Map, MapPin, Star, Users, ChefHat } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant, Region } from "@/types/restaurant";
 import { FilterState } from "@/components/filters/FilterPanel";
+import CategoryFilter from "@/components/filters/CategoryFilter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -223,8 +224,8 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     const existingRestaurant = allRestaurants.find(r =>
       mergedIds.includes(r.id) ||
       (r.name === restaurant.name &&
-       Math.abs(r.lat - restaurant.lat) < 0.0001 &&
-       Math.abs(r.lng - restaurant.lng) < 0.0001)
+        Math.abs(r.lat - restaurant.lat) < 0.0001 &&
+        Math.abs(r.lng - restaurant.lng) < 0.0001)
     );
 
     return existingRestaurant || restaurant;
@@ -280,38 +281,12 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
           </Suspense>
 
           {/* 카테고리 필터링 */}
-          <Select
-            value={selectedCategories.length > 0 ? selectedCategories.join(',') : 'all'}
-            onValueChange={(value) => {
-              if (value === 'all') {
-                handleCategoryChange([]);
-              } else {
-                handleCategoryChange(value.split(',').filter(Boolean));
-              }
-            }}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="카테고리 필터" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체</SelectItem>
-              <SelectItem value="한식">한식</SelectItem>
-              <SelectItem value="중식">중식</SelectItem>
-              <SelectItem value="양식">양식</SelectItem>
-              <SelectItem value="분식">분식</SelectItem>
-              <SelectItem value="치킨">치킨</SelectItem>
-              <SelectItem value="피자">피자</SelectItem>
-              <SelectItem value="고기">고기</SelectItem>
-              <SelectItem value="족발·보쌈">족발·보쌈</SelectItem>
-              <SelectItem value="돈까스·회">돈까스·회</SelectItem>
-              <SelectItem value="아시안">아시안</SelectItem>
-              <SelectItem value="패스트푸드">패스트푸드</SelectItem>
-              <SelectItem value="카페·디저트">카페·디저트</SelectItem>
-              <SelectItem value="찜·탕">찜·탕</SelectItem>
-              <SelectItem value="야식">야식</SelectItem>
-              <SelectItem value="도시락">도시락</SelectItem>
-            </SelectContent>
-          </Select>
+          <CategoryFilter
+            selectedCategories={selectedCategories}
+            onCategoryChange={handleCategoryChange}
+            selectedRegion={selectedRegion}
+            className="w-40"
+          />
 
           <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
             <RestaurantSearch
