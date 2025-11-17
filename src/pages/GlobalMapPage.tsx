@@ -112,8 +112,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         address: '',
         phone: '',
         category: [] as string[],
-        youtube_links: [] as { unique_id: string; youtube_link: string; }[],
-        tzuyang_reviews: [] as { unique_id: string; review: string; }[]
+        youtube_reviews: [] as { youtube_link: string; tzuyang_review: string; unique_id?: string }[]
     });
     const [filters, setFilters] = useState<FilterState>({
         categories: [],
@@ -223,16 +222,30 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const handleRequestEditRestaurant = useCallback((restaurant: Restaurant) => {
         setRestaurantToEdit(restaurant);
         
-        // youtube_links와 tzuyang_reviews를 unique_id와 함께 저장
-        const youtubeLinks = (restaurant.youtube_links || []).map((link, index) => ({
-            unique_id: `${restaurant.id}-youtube-${index}`,
-            youtube_link: link
-        }));
-
-        const tzuyangReviews = (restaurant.tzuyang_reviews || []).map((review, index) => ({
-            unique_id: `${restaurant.id}-review-${index}`,
-            review: review
-        }));
+        // mergedRestaurants에서 모든 유튜브 링크와 쯔양 리뷰 추출
+        const youtubeReviews: { youtube_link: string; tzuyang_review: string; unique_id?: string }[] = [];
+        
+        if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
+            // 병합된 모든 레코드에서 유튜브 링크와 쯔양 리뷰 추출
+            restaurant.mergedRestaurants.forEach(record => {
+                if (record.youtube_link && record.tzuyang_review) {
+                    youtubeReviews.push({
+                        youtube_link: record.youtube_link,
+                        tzuyang_review: record.tzuyang_review,
+                        unique_id: record.unique_id || undefined
+                    });
+                }
+            });
+        } else {
+            // 병합되지 않은 경우 (단일 레코드)
+            if (restaurant.youtube_link && restaurant.tzuyang_review) {
+                youtubeReviews.push({
+                    youtube_link: restaurant.youtube_link,
+                    tzuyang_review: restaurant.tzuyang_review,
+                    unique_id: restaurant.unique_id || undefined
+                });
+            }
+        }
 
         setEditFormData({
             name: restaurant.name,
@@ -241,8 +254,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             category: Array.isArray(restaurant.categories)
                 ? restaurant.categories
                 : (restaurant.categories ? [restaurant.categories] : []),
-            youtube_links: youtubeLinks,
-            tzuyang_reviews: tzuyangReviews
+            youtube_reviews: youtubeReviews
         });
         setIsEditModalOpen(true);
     }, []);
@@ -254,26 +266,13 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         }));
     };
 
-    const getEditChanges = () => {
-        if (!restaurantToEdit) return [];
-
-        const originalData = {
-            name: restaurantToEdit.name,
-            address: restaurantToEdit.road_address || restaurantToEdit.jibun_address || '',
-            phone: restaurantToEdit.phone || '',
-            category: Array.isArray(restaurantToEdit.categories)
-                ? restaurantToEdit.categories
-                : (restaurantToEdit.categories ? [restaurantToEdit.categories] : []),
-            youtube_link: restaurantToEdit.youtube_link || '',
-            tzuyang_review: restaurantToEdit.tzuyang_review || ''
-        }; return Object.entries(editFormData).filter(([key, value]) => {
-            const originalValue = originalData[key as keyof typeof originalData];
-            if (key === 'category') {
-                // 카테고리는 배열 비교
-                return JSON.stringify(originalValue) !== JSON.stringify(value);
-            }
-            return originalValue !== value;
-        });
+    const handleYoutubeReviewChange = (index: number, field: 'youtube_link' | 'tzuyang_review', value: string) => {
+        setEditFormData(prev => ({
+            ...prev,
+            youtube_reviews: prev.youtube_reviews.map((item, i) => 
+                i === index ? { ...item, [field]: value } : item
+            )
+        }));
     };
 
     const handleEditSubmit = async (e: React.FormEvent) => {
@@ -281,67 +280,31 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         if (!restaurantToEdit) return;
 
         try {
-            const formData = new FormData(e.target as HTMLFormElement);
-            const updatedData = {
-                name: editFormData.name,
-                address: editFormData.address,
-                phone: editFormData.phone,
-                category: editFormData.category,
-                youtube_links: editFormData.youtube_links,
-                tzuyang_reviews: editFormData.tzuyang_reviews,
-            };
-
-            // 변경사항 계산
-            const originalData = {
-                restaurant_name: restaurantToEdit.name,
-                address: restaurantToEdit.address,
-                phone: restaurantToEdit.phone || '',
-                category: Array.isArray(restaurantToEdit.categories) ? restaurantToEdit.categories : (restaurantToEdit.categories ? [restaurantToEdit.categories] : []),
-                youtube_links: (restaurantToEdit.youtube_links || []).map((link, index) => ({
-                    unique_id: `${restaurantToEdit.id}-youtube-${index}`,
-                    youtube_link: link
-                })),
-                tzuyang_reviews: (restaurantToEdit.tzuyang_reviews || []).map((review, index) => ({
-                    unique_id: `${restaurantToEdit.id}-review-${index}`,
-                    review: review
-                }))
-            };
-
-            const changes_requested: Record<string, { from: any; to: any }> = {};
-            Object.entries(updatedData).forEach(([key, value]) => {
-                const originalValue = originalData[key === 'name' ? 'restaurant_name' : key as keyof typeof originalData];
-                const hasChanged = key === 'category' || key === 'youtube_links' || key === 'tzuyang_reviews'
-                    ? JSON.stringify(originalValue) !== JSON.stringify(value)
-                    : originalValue !== value;
-
-                if (hasChanged) {
-                    changes_requested[key === 'name' ? 'restaurant_name' : key] = {
-                        from: originalValue,
-                        to: value
-                    };
-                }
-            });
-
-            // restaurant_submissions 테이블에 수정 요청 저장
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
                 toast.error("로그인이 필요합니다.");
                 return;
             }
 
+            // 수정된 항목들을 user_restaurants_submission 형식으로 변환
+            const submissionData = editFormData.youtube_reviews.map(review => ({
+                unique_id: review.unique_id || null,
+                name: editFormData.name,
+                categories: editFormData.category,
+                address: editFormData.address,
+                phone: editFormData.phone,
+                youtube_link: review.youtube_link,
+                tzuyang_review: review.tzuyang_review
+            }));
+
+            // 새로운 restaurant_submissions 테이블 구조에 맞춰 저장
             const { error } = await supabase
                 .from('restaurant_submissions')
                 .insert({
-                    original_restaurant_id: restaurantToEdit.id,
-                    restaurant_name: updatedData.name.trim(),
-                    address: updatedData.address.trim(),
-                    phone: updatedData.phone?.trim() || null,
-                    category: updatedData.category,
-                    youtube_link: JSON.stringify(updatedData.youtube_links),
-                    tzuyang_review: JSON.stringify(updatedData.tzuyang_reviews),
-                    changes_requested: changes_requested,
                     user_id: user.id,
-                    submission_type: 'edit'
+                    submission_type: 'edit',
+                    status: 'pending',
+                    user_restaurants_submission: submissionData
                 } as any);
 
             if (error) throw error;
@@ -656,119 +619,38 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                     />
                                 </div>
 
-                                {/* 유튜브 링크 & 쯔양 리뷰 매칭 섹션 */}
+                                {/* 유튜브 영상별 정보 */}
                                 <div className="space-y-4">
-                                    <Label>유튜브 영상 & 쯔양 리뷰</Label>
-                                    {editFormData.youtube_links.map((linkData, index) => (
-                                        <div key={linkData.unique_id} className="border p-4 rounded-lg space-y-3 bg-gray-50">
+                                    <h3 className="font-semibold text-lg">유튜브 영상별 정보</h3>
+                                    
+                                    {editFormData.youtube_reviews.map((review, index) => (
+                                        <Card key={index} className="p-4 space-y-3">
                                             <div className="flex items-center justify-between">
-                                                <span className="text-sm font-medium">영상 {index + 1}</span>
+                                                <Badge variant="outline">영상 {index + 1}</Badge>
                                             </div>
                                             
-                                            {/* 유튜브 링크 */}
-                                            <div>
-                                                <Label htmlFor={`youtube_link_${index}`} className="text-xs">유튜브 링크</Label>
+                                            <div className="space-y-2">
+                                                <Label>유튜브 링크</Label>
                                                 <Input
-                                                    id={`youtube_link_${index}`}
-                                                    value={linkData.youtube_link}
-                                                    readOnly
-                                                    className="bg-white text-sm"
+                                                    value={review.youtube_link}
+                                                    onChange={(e) => handleYoutubeReviewChange(index, 'youtube_link', e.target.value)}
+                                                    placeholder="https://www.youtube.com/watch?v=..."
                                                 />
                                             </div>
 
-                                            {/* 쯔양 리뷰 */}
-                                            {editFormData.tzuyang_reviews[index] && (
-                                                <div>
-                                                    <Label htmlFor={`review_${index}`} className="text-xs">쯔양 리뷰</Label>
-                                                    <Textarea
-                                                        id={`review_${index}`}
-                                                        value={editFormData.tzuyang_reviews[index].review}
-                                                        readOnly
-                                                        rows={3}
-                                                        className="bg-white text-sm"
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
+                                            <div className="space-y-2">
+                                                <Label>쯔양 리뷰</Label>
+                                                <Textarea
+                                                    value={review.tzuyang_review}
+                                                    onChange={(e) => handleYoutubeReviewChange(index, 'tzuyang_review', e.target.value)}
+                                                    placeholder="쯔양의 리뷰 내용을 입력해주세요"
+                                                    rows={3}
+                                                />
+                                            </div>
+                                        </Card>
                                     ))}
                                 </div>
                             </div>
-
-                            {/* 변경사항 표시 */}
-                            {getEditChanges().length > 0 && (
-                                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                                    <div className="space-y-3">
-                                        <div className="flex items-center gap-2">
-                                            <div className="text-blue-600">📋</div>
-                                            <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                                                수정 요청 내용
-                                            </Label>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            {getEditChanges().map(([key, value]) => {
-                                                const originalValue = restaurantToEdit ? {
-                                                    name: restaurantToEdit.name,
-                                                    address: restaurantToEdit.address,
-                                                    phone: restaurantToEdit.phone || '',
-                                                    category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
-                                                    youtube_links: (restaurantToEdit.youtube_links || []).map((link, index) => ({
-                                                        unique_id: `${restaurantToEdit.id}-youtube-${index}`,
-                                                        youtube_link: link
-                                                    })),
-                                                    tzuyang_reviews: (restaurantToEdit.tzuyang_reviews || []).map((review, index) => ({
-                                                        unique_id: `${restaurantToEdit.id}-review-${index}`,
-                                                        review: review
-                                                    }))
-                                                }[key as keyof typeof restaurantToEdit] || '' : '';
-
-                                                const fieldName = {
-                                                    name: '맛집 이름',
-                                                    address: '주소',
-                                                    phone: '전화번호',
-                                                    category: '카테고리',
-                                                    youtube_links: '유튜브 링크',
-                                                    tzuyang_reviews: '쯔양 리뷰'
-                                                }[key] || key;
-
-                                                return (
-                                                    <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                                                        <div className="flex items-center justify-between mb-2">
-                                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                {fieldName}
-                                                            </span>
-                                                            <div className="flex items-center gap-1 text-xs text-orange-600">
-                                                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                                                변경됨
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <div className="text-xs text-red-600 line-through">
-                                                                기존: {
-                                                                    key === 'category' 
-                                                                        ? (Array.isArray(originalValue) ? originalValue.join(', ') : String(originalValue))
-                                                                        : key === 'youtube_links' || key === 'tzuyang_reviews'
-                                                                        ? `${Array.isArray(originalValue) ? originalValue.length : 0}개`
-                                                                        : (String(originalValue) || '없음')
-                                                                }
-                                                            </div>
-                                                            <div className="text-xs text-green-600 font-medium">
-                                                                변경: {
-                                                                    key === 'category' 
-                                                                        ? (Array.isArray(value) ? value.join(', ') : String(value))
-                                                                        : key === 'youtube_links' || key === 'tzuyang_reviews'
-                                                                        ? `${Array.isArray(value) ? value.length : 0}개`
-                                                                        : (String(value) || '없음')
-                                                                }
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </Card>
-                            )}
 
                             <div className="flex gap-2 pt-4">
                                 <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">
