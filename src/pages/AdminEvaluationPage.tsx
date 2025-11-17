@@ -182,8 +182,8 @@ export default function AdminEvaluationPage() {
         // @ts-expect-error - Supabase RPC 타입 문제
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
-          similarity_threshold: 0.02,
-          max_results: 100
+          max_results: 100,
+          include_all_status: true  // 관리자는 전체 상태 조회
         });
 
         if (error) {

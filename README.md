@@ -158,66 +158,65 @@
 - Perplexity AI 기반 정보 추출
 - 네이버 지오코딩 API 주소 검증
 
-## 🔍 스마트 검색 시스템
+## 🔍 고급 맛집 검색 우선순위 시스템
 
 ### 검색 알고리즘
 
-쯔둥의 맛집 검색은 **이중 검색 엔진**과 **Fuzzy Search** 기술을 활용하여 정확하고 똑똑한 검색을 제공합니다. **맛집 이름과 YouTube 제목 모두 동일한 고급 알고리즘**을 사용합니다.
+쯔둥의 맛집 검색은 **완전 포함 → 단어 매칭 → Trigram 유사도 → 레벤슈타인 거리** 4단계 우선순위 시스템을 사용합니다. **맛집 이름과 YouTube 제목 모두 동일한 알고리즘**을 적용합니다.
 
-#### 🎯 검색 프로세스
+#### 🎯 검색 우선순위
 
-1. **이중 검색 엔진** (통합된 Fuzzy Search)
-   - **맛집 이름 검색**: RPC 함수 `search_restaurants_by_name()` 호출
-   - **YouTube 제목 검색**: RPC 함수 `search_restaurants_by_youtube_title()` 호출
-   - 두 검색 모두 **동일한 알고리즘** 적용
-   - 결과를 병합하여 더 풍부한 검색 결과 제공
+1. **완전 포함** (Complete Match) - 🥇 최우선
+   - 검색어가 맛집명에 **그대로 포함**되는 경우
+   - 예: "솔밭" 검색 → "솔밭 식당" ✅ (complete_match_score = 1)
 
-2. **다층 필터링 시스템**
-   - **느슨한 필터링** (OR 조건 - 하나라도 통과하면 OK):
-     - `ILIKE` 부분 문자열 매칭
-     - `similarity()` 전체 유사도 > 0
-     - `word_similarity()` 부분 유사도 > 0
-     - 띄어쓰기 제거 후 매칭
-     - 토큰(글자) 단위 매칭
-   
-   - **필수 필터링** (AND 조건 - 반드시 통과):
-     - 검색어의 **최소 1글자**는 반드시 포함되어야 함
-     - 완전히 무관한 결과 차단
+2. **단어 매칭** (Word Match) - 🥈 2순위
+   - 검색어를 **띄어쓰기 기준**으로 단어 분리
+   - 분리된 단어가 맛집명에 **얼마나 포함**되는지 계산
+   - 최소 **1/3 이상** 단어가 매칭되어야 함 (threshold: 0.33)
+   - 예: "솔밭 식당" 검색 → "솔밭 한정식 본점" (2/2 = 100% 매칭) ✅
 
-3. **8단계 정렬 우선순위** (맛집 이름 & YouTube 제목 동일)
-   ```sql
-   ORDER BY
-     1. 완전 일치 (대소문자 무시)
-     2. 띄어쓰기 제거 후 완전 일치
-     3. 시작 부분 일치
-     4. 토큰 매칭 개수 (검색어의 글자가 몇 개나 있는지) DESC
-     5. word_similarity (단방향 유사도) DESC
-     6. similarity (전체 유사도) DESC
-     7. Levenshtein 거리 (편집 거리) ASC
-     8. 텍스트 길이 (짧을수록) ASC
-   ```
+3. **Trigram 유사도** (Trigram Similarity) - 🥉 3순위
+   - **띄어쓰기 제거** 후 Trigram 기반 유사도 계산
+   - PostgreSQL의 `pg_trgm` 확장 사용
+   - 0~1 사이의 값 (높을수록 유사)
+   - 예: "솔밧식당" vs "솔밭식당" → 높은 유사도 (오타 허용) ✅
 
-4. **품질 필터링**
-   - ✅ `status = 'approved'` 승인된 맛집만 표시
-   - ✅ 같은 음식점명 자동 중복 제거 (대소문자 무시)
-   - ✅ **필수 조건**: 검색어와 최소 1글자는 반드시 매칭
-   - ✅ 최대 10개 결과 반환
+4. **레벤슈타인 거리** (Levenshtein Distance) - 4순위
+   - **편집 거리** 기반 유사도 (몇 글자를 바꿔야 같아지는지)
+   - 작을수록 유사함
+   - 예: "솔밧" vs "솔밭" → 거리 1 (한 글자만 다름) ✅
+
+5. **이름 길이** - 최종 순위
+   - 같은 우선순위일 때 **짧은 이름**을 우선
+   - 예: "솔밭" vs "솔밭식당본점" → "솔밭" 우선 ✅
+
+#### 🚫 필수 필터링 조건
+
+- **최소 1글자 이상 포함 필수**: 검색어의 글자가 하나라도 맞지 않으면 결과에서 제외
+- 예: "솔밭" 검색 → "치킨집" ❌ (완전히 무관)
 
 #### 📝 검색 예시
 
 ```
-검색어: "고기집"
+검색어: "솔밭 식당"
 
-✅ 매칭되는 경우 (토큰 분석):
-- "고기집" (완전 일치, 3/3개) → 🥇 1순위
-- "고기집 본점" (시작 일치, 3/3개) → 🥈 2순위
-- "고깃집에..." (토큰 2/3개: 고✅, 기❌, 집✅) → 🥉 3순위
-- "곱창파는고깃집" (토큰 2/3개: 고✅, 기❌, 집✅) → 4순위
-- "고기 먹방" (토큰 2/3개: 고✅, 기✅, 집❌) → 5순위
+1순위 (완전 포함):
+- "솔밭 식당" (검색어가 그대로 포함) → 🥇
+
+2순위 (단어 매칭):
+- "솔밭 한정식" (2/2 단어 = 100% 매칭) → 🥈
+- "식당 솔밭 본점" (2/2 단어 = 100% 매칭) → �
+
+3순위 (Trigram 유사도):
+- "솔밧식당" (띄어쓰기 제거 후 유사도 높음) → 🥉
+
+4순위 (레벤슈타인 거리):
+- "솔방식당" (편집 거리 1-2) → 4위
 
 ❌ 필터링되는 경우:
-- "Food House" (토큰 0/3개 - 한 글자도 안겹침) ❌
-- "치킨전문점" (토큰 0/3개) ❌
+- "치킨집" (한 글자도 안 겹침) ❌
+- "Food House" (한 글자도 안 겹침) ❌
 ```
 
 #### 🔧 기술 구현
@@ -225,86 +224,247 @@
 **파일 위치**: `/src/components/search/RestaurantSearch.tsx`
 
 ```typescript
-// 1. 맛집 이름 검색 (RPC 함수 - 고급 Fuzzy Search)
+// 1. 맛집 이름 검색 (RPC 함수)
 const { data: nameResults } = await supabase
   .rpc("search_restaurants_by_name", {
     search_query: searchQuery,
-    similarity_threshold: 0.001,  // 매우 낮은 threshold
+    search_categories: categories,  // 카테고리 필터 (선택)
     max_results: 50,
+    include_all_status: false,      // approved만 표시
+    korean_only: true,              // 한국 지역만 (홈페이지용)
   });
 
 // 2. YouTube 제목 검색 (RPC 함수 - 동일한 알고리즘)
 const { data: youtubeResults } = await supabase
   .rpc("search_restaurants_by_youtube_title", {
     search_query: searchQuery,
-    similarity_threshold: 0.001,
     max_results: 50,
+    include_all_status: false,      // approved만 표시
+    korean_only: true,              // 한국 지역만 (홈페이지용)
   });
 
-// 3. 결과 병합 및 중복 제거
-// 4. 필수: 최소 1글자 매칭 확인 (SQL에서 처리)
-// 5. 음식점명 기준 중복 제거
+// 3. 결과 병합 및 중복 제거 (음식점명 기준)
 ```
 
 **데이터베이스 함수**:
 
-- `/supabase/migrations/20251112_restaurant_name_search.sql` (맛집 이름 검색)
-- `/supabase/migrations/20251111_youtube_title_search.sql` (YouTube 제목 검색)
+- `/supabase/migrations/20251117_advanced_restaurant_search.sql`
+  - `calculate_word_match_score()`: 단어 매칭 점수 계산
+  - `search_restaurants_by_name(query, categories, max_results, include_all_status, korean_only)`: 맛집 이름 검색
+  - `search_restaurants_by_youtube_title(query, max_results, include_all_status, korean_only)`: YouTube 제목 검색
+
+**주요 기능**:
+
+- ✅ **완전 포함 우선**: 검색어가 그대로 들어있으면 최우선
+- ✅ **단어 단위 매칭**: 띄어쓰기 기준으로 단어를 분리하여 매칭
+- ✅ **오타 허용**: Trigram + 레벤슈타인으로 유사한 이름 찾기
+- ✅ **카테고리 필터**: 맛집 이름 검색 시 카테고리 필터 지원
+- ✅ **지역 필터**: `korean_only=true` 시 한국 17개 시/도만 검색 (DB 레벨)
+- ✅ **품질 관리**: `include_all_status=false` 시 승인된 맛집만 표시
+- ✅ **최소 1글자 매칭**: 완전히 무관한 결과 차단
 
 **검색 알고리즘 비교**:
 
-| 항목              | 이전 방식                  | 현재 방식                        |
-| ----------------- | -------------------------- | -------------------------------- |
-| 맛집 이름 검색    | `ILIKE` (단순 부분 문자열) | Trigram 유사도 + word_similarity |
-| YouTube 제목 검색 | Trigram 유사도             | Trigram 유사도 (동일)            |
-| 정렬              | DB 기본 순서 (무작위)      | 유사도 기반 스마트 정렬          |
-| 오타 허용         | ❌                          | ✅                                |
-| 순서 무관 매칭    | 제한적                     | ✅                                |
+| 항목              | 이전 방식 (v1)             | 현재 방식 (v2)                           |
+| ----------------- | -------------------------- | ---------------------------------------- |
+| 우선순위          | 토큰 → similarity → 길이   | 완전 포함 → 단어 매칭 → Trigram → 편집 거리 |
+| 단어 매칭         | 토큰(글자) 단위            | 띄어쓰기 기준 단어 단위                  |
+| 지역 필터         | ❌                          | ✅ (DB 레벨, 한국 17개 시/도)            |
+| 최소 매칭 조건    | 1글자 이상                 | 1글자 이상 (동일)                        |
+| 오타 허용         | ✅                          | ✅ (Trigram + 레벤슈타인)                 |
+| 순서 무관 매칭    | 제한적                     | ✅ (단어 단위)                            |
+| 카테고리 필터     | ❌                          | ✅                                        |
 
-## 🎨 주요 페이지
+## 🎨 주요 페이지 및 검색 로직
 
 ### 쯔동여지도 홈/글로벌 (Home/Global Map)
 
-- 지도 기반 맛집 탐색
-- 지역/카테고리 필터링 (road_address, jibun_address 기반)
-- 맛집 상세 정보 패널
+**페이지 기능**:
+- 🗺️ 지도 기반 맛집 탐색
+- 🏷️ 지역/카테고리 필터링 (road_address, jibun_address 기반)
+- 📍 맛집 상세 정보 패널
   - 도로명 주소 및 지번 주소 표시
   - YouTube 영상 목록 (썸네일)
   - 쯔양 리뷰 목록
   - 카테고리 배지
-- 마커 클릭 시 상세 정보 표시
+- 🖱️ 마커 클릭 시 상세 정보 표시
+
+**검색 로직** (`RestaurantSearch.tsx`):
+- **이중 검색 엔진**:
+  - 맛집 이름 검색: `search_restaurants_by_name()` RPC 함수
+  - YouTube 제목 검색: `search_restaurants_by_youtube_title()` RPC 함수
+- **카테고리 필터 통합**: 선택된 카테고리를 맛집 이름 검색에 전달
+- **지역 필터링**: 
+  - **홈페이지** (`isKoreanOnly=true`): DB 레벨에서 한국 지역만 필터링
+    - 17개 시/도 정규표현식 매칭 (서울특별시, 부산광역시, ...)
+    - `korean_only: true` 파라미터로 SQL에서 직접 필터링
+  - **글로벌** (`isKoreanOnly=false`): 전 세계 지역 표시
+    - 선택된 국가(`selectedRegion`)로 클라이언트 필터링
+- **최대 50개 결과** 반환
+- **실시간 검색**: 타이핑 즉시 검색 실행
+
+```typescript
+// 맛집 이름 검색 (홈페이지)
+const { data } = await supabase.rpc("search_restaurants_by_name", {
+  search_query: trimmedQuery,
+  search_categories: categoriesToSearch,  // 카테고리 필터
+  max_results: 50,
+  include_all_status: false,  // approved만
+  korean_only: true,  // 한국 지역만 (DB 레벨 필터링)
+});
+
+// YouTube 제목 검색 (홈페이지)
+const { data } = await supabase.rpc("search_restaurants_by_youtube_title", {
+  search_query: trimmedQuery,
+  max_results: 50,
+  include_all_status: false,  // approved만
+  korean_only: true,  // 한국 지역만 (DB 레벨 필터링)
+});
+
+// 글로벌 페이지: 선택된 국가로 클라이언트 필터링
+if (!isKoreanOnly && selectedRegion) {
+  results = results.filter(restaurant => 
+    address.includes(selectedRegion)
+  );
+}
+```
 
 ### 쯔동여지도 필터링 (Filtering Page)
 
-- 테이블 형식 맛집 목록
-- 다중 필터 적용:
+**페이지 기능**:
+- 📋 테이블 형식 맛집 목록
+- 🔍 다중 필터 적용:
   - 검색어 (맛집명)
   - 지역 필터 (시/도 단위)
   - 카테고리 필터 (복수 선택)
   - 리뷰 수 필터 (슬라이더)
-- 정렬 기능 (이름, 카테고리, 리뷰 수)
-- 우측 패널: 선택한 맛집의 리뷰 목록
+- 📊 정렬 기능 (이름, 카테고리, 리뷰 수)
+- 📝 우측 패널: 선택한 맛집의 리뷰 목록
+
+**검색 로직** (`FilteringPage.tsx`):
+- **맛집 이름 검색만 사용**: `search_restaurants_by_name()` RPC 함수
+- **카테고리 필터 없음**: `search_categories: null` (검색 후 클라이언트 필터링)
+- **최대 100개 결과** 반환 (필터링 페이지이므로 더 많은 결과)
+- **검색어 있을 때만 실행**: `enabled: !!searchQuery.trim()`
+
+```typescript
+// 맛집 이름 검색
+const { data: restaurants } = await supabase.rpc('search_restaurants_by_name', {
+  search_query: searchQuery.trim(),
+  search_categories: null,  // 카테고리 필터 사용 안 함
+  max_results: 100,
+  include_all_status: false,  // approved만
+  korean_only: false,  // 전체 지역 (글로벌 포함)
+});
+
+// 검색어가 없으면 전체 맛집 목록 표시
+// 검색어가 있으면 검색 결과 표시
+const sourceData = searchQuery.trim() ? searchResults : allRestaurants;
+```
+
+### 관리자 데이터 검수 (Admin Evaluation Page)
+
+**페이지 기능**:
+- ✅ YouTube 영상에서 추출한 레스토랑 정보 검토 및 승인
+- 📊 7가지 평가 지표 기반 품질 관리
+- ♾️ 무한 스크롤 방식의 효율적인 데이터 로딩 (50개씩)
+- 🗑️ Soft Delete 방식의 삭제 기능
+- 🔍 영상 제목 검색 기능 (필터링된 결과 내 검색)
+- 🔄 DB 충돌 감지 및 자동 병합
+- 🎯 상태별 필터링 (pending, approved, hold, missing, db_conflict, etc.)
+
+**검색 로직** (`AdminEvaluationPage.tsx`):
+- **YouTube 제목 검색만 사용**: `search_restaurants_by_youtube_title()` RPC 함수
+- **전체 상태 조회**: `include_all_status: true` (관리자용)
+- **최대 100개 결과** 반환
+- **필수 컬럼만 조회**: 22개 컬럼 (성능 최적화)
+  - 기본 정보: id, name, 주소, 전화번호, 카테고리, 좌표, 상태
+  - YouTube 정보: youtube_link, youtube_meta (title 포함)
+  - 평가 정보: origin_address, address_elements, reasoning_basis, evaluation_results
+  - 검색 점수: complete_match_score, word_match_score, trigram_similarity, levenshtein_distance
+- **Fuzzy Search (퍼지 검색)**: Trigram 유사도 기반 (오타 허용)
+- **디바운스 처리**: 300ms 대기 후 검색 (타이핑 중 과도한 요청 방지)
+- **필터링된 결과 내 검색**: 현재 적용된 필터(상태, 평가 지표)를 유지하면서 검색
+
+```typescript
+// YouTube 제목 검색 (관리자용 - 전체 상태 조회)
+const { data } = await supabase.rpc('search_restaurants_by_youtube_title', {
+  search_query: searchQuery.trim(),
+  max_results: 100,
+  include_all_status: true,  // 관리자는 모든 상태의 레코드 조회 가능
+  korean_only: false,  // 전체 지역 (글로벌 포함)
+});
+
+// 검색 결과를 EvaluationRecord 형식으로 변환
+const convertedData = (data || []).map(r => ({
+  id: r.id,
+  youtube_title: r.youtube_title,
+  youtube_link: r.youtube_link,
+  // ... 기타 필드
+}));
+```
+
+**검색 특징**:
+- ✅ **오타 허용**: "밥도독" → "[HD]밥도둑 정찬..." 매칭
+- ✅ **부분 매칭**: 제목의 일부만 검색해도 찾기 가능
+- ✅ **실시간 검색**: 디바운스 후 자동 검색
+- ✅ **필터 유지**: 검색 시 현재 적용된 상태/평가 필터 유지
 
 ### 쯔동여지도 도장 (Stamp Page)
 
-- YouTube 영상이 있는 맛집 그리드 표시
-- 썸네일 기반 시각적 탐색
-- 리뷰 수 표시
+**페이지 기능**:
+- 📺 YouTube 영상이 있는 맛집 그리드 표시
+- 🖼️ 썸네일 기반 시각적 탐색
+- ⭐ 리뷰 수 표시
+
+**검색 로직**: 
+- 검색 기능 없음 (전체 맛집 그리드 표시)
 
 ### 쯔동여지도 제보 (Submission Page)
 
-- **신규 맛집 제보**:
+**페이지 기능**:
+- 📝 **신규 맛집 제보**:
   - 맛집명, 주소(도로명), 전화번호
   - 카테고리 선택 (복수 가능, 배열로 저장)
   - YouTube 영상 링크
   - 설명 (선택)
   - 모든 주소는 **도로명 주소**로 저장
-- **맛집 수정 요청**:
+- ✏️ **맛집 수정 요청**:
   - 기존 맛집 선택 (드롭다운)
   - 변경사항 자동 감지 및 표시
   - 수정된 정보 제출
-- 내 제보 내역 조회 (무한 스크롤)
-- 상태별 표시 (대기/승인/거부)
+- 📋 내 제보 내역 조회 (무한 스크롤)
+- 🏷️ 상태별 표시 (대기/승인/거부)
+
+**검색 로직**:
+- 검색 기능 없음 (제보 및 내역 조회 페이지)
+
+### 관리자 페이지 (리뷰 승인, 제보 관리)
+
+**페이지 기능**:
+- ✅ **리뷰 승인**: 사용자 리뷰 검토 및 승인/거부
+  - 승인 시 `review_count` 자동 증가
+  - 거부 시 `review_count` 자동 감소
+- 📋 **제보 관리**: 맛집 제보 및 수정 요청 처리
+  - 신규 제보: `road_address`에 주소 저장, `youtube_links` 배열로 저장
+  - **중복 방지**: 이름 + 도로명 주소 조합으로 자동 체크
+  - 중복 발견 시 에러 메시지 표시
+
+**검색 로직**:
+- 간단한 클라이언트 필터링 (이름, 사용자명 등)
+
+---
+
+## 📊 검색 로직 요약 비교
+
+| 페이지               | 사용 함수                              | 카테고리 필터 | 지역 필터 | 최대 결과 | 특징                           |
+| -------------------- | -------------------------------------- | ------------- | --------- | --------- | ------------------------------ |
+| 홈/글로벌            | `search_restaurants_by_name` + `youtube_title` | ✅ 지원        | ✅ 한국만 (DB) | 50개      | 이중 검색, DB 레벨 지역 필터링 |
+| 필터링               | `search_restaurants_by_name`           | ❌ 미지원      | ❌        | 100개     | 맛집 이름만, 더 많은 결과      |
+| 관리자 데이터 검수   | `search_restaurants_by_youtube_title`  | ❌ 미지원      | ❌        | 100개     | YouTube 제목만, 전체 상태 조회, 22개 컬럼 |
+| 도장                 | -                                      | -             | -         | -         | 검색 없음                      |
+| 제보                 | -                                      | -             | -         | -         | 검색 없음                      |
+| 관리자 리뷰/제보     | 클라이언트 필터링                      | -             | -         | -         | 간단한 텍스트 필터링           |
 
 ### 관리자 페이지
 

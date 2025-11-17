@@ -307,6 +307,9 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
               onRestaurantSelect={handleRestaurantSelect}
               onRestaurantSearch={handleRestaurantSearch}
               onSearchExecute={switchToSingleMap}
+              filters={filters}
+              selectedRegion={selectedRegion}
+              isKoreanOnly={true}
             />
           </Suspense>
           <Button
