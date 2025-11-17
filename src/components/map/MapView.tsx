@@ -107,21 +107,81 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   // 검색된 맛집으로 지도 이동
   useEffect(() => {
-    if (searchedRestaurant && googleMapRef.current) {
-      const position = { lat: Number(searchedRestaurant.lat), lng: Number(searchedRestaurant.lng) };
+    if (!searchedRestaurant || !isLoaded || !googleMapRef.current) {
+      return;
+    }
 
+    console.log('🗺️ MapView: 검색된 맛집으로 지도 이동 시도', {
+      restaurant: searchedRestaurant.name,
+      lat: searchedRestaurant.lat,
+      lng: searchedRestaurant.lng,
+      mapReady: !!googleMapRef.current,
+      isLoaded
+    });
+
+    const lat = Number(searchedRestaurant.lat);
+    const lng = Number(searchedRestaurant.lng);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      console.error('MapView: 잘못된 좌표값', { lat: searchedRestaurant.lat, lng: searchedRestaurant.lng });
+      return;
+    }
+
+    // 지도가 완전히 준비되었는지 추가 확인
+    if (!googleMapRef.current.getBounds || !googleMapRef.current.getZoom) {
+      console.warn('MapView: 지도가 아직 완전히 초기화되지 않았습니다');
+      return;
+    }
+
+    const position = { lat, lng };
+
+    // 비동기로 실행하여 지도 준비를 기다림
+    const performMapMove = () => {
       try {
-        googleMapRef.current.setCenter(position);
-        googleMapRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
+        // 현재 줌 레벨 확인
+        const currentZoom = googleMapRef.current?.getZoom();
+        console.log('MapView: 현재 줌 레벨:', currentZoom);
 
-        // 검색된 맛집 선택 상태로 설정
-        if (onRestaurantSelect) {
-          onRestaurantSelect(searchedRestaurant);
-        }
+        // 지도 중심 이동
+        googleMapRef.current?.setCenter(position);
+        console.log('MapView: 지도 중심 이동 완료');
+
+        // 약간의 지연 후 줌 레벨 설정 (지도 안정화를 위해)
+        setTimeout(() => {
+          if (googleMapRef.current) {
+            googleMapRef.current.setZoom(20);
+            console.log('MapView: 줌 레벨 설정 완료: 20');
+
+            // 검색된 맛집 선택 상태로 설정
+            if (onRestaurantSelect) {
+              onRestaurantSelect(searchedRestaurant);
+              console.log('MapView: 맛집 선택 상태 설정 완료');
+            }
+
+            console.log('🗺️ MapView: 지도 이동 완료');
+          }
+        }, 100);
+
       } catch (error) {
         console.error('MapView: Error moving to searched restaurant position:', error);
+        // 재시도 로직 (한 번 더 시도)
+        setTimeout(() => {
+          if (googleMapRef.current && searchedRestaurant) {
+            try {
+              googleMapRef.current.setCenter(position);
+              googleMapRef.current.setZoom(20);
+              console.log('MapView: 재시도 성공');
+            } catch (retryError) {
+              console.error('MapView: 재시도 실패:', retryError);
+            }
+          }
+        }, 500);
       }
-    }
+    };
+
+    // 지연 실행으로 지도 안정화 대기
+    setTimeout(performMapMove, 50);
+
   }, [searchedRestaurant, onRestaurantSelect]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
