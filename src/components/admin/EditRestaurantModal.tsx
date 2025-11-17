@@ -4,13 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Badge } from '@/components/ui/badge';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,6 +29,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 
 interface EditRestaurantModalProps {
   record: EvaluationRecord | null;
@@ -34,6 +43,7 @@ interface FormData {
   address: string;
   phone: string;
   tzuyang_review: string;
+  categories: string[]; // 카테고리 배열로 변경
 }
 
 interface NaverGeocodingResponse {
@@ -65,6 +75,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     address: '',
     phone: '',
     tzuyang_review: '',
+    categories: [], // 카테고리 배열 초기값
   });
   const [initialAddress, setInitialAddress] = useState<string>(''); // 원본 주소 저장
   const [addressChanged, setAddressChanged] = useState<boolean>(false); // 주소 변경 여부
@@ -429,12 +440,14 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     const trimmedName = formData.name.trim();
     const trimmedPhone = formData.phone.trim();
     const trimmedTzuyangReview = formData.tzuyang_review.trim();
+    const selectedCategories = formData.categories; // 선택된 카테고리 배열
     const selectedResult = geocodingResults[selectedGeocodingIndex!];
 
     // restaurants 테이블에 업데이트 (evaluation_records와 통합됨)
     console.log('🔄 DB 업데이트 시작:', {
       id: record.id,
       name: trimmedName,
+      categories: selectedCategories,
       selectedResult,
     });
 
@@ -447,7 +460,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       lat: parseFloat(selectedResult.y),
       lng: parseFloat(selectedResult.x),
       phone: trimmedPhone || null,
-      categories: record.restaurant_info?.category ? [record.restaurant_info.category] : [],
+      categories: selectedCategories, // 선택된 카테고리 배열
       youtube_link: record.youtube_link,
       tzuyang_review: trimmedTzuyangReview || record.restaurant_info?.tzuyang_review || null,
       status: 'approved', // 승인 상태로 변경
@@ -506,6 +519,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         ...record.restaurant_info,
         name: trimmedName,
         phone: trimmedPhone || null,
+        category: selectedCategories[0] || record.restaurant_info.category, // 첫 번째 카테고리 사용
         tzuyang_review: trimmedTzuyangReview || record.restaurant_info.tzuyang_review,
         naver_address_info: {
           road_address: selectedResult.road_address,
@@ -533,6 +547,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const trimmedPhone = formData.phone.trim();
       const trimmedAddress = formData.address.trim();
       const trimmedTzuyangReview = formData.tzuyang_review.trim();
+      const selectedCategories = formData.categories; // 선택된 카테고리 배열
 
       if (!trimmedName) {
         toast({
@@ -549,6 +564,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updated_by_admin_id: user?.id || null,
         updated_at: new Date().toISOString(),
       };
+
+      // 카테고리 업데이트
+      if (selectedCategories.length > 0) {
+        updateData.categories = selectedCategories;
+      }
 
       // 지오코딩 결과가 있고 선택된 경우에만 주소 정보 업데이트
       if (geocodingResults.length > 0 && selectedGeocodingIndex !== null) {
@@ -600,6 +620,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           ...record.restaurant_info,
           name: trimmedName,
           phone: trimmedPhone || null,
+          category: selectedCategories[0] || record.restaurant_info.category, // 첫 번째 카테고리 사용
           tzuyang_review: trimmedTzuyangReview || record.restaurant_info.tzuyang_review,
         };
       }
@@ -654,6 +675,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       address: '',
       phone: '',
       tzuyang_review: '',
+      categories: [], // 카테고리 배열 초기화
     });
     setGeocodingResults([]);
     setSelectedGeocodingIndex(null);
@@ -678,10 +700,43 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         record.restaurant_info.origin_address ||
         '';
 
+      // 카테고리 초기값 설정
+      let initialCategories: string[] = [];
+      
+      // 1. 기존 categories 배열 사용 또는 단일 category를 배열로 변환
+      if (record.restaurant_info.category) {
+        initialCategories = [record.restaurant_info.category];
+      }
+      
+      // 2. evaluation_results.category_TF가 false이고 category_revision이 있으면 제안된 카테고리 사용
+      if (record.evaluation_results?.category_TF?.eval_value === false) {
+        const categoryRevision = record.evaluation_results.category_TF.category_revision;
+        
+        if (categoryRevision) {
+          // category_revision이 배열인 경우
+          if (Array.isArray(categoryRevision)) {
+            const validCategories = categoryRevision.filter(cat => 
+              RESTAURANT_CATEGORIES.includes(cat as typeof RESTAURANT_CATEGORIES[number])
+            );
+            if (validCategories.length > 0) {
+              initialCategories = validCategories;
+            }
+          } 
+          // category_revision이 문자열인 경우
+          else if (typeof categoryRevision === 'string') {
+            if (RESTAURANT_CATEGORIES.includes(categoryRevision as typeof RESTAURANT_CATEGORIES[number])) {
+              initialCategories = [categoryRevision];
+            }
+          }
+        }
+      }
+
       console.log('🔄 Modal 초기화:', {
         record_id: record.id,
         address,
-        has_naver_info: !!record.restaurant_info.naver_address_info
+        has_naver_info: !!record.restaurant_info.naver_address_info,
+        initial_categories: initialCategories,
+        category_revision: record.evaluation_results?.category_TF?.category_revision,
       });
 
       setInitialAddress(address); // 원본 주소 저장
@@ -692,6 +747,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         address: address,
         phone: record.restaurant_info.phone || '',
         tzuyang_review: record.restaurant_info.tzuyang_review || '',
+        categories: initialCategories, // 카테고리 배열 설정
       });
 
       // 기존 지오코딩 결과가 있다면 표시
@@ -890,6 +946,91 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="예: 02-1234-5678"
             />
+          </div>
+
+          {/* 카테고리 */}
+          <div className="space-y-3">
+            <Label>카테고리</Label>
+            
+            {/* 기존 카테고리 (위) */}
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">기존 카테고리</Label>
+              <div className="p-3 rounded-lg border bg-muted">
+                <p className="text-sm font-medium">
+                  {record?.restaurant_info?.category || '없음'}
+                </p>
+                {record?.evaluation_results?.category_TF?.eval_value === false && (
+                  <Badge variant="destructive" className="mt-2">
+                    카테고리 정합성 False
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* 수정할 카테고리 (아래) */}
+            <div className="space-y-2">
+              <Label className="text-sm text-muted-foreground">
+                수정할 카테고리 (여러 개 선택 가능)
+                {record?.evaluation_results?.category_TF?.eval_value === false && (
+                  <span className="text-xs text-muted-foreground ml-2">
+                    (제안된 카테고리가 선택됨)
+                  </span>
+                )}
+              </Label>
+              
+              {/* 선택된 카테고리 배지 */}
+              {formData.categories.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-2">
+                  {formData.categories.map((cat) => (
+                    <Badge key={cat} variant="secondary" className="gap-1">
+                      {cat}
+                      <X
+                        className="h-3 w-3 cursor-pointer hover:text-destructive"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            categories: prev.categories.filter(c => c !== cat)
+                          }));
+                        }}
+                      />
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              
+              {/* 카테고리 체크박스 목록 (2열 그리드) */}
+              <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                  {RESTAURANT_CATEGORIES.map((category) => (
+                    <div key={category} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`cat-${category}`}
+                        checked={formData.categories.includes(category)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setFormData(prev => ({
+                              ...prev,
+                              categories: [...prev.categories, category]
+                            }));
+                          } else {
+                            setFormData(prev => ({
+                              ...prev,
+                              categories: prev.categories.filter(c => c !== category)
+                            }));
+                          }
+                        }}
+                      />
+                      <label
+                        htmlFor={`cat-${category}`}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {category}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* 쯔양 리뷰 */}
