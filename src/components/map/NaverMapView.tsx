@@ -246,8 +246,18 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             const restaurantsToShow = [...restaurants];
 
             // 검색된 맛집이 기존 목록에 없는 경우 추가
-            if (searchedRestaurant && !restaurants.find(r => r.id === searchedRestaurant.id)) {
-                restaurantsToShow.push(searchedRestaurant);
+            // ID 비교뿐만 아니라 이름과 좌표로도 확인 (병합된 레스토랑 중복 방지)
+            if (searchedRestaurant) {
+                const alreadyExists = restaurants.find(r =>
+                    r.id === searchedRestaurant.id ||
+                    (r.name === searchedRestaurant.name &&
+                        Math.abs(r.lat - searchedRestaurant.lat) < 0.0001 &&
+                        Math.abs(r.lng - searchedRestaurant.lng) < 0.0001)
+                );
+
+                if (!alreadyExists) {
+                    restaurantsToShow.push(searchedRestaurant);
+                }
             }
 
             // restaurantsRef 업데이트 (마커 클릭 핸들러에서 사용)
