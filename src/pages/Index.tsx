@@ -285,7 +285,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
             selectedCategories={selectedCategories}
             onCategoryChange={handleCategoryChange}
             selectedRegion={selectedRegion}
-            className="w-40"
+            className="w-48"
           />
 
           <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>

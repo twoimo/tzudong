@@ -105,12 +105,19 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
                     aria-expanded={isOpen}
                     className={cn("justify-between", className)}
                 >
-                    <div className="flex items-center gap-2">
-                        <ChefHat className="h-4 w-4 text-muted-foreground" />
-                        {selectedCategories.length > 0
-                            ? `${selectedCategories.length}개 선택됨`
-                            : "카테고리"
-                        }
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <ChefHat className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <div className="flex items-center justify-between flex-1 min-w-0">
+                            <span className={selectedCategories.length > 0 ? "truncate" : ""}>
+                                {selectedCategories.length > 0
+                                    ? `${selectedCategories.length}개 선택됨`
+                                    : "카테고리"
+                                }
+                            </span>
+                            {selectedCategories.length === 0 && (
+                                <span className="ml-2 text-xs text-muted-foreground shrink-0">({totalCount}개)</span>
+                            )}
+                        </div>
                     </div>
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
