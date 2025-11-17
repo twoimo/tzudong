@@ -25,6 +25,13 @@ export interface Restaurant extends BaseRestaurant {
     mergedYoutubeLinks?: string[]; // 병합된 모든 유튜브 링크
     mergedTzuyangReviews?: string[]; // 병합된 모든 쯔양 리뷰
     mergedYoutubeMetas?: YoutubeMeta[]; // 병합된 모든 유튜브 메타
+    
+    // 마커 클릭 시 동일 name+jibun_address 레코드 병합 데이터
+    youtube_links?: string[]; // 모든 유튜브 링크 배열
+    tzuyang_reviews?: string[]; // 모든 쯔양 리뷰 배열
+    
+    // 병합된 원본 레코드들
+    mergedRestaurants?: BaseRestaurant[]; // 병합된 모든 레스토랑 레코드
 }
 
 export type Review = Tables<"reviews">;

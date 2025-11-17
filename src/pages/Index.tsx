@@ -52,8 +52,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     address: '',
     phone: '',
     category: [] as string[],
-    youtube_link: '',
-    tzuyang_review: ''
+    youtube_reviews: [] as { youtube_link: string; tzuyang_review: string; unique_id?: string }[]
   });
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
@@ -110,6 +109,32 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   const handleRequestEditRestaurant = (restaurant: Restaurant) => {
     setRestaurantToEdit(restaurant);
+    
+    // mergedRestaurants에서 모든 유튜브 링크와 쯔양 리뷰 추출
+    const youtubeReviews: { youtube_link: string; tzuyang_review: string; unique_id?: string }[] = [];
+    
+    if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
+      // 병합된 모든 레코드에서 유튜브 링크와 쯔양 리뷰 추출
+      restaurant.mergedRestaurants.forEach(record => {
+        if (record.youtube_link && record.tzuyang_review) {
+          youtubeReviews.push({
+            youtube_link: record.youtube_link,
+            tzuyang_review: record.tzuyang_review,
+            unique_id: record.unique_id || undefined
+          });
+        }
+      });
+    } else {
+      // 병합되지 않은 경우 (단일 레코드)
+      if (restaurant.youtube_link && restaurant.tzuyang_review) {
+        youtubeReviews.push({
+          youtube_link: restaurant.youtube_link,
+          tzuyang_review: restaurant.tzuyang_review,
+          unique_id: restaurant.unique_id || undefined
+        });
+      }
+    }
+
     setEditFormData({
       name: restaurant.name,
       address: restaurant.road_address || restaurant.jibun_address || '',
@@ -117,8 +142,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
       category: Array.isArray(restaurant.categories)
         ? restaurant.categories
         : (restaurant.categories ? [restaurant.categories] : []),
-      youtube_link: restaurant.youtube_link || '',
-      tzuyang_review: restaurant.tzuyang_review || ''
+      youtube_reviews: youtubeReviews
     });
     setIsEditModalOpen(true);
   };
@@ -130,28 +154,13 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     }));
   };
 
-  const getEditChanges = () => {
-    if (!restaurantToEdit) return [];
-
-    const originalData = {
-      name: restaurantToEdit.name,
-      address: restaurantToEdit.road_address || restaurantToEdit.jibun_address || '',
-      phone: restaurantToEdit.phone || '',
-      category: Array.isArray(restaurantToEdit.categories)
-        ? restaurantToEdit.categories
-        : (restaurantToEdit.categories ? [restaurantToEdit.categories] : []),
-      youtube_link: restaurantToEdit.youtube_link || '',
-      tzuyang_review: restaurantToEdit.tzuyang_review || ''
-    };
-
-    return Object.entries(editFormData).filter(([key, value]) => {
-      const originalValue = originalData[key as keyof typeof originalData];
-      if (key === 'category') {
-        // 카테고리는 배열 비교
-        return JSON.stringify(originalValue) !== JSON.stringify(value);
-      }
-      return originalValue !== value;
-    });
+  const handleYoutubeReviewChange = (index: number, field: 'youtube_link' | 'tzuyang_review', value: string) => {
+    setEditFormData(prev => ({
+      ...prev,
+      youtube_reviews: prev.youtube_reviews.map((item, i) => 
+        i === index ? { ...item, [field]: value } : item
+      )
+    }));
   };
 
   const handleRegionChange = (region: Region | null) => {
@@ -307,6 +316,9 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
               onRestaurantSelect={handleRestaurantSelect}
               onRestaurantSearch={handleRestaurantSearch}
               onSearchExecute={switchToSingleMap}
+              filters={filters}
+              selectedRegion={selectedRegion}
+              isKoreanOnly={true}
             />
           </Suspense>
           <Button
@@ -465,13 +477,13 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
       {/* 맛집 수정 요청 모달 */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
               맛집 수정 요청
             </DialogTitle>
             <DialogDescription>
-              잘못된 정보나 오타가 있는 맛집 정보를 수정해주세요
+              해당 맛집의 유튜브 영상별 정보를 수정해주세요
             </DialogDescription>
           </DialogHeader>
 
@@ -479,61 +491,30 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
             <form onSubmit={async (e) => {
               e.preventDefault();
               try {
-                const formData = new FormData(e.target as HTMLFormElement);
-                const updatedData = {
-                  name: editFormData.name,
-                  address: editFormData.address,
-                  phone: editFormData.phone,
-                  category: editFormData.category,
-                  youtube_link: editFormData.youtube_link,
-                  tzuyang_review: editFormData.tzuyang_review,
-                };
-
-                // 변경사항 계산
-                const originalData = {
-                  restaurant_name: restaurantToEdit.name,
-                  address: restaurantToEdit.address,
-                  phone: restaurantToEdit.phone || '',
-                  category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
-                  youtube_link: restaurantToEdit.youtube_link || '',
-                  tzuyang_review: restaurantToEdit.tzuyang_review || ''
-                };
-
-                const changes_requested: Record<string, { from: unknown; to: unknown }> = {};
-                Object.entries(updatedData).forEach(([key, value]) => {
-                  const originalValue = originalData[key === 'name' ? 'restaurant_name' : key as keyof typeof originalData];
-                  const hasChanged = key === 'category'
-                    ? JSON.stringify(originalValue) !== JSON.stringify(value)
-                    : originalValue !== value;
-
-                  if (hasChanged) {
-                    changes_requested[key === 'name' ? 'restaurant_name' : key] = {
-                      from: originalValue,
-                      to: value
-                    };
-                  }
-                });
-
-                // restaurant_submissions 테이블에 수정 요청 저장
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) {
                   throw new Error('로그인이 필요합니다.');
                 }
 
+                // 수정된 항목들을 user_restaurants_submission 형식으로 변환
+                const submissionData = editFormData.youtube_reviews.map(review => ({
+                  unique_id: review.unique_id || null,
+                  name: editFormData.name,
+                  categories: editFormData.category,
+                  address: editFormData.address,
+                  phone: editFormData.phone,
+                  youtube_link: review.youtube_link,
+                  tzuyang_review: review.tzuyang_review
+                }));
+
+                // 새로운 restaurant_submissions 테이블 구조에 맞춰 저장
                 const { error } = await supabase
                   .from('restaurant_submissions')
                   .insert({
                     user_id: user.id,
-                    submission_type: 'update',
-                    restaurant_name: updatedData.name.trim(),
-                    address: updatedData.address.trim(),
-                    phone: updatedData.phone?.trim() || null,
-                    category: [updatedData.category], // TEXT[] 타입이므로 배열로
-                    youtube_link: updatedData.youtube_link?.trim() || null,
-                    tzuyang_review: updatedData.tzuyang_review?.trim() || null,
-                    original_restaurant_id: restaurantToEdit.id,
-                    changes_requested: changes_requested,
-                    status: 'pending'
+                    submission_type: 'edit',
+                    status: 'pending',
+                    user_restaurants_submission: submissionData
                   });
 
                 if (error) throw error;
@@ -546,15 +527,17 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                 toast.error('제출에 실패했습니다. 다시 시도해주세요.');
               }
             }} className="space-y-4 mt-4">
-              {/* 수정할 정보 입력 */}
-              <div className="space-y-4">
+              
+              {/* 공통 정보 입력 */}
+              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                <h3 className="font-semibold text-lg">공통 정보</h3>
+                
                 <div className="space-y-2">
                   <Label htmlFor="name">
                     맛집 이름 <span className="text-red-500">*</span>
                   </Label>
                   <Input
                     id="name"
-                    name="name"
                     value={editFormData.name}
                     onChange={(e) => handleEditFormChange('name', e.target.value)}
                     placeholder="맛집 이름을 입력해주세요"
@@ -568,7 +551,6 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   </Label>
                   <Input
                     id="address"
-                    name="address"
                     value={editFormData.address}
                     onChange={(e) => handleEditFormChange('address', e.target.value)}
                     placeholder="주소를 입력해주세요"
@@ -580,7 +562,6 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                   <Label htmlFor="phone">전화번호</Label>
                   <Input
                     id="phone"
-                    name="phone"
                     value={editFormData.phone}
                     onChange={(e) => handleEditFormChange('phone', e.target.value)}
                     placeholder="전화번호를 입력해주세요"
@@ -629,8 +610,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                                   }}
                                 >
                                   <Check
-                                    className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"
-                                      }`}
+                                    className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
                                   />
                                   {category}
                                 </CommandItem>
@@ -661,88 +641,37 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                     </div>
                   )}
                 </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="youtube_link">쯔양 유튜브 영상 링크</Label>
-                  <Input
-                    id="youtube_link"
-                    name="youtube_link"
-                    value={editFormData.youtube_link}
-                    onChange={(e) => handleEditFormChange('youtube_link', e.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="tzuyang_review">쯔양의 리뷰</Label>
-                  <Textarea
-                    id="tzuyang_review"
-                    name="tzuyang_review"
-                    value={editFormData.tzuyang_review}
-                    onChange={(e) => handleEditFormChange('tzuyang_review', e.target.value)}
-                    placeholder="쯔양의 리뷰 내용을 입력해주세요"
-                    rows={4}
-                  />
-                </div>
               </div>
 
-              {/* 변경사항 표시 */}
-              {getEditChanges().length > 0 && (
-                <Card className="p-4 bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <div className="text-blue-600">📋</div>
-                      <Label className="text-sm font-medium text-blue-800 dark:text-blue-200">
-                        수정 요청 내용
-                      </Label>
+              {/* 유튜브 영상별 정보 */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-lg">유튜브 영상별 정보</h3>
+                
+                                {editFormData.youtube_reviews.map((review, index) => (
+                                    <Card key={index} className="p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <Badge variant="outline">영상 {index + 1}</Badge>
+                                        </div>                    <div className="space-y-2">
+                      <Label>유튜브 링크</Label>
+                      <Input
+                        value={review.youtube_link}
+                        onChange={(e) => handleYoutubeReviewChange(index, 'youtube_link', e.target.value)}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                      />
                     </div>
 
-                    <div className="space-y-3">
-                      {getEditChanges().map(([key, value]) => {
-                        const originalValue = restaurantToEdit ? {
-                          name: restaurantToEdit.name,
-                          address: restaurantToEdit.address,
-                          phone: restaurantToEdit.phone || '',
-                          category: Array.isArray(restaurantToEdit.category) ? restaurantToEdit.category : [restaurantToEdit.category],
-                          youtube_link: restaurantToEdit.youtube_link || '',
-                          tzuyang_review: restaurantToEdit.tzuyang_review || ''
-                        }[key as keyof typeof restaurantToEdit] || '' : '';
-
-                        const fieldName = {
-                          name: '맛집 이름',
-                          address: '주소',
-                          phone: '전화번호',
-                          category: '카테고리',
-                          youtube_link: '유튜브 링크',
-                          tzuyang_review: '쯔양의 리뷰'
-                        }[key] || key;
-
-                        return (
-                          <div key={key} className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-blue-200 dark:border-blue-700">
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                {fieldName}
-                              </span>
-                              <div className="flex items-center gap-1 text-xs text-orange-600">
-                                <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                                변경됨
-                              </div>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="text-xs text-red-600 line-through">
-                                기존: {key === 'category' ? (Array.isArray(originalValue) ? originalValue.join(', ') : originalValue) : (originalValue || '없음')}
-                              </div>
-                              <div className="text-xs text-green-600 font-medium">
-                                변경: {key === 'category' ? (Array.isArray(value) ? value.join(', ') : value) : (value || '없음')}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div className="space-y-2">
+                      <Label>쯔양 리뷰</Label>
+                      <Textarea
+                        value={review.tzuyang_review}
+                        onChange={(e) => handleYoutubeReviewChange(index, 'tzuyang_review', e.target.value)}
+                        placeholder="쯔양의 리뷰 내용을 입력해주세요"
+                        rows={3}
+                      />
                     </div>
-                  </div>
-                </Card>
-              )}
+                  </Card>
+                ))}
+              </div>
 
               <div className="flex gap-2 pt-4">
                 <Button type="button" variant="outline" onClick={() => setIsEditModalOpen(false)} className="flex-1">

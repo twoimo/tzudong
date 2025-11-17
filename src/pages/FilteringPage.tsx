@@ -159,28 +159,29 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         },
     });
 
-    // 검색 시 사용할 전체 맛집 데이터 조회
+    // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
     const { data: allRestaurants = [], isLoading: isLoadingAllRestaurants } = useQuery({
         queryKey: ['all-restaurants', searchQuery],
         queryFn: async () => {
             if (!searchQuery.trim()) return [];
 
             try {
-                const { data: restaurants, error } = await supabase
-                    .from('restaurants')
-                    .select('*')
-                    .eq('status', 'approved')
-                    .ilike('name', `%${searchQuery}%`) // 데이터베이스 레벨에서 검색
-                    .order('review_count', { ascending: false });
+                // search_restaurants_by_name RPC 함수 사용 (새 버전)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const { data: restaurants, error } = await (supabase as any).rpc('search_restaurants_by_name', {
+                    search_query: searchQuery.trim(),
+                    search_categories: null,
+                    max_results: 100
+                });
 
                 if (error) {
-                    console.error('전체 맛집 조회 실패:', error);
+                    console.error('맛집 검색 실패:', error);
                     return [];
                 }
 
                 return restaurants || [];
             } catch (error) {
-                console.error('전체 맛집 데이터 조회 중 오류:', error);
+                console.error('맛집 검색 중 오류:', error);
                 return [];
             }
         },
