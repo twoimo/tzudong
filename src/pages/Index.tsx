@@ -176,7 +176,6 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     const restaurantRegion = getRestaurantRegion(restaurant);
     if (restaurantRegion && restaurantRegion !== selectedRegion) {
       setSelectedRegion(restaurantRegion);
-      console.log('🔍 검색된 맛집 지역으로 필터 변경:', restaurantRegion);
     }
   };
 

@@ -699,6 +699,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
         <PanelGroup direction="horizontal" className="h-full bg-background">
             {/* Left Panel - Filtering */}
             <Panel
+                id="filter-panel"
+                order={1}
                 defaultSize={isRightPanelVisible ? 70 : 100}
                 minSize={30}
                 maxSize={80}
@@ -1040,6 +1042,8 @@ const FilteringPage = ({ onAdminEditRestaurant }: FilteringPageProps) => {
             {/* Right Panel - Reviews */}
             {isRightPanelVisible && (
                 <Panel
+                    id="review-panel"
+                    order={2}
                     defaultSize={30}
                     minSize={20}
                     maxSize={70}
