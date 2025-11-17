@@ -89,6 +89,7 @@ RETURNS TABLE (
     created_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ,
     english_address TEXT,
+    youtube_meta JSONB,
     complete_match_score INT,
     word_match_score DOUBLE PRECISION,
     trigram_similarity REAL,
@@ -124,6 +125,7 @@ BEGIN
         r.created_at,
         r.updated_at,
         r.english_address,
+        r.youtube_meta,
         -- 완전 포함 점수: 검색어가 맛집명에 그대로 포함되면 1, 아니면 0
         CASE 
             WHEN LOWER(r.name) LIKE '%' || LOWER(clean_search_query) || '%' THEN 1
