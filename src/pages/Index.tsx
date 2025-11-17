@@ -166,17 +166,9 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   const handleRestaurantSearch = (restaurant: Restaurant) => {
     // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
-    // 병합된 데이터의 경우 기존 restaurants에서 같은 데이터를 찾아서 사용
-    let actualRestaurant = restaurant;
-
-    // 현재 restaurants 데이터를 가져와서 비교 (useRestaurants 훅 사용)
-    // 하지만 여기서는 직접 접근할 수 없으므로, 병합된 데이터인 경우 null로 설정하고 selectedRestaurant만 업데이트
-    if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
-      setSearchedRestaurant(null); // 병합된 데이터는 이미 지도에 있으므로 searchedRestaurant을 null로
-      // selectedRestaurant은 병합된 데이터로 설정 (NaverMapView에서 교체 처리)
-    } else {
-      setSearchedRestaurant(restaurant);
-    }
+    // 모든 검색 결과에 대해 searchedRestaurant을 null로 설정해서 중복 마커 생성 방지
+    // (지도에 이미 표시된 맛집을 검색하는 경우)
+    setSearchedRestaurant(null);
     setSelectedRestaurant(restaurant);
   };
 

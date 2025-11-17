@@ -80,16 +80,30 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
     });
 
-    // selectedRestaurant이 병합된 데이터인 경우 기존 데이터로 교체
+    // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
     useEffect(() => {
-        if (selectedRestaurant && restaurants.length > 0 && selectedRestaurant.mergedRestaurants && selectedRestaurant.mergedRestaurants.length > 0) {
-            const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
-            const existingRestaurant = restaurants.find(r =>
-                mergedIds.includes(r.id) ||
-                (r.name === selectedRestaurant.name &&
-                 Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
-                 Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
-            );
+        if (selectedRestaurant && restaurants.length > 0) {
+            let existingRestaurant = null;
+
+            // 병합된 데이터의 경우
+            if (selectedRestaurant.mergedRestaurants && selectedRestaurant.mergedRestaurants.length > 0) {
+                const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
+                existingRestaurant = restaurants.find(r =>
+                    mergedIds.includes(r.id) ||
+                    (r.name === selectedRestaurant.name &&
+                     Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
+                     Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
+                );
+            } else {
+                // 일반 데이터의 경우
+                existingRestaurant = restaurants.find(r =>
+                    r.id === selectedRestaurant.id ||
+                    (r.name === selectedRestaurant.name &&
+                     Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
+                     Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
+                );
+            }
+
             if (existingRestaurant && existingRestaurant.id !== selectedRestaurant.id) {
                 console.log('🔍 selectedRestaurant을 기존 데이터로 교체:', existingRestaurant.name, existingRestaurant.id);
                 if (onRestaurantSelect) {
