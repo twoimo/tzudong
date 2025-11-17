@@ -23,6 +23,7 @@ import { Grid3X3, Map, MapPin, Star, Users, ChefHat } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant, Region } from "@/types/restaurant";
 import { FilterState } from "@/components/filters/FilterPanel";
+import CategoryFilter from "@/components/filters/CategoryFilter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -166,8 +167,82 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   const handleRestaurantSearch = (restaurant: Restaurant) => {
     // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
-    setSearchedRestaurant(restaurant);
+    // 모든 검색 결과에 대해 searchedRestaurant을 null로 설정해서 중복 마커 생성 방지
+    // (지도에 이미 표시된 맛집을 검색하는 경우)
+    setSearchedRestaurant(null);
     setSelectedRestaurant(restaurant);
+
+    // 검색된 맛집의 지역으로 하단 컨트롤 패널의 지역 필터 실시간 변경
+    const restaurantRegion = getRestaurantRegion(restaurant);
+    if (restaurantRegion && restaurantRegion !== selectedRegion) {
+      setSelectedRegion(restaurantRegion);
+    }
+  };
+
+  // 맛집의 지역 정보를 추출하는 함수
+  const getRestaurantRegion = (restaurant: Restaurant): Region | null => {
+    if (restaurant.address_elements && typeof restaurant.address_elements === 'object') {
+      const addressElements = restaurant.address_elements as any;
+      if (addressElements.SIDO) {
+        // SIDO 값이 "서울특별시" 형태로 저장되어 있는지 확인
+        const sido = addressElements.SIDO;
+        if (typeof sido === 'string') {
+          return sido as Region;
+        }
+      }
+    }
+
+    // address_elements에 지역 정보가 없는 경우 주소에서 추출 시도
+    if (restaurant.road_address || restaurant.jibun_address) {
+      const address = (restaurant.road_address || restaurant.jibun_address) as string;
+
+      // 세부 지역명 우선 처리 (특정 지역의 세부 구역)
+      const specificRegionMappings = [
+        { pattern: "욕지면", region: "욕지도" as Region },
+        // 필요에 따라 다른 세부 지역 매핑 추가 가능
+        // { pattern: "울릉읍", region: "울릉도" as Region },
+      ];
+
+      for (const mapping of specificRegionMappings) {
+        if (address.includes(mapping.pattern)) {
+          return mapping.region;
+        }
+      }
+
+      // 일반 광역시도 패턴으로 추출
+      const regionPatterns = [
+        "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
+        "대전광역시", "울산광역시", "세종특별자치시", "경기도", "충청북도",
+        "충청남도", "전라남도", "경상북도", "경상남도", "전북특별자치도", "제주특별자치도",
+        "울릉도", "욕지도"
+      ];
+
+      for (const region of regionPatterns) {
+        if (address.includes(region)) {
+          return region as Region;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // useRestaurants의 결과를 활용해서 검색된 병합 데이터를 기존 데이터와 일치시키는 함수
+  const normalizeSearchedRestaurant = (restaurant: Restaurant, allRestaurants: Restaurant[]): Restaurant => {
+    if (!restaurant.mergedRestaurants || restaurant.mergedRestaurants.length === 0) {
+      return restaurant;
+    }
+
+    // 병합된 데이터의 경우 기존 restaurants에서 같은 데이터를 찾음
+    const mergedIds = restaurant.mergedRestaurants.map(r => r.id);
+    const existingRestaurant = allRestaurants.find(r =>
+      mergedIds.includes(r.id) ||
+      (r.name === restaurant.name &&
+        Math.abs(r.lat - restaurant.lat) < 0.0001 &&
+        Math.abs(r.lng - restaurant.lng) < 0.0001)
+    );
+
+    return existingRestaurant || restaurant;
   };
 
   // 그리드 모드에서 사용할 지역들 (4개 지역)
@@ -220,38 +295,12 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
           </Suspense>
 
           {/* 카테고리 필터링 */}
-          <Select
-            value={selectedCategories.length > 0 ? selectedCategories.join(',') : 'all'}
-            onValueChange={(value) => {
-              if (value === 'all') {
-                handleCategoryChange([]);
-              } else {
-                handleCategoryChange(value.split(',').filter(Boolean));
-              }
-            }}
-          >
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="카테고리 필터" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">전체</SelectItem>
-              <SelectItem value="한식">한식</SelectItem>
-              <SelectItem value="중식">중식</SelectItem>
-              <SelectItem value="양식">양식</SelectItem>
-              <SelectItem value="분식">분식</SelectItem>
-              <SelectItem value="치킨">치킨</SelectItem>
-              <SelectItem value="피자">피자</SelectItem>
-              <SelectItem value="고기">고기</SelectItem>
-              <SelectItem value="족발·보쌈">족발·보쌈</SelectItem>
-              <SelectItem value="돈까스·회">돈까스·회</SelectItem>
-              <SelectItem value="아시안">아시안</SelectItem>
-              <SelectItem value="패스트푸드">패스트푸드</SelectItem>
-              <SelectItem value="카페·디저트">카페·디저트</SelectItem>
-              <SelectItem value="찜·탕">찜·탕</SelectItem>
-              <SelectItem value="야식">야식</SelectItem>
-              <SelectItem value="도시락">도시락</SelectItem>
-            </SelectContent>
-          </Select>
+          <CategoryFilter
+            selectedCategories={selectedCategories}
+            onCategoryChange={handleCategoryChange}
+            selectedRegion={selectedRegion}
+            className="w-48"
+          />
 
           <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
             <RestaurantSearch

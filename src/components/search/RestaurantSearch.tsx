@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant } from "@/types/restaurant";
+import { mergeRestaurants } from "@/hooks/use-restaurants";
 import { Input } from "@/components/ui/input";
 import { Search, MapPin, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -83,20 +84,12 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
         }
       });
 
-      // 4. 같은 음식점명 중복 제거 (첫 번째 것만 유지)
-      const seenNames = new Set<string>();
-      const uniqueResults: Restaurant[] = [];
-
-      for (const restaurant of restaurantMap.values()) {
-        const normalizedName = restaurant.name.trim().toLowerCase();
-        if (!seenNames.has(normalizedName)) {
-          seenNames.add(normalizedName);
-          uniqueResults.push(restaurant);
-        }
-      }
+      // 4. 병합 로직 적용 (동일한 상호명 처리)
+      const allRestaurants = Array.from(restaurantMap.values());
+      const merged = mergeRestaurants(allRestaurants);
 
       // 5. 최대 10개로 제한
-      return uniqueResults.slice(0, 10);
+      return merged.slice(0, 10);
     },
     enabled: searchQuery.length > 0,
   });
@@ -109,8 +102,8 @@ const RestaurantSearch = ({ onRestaurantSelect, onSearchExecute, onRestaurantSea
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside, { passive: true });
+    return () => document.removeEventListener("mousedown", handleClickOutside, { passive: true });
   }, []);
 
   const handleSelect = (restaurant: Restaurant) => {

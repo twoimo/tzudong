@@ -9,6 +9,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { MapPin, Grid3X3, Map, ChevronsUpDown, Check, X } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant } from "@/types/restaurant";
+import CategoryFilter from "@/components/filters/CategoryFilter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -131,6 +132,19 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         setSelectedRestaurant(restaurant);
     }, [setSelectedRestaurant]);
 
+    // 검색된 맛집의 국가를 찾는 헬퍼 함수
+    const getRestaurantCountry = useCallback((restaurant: Restaurant): GlobalCountry | null => {
+        const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
+
+        // 각 국가에 대해 확인
+        for (const country of GLOBAL_COUNTRIES) {
+            if (address.includes(country)) {
+                return country;
+            }
+        }
+        return null;
+    }, []);
+
     const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
         // 개발 환경에서만 구조화된 상태 로그 출력
         if (process.env.NODE_ENV === "development") {
@@ -141,9 +155,21 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 selectedCountry,
             });
         }
+
+        // 검색된 맛집의 국가로 하단 컨트롤 패널의 국가 필터 실시간 변경
+        const restaurantCountry = getRestaurantCountry(restaurant);
+        if (restaurantCountry && restaurantCountry !== selectedCountry) {
+            setSelectedCountry(restaurantCountry);
+            console.log('🌍 검색된 맛집 국가로 필터 변경:', restaurantCountry);
+        }
+
         // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
         setSearchedRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
+
+        // 검색 시 자동으로 패널 열기
+        setPanelRestaurant(restaurant);
+        setIsPanelOpen(true);
 
         // 지도 이동 함수가 준비되었다면 즉시 이동
         if (moveToRestaurant) {
@@ -159,10 +185,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 console.log("[handleRestaurantSearch] 그리드 모드에서 단일 모드로 전환");
             }
             setIsGridMode(false);
-            // 검색된 맛집의 국가로 전환 (가능하다면)
-            // TODO: 맛집의 국가 정보를 기반으로 selectedCountry 설정
         }
-    }, [moveToRestaurant, isGridMode, setSelectedRestaurant, selectedCountry]);
+    }, [moveToRestaurant, isGridMode, setSelectedRestaurant, selectedCountry, getRestaurantCountry]);
 
     const switchToSingleMap = useCallback(() => {
         // 그리드 모드에서 검색 시 단일 모드로 전환
@@ -347,38 +371,12 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     </Select>
 
                     {/* 카테고리 필터링 */}
-                    <Select
-                        value={filters.categories.length > 0 ? filters.categories.join(',') : 'all'}
-                        onValueChange={(value) => {
-                            if (value === 'all') {
-                                setFilters(prev => ({ ...prev, categories: [] }));
-                            } else {
-                                setFilters(prev => ({ ...prev, categories: value.split(',').filter(Boolean) }));
-                            }
-                        }}
-                    >
-                        <SelectTrigger className="w-40">
-                            <SelectValue placeholder="카테고리 필터" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">전체</SelectItem>
-                            <SelectItem value="한식">한식</SelectItem>
-                            <SelectItem value="중식">중식</SelectItem>
-                            <SelectItem value="양식">양식</SelectItem>
-                            <SelectItem value="분식">분식</SelectItem>
-                            <SelectItem value="치킨">치킨</SelectItem>
-                            <SelectItem value="피자">피자</SelectItem>
-                            <SelectItem value="고기">고기</SelectItem>
-                            <SelectItem value="족발·보쌈">족발·보쌈</SelectItem>
-                            <SelectItem value="돈까스·회">돈까스·회</SelectItem>
-                            <SelectItem value="아시안">아시안</SelectItem>
-                            <SelectItem value="패스트푸드">패스트푸드</SelectItem>
-                            <SelectItem value="카페·디저트">카페·디저트</SelectItem>
-                            <SelectItem value="찜·탕">찜·탕</SelectItem>
-                            <SelectItem value="야식">야식</SelectItem>
-                            <SelectItem value="도시락">도시락</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <CategoryFilter
+                        selectedCategories={filters.categories}
+                        onCategoryChange={(categories) => setFilters(prev => ({ ...prev, categories }))}
+                        selectedCountry={selectedCountry}
+                        className="w-48"
+                    />
 
                     {/* 맛집 검색 */}
                     <Suspense fallback={<div className="w-72 h-10 bg-muted animate-pulse rounded" />}>
@@ -454,7 +452,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     </div>
                 }>
                     <PanelGroup direction="horizontal" className="w-full h-full">
-                        <Panel defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>
+                        <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>
                             <MapView
                                 filters={filters}
                                 selectedCountry={selectedCountry}
@@ -478,7 +476,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
 
                         {/* Restaurant Detail Panel */}
                         {panelRestaurant && isPanelOpen && (
-                            <Panel defaultSize={25} minSize={20} maxSize={60}>
+                            <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={60}>
                                 <RestaurantDetailPanel
                                     restaurant={panelRestaurant}
                                     onClose={handlePanelClose}
