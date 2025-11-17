@@ -11,12 +11,66 @@
 -- 필터링: 최소 1글자 이상 포함 필수
 -- ============================================
 
+-- ========================================
+-- PART 0: PostgreSQL 확장 활성화
+-- ========================================
+
+-- pg_trgm 확장 활성화 (Trigram 유사도)
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+
+-- fuzzystrmatch 확장 활성화 (레벤슈타인 거리)
+CREATE EXTENSION IF NOT EXISTS fuzzystrmatch;
+
+-- 확장이 제대로 설치되었는지 확인
+DO $$
+BEGIN
+    -- similarity 함수 테스트
+    IF EXISTS (
+        SELECT 1 
+        FROM pg_proc 
+        WHERE proname = 'similarity'
+    ) THEN
+        RAISE NOTICE '✅ pg_trgm 확장이 활성화되었습니다 (similarity 함수 사용 가능)';
+    ELSE
+        RAISE EXCEPTION '❌ pg_trgm 확장 활성화 실패';
+    END IF;
+
+    -- levenshtein 함수 테스트
+    IF EXISTS (
+        SELECT 1 
+        FROM pg_proc 
+        WHERE proname = 'levenshtein'
+    ) THEN
+        RAISE NOTICE '✅ fuzzystrmatch 확장이 활성화되었습니다 (levenshtein 함수 사용 가능)';
+    ELSE
+        RAISE EXCEPTION '❌ fuzzystrmatch 확장 활성화 실패';
+    END IF;
+END $$;
+
+-- GIN 인덱스 생성 (Trigram 검색 성능 최적화)
+DROP INDEX IF EXISTS idx_restaurants_name_trgm;
+CREATE INDEX idx_restaurants_name_trgm ON public.restaurants USING gin (name gin_trgm_ops);
+
+COMMENT ON INDEX idx_restaurants_name_trgm IS 'Trigram 유사도 기반 맛집 이름 검색 최적화';
+
+-- ========================================
+-- PART 1: 기존 함수 완전 삭제
+-- ========================================
+
+-- ========================================
+-- PART 2: 함수 생성
+-- ========================================
+
 -- 1. 단어 매칭 점수 계산 함수
 -- 검색어의 단어가 맛집명에 얼마나 포함되어 있는지 계산 (1/3 이상 필수)
 CREATE OR REPLACE FUNCTION public.calculate_word_match_score(
     restaurant_name TEXT,
     search_query TEXT
-) RETURNS DOUBLE PRECISION AS $$
+) RETURNS DOUBLE PRECISION 
+LANGUAGE plpgsql
+IMMUTABLE
+SET search_path = public
+AS $$
 DECLARE
     clean_name TEXT;
     clean_query TEXT;
@@ -48,25 +102,12 @@ BEGIN
     -- 일치 비율 반환 (0~1)
     RETURN matched_count::DOUBLE PRECISION / total_words;
 END;
-$$ LANGUAGE plpgsql IMMUTABLE;
+$$;
 
 COMMENT ON FUNCTION public.calculate_word_match_score IS 
 '검색어의 단어(띄어쓰기 기준)가 맛집명에 얼마나 포함되는지 0~1 사이의 점수 반환';
 
--- 2. 기존 함수 삭제 (모든 오버로드 버전)
-DROP FUNCTION IF EXISTS public.search_restaurants_by_name(TEXT, TEXT[], REAL, INTEGER);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_name(TEXT, TEXT[], INTEGER);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_name(TEXT, TEXT[], INTEGER, BOOLEAN);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_name(TEXT, TEXT[], INTEGER, BOOLEAN, BOOLEAN);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_name(TEXT, REAL, INTEGER);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_name(TEXT, INTEGER);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_youtube_title(TEXT, REAL, INTEGER);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_youtube_title(TEXT, INTEGER);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_youtube_title(TEXT, INTEGER, BOOLEAN);
-DROP FUNCTION IF EXISTS public.search_restaurants_by_youtube_title(TEXT, INTEGER, BOOLEAN, BOOLEAN);
-DROP FUNCTION IF EXISTS public.calculate_sequence_match_score(TEXT, TEXT);
-
--- 3. 맛집명으로 검색하는 고급 함수 (카테고리 필터 지원)
+-- 2. 맛집명으로 검색하는 고급 함수 (카테고리 필터 지원)
 CREATE OR REPLACE FUNCTION public.search_restaurants_by_name(
     search_query TEXT,
     search_categories TEXT[] DEFAULT NULL,
@@ -96,6 +137,8 @@ RETURNS TABLE (
     levenshtein_distance INT
 )
 LANGUAGE plpgsql
+STABLE
+SET search_path = public
 AS $$
 DECLARE
     clean_search_query TEXT;
@@ -134,12 +177,12 @@ BEGIN
         -- 단어 매칭 점수
         calculate_word_match_score(r.name, clean_search_query) AS word_match_score,
         -- Trigram 유사도 (띄어쓰기 제거)
-        similarity(
+        extensions.similarity(
             REPLACE(LOWER(r.name), ' ', ''),
             REPLACE(LOWER(clean_search_query), ' ', '')
         ) AS trigram_similarity,
         -- 레벤슈타인 거리 (편집 거리)
-        levenshtein(
+        extensions.levenshtein(
             LOWER(r.name),
             LOWER(clean_search_query)
         ) AS levenshtein_distance
@@ -212,6 +255,8 @@ RETURNS TABLE (
     levenshtein_distance INT
 )
 LANGUAGE plpgsql
+STABLE
+SET search_path = public
 AS $$
 DECLARE
     clean_search_query TEXT;
@@ -254,12 +299,12 @@ BEGIN
         -- 단어 매칭 점수
         calculate_word_match_score(r.youtube_meta->>'title', clean_search_query) AS word_match_score,
         -- Trigram 유사도 (띄어쓰기 제거)
-        similarity(
+        extensions.similarity(
             REPLACE(LOWER(r.youtube_meta->>'title'), ' ', ''),
             REPLACE(LOWER(clean_search_query), ' ', '')
         ) AS trigram_similarity,
         -- 레벤슈타인 거리
-        levenshtein(
+        extensions.levenshtein(
             LOWER(r.youtube_meta->>'title'),
             LOWER(clean_search_query)
         ) AS levenshtein_distance
@@ -332,3 +377,19 @@ GRANT EXECUTE ON FUNCTION public.search_restaurants_by_youtube_title(TEXT, INTEG
 -- WHERE status = 'approved'
 -- ORDER BY score DESC
 -- LIMIT 10;
+
+-- ========================================
+-- 완료 메시지
+-- ========================================
+
+DO $$
+BEGIN
+    RAISE NOTICE '========================================';
+    RAISE NOTICE '✅ 고급 맛집 검색 시스템 설정 완료';
+    RAISE NOTICE '   - PostgreSQL 확장: pg_trgm, fuzzystrmatch';
+    RAISE NOTICE '   - GIN 인덱스: restaurants.name';
+    RAISE NOTICE '   - 검색 함수: search_restaurants_by_name';
+    RAISE NOTICE '   - 검색 함수: search_restaurants_by_youtube_title';
+    RAISE NOTICE '   - 유틸 함수: calculate_word_match_score';
+    RAISE NOTICE '========================================';
+END $$;
