@@ -164,7 +164,11 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
         // 호환성 속성 추가
         address: restaurant.road_address || restaurant.jibun_address || '',
         category: restaurant.categories,
-        // 병합된 데이터는 spread로 자동 포함됨
+        // 병합된 데이터 명시적으로 포함
+        mergedRestaurants: restaurant.mergedRestaurants,
+        mergedYoutubeLinks: restaurant.mergedYoutubeLinks,
+        mergedTzuyangReviews: restaurant.mergedTzuyangReviews,
+        mergedYoutubeMetas: restaurant.mergedYoutubeMetas,
     })) as Restaurant[];
 
     return mergedRestaurants;

@@ -166,8 +166,36 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   const handleRestaurantSearch = (restaurant: Restaurant) => {
     // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
-    setSearchedRestaurant(restaurant);
+    // 병합된 데이터의 경우 기존 restaurants에서 같은 데이터를 찾아서 사용
+    let actualRestaurant = restaurant;
+
+    // 현재 restaurants 데이터를 가져와서 비교 (useRestaurants 훅 사용)
+    // 하지만 여기서는 직접 접근할 수 없으므로, 병합된 데이터인 경우 null로 설정하고 selectedRestaurant만 업데이트
+    if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
+      setSearchedRestaurant(null); // 병합된 데이터는 이미 지도에 있으므로 searchedRestaurant을 null로
+      // selectedRestaurant은 병합된 데이터로 설정 (NaverMapView에서 교체 처리)
+    } else {
+      setSearchedRestaurant(restaurant);
+    }
     setSelectedRestaurant(restaurant);
+  };
+
+  // useRestaurants의 결과를 활용해서 검색된 병합 데이터를 기존 데이터와 일치시키는 함수
+  const normalizeSearchedRestaurant = (restaurant: Restaurant, allRestaurants: Restaurant[]): Restaurant => {
+    if (!restaurant.mergedRestaurants || restaurant.mergedRestaurants.length === 0) {
+      return restaurant;
+    }
+
+    // 병합된 데이터의 경우 기존 restaurants에서 같은 데이터를 찾음
+    const mergedIds = restaurant.mergedRestaurants.map(r => r.id);
+    const existingRestaurant = allRestaurants.find(r =>
+      mergedIds.includes(r.id) ||
+      (r.name === restaurant.name &&
+       Math.abs(r.lat - restaurant.lat) < 0.0001 &&
+       Math.abs(r.lng - restaurant.lng) < 0.0001)
+    );
+
+    return existingRestaurant || restaurant;
   };
 
   // 그리드 모드에서 사용할 지역들 (4개 지역)

@@ -80,6 +80,25 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
     });
 
+    // selectedRestaurant이 병합된 데이터인 경우 기존 데이터로 교체
+    useEffect(() => {
+        if (selectedRestaurant && restaurants.length > 0 && selectedRestaurant.mergedRestaurants && selectedRestaurant.mergedRestaurants.length > 0) {
+            const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
+            const existingRestaurant = restaurants.find(r =>
+                mergedIds.includes(r.id) ||
+                (r.name === selectedRestaurant.name &&
+                 Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
+                 Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
+            );
+            if (existingRestaurant && existingRestaurant.id !== selectedRestaurant.id) {
+                console.log('🔍 selectedRestaurant을 기존 데이터로 교체:', existingRestaurant.name, existingRestaurant.id);
+                if (onRestaurantSelect) {
+                    onRestaurantSelect(existingRestaurant);
+                }
+            }
+        }
+    }, [selectedRestaurant, onRestaurantSelect]); // restaurants를 dependency에서 제거하여 무한 루프 방지
+
 
 
     // 지도 초기화
@@ -201,30 +220,49 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     useEffect(() => {
         if (!searchedRestaurant || !mapInstanceRef.current) return;
 
+        // 검색된 맛집이 병합된 데이터라면 기존 restaurants에서 같은 데이터를 찾아서 교체
+        let actualSearchedRestaurant = searchedRestaurant;
+        if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
+            const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
+            const existingRestaurant = restaurants.find(r =>
+                mergedIds.includes(r.id) ||
+                (r.name === searchedRestaurant.name &&
+                 Math.abs(r.lat - searchedRestaurant.lat) < 0.0001 &&
+                 Math.abs(r.lng - searchedRestaurant.lng) < 0.0001)
+            );
+            if (existingRestaurant) {
+                console.log('🔍 기존 레스토랑으로 교체:', existingRestaurant.name, existingRestaurant.id);
+                actualSearchedRestaurant = existingRestaurant;
+                // 부모 컴포넌트의 selectedRestaurant도 업데이트
+                if (onRestaurantSelect) {
+                    onRestaurantSelect(existingRestaurant);
+                }
+            } else {
+                console.log('🔍 기존 레스토랑을 찾지 못함, 검색된 데이터 사용');
+            }
+        }
+
         const { naver } = window;
 
         // 상세 패널이 이미 열려있는 경우 중심을 오른쪽으로 조정 (패널이 지도를 가리지 않도록)
-        if (selectedRestaurant && selectedRestaurant.id !== searchedRestaurant.id) {
+        if (selectedRestaurant && selectedRestaurant.id !== actualSearchedRestaurant.id) {
             // 다른 맛집의 상세 패널이 열려있을 때는 중심을 오른쪽으로 0.008도 이동 (약 800m)
-            const adjustedLng = searchedRestaurant.lng + 0.008;
-            mapInstanceRef.current.setCenter(new naver.maps.LatLng(searchedRestaurant.lat, adjustedLng));
+            const adjustedLng = actualSearchedRestaurant.lng + 0.008;
+            mapInstanceRef.current.setCenter(new naver.maps.LatLng(actualSearchedRestaurant.lat, adjustedLng));
         } else {
             // 상세 패널이 닫혀있거나 같은 맛집을 다시 선택한 경우 그대로 중심 설정
-            mapInstanceRef.current.setCenter(new naver.maps.LatLng(searchedRestaurant.lat, searchedRestaurant.lng));
+            mapInstanceRef.current.setCenter(new naver.maps.LatLng(actualSearchedRestaurant.lat, actualSearchedRestaurant.lng));
         }
 
         mapInstanceRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
 
-        // 검색된 맛집을 부모 컴포넌트 상태에 설정
-        if (onRestaurantSelect) {
-            onRestaurantSelect(searchedRestaurant);
-        }
+        // 검색된 맛집을 부모 컴포넌트 상태에 설정 (이미 위에서 처리됨)
 
         // 패널 열기 (검색 시에만)
         setIsPanelOpen(true);
 
         // 토스트 메시지 표시
-        toast.success(`"${searchedRestaurant.name}" 맛집을 찾았습니다!`);
+        toast.success(`"${actualSearchedRestaurant.name}" 맛집을 찾았습니다!`);
     }, [searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // 마커 업데이트 (최적화됨)
@@ -246,17 +284,27 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             const restaurantsToShow = [...restaurants];
 
             // 검색된 맛집이 기존 목록에 없는 경우 추가
-            // ID 비교뿐만 아니라 이름과 좌표로도 확인 (병합된 레스토랑 중복 방지)
+            // searchedRestaurant이 교체된 경우에도 기존 데이터와 일치하도록 보장
             if (searchedRestaurant) {
-                const alreadyExists = restaurants.find(r =>
-                    r.id === searchedRestaurant.id ||
-                    (r.name === searchedRestaurant.name &&
-                        Math.abs(r.lat - searchedRestaurant.lat) < 0.0001 &&
-                        Math.abs(r.lng - searchedRestaurant.lng) < 0.0001)
-                );
+                console.log('🔍 searchedRestaurant (마커 추가 시점):', searchedRestaurant);
+                console.log('🔍 restaurants.length:', restaurants.length);
+
+                // 병합된 데이터의 경우 mergedRestaurants로 확인
+                let alreadyExists = false;
+                if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
+                    const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
+                    alreadyExists = restaurants.some(r => mergedIds.includes(r.id));
+                } else {
+                    alreadyExists = restaurants.some(r => r.id === searchedRestaurant.id);
+                }
+
+                console.log('🔍 alreadyExists (마커 추가 시점):', alreadyExists);
 
                 if (!alreadyExists) {
                     restaurantsToShow.push(searchedRestaurant);
+                    console.log('🔍 추가된 searchedRestaurant:', searchedRestaurant);
+                } else {
+                    console.log('🔍 searchedRestaurant은 이미 restaurants에 존재하므로 추가하지 않음');
                 }
             }
 
@@ -343,10 +391,23 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 naver.maps.Event.addListener(marker, "click", () => {
                     // restaurantsRef.current에서 병합된 레스토랑 찾기
                     // restaurant.id로 찾되, 없으면 이름과 좌표로 찾기 (병합된 경우 다른 ID일 수 있음)
-                    const currentRestaurant = restaurantsRef.current.find(r =>
+                    // 병합된 데이터의 경우 mergedRestaurants 속성으로도 확인
+                    let currentRestaurant = restaurantsRef.current.find(r =>
                         r.id === restaurant.id ||
                         (r.name === restaurant.name && Math.abs(r.lat - restaurant.lat) < 0.0001 && Math.abs(r.lng - restaurant.lng) < 0.0001)
-                    ) || restaurant;
+                    );
+
+                    // 병합된 데이터의 경우 mergedRestaurants로 확인
+                    if (!currentRestaurant && restaurant.mergedRestaurants) {
+                        const mergedIds = restaurant.mergedRestaurants.map(r => r.id);
+                        currentRestaurant = restaurantsRef.current.find(r =>
+                            mergedIds.includes(r.id) ||
+                            (r.name === restaurant.name && Math.abs(r.lat - restaurant.lat) < 0.0001 && Math.abs(r.lng - restaurant.lng) < 0.0001)
+                        );
+                    }
+
+                    // 찾지 못한 경우 원본 restaurant 사용
+                    currentRestaurant = currentRestaurant || restaurant;
 
                     // 모든 모드에서 부모 컴포넌트로 맛집 선택 전달 (단일 모드에서도 상태 일관성 유지)
                     if (onRestaurantSelect) {
@@ -373,10 +434,31 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         if (!isLoaded || markersRef.current.length === 0) return;
 
         markersRef.current.forEach((marker, index) => {
-            const restaurant = restaurants[index];
+            const restaurant = restaurantsRef.current[index];
             if (!restaurant) return;
 
-            const isSelected = selectedRestaurant?.id === restaurant.id;
+            // 선택된 맛집 비교 (ID, 이름+좌표, 병합된 데이터 모두 고려)
+            let isSelected = false;
+
+            if (selectedRestaurant) {
+                isSelected = selectedRestaurant.id === restaurant.id;
+
+                // 병합된 데이터의 경우 이름과 좌표로도 비교
+                if (!isSelected) {
+                    isSelected = selectedRestaurant.name === restaurant.name &&
+                               Math.abs(selectedRestaurant.lat - restaurant.lat) < 0.0001 &&
+                               Math.abs(selectedRestaurant.lng - restaurant.lng) < 0.0001;
+                }
+
+                // 병합된 데이터의 경우 mergedRestaurants로 확인
+                if (!isSelected && selectedRestaurant.mergedRestaurants) {
+                    const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
+                    isSelected = mergedIds.includes(restaurant.id);
+                }
+            }
+
+            console.log('🎯 마커 선택 상태:', restaurant.name, 'isSelected:', isSelected, 'selectedRestaurant:', selectedRestaurant?.name);
+
             const markerElement = marker.getIcon().content as HTMLElement;
             if (!markerElement) return;
 
@@ -394,7 +476,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 innerDiv.classList.remove('animate-bounce');
             }
         });
-    }, [selectedRestaurant?.id, restaurants, isLoaded]);
+    }, [selectedRestaurant, restaurants, isLoaded]);
 
     // 줌 이벤트 시 마커 스타일 유지
     useEffect(() => {
@@ -406,10 +488,29 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 if (!isLoaded || markersRef.current.length === 0) return;
 
                 markersRef.current.forEach((marker, index) => {
-                    const restaurant = restaurants[index];
+                    const restaurant = restaurantsRef.current[index];
                     if (!restaurant) return;
 
-                    const isSelected = selectedRestaurant?.id === restaurant.id;
+                    // 선택된 맛집 비교 (ID, 이름+좌표, 병합된 데이터 모두 고려)
+                    let isSelected = false;
+
+                    if (selectedRestaurant) {
+                        isSelected = selectedRestaurant.id === restaurant.id;
+
+                        // 병합된 데이터의 경우 이름과 좌표로도 비교
+                        if (!isSelected) {
+                            isSelected = selectedRestaurant.name === restaurant.name &&
+                                       Math.abs(selectedRestaurant.lat - restaurant.lat) < 0.0001 &&
+                                       Math.abs(selectedRestaurant.lng - restaurant.lng) < 0.0001;
+                        }
+
+                        // 병합된 데이터의 경우 mergedRestaurants로 확인
+                        if (!isSelected && selectedRestaurant.mergedRestaurants) {
+                            const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
+                            isSelected = mergedIds.includes(restaurant.id);
+                        }
+                    }
+
                     const markerElement = marker.getIcon().content as HTMLElement;
                     if (!markerElement) return;
 
@@ -436,7 +537,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         return () => {
             // Naver Maps에서는 이벤트 리스너가 자동으로 정리됨
         };
-    }, [isLoaded, selectedRestaurant?.id, restaurants]);
+    }, [isLoaded, selectedRestaurant, restaurants]);
 
     // 로딩 에러 처리
     if (loadError) {
