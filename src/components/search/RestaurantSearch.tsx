@@ -209,16 +209,33 @@ const RestaurantSearch = ({
               >
                 <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <div className="flex flex-col min-w-0 flex-1">
-                  <div className="flex items-baseline gap-2 min-w-0">
-                    <span className="font-medium flex-shrink-0">{restaurant.name}</span>
-                    {searchType === 'youtube' && restaurant.youtube_meta && 
-                     typeof restaurant.youtube_meta === 'object' && 
-                     'title' in restaurant.youtube_meta && (
-                      <span className="text-xs text-muted-foreground truncate">
-                        ({(restaurant.youtube_meta as YoutubeMeta).title})
-                      </span>
-                    )}
-                  </div>
+                  {/* 홈페이지(한국): 음식점명 옆에 유튜브 제목 */}
+                  {isKoreanOnly && searchType === 'youtube' ? (
+                    <div className="flex items-baseline gap-2 min-w-0">
+                      <span className="font-medium flex-shrink-0">{restaurant.name}</span>
+                      {restaurant.youtube_meta && 
+                       typeof restaurant.youtube_meta === 'object' && 
+                       'title' in restaurant.youtube_meta && (
+                        <span className="text-xs text-muted-foreground truncate">
+                          ({(restaurant.youtube_meta as YoutubeMeta).title})
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    /* 글로벌 또는 맛집명 검색: 음식점명만 */
+                    <span className="font-medium">{restaurant.name}</span>
+                  )}
+                  
+                  {/* 글로벌 유튜브 검색: 유튜브 제목을 별도 줄로 표시 */}
+                  {!isKoreanOnly && searchType === 'youtube' && 
+                   restaurant.youtube_meta && 
+                   typeof restaurant.youtube_meta === 'object' && 
+                   'title' in restaurant.youtube_meta && (
+                    <span className="text-xs text-muted-foreground truncate">
+                      {(restaurant.youtube_meta as YoutubeMeta).title}
+                    </span>
+                  )}
+                  
                   <span className="text-sm text-muted-foreground truncate">
                     {restaurant.address}
                   </span>
