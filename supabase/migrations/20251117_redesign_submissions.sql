@@ -83,6 +83,7 @@ CREATE OR REPLACE FUNCTION public.generate_unique_id(
 RETURNS TEXT
 LANGUAGE plpgsql
 IMMUTABLE
+SET search_path = public
 AS $$
 DECLARE
     combined_string TEXT;

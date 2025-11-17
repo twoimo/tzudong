@@ -30,8 +30,14 @@
   - Soft Delete 방식의 삭제 기능
   - 영상 제목 검색 기능 (필터링된 결과 내 검색)
   - DB 충돌 감지 및 자동 병합
-- 📝 **리뷰 관리**: 사용자 리뷰 승인/거부 시스템
-- 📋 **제보 관리**: 맛집 제보 및 수정 요청 검토
+- 📝 **맛집 직접 수정**
+  - 관리자 모달에서 restaurants 테이블 직접 편집
+  - **필수 재지오코딩**: 수정 시 Naver Geocoding API로 주소 재검증
+  - **듀얼 쿼리 전략**: 이름+전체주소, 이름+시군구 두 가지 방식으로 검색
+  - **다중 후보 선택**: 최대 6개 주소 후보 중 사용자 선택
+  - 모든 주소 필드 자동 업데이트 (도로명/지번/영문주소, 주소요소, 좌표)
+- 🔍 **리뷰 관리**: 사용자 리뷰 승인/거부 시스템
+- 📋 **제보 관리**: 맛집 제보 및 수정 요청 검토 (JSONB 배열 기반)
 
 ## 📋 관리자 데이터 검수 (Admin Evaluation Management)
 
@@ -571,25 +577,29 @@ tzudong/
 | created_at       | TIMESTAMP | 생성 시간                      |
 | updated_at       | TIMESTAMP | 수정 시간                      |
 
-### restaurant_submissions 테이블
+### restaurant_submissions 테이블 (JSONB 배열 기반)
 
-| 컬럼명                 | 타입      | 설명                             |
-| ---------------------- | --------- | -------------------------------- |
-| id                     | UUID      | Primary Key                      |
-| user_id                | UUID      | 제보자 ID (profiles FK)          |
-| restaurant_name        | TEXT      | 맛집명                           |
-| address                | TEXT      | 주소 (도로명 주소로 저장)        |
-| phone                  | TEXT      | 전화번호                         |
-| category               | TEXT[]    | 카테고리 배열 (항상 배열로 저장) |
-| youtube_link           | TEXT      | YouTube 영상 링크                |
-| description            | TEXT      | 설명                             |
-| status                 | TEXT      | pending/approved/rejected        |
-| rejection_reason       | TEXT      | 거부 사유                        |
-| submission_type        | TEXT      | new/update                       |
-| original_restaurant_id | UUID      | 수정 대상 맛집 ID                |
-| changes_requested      | JSONB     | 변경 요청 사항                   |
-| created_at             | TIMESTAMP | 제보 시간                        |
-| reviewed_at            | TIMESTAMP | 검토 시간                        |
+| 컬럼명                      | 타입              | 설명                                                                 |
+| --------------------------- | ----------------- | -------------------------------------------------------------------- |
+| id                          | UUID              | Primary Key                                                          |
+| user_id                     | UUID              | 제보자 ID (auth.users FK)                                            |
+| submission_type             | submission_type   | new (신규 제보) / edit (수정 요청)                                   |
+| status                      | submission_status | pending / all_approved / partially_approved / all_deleted            |
+| user_restaurants_submission | JSONB             | 제보 맛집 배열 `[{unique_id, name, categories, address, phone, youtube_link, tzuyang_review}, ...]` |
+| admin_notes                 | TEXT              | 관리자 메모                                                          |
+| rejection_reason            | TEXT              | 거부 사유                                                            |
+| resolved_by_admin_id        | UUID              | 검토한 관리자 ID                                                     |
+| reviewed_at                 | TIMESTAMPTZ       | 검토 완료 시간                                                       |
+| created_at                  | TIMESTAMPTZ       | 제보 시간                                                            |
+| updated_at                  | TIMESTAMPTZ       | 수정 시간                                                            |
+
+**특징**:
+- **JSONB 배열 구조**: 한 번의 제보에 여러 맛집 정보 포함 가능
+- **unique_id**: 
+  - 신규 제보 시: `null` (승인 시 자동 생성)
+  - 수정 요청 시: 기존 맛집의 `unique_id`
+- **부분 승인**: 여러 맛집 중 일부만 승인 가능 (`partially_approved`)
+- **MD5 해싱**: `generate_unique_id(name, jibun_address, tzuyang_review)`로 중복 방지
 
 > **주소 저장**: 사용자가 입력한 주소는 모두 **도로명 주소**로 저장됩니다.
 >
