@@ -170,6 +170,46 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     // (지도에 이미 표시된 맛집을 검색하는 경우)
     setSearchedRestaurant(null);
     setSelectedRestaurant(restaurant);
+
+    // 검색된 맛집의 지역으로 하단 컨트롤 패널의 지역 필터 실시간 변경
+    const restaurantRegion = getRestaurantRegion(restaurant);
+    if (restaurantRegion && restaurantRegion !== selectedRegion) {
+      setSelectedRegion(restaurantRegion);
+      console.log('🔍 검색된 맛집 지역으로 필터 변경:', restaurantRegion);
+    }
+  };
+
+  // 맛집의 지역 정보를 추출하는 함수
+  const getRestaurantRegion = (restaurant: Restaurant): Region | null => {
+    if (restaurant.address_elements && typeof restaurant.address_elements === 'object') {
+      const addressElements = restaurant.address_elements as any;
+      if (addressElements.SIDO) {
+        // SIDO 값이 "서울특별시" 형태로 저장되어 있는지 확인
+        const sido = addressElements.SIDO;
+        if (typeof sido === 'string') {
+          return sido as Region;
+        }
+      }
+    }
+
+    // address_elements에 지역 정보가 없는 경우 주소에서 추출 시도
+    if (restaurant.road_address || restaurant.jibun_address) {
+      const address = (restaurant.road_address || restaurant.jibun_address) as string;
+      // 지역명 패턴으로 추출
+      const regionPatterns = [
+        "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
+        "대전광역시", "울산광역시", "세종특별자치시", "경기도", "충청북도",
+        "충청남도", "전라남도", "경상북도", "경상남도", "전북특별자치도", "제주특별자치도"
+      ];
+
+      for (const region of regionPatterns) {
+        if (address.includes(region)) {
+          return region as Region;
+        }
+      }
+    }
+
+    return null;
   };
 
   // useRestaurants의 결과를 활용해서 검색된 병합 데이터를 기존 데이터와 일치시키는 함수

@@ -80,15 +80,28 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
     });
 
+    // 지역 변경 시 로딩 중에도 이전 마커를 유지하기 위한 상태
+    const [previousRestaurants, setPreviousRestaurants] = useState<Restaurant[]>([]);
+
+    // restaurants가 변경될 때 이전 데이터를 저장
+    useEffect(() => {
+        if (restaurants.length > 0 && !isLoadingRestaurants) {
+            setPreviousRestaurants(restaurants);
+        }
+    }, [restaurants, isLoadingRestaurants]);
+
+    // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용)
+    const displayRestaurants = isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
+
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
     useEffect(() => {
-        if (selectedRestaurant && restaurants.length > 0) {
+        if (selectedRestaurant && displayRestaurants.length > 0) {
             let existingRestaurant = null;
 
             // 병합된 데이터의 경우
             if (selectedRestaurant.mergedRestaurants && selectedRestaurant.mergedRestaurants.length > 0) {
                 const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
-                existingRestaurant = restaurants.find(r =>
+                existingRestaurant = displayRestaurants.find(r =>
                     mergedIds.includes(r.id) ||
                     (r.name === selectedRestaurant.name &&
                      Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
@@ -96,7 +109,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 );
             } else {
                 // 일반 데이터의 경우
-                existingRestaurant = restaurants.find(r =>
+                existingRestaurant = displayRestaurants.find(r =>
                     r.id === selectedRestaurant.id ||
                     (r.name === selectedRestaurant.name &&
                      Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
@@ -294,22 +307,22 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             oldMarkers.forEach(marker => marker.setMap(null));
             markersRef.current = [];
 
-            // 마커를 표시할 맛집 목록 생성 (기존 restaurants + 검색된 맛집)
-            const restaurantsToShow = [...restaurants];
+            // 마커를 표시할 맛집 목록 생성 (기존 displayRestaurants + 검색된 맛집)
+            const restaurantsToShow = [...displayRestaurants];
 
             // 검색된 맛집이 기존 목록에 없는 경우 추가
             // searchedRestaurant이 교체된 경우에도 기존 데이터와 일치하도록 보장
             if (searchedRestaurant) {
                 console.log('🔍 searchedRestaurant (마커 추가 시점):', searchedRestaurant);
-                console.log('🔍 restaurants.length:', restaurants.length);
+                console.log('🔍 displayRestaurants.length:', displayRestaurants.length);
 
                 // 병합된 데이터의 경우 mergedRestaurants로 확인
                 let alreadyExists = false;
                 if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
                     const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
-                    alreadyExists = restaurants.some(r => mergedIds.includes(r.id));
+                    alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
                 } else {
-                    alreadyExists = restaurants.some(r => r.id === searchedRestaurant.id);
+                    alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
                 }
 
                 console.log('🔍 alreadyExists (마커 추가 시점):', alreadyExists);
@@ -441,7 +454,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [restaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant, isGridMode, gridSelectedRestaurant, onRestaurantSelect]);
+    }, [displayRestaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant, isGridMode, gridSelectedRestaurant, onRestaurantSelect]);
 
     // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
     useEffect(() => {
@@ -490,7 +503,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 innerDiv.classList.remove('animate-bounce');
             }
         });
-    }, [selectedRestaurant, restaurants, isLoaded]);
+    }, [selectedRestaurant, displayRestaurants, isLoaded]);
 
     // 줌 이벤트 시 마커 스타일 유지
     useEffect(() => {
@@ -551,7 +564,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         return () => {
             // Naver Maps에서는 이벤트 리스너가 자동으로 정리됨
         };
-    }, [isLoaded, selectedRestaurant, restaurants]);
+    }, [isLoaded, selectedRestaurant, displayRestaurants]);
 
     // 로딩 에러 처리
     if (loadError) {
