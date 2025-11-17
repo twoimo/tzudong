@@ -196,11 +196,26 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     // address_elements에 지역 정보가 없는 경우 주소에서 추출 시도
     if (restaurant.road_address || restaurant.jibun_address) {
       const address = (restaurant.road_address || restaurant.jibun_address) as string;
-      // 지역명 패턴으로 추출
+
+      // 세부 지역명 우선 처리 (특정 지역의 세부 구역)
+      const specificRegionMappings = [
+        { pattern: "욕지면", region: "욕지도" as Region },
+        // 필요에 따라 다른 세부 지역 매핑 추가 가능
+        // { pattern: "울릉읍", region: "울릉도" as Region },
+      ];
+
+      for (const mapping of specificRegionMappings) {
+        if (address.includes(mapping.pattern)) {
+          return mapping.region;
+        }
+      }
+
+      // 일반 광역시도 패턴으로 추출
       const regionPatterns = [
         "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
         "대전광역시", "울산광역시", "세종특별자치시", "경기도", "충청북도",
-        "충청남도", "전라남도", "경상북도", "경상남도", "전북특별자치도", "제주특별자치도"
+        "충청남도", "전라남도", "경상북도", "경상남도", "전북특별자치도", "제주특별자치도",
+        "울릉도", "욕지도"
       ];
 
       for (const region of regionPatterns) {
