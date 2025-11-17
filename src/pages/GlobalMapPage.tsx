@@ -132,6 +132,19 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
         setSelectedRestaurant(restaurant);
     }, [setSelectedRestaurant]);
 
+    // 검색된 맛집의 국가를 찾는 헬퍼 함수
+    const getRestaurantCountry = useCallback((restaurant: Restaurant): GlobalCountry | null => {
+        const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
+
+        // 각 국가에 대해 확인
+        for (const country of GLOBAL_COUNTRIES) {
+            if (address.includes(country)) {
+                return country;
+            }
+        }
+        return null;
+    }, []);
+
     const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
         // 개발 환경에서만 구조화된 상태 로그 출력
         if (process.env.NODE_ENV === "development") {
@@ -142,9 +155,21 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 selectedCountry,
             });
         }
+
+        // 검색된 맛집의 국가로 하단 컨트롤 패널의 국가 필터 실시간 변경
+        const restaurantCountry = getRestaurantCountry(restaurant);
+        if (restaurantCountry && restaurantCountry !== selectedCountry) {
+            setSelectedCountry(restaurantCountry);
+            console.log('🌍 검색된 맛집 국가로 필터 변경:', restaurantCountry);
+        }
+
         // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
         setSearchedRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
+
+        // 검색 시 자동으로 패널 열기
+        setPanelRestaurant(restaurant);
+        setIsPanelOpen(true);
 
         // 지도 이동 함수가 준비되었다면 즉시 이동
         if (moveToRestaurant) {
@@ -160,10 +185,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                 console.log("[handleRestaurantSearch] 그리드 모드에서 단일 모드로 전환");
             }
             setIsGridMode(false);
-            // 검색된 맛집의 국가로 전환 (가능하다면)
-            // TODO: 맛집의 국가 정보를 기반으로 selectedCountry 설정
         }
-    }, [moveToRestaurant, isGridMode, setSelectedRestaurant, selectedCountry]);
+    }, [moveToRestaurant, isGridMode, setSelectedRestaurant, selectedCountry, getRestaurantCountry]);
 
     const switchToSingleMap = useCallback(() => {
         // 그리드 모드에서 검색 시 단일 모드로 전환

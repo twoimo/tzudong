@@ -105,6 +105,25 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [onMapReady, moveToRestaurant]);
 
+  // 검색된 맛집으로 지도 이동
+  useEffect(() => {
+    if (searchedRestaurant && googleMapRef.current) {
+      const position = { lat: Number(searchedRestaurant.lat), lng: Number(searchedRestaurant.lng) };
+
+      try {
+        googleMapRef.current.setCenter(position);
+        googleMapRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
+
+        // 검색된 맛집 선택 상태로 설정
+        if (onRestaurantSelect) {
+          onRestaurantSelect(searchedRestaurant);
+        }
+      } catch (error) {
+        console.error('MapView: Error moving to searched restaurant position:', error);
+      }
+    }
+  }, [searchedRestaurant, onRestaurantSelect]);
+
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
@@ -123,6 +142,29 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }), [mapBounds, memoizedFilters, selectedCountry, isLoaded]);
 
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantsOptions);
+
+  // 마커를 표시할 맛집 목록 (기존 restaurants + 검색된 맛집)
+  const restaurantsToShow = useMemo(() => {
+    const result = [...restaurants];
+
+    // 검색된 맛집이 기존 목록에 없는 경우 추가
+    if (searchedRestaurant) {
+      // 병합된 데이터의 경우
+      let alreadyExists = false;
+      if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
+        const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
+        alreadyExists = restaurants.some(r => mergedIds.includes(r.id));
+      } else {
+        alreadyExists = restaurants.some(r => r.id === searchedRestaurant.id);
+      }
+
+      if (!alreadyExists) {
+        result.push(searchedRestaurant);
+      }
+    }
+
+    return result;
+  }, [restaurants, searchedRestaurant]);
 
 
   // Refetch when refreshTrigger changes
@@ -226,7 +268,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     markersRef.current = [];
 
     // Create new markers
-    restaurants.forEach((restaurant) => {
+    restaurantsToShow.forEach((restaurant) => {
       const isSelected = selectedRestaurant?.id === restaurant.id;
 
       // 카테고리별 적절한 이모티콘으로 변경
@@ -303,7 +345,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     if (!isLoaded || markersRef.current.length === 0) return;
 
     markersRef.current.forEach((marker, index) => {
-      const restaurant = restaurants[index];
+      const restaurant = restaurantsToShow[index];
       if (!restaurant) return;
 
       const isSelected = selectedRestaurant?.id === restaurant.id;
@@ -324,7 +366,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         innerDiv.classList.remove('animate-bounce');
       }
     });
-  }, [selectedRestaurant?.id, restaurants, isLoaded]);
+  }, [selectedRestaurant?.id, restaurantsToShow, isLoaded]);
 
   // 줌 이벤트 시 마커 스타일 유지
   useEffect(() => {
@@ -336,7 +378,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         if (!isLoaded || markersRef.current.length === 0) return;
 
         markersRef.current.forEach((marker, index) => {
-          const restaurant = restaurants[index];
+          const restaurant = restaurantsToShow[index];
           if (!restaurant) return;
 
           const isSelected = selectedRestaurant?.id === restaurant.id;
@@ -368,7 +410,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         google.maps.event.removeListener(zoomListener);
       }
     };
-  }, [isLoaded, selectedRestaurant?.id, restaurants]);
+  }, [isLoaded, selectedRestaurant?.id, restaurantsToShow]);
 
   if (loadError) {
     return (
