@@ -12,6 +12,7 @@ interface Restaurant {
     jibun_address: string | null;
     lat?: number;
     lng?: number;
+    tzuyang_review?: string;
 }
 
 interface UserReview {
@@ -51,7 +52,7 @@ export function useUnvisitedRestaurants() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng')
+                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review')
                 .eq('status', 'approved')
                 .not('youtube_link', 'is', null)
                 .order('created_at', { ascending: true });

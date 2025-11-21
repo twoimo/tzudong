@@ -85,7 +85,7 @@ function AppLayout() {
         queryFn: async () => {
           const { data, error } = await supabase
             .from('restaurants')
-            .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng')
+            .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review')
             .eq('status', 'approved')
             .not('youtube_link', 'is', null)
             .order('created_at', { ascending: true });
