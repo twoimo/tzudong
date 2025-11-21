@@ -99,12 +99,28 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [panelRestaurant, setPanelRestaurant] = useState<Restaurant | null>(null);
 
-    // selectedRestaurant 변경 시 panelRestaurant도 업데이트 (관리자 수정 즉각 반영)
+    // selectedRestaurant 변경 시 panelRestaurant도 업데이트 + 팝업에서 이동 시 패널 및 지도 조정
     useEffect(() => {
-        if (selectedRestaurant && isPanelOpen) {
+        if (selectedRestaurant) {
             setPanelRestaurant(selectedRestaurant);
+            setIsPanelOpen(true); // 팝업에서 이동 시 패널 자동 열기
+            setSearchedRestaurant(selectedRestaurant); // 지도 재조정을 위해 설정
+
+            // 해당 레스토랑의 국가로 필터 자동 변경
+            const address = selectedRestaurant.english_address || selectedRestaurant.road_address || selectedRestaurant.jibun_address || '';
+            for (const country of GLOBAL_COUNTRIES) {
+                if (address.includes(country)) {
+                    setSelectedCountry(country as GlobalCountry);
+                    break;
+                }
+            }
+
+            // 지도 이동 함수가 준비되었다면 즉시 이동
+            if (moveToRestaurant) {
+                moveToRestaurant(selectedRestaurant);
+            }
         }
-    }, [selectedRestaurant, isPanelOpen]);
+    }, [selectedRestaurant, moveToRestaurant]);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
     const [editFormData, setEditFormData] = useState({
@@ -221,10 +237,10 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
 
     const handleRequestEditRestaurant = useCallback((restaurant: Restaurant) => {
         setRestaurantToEdit(restaurant);
-        
+
         // mergedRestaurants에서 모든 유튜브 링크와 쯔양 리뷰 추출
         const youtubeReviews: { youtube_link: string; tzuyang_review: string; unique_id?: string }[] = [];
-        
+
         if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
             // 병합된 모든 레코드에서 유튜브 링크와 쯔양 리뷰 추출
             restaurant.mergedRestaurants.forEach(record => {
@@ -269,7 +285,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const handleYoutubeReviewChange = (index: number, field: 'youtube_link' | 'tzuyang_review', value: string) => {
         setEditFormData(prev => ({
             ...prev,
-            youtube_reviews: prev.youtube_reviews.map((item, i) => 
+            youtube_reviews: prev.youtube_reviews.map((item, i) =>
                 i === index ? { ...item, [field]: value } : item
             )
         }));
@@ -622,13 +638,13 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 {/* 유튜브 영상별 정보 */}
                                 <div className="space-y-4">
                                     <h3 className="font-semibold text-lg">유튜브 영상별 정보</h3>
-                                    
+
                                     {editFormData.youtube_reviews.map((review, index) => (
                                         <Card key={index} className="p-4 space-y-3">
                                             <div className="flex items-center justify-between">
                                                 <Badge variant="outline">영상 {index + 1}</Badge>
                                             </div>
-                                            
+
                                             <div className="space-y-2">
                                                 <Label>유튜브 링크</Label>
                                                 <Input

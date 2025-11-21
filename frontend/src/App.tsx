@@ -57,10 +57,9 @@ function AppLayout() {
   useEffect(() => {
     const state = location.state as { selectedRestaurant?: Restaurant };
     if (state?.selectedRestaurant) {
-      console.log('[App.tsx] Setting selected restaurant from popup:', state.selectedRestaurant);
       setSelectedRestaurant(state.selectedRestaurant);
     }
-  }, [location.pathname, location.key]); // location.state 대신 pathname과 key 사용
+  }, [location.state]);
 
   // 팝업 데이터 즉시 prefetch (빠른 팝업 표시를 위해)
   useEffect(() => {
@@ -86,7 +85,7 @@ function AppLayout() {
         queryFn: async () => {
           const { data, error } = await supabase
             .from('restaurants')
-            .select('id, name, youtube_link, review_count, categories, road_address, jibun_address')
+            .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng')
             .eq('status', 'approved')
             .not('youtube_link', 'is', null)
             .order('created_at', { ascending: true });
