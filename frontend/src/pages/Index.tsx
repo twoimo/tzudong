@@ -109,10 +109,10 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   const handleRequestEditRestaurant = (restaurant: Restaurant) => {
     setRestaurantToEdit(restaurant);
-    
+
     // mergedRestaurants에서 모든 유튜브 링크와 쯔양 리뷰 추출
     const youtubeReviews: { youtube_link: string; tzuyang_review: string; unique_id?: string }[] = [];
-    
+
     if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
       // 병합된 모든 레코드에서 유튜브 링크와 쯔양 리뷰 추출
       restaurant.mergedRestaurants.forEach(record => {
@@ -157,7 +157,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
   const handleYoutubeReviewChange = (index: number, field: 'youtube_link' | 'tzuyang_review', value: string) => {
     setEditFormData(prev => ({
       ...prev,
-      youtube_reviews: prev.youtube_reviews.map((item, i) => 
+      youtube_reviews: prev.youtube_reviews.map((item, i) =>
         i === index ? { ...item, [field]: value } : item
       )
     }));
@@ -235,6 +235,16 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
     return null;
   };
+
+  // selectedRestaurant 변경 시 해당 지역으로 자동 이동
+  useEffect(() => {
+    if (selectedRestaurant) {
+      const region = getRestaurantRegion(selectedRestaurant);
+      if (region && region !== selectedRegion) {
+        setSelectedRegion(region);
+      }
+    }
+  }, [selectedRestaurant]);
 
   // useRestaurants의 결과를 활용해서 검색된 병합 데이터를 기존 데이터와 일치시키는 함수
   const normalizeSearchedRestaurant = (restaurant: Restaurant, allRestaurants: Restaurant[]): Restaurant => {
@@ -527,11 +537,11 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                 toast.error('제출에 실패했습니다. 다시 시도해주세요.');
               }
             }} className="space-y-4 mt-4">
-              
+
               {/* 공통 정보 입력 */}
               <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
                 <h3 className="font-semibold text-lg">공통 정보</h3>
-                
+
                 <div className="space-y-2">
                   <Label htmlFor="name">
                     맛집 이름 <span className="text-red-500">*</span>
@@ -646,12 +656,12 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
               {/* 유튜브 영상별 정보 */}
               <div className="space-y-4">
                 <h3 className="font-semibold text-lg">유튜브 영상별 정보</h3>
-                
-                                {editFormData.youtube_reviews.map((review, index) => (
-                                    <Card key={index} className="p-4 space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <Badge variant="outline">영상 {index + 1}</Badge>
-                                        </div>                    <div className="space-y-2">
+
+                {editFormData.youtube_reviews.map((review, index) => (
+                  <Card key={index} className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Badge variant="outline">영상 {index + 1}</Badge>
+                    </div>                    <div className="space-y-2">
                       <Label>유튜브 링크</Label>
                       <Input
                         value={review.youtube_link}
