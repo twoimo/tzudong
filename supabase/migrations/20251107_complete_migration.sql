@@ -951,481 +951,241 @@ BEGIN
             WHEN OTHERS THEN
                 failed := failed + 1;
                 failed_list := array_append(failed_list, jsonb_build_object(
-                    'data', record,
-                    'error', SQLERRM
-                ));
-        END;
-    END LOOP;
-    
-    RETURN QUERY SELECT inserted, updated, failed, failed_list;
-END;
-$$;
-
-COMMENT ON FUNCTION public.batch_insert_restaurants_from_jsonl IS 'JSONL 배열을 한 번에 처리하여 restaurants 테이블에 삽입/업데이트';
-
-
--- ========================================
--- PART 2.29: (신규) 사용자 제보 승인 함수 (관리자 전용)
--- ========================================
-DROP FUNCTION IF EXISTS public.approve_restaurant_submission(UUID, UUID);
-CREATE OR REPLACE FUNCTION public.approve_restaurant_submission(
-    submission_id UUID,
-    admin_user_id UUID
-)
-RETURNS BOOLEAN
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-    submission_record public.restaurant_submissions;
-    is_admin BOOLEAN;
-BEGIN
-    -- 1. 관리자 권한 확인
-    SELECT public.is_user_admin(admin_user_id) INTO is_admin;
-    IF NOT is_admin THEN
-        RAISE EXCEPTION '관리자 권한이 필요합니다.';
-    END IF;
-
-    -- 2. 처리할 제보 조회 (pending 상태, 관리자가 입력한 최종 데이터 기준)
-    SELECT * INTO submission_record
-    FROM public.restaurant_submissions
-    WHERE id = submission_id AND status = 'pending';
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION '처리할 제보가 없거나 이미 처리된 제보입니다.';
-    END IF;
-
-    -- 3. [관리자 검증] 필수 항목이 채워졌는지 확인 (지오코딩/수동입력 완료 여부)
-    IF submission_record.name IS NULL OR
-       submission_record.lat IS NULL OR
-       submission_record.lng IS NULL OR
-       submission_record.categories IS NULL OR
-       (submission_record.road_address IS NULL AND submission_record.jibun_address IS NULL)
-    THEN
-        RAISE EXCEPTION '승인 실패: 필수 항목(이름, 좌표, 카테고리, 주소)이 누락되었습니다. 지오코딩 또는 수동 입력 후 승인하세요.';
-    END IF;
-
-    -- 4. 제보 유형에 따라 분기
-    IF submission_record.submission_type = 'new' THEN
-        
-        -- 4-1. 신규 제보 승인 (INSERT into restaurants)
-        INSERT INTO public.restaurants (
-            name, phone, categories,
-            lat, lng, road_address, jibun_address, english_address, address_elements,
-            status, -- 'approved'로 즉시 승인
-            source_type, -- 'user_submission_new'
-            created_by, -- 제보한 사용자 ID
-            updated_by_admin_id -- 승인한 관리자 ID
-        )
-        VALUES (
-            submission_record.name, submission_record.phone, submission_record.categories,
-            submission_record.lat, submission_record.lng, submission_record.road_address, 
-            submission_record.jibun_address, submission_record.english_address, submission_record.address_elements,
-            'approved',
-            'user_submission_new', -- 요청하신 source_type
-            submission_record.user_id,
-            admin_user_id
-        );
-
-    ELSIF submission_record.submission_type = 'edit' THEN
-    
-        -- 4-2. 수정 제보 승인 (UPDATE restaurants)
-        
-        IF submission_record.restaurant_id IS NULL THEN
-            RAISE EXCEPTION '승인 실패: 수정할 대상 맛집(restaurant_id)이 지정되지 않았습니다.';
-        END IF;
-
-        UPDATE public.restaurants r
-        SET
-            -- 관리자가 제보 테이블에 수정한 값으로 덮어쓰기
-            -- (COALESCE 사용: 제보에 값이 있으면 그 값으로, 없으면(NULL) 기존 값 유지)
-            name = COALESCE(submission_record.name, r.name),
-            phone = COALESCE(submission_record.phone, r.phone),
-            categories = COALESCE(submission_record.categories, r.categories),
-            lat = COALESCE(submission_record.lat, r.lat),
-            lng = COALESCE(submission_record.lng, r.lng),
-            road_address = COALESCE(submission_record.road_address, r.road_address),
-            jibun_address = COALESCE(submission_record.jibun_address, r.jibun_address),
-            english_address = COALESCE(submission_record.english_address, r.english_address),
-            address_elements = COALESCE(submission_record.address_elements, r.address_elements),
-            
-            status = 'approved', -- 'approved' 상태 보장
-            source_type = 'user_submission_edit', -- 'modifying' 대신 'edit' 사용 (수정 가능)
-            updated_by_admin_id = admin_user_id,
-            updated_at = now()
-        WHERE
-            r.id = submission_record.restaurant_id;
-
-        IF NOT FOUND THEN
-             RAISE EXCEPTION '승인 실패: 수정할 대상 맛집(ID: %)을 찾을 수 없습니다.', submission_record.restaurant_id;
-        END IF;
-
-    END IF;
-
-    -- 5. 제보 테이블 상태 'approved'로 변경
-    UPDATE public.restaurant_submissions
-    SET
-        status = 'approved',
-        resolved_by_admin_id = admin_user_id,
-        updated_at = now()
-    WHERE
-        id = submission_id;
-
-    RETURN TRUE;
-END;
-$$;
-
-COMMENT ON FUNCTION public.approve_restaurant_submission IS '사용자 제보(신규/수정)를 승인하고 restaurants 테이블에 status=approved로 즉시 반영합니다. (관리자 전용)';
-
 
 -- ========================================
 -- PART 3: 테이블 생성
 -- ========================================
 
--- 3.1 사용자 역할 테이블 (보안을 위해 프로필과 분리)
+-- 3.1 사용자 역할 테이블
 DROP TABLE IF EXISTS public.user_roles CASCADE;
 CREATE TABLE public.user_roles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    role app_role NOT NULL DEFAULT 'user',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    UNIQUE(user_id, role)
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  role app_role NOT NULL DEFAULT 'user'::app_role,
+  created_at timestamp with time zone NULL DEFAULT now(),
+  CONSTRAINT user_roles_pkey PRIMARY KEY (id),
+  CONSTRAINT user_roles_user_id_role_key UNIQUE (user_id, role),
+  CONSTRAINT user_roles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE public.user_roles IS '사용자 역할 관리 테이블 (admin, user)';
-COMMENT ON COLUMN public.user_roles.user_id IS 'auth.users 테이블의 사용자 ID';
-COMMENT ON COLUMN public.user_roles.role IS '사용자 역할 (admin: 관리자, user: 일반 사용자)';
 
 -- 3.2 사용자 프로필 테이블
 DROP TABLE IF EXISTS public.profiles CASCADE;
 CREATE TABLE public.profiles (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
-    nickname TEXT NOT NULL UNIQUE CHECK (length(nickname) >= 2 AND length(nickname) <= 20),
-    email TEXT NOT NULL CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
-    profile_picture TEXT,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    last_login TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  nickname text NOT NULL,
+  email text NOT NULL,
+  profile_picture text NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  last_login timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_email_check CHECK ((email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'::text)),
+  CONSTRAINT profiles_nickname_check CHECK (((length(nickname) >= 2) AND (length(nickname) <= 20))),
+  CONSTRAINT profiles_email_key UNIQUE (email),
+  CONSTRAINT profiles_nickname_key UNIQUE (nickname),
+  CONSTRAINT profiles_user_id_key UNIQUE (user_id),
+  CONSTRAINT profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
 );
 
-COMMENT ON TABLE public.profiles IS '사용자 프로필 정보 테이블 (이메일 중복 가능, 닉네임만 고유)';
-COMMENT ON COLUMN public.profiles.nickname IS '사용자 닉네임 (고유값, 2-20자, 중복 불가)';
-COMMENT ON COLUMN public.profiles.email IS '이메일 주소 (형식 검증, 중복 가능 - 회원탈퇴 후 재가입 허용)';
-COMMENT ON COLUMN public.profiles.profile_picture IS '프로필 이미지 URL';
-COMMENT ON COLUMN public.profiles.last_login IS '마지막 로그인 시간';
+COMMENT ON TABLE public.profiles IS '사용자 프로필 정보 테이블';
 
--- 3.3 맛집 정보 테이블 (통합: restaurants + evaluation_records)
+-- 3.3 맛집 정보 테이블
 DROP TABLE IF EXISTS public.restaurants CASCADE;
 CREATE TABLE public.restaurants (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    
-    -- 기본 정보
-    name TEXT NOT NULL CHECK (length(name) >= 1 AND length(name) <= 100),  -- 1자 이상으로 완화
-    phone TEXT,  -- 전화번호 제약 제거 (해외 번호 포함)
-    description TEXT,
-    categories TEXT[] CHECK (categories IS NULL OR (array_length(categories, 1) > 0 AND array_length(categories, 1) <= 5)), -- [수정]
-    
-    -- 위치 정보
-    lat NUMERIC CHECK (lat IS NULL OR (lat >= -90 AND lat <= 90)),
-    lng NUMERIC CHECK (lng IS NULL OR (lng >= -180 AND lng <= 180)),
-    
-    -- 주소 정보
-    road_address TEXT,
-    jibun_address TEXT,
-    english_address TEXT,
-    address_elements JSONB DEFAULT '{}'::JSONB,
-    origin_address JSONB,  -- AI 크롤링 원본 주소 정보 (JSON: {address, lat, lng})
-    
-    -- 유튜브 관련 정보
-    youtube_link TEXT,  -- 유튜브 영상 링크 (단일)
-    youtube_meta JSONB,  -- 개별 유튜브 메타데이터 (AI 크롤링용)
-    unique_id TEXT UNIQUE,  -- AI 크롤링 고유 식별자 (youtube_link 기반)
-    
-    -- 쯔양 리뷰 정보
-    tzuyang_review TEXT,  -- 쯔양 리뷰 내용 (텍스트)
-    reasoning_basis TEXT,  -- AI 평가 근거
-    
-    -- AI 평가 정보
-    evaluation_results JSONB,  -- AI 평가 결과 (JSON)
-    
-    -- 데이터 출처
-    source_type TEXT,  -- 데이터 출처 (예: 'perplexity', 'manual', 'user_submission')
-    
-    -- 지오코딩 정보
-    geocoding_success BOOLEAN NOT NULL DEFAULT false,
-    geocoding_false_stage INTEGER CHECK (geocoding_false_stage IS NULL OR geocoding_false_stage IN (0, 1, 2)),
-    
-    -- 상태 관리
-    status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-    is_missing BOOLEAN NOT NULL DEFAULT false,  -- 맛집 정보 누락 여부
-    is_not_selected BOOLEAN NOT NULL DEFAULT false,  -- 선택되지 않음 여부
-    
-    -- 리뷰 통계
-    review_count INTEGER NOT NULL DEFAULT 0 CHECK (review_count >= 0),
-    
-    -- 관리자 정보
-    created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    updated_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    
-    -- 타임스탬프
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    
-    -- 데이터 무결성을 위한 제약조건
-    CONSTRAINT restaurants_approved_data_check CHECK (
-        -- status가 'approved'인 경우 필수 데이터 검증
-        (status = 'approved' AND 
-         lat IS NOT NULL AND 
-         lng IS NOT NULL AND 
-         categories IS NOT NULL AND
-         (road_address IS NOT NULL OR jibun_address IS NOT NULL)) OR
-        -- 그 외의 status는 제약 없음
-        status IN ('pending', 'rejected')
-    ),
-    CONSTRAINT restaurants_geocoding_stage_check CHECK (
-        (geocoding_success = true AND geocoding_false_stage IS NULL) OR
-        (geocoding_success = false AND geocoding_false_stage IS NOT NULL) OR
-        (geocoding_success = false AND geocoding_false_stage IS NULL)
-    )
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  phone text NULL,
+  categories text[] NULL,
+  lat numeric NULL,
+  lng numeric NULL,
+  road_address text NULL,
+  jibun_address text NULL,
+  english_address text NULL,
+  address_elements jsonb NULL DEFAULT '{}'::jsonb,
+  origin_address jsonb NULL,
+  youtube_link text NULL,
+  youtube_meta jsonb NULL,
+  unique_id text NULL,
+  tzuyang_review text NULL,
+  reasoning_basis text NULL,
+  evaluation_results jsonb NULL,
+  source_type text NULL,
+  geocoding_success boolean NOT NULL DEFAULT false,
+  geocoding_false_stage integer NULL,
+  status text NOT NULL DEFAULT 'pending'::text,
+  is_missing boolean NOT NULL DEFAULT false,
+  is_not_selected boolean NOT NULL DEFAULT false,
+  review_count integer NOT NULL DEFAULT 0,
+  created_by uuid NULL,
+  updated_by_admin_id uuid NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  db_error_message text NULL,
+  db_error_details jsonb NULL,
+  CONSTRAINT restaurants_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurants_categories_check CHECK ((categories IS NULL OR ((array_length(categories, 1) > 0) AND (array_length(categories, 1) <= 5)))),
+  CONSTRAINT restaurants_geocoding_false_stage_check CHECK ((geocoding_false_stage IS NULL OR (geocoding_false_stage = ANY (ARRAY[0, 1, 2])))),
+  CONSTRAINT restaurants_lat_check CHECK ((lat IS NULL OR ((lat >= '-90'::integer::numeric) AND (lat <= 90::numeric)))),
+  CONSTRAINT restaurants_lng_check CHECK ((lng IS NULL OR ((lng >= '-180'::integer::numeric) AND (lng <= 180::numeric)))),
+  CONSTRAINT restaurants_name_check CHECK (((length(name) >= 1) AND (length(name) <= 100))),
+  CONSTRAINT restaurants_review_count_check CHECK ((review_count >= 0)),
+  CONSTRAINT restaurants_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text]))),
+  CONSTRAINT restaurants_unique_id_key UNIQUE (unique_id),
+  CONSTRAINT restaurants_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users (id) ON DELETE SET NULL,
+  CONSTRAINT restaurants_updated_by_admin_id_fkey FOREIGN KEY (updated_by_admin_id) REFERENCES auth.users (id) ON DELETE SET NULL
 );
 
-COMMENT ON TABLE public.restaurants IS '맛집 정보 통합 테이블 (restaurants + evaluation_records)';
-COMMENT ON COLUMN public.restaurants.name IS '맛집 이름 (2-100자)';
-COMMENT ON COLUMN public.restaurants.phone IS '전화번호 (형식: 02-1234-5678 또는 010-1234-5678)';
-COMMENT ON COLUMN public.restaurants.lat IS '위도 (범위: -90 ~ 90, status=approved일 때 필수)';
-COMMENT ON COLUMN public.restaurants.lng IS '경도 (범위: -180 ~ 180, status=approved일 때 필수)';
-COMMENT ON COLUMN public.restaurants.categories IS '맛집 카테고리 배열 (1-5개, status=approved일 때 필수)';
-COMMENT ON COLUMN public.restaurants.road_address IS '도로명 주소';
-COMMENT ON COLUMN public.restaurants.jibun_address IS '지번 주소';
-COMMENT ON COLUMN public.restaurants.english_address IS '영문 주소';
-COMMENT ON COLUMN public.restaurants.address_elements IS '주소 상세 정보 (JSONB)';
-COMMENT ON COLUMN public.restaurants.origin_address IS 'AI 크롤링 원본 주소 정보 (JSON: {address, lat, lng})';
-COMMENT ON COLUMN public.restaurants.youtube_link IS '유튜브 영상 링크 (단일)';
-COMMENT ON COLUMN public.restaurants.youtube_meta IS '개별 유튜브 메타데이터 (AI 크롤링용)';
-COMMENT ON COLUMN public.restaurants.unique_id IS 'AI 크롤링 고유 식별자 (youtube_link 기반)';
-COMMENT ON COLUMN public.restaurants.tzuyang_review IS '쯔양 리뷰 내용 (텍스트)';
-COMMENT ON COLUMN public.restaurants.reasoning_basis IS 'AI 평가 근거';
-COMMENT ON COLUMN public.restaurants.evaluation_results IS 'AI 평가 결과 (JSON)';
-COMMENT ON COLUMN public.restaurants.geocoding_success IS '지오코딩 성공 여부';
-COMMENT ON COLUMN public.restaurants.geocoding_false_stage IS '지오코딩 실패 단계 (0: 초기, 1: 중간, 2: 최종)';
-COMMENT ON COLUMN public.restaurants.status IS '승인 상태 (pending: 대기, approved: 승인, rejected: 거부)';
-COMMENT ON COLUMN public.restaurants.is_missing IS '맛집 정보 누락 여부';
-COMMENT ON COLUMN public.restaurants.is_not_selected IS '선택되지 않음 여부';
-COMMENT ON COLUMN public.restaurants.review_count IS '리뷰 개수 (0 이상)';
+COMMENT ON TABLE public.restaurants IS '맛집 정보 통합 테이블';
 
 -- 3.4 리뷰 테이블
 DROP TABLE IF EXISTS public.reviews CASCADE;
 CREATE TABLE public.reviews (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    restaurant_id UUID REFERENCES public.restaurants(id) ON DELETE CASCADE NOT NULL,
-    title TEXT NOT NULL CHECK (length(title) >= 2 AND length(title) <= 200),
-    content TEXT NOT NULL CHECK (length(content) >= 10),
-    visited_at TIMESTAMP WITH TIME ZONE NOT NULL CHECK (visited_at <= now()),
-    verification_photo TEXT NOT NULL,
-    food_photos TEXT[] DEFAULT ARRAY[]::TEXT[],
-    categories TEXT[] DEFAULT ARRAY[]::TEXT[],
-    is_verified BOOLEAN NOT NULL DEFAULT false,
-    admin_note TEXT,
-    is_pinned BOOLEAN NOT NULL DEFAULT false,
-    is_edited_by_admin BOOLEAN NOT NULL DEFAULT false,
-    edited_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    edited_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    
-    -- 데이터 무결성을 위한 제약조건
-    CONSTRAINT reviews_edited_consistency CHECK (
-        (is_edited_by_admin = false AND edited_by_admin_id IS NULL AND edited_at IS NULL) OR
-        (is_edited_by_admin = true AND edited_by_admin_id IS NOT NULL AND edited_at IS NOT NULL)
-    )
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  restaurant_id uuid NOT NULL,
+  title text NOT NULL,
+  content text NOT NULL,
+  visited_at timestamp with time zone NOT NULL,
+  verification_photo text NOT NULL,
+  food_photos text[] NULL DEFAULT ARRAY[]::text[],
+  categories text[] NULL DEFAULT ARRAY[]::text[],
+  is_verified boolean NOT NULL DEFAULT false,
+  admin_note text NULL,
+  is_pinned boolean NOT NULL DEFAULT false,
+  is_edited_by_admin boolean NOT NULL DEFAULT false,
+  edited_by_admin_id uuid NULL,
+  edited_at timestamp with time zone NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT reviews_pkey PRIMARY KEY (id),
+  CONSTRAINT reviews_content_check CHECK ((length(content) >= 10)),
+  CONSTRAINT reviews_edited_consistency CHECK ((((is_edited_by_admin = false) AND (edited_by_admin_id IS NULL) AND (edited_at IS NULL)) OR ((is_edited_by_admin = true) AND (edited_by_admin_id IS NOT NULL) AND (edited_at IS NOT NULL)))),
+  CONSTRAINT reviews_title_check CHECK (((length(title) >= 2) AND (length(title) <= 200))),
+  CONSTRAINT reviews_visited_at_check CHECK ((visited_at <= now())),
+  CONSTRAINT reviews_edited_by_admin_id_fkey FOREIGN KEY (edited_by_admin_id) REFERENCES auth.users (id) ON DELETE SET NULL,
+  CONSTRAINT reviews_restaurant_id_fkey FOREIGN KEY (restaurant_id) REFERENCES public.restaurants (id) ON DELETE CASCADE,
+  CONSTRAINT reviews_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE public.reviews IS '사용자 리뷰 테이블';
-COMMENT ON COLUMN public.reviews.title IS '리뷰 제목 (2-200자)';
-COMMENT ON COLUMN public.reviews.content IS '리뷰 내용 (최소 10자)';
-COMMENT ON COLUMN public.reviews.visited_at IS '방문 일시 (미래 날짜 불가)';
-COMMENT ON COLUMN public.reviews.verification_photo IS '방문 인증 사진 URL';
-COMMENT ON COLUMN public.reviews.food_photos IS '음식 사진 URL 배열';
-COMMENT ON COLUMN public.reviews.categories IS '리뷰 카테고리 배열';
-COMMENT ON COLUMN public.reviews.is_verified IS '관리자 인증 여부';
-COMMENT ON COLUMN public.reviews.admin_note IS '관리자 메모';
-COMMENT ON COLUMN public.reviews.is_pinned IS '고정 여부';
-COMMENT ON COLUMN public.reviews.is_edited_by_admin IS '관리자 수정 여부';
-COMMENT ON COLUMN public.reviews.edited_by_admin_id IS '수정한 관리자 ID';
-COMMENT ON COLUMN public.reviews.edited_at IS '관리자 수정 시간';
 
 -- 3.5 리뷰 좋아요 테이블
 DROP TABLE IF EXISTS public.review_likes CASCADE;
 CREATE TABLE public.review_likes (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    review_id UUID REFERENCES public.reviews(id) ON DELETE CASCADE NOT NULL,
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-    UNIQUE(review_id, user_id)
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  review_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  created_at timestamp with time zone NULL DEFAULT now(),
+  CONSTRAINT review_likes_pkey PRIMARY KEY (id),
+  CONSTRAINT review_likes_review_id_user_id_key UNIQUE (review_id, user_id),
+  CONSTRAINT review_likes_review_id_fkey FOREIGN KEY (review_id) REFERENCES public.reviews (id) ON DELETE CASCADE,
+  CONSTRAINT review_likes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE public.review_likes IS '리뷰 좋아요 테이블';
-COMMENT ON COLUMN public.review_likes.review_id IS '좋아요한 리뷰 ID';
-COMMENT ON COLUMN public.review_likes.user_id IS '좋아요한 사용자 ID';
 
 -- 3.6 서버 비용 테이블
 DROP TABLE IF EXISTS public.server_costs CASCADE;
 CREATE TABLE public.server_costs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    item_name TEXT NOT NULL CHECK (length(item_name) >= 2),
-    monthly_cost NUMERIC NOT NULL CHECK (monthly_cost >= 0),
-    description TEXT,
-    updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  item_name text NOT NULL,
+  monthly_cost numeric NOT NULL,
+  description text NULL,
+  updated_by uuid NULL,
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT server_costs_pkey PRIMARY KEY (id),
+  CONSTRAINT server_costs_item_name_check CHECK ((length(item_name) >= 2)),
+  CONSTRAINT server_costs_monthly_cost_check CHECK ((monthly_cost >= (0)::numeric)),
+  CONSTRAINT server_costs_updated_by_fkey FOREIGN KEY (updated_by) REFERENCES auth.users (id) ON DELETE SET NULL
 );
 
 COMMENT ON TABLE public.server_costs IS '서버 운영 비용 테이블';
-COMMENT ON COLUMN public.server_costs.item_name IS '비용 항목명 (최소 2자)';
-COMMENT ON COLUMN public.server_costs.monthly_cost IS '월 비용 (0 이상)';
-COMMENT ON COLUMN public.server_costs.description IS '비용 설명';
 
--- 3.7 사용자 통계 테이블 (리더보드용)
+-- 3.7 사용자 통계 테이블
 DROP TABLE IF EXISTS public.user_stats CASCADE;
 CREATE TABLE public.user_stats (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL UNIQUE,
-    review_count INTEGER NOT NULL DEFAULT 0 CHECK (review_count >= 0),
-    verified_review_count INTEGER NOT NULL DEFAULT 0 CHECK (verified_review_count >= 0),
-    trust_score NUMERIC NOT NULL DEFAULT 0 CHECK (trust_score >= 0 AND trust_score <= 100),
-    last_updated TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    
-    -- 데이터 무결성을 위한 제약조건
-    CONSTRAINT user_stats_count_consistency CHECK (verified_review_count <= review_count)
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  review_count integer NOT NULL DEFAULT 0,
+  verified_review_count integer NOT NULL DEFAULT 0,
+  trust_score numeric NOT NULL DEFAULT 0,
+  last_updated timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT user_stats_pkey PRIMARY KEY (id),
+  CONSTRAINT user_stats_review_count_check CHECK ((review_count >= 0)),
+  CONSTRAINT user_stats_trust_score_check CHECK (((trust_score >= (0)::numeric) AND (trust_score <= (100)::numeric))),
+  CONSTRAINT user_stats_user_id_key UNIQUE (user_id),
+  CONSTRAINT user_stats_verified_review_count_check CHECK ((verified_review_count >= 0)),
+  CONSTRAINT user_stats_count_consistency CHECK ((verified_review_count <= review_count)),
+  CONSTRAINT user_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE public.user_stats IS '사용자 활동 통계 테이블';
-COMMENT ON COLUMN public.user_stats.review_count IS '총 리뷰 작성 수 (0 이상)';
-COMMENT ON COLUMN public.user_stats.verified_review_count IS '인증된 리뷰 수 (0 이상, review_count 이하)';
-COMMENT ON COLUMN public.user_stats.trust_score IS '신뢰도 점수 (0-100)';
 
 -- 3.8 알림 테이블
 DROP TABLE IF EXISTS public.notifications CASCADE;
 CREATE TABLE public.notifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-    type notification_type NOT NULL DEFAULT 'system',
-    title TEXT NOT NULL CHECK (length(title) >= 1 AND length(title) <= 100),
-    message TEXT NOT NULL CHECK (length(message) >= 1 AND length(message) <= 500),
-    is_read BOOLEAN NOT NULL DEFAULT false,
-    data JSONB DEFAULT '{}'::JSONB,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  type notification_type NOT NULL DEFAULT 'system'::notification_type,
+  title text NOT NULL,
+  message text NOT NULL,
+  is_read boolean NOT NULL DEFAULT false,
+  data jsonb NULL DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT notifications_message_check CHECK (((length(message) >= 1) AND (length(message) <= 500))),
+  CONSTRAINT notifications_title_check CHECK (((length(title) >= 1) AND (length(title) <= 100))),
+  CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE CASCADE
 );
 
 COMMENT ON TABLE public.notifications IS '사용자 알림 테이블';
-COMMENT ON COLUMN public.notifications.type IS '알림 타입 (system, user, admin_announcement 등)';
-COMMENT ON COLUMN public.notifications.title IS '알림 제목 (1-100자)';
-COMMENT ON COLUMN public.notifications.message IS '알림 내용 (1-500자)';
-COMMENT ON COLUMN public.notifications.is_read IS '읽음 여부';
-COMMENT ON COLUMN public.notifications.data IS '추가 데이터 (JSONB)';
 
 -- 3.9 관리자 공지사항 테이블
 DROP TABLE IF EXISTS public.announcements CASCADE;
 CREATE TABLE public.announcements (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    title TEXT NOT NULL CHECK (length(title) >= 1 AND length(title) <= 100),
-    message TEXT NOT NULL CHECK (length(message) >= 1),
-    data JSONB DEFAULT '{}'::JSONB,
-    is_active BOOLEAN NOT NULL DEFAULT true,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  admin_id uuid NULL,
+  title text NOT NULL,
+  message text NOT NULL,
+  data jsonb NULL DEFAULT '{}'::jsonb,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT announcements_pkey PRIMARY KEY (id),
+  CONSTRAINT announcements_message_check CHECK ((length(message) >= 1)),
+  CONSTRAINT announcements_title_check CHECK (((length(title) >= 1) AND (length(title) <= 100))),
+  CONSTRAINT announcements_admin_id_fkey FOREIGN KEY (admin_id) REFERENCES auth.users (id) ON DELETE SET NULL
 );
 
 COMMENT ON TABLE public.announcements IS '관리자 공지사항 테이블';
-COMMENT ON COLUMN public.announcements.admin_id IS '공지 작성 관리자 ID';
-COMMENT ON COLUMN public.announcements.title IS '공지 제목 (1-100자)';
-COMMENT ON COLUMN public.announcements.message IS '공지 내용 (1자 이상)';
-COMMENT ON COLUMN public.announcements.is_active IS '공지 활성화 여부';
-COMMENT ON COLUMN public.announcements.data IS '추가 데이터 (JSONB)';
 
--- 3.10 evaluation_records 테이블은 restaurants 테이블과 통합되었습니다.
-
-
--- ========================================
--- PART 3.11: (신규) 사용자 맛집 제보 테이블 (관리자 검토용)
--- ========================================
+-- 3.10 사용자 맛집 제보 테이블
 DROP TABLE IF EXISTS public.restaurant_submissions CASCADE;
 CREATE TABLE public.restaurant_submissions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    
-    submission_type submission_type NOT NULL, -- 'new' (신규) 또는 'edit' (수정)
-    restaurant_id UUID REFERENCES public.restaurants(id) ON DELETE CASCADE, -- 'edit'일 경우 대상 맛집 ID
-    
-    status submission_status NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected'
-    
-    -- 1. 사용자가 직접 입력하는 필드
-    user_submitted_name TEXT CHECK (user_submitted_name IS NULL OR length(user_submitted_name) >= 2),
-    user_submitted_categories TEXT[], -- 사용자가 '카테고리'를 입력하면 배열로 저장
-    user_submitted_phone TEXT,
-    user_raw_address TEXT, -- 사용자가 입력한 '주소' 원본 (지오코딩 전)
-    
-    -- 2. 관리자가 지오코딩/검토 후 채우는 필드 (restaurants 테이블과 동일)
-    name TEXT,
-    phone TEXT,
-    categories TEXT[],
-    lat NUMERIC,
-    lng NUMERIC,
-    road_address TEXT,
-    jibun_address TEXT,
-    english_address TEXT,
-    address_elements JSONB,
-    
-    -- 3. 유튜브 및 리뷰 관련 필드
-    youtube_link TEXT, -- 유튜브 영상 링크 (신규 제보용)
-    youtube_links TEXT[] DEFAULT ARRAY[]::TEXT[], -- 모든 유튜브 영상 링크 배열 (수정 요청용)
-    youtube_metas JSONB DEFAULT '[]'::JSONB, -- 유튜브 메타데이터 배열
-    description TEXT, -- 설명 또는 쯔양의 리뷰 내용
-    tzuyang_reviews JSONB DEFAULT '[]'::JSONB, -- 쯔양 리뷰 정보 (JSONB 배열)
-    
-    -- 4. 수정 요청 관련 필드
-    unique_id TEXT, -- 수정 대상 맛집의 unique_id (수정 요청 시)
-    changes_requested JSONB, -- 수정 요청 내용 (변경사항)
-    
-    -- 5. 관리자 처리 관련 필드
-    admin_notes TEXT, -- 관리자 메모 (예: '지오코딩 실패로 수동 입력')
-    rejection_reason TEXT, -- 관리자 거부 사유
-    resolved_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-    reviewed_at TIMESTAMP WITH TIME ZONE, -- 관리자 검토 완료 시간
-    reviewed_by_admin_id UUID REFERENCES auth.users(id) ON DELETE SET NULL, -- 검토한 관리자 ID
-    approved_restaurant_id UUID REFERENCES public.restaurants(id) ON DELETE SET NULL, -- 승인 후 생성된 맛집 ID
-    
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  submission_type submission_type NOT NULL,
+  status submission_status NOT NULL DEFAULT 'pending'::submission_status,
+  user_restaurants_submission jsonb NOT NULL DEFAULT '[]'::jsonb,
+  admin_notes text NULL,
+  rejection_reason text NULL,
+  resolved_by_admin_id uuid NULL,
+  reviewed_at timestamp with time zone NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT restaurant_submissions_pkey PRIMARY KEY (id),
+  CONSTRAINT restaurant_submissions_resolved_by_admin_id_fkey FOREIGN KEY (resolved_by_admin_id) REFERENCES auth.users (id) ON DELETE SET NULL,
+  CONSTRAINT restaurant_submissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users (id) ON DELETE SET NULL
 );
 
-COMMENT ON TABLE public.restaurant_submissions IS '사용자 맛집 제보(신규/수정) 대기 테이블';
-COMMENT ON COLUMN public.restaurant_submissions.submission_type IS '제보 유형 (new: 신규, edit: 수정)';
-COMMENT ON COLUMN public.restaurant_submissions.restaurant_id IS '수정 제보 대상 맛집 ID (신규 제보 시 NULL)';
-COMMENT ON COLUMN public.restaurant_submissions.status IS '관리자 처리 상태';
-COMMENT ON COLUMN public.restaurant_submissions.user_raw_address IS '사용자가 입력한 주소 원본 (지오코딩 대상)';
-COMMENT ON COLUMN public.restaurant_submissions.name IS '관리자가 검토/수정한 최종 맛집 이름';
-COMMENT ON COLUMN public.restaurant_submissions.lat IS '관리자가 지오코딩/수동 입력한 위도';
-COMMENT ON COLUMN public.restaurant_submissions.youtube_link IS '유튜브 영상 링크 (신규 제보용)';
-COMMENT ON COLUMN public.restaurant_submissions.youtube_links IS '모든 유튜브 영상 링크 배열 (수정 요청용)';
-COMMENT ON COLUMN public.restaurant_submissions.youtube_metas IS '유튜브 메타데이터 배열';
-COMMENT ON COLUMN public.restaurant_submissions.description IS '설명 또는 쯔양의 리뷰 내용';
-COMMENT ON COLUMN public.restaurant_submissions.tzuyang_reviews IS '쯔양 리뷰 정보 (JSONB 배열)';
-COMMENT ON COLUMN public.restaurant_submissions.unique_id IS '수정 대상 맛집의 unique_id (수정 요청 시)';
-COMMENT ON COLUMN public.restaurant_submissions.changes_requested IS '수정 요청 내용 (변경사항)';
-COMMENT ON COLUMN public.restaurant_submissions.admin_notes IS '관리자 처리 메모 (거부 사유, 수정 내역 등)';
-COMMENT ON COLUMN public.restaurant_submissions.rejection_reason IS '관리자 거부 사유';
-COMMENT ON COLUMN public.restaurant_submissions.reviewed_at IS '관리자 검토 완료 시간';
-COMMENT ON COLUMN public.restaurant_submissions.reviewed_by_admin_id IS '검토한 관리자 ID';
-COMMENT ON COLUMN public.restaurant_submissions.approved_restaurant_id IS '승인 후 생성된 맛집 ID';
-
+COMMENT ON TABLE public.restaurant_submissions IS '사용자 맛집 제보 테이블';
 
 -- (신규) RLS 활성화
 ALTER TABLE public.restaurant_submissions ENABLE ROW LEVEL SECURITY;
 
--- (신규) RLS 정책
+-- (신규) RLS 정책 (수정됨: 컬럼 변경 반영)
 DROP POLICY IF EXISTS "Users can view own submissions" ON public.restaurant_submissions;
 CREATE POLICY "Users can view own submissions"
     ON public.restaurant_submissions FOR SELECT
@@ -1438,10 +1198,7 @@ CREATE POLICY "Users can insert own submissions"
     TO authenticated
     WITH CHECK (
         user_id = (SELECT auth.uid()) AND
-        -- 사용자는 'pending' 상태로만 제보 가능
-        status = 'pending' AND
-        -- 사용자는 '사용자 입력 필드'만 채울 수 있음
-        lat IS NULL AND road_address IS NULL AND admin_notes IS NULL
+        status = 'pending'
     );
 
 DROP POLICY IF EXISTS "Admins can manage all submissions" ON public.restaurant_submissions;
@@ -1454,10 +1211,6 @@ CREATE POLICY "Admins can manage all submissions"
 CREATE INDEX IF NOT EXISTS idx_submissions_user_id ON public.restaurant_submissions(user_id);
 CREATE INDEX IF NOT EXISTS idx_submissions_status ON public.restaurant_submissions(status);
 CREATE INDEX IF NOT EXISTS idx_submissions_type ON public.restaurant_submissions(submission_type);
-CREATE INDEX IF NOT EXISTS idx_submissions_restaurant_id ON public.restaurant_submissions(restaurant_id);
-CREATE INDEX IF NOT EXISTS idx_submissions_youtube_link ON public.restaurant_submissions(youtube_link);
-CREATE INDEX IF NOT EXISTS idx_submissions_unique_id ON public.restaurant_submissions(unique_id);
-CREATE INDEX IF NOT EXISTS idx_submissions_approved_restaurant_id ON public.restaurant_submissions(approved_restaurant_id);
 
 -- (신규) updated_at 트리거
 DROP TRIGGER IF EXISTS update_restaurant_submissions_updated_at ON public.restaurant_submissions;
