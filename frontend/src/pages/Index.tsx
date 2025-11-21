@@ -24,10 +24,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant, Region } from "@/types/restaurant";
 import { FilterState } from "@/components/filters/FilterPanel";
 import CategoryFilter from "@/components/filters/CategoryFilter";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useSearchParams } from "react-router-dom";
 
 interface IndexProps {
   refreshTrigger: number;
@@ -38,7 +36,6 @@ interface IndexProps {
 
 const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: IndexProps) => {
   const { isAdmin } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<Region | null>("서울특별시");
   const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
@@ -56,44 +53,12 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
   });
   const [filters, setFilters] = useState<FilterState>({
     categories: [],
+    minRating: 1,
     minReviews: 0,
+    minUserVisits: 0,
+    minJjyangVisits: 0,
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-
-  // URL 쿼리 파라미터로 맛집 ID를 받아서 자동으로 선택
-  useEffect(() => {
-    const restaurantId = searchParams.get('restaurant');
-    if (restaurantId && !selectedRestaurant) {
-      // Supabase에서 해당 맛집 조회
-      const fetchRestaurant = async () => {
-        const { data, error } = await supabase
-          .from('restaurants')
-          .select('*')
-          .eq('id', restaurantId)
-          .eq('status', 'approved')
-          .single();
-
-        if (error) {
-          console.error('맛집 조회 실패:', error);
-          toast.error('맛집을 찾을 수 없습니다.');
-          // URL 파라미터 제거
-          searchParams.delete('restaurant');
-          setSearchParams(searchParams);
-          return;
-        }
-
-        if (data) {
-          // 맛집 선택
-          setSelectedRestaurant(data as Restaurant);
-          // URL 파라미터 제거 (한 번만 실행)
-          searchParams.delete('restaurant');
-          setSearchParams(searchParams);
-        }
-      };
-
-      fetchRestaurant();
-    }
-  }, [searchParams, setSearchParams, selectedRestaurant, setSelectedRestaurant]);
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -525,7 +490,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                     submission_type: 'edit',
                     status: 'pending',
                     user_restaurants_submission: submissionData
-                  });
+                  } as any);
 
                 if (error) throw error;
 
