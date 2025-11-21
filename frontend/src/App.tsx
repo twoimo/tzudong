@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
@@ -45,6 +45,7 @@ function AppLayout() {
   const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
   const queryClient = useQueryClient();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCenteredLayout, setIsCenteredLayout] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -53,13 +54,15 @@ function AppLayout() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // 팝업에서 전달된 레스토랑 처리
+  // 팝업에서 전달된 레스토랑 처리 (state를 읽은 후 즉시 제거하여 새로고침 시 유지 방지)
   useEffect(() => {
     const state = location.state as { selectedRestaurant?: Restaurant };
     if (state?.selectedRestaurant) {
       setSelectedRestaurant(state.selectedRestaurant);
+      // state를 즉시 제거하여 새로고침 시 유지되지 않도록 함
+      navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state]);
+  }, [location.state, location.pathname, navigate]);
 
   // 팝업 데이터 즉시 prefetch (빠른 팝업 표시를 위해)
   useEffect(() => {
