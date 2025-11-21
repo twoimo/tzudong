@@ -13,6 +13,7 @@ interface Restaurant {
     lat?: number;
     lng?: number;
     tzuyang_review?: string;
+    created_at: string;
     mergedYoutubeLinks?: string[];
     mergedTzuyangReviews?: string[];
 }
@@ -54,10 +55,10 @@ export function useUnvisitedRestaurants() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review')
+                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review, created_at')
                 .eq('status', 'approved')
                 .not('youtube_link', 'is', null)
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: false });
 
             if (error) throw error;
             return data as Restaurant[];
@@ -105,18 +106,8 @@ export function useUnvisitedRestaurants() {
         return acc;
     }, []);
 
-    // 방문하지 않은 맛집만 필터링 (병합된 데이터 기준)
-    // 병합된 식당의 ID 중 하나라도 방문했다면 방문한 것으로 처리해야 할 수도 있지만,
-    // 여기서는 대표 ID(첫 번째 발견된 ID)를 기준으로 필터링하거나,
-    // 혹은 모든 ID를 체크해야 함. 하지만 간단히 대표 ID로 체크.
-    // 더 정확하게는: 병합된 식당의 구성원 ID 중 하나라도 visited에 있으면 visited로 처리?
-    // 아니면, 사용자가 '이 식당'을 방문했는지가 중요하므로, 이름/주소로 매칭된 그룹 중 하나라도 리뷰가 있으면 방문한 것.
-
+    // 방문하지 않은 맛집만 필터링
     const unvisitedRestaurants = mergedRestaurants.filter(restaurant => {
-        // 현재 로직: 대표 ID가 visited에 없으면 미방문.
-        // 개선: 병합된 그룹 내의 어떤 ID라도 visited에 있으면 방문으로 처리해야 함.
-        // 하지만 현재 구조상 mergedRestaurants에는 원본 ID들의 리스트가 없음.
-        // 일단 단순 필터링 유지 (대부분의 경우 문제 없음)
         return !visitedRestaurantIds.has(restaurant.id);
     });
 
