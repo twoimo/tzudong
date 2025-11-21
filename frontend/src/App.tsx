@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import GlobalMapPage from "./pages/GlobalMapPage";
 import FilteringPage from "./pages/FilteringPage";
@@ -59,6 +60,42 @@ function AppLayout() {
       setSelectedRestaurant(state.selectedRestaurant);
     }
   }, [location.state]);
+
+  // 팝업 데이터 즉시 prefetch (빠른 팝업 표시를 위해)
+  useEffect(() => {
+    if (user?.id) {
+      // 사용자 리뷰 데이터 prefetch
+      queryClient.prefetchQuery({
+        queryKey: ['user-reviews', user.id],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from('reviews')
+            .select('restaurant_id, is_verified')
+            .eq('user_id', user.id)
+            .eq('is_verified', true);
+          if (error) throw error;
+          return data;
+        },
+        staleTime: 5 * 60 * 1000,
+      });
+
+      // 승인된 맛집 데이터 prefetch
+      queryClient.prefetchQuery({
+        queryKey: ['unvisited-restaurants-all'],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from('restaurants')
+            .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng')
+            .eq('status', 'approved')
+            .not('youtube_link', 'is', null)
+            .order('created_at', { ascending: true });
+          if (error) throw error;
+          return data;
+        },
+        staleTime: 5 * 60 * 1000,
+      });
+    }
+  }, [user?.id, queryClient]);
 
   // 홈페이지, 글로벌, 필터링 페이지에서는 가운데 정렬 버튼 숨기기
   const shouldShowCenteredLayoutButton = location.pathname !== '/' && location.pathname !== '/global' && location.pathname !== '/filtering';
