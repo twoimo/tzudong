@@ -53,12 +53,14 @@ export function DailyRecommendationPopup() {
 
     // 카드 클릭 시 지도 페이지로 이동하며 해당 맛집 선택
     const handleCardClick = () => {
+        console.log('[DailyRecommendationPopup] Card clicked, restaurant:', selectedRestaurant);
         setIsVisible(false);
         navigate('/global', {
             state: {
                 selectedRestaurant: selectedRestaurant
             }
         });
+        console.log('[DailyRecommendationPopup] Navigated to /global with state');
     };
 
     if (!selectedRestaurant || !isVisible) return null;

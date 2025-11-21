@@ -57,9 +57,10 @@ function AppLayout() {
   useEffect(() => {
     const state = location.state as { selectedRestaurant?: Restaurant };
     if (state?.selectedRestaurant) {
+      console.log('[App.tsx] Setting selected restaurant from popup:', state.selectedRestaurant);
       setSelectedRestaurant(state.selectedRestaurant);
     }
-  }, [location.state]);
+  }, [location.pathname, location.key]); // location.state 대신 pathname과 key 사용
 
   // 팝업 데이터 즉시 prefetch (빠른 팝업 표시를 위해)
   useEffect(() => {
