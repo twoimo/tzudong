@@ -15,6 +15,11 @@ export function DailyRecommendationPopup() {
     const [isVisible, setIsVisible] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<typeof unvisitedRestaurants[0] | null>(null);
 
+    // 글로벌 국가 목록 (GlobalMapPage와 동일)
+    const GLOBAL_COUNTRIES = [
+        "미국", "일본", "대만", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
+    ];
+
     // YouTube 썸네일 URL 추출 함수
     const extractYouTubeVideoId = (url: string) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -54,7 +59,16 @@ export function DailyRecommendationPopup() {
     // 카드 클릭 시 지도 페이지로 이동하며 해당 맛집 선택
     const handleCardClick = () => {
         setIsVisible(false);
-        navigate('/global', {
+
+        if (!selectedRestaurant) return;
+
+        const address = selectedRestaurant.road_address || selectedRestaurant.jibun_address || '';
+        const isGlobal = GLOBAL_COUNTRIES.some(country => address.includes(country));
+
+        // 국내/해외 구분하여 이동
+        const targetPath = isGlobal ? '/global' : '/';
+
+        navigate(targetPath, {
             state: {
                 selectedRestaurant: selectedRestaurant
             }
