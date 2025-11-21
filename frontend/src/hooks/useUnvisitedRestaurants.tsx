@@ -12,6 +12,10 @@ interface Restaurant {
     jibun_address: string | null;
     lat?: number;
     lng?: number;
+    tzuyang_review?: string;
+    created_at: string;
+    mergedYoutubeLinks?: string[];
+    mergedTzuyangReviews?: string[];
 }
 
 interface UserReview {
@@ -51,10 +55,10 @@ export function useUnvisitedRestaurants() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng')
+                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review, created_at')
                 .eq('status', 'approved')
                 .not('youtube_link', 'is', null)
-                .order('created_at', { ascending: true });
+                .order('created_at', { ascending: false });
 
             if (error) throw error;
             return data as Restaurant[];
@@ -67,10 +71,45 @@ export function useUnvisitedRestaurants() {
         userReviewData.map(review => review.restaurant_id)
     );
 
+    // 데이터 병합 로직
+    const mergedRestaurants = (restaurantsData || []).reduce((acc: Restaurant[], curr) => {
+        const existingIndex = acc.findIndex(r =>
+            r.name === curr.name &&
+            (r.jibun_address === curr.jibun_address || r.road_address === curr.road_address)
+        );
+
+        if (existingIndex >= 0) {
+            const existing = acc[existingIndex];
+
+            // 유튜브 링크 병합
+            const existingLinks = existing.mergedYoutubeLinks || (existing.youtube_link ? [existing.youtube_link] : []);
+            const newLinks = curr.youtube_link ? [curr.youtube_link] : [];
+            const mergedLinks = Array.from(new Set([...existingLinks, ...newLinks]));
+
+            // 쯔양 리뷰 병합
+            const existingReviews = existing.mergedTzuyangReviews || (existing.tzuyang_review ? [existing.tzuyang_review] : []);
+            const newReviews = curr.tzuyang_review ? [curr.tzuyang_review] : [];
+            const mergedReviews = Array.from(new Set([...existingReviews, ...newReviews]));
+
+            acc[existingIndex] = {
+                ...existing,
+                mergedYoutubeLinks: mergedLinks,
+                mergedTzuyangReviews: mergedReviews
+            };
+        } else {
+            acc.push({
+                ...curr,
+                mergedYoutubeLinks: curr.youtube_link ? [curr.youtube_link] : [],
+                mergedTzuyangReviews: curr.tzuyang_review ? [curr.tzuyang_review] : []
+            });
+        }
+        return acc;
+    }, []);
+
     // 방문하지 않은 맛집만 필터링
-    const unvisitedRestaurants = (restaurantsData || []).filter(
-        restaurant => !visitedRestaurantIds.has(restaurant.id)
-    );
+    const unvisitedRestaurants = mergedRestaurants.filter(restaurant => {
+        return !visitedRestaurantIds.has(restaurant.id);
+    });
 
     return {
         unvisitedRestaurants,
