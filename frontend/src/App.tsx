@@ -25,6 +25,7 @@ import AuthModal from "./components/auth/AuthModal";
 import { ProfileModal } from "./components/profile/ProfileModal";
 import { NicknameSetupModal } from "./components/profile/NicknameSetupModal";
 import { AdminRestaurantModal } from "./components/admin/AdminRestaurantModal";
+import { DailyRecommendationPopup } from "./components/recommendation/DailyRecommendationPopup";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
@@ -50,6 +51,14 @@ function AppLayout() {
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // 팝업에서 전달된 레스토랑 처리
+  useEffect(() => {
+    const state = location.state as { selectedRestaurant?: Restaurant };
+    if (state?.selectedRestaurant) {
+      setSelectedRestaurant(state.selectedRestaurant);
+    }
+  }, [location.state]);
 
   // 홈페이지, 글로벌, 필터링 페이지에서는 가운데 정렬 버튼 숨기기
   const shouldShowCenteredLayoutButton = location.pathname !== '/' && location.pathname !== '/global' && location.pathname !== '/filtering';
@@ -146,6 +155,8 @@ function AppLayout() {
         isOpen={needsNicknameSetup}
         onComplete={completeNicknameSetup}
       />
+
+      <DailyRecommendationPopup />
 
     </div>
   );
