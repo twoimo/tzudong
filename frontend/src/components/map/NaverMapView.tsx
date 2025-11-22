@@ -59,17 +59,28 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     // 선택된 맛집이 변경될 때 지도 중앙 재조정
     useEffect(() => {
         if (selectedRestaurant && mapInstanceRef.current && !isGridMode) {
-            // 현재 줌 레벨에 따라 적절한 오프셋 계산
-            const currentZoom = mapInstanceRef.current.getZoom();
-            const zoomFactor = Math.pow(2, 15 - currentZoom);
-            const offsetLng = 0.004 * zoomFactor;
+            // 검색된 맛집의 정확한 위치로 이동하고 줌 레벨 설정
+            const targetLatLng = new naver.maps.LatLng(selectedRestaurant.lat, selectedRestaurant.lng);
 
-            const targetLatLng = new naver.maps.LatLng(selectedRestaurant.lat, selectedRestaurant.lng - offsetLng);
+            // 줌 레벨을 16으로 설정 (개별 맛집이 보이는 수준)
+            mapInstanceRef.current.setZoom(16);
 
-            // 부드러운 애니메이션으로 지도 중앙 이동
-            mapInstanceRef.current.panTo(targetLatLng, {
-                duration: 300
-            });
+            // 약간의 딜레이 후 지도 중앙 이동 (줌 애니메이션 완료 대기)
+            setTimeout(() => {
+                if (mapInstanceRef.current) {
+                    // 패널 오프셋 계산
+                    const currentZoom = mapInstanceRef.current.getZoom();
+                    const zoomFactor = Math.pow(2, 15 - currentZoom);
+                    const offsetLng = 0.004 * zoomFactor;
+
+                    const adjustedLatLng = new naver.maps.LatLng(selectedRestaurant.lat, selectedRestaurant.lng - offsetLng);
+
+                    // 부드러운 애니메이션으로 지도 중앙 이동
+                    mapInstanceRef.current.panTo(adjustedLatLng, {
+                        duration: 300
+                    });
+                }
+            }, 100);
         }
     }, [selectedRestaurant, isGridMode]);
 

@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { MapPin, ExternalLink, X } from "lucide-react";
 import { useUnvisitedRestaurants } from "@/hooks/useUnvisitedRestaurants";
+
+const POPUP_STORAGE_KEY = "dailyRecommendationHideUntil";
 
 /**
  * 매일 추천 음식점 팝업 컴포넌트 (광고 팝업 스타일)
@@ -16,6 +19,7 @@ export function DailyRecommendationPopup() {
     const { unvisitedRestaurants, isLoading, isLoggedIn } = useUnvisitedRestaurants();
     const [isVisible, setIsVisible] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<typeof unvisitedRestaurants[0] | null>(null);
+    const [hideToday, setHideToday] = useState(false);
 
     // 글로벌 국가 목록 (GlobalMapPage와 동일)
     const GLOBAL_COUNTRIES = [
@@ -48,6 +52,20 @@ export function DailyRecommendationPopup() {
 
     // 초기 로딩 후 팝업 표시 (홈/글로벌 페이지에서만)
     useEffect(() => {
+        // localStorage에서 숨김 설정 확인
+        const hideUntilStr = localStorage.getItem(POPUP_STORAGE_KEY);
+        if (hideUntilStr) {
+            const hideUntil = new Date(hideUntilStr);
+            const now = new Date();
+            if (now < hideUntil) {
+                // 아직 숨김 기간이 유효함
+                return;
+            } else {
+                // 기간 만료, localStorage 제거
+                localStorage.removeItem(POPUP_STORAGE_KEY);
+            }
+        }
+
         // 로그인하고 미방문 맛집이 있고 홈/글로벌 페이지일 때만 표시
         if (isLoggedIn && unvisitedRestaurants.length > 0 && shouldShowPopup) {
             const restaurant = selectRandomRestaurant();
@@ -63,6 +81,13 @@ export function DailyRecommendationPopup() {
 
     // 닫기
     const handleClose = () => {
+        // "오늘 하루 안 보이기" 체크된 경우 localStorage에 저장
+        if (hideToday) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(0, 0, 0, 0); // 다음 날 자정
+            localStorage.setItem(POPUP_STORAGE_KEY, tomorrow.toISOString());
+        }
         setIsVisible(false);
     };
 
@@ -101,10 +126,10 @@ export function DailyRecommendationPopup() {
                 onClick={handleClose}
             />
 
-            {/* 광고 팝업 스타일 */}
+            {/* 대동여지도 스타일 팝업 */}
             <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-500">
                 <Card
-                    className="w-[320px] overflow-hidden shadow-2xl border-2 border-primary/30 cursor-pointer hover:shadow-primary/20 transition-all hover:scale-[1.02] bg-white"
+                    className="w-[320px] overflow-hidden shadow-2xl border-2 border-[#8B5A2B] cursor-pointer hover:shadow-[#8B5A2B]/30 transition-all hover:scale-[1.02] bg-[#F5E6D3]"
                     onClick={handleCardClick}
                 >
                     {/* X 닫기 버튼 */}
@@ -113,7 +138,7 @@ export function DailyRecommendationPopup() {
                             e.stopPropagation();
                             handleClose();
                         }}
-                        className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
+                        className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-[#8B5A2B]/80 hover:bg-[#8B5A2B] text-[#F5E6D3] flex items-center justify-center transition-colors"
                         aria-label="닫기"
                     >
                         <X className="w-3 h-3" />
@@ -121,31 +146,31 @@ export function DailyRecommendationPopup() {
 
                     {/* 오늘의 추천 배지 */}
                     <div className="absolute top-2 left-2 z-10">
-                        <Badge className="bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold shadow-lg animate-pulse">
+                        <Badge className="bg-gradient-to-r from-[#B4654A] to-[#8B5A2B] text-[#F5E6D3] font-bold shadow-lg border border-[#8B5A2B]/30 font-serif">
                             오늘의 추천!
                         </Badge>
                     </div>
 
                     {/* YouTube 썸네일 */}
                     {thumbnailUrl && (
-                        <div className="aspect-video relative group">
+                        <div className="aspect-video relative group border-b-2 border-[#8B5A2B]/20">
                             <img
                                 src={thumbnailUrl}
                                 alt={`${selectedRestaurant.name} 썸네일`}
                                 className="w-full h-full object-cover group-hover:brightness-110 transition-all"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#8B5A2B]/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                     )}
 
                     {/* 음식점 정보 */}
-                    <div className="p-4 space-y-2">
+                    <div className="p-4 space-y-2 bg-[#F5E6D3]">
                         <div>
-                            <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-1">
+                            <h3 className="text-lg font-bold text-[#3E2723] line-clamp-1 mb-1 font-serif">
                                 {selectedRestaurant.name}
                             </h3>
-                            <div className="flex items-start gap-1.5 text-xs text-gray-600">
-                                <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                            <div className="flex items-start gap-1.5 text-xs text-[#5D4037]">
+                                <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-[#8B5A2B]" />
                                 <span className="line-clamp-1">{address}</span>
                             </div>
                         </div>
@@ -154,7 +179,7 @@ export function DailyRecommendationPopup() {
                         {selectedRestaurant.categories && selectedRestaurant.categories.length > 0 && (
                             <div className="flex flex-wrap gap-1.5">
                                 {selectedRestaurant.categories.slice(0, 2).map((category, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs px-2 py-0">
+                                    <Badge key={index} className="text-xs px-2 py-0 bg-[#D7CCC8] text-[#3E2723] border border-[#8B5A2B]/20 font-serif">
                                         {category}
                                     </Badge>
                                 ))}
@@ -162,9 +187,28 @@ export function DailyRecommendationPopup() {
                         )}
 
                         {/* 클릭 유도 텍스트 */}
-                        <div className="pt-1 flex items-center justify-between text-primary font-medium text-sm">
-                            <span>지도에서 확인하기</span>
+                        <div className="pt-1 flex items-center justify-between text-[#8B5A2B] font-medium text-sm">
+                            <span className="font-serif">지도에서 확인하기</span>
                             <ExternalLink className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                        </div>
+
+                        {/* 오늘 하루 안 보이기 체크박스 */}
+                        <div 
+                            className="flex items-center space-x-2 pt-2 border-t border-[#8B5A2B]/20"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <Checkbox 
+                                id="hide-today"
+                                checked={hideToday}
+                                onCheckedChange={(checked) => setHideToday(checked as boolean)}
+                                className="border-[#8B5A2B]"
+                            />
+                            <label
+                                htmlFor="hide-today"
+                                className="text-xs text-[#5D4037] cursor-pointer select-none font-serif"
+                            >
+                                오늘 하루 안 보이기
+                            </label>
                         </div>
                     </div>
                 </Card>
