@@ -43,11 +43,25 @@ export function DailyRecommendationPopup() {
         return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
     };
 
-    // 랜덤 음식점 선택
+    // 랜덤 음식점 선택 (국내만)
     const selectRandomRestaurant = () => {
-        if (unvisitedRestaurants.length === 0) return null;
-        const randomIndex = Math.floor(Math.random() * unvisitedRestaurants.length);
-        return unvisitedRestaurants[randomIndex];
+        // 한국 지역만 필터링 (해외 제외)
+        const KOREAN_REGIONS = [
+            "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
+            "대전광역시", "울산광역시", "세종특별자치시",
+            "경기도", "강원특별자치도", "충청북도", "충청남도",
+            "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"
+        ];
+
+        const koreanRestaurants = unvisitedRestaurants.filter(restaurant => {
+            const address = restaurant.road_address || restaurant.jibun_address || '';
+            // 한국 지역이 주소에 포함되어 있는지 확인
+            return KOREAN_REGIONS.some(region => address.includes(region));
+        });
+
+        if (koreanRestaurants.length === 0) return null;
+        const randomIndex = Math.floor(Math.random() * koreanRestaurants.length);
+        return koreanRestaurants[randomIndex];
     };
 
     // 초기 로딩 후 팝업 표시 (홈/글로벌 페이지에서만)
@@ -91,6 +105,40 @@ export function DailyRecommendationPopup() {
         setIsVisible(false);
     };
 
+    // 맛집의 지역 정보를 추출하는 함수
+    const getRestaurantRegion = (restaurant: typeof unvisitedRestaurants[0]): string | null => {
+        if (restaurant.address_elements && typeof restaurant.address_elements === 'object') {
+            const addressElements = restaurant.address_elements as any;
+            if (addressElements.SIDO) {
+                const sido = addressElements.SIDO;
+                if (typeof sido === 'string') {
+                    return sido;
+                }
+            }
+        }
+
+        // address_elements에 지역 정보가 없는 경우 주소에서 추출 시도
+        if (restaurant.road_address || restaurant.jibun_address) {
+            const address = (restaurant.road_address || restaurant.jibun_address) as string;
+
+            // 일반 광역시도 패턴으로 추출
+            const regionPatterns = [
+                "서울특별시", "부산광역시", "대구광역시", "인천광역시", "광주광역시",
+                "대전광역시", "울산광역시", "세종특별자치시", "경기도", "충청북도",
+                "충청남도", "전라남도", "경상북도", "경상남도", "전북특별자치도", "제주특별자치도",
+                "강원특별자치도"
+            ];
+
+            for (const region of regionPatterns) {
+                if (address.includes(region)) {
+                    return region;
+                }
+            }
+        }
+
+        return null;
+    };
+
     // 카드 클릭 시 지도 페이지로 이동하며 해당 맛집 선택
     const handleCardClick = () => {
         setIsVisible(false);
@@ -103,9 +151,13 @@ export function DailyRecommendationPopup() {
         // 국내/해외 구분하여 이동
         const targetPath = isGlobal ? '/global' : '/';
 
+        // 국내인 경우 지역 정보 추출
+        const selectedRegion = !isGlobal ? getRestaurantRegion(selectedRestaurant) : null;
+
         navigate(targetPath, {
             state: {
-                selectedRestaurant: selectedRestaurant
+                selectedRestaurant: selectedRestaurant,
+                selectedRegion: selectedRegion
             }
         });
     };

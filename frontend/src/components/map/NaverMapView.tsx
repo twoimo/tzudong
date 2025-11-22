@@ -68,10 +68,10 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             // 약간의 딜레이 후 지도 중앙 이동 (줌 애니메이션 완료 대기)
             setTimeout(() => {
                 if (mapInstanceRef.current) {
-                    // 패널 오프셋 계산
+                    // 패널 오프셋 계산 (패널 너비의 절반만큼 왼쪽으로 이동)
                     const currentZoom = mapInstanceRef.current.getZoom();
                     const zoomFactor = Math.pow(2, 15 - currentZoom);
-                    const offsetLng = 0.004 * zoomFactor;
+                    const offsetLng = 0.006 * zoomFactor; // 오프셋 증가 (더 왼쪽으로)
 
                     const adjustedLatLng = new naver.maps.LatLng(selectedRestaurant.lat, selectedRestaurant.lng - offsetLng);
 
