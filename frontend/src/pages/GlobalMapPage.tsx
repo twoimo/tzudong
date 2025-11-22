@@ -22,6 +22,7 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { useQuery } from "@tanstack/react-query";
+import { mergeRestaurants } from "@/hooks/use-restaurants";
 
 // 코드 스플리팅으로 성능 최적화
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
@@ -46,24 +47,25 @@ const GRID_COUNTRIES: GlobalCountry[] = ["미국", "일본", "태국", "인도�
 const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: GlobalMapPageProps) => {
     const { isAdmin } = useAuth();
 
-    // 글로벌 맛집 데이터 가져오기 (주소 정보만 필요)
+    // 글로벌 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
     const { data: globalRestaurants = [] } = useQuery({
         queryKey: ['global-restaurants-count'],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('road_address, jibun_address, english_address')
+                .select('*')
                 .eq('status', 'approved');
 
             if (error) {
                 console.error('글로벌 맛집 데이터 조회 실패:', error);
                 return [];
             }
-            return data || [];
+            // 병합 로직 적용하여 중복 제거
+            return mergeRestaurants(data || []);
         },
     });
 
-    // 국가별 맛집 수 계산
+    // 국가별 맛집 수 계산 (병합된 데이터 기준)
     const countryCounts = useMemo(() => {
         const counts: Record<string, number> = {};
 
