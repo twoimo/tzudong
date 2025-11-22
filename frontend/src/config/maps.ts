@@ -37,6 +37,6 @@ export const REGION_MAP_CONFIG = {
     "전북특별자치도": { center: [35.7175, 127.1530], zoom: 10 },
     "제주특별자치도": { center: [33.3625, 126.5339], zoom: 11 },
     "울릉도": { center: [37.4918, 130.8616], zoom: 13 },
-    "욕지도": { center: [34.6354, 128.2661], zoom: 13 }
+    "욕지도": { center: [34.6354, 128.2661], zoom: 14 }
 } as const;
 
