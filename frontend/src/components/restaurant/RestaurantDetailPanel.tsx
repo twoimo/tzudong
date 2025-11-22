@@ -62,6 +62,46 @@ export function RestaurantDetailPanel({
             ? [restaurant.categories]
             : [];
 
+    // 최적 레코드 선택: 가장 긴 이름 -> 가장 긴 지번 주소 순으로 우선순위
+    const uniqueData = useMemo(() => {
+        if (!restaurant) return null;
+
+        // 모든 레코드 수집 (현재 restaurant + mergedRestaurants)
+        const allRecords = [restaurant, ...(restaurant.mergedRestaurants || [])];
+
+        // 우선순위: 1) 가장 긴 이름, 2) 가장 긴 지번 주소
+        const sortedRecords = [...allRecords].sort((a, b) => {
+            const nameA = a.name || '';
+            const nameB = b.name || '';
+            const jibunA = a.jibun_address || '';
+            const jibunB = b.jibun_address || '';
+
+            // 이름 길이 비교
+            if (nameB.length !== nameA.length) {
+                return nameB.length - nameA.length;
+            }
+
+            // 이름이 같으면 지번 주소 길이 비교
+            return jibunB.length - jibunA.length;
+        });
+
+        // 가장 우선순위가 높은 레코드
+        const primaryRecord = sortedRecords[0];
+
+        // 해당 레코드의 주소와 전화번호만 사용
+        const roadAddress = primaryRecord.road_address;
+        const jibunAddress = primaryRecord.jibun_address;
+        const englishAddress = primaryRecord.english_address;
+        const phone = primaryRecord.phone;
+
+        return {
+            roadAddresses: roadAddress ? [roadAddress] : [],
+            jibunAddresses: jibunAddress ? [jibunAddress] : [],
+            englishAddresses: englishAddress ? [englishAddress] : [],
+            phones: phone ? [phone] : [],
+        };
+    }, [restaurant]);
+
     // 실제 리뷰 데이터 가져오기
     const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
         queryKey: ['restaurant-reviews', restaurant?.id],
@@ -433,15 +473,16 @@ export function RestaurantDetailPanel({
                                         매장 정보
                                     </h3>
 
-                                    {restaurant.road_address && (
+                                    {uniqueData?.roadAddresses.map((address, index) => (
                                         <div
+                                            key={index}
                                             className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
-                                            onClick={() => handleCopyAddress(restaurant.road_address!, 'road')}
+                                            onClick={() => handleCopyAddress(address, 'road')}
                                         >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
                                                 <p className="text-xs text-muted-foreground">도로명 주소</p>
-                                                <p className="text-sm">{restaurant.road_address}</p>
+                                                <p className="text-sm">{address}</p>
                                             </div>
                                             {copiedAddress === 'road' ? (
                                                 <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -449,17 +490,18 @@ export function RestaurantDetailPanel({
                                                 <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             )}
                                         </div>
-                                    )}
+                                    ))}
 
-                                    {restaurant.jibun_address && (
+                                    {uniqueData?.jibunAddresses.map((address, index) => (
                                         <div
+                                            key={index}
                                             className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
-                                            onClick={() => handleCopyAddress(restaurant.jibun_address!, 'jibun')}
+                                            onClick={() => handleCopyAddress(address, 'jibun')}
                                         >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
                                                 <p className="text-xs text-muted-foreground">지번 주소</p>
-                                                <p className="text-sm">{restaurant.jibun_address}</p>
+                                                <p className="text-sm">{address}</p>
                                             </div>
                                             {copiedAddress === 'jibun' ? (
                                                 <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -467,17 +509,18 @@ export function RestaurantDetailPanel({
                                                 <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             )}
                                         </div>
-                                    )}
+                                    ))}
 
-                                    {restaurant.english_address && (
+                                    {uniqueData?.englishAddresses.map((address, index) => (
                                         <div
+                                            key={index}
                                             className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
-                                            onClick={() => handleCopyAddress(restaurant.english_address!, 'english')}
+                                            onClick={() => handleCopyAddress(address, 'english')}
                                         >
                                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <div className="flex-1">
                                                 <p className="text-xs text-muted-foreground">영어 주소</p>
-                                                <p className="text-sm">{restaurant.english_address}</p>
+                                                <p className="text-sm">{address}</p>
                                             </div>
                                             {copiedAddress === 'english' ? (
                                                 <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
@@ -485,19 +528,19 @@ export function RestaurantDetailPanel({
                                                 <Copy className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
                                             )}
                                         </div>
-                                    )}
+                                    ))}
 
-                                    {restaurant.phone && (
-                                        <div className="flex gap-3">
+                                    {uniqueData?.phones.map((phone, index) => (
+                                        <div key={index} className="flex gap-3">
                                             <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                                             <a
-                                                href={`tel:${restaurant.phone}`}
+                                                href={`tel:${phone}`}
                                                 className="text-sm text-primary hover:underline"
                                             >
-                                                {restaurant.phone}
+                                                {phone}
                                             </a>
                                         </div>
-                                    )}
+                                    ))}
 
                                     <div className="flex gap-3">
                                         <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
