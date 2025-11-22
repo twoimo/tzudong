@@ -8,144 +8,172 @@ All colors MUST be HSL.
 
 /* 성능 최적화: 폰트 로딩 최적화 */
 @font-face {
+  font-family: 'Noto Serif KR';
+  font-style: normal;
+  font-weight: 400;
   font-display: swap;
+  src: local('Noto Serif KR'), local('NotoSerifKR-Regular');
 }
 
 /* GPU 가속화 및 성능 최적화 */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 20 14% 10%;
+    /* 한지 색상 (Background) - HSL: 38 30% 98% */
+    --background: 38 30% 98%;
+    /* 먹물 색상 (Foreground - Stone 900) - HSL: 24 10% 10% */
+    --foreground: 24 10% 10%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 20 14% 10%;
+    --card: 38 30% 98%;
+    --card-foreground: 24 10% 10%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 20 14% 10%;
+    --popover: 38 30% 98%;
+    --popover-foreground: 24 10% 10%;
 
-    --primary: 15 86% 55%;
-    --primary-foreground: 0 0% 100%;
+    /* 낙관 색상 (Primary - Red 700) - HSL: 0 74% 42% */
+    --primary: 0 74% 42%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 38 92% 50%;
-    --secondary-foreground: 0 0% 100%;
+    /* 보조 색상 (Secondary - Stone 200) - HSL: 24 6% 90% */
+    --secondary: 24 6% 90%;
+    --secondary-foreground: 24 10% 10%;
 
-    --muted: 20 14% 96%;
-    --muted-foreground: 20 5% 45%;
+    --muted: 24 6% 90%;
+    --muted-foreground: 24 5% 45%;
 
-    --accent: 5 78% 57%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 24 6% 90%;
+    --accent-foreground: 24 10% 10%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 20 14% 90%;
-    --input: 20 14% 90%;
-    --ring: 15 86% 55%;
+    /* 테두리 색상 (Stone 300) - HSL: 24 5% 83% */
+    --border: 24 5% 83%;
+    --input: 24 5% 83%;
+    --ring: 0 74% 42%;
 
-    --radius: 0.75rem;
+    --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 20 14% 10%;
-    --sidebar-primary: 15 86% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 20 14% 96%;
-    --sidebar-accent-foreground: 20 14% 10%;
-    --sidebar-border: 20 14% 90%;
-    --sidebar-ring: 15 86% 55%;
+    --sidebar-background: 38 30% 98%;
+    --sidebar-foreground: 24 10% 10%;
+    --sidebar-primary: 0 74% 42%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 24 6% 90%;
+    --sidebar-accent-foreground: 24 10% 10%;
+    --sidebar-border: 24 5% 83%;
+    --sidebar-ring: 0 74% 42%;
 
     /* Custom tokens */
-    --gradient-primary: linear-gradient(135deg, hsl(15 86% 55%), hsl(5 78% 57%));
-    --gradient-secondary: linear-gradient(135deg, hsl(38 92% 50%), hsl(15 86% 55%));
-    --shadow-primary: 0 10px 30px -10px hsl(15 86% 55% / 0.3);
-    --shadow-glow: 0 0 40px hsl(15 86% 55% / 0.2);
+    --gradient-primary: linear-gradient(135deg, hsl(0 74% 42%), hsl(0 60% 35%));
+    --gradient-secondary: linear-gradient(135deg, hsl(24 6% 90%), hsl(24 10% 85%));
+    --shadow-primary: 0 4px 14px 0 rgba(185, 28, 28, 0.2);
+    --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
   }
 
   .dark {
-    --background: 20 14% 8%;
-    --foreground: 0 0% 98%;
+    --background: 24 10% 10%;
+    --foreground: 38 30% 98%;
 
-    --card: 20 14% 10%;
-    --card-foreground: 0 0% 98%;
+    --card: 24 10% 12%;
+    --card-foreground: 38 30% 98%;
 
-    --popover: 20 14% 10%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 24 10% 12%;
+    --popover-foreground: 38 30% 98%;
 
-    --primary: 15 86% 55%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 0 74% 42%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 38 92% 50%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 24 10% 15%;
+    --secondary-foreground: 38 30% 98%;
 
-    --muted: 20 14% 15%;
-    --muted-foreground: 20 5% 65%;
+    --muted: 24 10% 15%;
+    --muted-foreground: 24 5% 60%;
 
-    --accent: 5 78% 57%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 24 10% 15%;
+    --accent-foreground: 38 30% 98%;
 
-    --destructive: 0 62% 40%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 20 14% 20%;
-    --input: 20 14% 20%;
-    --ring: 15 86% 55%;
+    --border: 24 10% 20%;
+    --input: 24 10% 20%;
+    --ring: 0 74% 42%;
 
-    --sidebar-background: 20 14% 10%;
-    --sidebar-foreground: 0 0% 98%;
-    --sidebar-primary: 15 86% 55%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 20 14% 15%;
-    --sidebar-accent-foreground: 0 0% 98%;
-    --sidebar-border: 20 14% 20%;
-    --sidebar-ring: 15 86% 55%;
+    --sidebar-background: 24 10% 10%;
+    --sidebar-foreground: 38 30% 98%;
+    --sidebar-primary: 0 74% 42%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 24 10% 15%;
+    --sidebar-accent-foreground: 38 30% 98%;
+    --sidebar-border: 24 10% 20%;
+    --sidebar-ring: 0 74% 42%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(15 86% 55%), hsl(5 78% 57%));
-    --gradient-secondary: linear-gradient(135deg, hsl(38 92% 50%), hsl(15 86% 55%));
-    --shadow-primary: 0 10px 30px -10px hsl(15 86% 55% / 0.4);
-    --shadow-glow: 0 0 40px hsl(15 86% 55% / 0.3);
+    --gradient-primary: linear-gradient(135deg, hsl(0 74% 42%), hsl(0 60% 35%));
+    --gradient-secondary: linear-gradient(135deg, hsl(24 10% 15%), hsl(24 10% 20%));
+    --shadow-primary: 0 10px 30px -10px hsl(0 74% 42% / 0.4);
+    --shadow-glow: 0 0 40px hsl(0 74% 42% / 0.3);
   }
 }
 
 @layer base {
-  * {
+  /* 전역 border 스타일 제거 - 지도 등 외부 라이브러리 충돌 방지 */
+  /* * {
     @apply border-border;
-  }
+  } */
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-serif;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
   }
 }
 
-/* 네이버 지도 마커 최적화 */
-.marker-icon {
-  position: relative;
-  font-size: 24px;
-  cursor: pointer;
-  transition: transform 0.2s ease-in-out;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
-  will-change: transform;
-  backface-visibility: hidden;
-  -webkit-font-smoothing: antialiased;
+/* 네이버 지도 마커 최적화 및 스타일 초기화 */
+.marker-icon,
+.custom-marker,
+.marker-icon>div,
+.custom-marker>div,
+.marker-icon span,
+.custom-marker span,
+.marker-icon img,
+.custom-marker img {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
 }
 
-.marker-icon:hover {
+/* 네이버 지도 내부의 특정 div들이 불필요한 스타일을 갖지 않도록 강제 */
+div[style*="z-index"]>div>.marker-icon,
+div[style*="z-index"]>div>.custom-marker {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.marker-icon:hover,
+.custom-marker:hover {
   transform: scale(1.2);
 }
 
 /* GPU 가속 활성화 */
-.marker-icon {
+.marker-icon,
+.custom-marker {
   transform: translateZ(0);
 }
 
 /* 선택된 마커 애니메이션 */
 @keyframes pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 4px rgba(255,255,255,0.9);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 4px rgba(255, 255, 255, 0.9);
   }
+
   50% {
     transform: scale(1.08);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.6), 0 0 0 5px rgba(255,255,255,1);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6), 0 0 0 5px rgba(255, 255, 255, 1);
   }
 }
 
@@ -180,8 +208,9 @@ a[href*="navercorp.com"],
 }
 
 /* Naver Maps iframe 내 로고 숨기기 */
-iframe[src*="naver.com"] ~ *,
-iframe[src*="navermaps"] ~ * {
+iframe[src*="naver.com"]~*,
+iframe[src*="navermaps"]~* {
+
   [class*="logo" i],
   [class*="Logo" i] {
     display: none !important;
@@ -190,8 +219,8 @@ iframe[src*="navermaps"] ~ * {
 }
 
 /* 우측 하단 영역 로고 강제 숨김 */
-body > div:last-child [class*="logo" i],
-body > div:last-child [class*="Logo" i] {
+body>div:last-child [class*="logo" i],
+body>div:last-child [class*="Logo" i] {
   display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;

@@ -62,32 +62,47 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 bg-sidebar border-r border-sidebar-border transition-transform duration-300 ease-in-out flex flex-col h-screen w-64",
+        "fixed left-0 top-0 z-40 bg-sidebar border-r border-sidebar-border transition-transform duration-300 ease-in-out flex flex-col h-screen w-64 shadow-xl",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
+      style={{ backgroundColor: '#fdfbf7' }}
     >
-      <div className="p-4 border-b border-sidebar-border">
-        <div className="flex items-center gap-3 group animate-fade-in cursor-pointer" onClick={() => navigate("/")}>
-          {/* Enhanced Logo */}
-          <div className="relative">
-            <div className="w-8 h-8 bg-gradient-to-br from-orange-400 via-red-500 to-pink-500 rounded-lg flex items-center justify-center shadow-md group-hover:shadow-lg transition-all duration-300 group-hover:scale-110 group-hover:rotate-12">
-              <MapPin className="w-4 h-4 text-white drop-shadow-sm group-hover:animate-pulse" />
-            </div>
-            {/* Subtle glow effect */}
-            <div className="absolute inset-0 bg-gradient-to-br from-orange-400/30 to-pink-500/30 rounded-lg blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300 animate-pulse"></div>
-            {/* Floating particles effect */}
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-400 rounded-full opacity-0 group-hover:opacity-100 animate-ping"></div>
-            <div className="absolute -bottom-1 -left-1 w-1.5 h-1.5 bg-pink-500 rounded-full opacity-0 group-hover:opacity-100 animate-ping" style={{ animationDelay: '0.2s' }}></div>
+      {/* 한지 질감 오버레이 */}
+      <div className="absolute inset-0 opacity-30 pointer-events-none z-0"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")` }}
+      />
+
+      {/* 전통 문양 테두리 (내부) */}
+      <div className="absolute inset-1 border border-stone-800/10 rounded-sm pointer-events-none z-0" />
+
+      <div className="h-16 flex items-center px-6 border-b border-stone-800/10 relative z-10">
+        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate("/")}>
+          {/* Logo - 낙관 스타일 */}
+          <div className="relative w-8 h-8 bg-red-800 rounded-sm flex items-center justify-center shadow-md transform rotate-3 transition-transform group-hover:rotate-0">
+            <MapPin className="w-5 h-5 text-white/90" strokeWidth={2.5} />
+            <div className="absolute inset-0 border border-white/20 rounded-sm" />
           </div>
 
-          {/* Enhanced Title */}
-          <h1 className="text-xl font-bold bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent group-hover:from-orange-300 group-hover:via-red-400 group-hover:to-pink-400 transition-all duration-300 group-hover:scale-105 group-hover:tracking-wide">
-            쯔동여지도
-          </h1>
+          {/* Title - 세로쓰기 느낌의 명조체 */}
+          <div className="flex flex-col justify-center">
+            <h1 className="text-lg font-serif font-bold text-stone-900 tracking-widest leading-none mb-0.5">
+              쯔동여지도
+            </h1>
+            <span className="text-[9px] text-stone-500 font-serif tracking-tighter leading-none">
+              TZUYANG'S GOURMET MAP
+            </span>
+          </div>
+        </div>
+
+        {/* 우측 장식 낙관 (味) */}
+        <div className="ml-auto opacity-40 group-hover:opacity-80 transition-opacity duration-500">
+          <div className="w-9 h-9 border-2 border-stone-300 rounded-full flex items-center justify-center transform -rotate-12 bg-stone-100/50">
+            <span className="font-serif text-stone-400 font-bold text-xl" style={{ fontFamily: '"Noto Serif KR", serif' }}>味</span>
+          </div>
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto relative z-10">
         {menuItems.map((item, index) => {
           const isActive = location.pathname === item.path;
           const isHomePage = item.path === "/";
@@ -95,10 +110,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
           return (
             <Button
               key={index}
-              variant={isActive ? "default" : "ghost"}
+              variant="ghost"
               className={cn(
-                "w-full justify-start gap-3",
-                isActive && "bg-gradient-primary shadow-primary"
+                "w-full justify-start gap-3 font-serif text-base h-11 transition-all duration-200",
+                isActive
+                  ? "bg-stone-800 text-white shadow-md hover:bg-stone-700 hover:text-white"
+                  : "text-stone-600 hover:bg-stone-200/50 hover:text-stone-900"
               )}
               onClick={item.onClick}
               onMouseEnter={() => {
@@ -109,22 +126,23 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               }}
               disabled={!item.onClick}
             >
-              <item.icon className="h-5 w-5" />
+              <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-stone-400")} />
               <span>{item.label}</span>
+              {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" />}
             </Button>
           );
         })}
       </nav>
 
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-4 relative z-10">
         {/* 광고 배너 */}
         <AdBanner />
 
         {/* 버전 정보 */}
-        <div className="border-t border-sidebar-border pt-3 text-center">
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>쯔동여지도, 유튜브 쯔양 맛집 지도 v1.5.3</p>
-            <p className="text-primary font-semibold">@ 2025 Tzudong. All rights reserved.</p>
+        <div className="border-t border-stone-800/10 pt-4 text-center">
+          <div className="text-xs text-stone-400 font-serif space-y-1">
+            <p>쯔동여지도 v1.5.3</p>
+            <p className="text-stone-300">@ 2025 Tzudong</p>
           </div>
         </div>
       </div>

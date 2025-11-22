@@ -83,18 +83,29 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   // 맛집으로 지도 이동하는 함수
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
-    if (googleMapRef.current) {
-      const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
+    const tryMove = (retryCount = 0) => {
+      if (googleMapRef.current) {
+        const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
 
-      try {
-        googleMapRef.current.setCenter(position);
-        googleMapRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
-      } catch (error) {
-        console.error('MapView: Error moving to restaurant position:', error);
+        try {
+          // 패널이 열리면서 지도 크기가 변했을 수 있으므로 리사이즈 트리거
+          google.maps.event.trigger(googleMapRef.current, "resize");
+
+          googleMapRef.current.panTo(position);
+          googleMapRef.current.setZoom(17); // 맛집 상세 보기용 줌 레벨 (더 확대)
+        } catch (error) {
+          console.error('MapView: Error moving to restaurant position:', error);
+        }
+      } else if (retryCount < 5) {
+        // 지도가 아직 준비되지 않았다면 재시도 (최대 5회, 200ms 간격)
+        console.warn(`MapView: Map not ready, retrying... (${retryCount + 1}/5)`);
+        setTimeout(() => tryMove(retryCount + 1), 200);
+      } else {
+        console.warn('MapView: Map not ready for moving to restaurant after retries');
       }
-    } else {
-      console.warn('MapView: Map not ready for moving to restaurant');
-    }
+    };
+
+    tryMove();
   }, []);
 
   // 외부 콜백에 지도 이동 함수 전달
@@ -111,78 +122,47 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       return;
     }
 
-    console.log('🗺️ MapView: 검색된 맛집으로 지도 이동 시도', {
-      restaurant: searchedRestaurant.name,
-      lat: searchedRestaurant.lat,
-      lng: searchedRestaurant.lng,
-      mapReady: !!googleMapRef.current,
-      isLoaded
-    });
-
     const lat = Number(searchedRestaurant.lat);
     const lng = Number(searchedRestaurant.lng);
 
     if (isNaN(lat) || isNaN(lng)) {
-      console.error('MapView: 잘못된 좌표값', { lat: searchedRestaurant.lat, lng: searchedRestaurant.lng });
-      return;
-    }
-
-    // 지도가 완전히 준비되었는지 추가 확인
-    if (!googleMapRef.current.getBounds || !googleMapRef.current.getZoom) {
-      console.warn('MapView: 지도가 아직 완전히 초기화되지 않았습니다');
       return;
     }
 
     const position = { lat, lng };
 
-    // 비동기로 실행하여 지도 준비를 기다림
+    // 패널 애니메이션 등을 고려하여 약간의 지연 후 이동
     const performMapMove = () => {
       try {
-        // 현재 줌 레벨 확인
-        const currentZoom = googleMapRef.current?.getZoom();
-        console.log('MapView: 현재 줌 레벨:', currentZoom);
+        if (!googleMapRef.current) return;
 
-        // 지도 중심 이동
-        googleMapRef.current?.setCenter(position);
-        console.log('MapView: 지도 중심 이동 완료');
+        // 지도 리사이즈 인식
+        google.maps.event.trigger(googleMapRef.current, "resize");
 
-        // 약간의 지연 후 줌 레벨 설정 (지도 안정화를 위해)
+        // 지도 중심 이동 (부드럽게)
+        googleMapRef.current.panTo(position);
+
+        // 줌 레벨 설정 (약간의 지연 후)
         setTimeout(() => {
           if (googleMapRef.current) {
-            googleMapRef.current.setZoom(20);
-            console.log('MapView: 줌 레벨 설정 완료: 20');
+            googleMapRef.current.setZoom(18);
 
             // 검색된 맛집 선택 상태로 설정
             if (onRestaurantSelect) {
               onRestaurantSelect(searchedRestaurant);
-              console.log('MapView: 맛집 선택 상태 설정 완료');
             }
-
-            console.log('🗺️ MapView: 지도 이동 완료');
           }
-        }, 100);
+        }, 300);
 
       } catch (error) {
         console.error('MapView: Error moving to searched restaurant position:', error);
-        // 재시도 로직 (한 번 더 시도)
-        setTimeout(() => {
-          if (googleMapRef.current && searchedRestaurant) {
-            try {
-              googleMapRef.current.setCenter(position);
-              googleMapRef.current.setZoom(20);
-              console.log('MapView: 재시도 성공');
-            } catch (retryError) {
-              console.error('MapView: 재시도 실패:', retryError);
-            }
-          }
-        }, 500);
       }
     };
 
-    // 지연 실행으로 지도 안정화 대기
-    setTimeout(performMapMove, 50);
+    // 지연 실행으로 지도 안정화 및 패널 오픈 대기
+    setTimeout(performMapMove, 300);
 
-  }, [searchedRestaurant, onRestaurantSelect]);
+  }, [searchedRestaurant, onRestaurantSelect, isLoaded]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
@@ -300,12 +280,17 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   useEffect(() => {
     if (!googleMapRef.current || !selectedCountry) return;
 
+    // 검색된 맛집이 있으면 국가 중심으로 이동하지 않음 (검색 이동 로직이 우선)
+    // 단, 검색된 맛집이 현재 선택된 국가와 다를 수 있으므로 주의 필요하지만,
+    // handleRestaurantSearch에서 이미 국가를 맞춰주므로 여기서는 이동만 막으면 됨
+    if (searchedRestaurant) return;
+
     const countryConfig = COUNTRY_CENTERS[selectedCountry];
     if (countryConfig) {
       googleMapRef.current.setCenter({ lat: countryConfig.lat, lng: countryConfig.lng });
       googleMapRef.current.setZoom(countryConfig.zoom);
     }
-  }, [selectedCountry]);
+  }, [selectedCountry, searchedRestaurant]);
 
   // Retry map initialization if Google Maps becomes available later
   useEffect(() => {
