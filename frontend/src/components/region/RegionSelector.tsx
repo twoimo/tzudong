@@ -11,6 +11,7 @@ import { REGIONS, Region } from "@/types/restaurant";
 import { MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { mergeRestaurants } from "@/hooks/use-restaurants";
 
 interface RegionSelectorProps {
   selectedRegion: Region | null;
@@ -20,24 +21,25 @@ interface RegionSelectorProps {
 }
 
 const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, className }: RegionSelectorProps) => {
-  // 모든 맛집 데이터 가져오기 (주소 정보만 필요)
+  // 모든 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
   const { data: restaurants = [] } = useQuery({
     queryKey: ['restaurants-count'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('restaurants')
-        .select('road_address, jibun_address')
+        .select('*')
         .eq('status', 'approved');
 
       if (error) {
         console.error('맛집 데이터 조회 실패:', error);
         return [];
       }
-      return data || [];
+      // 병합 로직 적용하여 중복 제거
+      return mergeRestaurants(data || []);
     },
   });
 
-  // 지역별 맛집 수 계산
+  // 지역별 맛집 수 계산 (병합된 데이터 기준)
   const regionCounts = useMemo(() => {
     const counts: Record<string, number> = {};
 
@@ -65,7 +67,7 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
     return counts;
   }, [restaurants]);
 
-  // 전체 맛집 수
+  // 전체 맛집 수 (병합된 데이터 기준)
   const totalCount = restaurants.length;
 
   const handleRegionChange = (value: string) => {

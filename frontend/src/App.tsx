@@ -20,6 +20,7 @@ import AdminReviewsPage from "./pages/AdminReviewsPage";
 import AdminEvaluationPage from "./pages/AdminEvaluationPage";
 import NotFound from "./pages/NotFound";
 import { useState } from "react";
+import { useRef } from "react";
 import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import AuthModal from "./components/auth/AuthModal";
@@ -54,15 +55,36 @@ function AppLayout() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // 팝업에서 전달된 레스토랑 처리 (state를 읽은 후 즉시 제거하여 새로고침 시 유지 방지)
+  // 이전 pathname 추적을 위한 ref
+  const prevPathnameRef = useRef(location.pathname);
+
+  // 페이지 이동 감지 및 상세 패널 닫기
   useEffect(() => {
-    const state = location.state as { selectedRestaurant?: Restaurant };
-    if (state?.selectedRestaurant) {
-      setSelectedRestaurant(state.selectedRestaurant);
-      // state를 즉시 제거하여 새로고침 시 유지되지 않도록 함
-      navigate(location.pathname, { replace: true, state: {} });
+    // pathname이 실제로 변경되었는지 확인
+    if (prevPathnameRef.current !== location.pathname) {
+      // 먼저 상세 패널 닫기
+      setSelectedRestaurant(null);
+
+      // 팝업에서 전달된 레스토랑이 있으면 복원
+      const state = location.state as { selectedRestaurant?: Restaurant };
+      if (state?.selectedRestaurant) {
+        setSelectedRestaurant(state.selectedRestaurant);
+        // state를 즉시 제거하여 새로고침 시 유지되지 않도록 함
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+
+      // 현재 pathname을 저장
+      prevPathnameRef.current = location.pathname;
+    } else if (location.state) {
+      // pathname은 같지만 state가 있는 경우 (팝업에서 같은 페이지로 이동)
+      const state = location.state as { selectedRestaurant?: Restaurant };
+      if (state?.selectedRestaurant) {
+        setSelectedRestaurant(state.selectedRestaurant);
+        // state를 즉시 제거하여 새로고침 시 유지되지 않도록 함
+        navigate(location.pathname, { replace: true, state: {} });
+      }
     }
-  }, [location.state, location.pathname, navigate]);
+  }, [location.pathname, location.state, navigate]);
 
   // 팝업 데이터 즉시 prefetch (빠른 팝업 표시를 위해)
   useEffect(() => {

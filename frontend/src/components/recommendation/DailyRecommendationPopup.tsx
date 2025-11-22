@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, ExternalLink, X } from "lucide-react";
@@ -8,9 +8,11 @@ import { useUnvisitedRestaurants } from "@/hooks/useUnvisitedRestaurants";
 /**
  * 매일 추천 음식점 팝업 컴포넌트 (광고 팝업 스타일)
  * 사용자가 방문하지 않은 음식점을 매번 추천합니다.
+ * 홈(/)과 글로벌(/global) 페이지에서만 표시됩니다.
  */
 export function DailyRecommendationPopup() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { unvisitedRestaurants, isLoading, isLoggedIn } = useUnvisitedRestaurants();
     const [isVisible, setIsVisible] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<typeof unvisitedRestaurants[0] | null>(null);
@@ -20,9 +22,14 @@ export function DailyRecommendationPopup() {
         "미국", "일본", "대만", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
     ];
 
+    // 홈과 글로벌 페이지에서만 팝업 표시
+    const isHomePage = location.pathname === '/';
+    const isGlobalPage = location.pathname === '/global';
+    const shouldShowPopup = isHomePage || isGlobalPage;
+
     // YouTube 썸네일 URL 추출 함수
     const extractYouTubeVideoId = (url: string) => {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
     };
@@ -39,17 +46,20 @@ export function DailyRecommendationPopup() {
         return unvisitedRestaurants[randomIndex];
     };
 
-    // 초기 로딩 후 팝업 표시
+    // 초기 로딩 후 팝업 표시 (홈/글로벌 페이지에서만)
     useEffect(() => {
-        // 로그인하고 미방문 맛집이 있으면 무조건 표시
-        if (isLoggedIn && unvisitedRestaurants.length > 0) {
+        // 로그인하고 미방문 맛집이 있고 홈/글로벌 페이지일 때만 표시
+        if (isLoggedIn && unvisitedRestaurants.length > 0 && shouldShowPopup) {
             const restaurant = selectRandomRestaurant();
             if (restaurant) {
                 setSelectedRestaurant(restaurant);
                 setTimeout(() => setIsVisible(true), 500); // 부드러운 등장을 위한 딜레이
             }
+        } else {
+            // 다른 페이지로 이동하면 팝업 닫기
+            setIsVisible(false);
         }
-    }, [isLoggedIn, unvisitedRestaurants.length]);
+    }, [isLoggedIn, unvisitedRestaurants.length, shouldShowPopup]);
 
     // 닫기
     const handleClose = () => {
