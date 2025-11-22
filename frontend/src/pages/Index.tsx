@@ -1,4 +1,5 @@
 import { useState, memo, Suspense, lazy, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 
 // 코드 스플리팅으로 성능 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -36,6 +37,7 @@ interface IndexProps {
 
 const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: IndexProps) => {
   const { isAdmin } = useAuth();
+  const location = useLocation();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<Region | null>("서울특별시");
   const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
@@ -210,6 +212,29 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
       }
     }
   }, [selectedRestaurant]);
+
+  // 팝업에서 전달된 음식점 정보 처리
+  useEffect(() => {
+    if (location.state?.selectedRestaurant) {
+      const restaurant = location.state.selectedRestaurant as Restaurant;
+      const region = location.state.selectedRegion as Region | null;
+      
+      // 지역 필터 설정
+      if (region && region !== selectedRegion) {
+        setSelectedRegion(region);
+      }
+      
+      // 약간의 딜레이 후 음식점 선택 (지역 데이터 로딩 대기)
+      setTimeout(() => {
+        // searchedRestaurant로 설정하여 지도 중앙 조정 및 마커 활성화
+        setSearchedRestaurant(restaurant);
+        setSelectedRestaurant(restaurant);
+      }, 300);
+      
+      // location.state 초기화 (중복 처리 방지)
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   // useRestaurants의 결과를 활용해서 검색된 병합 데이터를 기존 데이터와 일치시키는 함수
   const normalizeSearchedRestaurant = (restaurant: Restaurant, allRestaurants: Restaurant[]): Restaurant => {

@@ -367,7 +367,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                             setSelectedCountry(value as GlobalCountry);
                         }}
                     >
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="w-48">
                             <div className="flex items-center gap-2">
                                 <MapPin className="h-4 w-4 text-muted-foreground" />
                                 <SelectValue placeholder="국가를 선택하세요" />
@@ -379,8 +379,8 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 return (
                                     <SelectItem key={country} value={country}>
                                         <div className="flex items-center justify-between w-full">
-                                            <span>{country}</span>
-                                            <span className="ml-2 text-xs text-muted-foreground">({count}개)</span>
+                                            <span className="whitespace-nowrap">{country}</span>
+                                            <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({count}개)</span>
                                         </div>
                                     </SelectItem>
                                 );

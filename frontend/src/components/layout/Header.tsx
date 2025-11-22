@@ -28,11 +28,11 @@ interface HeaderProps {
 }
 
 const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, isCenteredLayout = false, onToggleCenteredLayout }: HeaderProps) => {
-  const [isDark, setIsDark] = useState(false);
+  const [isHanjiMode, setIsHanjiMode] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
 
   const toggleTheme = () => {
-    // 다크모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
+    // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
     const root = document.documentElement;
 
     // 모든 transition 비활성화
@@ -40,7 +40,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
     style.textContent = '* { transition: none !important; }';
     document.head.appendChild(style);
 
-    setIsDark(!isDark);
+    setIsHanjiMode(!isHanjiMode);
     root.classList.toggle("dark");
 
     // 다음 프레임에서 transition 복구
@@ -112,8 +112,9 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
           size="icon"
           onClick={toggleTheme}
           className="hover:bg-accent"
+          title={isHanjiMode ? "대동여지도 모드" : "한지 모드"}
         >
-          {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {isHanjiMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
         <DropdownMenu>

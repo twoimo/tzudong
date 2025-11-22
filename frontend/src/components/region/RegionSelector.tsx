@@ -101,8 +101,8 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
           return (
             <SelectItem key={region} value={region}>
               <div className="flex items-center justify-between w-full">
-                <span>{region}</span>
-                <span className="ml-2 text-xs text-muted-foreground">({count}개)</span>
+                <span className="whitespace-nowrap">{region}</span>
+                <span className="ml-2 text-xs text-muted-foreground whitespace-nowrap">({count}개)</span>
               </div>
             </SelectItem>
           );
