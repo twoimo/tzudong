@@ -17,13 +17,13 @@ const USA_ZOOM = 4; // 미국 줌 레벨
 
 // 국가별 지도 중심 좌표
 const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
-  "미국": { lat: 39.8283, lng: -98.5795, zoom: 4 },
+  "미국": { lat: 39.8283, lng: -98.5795, zoom: 5 },
   "일본": { lat: 35.1815, lng: 136.9066, zoom: 10 }, // 나고야시 중심으로 변경
   "대만": { lat: 25.0330, lng: 121.5654, zoom: 10 }, // 타이베이 중심
-  "태국": { lat: 13.7563, lng: 100.5018, zoom: 10 }, // 방콕 중심으로 확대
+  "태국": { lat: 13.7563, lng: 100.5018, zoom: 11 }, // 방콕 중심으로 확대
   "인도네시아": { lat: -6.9667, lng: 110.4167, zoom: 7 }, // 줌아웃 -3
-  "튀르키예": { lat: 41.0082, lng: 28.9784, zoom: 10 }, // 이스탄불 더 확대
-  "헝가리": { lat: 47.4979, lng: 19.0402, zoom: 10 }, // 줌인 +3
+  "튀르키예": { lat: 41.0082, lng: 28.9784, zoom: 11 }, // 이스탄불 더 확대
+  "헝가리": { lat: 47.4979, lng: 19.0402, zoom: 11 }, // 줌인 +3
   "오스트레일리아": { lat: -33.8688, lng: 151.2093, zoom: 10 }, // 시드니 중심으로 변경
 };
 
@@ -83,18 +83,29 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
   // 맛집으로 지도 이동하는 함수
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
-    if (googleMapRef.current) {
-      const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
+    const tryMove = (retryCount = 0) => {
+      if (googleMapRef.current) {
+        const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
 
-      try {
-        googleMapRef.current.setCenter(position);
-        googleMapRef.current.setZoom(15); // 맛집 상세 보기용 줌 레벨
-      } catch (error) {
-        console.error('MapView: Error moving to restaurant position:', error);
+        try {
+          // 패널이 열리면서 지도 크기가 변했을 수 있으므로 리사이즈 트리거
+          google.maps.event.trigger(googleMapRef.current, "resize");
+
+          googleMapRef.current.panTo(position);
+          googleMapRef.current.setZoom(17); // 맛집 상세 보기용 줌 레벨 (더 확대)
+        } catch (error) {
+          console.error('MapView: Error moving to restaurant position:', error);
+        }
+      } else if (retryCount < 5) {
+        // 지도가 아직 준비되지 않았다면 재시도 (최대 5회, 200ms 간격)
+        console.warn(`MapView: Map not ready, retrying... (${retryCount + 1}/5)`);
+        setTimeout(() => tryMove(retryCount + 1), 200);
+      } else {
+        console.warn('MapView: Map not ready for moving to restaurant after retries');
       }
-    } else {
-      console.warn('MapView: Map not ready for moving to restaurant');
-    }
+    };
+
+    tryMove();
   }, []);
 
   // 외부 콜백에 지도 이동 함수 전달
@@ -111,78 +122,47 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       return;
     }
 
-    console.log('🗺️ MapView: 검색된 맛집으로 지도 이동 시도', {
-      restaurant: searchedRestaurant.name,
-      lat: searchedRestaurant.lat,
-      lng: searchedRestaurant.lng,
-      mapReady: !!googleMapRef.current,
-      isLoaded
-    });
-
     const lat = Number(searchedRestaurant.lat);
     const lng = Number(searchedRestaurant.lng);
 
     if (isNaN(lat) || isNaN(lng)) {
-      console.error('MapView: 잘못된 좌표값', { lat: searchedRestaurant.lat, lng: searchedRestaurant.lng });
-      return;
-    }
-
-    // 지도가 완전히 준비되었는지 추가 확인
-    if (!googleMapRef.current.getBounds || !googleMapRef.current.getZoom) {
-      console.warn('MapView: 지도가 아직 완전히 초기화되지 않았습니다');
       return;
     }
 
     const position = { lat, lng };
 
-    // 비동기로 실행하여 지도 준비를 기다림
+    // 패널 애니메이션 등을 고려하여 약간의 지연 후 이동
     const performMapMove = () => {
       try {
-        // 현재 줌 레벨 확인
-        const currentZoom = googleMapRef.current?.getZoom();
-        console.log('MapView: 현재 줌 레벨:', currentZoom);
+        if (!googleMapRef.current) return;
 
-        // 지도 중심 이동
-        googleMapRef.current?.setCenter(position);
-        console.log('MapView: 지도 중심 이동 완료');
+        // 지도 리사이즈 인식
+        google.maps.event.trigger(googleMapRef.current, "resize");
 
-        // 약간의 지연 후 줌 레벨 설정 (지도 안정화를 위해)
+        // 지도 중심 이동 (부드럽게)
+        googleMapRef.current.panTo(position);
+
+        // 줌 레벨 설정 (약간의 지연 후)
         setTimeout(() => {
           if (googleMapRef.current) {
-            googleMapRef.current.setZoom(20);
-            console.log('MapView: 줌 레벨 설정 완료: 20');
+            googleMapRef.current.setZoom(18);
 
             // 검색된 맛집 선택 상태로 설정
             if (onRestaurantSelect) {
               onRestaurantSelect(searchedRestaurant);
-              console.log('MapView: 맛집 선택 상태 설정 완료');
             }
-
-            console.log('🗺️ MapView: 지도 이동 완료');
           }
-        }, 100);
+        }, 300);
 
       } catch (error) {
         console.error('MapView: Error moving to searched restaurant position:', error);
-        // 재시도 로직 (한 번 더 시도)
-        setTimeout(() => {
-          if (googleMapRef.current && searchedRestaurant) {
-            try {
-              googleMapRef.current.setCenter(position);
-              googleMapRef.current.setZoom(20);
-              console.log('MapView: 재시도 성공');
-            } catch (retryError) {
-              console.error('MapView: 재시도 실패:', retryError);
-            }
-          }
-        }, 500);
       }
     };
 
-    // 지연 실행으로 지도 안정화 대기
-    setTimeout(performMapMove, 50);
+    // 지연 실행으로 지도 안정화 및 패널 오픈 대기
+    setTimeout(performMapMove, 300);
 
-  }, [searchedRestaurant, onRestaurantSelect]);
+  }, [searchedRestaurant, onRestaurantSelect, isLoaded]);
 
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
@@ -300,12 +280,17 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   useEffect(() => {
     if (!googleMapRef.current || !selectedCountry) return;
 
+    // 검색된 맛집이 있으면 국가 중심으로 이동하지 않음 (검색 이동 로직이 우선)
+    // 단, 검색된 맛집이 현재 선택된 국가와 다를 수 있으므로 주의 필요하지만,
+    // handleRestaurantSearch에서 이미 국가를 맞춰주므로 여기서는 이동만 막으면 됨
+    if (searchedRestaurant) return;
+
     const countryConfig = COUNTRY_CENTERS[selectedCountry];
     if (countryConfig) {
       googleMapRef.current.setCenter({ lat: countryConfig.lat, lng: countryConfig.lng });
       googleMapRef.current.setZoom(countryConfig.zoom);
     }
-  }, [selectedCountry]);
+  }, [selectedCountry, searchedRestaurant]);
 
   // Retry map initialization if Google Maps becomes available later
   useEffect(() => {

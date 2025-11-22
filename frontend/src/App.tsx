@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { NotificationProvider } from "@/contexts/NotificationContext";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
 import { useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
 import GlobalMapPage from "./pages/GlobalMapPage";
 import FilteringPage from "./pages/FilteringPage";
@@ -19,12 +20,14 @@ import AdminReviewsPage from "./pages/AdminReviewsPage";
 import AdminEvaluationPage from "./pages/AdminEvaluationPage";
 import NotFound from "./pages/NotFound";
 import { useState } from "react";
+import { useRef } from "react";
 import Header from "./components/layout/Header";
 import Sidebar from "./components/layout/Sidebar";
 import AuthModal from "./components/auth/AuthModal";
 import { ProfileModal } from "./components/profile/ProfileModal";
 import { NicknameSetupModal } from "./components/profile/NicknameSetupModal";
 import { AdminRestaurantModal } from "./components/admin/AdminRestaurantModal";
+import { DailyRecommendationPopup } from "./components/recommendation/DailyRecommendationPopup";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
@@ -43,6 +46,7 @@ function AppLayout() {
   const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
   const queryClient = useQueryClient();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCenteredLayout, setIsCenteredLayout] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -50,6 +54,73 @@ function AppLayout() {
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // 이전 pathname 추적을 위한 ref
+  const prevPathnameRef = useRef(location.pathname);
+
+  // 페이지 이동 감지 및 상세 패널 닫기
+  useEffect(() => {
+    // pathname이 실제로 변경되었는지 확인
+    if (prevPathnameRef.current !== location.pathname) {
+      // 먼저 상세 패널 닫기
+      setSelectedRestaurant(null);
+
+      // 팝업에서 전달된 레스토랑이 있으면 복원
+      const state = location.state as { selectedRestaurant?: Restaurant };
+      if (state?.selectedRestaurant) {
+        setSelectedRestaurant(state.selectedRestaurant);
+        // state를 즉시 제거하여 새로고침 시 유지되지 않도록 함
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+
+      // 현재 pathname을 저장
+      prevPathnameRef.current = location.pathname;
+    } else if (location.state) {
+      // pathname은 같지만 state가 있는 경우 (팝업에서 같은 페이지로 이동)
+      const state = location.state as { selectedRestaurant?: Restaurant };
+      if (state?.selectedRestaurant) {
+        setSelectedRestaurant(state.selectedRestaurant);
+        // state를 즉시 제거하여 새로고침 시 유지되지 않도록 함
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+    }
+  }, [location.pathname, location.state, navigate]);
+
+  // 팝업 데이터 즉시 prefetch (빠른 팝업 표시를 위해)
+  useEffect(() => {
+    if (user?.id) {
+      // 사용자 리뷰 데이터 prefetch
+      queryClient.prefetchQuery({
+        queryKey: ['user-reviews', user.id],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from('reviews')
+            .select('restaurant_id, is_verified')
+            .eq('user_id', user.id)
+            .eq('is_verified', true);
+          if (error) throw error;
+          return data;
+        },
+        staleTime: 5 * 60 * 1000,
+      });
+
+      // 승인된 맛집 데이터 prefetch
+      queryClient.prefetchQuery({
+        queryKey: ['unvisited-restaurants-all'],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from('restaurants')
+            .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review, created_at')
+            .eq('status', 'approved')
+            .not('youtube_link', 'is', null)
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+          return data;
+        },
+        staleTime: 5 * 60 * 1000,
+      });
+    }
+  }, [user?.id, queryClient]);
 
   // 홈페이지, 글로벌, 필터링 페이지에서는 가운데 정렬 버튼 숨기기
   const shouldShowCenteredLayoutButton = location.pathname !== '/' && location.pathname !== '/global' && location.pathname !== '/filtering';
@@ -146,6 +217,8 @@ function AppLayout() {
         isOpen={needsNicknameSetup}
         onComplete={completeNicknameSetup}
       />
+
+      <DailyRecommendationPopup />
 
     </div>
   );

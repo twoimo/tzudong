@@ -9,6 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { Region } from "@/types/restaurant";
+import { mergeRestaurants } from "@/hooks/use-restaurants";
 
 interface CategoryFilterProps {
     selectedCategories: string[];
@@ -39,13 +40,13 @@ const CATEGORIES = [
 const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, selectedCountry, className }: CategoryFilterProps) => {
     const [isOpen, setIsOpen] = useState(false);
 
-    // 선택된 지역/국가에 따른 맛집 데이터 가져오기 (카테고리 정보만 필요)
+    // 선택된 지역/국가에 따른 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
     const { data: restaurants = [] } = useQuery({
         queryKey: ['restaurants-categories', selectedRegion, selectedCountry],
         queryFn: async () => {
             let query = supabase
                 .from('restaurants')
-                .select('categories, road_address, jibun_address, english_address')
+                .select('*')
                 .eq('status', 'approved');
 
             // 지역 또는 국가 필터링 적용
@@ -69,11 +70,12 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
                 console.error('카테고리 데이터 조회 실패:', error);
                 return [];
             }
-            return data || [];
+            // 병합 로직 적용하여 중복 제거
+            return mergeRestaurants(data || []);
         },
     });
 
-    // 카테고리별 맛집 수 계산
+    // 카테고리별 맛집 수 계산 (병합된 데이터 기준)
     const categoryCounts = useMemo(() => {
         const counts: Record<string, number> = {};
 
@@ -87,7 +89,7 @@ const CategoryFilter = ({ selectedCategories, onCategoryChange, selectedRegion, 
         return counts;
     }, [restaurants]);
 
-    // 전체 맛집 수
+    // 전체 맛집 수 (병합된 데이터 기준)
     const totalCount = restaurants.length;
 
     const handleCategoryToggle = (category: string) => {
