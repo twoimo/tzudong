@@ -1,4 +1,4 @@
-import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield, MapPin, ClipboardCheck } from "lucide-react";
+import { Home, Globe, Filter, Trophy, MessageSquare, DollarSign, Send, Shield, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -75,30 +75,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       {/* 전통 문양 테두리 (내부) */}
       <div className="absolute inset-1 border border-stone-800/10 rounded-sm pointer-events-none z-0" />
 
-      <div className="h-16 flex items-center px-6 border-b border-stone-800/10 relative z-10">
-        <div className="flex items-center gap-3 group cursor-pointer" onClick={() => navigate("/")}>
-          {/* Logo - 낙관 스타일 */}
-          <div className="relative w-8 h-8 bg-red-800 rounded-sm flex items-center justify-center shadow-md transform rotate-3 transition-transform group-hover:rotate-0">
-            <MapPin className="w-5 h-5 text-white/90" strokeWidth={2.5} />
-            <div className="absolute inset-0 border border-white/20 rounded-sm" />
-          </div>
-
-          {/* Title - 세로쓰기 느낌의 명조체 */}
-          <div className="flex flex-col justify-center">
-            <h1 className="text-lg font-serif font-bold text-stone-900 tracking-widest leading-none mb-0.5">
-              쯔동여지도
-            </h1>
-            <span className="text-[9px] text-stone-500 font-serif tracking-tighter leading-none">
-              TZUYANG'S GOURMET MAP
-            </span>
-          </div>
-        </div>
-
-        {/* 우측 장식 낙관 (味) */}
-        <div className="ml-auto opacity-40 group-hover:opacity-80 transition-opacity duration-500">
-          <div className="w-9 h-9 border-2 border-stone-300 rounded-full flex items-center justify-center transform -rotate-12 bg-stone-100/50">
-            <span className="font-serif text-stone-400 font-bold text-xl" style={{ fontFamily: '"Noto Serif KR", serif' }}>味</span>
-          </div>
+      {/* 로고 영역 - "쯔동여지도" 5글자만 크게 조선100년체로 가운데 배치 */}
+      <div className="h-16 flex items-center justify-center px-6 border-b border-stone-800/10 relative z-10">
+        <div className="cursor-pointer" onClick={() => navigate("/")}>
+          <h1 className="text-4xl text-stone-900 tracking-wide hover:text-red-800 transition-colors" style={{ fontFamily: "'ChosunCentennial', cursive" }}>
+            쯔동여지도
+          </h1>
         </div>
       </div>
 
