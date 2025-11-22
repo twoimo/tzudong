@@ -196,20 +196,23 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
             console.log('🌍 검색된 맛집 국가로 필터 변경:', restaurantCountry);
         }
 
-        // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
-        setSearchedRestaurant(restaurant);
+        // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정 (객체 복사로 참조 변경 보장)
+        setSearchedRestaurant({ ...restaurant });
         setSelectedRestaurant(restaurant);
 
         // 검색 시 자동으로 패널 열기
         setPanelRestaurant(restaurant);
         setIsPanelOpen(true);
 
-        // 지도 이동 함수가 준비되었다면 즉시 이동
+        // 지도 이동 함수가 준비되었다면 약간의 지연 후 이동 (패널 오픈 애니메이션 고려)
         if (moveToRestaurant) {
             if (process.env.NODE_ENV === "development") {
-                console.log("[handleRestaurantSearch] moveToRestaurant 실행", { restaurant });
+                console.log("[handleRestaurantSearch] moveToRestaurant 실행 예약", { restaurant });
             }
-            moveToRestaurant(restaurant);
+            // 300ms 지연 후 이동 (패널이 열리고 지도가 리사이즈될 시간을 줌)
+            setTimeout(() => {
+                moveToRestaurant(restaurant);
+            }, 300);
         }
 
         // 그리드 모드에서 검색 시 단일 모드로 전환
