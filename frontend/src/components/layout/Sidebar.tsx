@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import AdBanner from "./AdBanner";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -115,10 +116,16 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         })}
       </nav>
 
-      <div className="p-4 border-t border-sidebar-border text-center">
-        <div className="text-xs text-muted-foreground space-y-1">
-          <p>쯔동여지도, 유튜브 쯔양 맛집 지도 v1.5.3</p>
-          <p className="text-primary font-semibold">@ 2025 Tzudong. All rights reserved.</p>
+      <div className="p-4 space-y-3">
+        {/* 광고 배너 */}
+        <AdBanner />
+
+        {/* 버전 정보 */}
+        <div className="border-t border-sidebar-border pt-3 text-center">
+          <div className="text-xs text-muted-foreground space-y-1">
+            <p>쯔동여지도, 유튜브 쯔양 맛집 지도 v1.5.3</p>
+            <p className="text-primary font-semibold">@ 2025 Tzudong. All rights reserved.</p>
+          </div>
         </div>
       </div>
     </aside>
