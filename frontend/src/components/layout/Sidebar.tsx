@@ -62,18 +62,20 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 bg-sidebar border-r border-sidebar-border transition-transform duration-300 ease-in-out flex flex-col h-screen w-64 shadow-xl",
+        "fixed left-0 top-0 z-40 bg-sidebar border-r border-sidebar-border transition-colors duration-300 ease-in-out flex flex-col h-screen w-64 shadow-xl",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
-      style={{ backgroundColor: '#fdfbf7' }}
     >
-      {/* 한지 질감 오버레이 */}
-      <div className="absolute inset-0 opacity-30 pointer-events-none z-0"
-        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")` }}
+      {/* 한지 질감 오버레이 - 더 선명하게 */}
+      <div className="absolute inset-0 opacity-40 pointer-events-none z-0"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E")` }}
       />
 
       {/* 전통 문양 테두리 (내부) */}
       <div className="absolute inset-1 border border-stone-800/10 rounded-sm pointer-events-none z-0" />
+
+      {/* 우측 테두리 강조 */}
+      <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-stone-800/20 to-transparent pointer-events-none z-0" />
 
       {/* 로고 영역 - "쯔동여지도" 5글자만 크게 조선100년체로 가운데 배치 */}
       <div className="h-16 flex items-center justify-center px-6 border-b border-stone-800/10 relative z-10">
