@@ -92,8 +92,8 @@ const RestaurantSearch = ({
           results = (data || []) as Restaurant[];
         }
 
-        // 지역 필터 적용 (글로벌 페이지용 - 선택된 국가로 필터링)
-        if (!isKoreanOnly && selectedRegion) {
+        // 지역 필터 적용 (선택된 지역/국가로 필터링)
+        if (selectedRegion) {
           results = results.filter((restaurant: Restaurant) => {
             const address = restaurant.road_address || restaurant.jibun_address || restaurant.english_address || '';
             return address.includes(selectedRegion);

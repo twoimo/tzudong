@@ -28,11 +28,11 @@ interface HeaderProps {
 }
 
 const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, isCenteredLayout = false, onToggleCenteredLayout }: HeaderProps) => {
-  const [isDark, setIsDark] = useState(false);
+  const [isHanjiMode, setIsHanjiMode] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
 
   const toggleTheme = () => {
-    // 다크모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
+    // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
     const root = document.documentElement;
 
     // 모든 transition 비활성화
@@ -40,7 +40,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
     style.textContent = '* { transition: none !important; }';
     document.head.appendChild(style);
 
-    setIsDark(!isDark);
+    setIsHanjiMode(!isHanjiMode);
     root.classList.toggle("dark");
 
     // 다음 프레임에서 transition 복구
@@ -92,63 +92,78 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
   };
 
   return (
-    <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 shadow-sm z-10">
-      <div className="flex items-center">
+    <header
+      className="h-16 border-b border-stone-800/10 bg-card flex items-center justify-between px-4 shadow-sm z-10 relative transition-colors duration-300"
+    >
+      {/* 한지 질감 오버레이 */}
+      <div
+        className="absolute inset-0 opacity-30 pointer-events-none"
+        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")` }}
+      />
+
+      {/* 전통 문양 테두리 */}
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-stone-800/20 to-transparent" />
+
+      <div className="flex items-center relative z-10">
         <Button
           variant="ghost"
           size="icon"
           onClick={onToggleSidebar}
-          className="hover:bg-accent"
+          className="hover:bg-stone-200/50 text-stone-700 font-serif transition-colors"
         >
           <Menu className="h-5 w-5" />
         </Button>
       </div>
 
-      <div className="flex items-center gap-2">
-
-
+      <div className="flex items-center gap-2 relative z-10">
+        {/* 한지 모드 토글 */}
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleTheme}
-          className="hover:bg-accent"
+          className="hover:bg-stone-200/50 text-stone-700 transition-colors"
+          title={isHanjiMode ? "밝은 모드" : "한지 모드"}
         >
-          {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          {isHanjiMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
+        {/* 알림 */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-accent relative">
+            <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
                 <Badge
                   variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-800"
                 >
                   {unreadCount > 99 ? '99+' : unreadCount}
                 </Badge>
               )}
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-80">
-            <DropdownMenuLabel className="flex items-center justify-between">
+          <DropdownMenuContent
+            align="end"
+            className="w-80 bg-[#fdfbf7] border-stone-800/10 font-serif"
+          >
+            <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
               <span>알림</span>
               {unreadCount > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={markAllAsRead}
-                  className="h-6 px-2 text-xs"
+                  className="h-6 px-2 text-xs hover:bg-stone-200/50 text-stone-600"
                 >
                   <CheckCheck className="h-3 w-3 mr-1" />
                   모두 읽음
                 </Button>
               )}
             </DropdownMenuLabel>
-            <DropdownMenuSeparator />
+            <DropdownMenuSeparator className="bg-stone-800/10" />
             <ScrollArea className="h-96">
               {notifications.length === 0 ? (
-                <div className="p-4 text-center text-sm text-muted-foreground">
+                <div className="p-4 text-center text-sm text-stone-500">
                   새로운 알림이 없습니다
                 </div>
               ) : (
@@ -156,14 +171,14 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
                   {notifications.map((notification) => (
                     <DropdownMenuItem
                       key={notification.id}
-                      className={`flex-col items-start p-4 cursor-pointer ${!notification.isRead ? 'bg-accent/50' : ''
+                      className={`flex-col items-start p-4 cursor-pointer ${!notification.isRead ? 'bg-stone-100/50' : ''
                         }`}
                       onClick={() => markAsRead(notification.id)}
                     >
                       <div className="flex items-start justify-between w-full mb-2">
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{getNotificationIcon(notification.type)}</span>
-                          <span className="font-medium text-sm">{notification.title}</span>
+                          <span className="font-medium text-sm text-stone-900">{notification.title}</span>
                         </div>
                         <Button
                           variant="ghost"
@@ -177,9 +192,9 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
                           <X className="h-3 w-3" />
                         </Button>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
+                      <p className="text-sm text-stone-600 mb-2">{notification.message}</p>
                       <div className="flex items-center justify-between w-full">
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-stone-500">
                           {formatDistanceToNow(notification.createdAt, {
                             addSuffix: true,
                             locale: ko
@@ -203,8 +218,8 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
             variant="ghost"
             size="icon"
             className={cn(
-              "hover:bg-accent",
-              isCenteredLayout && "bg-accent"
+              "hover:bg-stone-200/50 text-stone-700 transition-colors",
+              isCenteredLayout && "bg-stone-200/50"
             )}
             onClick={onToggleCenteredLayout}
           >
@@ -212,29 +227,31 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
           </Button>
         )}
 
+        {/* 전체화면 */}
         <Button
           variant="ghost"
           size="icon"
           onClick={toggleFullscreen}
-          className="hover:bg-accent"
+          className="hover:bg-stone-200/50 text-stone-700 transition-colors"
         >
           <Maximize className="h-5 w-5" />
         </Button>
 
+        {/* 로그인 상태 */}
         {isLoggedIn && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-accent">
+              <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 transition-colors">
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onProfileClick}>
+            <DropdownMenuContent align="end" className="bg-[#fdfbf7] border-stone-800/10 font-serif">
+              <DropdownMenuItem onClick={onProfileClick} className="text-stone-900 hover:bg-stone-200/50">
                 <User className="mr-2 h-4 w-4" />
                 프로필
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onLogout}>
+              <DropdownMenuSeparator className="bg-stone-800/10" />
+              <DropdownMenuItem onClick={onLogout} className="text-stone-900 hover:bg-stone-200/50">
                 <LogOut className="mr-2 h-4 w-4" />
                 로그아웃
               </DropdownMenuItem>
@@ -242,10 +259,11 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
           </DropdownMenu>
         )}
 
+        {/* 로그인 버튼 */}
         {!isLoggedIn && (
           <Button
             onClick={onOpenAuth}
-            className="ml-2 bg-gradient-primary hover:opacity-90 transition-opacity"
+            className="ml-2 bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md"
           >
             로그인
           </Button>

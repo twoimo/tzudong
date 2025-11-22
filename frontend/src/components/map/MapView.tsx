@@ -108,6 +108,10 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     tryMove();
   }, []);
 
+  // Google Maps API 로드
+  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
+  const { isLoaded, loadError } = useGoogleMaps({ apiKey });
+
   // 외부 콜백에 지도 이동 함수 전달
   useEffect(() => {
     if (onMapReady) {
@@ -163,9 +167,6 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     setTimeout(performMapMove, 300);
 
   }, [searchedRestaurant, onRestaurantSelect, isLoaded]);
-
-  const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
-  const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
   // useRestaurants 옵션 메모이제이션
   const restaurantsOptions = useMemo(() => ({

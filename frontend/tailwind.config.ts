@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         sans: ['"Noto Serif KR"', 'serif'],
         serif: ['"Noto Serif KR"', 'serif'],
+        display: ['"ChosunCentennial"', '"Noto Serif KR"', 'cursive'],
       },
       colors: {
         border: "hsl(var(--border))",

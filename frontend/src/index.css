@@ -15,6 +15,15 @@ All colors MUST be HSL.
   src: local('Noto Serif KR'), local('NotoSerifKR-Regular');
 }
 
+/* 조선100년체 로컬 폰트 */
+@font-face {
+  font-family: 'ChosunCentennial';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/ChosunCentennial_otf.otf') format('opentype');
+}
+
 /* GPU 가속화 및 성능 최적화 */
 
 @layer base {
@@ -70,48 +79,55 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
   }
 
+  /* 한지 모드 (대동여지도 - 오래된 누런 종이 톤) */
   .dark {
-    --background: 24 10% 10%;
-    --foreground: 38 30% 98%;
+    --background: 45 35% 88%;
+    /* 누런 오래된 종이 */
+    --foreground: 30 15% 20%;
+    /* 진한 먹물 갈색 */
 
-    --card: 24 10% 12%;
-    --card-foreground: 38 30% 98%;
+    --card: 45 30% 90%;
+    /* 밝은 누런 종이 */
+    --card-foreground: 30 15% 20%;
 
-    --popover: 24 10% 12%;
-    --popover-foreground: 38 30% 98%;
+    --popover: 45 30% 90%;
+    --popover-foreground: 30 15% 20%;
 
-    --primary: 0 74% 42%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 15 60% 40%;
+    /* 진한 붉은 낙관 */
+    --primary-foreground: 45 30% 95%;
 
-    --secondary: 24 10% 15%;
-    --secondary-foreground: 38 30% 98%;
+    --secondary: 42 20% 82%;
+    /* 연한 누런 톤 */
+    --secondary-foreground: 30 15% 20%;
 
-    --muted: 24 10% 15%;
-    --muted-foreground: 24 5% 60%;
+    --muted: 42 20% 82%;
+    --muted-foreground: 30 10% 35%;
 
-    --accent: 24 10% 15%;
-    --accent-foreground: 38 30% 98%;
+    --accent: 42 20% 82%;
+    --accent-foreground: 30 15% 20%;
 
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 65% 50%;
+    --destructive-foreground: 45 30% 95%;
 
-    --border: 24 10% 20%;
-    --input: 24 10% 20%;
-    --ring: 0 74% 42%;
+    --border: 40 18% 72%;
+    /* 누런 테두리 */
+    --input: 40 18% 72%;
+    --ring: 15 60% 40%;
 
-    --sidebar-background: 24 10% 10%;
-    --sidebar-foreground: 38 30% 98%;
-    --sidebar-primary: 0 74% 42%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 24 10% 15%;
-    --sidebar-accent-foreground: 38 30% 98%;
-    --sidebar-border: 24 10% 20%;
-    --sidebar-ring: 0 74% 42%;
+    --sidebar-background: 45 35% 88%;
+    --sidebar-foreground: 30 15% 20%;
+    --sidebar-primary: 15 60% 40%;
+    --sidebar-primary-foreground: 45 30% 95%;
+    --sidebar-accent: 42 20% 82%;
+    --sidebar-accent-foreground: 30 15% 20%;
+    --sidebar-border: 40 18% 72%;
+    --sidebar-ring: 15 60% 40%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(0 74% 42%), hsl(0 60% 35%));
-    --gradient-secondary: linear-gradient(135deg, hsl(24 10% 15%), hsl(24 10% 20%));
-    --shadow-primary: 0 10px 30px -10px hsl(0 74% 42% / 0.4);
-    --shadow-glow: 0 0 40px hsl(0 74% 42% / 0.3);
+    --gradient-primary: linear-gradient(135deg, hsl(15 60% 40%), hsl(10 55% 35%));
+    --gradient-secondary: linear-gradient(135deg, hsl(42 20% 82%), hsl(40 22% 78%));
+    --shadow-primary: 0 4px 14px 0 rgba(110, 70, 30, 0.2);
+    --shadow-glow: 0 0 20px rgba(110, 70, 30, 0.15);
   }
 }
 
