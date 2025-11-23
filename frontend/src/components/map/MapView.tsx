@@ -88,31 +88,24 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const effectivePanelWidth = propPanelWidth !== undefined ? propPanelWidth : panelWidth;
 
 
-  // 맛집으로 지도 이동하는 함수
+  // 맛집으로 지도 이동하는 함수 (즉시 실행, 재시도 없음)
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
-    const tryMove = (retryCount = 0) => {
-      if (googleMapRef.current) {
-        const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
+    if (!googleMapRef.current) {
+      console.warn('MapView: Map not ready for moving');
+      return;
+    }
 
-        try {
-          // 패널이 열리면서 지도 크기가 변했을 수 있으므로 리사이즈 트리거
-          google.maps.event.trigger(googleMapRef.current, "resize");
+    const position = { lat: Number(restaurant.lat), lng: Number(restaurant.lng) };
 
-          googleMapRef.current.panTo(position);
-          googleMapRef.current.setZoom(14); // 줌 레벨 14로 조정
-        } catch (error) {
-          console.error('MapView: Error moving to restaurant position:', error);
-        }
-      } else if (retryCount < 5) {
-        // 지도가 아직 준비되지 않았다면 재시도 (최대 5회, 200ms 간격)
-        console.warn(`MapView: Map not ready, retrying... (${retryCount + 1}/5)`);
-        setTimeout(() => tryMove(retryCount + 1), 200);
-      } else {
-        console.warn('MapView: Map not ready for moving to restaurant after retries');
-      }
-    };
+    try {
+      // 패널이 열리면서 지도 크기가 변했을 수 있으므로 리사이즈 트리거
+      google.maps.event.trigger(googleMapRef.current, "resize");
 
-    tryMove();
+      googleMapRef.current.panTo(position);
+      googleMapRef.current.setZoom(14); // 줌 레벨 14로 조정
+    } catch (error) {
+      console.error('MapView: Error moving to restaurant position:', error);
+    }
   }, []);
 
   // Google Maps API 로드
@@ -370,7 +363,10 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
     // Create new markers
     restaurantsToShow.forEach((restaurant) => {
-      const isSelected = selectedRestaurant?.id === restaurant.id;
+      // selectedRestaurant 또는 searchedRestaurant와 비교하여 선택 상태 판단
+      const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
+      
+      console.log('[MapView] 마커 생성:', restaurant.name, 'isSelected:', isSelected, 'selectedRestaurant:', selectedRestaurant?.id, 'restaurant.id:', restaurant.id);
 
       // 카테고리별 적절한 이모티콘으로 변경
       const getCategoryIcon = (categories: string | string[] | null | undefined) => {
@@ -428,29 +424,35 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
 
       markerElement.addEventListener("click", () => {
-        // selectedRestaurant 업데이트 (외부 상태 관리용)
-        onRestaurantSelect?.(restaurant);
-
-        // 패널 관리는 부모 컴포넌트에서 처리 (완전 분리)
+        console.log('[MapView] 마커 클릭:', restaurant.name);
+        
+        // 1. 패널을 먼저 즉시 열기 (지도 이동 전에)
         onMarkerClick?.(restaurant);
+        console.log('[MapView] onMarkerClick 호출 (패널 즉시 열기)');
+        
+        // 2. selectedRestaurant 업데이트
+        onRestaurantSelect?.(restaurant);
+        console.log('[MapView] onRestaurantSelect 호출');
 
-        // 마커 클릭 시 해당 위치로 이동 및 줌인
+        // 3. 지도 이동은 마지막에 (비동기 작업)
         moveToRestaurant(restaurant);
+        console.log('[MapView] moveToRestaurant 호출');
       });
 
       markersRef.current.push(marker);
     });
-  }, [restaurants, isLoaded, onRestaurantSelect, onMarkerClick, selectedRestaurant?.id]);
+  }, [restaurants, isLoaded, onRestaurantSelect, onMarkerClick]);
 
   // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
   useEffect(() => {
-    if (!isLoaded || markersRef.current.length === 0) return;
+    if (!isLoaded || markersRef.current.length === 0 || !restaurantsToShow) return;
 
     markersRef.current.forEach((marker, index) => {
       const restaurant = restaurantsToShow[index];
       if (!restaurant) return;
 
-      const isSelected = selectedRestaurant?.id === restaurant.id;
+      // selectedRestaurant 또는 searchedRestaurant와 비교하여 활성화 상태 결정
+      const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
       const markerElement = marker.content as HTMLElement;
       if (!markerElement) return;
 
@@ -468,7 +470,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         innerDiv.classList.remove('animate-bounce');
       }
     });
-  }, [selectedRestaurant?.id, restaurantsToShow, isLoaded]);
+  }, [selectedRestaurant?.id, searchedRestaurant?.id, restaurantsToShow, isLoaded]);
 
   // 줌 이벤트 시 마커 스타일 유지
   useEffect(() => {
@@ -483,7 +485,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           const restaurant = restaurantsToShow[index];
           if (!restaurant) return;
 
-          const isSelected = selectedRestaurant?.id === restaurant.id;
+          const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
           const markerElement = marker.content as HTMLElement;
           if (!markerElement) return;
 
