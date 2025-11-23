@@ -211,6 +211,15 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     setSearchedRestaurant(null);
   };
 
+  const handleCountryChange = (country: string) => {
+    setSelectedCountry(country);
+    // 국가 변경 시 패널과 선택 상태 초기화
+    setIsPanelOpen(false);
+    setPanelRestaurant(null);
+    setSelectedRestaurant(null);
+    setSearchedRestaurant(null);
+  };
+
   // mapMode 변경 시 상태 초기화
   useEffect(() => {
     // 모드 변경 시 해외 모드 관련 상태 모두 초기화
@@ -451,7 +460,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
                 onRegionSelect={switchToSingleMap}
               />
             ) : (
-              <Select value={selectedCountry || undefined} onValueChange={setSelectedCountry}>
+              <Select value={selectedCountry || undefined} onValueChange={handleCountryChange}>
                 <SelectTrigger className="w-48">
                   <SelectValue placeholder="국가 선택" />
                 </SelectTrigger>
