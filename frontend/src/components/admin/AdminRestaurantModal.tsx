@@ -150,6 +150,7 @@ export function AdminRestaurantModal({
 }: AdminRestaurantModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deletedReviewIds, setDeletedReviewIds] = useState<string[]>([]); // X 버튼으로 삭제된 기존 레코드 ID 추적
     const [customCategory, setCustomCategory] = useState(""); // 커스텀 카테고리 입력용
     const [isGeocodingNaver, setIsGeocodingNaver] = useState(false);
     const [isGeocodingGoogle, setIsGeocodingGoogle] = useState(false);
@@ -180,12 +181,15 @@ export function AdminRestaurantModal({
     useEffect(() => {
         if (isOpen && restaurant) {
             // 모달이 열릴 때마다 데이터베이스의 원본 데이터로 초기화
-            // mergedRestaurants에서 모든 유튜브 링크-리뷰 쌍 추출
-            const youtubeReviews = restaurant.mergedRestaurants?.map(r => ({
-                id: r.id,
-                youtube_link: r.youtube_link || "",
-                tzuyang_review: r.tzuyang_review || "",
-            })) || (restaurant.youtube_link ? [{
+            setDeletedReviewIds([]); // 삭제 추적 초기화
+            // mergedRestaurants에서 status가 'approved'인 유튜브 링크-리뷰 쌍만 추출
+            const youtubeReviews = restaurant.mergedRestaurants
+                ?.filter(r => r.status === 'approved') // 승인된 것만
+                .map(r => ({
+                    id: r.id,
+                    youtube_link: r.youtube_link || "",
+                    tzuyang_review: r.tzuyang_review || "",
+                })) || (restaurant.youtube_link && restaurant.status === 'approved' ? [{
                 id: restaurant.id,
                 youtube_link: restaurant.youtube_link,
                 tzuyang_review: restaurant.tzuyang_review || "",
@@ -536,7 +540,26 @@ export function AdminRestaurantModal({
                 // 새로운 유튜브 링크들 (id가 'new-'로 시작하는 것들)
                 const newReviews = formData.youtube_reviews.filter(r => r.id.startsWith('new-'));
 
-                // 1. 공통 필드를 모든 기존 레코드에 업데이트
+                // 1. X 버튼으로 삭제된 레코드를 소프트 삭제 (status = 'deleted')
+                if (deletedReviewIds.length > 0) {
+                    const { error: deleteError } = await supabase
+                        .from('restaurants')
+                        // @ts-expect-error - Supabase 자동 생성 타입 문제
+                        .update({
+                            status: 'deleted',
+                            updated_at: new Date().toISOString(),
+                        })
+                        .in('id', deletedReviewIds);
+
+                    if (deleteError) {
+                        console.error('소프트 삭제 실패:', deleteError);
+                        toast.error('일부 항목 삭제에 실패했습니다');
+                    } else {
+                        console.log('✅ 소프트 삭제 완료:', deletedReviewIds);
+                    }
+                }
+
+                // 2. 공통 필드를 모든 기존 레코드에 업데이트
                 const { error: commonError } = await supabase
                     .from("restaurants")
                     .update(commonData)
@@ -544,7 +567,7 @@ export function AdminRestaurantModal({
 
                 if (commonError) throw commonError;
 
-                // 2. 각 기존 유튜브 링크-리뷰 쌍을 해당 레코드에 개별 업데이트
+                // 3. 각 기존 유튜브 링크-리뷰 쌍을 해당 레코드에 개별 업데이트
                 for (const review of formData.youtube_reviews) {
                     if (review.id.startsWith('new-')) continue; // 새 레코드는 스킵
 
@@ -561,7 +584,7 @@ export function AdminRestaurantModal({
                     }
                 }
 
-                // 3. 새로운 유튜브 링크-리뷰가 있으면 신규 레코드 생성
+                // 4. 새로운 유튜브 링크-리뷰가 있으면 신규 레코드 생성
                 let hasError = false; // 에러 플래그
                 
                 for (const newReview of newReviews) {
@@ -1020,10 +1043,18 @@ export function AdminRestaurantModal({
                                                 type="button"
                                                 size="sm"
                                                 variant="ghost"
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    youtube_reviews: formData.youtube_reviews.filter((_, i) => i !== index)
-                                                })}
+                                                onClick={() => {
+                                                    const reviewToDelete = formData.youtube_reviews[index];
+                                                    // 기존 레코드(new-로 시작하지 않는 ID)면 삭제 목록에 추가
+                                                    if (!reviewToDelete.id.startsWith('new-')) {
+                                                        setDeletedReviewIds([...deletedReviewIds, reviewToDelete.id]);
+                                                    }
+                                                    // UI에서 제거
+                                                    setFormData({
+                                                        ...formData,
+                                                        youtube_reviews: formData.youtube_reviews.filter((_, i) => i !== index)
+                                                    });
+                                                }}
                                             >
                                                 <X className="h-4 w-4" />
                                             </Button>
