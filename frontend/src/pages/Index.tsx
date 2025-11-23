@@ -51,6 +51,11 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   // mapMode 변경 시 디폴트값으로 초기화
   useEffect(() => {
+    // location.state 초기화 (팝업 데이터 중복 처리 방지)
+    if (location.state?.selectedRestaurant) {
+      window.history.replaceState({}, document.title);
+    }
+    
     if (mapMode === 'domestic') {
       setSelectedRegion(null); // 전국
       setSelectedCategories([]);
@@ -58,12 +63,13 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
       setSelectedCountry("튀르키예"); // 기본 국가
       setSelectedCategories([]);
     }
+    // 모든 선택 상태 초기화
     setSearchedRestaurant(null);
+    setSelectedRestaurant(null);
     // 패널 상태 초기화
     setIsPanelOpen(false);
     setPanelRestaurant(null);
-    setSelectedRestaurant(null);
-  }, [mapMode]);
+  }, [mapMode, setSelectedRestaurant, location.state]);
 
   const [isGridMode, setIsGridMode] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -205,23 +211,25 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     setSearchedRestaurant(null);
   };
 
+  // mapMode 변경 시 상태 초기화
+  useEffect(() => {
+    // 모드 변경 시 해외 모드 관련 상태 모두 초기화
+    setIsPanelOpen(false);
+    setPanelRestaurant(null);
+    setSelectedRestaurant(null);
+    setSearchedRestaurant(null);
+  }, [mapMode]);
+
   const handleRestaurantSelect = (restaurant: Restaurant) => {
     // 선택된 맛집을 NaverMapView에 전달하기 위해 상태 업데이트
     setSelectedRestaurant(restaurant);
   };
 
   const handleRestaurantSearch = (restaurant: Restaurant) => {
-    // 검색 시에는 지도 재조정을 위해 searchedRestaurant 설정
-    // 모든 검색 결과에 대해 searchedRestaurant을 null로 설정해서 중복 마커 생성 방지
-    // (지도에 이미 표시된 맛집을 검색하는 경우)
-    setSearchedRestaurant(null);
+    // 검색 시 해당 레스토랑으로 줌인하기 위해 searchedRestaurant 설정
+    setSearchedRestaurant(restaurant);
     setSelectedRestaurant(restaurant);
-
-    // 검색된 맛집의 지역으로 하단 컨트롤 패널의 지역 필터 실시간 변경
-    const restaurantRegion = getRestaurantRegion(restaurant);
-    if (restaurantRegion && restaurantRegion !== selectedRegion) {
-      setSelectedRegion(restaurantRegion);
-    }
+    // 지역 필터는 유지 (사용자가 선택한 필터 존중)
   };
 
   // 맛집의 지역 정보를 추출하는 함수
@@ -288,24 +296,32 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     if (location.state?.selectedRestaurant) {
       const restaurant = location.state.selectedRestaurant as Restaurant;
       
-      // 팝업에서 온 경우 무조건 '국내' 모드로 전환
-      setMapMode('domestic');
-      
-      // 지역 필터를 '전국'으로 설정
-      setSelectedRegion(null);
-      
-      // 즉시 음식점 선택 (지도 이동)
-      setSelectedRestaurant(restaurant);
-      
-      // 약간의 딩레이 후 searchedRestaurant 설정 (지역 데이터 로딩 대기 및 마커 활성화)
-      setTimeout(() => {
-        setSearchedRestaurant(restaurant);
-      }, 100);
-      
-      // location.state 초기화 (중복 처리 방지)
+      // location.state 즉시 초기화 (가장 먼저 실행)
       window.history.replaceState({}, document.title);
+      
+      // 글로벌 국가 목록으로 해외/국내 판단
+      const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
+      const isOverseas = GLOBAL_COUNTRIES.some(country => address.includes(country));
+      
+      // 해외/국내에 따라 모드 설정
+      if (isOverseas) {
+        setMapMode('overseas');
+        // 해당 국가로 필터 설정
+        const country = GLOBAL_COUNTRIES.find(c => address.includes(c));
+        if (country) setSelectedCountry(country);
+      } else {
+        setMapMode('domestic');
+        // 지역 필터를 '전국'으로 설정
+        setSelectedRegion(null);
+      }
+      
+      // 음식점 선택 (약간의 딜레이로 모드 전환 후 처리)
+      setTimeout(() => {
+        setSelectedRestaurant(restaurant);
+        setSearchedRestaurant(restaurant);
+      }, 200);
     }
-  }, [location.state]);
+  }, [location.state?.selectedRestaurant]);
 
   // useRestaurants의 결과를 활용해서 검색된 병합 데이터를 기존 데이터와 일치시키는 함수
   const normalizeSearchedRestaurant = (restaurant: Restaurant, allRestaurants: Restaurant[]): Restaurant => {
@@ -368,9 +384,12 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   // 해외 모드 - 마커 클릭 핸들러
   const handleMarkerClick = (restaurant: Restaurant) => {
+    console.log('[Index] handleMarkerClick 호출:', restaurant.name);
     setPanelRestaurant(restaurant);
-    setSelectedRestaurant(restaurant); // 마커 활성화를 위해 동일하게 설정
+    setSelectedRestaurant(restaurant); // 마커 활성화
+    setSearchedRestaurant(restaurant); // 마커 활성화를 위해 추가
     setIsPanelOpen(true);
+    console.log('[Index] 패널 상태 업데이트 완료');
   };
 
   // 해외 모드 - 패널 닫기
@@ -378,6 +397,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     setIsPanelOpen(false);
     setPanelRestaurant(null);
     setSelectedRestaurant(null); // 마커 활성화 해제
+    setSearchedRestaurant(null); // 검색 상태도 초기화
   };
 
   return (
@@ -388,7 +408,14 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
           <Button 
             variant={mapMode === 'domestic' ? 'default' : 'outline'}
             size="default"
-            onClick={() => setMapMode('domestic')}
+            onClick={() => {
+              // 토글 시 즉시 상태 초기화
+              setIsPanelOpen(false);
+              setPanelRestaurant(null);
+              setSelectedRestaurant(null);
+              setSearchedRestaurant(null);
+              setMapMode('domestic');
+            }}
             className={mapMode === 'domestic' ? 'bg-[#8B5A2B] hover:bg-[#6B4423]' : ''}
           >
             국내
@@ -396,7 +423,16 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
           <Button 
             variant={mapMode === 'overseas' ? 'default' : 'outline'}
             size="default"
-            onClick={() => setMapMode('overseas')}
+            onClick={() => {
+              console.log('[Index] 해외 토글 클릭 - 상태 초기화 시작');
+              // 토글 시 즉시 상태 초기화
+              setIsPanelOpen(false);
+              setPanelRestaurant(null);
+              setSelectedRestaurant(null);
+              setSearchedRestaurant(null);
+              console.log('[Index] 상태 초기화 완료, mapMode 변경');
+              setMapMode('overseas');
+            }}
             className={mapMode === 'overseas' ? 'bg-[#8B5A2B] hover:bg-[#6B4423]' : ''}
           >
             해외
