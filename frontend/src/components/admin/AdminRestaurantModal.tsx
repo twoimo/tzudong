@@ -14,6 +14,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, ChevronDown, X } from "lucide-react";
 
+// 해외 국가 목록
+const OVERSEAS_COUNTRIES = [
+    "미국", "USA", "United States",
+    "일본", "Japan",
+    "대만", "Taiwan",
+    "태국", "Thailand",
+    "인도네시아", "Indonesia",
+    "튀르키예", "Turkey", "Türkiye",
+    "헝가리", "Hungary",
+    "오스트레일리아", "Australia"
+];
+
 interface AdminRestaurantModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -29,7 +41,8 @@ export function AdminRestaurantModal({
 }: AdminRestaurantModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [customCategory, setCustomCategory] = useState(""); // 커스텀 카테고리 입력용
-    const [isGeocoding, setIsGeocoding] = useState(false);
+    const [isGeocodingNaver, setIsGeocodingNaver] = useState(false);
+    const [isGeocodingGoogle, setIsGeocodingGoogle] = useState(false);
     const [isGeocoded, setIsGeocoded] = useState(false); // 재지오코딩 완료 여부
     const [geocodingResults, setGeocodingResults] = useState<Array<{
         road_address: string;
@@ -133,6 +146,44 @@ export function AdminRestaurantModal({
         });
     };
 
+    // 해외 주소 감지 함수
+    const isOverseasAddress = (address: string, englishAddress?: string): boolean => {
+        const checkText = `${address} ${englishAddress || ''}`;
+        return OVERSEAS_COUNTRIES.some(country => checkText.includes(country));
+    };
+
+    // Google Geocoding API 호출 함수
+    const geocodeWithGoogle = async (address: string, limit: number = 3) => {
+        try {
+            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+            if (!apiKey) throw new Error('Google Maps API key not found');
+
+            const response = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+            );
+            const data = await response.json();
+
+            if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+                return [];
+            }
+
+            return data.results.slice(0, limit).map((result: any) => {
+                const location = result.geometry.location;
+                return {
+                    road_address: result.formatted_address,
+                    jibun_address: result.formatted_address,
+                    english_address: result.formatted_address,
+                    address_elements: result.address_components,
+                    x: String(location.lng),
+                    y: String(location.lat),
+                };
+            });
+        } catch (error) {
+            console.error('Google Geocoding 에러:', error);
+            throw error;
+        }
+    };
+
     // 지오코딩 함수 (여러 개 결과 반환)
     const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3) => {
         try {
@@ -158,8 +209,8 @@ export function AdminRestaurantModal({
         }
     };
 
-    // 재지오코딩 버튼 핸들러
-    const handleGeocode = async () => {
+    // 재지오코딩 버튼 핸들러 - 네이버
+    const handleGeocodeNaver = async () => {
         const trimmedAddress = formData.searchAddress.trim();
         const trimmedName = formData.name.trim();
 
@@ -173,12 +224,14 @@ export function AdminRestaurantModal({
             return;
         }
 
-        setIsGeocoding(true);
+        setIsGeocodingNaver(true);
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
         setIsGeocoded(false);
 
         try {
+            toast.info('네이버 Geocoding API로 검색 중...');
+            
             // 1. name + 전체 주소로 지오코딩 (최대 3개)
             const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
 
@@ -199,10 +252,57 @@ export function AdminRestaurantModal({
                 toast.error('주소를 찾을 수 없습니다');
             }
         } catch (error) {
-            console.error('Geocoding error:', error);
-            toast.error('지오코딩에 실패했습니다');
+            console.error('Naver Geocoding error:', error);
+            toast.error('네이버 지오코딩에 실패했습니다');
         } finally {
-            setIsGeocoding(false);
+            setIsGeocodingNaver(false);
+        }
+    };
+
+    // 재지오코딩 버튼 핸들러 - 구글
+    const handleGeocodeGoogle = async () => {
+        const trimmedAddress = formData.searchAddress.trim();
+        const trimmedName = formData.name.trim();
+
+        if (!trimmedAddress) {
+            toast.error('주소를 입력해주세요');
+            return;
+        }
+
+        if (!trimmedName) {
+            toast.error('음식점명을 입력해주세요');
+            return;
+        }
+
+        setIsGeocodingGoogle(true);
+        setGeocodingResults([]);
+        setSelectedGeocodingIndex(null);
+        setIsGeocoded(false);
+
+        try {
+            toast.info('Google Geocoding API로 검색 중...');
+            
+            // 1. name + 전체 주소로 지오코딩
+            const fullAddressResults = await geocodeWithGoogle(`${trimmedName} ${trimmedAddress}`, 3);
+            
+            // 2. 주소만으로 지오코딩
+            const addressOnlyResults = await geocodeWithGoogle(trimmedAddress, 3);
+            
+            // 3. 합치고 중복 제거
+            const allResults = [...fullAddressResults, ...addressOnlyResults];
+            const uniqueResults = removeDuplicateAddresses(allResults);
+
+            if (uniqueResults.length > 0) {
+                setGeocodingResults(uniqueResults);
+                toast.success(`${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`);
+            } else {
+                toast.error('주소를 찾을 수 없습니다');
+            }
+        } catch (error) {
+            console.error('Google Geocoding error:', error);
+            toast.error('Google 지오코딩에 실패했습니다');
+        } finally {
+            setIsGeocodingGoogle(false);
         }
     };
 
@@ -581,22 +681,39 @@ export function AdminRestaurantModal({
                                     id="searchAddress"
                                     value={formData.searchAddress}
                                     onChange={(e) => setFormData({ ...formData, searchAddress: e.target.value })}
-                                    placeholder="서울시 강남구..."
+                                    placeholder="서울시 강남구... or Las Vegas..."
                                     className="flex-1"
                                 />
                                 <Button
                                     type="button"
-                                    onClick={handleGeocode}
-                                    disabled={isGeocoding || !formData.searchAddress.trim() || !formData.name.trim()}
-                                    variant={isGeocoded ? "outline" : "default"}
+                                    onClick={handleGeocodeNaver}
+                                    disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
+                                    variant={isGeocodingNaver ? "default" : "outline"}
+                                    className="whitespace-nowrap"
                                 >
-                                    {isGeocoding ? (
+                                    {isGeocodingNaver ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            재지오코딩 중...
+                                            검색 중...
                                         </>
                                     ) : (
-                                        "재지오코딩"
+                                        "네이버 지오코딩"
+                                    )}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleGeocodeGoogle}
+                                    disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
+                                    variant={isGeocodingGoogle ? "default" : "outline"}
+                                    className="whitespace-nowrap"
+                                >
+                                    {isGeocodingGoogle ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            검색 중...
+                                        </>
+                                    ) : (
+                                        "Google 지오코딩"
                                     )}
                                 </Button>
                             </div>
