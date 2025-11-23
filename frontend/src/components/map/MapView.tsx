@@ -447,12 +447,27 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   useEffect(() => {
     if (!isLoaded || markersRef.current.length === 0 || !restaurantsToShow) return;
 
+    console.log('[MapView] 마커 스타일 업데이트 실행:', {
+      selectedRestaurantId: selectedRestaurant?.id,
+      searchedRestaurantId: searchedRestaurant?.id,
+      markersCount: markersRef.current.length,
+      restaurantsCount: restaurantsToShow.length
+    });
+
     markersRef.current.forEach((marker, index) => {
       const restaurant = restaurantsToShow[index];
-      if (!restaurant) return;
+      if (!restaurant) {
+        console.warn('[MapView] 마커 스타일 업데이트 스킵: restaurant 없음, index:', index);
+        return;
+      }
 
       // selectedRestaurant 또는 searchedRestaurant와 비교하여 활성화 상태 결정
       const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
+      
+      if (isSelected) {
+        console.log('[MapView] 마커 활성화:', restaurant.name, 'id:', restaurant.id);
+      }
+      
       const markerElement = marker.content as HTMLElement;
       if (!markerElement) return;
 
