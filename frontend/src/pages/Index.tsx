@@ -1,8 +1,11 @@
-import { useState, memo, Suspense, lazy, useEffect } from "react";
+import { useState, memo, Suspense, lazy, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { mergeRestaurants } from "@/hooks/use-restaurants";
 
 // 코드 스플리팅으로 성능 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
+const MapView = lazy(() => import("@/components/map/MapView"));
 const FilterPanel = lazy(() =>
   import("@/components/filters/FilterPanel").then(module => ({ default: module.FilterPanel }))
 );
@@ -10,6 +13,7 @@ const RegionSelector = lazy(() => import("@/components/region/RegionSelector"));
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -25,6 +29,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Restaurant, Region } from "@/types/restaurant";
 import { FilterState } from "@/components/filters/FilterPanel";
 import CategoryFilter from "@/components/filters/CategoryFilter";
+import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -38,14 +43,38 @@ interface IndexProps {
 const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: IndexProps) => {
   const { isAdmin } = useAuth();
   const location = useLocation();
+  const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<string | null>("튀르키예");
   const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
+
+  // mapMode 변경 시 디폴트값으로 초기화
+  useEffect(() => {
+    if (mapMode === 'domestic') {
+      setSelectedRegion(null); // 전국
+      setSelectedCategories([]);
+    } else {
+      setSelectedCountry("튀르키예"); // 기본 국가
+      setSelectedCategories([]);
+    }
+    setSearchedRestaurant(null);
+    // 패널 상태 초기화
+    setIsPanelOpen(false);
+    setPanelRestaurant(null);
+    setSelectedRestaurant(null);
+  }, [mapMode]);
+
   const [isGridMode, setIsGridMode] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
+  
+  // 해외 모드 패널 관리
+  const [moveToRestaurant, setMoveToRestaurant] = useState<((restaurant: Restaurant) => void) | null>(null);
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [panelRestaurant, setPanelRestaurant] = useState<Restaurant | null>(null);
   const [editFormData, setEditFormData] = useState({
     name: '',
     address: '',
@@ -61,6 +90,46 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     minJjyangVisits: 0,
   });
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  // 글로벌 국가 목록
+  const GLOBAL_COUNTRIES = [
+    "미국", "일본", "대만", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
+  ];
+
+  // 글로벌 맛집 데이터 가져오기 (병합 로직 적용)
+  const { data: globalRestaurants = [] } = useQuery({
+    queryKey: ['global-restaurants-count'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('status', 'approved');
+
+      if (error) {
+        console.error('글로벌 맛집 데이터 조회 실패:', error);
+        return [];
+      }
+      return mergeRestaurants(data || []);
+    },
+    enabled: mapMode === 'overseas', // 해외 모드일 때만 로드
+  });
+
+  // 국가별 맛집 수 계산
+  const countryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+
+    globalRestaurants.forEach((restaurant) => {
+      const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
+
+      GLOBAL_COUNTRIES.forEach((country) => {
+        if (address.includes(country)) {
+          counts[country] = (counts[country] || 0) + 1;
+        }
+      });
+    });
+
+    return counts;
+  }, [globalRestaurants]);
 
   const handleFilterChange = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -219,13 +288,16 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     if (location.state?.selectedRestaurant) {
       const restaurant = location.state.selectedRestaurant as Restaurant;
       
+      // 팝업에서 온 경우 무조건 '국내' 모드로 전환
+      setMapMode('domestic');
+      
       // 지역 필터를 '전국'으로 설정
       setSelectedRegion(null);
       
       // 즉시 음식점 선택 (지도 이동)
       setSelectedRestaurant(restaurant);
       
-      // 약간의 딜레이 후 searchedRestaurant 설정 (지역 데이터 로딩 대기 및 마커 활성화)
+      // 약간의 딩레이 후 searchedRestaurant 설정 (지역 데이터 로딩 대기 및 마커 활성화)
       setTimeout(() => {
         setSearchedRestaurant(restaurant);
       }, 100);
@@ -289,24 +361,84 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     }
   };
 
+  // 해외 모드 - 지도 준비 핸들러
+  const handleMapReady = (moveFunction: (restaurant: Restaurant) => void) => {
+    setMoveToRestaurant(() => moveFunction);
+  };
+
+  // 해외 모드 - 마커 클릭 핸들러
+  const handleMarkerClick = (restaurant: Restaurant) => {
+    setPanelRestaurant(restaurant);
+    setSelectedRestaurant(restaurant); // 마커 활성화를 위해 동일하게 설정
+    setIsPanelOpen(true);
+  };
+
+  // 해외 모드 - 패널 닫기
+  const handlePanelClose = () => {
+    setIsPanelOpen(false);
+    setPanelRestaurant(null);
+    setSelectedRestaurant(null); // 마커 활성화 해제
+  };
+
   return (
     <>
+      {/* 국내/해외 토글 버튼 - 지도 왼쪽 상단 */}
+      <div className="absolute top-6 left-4 z-10">
+        <div className="flex gap-2 bg-background/95 backdrop-blur-sm rounded-lg shadow-lg p-2 border border-border">
+          <Button 
+            variant={mapMode === 'domestic' ? 'default' : 'outline'}
+            size="default"
+            onClick={() => setMapMode('domestic')}
+            className={mapMode === 'domestic' ? 'bg-[#8B5A2B] hover:bg-[#6B4423]' : ''}
+          >
+            국내
+          </Button>
+          <Button 
+            variant={mapMode === 'overseas' ? 'default' : 'outline'}
+            size="default"
+            onClick={() => setMapMode('overseas')}
+            className={mapMode === 'overseas' ? 'bg-[#8B5A2B] hover:bg-[#6B4423]' : ''}
+          >
+            해외
+          </Button>
+        </div>
+      </div>
+
       {/* 지역 선택 및 검색 컴포넌트 */}
       <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
         <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
           <Suspense fallback={<div className="w-40 h-10 bg-muted animate-pulse rounded" />}>
-            <RegionSelector
-              selectedRegion={selectedRegion}
-              onRegionChange={setSelectedRegion}
-              onRegionSelect={switchToSingleMap}
-            />
+            {mapMode === 'domestic' ? (
+              <RegionSelector
+                selectedRegion={selectedRegion}
+                onRegionChange={setSelectedRegion}
+                onRegionSelect={switchToSingleMap}
+              />
+            ) : (
+              <Select value={selectedCountry || undefined} onValueChange={setSelectedCountry}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="국가 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="미국">미국 ({countryCounts["미국"] || 0}개)</SelectItem>
+                  <SelectItem value="일본">일본 ({countryCounts["일본"] || 0}개)</SelectItem>
+                  <SelectItem value="대만">대만 ({countryCounts["대만"] || 0}개)</SelectItem>
+                  <SelectItem value="태국">태국 ({countryCounts["태국"] || 0}개)</SelectItem>
+                  <SelectItem value="인도네시아">인도네시아 ({countryCounts["인도네시아"] || 0}개)</SelectItem>
+                  <SelectItem value="튀르키예">튀르키예 ({countryCounts["튀르키예"] || 0}개)</SelectItem>
+                  <SelectItem value="헝가리">헝가리 ({countryCounts["헝가리"] || 0}개)</SelectItem>
+                  <SelectItem value="오스트레일리아">오스트레일리아 ({countryCounts["오스트레일리아"] || 0}개)</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
           </Suspense>
 
           {/* 카테고리 필터링 */}
           <CategoryFilter
             selectedCategories={selectedCategories}
             onCategoryChange={handleCategoryChange}
-            selectedRegion={selectedRegion}
+            selectedRegion={mapMode === 'domestic' ? selectedRegion : null}
+            selectedCountry={mapMode === 'overseas' ? selectedCountry : null}
             className="w-48"
           />
 
@@ -316,8 +448,8 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
               onRestaurantSearch={handleRestaurantSearch}
               onSearchExecute={switchToSingleMap}
               filters={filters}
-              selectedRegion={selectedRegion}
-              isKoreanOnly={true}
+              selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
+              isKoreanOnly={mapMode === 'domestic'}
             />
           </Suspense>
           <Button
@@ -448,17 +580,64 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
       ) : (
         // 단일 지도 모드
         <Suspense fallback={<div className="flex items-center justify-center h-full">지도 로딩 중...</div>}>
-          <NaverMapView
-            filters={filters}
-            selectedRegion={selectedRegion}
-            searchedRestaurant={searchedRestaurant} // 검색 시 지도 재조정용
-            selectedRestaurant={selectedRestaurant}
-            refreshTrigger={refreshTrigger}
-            onAdminEditRestaurant={onAdminEditRestaurant}
-            onRequestEditRestaurant={handleRequestEditRestaurant}
-            isGridMode={false}
-            onRestaurantSelect={setSelectedRestaurant} // 단일 모드에서도 선택 상태 관리
-          />
+          {mapMode === 'domestic' ? (
+            <NaverMapView
+              filters={filters}
+              selectedRegion={selectedRegion}
+              searchedRestaurant={searchedRestaurant}
+              selectedRestaurant={selectedRestaurant}
+              refreshTrigger={refreshTrigger}
+              onAdminEditRestaurant={onAdminEditRestaurant}
+              onRequestEditRestaurant={handleRequestEditRestaurant}
+              isGridMode={false}
+              onRestaurantSelect={setSelectedRestaurant}
+            />
+          ) : (
+            <PanelGroup direction="horizontal" className="w-full h-full">
+              <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>
+                <MapView
+                  filters={filters}
+                  selectedCountry={selectedCountry}
+                  searchedRestaurant={searchedRestaurant}
+                  selectedRestaurant={selectedRestaurant}
+                  refreshTrigger={refreshTrigger}
+                  onAdminEditRestaurant={onAdminEditRestaurant}
+                  onRestaurantSelect={setSelectedRestaurant}
+                  onRequestEditRestaurant={handleRequestEditRestaurant}
+                  onMapReady={handleMapReady}
+                  onMarkerClick={handleMarkerClick}
+                />
+              </Panel>
+
+              {/* Resize Handle */}
+              {panelRestaurant && isPanelOpen && (
+                <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
+                  <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
+                </PanelResizeHandle>
+              )}
+
+              {/* Restaurant Detail Panel */}
+              {panelRestaurant && isPanelOpen && (
+                <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={33}>
+                  <div className="h-full">
+                    <RestaurantDetailPanel
+                      restaurant={panelRestaurant}
+                      onClose={handlePanelClose}
+                      onWriteReview={() => {
+                        setIsReviewModalOpen(true);
+                      }}
+                      onEditRestaurant={onAdminEditRestaurant ? () => {
+                        onAdminEditRestaurant(panelRestaurant);
+                      } : undefined}
+                      onRequestEditRestaurant={() => {
+                        handleRequestEditRestaurant(panelRestaurant);
+                      }}
+                    />
+                  </div>
+                </Panel>
+              )}
+            </PanelGroup>
+          )}
         </Suspense>
       )}
 

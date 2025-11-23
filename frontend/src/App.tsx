@@ -9,7 +9,6 @@ import { useGoogleMaps } from "@/hooks/use-google-maps";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import Index from "./pages/Index";
-import GlobalMapPage from "./pages/GlobalMapPage";
 import FilteringPage from "./pages/FilteringPage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import StampPage from "./pages/StampPage";
@@ -181,7 +180,6 @@ function AppLayout() {
           )}>
             <Routes>
               <Route path="/" element={<Index refreshTrigger={refreshTrigger} selectedRestaurant={selectedRestaurant} setSelectedRestaurant={setSelectedRestaurant} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
-              <Route path="/global" element={<GlobalMapPage refreshTrigger={refreshTrigger} selectedRestaurant={selectedRestaurant} setSelectedRestaurant={setSelectedRestaurant} onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
               <Route path="/filtering" element={<FilteringPage onAdminEditRestaurant={isAdmin ? handleAdminEditRestaurant : undefined} />} />
               <Route path="/stamp" element={<StampPage />} />
               <Route path="/leaderboard" element={<LeaderboardPage />} />

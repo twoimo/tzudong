@@ -26,10 +26,9 @@ export function DailyRecommendationPopup() {
         "미국", "일본", "대만", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
     ];
 
-    // 홈과 글로벌 페이지에서만 팝업 표시
+    // 홈 페이지에서만 팝업 표시
     const isHomePage = location.pathname === '/';
-    const isGlobalPage = location.pathname === '/global';
-    const shouldShowPopup = isHomePage || isGlobalPage;
+    const shouldShowPopup = isHomePage;
 
     // YouTube 썸네일 URL 추출 함수
     const extractYouTubeVideoId = (url: string) => {

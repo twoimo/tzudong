@@ -31,6 +31,18 @@ import {
 } from '@/components/ui/alert-dialog';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 
+// 해외 국가 목록
+const OVERSEAS_COUNTRIES = [
+    "미국", "USA", "United States",
+    "일본", "Japan",
+    "대만", "Taiwan",
+    "태국", "Thailand",
+    "인도네시아", "Indonesia",
+    "튀르키예", "Turkey", "Türkiye",
+    "헝가리", "Hungary",
+    "오스트레일리아", "Australia"
+];
+
 interface EditRestaurantModalProps {
   record: EvaluationRecord | null;
   open: boolean;
@@ -69,7 +81,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   const { toast } = useToast();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [geocoding, setGeocoding] = useState(false);
+  const [geocodingNaver, setGeocodingNaver] = useState(false);
+  const [geocodingGoogle, setGeocodingGoogle] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     address: '',
@@ -102,7 +115,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   } | null>(null);
 
 
-  const handleReGeocode = async () => {
+  // 재지오코딩 - 네이버
+  const handleReGeocodeNaver = async () => {
     const trimmedAddress = formData.address.trim();
     const trimmedName = formData.name.trim();
 
@@ -123,10 +137,15 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     }
 
     try {
-      setGeocoding(true);
+      setGeocodingNaver(true);
       setGeocodingError(null);
       setGeocodingResults([]);
       setSelectedGeocodingIndex(null);
+
+      console.log('🇺🇷 네이버 Geocoding API 사용');
+      toast({
+        title: '네이버 Geocoding API로 검색 중...',
+      });
 
       // 1. name + 전체 주소로 지오코딩 (최대 3개)
       const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
@@ -141,9 +160,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const allResults = [...fullAddressResults, ...shortAddressResults];
       const uniqueResults = removeDuplicateAddresses(allResults);
 
-      console.log('🗺️ 지오코딩 결과:', {
-        fullAddressResults: fullAddressResults.length,
-        shortAddressResults: shortAddressResults.length,
+      console.log('🗺️ 네이버 지오코딩 결과:', {
         uniqueResults: uniqueResults.length,
         results: uniqueResults,
       });
@@ -158,23 +175,100 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           description: `${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`,
         });
       } else {
-        setGeocodingError('주소를 찾을 수 없습니다.');
         toast({
           variant: 'destructive',
-          title: '지오코딩 실패',
-          description: '주소를 찾을 수 없습니다. 주소를 다시 확인해주세요.',
+          title: '주소를 찾을 수 없습니다',
+          description: '다른 주소를 시도하거나 Google 지오코딩을 사용해주세요.',
         });
+        setGeocodingError('주소를 찾을 수 없습니다.');
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
-      setGeocodingError(errorMessage);
+    } catch (error: any) {
+      console.error('💥 네이버 지오코딩 에러:', error);
+      setGeocodingError(error.message || '네이버 지오코딩에 실패했습니다');
       toast({
         variant: 'destructive',
-        title: '지오코딩 실패',
-        description: errorMessage,
+        title: '네이버 지오코딩 실패',
+        description: error.message || '네이버 지오코딩에 실패했습니다',
       });
     } finally {
-      setGeocoding(false);
+      setGeocodingNaver(false);
+    }
+  };
+
+  // 재지오코딩 - 구글
+  const handleReGeocodeGoogle = async () => {
+    const trimmedAddress = formData.address.trim();
+    const trimmedName = formData.name.trim();
+
+    if (!trimmedAddress) {
+      toast({
+        variant: 'destructive',
+        title: '주소를 입력해주세요',
+      });
+      return;
+    }
+
+    if (!trimmedName) {
+      toast({
+        variant: 'destructive',
+        title: '음식점명을 입력해주세요',
+      });
+      return;
+    }
+
+    try {
+      setGeocodingGoogle(true);
+      setGeocodingError(null);
+      setGeocodingResults([]);
+      setSelectedGeocodingIndex(null);
+
+      console.log('🌏 Google Geocoding API 사용');
+      toast({
+        title: 'Google Geocoding API로 검색 중...',
+      });
+
+      // 1. name + 전체 주소로 지오코딩
+      const fullAddressResults = await geocodeWithGoogle(`${trimmedName} ${trimmedAddress}`, 3);
+
+      // 2. 주소만으로 지오코딩
+      const addressOnlyResults = await geocodeWithGoogle(trimmedAddress, 3);
+
+      // 3. 합치고 중복 제거
+      const allResults = [...fullAddressResults, ...addressOnlyResults];
+      const uniqueResults = removeDuplicateAddresses(allResults);
+
+      console.log('🗺️ Google 지오코딩 결과:', {
+        uniqueResults: uniqueResults.length,
+        results: uniqueResults,
+      });
+
+      if (uniqueResults.length > 0) {
+        setGeocodingResults(uniqueResults);
+        setAddressChanged(false); // 지오코딩 성공 시 플래그 초기화
+        setInitialAddress(trimmedAddress); // 새로운 주소를 초기 주소로 설정
+
+        toast({
+          title: '지오코딩 성공',
+          description: `${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`,
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '주소를 찾을 수 없습니다',
+          description: '다른 주소를 시도하거나 네이버 지오코딩을 사용해주세요.',
+        });
+        setGeocodingError('주소를 찾을 수 없습니다.');
+      }
+    } catch (error: any) {
+      console.error('💥 Google 지오코딩 에러:', error);
+      setGeocodingError(error.message || 'Google 지오코딩에 실패했습니다');
+      toast({
+        variant: 'destructive',
+        title: 'Google 지오코딩 실패',
+        description: error.message || 'Google 지오코딩에 실패했습니다',
+      });
+    } finally {
+      setGeocodingGoogle(false);
     }
   };
 
@@ -210,6 +304,51 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       seen.add(addr.jibun_address);
       return true;
     });
+  };
+
+  // 해외 주소 감지 함수
+  const isOverseasAddress = (address: string, englishAddress?: string): boolean => {
+    const checkText = `${address} ${englishAddress || ''}`;
+    return OVERSEAS_COUNTRIES.some(country => checkText.includes(country));
+  };
+
+  // Google Geocoding API 호출 함수
+  const geocodeWithGoogle = async (address: string, limit: number = 3): Promise<Array<{
+    road_address: string;
+    jibun_address: string;
+    english_address: string;
+    address_elements: Record<string, unknown>;
+    x: string;
+    y: string;
+  }>> => {
+    try {
+      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      if (!apiKey) throw new Error('Google Maps API key not found');
+
+      const response = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+      );
+      const data = await response.json();
+
+      if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+        return [];
+      }
+
+      return data.results.slice(0, limit).map((result: any) => {
+        const location = result.geometry.location;
+        return {
+          road_address: result.formatted_address,
+          jibun_address: result.formatted_address,
+          english_address: result.formatted_address,
+          address_elements: result.address_components as Record<string, unknown>,
+          x: String(location.lng),
+          y: String(location.lat),
+        };
+      });
+    } catch (error) {
+      console.error('Google Geocoding 에러:', error);
+      throw error;
+    }
   };
 
   // 지오코딩 함수 (여러 개 결과 반환)
@@ -288,6 +427,16 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         variant: 'destructive',
         title: '승인 불가',
         description: '⚠️ 주소가 변경되었습니다. 재지오코딩을 먼저 진행해주세요.',
+      });
+      return;
+    }
+
+    // geocoding_success가 false인 경우 지오코딩 필수
+    if (record.geocoding_success === false && selectedGeocodingIndex === null) {
+      toast({
+        variant: 'destructive',
+        title: '승인 불가',
+        description: '⚠️ 지오코딩을 먼저 실행해주세요.',
       });
       return;
     }
@@ -811,26 +960,34 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
           {/* 주소 */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <Label htmlFor="edit-address">주소</Label>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={handleReGeocode}
-                disabled={geocoding || !formData.address.trim()}
-                title={
-                  geocoding
-                    ? '지오코딩 진행 중...'
-                    : !formData.address.trim()
-                      ? '주소를 입력해주세요'
-                      : '재지오코딩 실행'
-                }
-              >
-                {geocoding && <Loader2 className="mr-2 h-3 w-3 animate-spin" />}
-                {!geocoding && <RefreshCw className="mr-2 h-3 w-3" />}
-                재지오코딩
-              </Button>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleReGeocodeNaver}
+                  disabled={geocodingNaver || geocodingGoogle || !formData.address.trim()}
+                  className="whitespace-nowrap"
+                >
+                  {geocodingNaver && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                  {!geocodingNaver && <RefreshCw className="mr-1 h-3 w-3" />}
+                  네이버 지오코딩
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleReGeocodeGoogle}
+                  disabled={geocodingNaver || geocodingGoogle || !formData.address.trim()}
+                  className="whitespace-nowrap"
+                >
+                  {geocodingGoogle && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                  {!geocodingGoogle && <RefreshCw className="mr-1 h-3 w-3" />}
+                  Google 지오코딩
+                </Button>
+              </div>
             </div>
             <Textarea
               id="edit-address"
