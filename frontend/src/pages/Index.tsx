@@ -39,7 +39,7 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
   const { isAdmin } = useAuth();
   const location = useLocation();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedRegion, setSelectedRegion] = useState<Region | null>("서울특별시");
+  const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
   const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
   const [isGridMode, setIsGridMode] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -203,33 +203,32 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     return null;
   };
 
-  // selectedRestaurant 변경 시 해당 지역으로 자동 이동
-  useEffect(() => {
-    if (selectedRestaurant) {
-      const region = getRestaurantRegion(selectedRestaurant);
-      if (region && region !== selectedRegion) {
-        setSelectedRegion(region);
-      }
-    }
-  }, [selectedRestaurant]);
+  // selectedRestaurant 변경 시 지역 자동 변경 로직 제거
+  // (마커 클릭/팝업 클릭 시 현재 지역 필터 유지)
+  // useEffect(() => {
+  //   if (selectedRestaurant) {
+  //     const region = getRestaurantRegion(selectedRestaurant);
+  //     if (region && region !== selectedRegion) {
+  //       setSelectedRegion(region);
+  //     }
+  //   }
+  // }, [selectedRestaurant]);
 
   // 팝업에서 전달된 음식점 정보 처리
   useEffect(() => {
     if (location.state?.selectedRestaurant) {
       const restaurant = location.state.selectedRestaurant as Restaurant;
-      const region = location.state.selectedRegion as Region | null;
       
-      // 지역 필터 설정
-      if (region && region !== selectedRegion) {
-        setSelectedRegion(region);
-      }
+      // 지역 필터를 '전국'으로 설정
+      setSelectedRegion(null);
       
-      // 약간의 딜레이 후 음식점 선택 (지역 데이터 로딩 대기)
+      // 즉시 음식점 선택 (지도 이동)
+      setSelectedRestaurant(restaurant);
+      
+      // 약간의 딜레이 후 searchedRestaurant 설정 (지역 데이터 로딩 대기 및 마커 활성화)
       setTimeout(() => {
-        // searchedRestaurant로 설정하여 지도 중앙 조정 및 마커 활성화
         setSearchedRestaurant(restaurant);
-        setSelectedRestaurant(restaurant);
-      }, 300);
+      }, 100);
       
       // location.state 초기화 (중복 처리 방지)
       window.history.replaceState({}, document.title);

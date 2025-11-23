@@ -40,6 +40,8 @@ interface MapViewProps {
   onRequestEditRestaurant?: (restaurant: Restaurant) => void;
   // 패널 관리를 위한 콜백 추가
   onMarkerClick?: (restaurant: Restaurant) => void;
+  // 패널 너비 (동적 오프셋 계산용)
+  panelWidth?: number;
 }
 
 // 에러 바운더리용 폴백 컴포넌트
@@ -68,17 +70,22 @@ const MapErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetEr
   </div>
 );
 
-const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant, onMarkerClick }: MapViewProps) => {
+const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant, onMarkerClick, panelWidth: propPanelWidth }: MapViewProps) => {
   // 필터 객체 메모이제이션
   const memoizedFilters = useMemo(() => filters, [filters]);
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
   const googleMapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const detailPanelRef = useRef<HTMLDivElement>(null);
 
   const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [panelWidth, setPanelWidth] = useState(0);
+
+  // props로 전달된 panelWidth가 있으면 우선 사용
+  const effectivePanelWidth = propPanelWidth !== undefined ? propPanelWidth : panelWidth;
 
 
   // 맛집으로 지도 이동하는 함수
@@ -92,7 +99,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           google.maps.event.trigger(googleMapRef.current, "resize");
 
           googleMapRef.current.panTo(position);
-          googleMapRef.current.setZoom(17); // 맛집 상세 보기용 줌 레벨 (더 확대)
+          googleMapRef.current.setZoom(14); // 줌 레벨 14로 조정
         } catch (error) {
           console.error('MapView: Error moving to restaurant position:', error);
         }
@@ -112,6 +119,24 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "";
   const { isLoaded, loadError } = useGoogleMaps({ apiKey });
 
+  // ResizeObserver로 패널 너비 추적 (내부 패널이 있는 경우만)
+  useEffect(() => {
+    // props로 panelWidth가 전달되면 ResizeObserver 불필요
+    if (propPanelWidth !== undefined || !detailPanelRef.current) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setPanelWidth(entry.contentRect.width);
+      }
+    });
+
+    resizeObserver.observe(detailPanelRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [propPanelWidth]);
+
   // 외부 콜백에 지도 이동 함수 전달
   useEffect(() => {
     if (onMapReady) {
@@ -120,7 +145,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [onMapReady, moveToRestaurant]);
 
-  // 검색된 맛집으로 지도 이동
+  // 검색된 맛집으로 지도 이동 (정확히 중앙)
   useEffect(() => {
     if (!searchedRestaurant || !isLoaded || !googleMapRef.current) {
       return;
@@ -135,38 +160,68 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
     const position = { lat, lng };
 
-    // 패널 애니메이션 등을 고려하여 약간의 지연 후 이동
-    const performMapMove = () => {
-      try {
-        if (!googleMapRef.current) return;
+    try {
+      if (!googleMapRef.current) return;
 
-        // 지도 리사이즈 인식
-        google.maps.event.trigger(googleMapRef.current, "resize");
+      // 지도 리사이즈 인식
+      google.maps.event.trigger(googleMapRef.current, "resize");
 
-        // 지도 중심 이동 (부드럽게)
-        googleMapRef.current.panTo(position);
+      // 정확히 중앙에 배치 (오프셋 없음)
+      googleMapRef.current.panTo(position);
+      googleMapRef.current.setZoom(14);
 
-        // 줌 레벨 설정 (약간의 지연 후)
-        setTimeout(() => {
-          if (googleMapRef.current) {
-            googleMapRef.current.setZoom(18);
-
-            // 검색된 맛집 선택 상태로 설정
-            if (onRestaurantSelect) {
-              onRestaurantSelect(searchedRestaurant);
-            }
-          }
-        }, 300);
-
-      } catch (error) {
-        console.error('MapView: Error moving to searched restaurant position:', error);
+      // 검색된 맛집 선택 상태로 설정
+      if (onRestaurantSelect) {
+        onRestaurantSelect(searchedRestaurant);
       }
-    };
-
-    // 지연 실행으로 지도 안정화 및 패널 오픈 대기
-    setTimeout(performMapMove, 300);
-
+    } catch (error) {
+      console.error('MapView: Error moving to searched restaurant position:', error);
+    }
   }, [searchedRestaurant, onRestaurantSelect, isLoaded]);
+
+  // selectedRestaurant 변경 시 동적 오프셋으로 중앙 정렬
+  useEffect(() => {
+    if (!selectedRestaurant || !isLoaded || !googleMapRef.current) {
+      return;
+    }
+
+    const lat = Number(selectedRestaurant.lat);
+    const lng = Number(selectedRestaurant.lng);
+
+    if (isNaN(lat) || isNaN(lng)) {
+      return;
+    }
+
+    try {
+      const map = googleMapRef.current;
+      const bounds = map.getBounds();
+      if (!bounds) return;
+
+      // 지도의 실제 너비 계산
+      const mapWidth = mapRef.current?.offsetWidth || 0;
+      const sidebarWidth = 0; // GlobalMapPage에는 사이드바 없음
+
+      // 경도 범위 계산
+      const lngSpan = bounds.getNorthEast().lng() - bounds.getSouthWest().lng();
+
+      // 오른쪽 패널이 차지하는 경도 범위
+      const rightPanelLngSpan = lngSpan * (effectivePanelWidth / mapWidth);
+
+      // 왼쪽 사이드바가 차지하는 경도 범위
+      const leftSidebarLngSpan = lngSpan * (sidebarWidth / mapWidth);
+
+      // 오프셋 계산: 오른쪽으로 이동 - 왼쪽으로 이동
+      const offset = (rightPanelLngSpan / 2) - (leftSidebarLngSpan / 2);
+
+      // 조정된 경도
+      const adjustedLng = lng + offset;
+
+      // 지도 이동
+      map.panTo({ lat, lng: adjustedLng });
+    } catch (error) {
+      console.error('MapView: Error moving to selected restaurant:', error);
+    }
+  }, [selectedRestaurant, isLoaded, effectivePanelWidth]);
 
   // useRestaurants 옵션 메모이제이션
   const restaurantsOptions = useMemo(() => ({
@@ -379,7 +434,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         // 패널 관리는 부모 컴포넌트에서 처리 (완전 분리)
         onMarkerClick?.(restaurant);
 
-        // 지도 이동 제거 - 현재 위치 유지
+        // 마커 클릭 시 해당 위치로 이동 및 줌인
+        moveToRestaurant(restaurant);
       });
 
       markersRef.current.push(marker);
