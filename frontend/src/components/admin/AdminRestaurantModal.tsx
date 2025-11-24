@@ -9,10 +9,131 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Restaurant, RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Loader2, ChevronDown, X } from "lucide-react";
+import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
+
+// 해외 국가 목록
+const OVERSEAS_COUNTRIES = [
+    "미국", "USA", "United States",
+    "일본", "Japan",
+    "대만", "Taiwan",
+    "태국", "Thailand",
+    "인도네시아", "Indonesia",
+    "튀르키예", "Turkey", "Türkiye",
+    "헝가리", "Hungary",
+    "오스트레일리아", "Australia"
+];
+
+// YouTube Video ID 추출 함수
+const extractVideoId = (url: string): string | null => {
+    const patterns = [
+        /youtube\.com\/watch\?v=([^&]+)/,  // Standard watch URL
+        /youtu\.be\/([^?]+)/,              // Shortened URL
+        /youtube\.com\/embed\/([^?]+)/,    // Embed URL
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) return match[1];
+    }
+    return null;
+};
+
+// YouTube 메타데이터 가져오기 함수
+const fetchYouTubeMeta = async (youtubeLink: string) => {
+    const videoId = extractVideoId(youtubeLink);
+    if (!videoId) {
+        console.error('Invalid YouTube URL:', youtubeLink);
+        return null;
+    }
+
+    try {
+        // YouTube Data API v3 호출
+        const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+        if (!apiKey) {
+            console.error('YouTube API key not found');
+            return null;
+        }
+
+        const response = await fetch(
+            `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`
+        );
+
+        if (!response.ok) {
+            throw new Error('YouTube API request failed');
+        }
+
+        const data = await response.json();
+        
+        if (!data.items || data.items.length === 0) {
+            console.error('Video not found:', videoId);
+            return null;
+        }
+
+        const video = data.items[0];
+        const snippet = video.snippet;
+        const contentDetails = video.contentDetails;
+
+        // ISO 8601 duration을 초로 변환
+        const parseDuration = (duration: string): number => {
+            const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+            if (!match) return 0;
+            
+            const hours = parseInt(match[1] || '0');
+            const minutes = parseInt(match[2] || '0');
+            const seconds = parseInt(match[3] || '0');
+            
+            return hours * 3600 + minutes * 60 + seconds;
+        };
+
+        const durationSeconds = parseDuration(contentDetails.duration);
+        const description = snippet.description || '';
+        const adKeywords = ['유료', '광고', '지원', '협찬'];
+        const isAds = adKeywords.some(keyword => description.toLowerCase().includes(keyword));
+
+        return {
+            title: snippet.title,
+            publishedAt: snippet.publishedAt,
+            is_shorts: durationSeconds <= 180,
+            duration: durationSeconds,
+            ads_info: {
+                is_ads: isAds,
+                what_ads: isAds ? '수동 확인 필요' : null  // 간단히 처리 (OpenAI 없이)
+            }
+        };
+    } catch (error) {
+        console.error('Error fetching YouTube metadata:', error);
+        return null;
+    }
+};
+
+// unique_id 생성 함수 (Python 버전과 동일하게 SHA-256 사용)
+// youtube_link + name + tzuyang_review 순서로 해시
+ const generateUniqueId = async (youtubeLink: string, name: string, tzuyangReview: string): Promise<string> => {
+    const keyString = (youtubeLink || "") + (name || "") + (tzuyangReview || "");
+    
+    // SHA-256 해시 생성 (Web Crypto API 사용)
+    const encoder = new TextEncoder();
+    const data = encoder.encode(keyString);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    
+    return hashHex;
+};
 
 interface AdminRestaurantModalProps {
     isOpen: boolean;
@@ -28,8 +149,11 @@ export function AdminRestaurantModal({
     onSuccess,
 }: AdminRestaurantModalProps) {
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [deletedReviewIds, setDeletedReviewIds] = useState<string[]>([]); // X 버튼으로 삭제된 기존 레코드 ID 추적
     const [customCategory, setCustomCategory] = useState(""); // 커스텀 카테고리 입력용
-    const [isGeocoding, setIsGeocoding] = useState(false);
+    const [isGeocodingNaver, setIsGeocodingNaver] = useState(false);
+    const [isGeocodingGoogle, setIsGeocodingGoogle] = useState(false);
     const [isGeocoded, setIsGeocoded] = useState(false); // 재지오코딩 완료 여부
     const [geocodingResults, setGeocodingResults] = useState<Array<{
         road_address: string;
@@ -55,13 +179,17 @@ export function AdminRestaurantModal({
     });
 
     useEffect(() => {
-        if (restaurant) {
-            // mergedRestaurants에서 모든 유튜브 링크-리뷰 쌍 추출
-            const youtubeReviews = restaurant.mergedRestaurants?.map(r => ({
-                id: r.id,
-                youtube_link: r.youtube_link || "",
-                tzuyang_review: r.tzuyang_review || "",
-            })) || (restaurant.youtube_link ? [{
+        if (isOpen && restaurant) {
+            // 모달이 열릴 때마다 데이터베이스의 원본 데이터로 초기화
+            setDeletedReviewIds([]); // 삭제 추적 초기화
+            // mergedRestaurants에서 status가 'approved'인 유튜브 링크-리뷰 쌍만 추출
+            const youtubeReviews = restaurant.mergedRestaurants
+                ?.filter(r => r.status === 'approved') // 승인된 것만
+                .map(r => ({
+                    id: r.id,
+                    youtube_link: r.youtube_link || "",
+                    tzuyang_review: r.tzuyang_review || "",
+                })) || (restaurant.youtube_link && restaurant.status === 'approved' ? [{
                 id: restaurant.id,
                 youtube_link: restaurant.youtube_link,
                 tzuyang_review: restaurant.tzuyang_review || "",
@@ -83,10 +211,12 @@ export function AdminRestaurantModal({
                 lng: String(restaurant.lng || ""),
             });
             setIsGeocoded(true); // 기존 데이터는 이미 지오코딩됨
-        } else {
+            setGeocodingResults([]); // 지오코딩 결과 초기화
+            setSelectedGeocodingIndex(null); // 선택 인덱스 초기화
+        } else if (isOpen && !restaurant) {
             resetForm();
         }
-    }, [restaurant]);
+    }, [restaurant, isOpen]);
 
     const resetForm = () => {
         setFormData({
@@ -133,6 +263,44 @@ export function AdminRestaurantModal({
         });
     };
 
+    // 해외 주소 감지 함수
+    const isOverseasAddress = (address: string, englishAddress?: string): boolean => {
+        const checkText = `${address} ${englishAddress || ''}`;
+        return OVERSEAS_COUNTRIES.some(country => checkText.includes(country));
+    };
+
+    // Google Geocoding API 호출 함수
+    const geocodeWithGoogle = async (address: string, limit: number = 3) => {
+        try {
+            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+            if (!apiKey) throw new Error('Google Maps API key not found');
+
+            const response = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`
+            );
+            const data = await response.json();
+
+            if (data.status !== 'OK' || !data.results || data.results.length === 0) {
+                return [];
+            }
+
+            return data.results.slice(0, limit).map((result: any) => {
+                const location = result.geometry.location;
+                return {
+                    road_address: result.formatted_address,
+                    jibun_address: '', // Google은 지번 주소 제공 안 함
+                    english_address: '', // Google은 별도 영어 주소 제공 안 함
+                    address_elements: result.address_components,
+                    x: String(location.lng),
+                    y: String(location.lat),
+                };
+            });
+        } catch (error) {
+            console.error('Google Geocoding 에러:', error);
+            throw error;
+        }
+    };
+
     // 지오코딩 함수 (여러 개 결과 반환)
     const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3) => {
         try {
@@ -158,8 +326,8 @@ export function AdminRestaurantModal({
         }
     };
 
-    // 재지오코딩 버튼 핸들러
-    const handleGeocode = async () => {
+    // 재지오코딩 버튼 핸들러 - 네이버
+    const handleGeocodeNaver = async () => {
         const trimmedAddress = formData.searchAddress.trim();
         const trimmedName = formData.name.trim();
 
@@ -173,12 +341,14 @@ export function AdminRestaurantModal({
             return;
         }
 
-        setIsGeocoding(true);
+        setIsGeocodingNaver(true);
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
         setIsGeocoded(false);
 
         try {
+            toast.info('네이버 Geocoding API로 검색 중...');
+            
             // 1. name + 전체 주소로 지오코딩 (최대 3개)
             const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
 
@@ -199,10 +369,57 @@ export function AdminRestaurantModal({
                 toast.error('주소를 찾을 수 없습니다');
             }
         } catch (error) {
-            console.error('Geocoding error:', error);
-            toast.error('지오코딩에 실패했습니다');
+            console.error('Naver Geocoding error:', error);
+            toast.error('네이버 지오코딩에 실패했습니다');
         } finally {
-            setIsGeocoding(false);
+            setIsGeocodingNaver(false);
+        }
+    };
+
+    // 재지오코딩 버튼 핸들러 - 구글
+    const handleGeocodeGoogle = async () => {
+        const trimmedAddress = formData.searchAddress.trim();
+        const trimmedName = formData.name.trim();
+
+        if (!trimmedAddress) {
+            toast.error('주소를 입력해주세요');
+            return;
+        }
+
+        if (!trimmedName) {
+            toast.error('음식점명을 입력해주세요');
+            return;
+        }
+
+        setIsGeocodingGoogle(true);
+        setGeocodingResults([]);
+        setSelectedGeocodingIndex(null);
+        setIsGeocoded(false);
+
+        try {
+            toast.info('Google Geocoding API로 검색 중...');
+            
+            // 1. name + 전체 주소로 지오코딩
+            const fullAddressResults = await geocodeWithGoogle(`${trimmedName} ${trimmedAddress}`, 3);
+            
+            // 2. 주소만으로 지오코딩
+            const addressOnlyResults = await geocodeWithGoogle(trimmedAddress, 3);
+            
+            // 3. 합치고 중복 제거
+            const allResults = [...fullAddressResults, ...addressOnlyResults];
+            const uniqueResults = removeDuplicateAddresses(allResults);
+
+            if (uniqueResults.length > 0) {
+                setGeocodingResults(uniqueResults);
+                toast.success(`${uniqueResults.length}개의 주소 후보를 찾았습니다. 하나를 선택해주세요.`);
+            } else {
+                toast.error('주소를 찾을 수 없습니다');
+            }
+        } catch (error) {
+            console.error('Google Geocoding error:', error);
+            toast.error('Google 지오코딩에 실패했습니다');
+        } finally {
+            setIsGeocodingGoogle(false);
         }
     };
 
@@ -277,6 +494,14 @@ export function AdminRestaurantModal({
             return;
         }
 
+        // 유튜브 링크-리뷰 필수 입력 검증
+        for (const review of formData.youtube_reviews) {
+            if (!review.youtube_link.trim() || !review.tzuyang_review.trim()) {
+                toast.error("모든 유튜브 링크와 쯔양 리뷰를 입력해주세요");
+                return;
+            }
+        }
+
         const lat = parseFloat(formData.lat);
         const lng = parseFloat(formData.lng);
 
@@ -302,27 +527,50 @@ export function AdminRestaurantModal({
                     lng,
                 };
 
-                // 1. 공통 필드를 모든 mergedRestaurants 레코드에 업데이트
-                if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
-                    const ids = restaurant.mergedRestaurants.map(r => r.id);
-                    const { error: commonError } = await supabase
-                        .from("restaurants")
-                        .update(commonData)
-                        .in("id", ids);
+                // 기존 레코드 ID들 수집
+                const existingIds = restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0
+                    ? restaurant.mergedRestaurants.map(r => r.id)
+                    : [restaurant.id];
 
-                    if (commonError) throw commonError;
-                } else {
-                    // mergedRestaurants가 없으면 현재 restaurant만 업데이트
-                    const { error: commonError } = await supabase
-                        .from("restaurants")
-                        .update(commonData)
-                        .eq("id", restaurant.id);
+                // 기존 유튜브 링크들
+                const existingYoutubeLinks = formData.youtube_reviews
+                    .filter(r => existingIds.includes(r.id))
+                    .map(r => r.youtube_link.trim());
 
-                    if (commonError) throw commonError;
+                // 새로운 유튜브 링크들 (id가 'new-'로 시작하는 것들)
+                const newReviews = formData.youtube_reviews.filter(r => r.id.startsWith('new-'));
+
+                // 1. X 버튼으로 삭제된 레코드를 소프트 삭제 (status = 'deleted')
+                if (deletedReviewIds.length > 0) {
+                    const { error: deleteError } = await supabase
+                        .from('restaurants')
+                        // @ts-expect-error - Supabase 자동 생성 타입 문제
+                        .update({
+                            status: 'deleted',
+                            updated_at: new Date().toISOString(),
+                        })
+                        .in('id', deletedReviewIds);
+
+                    if (deleteError) {
+                        console.error('소프트 삭제 실패:', deleteError);
+                        toast.error('일부 항목 삭제에 실패했습니다');
+                    } else {
+                        console.log('✅ 소프트 삭제 완료:', deletedReviewIds);
+                    }
                 }
 
-                // 2. 각 유튜브 링크-리뷰 쌍을 해당 레코드에 개별 업데이트
+                // 2. 공통 필드를 모든 기존 레코드에 업데이트
+                const { error: commonError } = await supabase
+                    .from("restaurants")
+                    .update(commonData)
+                    .in("id", existingIds);
+
+                if (commonError) throw commonError;
+
+                // 3. 각 기존 유튜브 링크-리뷰 쌍을 해당 레코드에 개별 업데이트
                 for (const review of formData.youtube_reviews) {
+                    if (review.id.startsWith('new-')) continue; // 새 레코드는 스킵
+
                     const { error: reviewError } = await supabase
                         .from("restaurants")
                         .update({
@@ -334,6 +582,82 @@ export function AdminRestaurantModal({
                     if (reviewError) {
                         console.error(`레코드 ${review.id} 업데이트 실패:`, reviewError);
                     }
+                }
+
+                // 4. 새로운 유튜브 링크-리뷰가 있으면 신규 레코드 생성
+                let hasError = false; // 에러 플래그
+                
+                for (const newReview of newReviews) {
+                    const youtubeLink = newReview.youtube_link.trim();
+                    const tzuyangReview = newReview.tzuyang_review.trim();
+
+                    // unique_id 생성 (youtube_link + name + 쯔양리뷰) - Python과 동일
+                    const uniqueId = await generateUniqueId(
+                        youtubeLink,
+                        formData.name.trim(),
+                        tzuyangReview
+                    );
+
+                    // 중복 검사
+                    const duplicateCheck = await checkRestaurantDuplicate(
+                        formData.name.trim(),
+                        formData.jibun_address.trim(),
+                        undefined, // 신규 레코드이므로 id는 없음
+                        youtubeLink
+                    );
+
+                    if (duplicateCheck.isDuplicate) {
+                        // 중복 발견 - 유튜브 링크 비교
+                        const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
+                        
+                        if (youtubeLink === matchedYoutubeLink) {
+                            // 같은 유튜브 링크 - 중복 에러
+                            toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 이미 동일한 유튜브 링크가 존재합니다.`);
+                            hasError = true;
+                            break; // 더 이상 진행하지 않음
+                        }
+                        // 유튜브 링크가 다르면 계속 진행 (아래 INSERT)
+                    }
+
+                    // YouTube 메타데이터 가져오기
+                    toast.info('YouTube 메타데이터를 가져오는 중...');
+                    const youtubeMeta = await fetchYouTubeMeta(youtubeLink);
+                    
+                    if (!youtubeMeta) {
+                        toast.warning(`YouTube 메타데이터를 가져올 수 없습니다: ${youtubeLink}`);
+                    }
+
+                    // 신규 레코드 생성
+                    const { error: insertError } = await supabase
+                        .from("restaurants")
+                        .insert({
+                            ...commonData,
+                            unique_id: uniqueId,
+                            youtube_link: youtubeLink,
+                            tzuyang_review: tzuyangReview,
+                            youtube_meta: youtubeMeta,
+                            source_type: 'admin',
+                            status: 'approved',
+                            geocoding_success: true,
+                            is_missing: false,
+                            is_not_selected: false,
+                        });
+
+                    if (insertError) {
+                        console.error('신규 레코드 추가 실패:', insertError);
+                        toast.error(`신규 유튜브 링크 추가 실패: ${insertError.message}`);
+                        hasError = true;
+                        break;
+                    } else {
+                        console.log('✅ 신규 레코드 추가 성공:', youtubeLink);
+                        toast.success(`✅ 신규 유튜브 링크 추가 성공!`);
+                    }
+                }
+
+                // 에러가 있으면 모달을 닫지 않음
+                if (hasError) {
+                    setIsSubmitting(false);
+                    return;
                 }
 
                 toast.success("맛집이 수정되었습니다");
@@ -383,31 +707,17 @@ export function AdminRestaurantModal({
     const handleDelete = async () => {
         if (!restaurant) return;
 
-        if (!confirm("정말로 이 맛집을 삭제하시겠습니까?\n\n삭제된 데이터는 복구할 수 없습니다.")) {
-            return;
-        }
-
         setIsSubmitting(true);
 
         try {
-            // 해결책 1: 코드 레벨에서 제보 먼저 삭제 (임시 해결책)
-            // 참고: 데이터베이스 레벨에서 CASCADE DELETE 설정을 권장합니다.
-            // 새 마이그레이션 파일: 20251021200000_update_restaurant_submissions_cascade.sql
-
-            const { error: submissionsError } = await supabase
-                .from("restaurant_submissions")
-                .delete()
-                .eq("approved_restaurant_id", restaurant.id);
-
-            if (submissionsError) {
-                console.error("Submissions deletion error:", submissionsError);
-                // 제보 삭제 실패 시에도 계속 진행 (외래 키 제약 조건으로 어차피 실패할 것임)
-            }
-
-            // 레스토랑 삭제
+            // 소프트 삭제: status를 'deleted'로 변경
             const { error } = await supabase
                 .from("restaurants")
-                .delete()
+                // @ts-expect-error - Supabase 자동 생성 타입 문제
+                .update({
+                    status: 'deleted',
+                    updated_at: new Date().toISOString(),
+                })
                 .eq("id", restaurant.id);
 
             if (error) throw error;
@@ -462,8 +772,13 @@ export function AdminRestaurantModal({
                                         <ChevronDown className="h-4 w-4 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-64" align="start">
-                                    <div className="space-y-2">
+                                <PopoverContent 
+                                    className="w-64 p-0" 
+                                    align="start"
+                                    onWheel={(e) => e.stopPropagation()}
+                                    onTouchMove={(e) => e.stopPropagation()}
+                                >
+                                    <div className="p-4 space-y-2 max-h-[400px] overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
                                         <h4 className="font-semibold text-sm">카테고리 선택</h4>
 
                                         {/* 커스텀 카테고리 입력 */}
@@ -506,7 +821,7 @@ export function AdminRestaurantModal({
                                             </Button>
                                         </div>
 
-                                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                                        <div className="space-y-2">
                                             {RESTAURANT_CATEGORIES.map((category) => (
                                                 <div key={category} className="flex items-center space-x-2">
                                                     <Checkbox
@@ -581,22 +896,39 @@ export function AdminRestaurantModal({
                                     id="searchAddress"
                                     value={formData.searchAddress}
                                     onChange={(e) => setFormData({ ...formData, searchAddress: e.target.value })}
-                                    placeholder="서울시 강남구..."
+                                    placeholder="서울시 강남구... or Las Vegas..."
                                     className="flex-1"
                                 />
                                 <Button
                                     type="button"
-                                    onClick={handleGeocode}
-                                    disabled={isGeocoding || !formData.searchAddress.trim() || !formData.name.trim()}
-                                    variant={isGeocoded ? "outline" : "default"}
+                                    onClick={handleGeocodeNaver}
+                                    disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
+                                    variant={isGeocodingNaver ? "default" : "outline"}
+                                    className="whitespace-nowrap"
                                 >
-                                    {isGeocoding ? (
+                                    {isGeocodingNaver ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            재지오코딩 중...
+                                            검색 중...
                                         </>
                                     ) : (
-                                        "재지오코딩"
+                                        "네이버 지오코딩"
+                                    )}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleGeocodeGoogle}
+                                    disabled={isGeocodingNaver || isGeocodingGoogle || !formData.searchAddress.trim() || !formData.name.trim()}
+                                    variant={isGeocodingGoogle ? "default" : "outline"}
+                                    className="whitespace-nowrap"
+                                >
+                                    {isGeocodingGoogle ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            검색 중...
+                                        </>
+                                    ) : (
+                                        "Google 지오코딩"
                                     )}
                                 </Button>
                             </div>
@@ -711,10 +1043,18 @@ export function AdminRestaurantModal({
                                                 type="button"
                                                 size="sm"
                                                 variant="ghost"
-                                                onClick={() => setFormData({
-                                                    ...formData,
-                                                    youtube_reviews: formData.youtube_reviews.filter((_, i) => i !== index)
-                                                })}
+                                                onClick={() => {
+                                                    const reviewToDelete = formData.youtube_reviews[index];
+                                                    // 기존 레코드(new-로 시작하지 않는 ID)면 삭제 목록에 추가
+                                                    if (!reviewToDelete.id.startsWith('new-')) {
+                                                        setDeletedReviewIds([...deletedReviewIds, reviewToDelete.id]);
+                                                    }
+                                                    // UI에서 제거
+                                                    setFormData({
+                                                        ...formData,
+                                                        youtube_reviews: formData.youtube_reviews.filter((_, i) => i !== index)
+                                                    });
+                                                }}
                                             >
                                                 <X className="h-4 w-4" />
                                             </Button>
@@ -759,7 +1099,7 @@ export function AdminRestaurantModal({
                             <Button
                                 type="button"
                                 variant="destructive"
-                                onClick={handleDelete}
+                                onClick={() => setShowDeleteConfirm(true)}
                                 disabled={isSubmitting}
                             >
                                 삭제
@@ -793,6 +1133,40 @@ export function AdminRestaurantModal({
                     </div>
                 </form>
             </DialogContent>
+
+            {/* 삭제 확인 모달 */}
+            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>맛집 삭제 확인</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            정말로 이 맛집을 삭제하시겠습니까?
+                            <br />
+                            <br />
+                            <span className="font-semibold text-destructive">
+                                삭제된 데이터는 복구할 수 없습니다.
+                            </span>
+                            {restaurant && (
+                                <div className="mt-4 p-3 bg-muted rounded-md">
+                                    <p className="font-medium">{restaurant.name}</p>
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                        {restaurant.jibun_address || restaurant.road_address}
+                                    </p>
+                                </div>
+                            )}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>취소</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDelete}
+                            className="bg-destructive hover:bg-destructive/90"
+                        >
+                            삭제
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Dialog>
     );
 }

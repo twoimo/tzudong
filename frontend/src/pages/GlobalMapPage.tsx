@@ -49,6 +49,9 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
     const { isAdmin } = useAuth();
     const location = useLocation();
     const prevSelectedRestaurantRef = useRef<Restaurant | null>(null);
+    const detailPanelRef = useRef<HTMLDivElement>(null);
+
+    const [panelWidth, setPanelWidth] = useState(0);
 
     // 글로벌 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
     const { data: globalRestaurants = [] } = useQuery({
@@ -131,14 +134,29 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                     moveToRestaurant(selectedRestaurant);
                 }
             }
-        } else if (!selectedRestaurant) {
-            // selectedRestaurant가 null이 되면 패널 닫기
-            setIsPanelOpen(false);
-            setPanelRestaurant(null);
         }
+        // selectedRestaurant가 null이 되어도 패널은 유지 (명시적으로 닫기 버튼을 눌러야만 닫힘)
 
         prevSelectedRestaurantRef.current = selectedRestaurant;
     }, [selectedRestaurant, moveToRestaurant, location.state]);
+
+    // ResizeObserver로 패널 너비 추적
+    useEffect(() => {
+        if (!detailPanelRef.current) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                setPanelWidth(entry.contentRect.width);
+            }
+        });
+
+        resizeObserver.observe(detailPanelRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
+
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
     const [editFormData, setEditFormData] = useState({
@@ -484,6 +502,7 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
                                 onMapReady={handleMapReady}
                                 onRequestEditRestaurant={handleRequestEditRestaurant}
                                 onMarkerClick={handleMarkerClick}
+                                panelWidth={panelWidth}
                             />
                         </Panel>
 
@@ -496,20 +515,22 @@ const GlobalMapPage = memo(({ refreshTrigger, selectedRestaurant, setSelectedRes
 
                         {/* Restaurant Detail Panel */}
                         {panelRestaurant && isPanelOpen && (
-                            <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={60}>
-                                <RestaurantDetailPanel
-                                    restaurant={panelRestaurant}
-                                    onClose={handlePanelClose}
-                                    onWriteReview={() => {
-                                        setIsReviewModalOpen(true);
-                                    }}
-                                    onEditRestaurant={onAdminEditRestaurant ? () => {
-                                        onAdminEditRestaurant(panelRestaurant);
-                                    } : undefined}
-                                    onRequestEditRestaurant={() => {
-                                        handleRequestEditRestaurant(panelRestaurant);
-                                    }}
-                                />
+                            <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={33}>
+                                <div ref={detailPanelRef} className="h-full">
+                                    <RestaurantDetailPanel
+                                        restaurant={panelRestaurant}
+                                        onClose={handlePanelClose}
+                                        onWriteReview={() => {
+                                            setIsReviewModalOpen(true);
+                                        }}
+                                        onEditRestaurant={onAdminEditRestaurant ? () => {
+                                            onAdminEditRestaurant(panelRestaurant);
+                                        } : undefined}
+                                        onRequestEditRestaurant={() => {
+                                            handleRequestEditRestaurant(panelRestaurant);
+                                        }}
+                                    />
+                                </div>
                             </Panel>
                         )}
                     </PanelGroup>

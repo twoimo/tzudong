@@ -492,7 +492,7 @@ export function RestaurantDetailPanel({
                                         </div>
                                     ))}
 
-                                    {uniqueData?.jibunAddresses.map((address, index) => (
+                                    {uniqueData?.jibunAddresses && uniqueData.jibunAddresses.length > 0 && uniqueData.jibunAddresses.map((address, index) => (
                                         <div
                                             key={index}
                                             className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
@@ -511,7 +511,7 @@ export function RestaurantDetailPanel({
                                         </div>
                                     ))}
 
-                                    {uniqueData?.englishAddresses.map((address, index) => (
+                                    {uniqueData?.englishAddresses && uniqueData.englishAddresses.length > 0 && uniqueData.englishAddresses.map((address, index) => (
                                         <div
                                             key={index}
                                             className="flex gap-3 cursor-pointer hover:bg-muted/50 p-2 -m-2 rounded-lg transition-colors group"
