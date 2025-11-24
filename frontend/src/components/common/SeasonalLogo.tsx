@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import React, { useEffect, useState, useRef } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 type Season = 'spring' | 'summer' | 'autumn' | 'winter';
@@ -10,16 +10,28 @@ interface SeasonalLogoProps {
 
 const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
     const [season, setSeason] = useState<Season>('spring');
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Mouse tracking for parallax
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
 
-    useEffect(() => {
-        const month = new Date().getMonth(); // 0-11
-        // Spring: 3, 4, 5
-        // Summer: 6, 7, 8
-        // Autumn: 9, 10, 11
-        // Winter: 12, 1, 2
+    // Smooth spring physics for mouse movement
+    const springConfig = { damping: 25, stiffness: 120 };
+    const springX = useSpring(mouseX, springConfig);
+    const springY = useSpring(mouseY, springConfig);
 
+    // Parallax transforms
+    const layer1X = useTransform(springX, [-0.5, 0.5], [10, -10]); // Far mountains (slow)
+    const layer2X = useTransform(springX, [-0.5, 0.5], [20, -20]); // Mid mountains
+    const layer3X = useTransform(springX, [-0.5, 0.5], [40, -40]); // Close mountains (fast)
+
+    const layer1Y = useTransform(springY, [-0.5, 0.5], [5, -5]);
+    const layer2Y = useTransform(springY, [-0.5, 0.5], [10, -10]);
+    const layer3Y = useTransform(springY, [-0.5, 0.5], [15, -15]);
+
+    useEffect(() => {
+        const month = new Date().getMonth();
         if (month >= 2 && month <= 4) setSeason('spring');
         else if (month >= 5 && month <= 7) setSeason('summer');
         else if (month >= 8 && month <= 10) setSeason('autumn');
@@ -27,38 +39,55 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
     }, []);
 
     const handleMouseMove = (e: React.MouseEvent) => {
-        const { left, top } = e.currentTarget.getBoundingClientRect();
-        mouseX.set(e.clientX - left);
-        mouseY.set(e.clientY - top);
+        if (!containerRef.current) return;
+        const { width, height, left, top } = containerRef.current.getBoundingClientRect();
+
+        // Normalize coordinates to -0.5 to 0.5
+        const x = (e.clientX - left) / width - 0.5;
+        const y = (e.clientY - top) / height - 0.5;
+
+        mouseX.set(x);
+        mouseY.set(y);
     };
 
-    // SVG Paths
+    const handleMouseLeave = () => {
+        mouseX.set(0);
+        mouseY.set(0);
+    };
+
+    // SVG Paths for "Living Ink" Landscape
     const svgs = {
-        petal: "M12 2C12 2 10 0 8 0C5 0 2 2 2 5C2 8 5 10 8 10C10 10 12 8 12 8V2Z", // Simplified petal
-        leaf: "M12 0L14 4L18 4L15 7L16 11L12 9L8 11L9 7L6 4L10 4L12 0Z", // Maple leaf-ish
-        snowflake: "M12 2V22M2 12H22M5 5L19 19M5 19L19 5", // Simple snowflake lines (stroke only)
+        petal: "M12 2C12 2 10 0 8 0C5 0 2 2 2 5C2 8 5 10 8 10C10 10 12 8 12 8V2Z",
+        leaf: "M12 0L14 4L18 4L15 7L16 11L12 9L8 11L9 7L6 4L10 4L12 0Z",
+        snowflake: "M12 2V22M2 12H22M5 5L19 19M5 19L19 5",
+        // Layered Mountains
+        mountainFar: "M0,60 Q40,40 80,55 T160,45 T240,55 T320,40 V100 H0 Z",
+        mountainMid: "M0,100 L0,50 Q60,30 120,60 T240,40 T360,70 V100 Z",
+        mountainClose: "M0,100 L0,70 Q80,40 160,80 T320,60 T480,90 V100 Z",
     };
 
     const renderParticles = () => {
         switch (season) {
-            case 'spring': // Cherry Blossoms (SVG Petals)
+            case 'spring': // Apricot (Salgu) - Floating Petals
                 return (
                     <>
-                        {[...Array(12)].map((_, i) => (
+                        {[...Array(15)].map((_, i) => (
                             <motion.svg
                                 key={`spring-${i}`}
                                 viewBox="0 0 24 24"
-                                className="absolute w-4 h-4 fill-pink-200/80 pointer-events-none drop-shadow-sm"
+                                className={cn(
+                                    "absolute w-4 h-4 fill-rose-200/60 pointer-events-none mix-blend-multiply",
+                                    i % 3 === 0 ? "blur-[1px]" : "" // Depth of field
+                                )}
                                 initial={{ opacity: 0, y: -20, x: Math.random() * 100 }}
                                 animate={{
-                                    opacity: [0, 1, 1, 0],
-                                    y: [0, 100],
-                                    x: (i % 2 === 0 ? 1 : -1) * 30 + Math.random() * 20,
+                                    opacity: [0, 0.8, 0],
+                                    y: [0, 120],
+                                    x: (i % 2 === 0 ? 1 : -1) * 40 + Math.random() * 20,
                                     rotate: [0, 360],
-                                    scale: [0.8, 1, 0.8]
                                 }}
                                 transition={{
-                                    duration: 5 + Math.random() * 3,
+                                    duration: 6 + Math.random() * 4,
                                     repeat: Infinity,
                                     delay: Math.random() * 5,
                                     ease: "linear"
@@ -70,58 +99,49 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
                         ))}
                     </>
                 );
-            case 'summer': // Sun Glare & Heat Haze (Canvas-like feel with divs)
+            case 'summer': // Indigo (Jjok) - Rain/Mist
                 return (
                     <>
-                        {/* Sun Orb */}
-                        <motion.div
-                            className="absolute -top-10 -right-10 w-32 h-32 bg-gradient-to-br from-yellow-300 to-orange-500 rounded-full blur-2xl opacity-40 pointer-events-none"
-                            animate={{ scale: [1, 1.1, 1], opacity: [0.3, 0.5, 0.3] }}
-                            transition={{ duration: 4, repeat: Infinity }}
-                        />
-                        {/* Heat Particles */}
-                        {[...Array(6)].map((_, i) => (
+                        {[...Array(25)].map((_, i) => (
                             <motion.div
                                 key={`summer-${i}`}
-                                className="absolute w-2 h-2 bg-yellow-200/60 rounded-full blur-[1px] pointer-events-none"
-                                initial={{ opacity: 0, y: 100 }}
+                                className="absolute w-[1px] h-6 bg-slate-500/30 pointer-events-none"
+                                initial={{ opacity: 0, y: -20 }}
                                 animate={{
-                                    opacity: [0, 0.8, 0],
-                                    y: -20,
-                                    x: (Math.random() - 0.5) * 40
+                                    opacity: [0, 0.6, 0],
+                                    y: [0, 180],
                                 }}
                                 transition={{
-                                    duration: 3 + Math.random() * 2,
+                                    duration: 1 + Math.random(),
                                     repeat: Infinity,
                                     delay: Math.random() * 2,
-                                    ease: "easeOut"
+                                    ease: "linear"
                                 }}
-                                style={{ left: `${Math.random() * 100}%`, top: '100%' }}
+                                style={{ left: `${Math.random() * 100}%`, top: -20 }}
                             />
                         ))}
                     </>
                 );
-            case 'autumn': // Falling Maple Leaves (SVG)
+            case 'autumn': // Persimmon (Gam) - Falling Leaves
                 return (
                     <>
-                        {[...Array(8)].map((_, i) => (
+                        {[...Array(10)].map((_, i) => (
                             <motion.svg
                                 key={`autumn-${i}`}
                                 viewBox="0 0 24 24"
                                 className={cn(
-                                    "absolute w-5 h-5 pointer-events-none drop-shadow-md",
-                                    i % 2 === 0 ? "fill-orange-500/80" : "fill-red-600/80"
+                                    "absolute w-5 h-5 fill-orange-800/40 pointer-events-none mix-blend-multiply",
+                                    i % 2 === 0 ? "blur-[0.5px]" : ""
                                 )}
                                 initial={{ opacity: 0, y: -20, x: Math.random() * 100 }}
                                 animate={{
-                                    opacity: [0, 1, 1, 0],
-                                    y: [0, 120],
-                                    x: [0, (i % 2 === 0 ? 20 : -20), 0], // Swaying
-                                    rotate: [0, 180, 360],
-                                    rotateX: [0, 180, 0], // 3D flip
+                                    opacity: [0, 0.9, 0],
+                                    y: [0, 140],
+                                    x: [0, (i % 2 === 0 ? 30 : -30), 0],
+                                    rotate: [0, 180],
                                 }}
                                 transition={{
-                                    duration: 6 + Math.random() * 4,
+                                    duration: 7 + Math.random() * 5,
                                     repeat: Infinity,
                                     delay: Math.random() * 5,
                                     ease: "linear"
@@ -133,118 +153,114 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
                         ))}
                     </>
                 );
-            case 'winter': // Snowflakes (SVG Stroke)
+            case 'winter': // White (Baek) - Snow
                 return (
                     <>
-                        {[...Array(15)].map((_, i) => (
-                            <motion.svg
+                        {[...Array(20)].map((_, i) => (
+                            <motion.div
                                 key={`winter-${i}`}
-                                viewBox="0 0 24 24"
-                                className="absolute w-3 h-3 stroke-white/80 pointer-events-none drop-shadow-[0_0_2px_rgba(255,255,255,0.8)]"
-                                fill="none"
-                                strokeWidth="2"
-                                strokeLinecap="round"
+                                className={cn(
+                                    "absolute bg-stone-200/80 rounded-full pointer-events-none",
+                                    i % 3 === 0 ? "w-1.5 h-1.5 blur-[1px]" : "w-1 h-1"
+                                )}
                                 initial={{ opacity: 0, y: -20, x: Math.random() * 100 }}
                                 animate={{
-                                    opacity: [0, 1, 0],
+                                    opacity: [0, 0.9, 0],
                                     y: [0, 100],
-                                    x: (Math.random() - 0.5) * 30,
-                                    rotate: [0, 180]
+                                    x: (Math.random() - 0.5) * 40,
                                 }}
                                 transition={{
-                                    duration: 4 + Math.random() * 3,
+                                    duration: 4 + Math.random() * 4,
                                     repeat: Infinity,
                                     delay: Math.random() * 2,
                                     ease: "linear"
                                 }}
                                 style={{ left: `${Math.random() * 100}%`, top: -20 }}
-                            >
-                                <path d={svgs.snowflake} />
-                            </motion.svg>
+                            />
                         ))}
                     </>
                 );
         }
     };
 
-    const getSeasonStyle = () => {
-        switch (season) {
-            case 'spring':
-                return {
-                    // Pink to Rose gradient
-                    text: 'bg-gradient-to-r from-pink-400 via-rose-400 to-pink-500 bg-clip-text text-transparent',
-                    shadow: 'drop-shadow-[0_2px_10px_rgba(244,114,182,0.3)]',
-                    glow: 'from-pink-300/20 via-rose-300/10 to-transparent'
-                };
-            case 'summer':
-                return {
-                    // Amber to Orange gradient
-                    text: 'bg-gradient-to-r from-amber-400 via-orange-500 to-amber-500 bg-clip-text text-transparent',
-                    shadow: 'drop-shadow-[0_2px_10px_rgba(245,158,11,0.4)]',
-                    glow: 'from-amber-300/20 via-orange-300/10 to-transparent'
-                };
-            case 'autumn':
-                return {
-                    // Red to Brown/Orange gradient
-                    text: 'bg-gradient-to-r from-orange-500 via-red-600 to-orange-600 bg-clip-text text-transparent',
-                    shadow: 'drop-shadow-[0_2px_10px_rgba(220,38,38,0.3)]',
-                    glow: 'from-orange-300/20 via-red-300/10 to-transparent'
-                };
-            case 'winter':
-                return {
-                    // Sky to Blue gradient
-                    text: 'bg-gradient-to-r from-sky-300 via-blue-500 to-sky-400 bg-clip-text text-transparent',
-                    shadow: 'drop-shadow-[0_2px_10px_rgba(14,165,233,0.4)]',
-                    glow: 'from-sky-300/20 via-blue-300/10 to-transparent'
-                };
-            default:
-                return { text: 'text-stone-900', shadow: '', glow: '' };
-        }
-    };
-
-    const style = getSeasonStyle();
-
     return (
         <div
-            className={cn("relative w-full h-full flex items-center justify-center group overflow-hidden bg-stone-50/50", className)}
+            ref={containerRef}
+            className={cn("relative w-full h-full flex items-center justify-center group overflow-hidden select-none", className)}
             onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
         >
-            {/* Ambient Background Glow */}
-            <div className={cn("absolute inset-0 bg-gradient-to-b opacity-0 group-hover:opacity-100 transition-opacity duration-700", style.glow)} />
+            {/* --- Parallax Landscape Layers --- */}
 
-            {/* Main Text */}
-            <motion.h1
-                className={cn(
-                    "text-4xl tracking-wide relative z-10 font-bold select-none",
-                    style.text,
-                    style.shadow
-                )}
-                style={{ fontFamily: "'ChosunCentennial', cursive" }}
-                animate={{
-                    scale: [1, 1.02, 1],
-                    filter: ["brightness(1)", "brightness(1.1)", "brightness(1)"]
-                }}
-                transition={{
-                    duration: 5,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                }}
-            >
-                쯔동여지도
-            </motion.h1>
-
-            {/* Shimmer Overlay on Text */}
+            {/* Layer 1: Far Mountains (Faint, Slow) */}
             <motion.div
-                className="absolute inset-0 z-20 pointer-events-none mix-blend-overlay"
-                style={{
-                    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)",
-                    backgroundSize: "200% 100%"
-                }}
-                animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
-                transition={{ duration: 3, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
+                className="absolute inset-x-[-10%] bottom-0 h-24 opacity-5 pointer-events-none"
+                style={{ x: layer1X, y: layer1Y }}
+            >
+                <svg viewBox="0 0 320 100" preserveAspectRatio="none" className="w-full h-full fill-stone-900">
+                    <path d={svgs.mountainFar} />
+                </svg>
+            </motion.div>
+
+            {/* Mist Layer 1 */}
+            <motion.div
+                className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white/40 to-transparent pointer-events-none"
+                animate={{ opacity: [0.3, 0.5, 0.3], x: [-10, 10, -10] }}
+                transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
             />
 
-            {/* Seasonal Particles */}
+            {/* Layer 2: Mid Mountains (Darker, Medium Speed) */}
+            <motion.div
+                className="absolute inset-x-[-10%] bottom-0 h-20 opacity-10 pointer-events-none"
+                style={{ x: layer2X, y: layer2Y }}
+            >
+                <svg viewBox="0 0 360 100" preserveAspectRatio="none" className="w-full h-full fill-stone-900">
+                    <path d={svgs.mountainMid} />
+                </svg>
+            </motion.div>
+
+            {/* Mist Layer 2 */}
+            <motion.div
+                className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-white/30 to-transparent pointer-events-none"
+                animate={{ opacity: [0.2, 0.4, 0.2], x: [10, -10, 10] }}
+                transition={{ duration: 8, repeat: Infinity, ease: "easeInOut", delay: 1 }}
+            />
+
+            {/* Layer 3: Foreground Mountains (Darkest, Fast) */}
+            <motion.div
+                className="absolute inset-x-[-10%] bottom-[-10px] h-16 opacity-15 pointer-events-none"
+                style={{ x: layer3X, y: layer3Y }}
+            >
+                <svg viewBox="0 0 480 100" preserveAspectRatio="none" className="w-full h-full fill-stone-900">
+                    <path d={svgs.mountainClose} />
+                </svg>
+            </motion.div>
+
+            {/* --- Main Content --- */}
+            <div className="relative flex items-center justify-center z-10">
+                {/* Main Text: Living Ink Effect */}
+                <div className="relative">
+                    {/* Base Text */}
+                    <h1
+                        className="text-4xl tracking-wide text-stone-800 font-bold drop-shadow-sm relative z-10"
+                        style={{ fontFamily: "'ChosunCentennial', cursive" }}
+                    >
+                        쯔동여지도
+                    </h1>
+
+                    {/* Wet Ink Texture Overlay (Breathing) */}
+                    <motion.h1
+                        className="absolute inset-0 text-4xl tracking-wide text-stone-900 font-bold blur-[1px] opacity-0 z-0"
+                        style={{ fontFamily: "'ChosunCentennial', cursive" }}
+                        animate={{ opacity: [0, 0.3, 0], scale: [1, 1.01, 1] }}
+                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                        쯔동여지도
+                    </motion.h1>
+                </div>
+            </div>
+
+            {/* --- Seasonal Particles (Top Layer) --- */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <AnimatePresence>
                     {renderParticles()}
