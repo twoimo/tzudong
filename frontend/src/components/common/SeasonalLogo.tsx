@@ -58,7 +58,7 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
     // SVG Paths for "Living Ink" Landscape
     const svgs = {
         petal: "M12 2C12 2 10 0 8 0C5 0 2 2 2 5C2 8 5 10 8 10C10 10 12 8 12 8V2Z",
-        leaf: "M12 0L14 4L18 4L15 7L16 11L12 9L8 11L9 7L6 4L10 4L12 0Z",
+        leaf: "M12.0002 2.00024C12.0002 2.00024 13.5002 7.50024 13.5002 7.50024L18.5002 5.50024L16.5002 10.5002L21.5002 13.0002L16.0002 15.5002L16.0002 21.0002L12.0002 18.5002L8.00024 21.0002L8.00024 15.5002L2.50024 13.0002L7.50024 10.5002L5.50024 5.50024L10.5002 7.50024C10.5002 7.50024 12.0002 2.00024 12.0002 2.00024Z",
         snowflake: "M12 2V22M2 12H22M5 5L19 19M5 19L19 5",
         // Layered Mountains
         mountainFar: "M0,60 Q40,40 80,55 T160,45 T240,55 T320,40 V100 H0 Z",
@@ -125,31 +125,31 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
             case 'autumn': // Persimmon (Gam) - Falling Leaves
                 return (
                     <>
-                        {[...Array(10)].map((_, i) => (
-                            <motion.svg
+                        {[...Array(12)].map((_, i) => (
+                            <motion.div
                                 key={`autumn-${i}`}
-                                viewBox="0 0 24 24"
                                 className={cn(
-                                    "absolute w-5 h-5 fill-orange-800/40 pointer-events-none mix-blend-multiply",
-                                    i % 2 === 0 ? "blur-[0.5px]" : ""
+                                    "absolute pointer-events-none select-none",
+                                    i % 3 === 0 ? "text-xl blur-[0.5px]" : "text-lg", // Reduced size
+                                    i % 5 === 0 ? "text-xl" : "" // Occasional large
                                 )}
                                 initial={{ opacity: 0, y: -20, x: Math.random() * 100 }}
                                 animate={{
-                                    opacity: [0, 0.9, 0],
-                                    y: [0, 140],
-                                    x: [0, (i % 2 === 0 ? 30 : -30), 0],
-                                    rotate: [0, 180],
+                                    opacity: [0, 1, 0],
+                                    y: [0, 160],
+                                    x: [0, (i % 2 === 0 ? 40 : -40), 0],
+                                    rotate: [0, 45, -45, 180],
                                 }}
                                 transition={{
-                                    duration: 7 + Math.random() * 5,
+                                    duration: 10 + Math.random() * 8, // Slower and more variable duration
                                     repeat: Infinity,
-                                    delay: Math.random() * 5,
+                                    delay: -Math.random() * 20, // Negative delay to start mid-animation
                                     ease: "linear"
                                 }}
-                                style={{ left: `${Math.random() * 100}%`, top: -20 }}
+                                style={{ left: `${Math.random() * 100}%`, top: -30 }}
                             >
-                                <path d={svgs.leaf} />
-                            </motion.svg>
+                                {i % 2 === 0 ? "🍁" : "🍂"}
+                            </motion.div>
                         ))}
                     </>
                 );
