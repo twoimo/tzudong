@@ -129,13 +129,13 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
                             <motion.div
                                 key={`autumn-${i}`}
                                 className={cn(
-                                    "absolute pointer-events-none select-none",
+                                    "absolute pointer-events-none select-none sepia-[.5] grayscale-[.3] opacity-80", // Tone down colors
                                     i % 3 === 0 ? "text-xl blur-[0.5px]" : "text-lg", // Reduced size
                                     i % 5 === 0 ? "text-xl" : "" // Occasional large
                                 )}
                                 initial={{ opacity: 0, y: -20, x: Math.random() * 100 }}
                                 animate={{
-                                    opacity: [0, 1, 0],
+                                    opacity: [0, 0.6, 0], // Reduced max opacity
                                     y: [0, 160],
                                     x: [0, (i % 2 === 0 ? 40 : -40), 0],
                                     rotate: [0, 45, -45, 180],
