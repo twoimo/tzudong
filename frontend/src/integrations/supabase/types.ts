@@ -280,26 +280,6 @@ export interface Database {
                     updated_at?: string
                 }
             }
-            favorites: {
-                Row: {
-                    id: string
-                    user_id: string
-                    restaurant_id: string
-                    created_at: string
-                }
-                Insert: {
-                    id?: string
-                    user_id: string
-                    restaurant_id: string
-                    created_at?: string
-                }
-                Update: {
-                    id?: string
-                    user_id?: string
-                    restaurant_id?: string
-                    created_at?: string
-                }
-            }
         }
     }
 }
