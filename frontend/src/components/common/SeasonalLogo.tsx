@@ -237,26 +237,34 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
             </motion.div>
 
             {/* --- Main Content --- */}
-            <div className="relative flex items-center justify-center z-10">
-                {/* Main Text: Living Ink Effect */}
+            <div className="relative flex items-center justify-center z-10 px-4">
+                {/* Main Logo Image Container */}
                 <div className="relative">
-                    {/* Base Text */}
-                    <h1
-                        className="text-4xl tracking-wide text-stone-800 font-bold drop-shadow-sm relative z-10"
-                        style={{ fontFamily: "'ChosunCentennial', cursive" }}
+                    {/* Ink Spread / Reveal Effect Wrapper */}
+                    <motion.div
+                        initial={{ opacity: 0, filter: "blur(8px)", scale: 0.95 }}
+                        animate={{ opacity: 1, filter: "blur(0px)", scale: 1 }}
+                        transition={{ duration: 1.5, ease: "easeOut" }}
                     >
-                        쯔동여지도
-                    </h1>
+                        {/* Base Logo Image */}
+                        <motion.img
+                            src="/sidebar-logo.png"
+                            alt="쯔동여지도"
+                            className="h-14 w-auto object-contain mix-blend-multiply opacity-90 drop-shadow-sm grayscale contrast-125"
+                            // Subtle Floating Animation
+                            animate={{ y: [0, -2, 0] }}
+                            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                    </motion.div>
 
-                    {/* Wet Ink Texture Overlay (Breathing) */}
-                    <motion.h1
-                        className="absolute inset-0 text-4xl tracking-wide text-stone-900 font-bold blur-[1px] opacity-0 z-0"
-                        style={{ fontFamily: "'ChosunCentennial', cursive" }}
-                        animate={{ opacity: [0, 0.3, 0], scale: [1, 1.01, 1] }}
-                        transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                    >
-                        쯔동여지도
-                    </motion.h1>
+                    {/* Ink Bleeding / Breathing Effect Overlay */}
+                    <motion.img
+                        src="/sidebar-logo.png"
+                        alt=""
+                        className="absolute inset-0 h-14 w-auto object-contain mix-blend-multiply blur-[2px] opacity-0 pointer-events-none grayscale contrast-125"
+                        animate={{ opacity: [0, 0.2, 0], scale: [1, 1.03, 1] }}
+                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                    />
                 </div>
             </div>
 
