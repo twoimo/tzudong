@@ -406,10 +406,10 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     <>
       {/* 국내/해외 토글 버튼 - 지도 왼쪽 상단 */}
       <div className="absolute top-6 left-4 z-10">
-        <div className="flex gap-2 bg-background/95 backdrop-blur-sm rounded-lg shadow-lg p-2 border border-border">
+        <div className="flex items-center p-1 bg-white/90 backdrop-blur-md rounded-xl shadow-sm border border-gray-200/50">
           <Button
-            variant={mapMode === 'domestic' ? 'default' : 'outline'}
-            size="default"
+            variant="ghost"
+            size="sm"
             onClick={() => {
               // 토글 시 즉시 상태 초기화
               setIsPanelOpen(false);
@@ -418,13 +418,16 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
               setSearchedRestaurant(null);
               setMapMode('domestic');
             }}
-            className={mapMode === 'domestic' ? 'bg-[#8B5A2B] hover:bg-[#6B4423]' : ''}
+            className={`rounded-lg px-4 py-1.5 h-8 text-sm font-medium transition-all duration-200 ${mapMode === 'domestic'
+                ? 'bg-[#8B5A2B] text-white shadow-sm hover:bg-[#7A4E25]'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'
+              }`}
           >
             국내
           </Button>
           <Button
-            variant={mapMode === 'overseas' ? 'default' : 'outline'}
-            size="default"
+            variant="ghost"
+            size="sm"
             onClick={() => {
               console.log('[Index] 해외 토글 클릭 - 상태 초기화 시작');
               // 토글 시 즉시 상태 초기화
@@ -435,7 +438,10 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
               console.log('[Index] 상태 초기화 완료, mapMode 변경');
               setMapMode('overseas');
             }}
-            className={mapMode === 'overseas' ? 'bg-[#8B5A2B] hover:bg-[#6B4423]' : ''}
+            className={`rounded-lg px-4 py-1.5 h-8 text-sm font-medium transition-all duration-200 ${mapMode === 'overseas'
+                ? 'bg-[#8B5A2B] text-white shadow-sm hover:bg-[#7A4E25]'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'
+              }`}
           >
             해외
           </Button>

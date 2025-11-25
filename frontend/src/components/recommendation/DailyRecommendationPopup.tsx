@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin, ExternalLink, X } from "lucide-react";
+import { MapPin, ExternalLink, X, Sparkles } from "lucide-react";
 import { useUnvisitedRestaurants } from "@/hooks/useUnvisitedRestaurants";
 
 const POPUP_STORAGE_KEY = "dailyRecommendationHideUntil";
@@ -197,8 +197,9 @@ export function DailyRecommendationPopup() {
 
                     {/* 오늘의 추천 배지 */}
                     <div className="absolute top-2 left-2 z-10">
-                        <Badge className="bg-gradient-to-r from-[#B4654A] to-[#8B5A2B] text-[#F5E6D3] font-bold shadow-lg animate-pulse">
-                            오늘의 추천!
+                        <Badge className="bg-[#8B5A2B] text-white hover:bg-[#7A4E25] border-none px-3 py-1.5 shadow-lg flex items-center gap-1.5 transition-colors">
+                            <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
+                            <span className="font-medium tracking-wide">오늘의 추천</span>
                         </Badge>
                     </div>
 
@@ -244,11 +245,11 @@ export function DailyRecommendationPopup() {
                         </div>
 
                         {/* 오늘 하루 안 보이기 체크박스 */}
-                        <div 
+                        <div
                             className="flex items-center space-x-2 pt-2 border-t"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <Checkbox 
+                            <Checkbox
                                 id="hide-today"
                                 checked={hideToday}
                                 onCheckedChange={(checked) => setHideToday(checked as boolean)}
