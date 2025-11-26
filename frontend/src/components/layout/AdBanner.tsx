@@ -7,7 +7,7 @@ interface AdBannerSlide {
     id: number;
     title: string;
     description: string;
-    stampText: string;
+
 }
 
 // 광고 배너 슬라이드 데이터 (옛스러운 말투 적용)
@@ -16,19 +16,19 @@ const AD_SLIDES: AdBannerSlide[] = [
         id: 1,
         title: "광고주 모집",
         description: "귀하의 맛집을\n천하에 널리 알리옵소서",
-        stampText: "모집"
+
     },
     {
         id: 2,
         title: "명당 자리",
         description: "수많은 미식가들이\n오가는 길목이옵니다",
-        stampText: "명당"
+
     },
     {
         id: 3,
         title: "동반 성장",
         description: "쯔동여지도와 더불어\n큰 뜻을 펼치시옵소서",
-        stampText: "상생"
+
     }
 ];
 
@@ -63,18 +63,13 @@ const AdBanner = () => {
         goToSlide((currentSlide - 1 + AD_SLIDES.length) % AD_SLIDES.length);
     };
 
-    const handleBannerClick = () => {
-        window.open('mailto:contact@tzudong.com', '_blank');
-    };
-
     const currentAd = AD_SLIDES[currentSlide];
 
     return (
         <div
-            className="relative w-full h-64 rounded-lg overflow-hidden group cursor-pointer select-none shadow-md"
+            className="relative w-full h-64 rounded-lg overflow-hidden group select-none shadow-md"
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
-            onClick={handleBannerClick}
             style={{ backgroundColor: '#fdfbf7' }} // 한지 색상
         >
             {/* 한지 질감 오버레이 */}
@@ -100,16 +95,11 @@ const AdBanner = () => {
                 </h3>
 
                 {/* 설명 */}
-                <p className="text-base font-serif text-stone-700 whitespace-pre-line leading-loose mb-6 opacity-90">
+                <p className="text-base font-serif text-stone-700 whitespace-pre-line leading-loose mb-3 opacity-90">
                     {currentAd.description}
                 </p>
 
-                {/* 낙관 (도장) */}
-                <div className="absolute top-4 right-4 w-12 h-12 border-2 border-red-700 rounded-sm flex items-center justify-center transform rotate-3 opacity-80">
-                    <span className="text-red-700 font-serif font-bold text-sm writing-vertical-rl">
-                        {currentAd.stampText}
-                    </span>
-                </div>
+
 
                 {/* 버튼 */}
                 <Button
@@ -122,11 +112,11 @@ const AdBanner = () => {
             </div>
 
             {/* 네비게이션 컨트롤 */}
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50"
+                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto"
                     onClick={prevSlide}
                 >
                     <ChevronLeft className="h-5 w-5" />
@@ -134,7 +124,7 @@ const AdBanner = () => {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50"
+                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto"
                     onClick={nextSlide}
                 >
                     <ChevronRight className="h-5 w-5" />

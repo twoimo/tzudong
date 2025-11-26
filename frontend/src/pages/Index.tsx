@@ -51,11 +51,6 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
 
   // mapMode 변경 시 디폴트값으로 초기화
   useEffect(() => {
-    // location.state 초기화 (팝업 데이터 중복 처리 방지)
-    if (location.state?.selectedRestaurant) {
-      window.history.replaceState({}, document.title);
-    }
-    
     if (mapMode === 'domestic') {
       setSelectedRegion(null); // 전국
       setSelectedCategories([]);
@@ -69,14 +64,14 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     // 패널 상태 초기화
     setIsPanelOpen(false);
     setPanelRestaurant(null);
-  }, [mapMode, setSelectedRestaurant, location.state]);
+  }, [mapMode, setSelectedRestaurant]);
 
   const [isGridMode, setIsGridMode] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
-  
+
   // 해외 모드 패널 관리
   const [moveToRestaurant, setMoveToRestaurant] = useState<((restaurant: Restaurant) => void) | null>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -304,14 +299,14 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
   useEffect(() => {
     if (location.state?.selectedRestaurant) {
       const restaurant = location.state.selectedRestaurant as Restaurant;
-      
+
       // location.state 즉시 초기화 (가장 먼저 실행)
       window.history.replaceState({}, document.title);
-      
+
       // 글로벌 국가 목록으로 해외/국내 판단
       const address = restaurant.english_address || restaurant.road_address || restaurant.jibun_address || '';
       const isOverseas = GLOBAL_COUNTRIES.some(country => address.includes(country));
-      
+
       // 해외/국내에 따라 모드 설정
       if (isOverseas) {
         setMapMode('overseas');
@@ -323,12 +318,10 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
         // 지역 필터를 '전국'으로 설정
         setSelectedRegion(null);
       }
-      
-      // 음식점 선택 (약간의 딜레이로 모드 전환 후 처리)
-      setTimeout(() => {
-        setSelectedRestaurant(restaurant);
-        setSearchedRestaurant(restaurant);
-      }, 200);
+
+      // 음식점 선택 (즉시 처리 - setTimeout 제거)
+      setSelectedRestaurant(restaurant);
+      setSearchedRestaurant(restaurant);
     }
   }, [location.state?.selectedRestaurant]);
 
@@ -413,10 +406,10 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
     <>
       {/* 국내/해외 토글 버튼 - 지도 왼쪽 상단 */}
       <div className="absolute top-6 left-4 z-10">
-        <div className="flex gap-2 bg-background/95 backdrop-blur-sm rounded-lg shadow-lg p-2 border border-border">
-          <Button 
-            variant={mapMode === 'domestic' ? 'default' : 'outline'}
-            size="default"
+        <div className="flex items-center p-1 bg-white/90 backdrop-blur-md rounded-xl shadow-sm border border-gray-200/50">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               // 토글 시 즉시 상태 초기화
               setIsPanelOpen(false);
@@ -425,13 +418,16 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
               setSearchedRestaurant(null);
               setMapMode('domestic');
             }}
-            className={mapMode === 'domestic' ? 'bg-[#8B5A2B] hover:bg-[#6B4423]' : ''}
+            className={`rounded-lg px-4 py-1.5 h-8 text-sm font-medium transition-all duration-200 ${mapMode === 'domestic'
+                ? 'bg-[#8B5A2B] text-white shadow-sm hover:bg-[#7A4E25]'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'
+              }`}
           >
             국내
           </Button>
-          <Button 
-            variant={mapMode === 'overseas' ? 'default' : 'outline'}
-            size="default"
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => {
               console.log('[Index] 해외 토글 클릭 - 상태 초기화 시작');
               // 토글 시 즉시 상태 초기화
@@ -442,7 +438,10 @@ const Index = memo(({ refreshTrigger, selectedRestaurant, setSelectedRestaurant,
               console.log('[Index] 상태 초기화 완료, mapMode 변경');
               setMapMode('overseas');
             }}
-            className={mapMode === 'overseas' ? 'bg-[#8B5A2B] hover:bg-[#6B4423]' : ''}
+            className={`rounded-lg px-4 py-1.5 h-8 text-sm font-medium transition-all duration-200 ${mapMode === 'overseas'
+                ? 'bg-[#8B5A2B] text-white shadow-sm hover:bg-[#7A4E25]'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/50'
+              }`}
           >
             해외
           </Button>

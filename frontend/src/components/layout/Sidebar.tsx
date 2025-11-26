@@ -6,6 +6,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import AdBanner from "./AdBanner";
+import SeasonalLogo from "@/components/common/SeasonalLogo";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -77,11 +78,9 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-stone-800/20 to-transparent pointer-events-none z-0" />
 
       {/* 로고 영역 - "쯔동여지도" 5글자만 크게 조선100년체로 가운데 배치 */}
-      <div className="h-16 flex items-center justify-center px-6 border-b border-stone-800/10 relative z-10">
-        <div className="cursor-pointer" onClick={() => navigate("/")}>
-          <h1 className="text-4xl text-stone-900 tracking-wide hover:text-red-800 transition-colors" style={{ fontFamily: "'ChosunCentennial', cursive" }}>
-            쯔동여지도
-          </h1>
+      <div className="h-16 border-b border-stone-800/10 relative z-10">
+        <div className="cursor-pointer w-full h-full" onClick={() => navigate("/")}>
+          <SeasonalLogo />
         </div>
       </div>
 
