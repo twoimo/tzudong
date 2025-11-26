@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +14,7 @@ import { Trophy, Medal, Award, TrendingUp, Star, CheckCircle, Loader2 } from "lu
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface LeaderboardUser {
     id: string;
@@ -22,12 +23,13 @@ interface LeaderboardUser {
     reviewCount: number;
     verifiedReviewCount: number;
     totalLikes: number; // 추가: 총 좋아요 수
-    badges: { name: string; icon: string; earnedAt: string }[];
 }
 
 
 const LeaderboardPage = () => {
+    const { user: currentUser } = useAuth();
     const [sortBy, setSortBy] = useState<"reviews">("reviews");
+    const userRowRef = useRef<HTMLTableRowElement>(null);
 
     // Fetch leaderboard data from Supabase - 모든 사용자 포함
     const { data: allUsers, isLoading } = useQuery({
@@ -115,24 +117,6 @@ const LeaderboardPage = () => {
                     const reviewCount = reviewCountMap.get(profile.user_id) || 0;
                     const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
                     const totalLikes = totalLikesMap.get(profile.user_id) || 0;
-                    const badges: { name: string; icon: string; earnedAt: string }[] = [];
-
-                    // Award badges based on achievements
-                    if (reviewCount >= 1) {
-                        badges.push({ name: "첫 리뷰", icon: "⭐", earnedAt: "" });
-                    }
-                    if (reviewCount >= 10) {
-                        badges.push({ name: "열정적인 리뷰어", icon: "🔥", earnedAt: "" });
-                    }
-                    if (reviewCount >= 50) {
-                        badges.push({ name: "리뷰 마스터", icon: "👑", earnedAt: "" });
-                    }
-                    if (verifiedReviewCount >= 10) {
-                        badges.push({ name: "신뢰의 아이콘", icon: "💎", earnedAt: "" });
-                    }
-                    if (totalLikes >= 50) {
-                        badges.push({ name: "인기인", icon: "❤️", earnedAt: "" });
-                    }
 
                     return {
                         id: profile.user_id,
@@ -140,7 +124,6 @@ const LeaderboardPage = () => {
                         reviewCount,
                         verifiedReviewCount,
                         totalLikes,
-                        badges,
                     };
                 });
 
@@ -197,18 +180,6 @@ const LeaderboardPage = () => {
         }
     };
 
-    const getRankBadgeColor = (rank: number) => {
-        switch (rank) {
-            case 1:
-                return "bg-gradient-to-r from-yellow-400 to-yellow-600";
-            case 2:
-                return "bg-gradient-to-r from-gray-300 to-gray-500";
-            case 3:
-                return "bg-gradient-to-r from-amber-400 to-amber-600";
-            default:
-                return "bg-muted";
-        }
-    };
 
     const getUserTier = (reviewCount: number) => {
         if (reviewCount >= 100) return { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" };
@@ -219,6 +190,19 @@ const LeaderboardPage = () => {
         return { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
     };
 
+    // Calculate my rank
+    const myRank = currentUser
+        ? sortedLeaderboard.find((u) => u.id === currentUser.id)?.rank
+        : null;
+
+    // Auto-scroll to user's row
+    useEffect(() => {
+        if (!isLoading && currentUser && userRowRef.current) {
+            setTimeout(() => {
+                userRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500); // 렌더링 후 약간의 지연을 주어 스크롤 동작 보장
+        }
+    }, [isLoading, currentUser, sortedLeaderboard]);
 
     return (
         <TooltipProvider>
@@ -234,16 +218,20 @@ const LeaderboardPage = () => {
                                 </h1>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
-                                맛집 리뷰로 쌓은 랭킹
+                                리뷰를 작성하고 랭킹을 올려보세요!
                             </p>
                         </div>
-                        <div className="text-right">
-                            <div className="text-sm font-medium text-muted-foreground">
-                                총 참가자
-                            </div>
-                            <div className="text-2xl font-bold text-primary">
-                                {sortedLeaderboard.length}
-                            </div>
+                        <div className="flex gap-8 text-right">
+                            {currentUser && (
+                                <div>
+                                    <div className="text-sm font-medium text-muted-foreground">
+                                        나의 순위
+                                    </div>
+                                    <div className="text-2xl font-bold text-primary">
+                                        {myRank ? `${myRank}위` : "-"}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -251,14 +239,10 @@ const LeaderboardPage = () => {
 
                 {/* Full Rankings Table */}
                 <div className="flex-1 overflow-hidden p-6">
-                    <Card className="h-full flex flex-col">
-                        <div className="p-4 border-b border-border">
-                            <h2 className="font-semibold">전체 랭킹</h2>
-                        </div>
-
+                    <div className="rounded-md border bg-card h-full flex flex-col">
                         <ScrollArea className="flex-1">
                             <Table>
-                                <TableHeader className="sticky top-0 bg-muted">
+                                <TableHeader className="sticky top-0 bg-muted z-10">
                                     <TableRow>
                                         <TableHead className="w-20">순위</TableHead>
                                         <TableHead>사용자</TableHead>
@@ -267,13 +251,12 @@ const LeaderboardPage = () => {
                                                 onClick={() => setSortBy("reviews")}
                                                 className="flex items-center gap-1 mx-auto hover:text-primary"
                                             >
-                                                리뷰 수
+                                                도장 개수
                                                 {sortBy === "reviews" && <TrendingUp className="h-3 w-3" />}
                                             </button>
                                         </TableHead>
                                         <TableHead className="text-center">받은 좋아요</TableHead>
                                         <TableHead className="text-center">티어</TableHead>
-                                        <TableHead>배지</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -298,95 +281,52 @@ const LeaderboardPage = () => {
                                                 <TableCell className="text-center">
                                                     <div className="h-4 bg-muted rounded animate-pulse w-12 mx-auto"></div>
                                                 </TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-1">
-                                                        <div className="w-6 h-6 bg-muted rounded animate-pulse"></div>
-                                                        <div className="w-6 h-6 bg-muted rounded animate-pulse"></div>
-                                                    </div>
-                                                </TableCell>
+
                                             </TableRow>
                                         ))
-                                    ) : sortedLeaderboard.map((user, index) => (
-                                        <TableRow
-                                            key={`${user.id}-${index}`}
-                                            className="hover:bg-muted/50"
-                                        >
-                                            <TableCell>
-                                                <div className="flex items-center justify-center">
-                                                    {getRankIcon(user.rank, true)}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <span className="font-medium">{user.username}</span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <span className="font-semibold">{user.reviewCount}</span>
-                                                <span className="text-muted-foreground text-xs ml-1">개</span>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <div className="flex items-center justify-center gap-1">
-                                                    <span className="font-semibold text-red-600">{user.totalLikes}</span>
-                                                    <span className="text-muted-foreground text-xs">❤️</span>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-center">
-                                                <Badge variant="outline" className={`${getUserTier(user.reviewCount).bgColor} ${getUserTier(user.reviewCount).color} border-current`}>
-                                                    {getUserTier(user.reviewCount).name}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex gap-1 flex-wrap">
-                                                    {user.badges.slice(0, 3).map((badge, idx) => {
-                                                        const getBadgeDescription = (badgeName: string) => {
-                                                            switch (badgeName) {
-                                                                case "첫 리뷰":
-                                                                    return "⭐ 첫 리뷰: 1개 이상의 리뷰 작성";
-                                                                case "열정적인 리뷰어":
-                                                                    return "🔥 열정적인 리뷰어: 10개 이상의 리뷰 작성";
-                                                                case "리뷰 마스터":
-                                                                    return "👑 리뷰 마스터: 50개 이상의 리뷰 작성";
-                                                                case "신뢰의 아이콘":
-                                                                    return "💎 신뢰의 아이콘: 10개 이상의 승인된 리뷰";
-                                                                default:
-                                                                    return badgeName;
-                                                            }
-                                                        };
+                                    ) : sortedLeaderboard.map((user, index) => {
+                                        const isCurrentUser = currentUser?.id === user.id;
+                                        return (
+                                            <TableRow
+                                                key={`${user.id}-${index}`}
+                                                ref={isCurrentUser ? userRowRef : null}
+                                                className={`hover:bg-muted/50 ${isCurrentUser ? "bg-primary/10 hover:bg-primary/20 border-l-4 border-l-primary" : ""}`}
+                                            >
+                                                <TableCell>
+                                                    <div className="flex items-center justify-center">
+                                                        {getRankIcon(user.rank, true)}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span className={`font-medium ${isCurrentUser ? "text-primary font-bold" : ""}`}>
+                                                        {user.username}
+                                                        {isCurrentUser && " (나)"}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <span className="font-semibold">{user.reviewCount}</span>
+                                                    <span className="text-muted-foreground text-xs ml-1">개</span>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        <span className="font-semibold text-red-600">{user.totalLikes}</span>
+                                                        <span className="text-muted-foreground text-xs">❤️</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-center">
+                                                    <Badge variant="outline" className={`${getUserTier(user.reviewCount).bgColor} ${getUserTier(user.reviewCount).color} border-current`}>
+                                                        {getUserTier(user.reviewCount).name}
+                                                    </Badge>
+                                                </TableCell>
 
-                                                        return (
-                                                            <Tooltip key={idx}>
-                                                                <TooltipTrigger asChild>
-                                                                    <div className="inline-block">
-                                                                        <span className="text-lg cursor-help hover:scale-110 transition-transform duration-200 p-1 rounded-md hover:bg-muted/30">
-                                                                            {badge.icon}
-                                                                        </span>
-                                                                    </div>
-                                                                </TooltipTrigger>
-                                                                <TooltipContent>
-                                                                    <div className="text-center">
-                                                                        <div className="text-lg mb-1">{badge.icon}</div>
-                                                                        <p className="font-semibold text-sm">{badge.name}</p>
-                                                                        <p className="text-xs text-muted-foreground whitespace-pre-line">
-                                                                            {getBadgeDescription(badge.name)}
-                                                                        </p>
-                                                                    </div>
-                                                                </TooltipContent>
-                                                            </Tooltip>
-                                                        );
-                                                    })}
-                                                    {user.badges.length > 3 && (
-                                                        <span className="text-xs text-muted-foreground">
-                                                            +{user.badges.length - 3}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
+                                            </TableRow>
+                                        );
+                                    })}
 
                                     {/* 빈 데이터 상태 */}
                                     {!isLoading && sortedLeaderboard.length === 0 && (
                                         <TableRow>
-                                            <TableCell colSpan={7} className="text-center py-12">
+                                            <TableCell colSpan={5} className="text-center py-12">
                                                 <div className="text-muted-foreground">
                                                     <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                                     <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
@@ -399,7 +339,7 @@ const LeaderboardPage = () => {
                                 </TableBody>
                             </Table>
                         </ScrollArea>
-                    </Card>
+                    </div>
                 </div>
             </div>
         </TooltipProvider>
