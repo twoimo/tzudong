@@ -1,3 +1,4 @@
+import { RankingWidget } from "./RankingWidget";
 import { Menu, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -116,6 +117,9 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
       </div>
 
       <div className="flex items-center gap-2 relative z-10">
+        {/* 랭킹 및 접속자 위젯 */}
+        <RankingWidget />
+
         {/* 한지 모드 토글 */}
         <Button
           variant="ghost"
