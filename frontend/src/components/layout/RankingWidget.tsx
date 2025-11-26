@@ -1,57 +1,21 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Trophy, Users } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLeaderboard } from "@/hooks/useLeaderboard";
 
 export const RankingWidget = () => {
     const { user } = useAuth();
     const [onlineUsers, setOnlineUsers] = useState(0);
 
-    // Fetch user ranking
-    const { data: myRank } = useQuery({
-        queryKey: ['my-ranking', user?.id],
-        queryFn: async () => {
-            if (!user?.id) return null;
+    // Fetch user ranking using shared hook
+    const { data: leaderboardData = [] } = useLeaderboard();
 
-            // 1. Get all profiles to calculate rank (simplified for widget)
-            // Note: In a real app with many users, this should be a database function or materialized view
-            const { data: profilesData } = await supabase
-                .from('profiles')
-                .select('user_id')
-                .not('nickname', 'is', null)
-                .neq('nickname', '탈퇴한 사용자');
-
-            if (!profilesData) return null;
-
-            const userIds = profilesData.map(p => p.user_id);
-
-            // 2. Get review counts
-            const { data: reviewsData } = await supabase
-                .from('reviews')
-                .select('user_id')
-                .in('user_id', userIds);
-
-            if (!reviewsData) return null;
-
-            const reviewCountMap = new Map<string, number>();
-            reviewsData.forEach(r => {
-                reviewCountMap.set(r.user_id, (reviewCountMap.get(r.user_id) || 0) + 1);
-            });
-
-            // 3. Sort and find rank
-            const sortedUsers = userIds
-                .map(id => ({ id, count: reviewCountMap.get(id) || 0 }))
-                .sort((a, b) => b.count - a.count);
-
-            const rank = sortedUsers.findIndex(u => u.id === user.id) + 1;
-            return rank > 0 ? rank : null;
-        },
-        enabled: !!user,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-    });
+    // Find my rank
+    const myRank = user
+        ? leaderboardData.find((u) => u.id === user.id)?.rank
+        : null;
 
     // Real-time online users
     useEffect(() => {
@@ -73,6 +37,14 @@ export const RankingWidget = () => {
             supabase.removeChannel(channel);
         };
     }, [user]);
+
+    // Get rank color
+    const getRankColor = (rank: number) => {
+        if (rank === 1) return "text-yellow-500 border-yellow-500/20 bg-yellow-500/10";
+        if (rank === 2) return "text-gray-400 border-gray-400/20 bg-gray-400/10";
+        if (rank === 3) return "text-amber-600 border-amber-600/20 bg-amber-600/10";
+        return "text-primary border-primary/20 bg-primary/10";
+    };
 
     return (
         <div className="flex items-center gap-3 mr-2">
@@ -96,7 +68,7 @@ export const RankingWidget = () => {
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <div className="flex items-center gap-1.5 text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded-md border border-primary/20">
+                            <div className={`flex items-center gap-1.5 text-sm font-medium px-2 py-1 rounded-md border ${getRankColor(myRank)}`}>
                                 <Trophy className="h-4 w-4" />
                                 <span>{myRank}위</span>
                             </div>
