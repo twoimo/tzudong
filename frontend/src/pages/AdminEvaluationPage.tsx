@@ -948,7 +948,7 @@ export default function AdminEvaluationPage() {
               </button>
             </div>
             <p className="text-muted-foreground text-sm mt-1">
-              총 {stats.total}개 레코드 | 필터링: {filteredRecords.length}개
+              필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
             </p>
           </div>
 

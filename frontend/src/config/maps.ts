@@ -13,8 +13,8 @@ export const NAVER_MAPS_CONFIG = {
 // 관리자 재지오코딩용 - 본인의 NCP Maps API 키
 // MissingRestaurantForm, EditRestaurantModal에서 사용
 export const NCP_GEOCODING_CONFIG = {
-    clientId: import.meta.env.VITE_NCP_MAPS_KEY_ID || '',
-    clientSecret: import.meta.env.VITE_NCP_MAPS_KEY || '',
+    clientId: import.meta.env.VITE_NAVER_CLIENT_ID || '',
+    clientSecret: import.meta.env.VITE_NAVER_CLIENT_SECRET || '',
 };
 
 // 지역별 지도 중심 좌표 및 줌 레벨
