@@ -119,7 +119,7 @@ Table restaurants {
   evaluation_results jsonb [note: 'AI 평가 결과 (JSON)']
   
   // 데이터 출처
-  source_type text [note: '데이터 출처 (예: perplexity, manual, user_submission)']
+  source_type text [note: '데이터 출처 (perplexity, geminiCLI, admin, user_submission)']
   
   // 지오코딩 정보
   geocoding_success boolean [not null, default: false, note: '지오코딩 성공 여부']
