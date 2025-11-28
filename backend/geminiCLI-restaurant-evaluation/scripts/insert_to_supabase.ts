@@ -9,8 +9,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // frontend 폴더의 .env 파일 로드 (프로젝트 루트/.env가 없으면 frontend/.env 사용)
-const rootEnvPath = path.resolve(__dirname, '../../.env');
-const frontendEnvPath = path.resolve(__dirname, '../../frontend/.env');
+const rootEnvPath = path.resolve(__dirname, '../../../.env');
+const frontendEnvPath = path.resolve(__dirname, '../../../frontend/.env');
 const envPath = fs.existsSync(rootEnvPath) ? rootEnvPath : frontendEnvPath;
 console.log('📁 .env 파일 경로:', envPath);
 config({ path: envPath });
@@ -100,7 +100,7 @@ async function enableRLS() {
 async function insertRestaurants() {
   try {
     // JSONL 파일 읽기
-    const filePath = path.join(__dirname, 'tzuyang_restaurant_transforms.jsonl');
+    const filePath = path.join(__dirname, '../tzuyang_restaurant_transforms.jsonl');
     const fileContent = fs.readFileSync(filePath, 'utf-8');
     const lines = fileContent.trim().split('\n');
     

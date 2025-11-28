@@ -1,0 +1,146 @@
+name: GeminiCLI Restaurant Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: '실행할 단계 선택'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - crawling
+          - evaluation
+          - transform
+          - insert
+  schedule:
+    # 매주 월요일 오전 3시 (KST) 실행
+    - cron: '0 18 * * 0'  # UTC 기준
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+      
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/geminiCLI-restaurant-evaluation/package.json
+      
+      - name: 🔧 Install jq
+        run: sudo apt-get install -y jq
+      
+      - name: 🔧 Install Python dependencies
+        run: |
+          pip install requests python-dotenv google-api-python-client openai
+      
+      - name: 🔧 Install Node.js dependencies
+        working-directory: backend/geminiCLI-restaurant-evaluation
+        run: npm install
+      
+      - name: 🔑 Setup Google Cloud Auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GOOGLE_CLOUD_CREDENTIALS }}
+      
+      - name: 🔧 Install Gemini CLI
+        run: npm install -g @google/generative-ai-cli
+      
+      - name: 📝 Create .env files
+        run: |
+          # 크롤링 .env
+          cat > backend/geminiCLI-restaurant-crawling/.env << EOF
+          YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY }}
+          OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY }}
+          EOF
+          
+          # 평가 .env
+          cat > backend/geminiCLI-restaurant-evaluation/.env << EOF
+          NAVER_CLIENT_ID_BYEON=${{ secrets.NAVER_CLIENT_ID }}
+          NAVER_CLIENT_SECRET_BYEON=${{ secrets.NAVER_CLIENT_SECRET }}
+          NCP_MAPS_KEY_ID_BYEON=${{ secrets.NCP_MAPS_KEY_ID }}
+          NCP_MAPS_KEY_BYEON=${{ secrets.NCP_MAPS_KEY }}
+          EOF
+          
+          # 메인 .env (Supabase)
+          cat > backend/.env << EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EOF
+      
+      - name: 🚀 Run Full Pipeline
+        if: ${{ github.event.inputs.phase == 'all' || github.event_name == 'schedule' }}
+        working-directory: backend
+        run: python3 geminiCLI-restaurant-pipeline.py
+      
+      - name: 🔍 Run Crawling Only
+        if: ${{ github.event.inputs.phase == 'crawling' }}
+        working-directory: backend/geminiCLI-restaurant-crawling/scripts
+        run: bash crawling.sh
+      
+      - name: 📊 Run Evaluation Only
+        if: ${{ github.event.inputs.phase == 'evaluation' }}
+        working-directory: backend/geminiCLI-restaurant-evaluation/scripts
+        run: python3 evaluation-pipeline.py
+      
+      - name: 🔄 Run Transform Only
+        if: ${{ github.event.inputs.phase == 'transform' }}
+        working-directory: backend/geminiCLI-restaurant-evaluation/scripts
+        run: python3 transform_evaluation_results.py
+      
+      - name: 💾 Run DB Insert Only
+        if: ${{ github.event.inputs.phase == 'insert' }}
+        working-directory: backend/geminiCLI-restaurant-evaluation
+        run: npx tsx scripts/insert_to_supabase.ts
+      
+      - name: 📊 Upload Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-results-${{ github.run_number }}
+          path: |
+            backend/geminiCLI-restaurant-crawling/output/
+            backend/geminiCLI-restaurant-evaluation/output/
+          retention-days: 30
+      
+      - name: 📈 Print Statistics
+        if: always()
+        run: |
+          echo "📊 파이프라인 결과 통계"
+          echo "========================"
+          
+          if [ -f backend/geminiCLI-restaurant-crawling/output/crawling_results.jsonl ]; then
+            CRAWLING=$(wc -l < backend/geminiCLI-restaurant-crawling/output/crawling_results.jsonl)
+            echo "크롤링 결과: $CRAWLING 개"
+          fi
+          
+          if [ -f backend/geminiCLI-restaurant-evaluation/output/evaluation_results.jsonl ]; then
+            EVAL=$(wc -l < backend/geminiCLI-restaurant-evaluation/output/evaluation_results.jsonl)
+            echo "평가 성공: $EVAL 개"
+          fi
+          
+          if [ -f backend/geminiCLI-restaurant-evaluation/output/evaluation_errors.jsonl ]; then
+            ERRORS=$(wc -l < backend/geminiCLI-restaurant-evaluation/output/evaluation_errors.jsonl)
+            echo "평가 에러: $ERRORS 개"
+          fi
+          
+          if [ -f backend/geminiCLI-restaurant-evaluation/output/transforms.jsonl ]; then
+            TRANSFORMS=$(wc -l < backend/geminiCLI-restaurant-evaluation/output/transforms.jsonl)
+            echo "Transform: $TRANSFORMS 개"
+          fi

@@ -1,0 +1,53 @@
+YOLO mode is enabled. All tool calls will be automatically approved.
+Loaded cached credentials.
+Error during web search for query "전라북도 군산시 칠성6길 144 coordinates": The user aborted a request. GaxiosError: The user aborted a request.
+    at Gaxios._request (/Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/gaxios/build/src/gaxios.js:149:19)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async OAuth2Client.requestAsync (/Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/google-auth-library/build/src/auth/oauth2client.js:429:18)
+    at async CodeAssistServer.requestPost (file:///Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/server.js:79:21)
+    at async CodeAssistServer.generateContent (file:///Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/code_assist/server.js:33:22)
+    at async file:///Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/core/loggingContentGenerator.js:89:34
+    at async runInDevTraceSpan (file:///Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/telemetry/trace.js:33:16)
+    at async retryWithBackoff (file:///Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/utils/retry.js:75:28)
+    at async GeminiClient.generateContent (file:///Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/core/client.js:441:28)
+    at async WebSearchToolInvocation.execute (file:///Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/tools/web-search.js:24:30) {
+  config: {
+    url: 'https://cloudcode-pa.googleapis.com/v1internal:generateContent',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'User-Agent': 'GeminiCLI/v20.19.6 (darwin; arm64) google-api-nodejs-client/9.15.1',
+      Authorization: '<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.',
+      'x-goog-api-client': 'gl-node/20.19.6',
+      Accept: 'application/json'
+    },
+    responseType: 'json',
+    body: '<<REDACTED> - See `errorRedactor` option in `gaxios` for configuration>.',
+    signal: AbortSignal { aborted: true },
+    paramsSerializer: [Function: paramsSerializer],
+    validateStatus: [Function: validateStatus],
+    errorRedactor: [Function: defaultErrorRedactor]
+  },
+  response: undefined,
+  error: AbortError: The user aborted a request.
+      at abort (/Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/node-fetch/lib/index.js:1458:16)
+      at EventTarget.abortAndFinalize (/Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/node_modules/node-fetch/lib/index.js:1473:4)
+      at [nodejs.internal.kHybridDispatch] (node:internal/event_target:831:20)
+      at EventTarget.dispatchEvent (node:internal/event_target:766:26)
+      at abortSignal (node:internal/abort_controller:370:10)
+      at AbortController.abort (node:internal/abort_controller:392:5)
+      at ReadStream.keypressHandler (file:///Users/byeon-ujung/.nvm/versions/node/v20.19.6/lib/node_modules/@google/gemini-cli/dist/src/nonInteractiveCli.js:76:37)
+      at ReadStream.emit (node:events:524:28)
+      at emitKeys (node:internal/readline/utils:371:14)
+      at emitKeys.next (<anonymous>) {
+    type: 'aborted'
+  },
+  [Symbol(gaxios-gaxios-error)]: '6.7.1'
+}
+{
+  "error": {
+    "type": "FatalCancellationError",
+    "message": "Operation cancelled.",
+    "code": 130
+  }
+}

@@ -29,21 +29,21 @@ interface EvaluationFiltersProps {
 }
 
 const FILTER_TOOLTIPS = {
-  visit_authenticity: `0점 = 영상과 무관 (데이터가 허구)
+  visit_authenticity: `0점 = 자막에서 전혀 언급 없음 (데이터가 허구)
 1점 = 음식점(매장)이 맞으며, 직접 방문했고 지점명까지 명확
 2점 = 음식점(매장)이 맞으며, 직접 방문은 맞지만 지점명 특정 불명확
 3점 = 음식점을 방문하지 않고, 해당 음식점의 음식 포장/배달
 4점 = 언급만 하거나(매장 안 감), 음식점(매장)이 아님`,
   
-  rb_inference_score: `0점 = 논리적 비약 있음 / 현장 증거 없이 단순 검색·추측으로 특정
+  rb_inference_score: `0점 = 논리적 비약 있음 / 자막에서 확인 안 되는 내용으로 추측
 1점 = '방문 지역 언급 → 간판/편집자막 확인 → 음식점 특정' 순서로 자연스럽게 이어짐
-2점 = 영상 내 여러 시각정보와 음성정보, 검색정보를 조합하여 논리적으로 특정`,
+2점 = 자막 내용(음식점명, 메뉴, 위치 힌트)과 검색정보를 조합하여 논리적으로 특정`,
   
-  rb_grounding_TF: `True = reasoning_basis에 나온 근거 요소가 실제 영상에서 확인 가능
-False = 핵심 근거(매장 위치나 간판 확인 등)가 영상에서 전혀 확인 안 됨`,
+  rb_grounding_TF: `True = reasoning_basis의 핵심 근거가 자막에서 확인됨
+False = 핵심 근거(매장 위치나 이름 등)가 자막에서 전혀 확인 안 됨`,
   
-  review_faithfulness_score: `0점 = 과장/없는 말 지어냄, 위험하게 틀림
-1점 = 실제 멘트 기반으로 충실하게 요약됨, 큰 누락 없음`,
+  review_faithfulness_score: `0점 = 자막에 없는 내용 지어냄, 과장/왜곡
+1점 = 자막의 실제 멘트 기반으로 충실하게 요약됨, 큰 누락 없음`,
   
   geocoding_success: `True = 지오코딩 성공 (geocoding_success = true)
 False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
@@ -52,8 +52,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
   category_validity_TF: `True = category가 유효 카테고리 목록에 포함되고 null이 아님
 False = category가 목록에 없거나 null`,
   
-  category_TF: `True = 영상에서 음식들, 메뉴판 등을 확인했을 때 기존 category값이 적절함
-False = 영상에서 음식들, 메뉴판 등을 확인했을 때 기존 category값을 수용할 수 없음`,
+  category_TF: `True = 자막에서 확인되는 메뉴/업장 유형과 category가 일치
+False = 자막에서 전혀 맞지 않음 (수정 필요)`,
   
   category: '음식점의 카테고리별 필터링'
 };
