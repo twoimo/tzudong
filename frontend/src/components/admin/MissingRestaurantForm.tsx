@@ -366,8 +366,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   }> => {
     try {
       // 관리자 재지오코딩용 - 본인의 NCP Maps API 키 사용
-      const clientId = import.meta.env.VITE_NCP_MAPS_KEY_ID;
-      const clientSecret = import.meta.env.VITE_NCP_MAPS_KEY;
+      const clientId = import.meta.env.VITE_NAVER_CLIENT_ID;
+      const clientSecret = import.meta.env.VITE_NAVER_CLIENT_SECRET;
 
       if (!clientId || !clientSecret) {
         return { success: false, error: 'Naver 지오코딩 API 키가 설정되지 않았습니다.' };
