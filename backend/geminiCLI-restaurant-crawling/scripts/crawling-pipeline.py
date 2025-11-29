@@ -76,16 +76,9 @@ def main():
     results_file = project_dir / "tzuyang_restaurant_results.jsonl"
     results_with_meta_file = project_dir / "tzuyang_restaurant_results_with_meta.jsonl"
     
-    # 파이프라인 선택
-    # print("📌 실행할 단계를 선택하세요:")
-    # print("   1️⃣  전체 파이프라인 (URL 수집 → 크롤링 → 메타데이터)")
-    # print("   2️⃣  크롤링만 실행 (기존 URL 사용)")
-    # print()
-    # choice = input("선택 (1/2): ").strip()
-    
-    # URL 수집 생략하고 기존 URL로 크롤링만 실행
-    choice = "2"
-    print("📌 기존 URL 파일로 크롤링 실행 (URL 수집 생략)")
+    # 전체 파이프라인 실행 (URL 수집 → 크롤링 → 메타데이터)
+    choice = "1"
+    print("📌 전체 파이프라인 실행 (URL 수집 → 크롤링 → 메타데이터)")
     
     success_count = 0
     
