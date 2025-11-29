@@ -33,14 +33,14 @@ import { RESTAURANT_CATEGORIES } from '@/constants/categories';
 
 // 해외 국가 목록
 const OVERSEAS_COUNTRIES = [
-    "미국", "USA", "United States",
-    "일본", "Japan",
-    "대만", "Taiwan",
-    "태국", "Thailand",
-    "인도네시아", "Indonesia",
-    "튀르키예", "Turkey", "Türkiye",
-    "헝가리", "Hungary",
-    "오스트레일리아", "Australia"
+  "미국", "USA", "United States",
+  "일본", "Japan",
+  "대만", "Taiwan",
+  "태국", "Thailand",
+  "인도네시아", "Indonesia",
+  "튀르키예", "Turkey", "Türkiye",
+  "헝가리", "Hungary",
+  "오스트레일리아", "Australia"
 ];
 
 interface EditRestaurantModalProps {
@@ -322,7 +322,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     y: string;
   }>> => {
     try {
-      const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
       if (!apiKey) throw new Error('Google Maps API key not found');
 
       const response = await fetch(
@@ -851,26 +851,26 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
       // 카테고리 초기값 설정
       let initialCategories: string[] = [];
-      
+
       // 1. 기존 categories 배열 사용 또는 단일 category를 배열로 변환
       if (record.restaurant_info.category) {
         initialCategories = [record.restaurant_info.category];
       }
-      
+
       // 2. evaluation_results.category_TF가 false이고 category_revision이 있으면 제안된 카테고리 사용
       if (record.evaluation_results?.category_TF?.eval_value === false) {
         const categoryRevision = record.evaluation_results.category_TF.category_revision;
-        
+
         if (categoryRevision) {
           // category_revision이 배열인 경우
           if (Array.isArray(categoryRevision)) {
-            const validCategories = categoryRevision.filter(cat => 
+            const validCategories = categoryRevision.filter(cat =>
               RESTAURANT_CATEGORIES.includes(cat as typeof RESTAURANT_CATEGORIES[number])
             );
             if (validCategories.length > 0) {
               initialCategories = validCategories;
             }
-          } 
+          }
           // category_revision이 문자열인 경우
           else if (typeof categoryRevision === 'string') {
             if (RESTAURANT_CATEGORIES.includes(categoryRevision as typeof RESTAURANT_CATEGORIES[number])) {
@@ -1108,7 +1108,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           {/* 카테고리 */}
           <div className="space-y-3">
             <Label>카테고리</Label>
-            
+
             {/* 기존 카테고리 (위) */}
             <div className="space-y-2">
               <Label className="text-sm text-muted-foreground">기존 카테고리</Label>
@@ -1134,7 +1134,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                   </span>
                 )}
               </Label>
-              
+
               {/* 선택된 카테고리 배지 */}
               {formData.categories.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-2">
@@ -1154,7 +1154,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
                   ))}
                 </div>
               )}
-              
+
               {/* 카테고리 체크박스 목록 (2열 그리드) */}
               <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2">

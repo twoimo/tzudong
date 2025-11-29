@@ -707,7 +707,7 @@ export default function HomePage() {
             <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
                 <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                        <DialogTitle className="text-2xl text-primary font-bold">
                             맛집 수정 요청
                         </DialogTitle>
                         <DialogDescription>

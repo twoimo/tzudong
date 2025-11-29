@@ -44,7 +44,7 @@ const extractVideoId = (url: string): string | null => {
         /youtu\.be\/([^?]+)/,              // Shortened URL
         /youtube\.com\/embed\/([^?]+)/,    // Embed URL
     ];
-    
+
     for (const pattern of patterns) {
         const match = url.match(pattern);
         if (match) return match[1];
@@ -62,7 +62,7 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
 
     try {
         // YouTube Data API v3 호출
-        const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
+        const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
         if (!apiKey) {
             console.error('YouTube API key not found');
             return null;
@@ -77,7 +77,7 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
         }
 
         const data = await response.json();
-        
+
         if (!data.items || data.items.length === 0) {
             console.error('Video not found:', videoId);
             return null;
@@ -91,11 +91,11 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
         const parseDuration = (duration: string): number => {
             const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
             if (!match) return 0;
-            
+
             const hours = parseInt(match[1] || '0');
             const minutes = parseInt(match[2] || '0');
             const seconds = parseInt(match[3] || '0');
-            
+
             return hours * 3600 + minutes * 60 + seconds;
         };
 
@@ -122,16 +122,16 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
 
 // unique_id 생성 함수 (Python 버전과 동일하게 SHA-256 사용)
 // youtube_link + name + tzuyang_review 순서로 해시
- const generateUniqueId = async (youtubeLink: string, name: string, tzuyangReview: string): Promise<string> => {
+const generateUniqueId = async (youtubeLink: string, name: string, tzuyangReview: string): Promise<string> => {
     const keyString = (youtubeLink || "") + (name || "") + (tzuyangReview || "");
-    
+
     // SHA-256 해시 생성 (Web Crypto API 사용)
     const encoder = new TextEncoder();
     const data = encoder.encode(keyString);
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-    
+
     return hashHex;
 };
 
@@ -190,10 +190,10 @@ export function AdminRestaurantModal({
                     youtube_link: r.youtube_link || "",
                     tzuyang_review: r.tzuyang_review || "",
                 })) || (restaurant.youtube_link && restaurant.status === 'approved' ? [{
-                id: restaurant.id,
-                youtube_link: restaurant.youtube_link,
-                tzuyang_review: restaurant.tzuyang_review || "",
-            }] : []);
+                    id: restaurant.id,
+                    youtube_link: restaurant.youtube_link,
+                    tzuyang_review: restaurant.tzuyang_review || "",
+                }] : []);
 
             setFormData({
                 name: restaurant.name || "",
@@ -272,7 +272,7 @@ export function AdminRestaurantModal({
     // Google Geocoding API 호출 함수
     const geocodeWithGoogle = async (address: string, limit: number = 3) => {
         try {
-            const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
             if (!apiKey) throw new Error('Google Maps API key not found');
 
             const response = await fetch(
@@ -348,7 +348,7 @@ export function AdminRestaurantModal({
 
         try {
             toast.info('네이버 Geocoding API로 검색 중...');
-            
+
             // 1. name + 전체 주소로 지오코딩 (최대 3개)
             const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
 
@@ -398,13 +398,13 @@ export function AdminRestaurantModal({
 
         try {
             toast.info('Google Geocoding API로 검색 중...');
-            
+
             // 1. name + 전체 주소로 지오코딩
             const fullAddressResults = await geocodeWithGoogle(`${trimmedName} ${trimmedAddress}`, 3);
-            
+
             // 2. 주소만으로 지오코딩
             const addressOnlyResults = await geocodeWithGoogle(trimmedAddress, 3);
-            
+
             // 3. 합치고 중복 제거
             const allResults = [...fullAddressResults, ...addressOnlyResults];
             const uniqueResults = removeDuplicateAddresses(allResults);
@@ -443,8 +443,8 @@ export function AdminRestaurantModal({
     // 네이버 지오코딩 API (단일 - 기존 호환용)
     const geocodeWithNaver = async (address: string) => {
         try {
-            const clientId = import.meta.env.VITE_NAVER_MAP_CLIENT_ID;
-            const clientSecret = import.meta.env.VITE_NAVER_MAP_CLIENT_SECRET;
+            const clientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID;
+            const clientSecret = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_SECRET;
 
             const response = await fetch(
                 `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`,
@@ -586,7 +586,7 @@ export function AdminRestaurantModal({
 
                 // 4. 새로운 유튜브 링크-리뷰가 있으면 신규 레코드 생성
                 let hasError = false; // 에러 플래그
-                
+
                 for (const newReview of newReviews) {
                     const youtubeLink = newReview.youtube_link.trim();
                     const tzuyangReview = newReview.tzuyang_review.trim();
@@ -609,7 +609,7 @@ export function AdminRestaurantModal({
                     if (duplicateCheck.isDuplicate) {
                         // 중복 발견 - 유튜브 링크 비교
                         const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
-                        
+
                         if (youtubeLink === matchedYoutubeLink) {
                             // 같은 유튜브 링크 - 중복 에러
                             toast.error(`❌ 중복: "${formData.name.trim()}" 음식점에 이미 동일한 유튜브 링크가 존재합니다.`);
@@ -622,7 +622,7 @@ export function AdminRestaurantModal({
                     // YouTube 메타데이터 가져오기
                     toast.info('YouTube 메타데이터를 가져오는 중...');
                     const youtubeMeta = await fetchYouTubeMeta(youtubeLink);
-                    
+
                     if (!youtubeMeta) {
                         toast.warning(`YouTube 메타데이터를 가져올 수 없습니다: ${youtubeLink}`);
                     }
@@ -661,7 +661,7 @@ export function AdminRestaurantModal({
                 }
 
                 toast.success("맛집이 수정되었습니다");
-                
+
                 // 첫 번째 레코드의 업데이트된 데이터 가져오기
                 const { data: fetchedRestaurant } = await supabase
                     .from("restaurants")
@@ -772,8 +772,8 @@ export function AdminRestaurantModal({
                                         <ChevronDown className="h-4 w-4 opacity-50" />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent 
-                                    className="w-64 p-0" 
+                                <PopoverContent
+                                    className="w-64 p-0"
                                     align="start"
                                     onWheel={(e) => e.stopPropagation()}
                                     onTouchMove={(e) => e.stopPropagation()}
@@ -945,11 +945,10 @@ export function AdminRestaurantModal({
                                     {geocodingResults.map((result, index) => (
                                         <Card
                                             key={index}
-                                            className={`p-3 cursor-pointer transition-all ${
-                                                selectedGeocodingIndex === index
+                                            className={`p-3 cursor-pointer transition-all ${selectedGeocodingIndex === index
                                                     ? 'border-primary bg-primary/5'
                                                     : 'hover:border-primary/50'
-                                            }`}
+                                                }`}
                                             onClick={() => handleSelectGeocodingResult(index)}
                                         >
                                             <div className="space-y-1 text-sm">
