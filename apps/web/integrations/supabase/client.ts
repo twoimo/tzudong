@@ -2,20 +2,25 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-// Import the supabase client like this:
-// import { supabase } from "@/integrations/supabase/client";
+// 안전한 localStorage 접근을 위한 헬퍼 함수
+const getSafeLocalStorage = () => {
+  if (typeof window === 'undefined') return undefined;
+  try {
+    return localStorage;
+  } catch (error) {
+    console.warn('localStorage access denied:', error);
+    return undefined;
+  }
+};
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: typeof window !== 'undefined' ? localStorage : undefined,
-    persistSession: true,
+    storage: getSafeLocalStorage(),
     autoRefreshToken: true,
-  }
+    persistSession: true,
+    detectSessionInUrl: true,
+  },
 });

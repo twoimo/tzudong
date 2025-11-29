@@ -1,3 +1,5 @@
+'use client';
+
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { Notification, NotificationContextType, NotificationType } from '@/types/notification';
 import { supabase } from '@/integrations/supabase/client';
