@@ -33,38 +33,34 @@ import { FilterState } from "@/components/filters/FilterPanel";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { supabase } from "@/integrations/supabase/client";
+
 import { toast } from "sonner";
+import { AdminRestaurantModal } from "@/components/admin/AdminRestaurantModal";
 
 export default function HomePage() {
     const { isAdmin } = useAuth();
     const pathname = usePathname();
 
     // 내부 상태로 관리 (이전에는 props로 받았음)
+    // 내부 상태로 관리 (이전에는 props로 받았음)
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
-    const onAdminEditRestaurant = undefined; // Admin 기능은 별도로 구현
+
+    // Admin Edit State
+    const [isAdminEditModalOpen, setIsAdminEditModalOpen] = useState(false);
+    const [adminRestaurantToEdit, setAdminRestaurantToEdit] = useState<Restaurant | null>(null);
+
+    const handleAdminEditRestaurant = (restaurant: Restaurant) => {
+        setAdminRestaurantToEdit(restaurant);
+        setIsAdminEditModalOpen(true);
+    };
+
+    const onAdminEditRestaurant = isAdmin ? handleAdminEditRestaurant : undefined;
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
     const [selectedCountry, setSelectedCountry] = useState<string | null>("튀르키예");
     const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
-
-    // mapMode 변경 시 디폴트값으로 초기화
-    useEffect(() => {
-        if (mapMode === 'domestic') {
-            setSelectedRegion(null); // 전국
-            setSelectedCategories([]);
-        } else {
-            setSelectedCountry("튀르키예"); // 기본 국가
-            setSelectedCategories([]);
-        }
-        // 모든 선택 상태 초기화
-        setSearchedRestaurant(null);
-        setSelectedRestaurant(null);
-        // 패널 상태 초기화
-        setIsPanelOpen(false);
-        setPanelRestaurant(null);
-    }, [mapMode, setSelectedRestaurant]);
 
     const [isGridMode, setIsGridMode] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -91,6 +87,70 @@ export default function HomePage() {
         minJjyangVisits: 0,
     });
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+    // mapMode 변경 시 디폴트값으로 초기화
+    useEffect(() => {
+        if (mapMode === 'domestic') {
+            setSelectedRegion(null); // 전국
+            setSelectedCategories([]);
+        } else {
+            setSelectedCountry("튀르키예"); // 기본 국가
+            setSelectedCategories([]);
+        }
+        // 모든 선택 상태 초기화
+        setSearchedRestaurant(null);
+        setSelectedRestaurant(null);
+        // 패널 상태 초기화
+        setIsPanelOpen(false);
+        setPanelRestaurant(null);
+    }, [mapMode]);
+
+    // 팝업에서 선택된 맛집 처리 (초기 로딩 시 + 이벤트 수신 시)
+    useEffect(() => {
+        const handleRestaurantSelected = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const { restaurant, region } = customEvent.detail;
+
+            if (restaurant) {
+                setSelectedRestaurant(restaurant);
+                setPanelRestaurant(restaurant);
+                setIsPanelOpen(true);
+
+                if (region) {
+                    setSelectedRegion(region);
+                }
+            }
+        };
+
+        window.addEventListener('restaurant-selected', handleRestaurantSelected);
+
+        const storedRestaurant = sessionStorage.getItem('selectedRestaurant');
+        const storedRegion = sessionStorage.getItem('selectedRegion');
+
+        if (storedRestaurant) {
+            try {
+                const restaurant = JSON.parse(storedRestaurant);
+                setSelectedRestaurant(restaurant);
+                setPanelRestaurant(restaurant);
+                setIsPanelOpen(true);
+
+                // 지역 정보가 있으면 설정
+                if (storedRegion) {
+                    setSelectedRegion(storedRegion as Region);
+                }
+
+                // 사용 후 스토리지 클리어
+                sessionStorage.removeItem('selectedRestaurant');
+                sessionStorage.removeItem('selectedRegion');
+            } catch (e) {
+                console.error('Failed to parse stored restaurant:', e);
+            }
+        }
+
+        return () => {
+            window.removeEventListener('restaurant-selected', handleRestaurantSelected);
+        };
+    }, []);
 
     // 글로벌 국가 목록
     const GLOBAL_COUNTRIES = [
@@ -913,6 +973,27 @@ export default function HomePage() {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* 관리자 맛집 수정 모달 */}
+            {isAdmin && (
+                <AdminRestaurantModal
+                    isOpen={isAdminEditModalOpen}
+                    onClose={() => {
+                        setIsAdminEditModalOpen(false);
+                        setAdminRestaurantToEdit(null);
+                    }}
+                    restaurant={adminRestaurantToEdit}
+                    onSuccess={(updatedRestaurant) => {
+                        setRefreshTrigger(prev => prev + 1);
+                        if (updatedRestaurant && selectedRestaurant?.id === updatedRestaurant.id) {
+                            setSelectedRestaurant(updatedRestaurant);
+                            setPanelRestaurant(updatedRestaurant);
+                        }
+                        setIsAdminEditModalOpen(false);
+                        setAdminRestaurantToEdit(null);
+                    }}
+                />
+            )}
         </>
     );
 }

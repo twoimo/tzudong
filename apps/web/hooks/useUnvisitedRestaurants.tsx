@@ -14,6 +14,7 @@ interface Restaurant {
     lng?: number;
     tzuyang_review?: string;
     created_at: string;
+    address_elements?: any; // JSON type
     mergedYoutubeLinks?: string[];
     mergedTzuyangReviews?: string[];
 }
@@ -55,7 +56,7 @@ export function useUnvisitedRestaurants() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review, created_at')
+                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review, created_at, address_elements')
                 .eq('status', 'approved')
                 .not('youtube_link', 'is', null)
                 .order('created_at', { ascending: false });

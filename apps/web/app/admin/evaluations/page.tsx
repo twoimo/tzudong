@@ -33,20 +33,7 @@ export default function AdminEvaluationPage() {
   const router = useRouter();
   const { user, isAdmin, isLoading: authLoading } = useAuth();
 
-  // localStorage에서 초기 상태 복원
-  const getInitialState = () => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (error) {
-      console.error('Failed to parse saved state:', error);
-    }
-    return null;
-  };
 
-  const savedState = getInitialState();
 
   const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
   const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
@@ -65,8 +52,8 @@ export default function AdminEvaluationPage() {
     not_selected: 0,
     deleted: 0,
   });
-  const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>(savedState?.selectedStatuses || []);
-  const [searchQuery, setSearchQuery] = useState<string>(savedState?.searchQuery || ''); // 검색어 상태
+  const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
   const [searchResults, setSearchResults] = useState<EvaluationRecord[] | null>(null); // 검색 결과
   const [isSearching, setIsSearching] = useState(false); // 검색 로딩 상태
   const [evalFilters, setEvalFilters] = useState<{
@@ -78,7 +65,7 @@ export default function AdminEvaluationPage() {
     category_validity_TF?: string;
     category_TF?: string;
     status?: string;
-  }>(savedState?.evalFilters || {});
+  }>({});
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
   const [conflictPanelOpen, setConflictPanelOpen] = useState(false);
@@ -95,7 +82,23 @@ export default function AdminEvaluationPage() {
   } | null>(null);
 
   // 테이블 뷰 토글 상태
-  const [isAlternateView, setIsAlternateView] = useState(savedState?.isAlternateView || false);
+  const [isAlternateView, setIsAlternateView] = useState(false);
+
+  // localStorage에서 상태 복원
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.selectedStatuses) setSelectedStatuses(parsed.selectedStatuses);
+        if (parsed.searchQuery) setSearchQuery(parsed.searchQuery);
+        if (parsed.evalFilters) setEvalFilters(parsed.evalFilters);
+        if (parsed.isAlternateView) setIsAlternateView(parsed.isAlternateView);
+      }
+    } catch (error) {
+      console.error('Failed to parse saved state:', error);
+    }
+  }, []);
 
   // 오류 경고 다이얼로그
   const [showConflictWarning, setShowConflictWarning] = useState(false);

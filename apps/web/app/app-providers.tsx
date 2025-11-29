@@ -7,6 +7,7 @@ import { ProfileModal } from '@/components/profile/ProfileModal';
 import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
 import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
 import { DailyRecommendationPopup } from '@/components/recommendation/DailyRecommendationPopup';
+
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -20,6 +21,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                 <TooltipProvider>
                     <Toaster />
                     <Sonner />
+                    <DailyRecommendationPopup />
                     {children}
                 </TooltipProvider>
             </NotificationProvider>

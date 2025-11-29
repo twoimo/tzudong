@@ -19,7 +19,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+
 import { toast } from "sonner";
+import { AdminRestaurantModal } from "@/components/admin/AdminRestaurantModal";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
@@ -36,22 +38,91 @@ const GLOBAL_COUNTRIES = [
 
 type GlobalCountry = typeof GLOBAL_COUNTRIES[number];
 
-interface GlobalMapPageProps {
-    refreshTrigger: number;
-    selectedRestaurant: Restaurant | null;
-    setSelectedRestaurant: (restaurant: Restaurant | null) => void;
-    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
-}
-
 // 그리드 지역 설정 (글로벌 국가)
 const GRID_COUNTRIES: GlobalCountry[] = ["미국", "일본", "태국", "인도네시아"];
 
-export default function GlobalMapPage({ refreshTrigger, selectedRestaurant, setSelectedRestaurant, onAdminEditRestaurant }: GlobalMapPageProps) {
+export default function GlobalMapPage() {
     const { isAdmin } = useAuth();
+
+    // Page State
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+
+    // Admin Edit State
+    const [isAdminEditModalOpen, setIsAdminEditModalOpen] = useState(false);
+    const [adminRestaurantToEdit, setAdminRestaurantToEdit] = useState<Restaurant | null>(null);
+
+    const handleAdminEditRestaurant = useCallback((restaurant: Restaurant) => {
+        setAdminRestaurantToEdit(restaurant);
+        setIsAdminEditModalOpen(true);
+    }, []);
+
+    const onAdminEditRestaurant = isAdmin ? handleAdminEditRestaurant : undefined;
     const prevSelectedRestaurantRef = useRef<Restaurant | null>(null);
     const detailPanelRef = useRef<HTMLDivElement>(null);
 
+    // State Declarations
     const [panelWidth, setPanelWidth] = useState(0);
+    const [panelRestaurant, setPanelRestaurant] = useState<Restaurant | null>(null);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [selectedCountry, setSelectedCountry] = useState<GlobalCountry | null>("튀르키예");
+    const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
+    const [isGridMode, setIsGridMode] = useState(false);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
+    const [moveToRestaurant, setMoveToRestaurant] = useState<((restaurant: Restaurant) => void) | null>(null);
+    const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
+    const [editFormData, setEditFormData] = useState({
+        name: '',
+        address: '',
+        phone: '',
+        category: [] as string[],
+        youtube_reviews: [] as { youtube_link: string; tzuyang_review: string; unique_id?: string }[]
+    });
+    const [filters, setFilters] = useState<FilterState>({
+        categories: [],
+        minRating: 1,
+        minReviews: 0,
+        minUserVisits: 0,
+        minJjyangVisits: 0,
+    });
+
+    // 팝업에서 선택된 맛집 처리 (초기 로딩 시 + 이벤트 수신 시)
+    useEffect(() => {
+        const handleRestaurantSelected = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            const { restaurant } = customEvent.detail;
+
+            if (restaurant) {
+                setSelectedRestaurant(restaurant);
+                setPanelRestaurant(restaurant);
+                setIsPanelOpen(true);
+            }
+        };
+
+        window.addEventListener('restaurant-selected', handleRestaurantSelected);
+
+        const storedRestaurant = sessionStorage.getItem('selectedRestaurant');
+
+        if (storedRestaurant) {
+            try {
+                const restaurant = JSON.parse(storedRestaurant);
+                setSelectedRestaurant(restaurant);
+                setPanelRestaurant(restaurant);
+
+                // 사용 후 스토리지 클리어
+                sessionStorage.removeItem('selectedRestaurant');
+            } catch (e) {
+                console.error('Failed to parse stored restaurant:', e);
+            }
+        }
+
+        return () => {
+            window.removeEventListener('restaurant-selected', handleRestaurantSelected);
+        };
+    }, []);
 
     // 글로벌 맛집 데이터 가져오기 (병합 로직 적용을 위해 전체 데이터 필요)
     const { data: globalRestaurants = [] } = useQuery({
@@ -90,23 +161,6 @@ export default function GlobalMapPage({ refreshTrigger, selectedRestaurant, setS
         return counts;
     }, [globalRestaurants]);
 
-    // 관리자 수정 콜백 래핑 - 수정 후 패널 즉각 반영
-    const handleAdminEditRestaurant = useCallback((restaurant: Restaurant) => {
-        if (onAdminEditRestaurant) {
-            onAdminEditRestaurant(restaurant);
-        }
-    }, [onAdminEditRestaurant]);
-    const [isFilterOpen, setIsFilterOpen] = useState(false);
-    const [selectedCountry, setSelectedCountry] = useState<GlobalCountry | null>("튀르키예");
-    const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
-    const [isGridMode, setIsGridMode] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
-    const [moveToRestaurant, setMoveToRestaurant] = useState<((restaurant: Restaurant) => void) | null>(null);
-    // 패널 상태를 GlobalMapPage 레벨로 완전 이동 (MapView와 완전 분리)
-    const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [panelRestaurant, setPanelRestaurant] = useState<Restaurant | null>(null);
-
     // selectedRestaurant 변경 감지 - 팝업에서 전달된 경우에만 패널 열기
     useEffect(() => {
         // 이전 값과 비교하여 실제로 변경되었는지 확인
@@ -131,16 +185,6 @@ export default function GlobalMapPage({ refreshTrigger, selectedRestaurant, setS
             resizeObserver.disconnect();
         };
     }, []);
-
-    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-    const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
-    const [editFormData, setEditFormData] = useState({
-        name: '',
-        address: '',
-        phone: '',
-        category: [] as string[],
-        youtube_reviews: [] as { youtube_link: string; tzuyang_review: string; unique_id?: string }[]
-    });
     const [filters, setFilters] = useState<FilterState>({
         categories: [],
         minRating: 1,
@@ -709,5 +753,26 @@ export default function GlobalMapPage({ refreshTrigger, selectedRestaurant, setS
                     toast.success("리뷰가 성공적으로 등록되었습니다!");
                 }}
             />
+            {/* 관리자 맛집 수정 모달 */}
+            {isAdmin && (
+                <AdminRestaurantModal
+                    isOpen={isAdminEditModalOpen}
+                    onClose={() => {
+                        setIsAdminEditModalOpen(false);
+                        setAdminRestaurantToEdit(null);
+                    }}
+                    restaurant={adminRestaurantToEdit}
+                    onSuccess={(updatedRestaurant) => {
+                        setRefreshTrigger(prev => prev + 1);
+                        if (updatedRestaurant && selectedRestaurant?.id === updatedRestaurant.id) {
+                            setSelectedRestaurant(updatedRestaurant);
+                            setPanelRestaurant(updatedRestaurant);
+                        }
+                        setIsAdminEditModalOpen(false);
+                        setAdminRestaurantToEdit(null);
+                    }}
+                />
+            )}
         </>
+    );
 }

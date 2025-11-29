@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -65,10 +65,13 @@ export function DailyRecommendationPopup() {
         return koreanRestaurants[randomIndex];
     };
 
+    // window 객체에 커스텀 프로퍼티 타입 추가
+    const globalWindow = typeof window !== 'undefined' ? (window as any) : {};
+
     // 초기 로딩 후 팝업 표시 (홈/글로벌 페이지에서만)
     useEffect(() => {
-        // 클라이언트에서만 localStorage 접근
-        if (typeof window === 'undefined') return;
+        // 이미 보여줬거나, 클라이언트가 아니면 리턴
+        if (globalWindow.hasShownDailyPopup || typeof window === 'undefined') return;
 
         // localStorage에서 숨김 설정 확인
         const hideUntilStr = localStorage.getItem(POPUP_STORAGE_KEY);
@@ -89,11 +92,9 @@ export function DailyRecommendationPopup() {
             const restaurant = selectRandomRestaurant();
             if (restaurant) {
                 setSelectedRestaurant(restaurant);
+                globalWindow.hasShownDailyPopup = true; // 윈도우 객체에 표시 기록 (새로고침 시 초기화됨)
                 setTimeout(() => setIsVisible(true), 500); // 부드러운 등장을 위한 딜레이
             }
-        } else {
-            // 다른 페이지로 이동하면 팝업 닫기
-            setIsVisible(false);
         }
     }, [isLoggedIn, unvisitedRestaurants.length, shouldShowPopup]);
 
@@ -153,7 +154,7 @@ export function DailyRecommendationPopup() {
         const isGlobal = GLOBAL_COUNTRIES.some(country => address.includes(country));
 
         // 국내/해외 구분하여 이동
-        const targetPath = isGlobal ? '/global' : '/';
+        const targetPath = isGlobal ? '/global-map' : '/';
 
         // 국내인 경우 지역 정보 추출
         const selectedRegion = !isGlobal ? getRestaurantRegion(selectedRestaurant) : null;
@@ -163,6 +164,12 @@ export function DailyRecommendationPopup() {
         if (selectedRegion) {
             sessionStorage.setItem('selectedRegion', selectedRegion);
         }
+
+        // 커스텀 이벤트 발생 (같은 페이지에 있을 경우를 위해)
+        const event = new CustomEvent('restaurant-selected', {
+            detail: { restaurant: selectedRestaurant, region: selectedRegion }
+        });
+        window.dispatchEvent(event);
 
         router.push(targetPath);
     };

@@ -9,6 +9,16 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['"Noto Serif KR"', 'serif'], // Original used Serif for Sans
+        serif: ['"Noto Serif KR"', 'serif'],
+        display: ['"ChosunCentennial"', '"Noto Serif KR"', 'cursive'],
+        stylish: ['"Stylish"', "sans-serif"],
+        gugi: ['"Gugi"', "cursive"],
+        brush: ['"Nanum Brush Script"', "cursive"],
+        yeon: ['"Yeon Sung"', "cursive"],
+        chosun: ['"ChosunCentennial"', "serif"],
+      },
       colors: {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
@@ -50,6 +60,16 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -59,6 +79,29 @@ const config: Config = {
       backgroundImage: {
         'gradient-primary': "var(--gradient-primary)",
         'gradient-secondary': "var(--gradient-secondary)",
+      },
+      boxShadow: {
+        'primary': 'var(--shadow-primary)',
+        'glow': 'var(--shadow-glow)',
+      },
+      keyframes: {
+        "accordion-down": {
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
+        },
+        "accordion-up": {
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
+        },
+        "fade-in": {
+          from: { opacity: "0", transform: "translateY(-10px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+        "fade-in": "fade-in 0.6s ease-out",
       },
     },
   },
