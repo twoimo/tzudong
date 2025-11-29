@@ -1,23 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-
-interface Restaurant {
-    id: string;
-    name: string;
-    youtube_link: string | null;
-    review_count: number;
-    categories: string[];
-    road_address: string | null;
-    jibun_address: string | null;
-    lat?: number;
-    lng?: number;
-    tzuyang_review?: string;
-    created_at: string;
-    address_elements?: any; // JSON type
-    mergedYoutubeLinks?: string[];
-    mergedTzuyangReviews?: string[];
-}
+import { Restaurant } from "@/types/restaurant";
+import { mergeRestaurants } from "@/hooks/use-restaurants";
+import { Tables } from "@/integrations/supabase/types";
 
 interface UserReview {
     restaurant_id: string;
@@ -54,15 +40,17 @@ export function useUnvisitedRestaurants() {
     const { data: restaurantsData, isLoading } = useQuery({
         queryKey: ['unvisited-restaurants-all'],
         queryFn: async () => {
+            // 모든 필드를 가져와야 mergeRestaurants가 올바르게 작동하고
+            // AdminRestaurantModal 등에서 필요한 데이터를 사용할 수 있음
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review, created_at, address_elements')
+                .select('*')
                 .eq('status', 'approved')
                 .not('youtube_link', 'is', null)
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            return data as Restaurant[];
+            return data as Tables<"restaurants">[];
         },
         staleTime: 5 * 60 * 1000, // 5분 동안 캐시 유지
     });
@@ -72,40 +60,8 @@ export function useUnvisitedRestaurants() {
         userReviewData.map(review => review.restaurant_id)
     );
 
-    // 데이터 병합 로직
-    const mergedRestaurants = (restaurantsData || []).reduce((acc: Restaurant[], curr) => {
-        const existingIndex = acc.findIndex(r =>
-            r.name === curr.name &&
-            (r.jibun_address === curr.jibun_address || r.road_address === curr.road_address)
-        );
-
-        if (existingIndex >= 0) {
-            const existing = acc[existingIndex];
-
-            // 유튜브 링크 병합
-            const existingLinks = existing.mergedYoutubeLinks || (existing.youtube_link ? [existing.youtube_link] : []);
-            const newLinks = curr.youtube_link ? [curr.youtube_link] : [];
-            const mergedLinks = Array.from(new Set([...existingLinks, ...newLinks]));
-
-            // 쯔양 리뷰 병합
-            const existingReviews = existing.mergedTzuyangReviews || (existing.tzuyang_review ? [existing.tzuyang_review] : []);
-            const newReviews = curr.tzuyang_review ? [curr.tzuyang_review] : [];
-            const mergedReviews = Array.from(new Set([...existingReviews, ...newReviews]));
-
-            acc[existingIndex] = {
-                ...existing,
-                mergedYoutubeLinks: mergedLinks,
-                mergedTzuyangReviews: mergedReviews
-            };
-        } else {
-            acc.push({
-                ...curr,
-                mergedYoutubeLinks: curr.youtube_link ? [curr.youtube_link] : [],
-                mergedTzuyangReviews: curr.tzuyang_review ? [curr.tzuyang_review] : []
-            });
-        }
-        return acc;
-    }, []);
+    // 데이터 병합 로직 (공통 유틸리티 사용)
+    const mergedRestaurants = mergeRestaurants(restaurantsData || []);
 
     // 방문하지 않은 맛집만 필터링
     const unvisitedRestaurants = mergedRestaurants.filter(restaurant => {
