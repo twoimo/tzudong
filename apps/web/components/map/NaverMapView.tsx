@@ -1,3 +1,5 @@
+'use client';
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState, memo } from "react";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
