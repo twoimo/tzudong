@@ -185,13 +185,6 @@ export default function GlobalMapPage() {
             resizeObserver.disconnect();
         };
     }, []);
-    const [filters, setFilters] = useState<FilterState>({
-        categories: [],
-        minRating: 1,
-        minReviews: 0,
-        minUserVisits: 0,
-        minJjyangVisits: 0,
-    });
 
     const handleFilterChange = useCallback((newFilters: FilterState) => {
         setFilters(newFilters);
@@ -494,7 +487,7 @@ export default function GlobalMapPage() {
                             </div>
                             <div className="space-y-3">
                                 <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                                    쯔동여지도 로딩 중...
+                                    쯔동여지도여지도 로딩 중...
                                 </h2>
                                 <p className="text-muted-foreground">
                                     맛있는 발견을 준비하고 있습니다

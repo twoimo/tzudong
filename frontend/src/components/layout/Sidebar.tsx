@@ -37,11 +37,11 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
 
   // 기본 메뉴 항목
   const baseMenuItems = [
-    { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => navigate("/") },
-    { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
-    { icon: Trophy, label: "쯔동여지도 도장", path: "/stamp", onClick: () => navigate("/stamp") },
-    { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
-    { icon: Send, label: "쯔동여지도 제보", path: "/submissions", onClick: () => navigate("/submissions") },
+    { icon: Home, label: "쯔동여지도여지도 홈", path: "/", onClick: () => navigate("/") },
+    { icon: Filter, label: "쯔동여지도여지도 필터링", path: "/filtering", onClick: () => navigate("/filtering") },
+    { icon: Trophy, label: "쯔동여지도여지도 도장", path: "/stamp", onClick: () => navigate("/stamp") },
+    { icon: Trophy, label: "쯔동여지도여지도 랭킹", path: "/leaderboard", onClick: () => navigate("/leaderboard") },
+    { icon: Send, label: "쯔동여지도여지도 제보", path: "/submissions", onClick: () => navigate("/submissions") },
   ];
 
   // 관리자에게만 보이는 메뉴
@@ -77,7 +77,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       {/* 우측 테두리 강조 */}
       <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-stone-800/20 to-transparent pointer-events-none z-0" />
 
-      {/* 로고 영역 - "쯔동여지도" 5글자만 크게 조선100년체로 가운데 배치 */}
+      {/* 로고 영역 - "쯔동여지도여지도" 5글자만 크게 조선100년체로 가운데 배치 */}
       <div className="h-16 border-b border-stone-800/10 relative z-10">
         <div className="cursor-pointer w-full h-full" onClick={() => navigate("/")}>
           <SeasonalLogo />
@@ -123,7 +123,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
         {/* 버전 정보 */}
         <div className="border-t border-stone-800/10 pt-4 text-center">
           <div className="text-xs text-stone-400 font-serif space-y-1">
-            <p>쯔동여지도 v1.5.3</p>
+            <p>쯔동여지도여지도 v1.5.3</p>
             <p className="text-stone-300">@ 2025 Tzudong</p>
           </div>
         </div>

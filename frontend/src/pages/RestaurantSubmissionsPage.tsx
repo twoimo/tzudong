@@ -555,7 +555,7 @@ export default function RestaurantSubmissionsPage() {
                     <div>
                         <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                             <Youtube className="h-6 w-6 text-primary" />
-                            쯔동여지도 제보
+                            쯔동여지도여지도 제보
                         </h1>
                         <p className="text-muted-foreground text-sm mt-1">
                             쯔양이 방문한 맛집을 유튜브 영상과 함께 제보해주세요!
@@ -777,7 +777,7 @@ export default function RestaurantSubmissionsPage() {
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                            {submissionMode === 'new' ? '쯔동여지도 제보하기' : '맛집 수정 요청'}
+                            {submissionMode === 'new' ? '쯔동여지도여지도 제보하기' : '맛집 수정 요청'}
                         </DialogTitle>
                         <DialogDescription>
                             {submissionMode === 'new'

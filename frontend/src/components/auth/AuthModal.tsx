@@ -94,7 +94,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
               <span className="text-2xl">🔥</span>
             </div>
             <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-              쯔동여지도
+              쯔동여지도여지도
             </DialogTitle>
           </div>
           <DialogDescription>

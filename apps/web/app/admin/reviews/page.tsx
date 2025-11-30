@@ -93,9 +93,12 @@ export default function AdminReviewsPage() {
                 return { reviews: [], nextCursor: null };
             }
 
+            // 타입 단언: Supabase의 select('*')는 타입 추론이 정확하지 않으므로 명시적으로 지정
+            const typedReviewsData = reviewsData as any[];
+
             // 2. 필요한 user_id와 restaurant_id 수집
-            const userIds = [...new Set(reviewsData.map(r => r.user_id))];
-            const restaurantIds = [...new Set(reviewsData.map(r => r.restaurant_id))];
+            const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
+            const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
 
             // 3. Profiles 가져오기
             const { data: profilesData } = await supabase
@@ -109,16 +112,20 @@ export default function AdminReviewsPage() {
                 .select('id, name, address')
                 .in('id', restaurantIds);
 
+            // 타입 단언: Supabase 조회 결과에 명시적 타입 지정
+            const typedProfilesData = (profilesData || []) as any[];
+            const typedRestaurantsData = (restaurantsData || []) as any[];
+
             // 5. Map으로 변환 (빠른 조회)
             const profilesMap = new Map(
-                (profilesData || []).map(p => [p.user_id, p.nickname])
+                typedProfilesData.map(p => [p.user_id, p.nickname])
             );
             const restaurantsMap = new Map(
-                (restaurantsData || []).map(r => [r.id, { name: r.name, address: r.address }])
+                typedRestaurantsData.map(r => [r.id, { name: r.name, address: r.address }])
             );
 
             // 6. 리뷰 데이터 매핑
-            const reviews = reviewsData.map(review => ({
+            const reviews = typedReviewsData.map(review => ({
                 ...review,
                 profiles: {
                     nickname: profilesMap.get(review.user_id) || '탈퇴한 사용자'
@@ -183,12 +190,15 @@ export default function AdminReviewsPage() {
 
             if (reviewError) throw reviewError;
 
+            // 타입 단언
+            const typedReview = review as any;
+
             // 이미 승인된 리뷰인 경우 중복 방지
-            const wasAlreadyVerified = review.is_verified;
+            const wasAlreadyVerified = typedReview.is_verified;
 
             // 리뷰 승인
-            const { error: approveError } = await supabase
-                .from('reviews')
+            const { error: approveError } = await (supabase
+                .from('reviews') as any)
                 .update({
                     is_verified: true,
                     admin_note: adminNote.trim() || null,
@@ -205,19 +215,22 @@ export default function AdminReviewsPage() {
                 const { data: restaurant, error: fetchError } = await supabase
                     .from('restaurants')
                     .select('review_count')
-                    .eq('id', review.restaurant_id)
+                    .eq('id', typedReview.restaurant_id)
                     .single();
 
                 if (fetchError) throw fetchError;
 
+                // 타입 단언
+                const typedRestaurant = restaurant as any;
+
                 // 해당 맛집의 사용자 방문 횟수 및 리뷰 수 증가
-                const { error: visitError } = await supabase
-                    .from('restaurants')
+                const { error: visitError } = await (supabase
+                    .from('restaurants') as any)
                     .update({
-                        review_count: (restaurant.review_count ?? 0) + 1,
+                        review_count: (typedRestaurant.review_count ?? 0) + 1,
                         updated_at: new Date().toISOString(),
                     })
-                    .eq('id', review.restaurant_id);
+                    .eq('id', typedReview.restaurant_id);
 
                 if (visitError) throw visitError;
             }
@@ -262,9 +275,12 @@ export default function AdminReviewsPage() {
 
             if (reviewError) throw reviewError;
 
+            // 타입 단언
+            const typedReview = review as any;
+
             // 리뷰 거부
-            const { error: rejectError } = await supabase
-                .from('reviews')
+            const { error: rejectError } = await (supabase
+                .from('reviews') as any)
                 .update({
                     is_verified: false,
                     admin_note: adminNote.trim() ? `거부: ${adminNote.trim()}` : '거부: 관리자에 의해 거부됨',
@@ -276,24 +292,27 @@ export default function AdminReviewsPage() {
             if (rejectError) throw rejectError;
 
             // 승인된 리뷰를 거부하는 경우에만 방문 횟수 및 리뷰 수 감소
-            if (review.is_verified) {
+            if (typedReview.is_verified) {
                 // 해당 맛집의 현재 방문 횟수 및 리뷰 수 조회
                 const { data: restaurant, error: fetchError } = await supabase
                     .from('restaurants')
                     .select('review_count')
-                    .eq('id', review.restaurant_id)
+                    .eq('id', typedReview.restaurant_id)
                     .single();
 
                 if (fetchError) throw fetchError;
 
+                // 타입 단언
+                const typedRestaurant = restaurant as any;
+
                 // 해당 맛집의 사용자 방문 횟수 및 리뷰 수 감소 (0 이하로 내려가지 않도록)
-                const { error: visitError } = await supabase
-                    .from('restaurants')
+                const { error: visitError } = await (supabase
+                    .from('restaurants') as any)
                     .update({
-                        review_count: Math.max((restaurant.review_count ?? 0) - 1, 0),
+                        review_count: Math.max((typedRestaurant.review_count ?? 0) - 1, 0),
                         updated_at: new Date().toISOString(),
                     })
-                    .eq('id', review.restaurant_id);
+                    .eq('id', typedReview.restaurant_id);
 
                 if (visitError) throw visitError;
             }

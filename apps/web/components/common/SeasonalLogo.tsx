@@ -160,7 +160,7 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
                         {/* Base Logo Image */}
                         <motion.img
                             src="/sidebar-logo.png"
-                            alt="쯔동여지도"
+                            alt="쯔동여지도여지도"
                             className="h-14 w-auto object-contain mix-blend-multiply opacity-90 drop-shadow-sm grayscale contrast-125"
                             // Subtle Floating Animation
                             animate={{ y: [0, -2, 0] }}

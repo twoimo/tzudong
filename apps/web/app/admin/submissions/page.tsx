@@ -134,8 +134,11 @@ export default function AdminSubmissionsPage() {
                 return { submissions: [], nextCursor: null };
             }
 
+            // 타입 단언: Supabase의 select('*')는 타입 추론이 정확하지 않으므로 명시적으로 지정
+            const typedSubmissionsData = submissionsData as any[];
+
             // 2. user_id 목록 추출
-            const userIds = [...new Set(submissionsData.map(s => s.user_id))];
+            const userIds = [...new Set(typedSubmissionsData.map(s => s.user_id))];
 
             // 3. profiles 데이터 가져오기
             const { data: profilesData } = await supabase
@@ -143,13 +146,16 @@ export default function AdminSubmissionsPage() {
                 .select('user_id, nickname')
                 .in('user_id', userIds);
 
+            // 타입 단언
+            const typedProfilesData = (profilesData || []) as any[];
+
             // 4. Map으로 변환 (빠른 조회)
             const profilesMap = new Map(
-                (profilesData || []).map(p => [p.user_id, p.nickname])
+                typedProfilesData.map(p => [p.user_id, p.nickname])
             );
 
             // 5. 데이터 매핑
-            const submissions = submissionsData.map(submission => ({
+            const submissions = typedSubmissionsData.map(submission => ({
                 ...submission,
                 profiles: {
                     nickname: profilesMap.get(submission.user_id) || '탈퇴한 사용자'
@@ -220,8 +226,8 @@ export default function AdminSubmissionsPage() {
                     throw new Error('올바른 좌표를 입력해주세요');
                 }
 
-                const { error: updateError } = await supabase
-                    .from('restaurants')
+                const { error: updateError } = await (supabase
+                    .from('restaurants') as any)
                     .update({
                         name: submission.restaurant_name,
                         road_address: submission.address, // 도로명 주소로 저장
@@ -236,7 +242,7 @@ export default function AdminSubmissionsPage() {
                     .eq('id', submission.original_restaurant_id);
 
                 if (updateError) throw updateError;
-                restaurantId = submission.original_restaurant_id;
+                restaurantId = submission.original_restaurant_id!; // 수정 요청이므로 반드시 존재함
             } else {
                 // 신규 제보: 중복 체크 먼저 수행 (deleted 레코드 포함)
                 // name + jibun_address 기준으로 비교 (재지오코딩된 표준화 주소)
@@ -248,10 +254,13 @@ export default function AdminSubmissionsPage() {
 
                 if (checkError) throw checkError;
 
-                if (existingRestaurants && existingRestaurants.length > 0) {
+                // 타입 단언
+                const typedExistingRestaurants = (existingRestaurants || []) as any[];
+
+                if (typedExistingRestaurants.length > 0) {
                     // deleted 레코드 찾기
-                    const deletedRecord = existingRestaurants.find(r => r.status === 'deleted');
-                    const activeRecord = existingRestaurants.find(r => r.status !== 'deleted');
+                    const deletedRecord = typedExistingRestaurants.find(r => r.status === 'deleted');
+                    const activeRecord = typedExistingRestaurants.find(r => r.status !== 'deleted');
 
                     if (activeRecord) {
                         // active 레코드가 있으면 차단
@@ -273,8 +282,8 @@ export default function AdminSubmissionsPage() {
                     throw new Error('올바른 좌표를 입력해주세요');
                 }
 
-                const { data: restaurant, error: restaurantError } = await supabase
-                    .from('restaurants')
+                const { data: restaurant, error: restaurantError } = await (supabase
+                    .from('restaurants') as any)
                     .insert({
                         name: submission.restaurant_name,
                         road_address: approvalData.road_address, // 재지오코딩된 도로명 주소
@@ -298,8 +307,8 @@ export default function AdminSubmissionsPage() {
             }
 
             // 제보 상태 업데이트
-            const { error: updateError } = await supabase
-                .from('restaurant_submissions')
+            const { error: updateError } = await (supabase
+                .from('restaurant_submissions') as any)
                 .update({
                     status: 'approved',
                     reviewed_by_admin_id: user.id,
@@ -351,8 +360,8 @@ export default function AdminSubmissionsPage() {
             if (!user) throw new Error('로그인이 필요합니다');
             if (!rejectionReason.trim()) throw new Error('거부 사유를 입력해주세요');
 
-            const { error } = await supabase
-                .from('restaurant_submissions')
+            const { error } = await (supabase
+                .from('restaurant_submissions') as any)
                 .update({
                     status: 'rejected',
                     rejection_reason: rejectionReason.trim(),
@@ -550,8 +559,8 @@ export default function AdminSubmissionsPage() {
             }
 
             // 삭제된 레코드를 approved 상태로 복원 + 새 제보 데이터로 업데이트
-            const { error: updateError } = await supabase
-                .from('restaurants')
+            const { error: updateError } = await (supabase
+                .from('restaurants') as any)
                 .update({
                     name: submission.restaurant_name,
                     road_address: approvalData.road_address, // 재지오코딩된 도로명 주소
@@ -574,8 +583,8 @@ export default function AdminSubmissionsPage() {
             if (updateError) throw updateError;
 
             // 제보 상태 업데이트
-            const { error: submissionError } = await supabase
-                .from('restaurant_submissions')
+            const { error: submissionError } = await (supabase
+                .from('restaurant_submissions') as any)
                 .update({
                     status: 'approved',
                     reviewed_by_admin_id: user.id,
@@ -623,8 +632,8 @@ export default function AdminSubmissionsPage() {
             }
 
             // 새로운 맛집 생성 (deleted 레코드 무시하고)
-            const { data: restaurant, error: restaurantError } = await supabase
-                .from('restaurants')
+            const { data: restaurant, error: restaurantError } = await (supabase
+                .from('restaurants') as any)
                 .insert({
                     name: submission.restaurant_name,
                     road_address: approvalData.road_address, // 재지오코딩된 도로명 주소
@@ -646,8 +655,8 @@ export default function AdminSubmissionsPage() {
             if (restaurantError) throw restaurantError;
 
             // 제보 상태 업데이트
-            const { error: submissionError } = await supabase
-                .from('restaurant_submissions')
+            const { error: submissionError } = await (supabase
+                .from('restaurant_submissions') as any)
                 .update({
                     status: 'approved',
                     reviewed_by_admin_id: user.id,
