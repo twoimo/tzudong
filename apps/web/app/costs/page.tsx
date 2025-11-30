@@ -110,8 +110,8 @@ export default function ServerCostsPage() {
     // Create mutation
     const createMutation = useMutation({
         mutationFn: async (newCost: { item_name: string; monthly_cost: number; description: string }) => {
-            const { error } = await supabase
-                .from('server_costs')
+            const { error } = await (supabase
+                .from('server_costs') as any)
                 .insert([newCost]);
 
             if (error) throw error;
@@ -137,8 +137,8 @@ export default function ServerCostsPage() {
     // Update mutation
     const updateMutation = useMutation({
         mutationFn: async (updatedCost: ServerCost) => {
-            const { error } = await supabase
-                .from('server_costs')
+            const { error } = await (supabase
+                .from('server_costs') as any)
                 .update({
                     item_name: updatedCost.item_name,
                     monthly_cost: updatedCost.monthly_cost,
