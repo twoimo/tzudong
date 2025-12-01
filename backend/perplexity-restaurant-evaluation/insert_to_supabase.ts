@@ -52,6 +52,8 @@ interface RestaurantData {
   jibunAddress: string | null;
   englishAddress: string | null;
   addressElements: any;
+  lat: number | null;
+  lng: number | null;
   geocoding_success: boolean;
   geocoding_false_stage: number | null;
   is_missing: boolean;
@@ -178,9 +180,9 @@ async function insertRestaurants() {
           is_missing: data.is_missing,
           is_not_selected: data.is_notSelected || false,
           
-          // 위치 좌표
-          lat: data.origin_address?.lat || null,
-          lng: data.origin_address?.lng || null,
+          // 위치 좌표 (naver_address 지오코딩 결과)
+          lat: data.lat || null,
+          lng: data.lng || null,
           
           // 리뷰 통계
           review_count: 0

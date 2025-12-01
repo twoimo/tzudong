@@ -313,7 +313,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
                 cand_lng = float(cand_geocoded[0].get("x", 0))
                 dist = haversine_m(geocoded_lat, geocoded_lng, cand_lat, cand_lng)
                 print(f"[DEBUG] {name}: 2단계 cand_jibun={cand_jibun}, cand_lat={cand_lat}, cand_lng={cand_lng}, dist={dist}")
-                if dist <= 30.0 and dist < min_dist:  # 30m 이내, 가장 가까운 것
+                if dist <= 20.0 and dist < min_dist:  # 20m 이내, 가장 가까운 것
                     min_dist = dist
                     best_cand = cand
         
@@ -328,13 +328,14 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
         matched_result = best_cand
 
     # --- 일치하는 결과의 상세 정보 저장 ---
-    # NCP 지오코딩으로 lat, lng 정보도 가져오기
-    geocoded_addresses = ncp_geocode_addresses(origin_address)
-    if geocoded_addresses and len(geocoded_addresses) > 0:
-        addr_info = geocoded_addresses[0]
+    # matched_result의 주소로 지오코딩해서 정확한 좌표 얻기
+    matched_addr = matched_result.get("address") or matched_result.get("roadAddress") or ""
+    matched_geocoded = ncp_geocode_addresses(matched_addr)
+    if matched_geocoded and len(matched_geocoded) > 0:
+        addr_info = matched_geocoded[0]
         naver_address = {
-            "roadAddress": matched_result.get("roadAddress", ""),
-            "jibunAddress": matched_result.get("address", ""),
+            "roadAddress": addr_info.get("roadAddress", ""),
+            "jibunAddress": addr_info.get("jibunAddress", ""),
             "englishAddress": addr_info.get("englishAddress", ""),
             "addressElements": addr_info.get("addressElements", []),
             "x": addr_info.get("x", ""),
@@ -342,15 +343,14 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
             "distance": min_dist if 'min_dist' in locals() else 0.0
         }
     else:
-        # 지오코딩 실패시 기본 정보로 채움
-        latlon = convert_mapx_mapy_to_wgs84(matched_result.get("mapx"), matched_result.get("mapy"))
+        # 지오코딩 실패시 빈값으로 저장 (주소와 좌표는 한 세트)
         naver_address = {
-            "roadAddress": matched_result.get("roadAddress", ""),
-            "jibunAddress": matched_result.get("address", ""),
+            "roadAddress": "",
+            "jibunAddress": "",
             "englishAddress": "",
             "addressElements": [],
-            "x": matched_result.get("mapx", ""),
-            "y": matched_result.get("mapy", ""),
+            "x": "",
+            "y": "",
             "distance": min_dist if 'min_dist' in locals() else 0.0
         }
 

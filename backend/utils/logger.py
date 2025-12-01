@@ -93,20 +93,36 @@ class PipelineLogger:
         self.start_time = datetime.now(KST)
         self.start_timestamp = self.start_time.isoformat()
         
-        # 로그 디렉토리 설정
+        # 날짜 폴더명 (yy-mm-dd)
+        self.date_folder = self.start_time.strftime("%y-%m-%d")
+        
+        # 로그 기본 디렉토리 설정
         if log_dir:
-            self.log_dir = Path(log_dir)
+            self.log_base_dir = Path(log_dir)
         else:
             # backend/log/geminiCLI-restaurant 기본 경로
-            self.log_dir = Path(__file__).parent.parent / "log" / "geminiCLI-restaurant"
+            self.log_base_dir = Path(__file__).parent.parent / "log" / "geminiCLI-restaurant"
         
-        self.log_dir.mkdir(parents=True, exist_ok=True)
+        # 새 폴더 구조:
+        # - report/yy-mm-dd/*.json (요약 리포트)
+        # - text/yy-mm-dd/*.log (텍스트 로그)
+        # - structured/yy-mm-dd/*.jsonl (구조화 로그)
+        self.report_dir = self.log_base_dir / "report" / self.date_folder
+        self.text_dir = self.log_base_dir / "text" / self.date_folder
+        self.structured_dir = self.log_base_dir / "structured" / self.date_folder
         
-        # 로그 파일 경로 (날짜_phase.log / .jsonl)
-        date_str = self.start_time.strftime("%Y-%m-%d")
-        self.log_file = self.log_dir / f"{date_str}_{phase}.log"
-        self.json_log_file = self.log_dir / f"{date_str}_{phase}.jsonl"
-        self.summary_file = self.log_dir / f"{date_str}_{phase}_summary.json"
+        # 디렉토리 생성
+        self.report_dir.mkdir(parents=True, exist_ok=True)
+        self.text_dir.mkdir(parents=True, exist_ok=True)
+        self.structured_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 하위 호환성을 위한 log_dir (report 폴더 사용)
+        self.log_dir = self.report_dir
+        
+        # 로그 파일 경로 (날짜는 폴더에 있으므로 파일명에서 제거)
+        self.log_file = self.text_dir / f"{phase}.log"
+        self.json_log_file = self.structured_dir / f"{phase}.jsonl"
+        self.summary_file = self.report_dir / f"{phase}_summary.json"
         
         # 통계 수집
         self.stats = {
@@ -131,7 +147,10 @@ class PipelineLogger:
         self._log(LogLevel.INFO, f"{'='*60}")
         self._log(LogLevel.INFO, f"🚀 [{phase.upper()}] 파이프라인 시작")
         self._log(LogLevel.INFO, f"⏰ 시작 시간: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        self._log(LogLevel.INFO, f"📁 로그 저장: {self.log_dir}")
+        self._log(LogLevel.INFO, f"📁 로그 저장: {self.log_base_dir}")
+        self._log(LogLevel.INFO, f"   📄 text: {self.text_dir}")
+        self._log(LogLevel.INFO, f"   📊 structured: {self.structured_dir}")
+        self._log(LogLevel.INFO, f"   📋 report: {self.report_dir}")
         self._log(LogLevel.INFO, f"{'='*60}")
     
     def _should_log(self, level: LogLevel) -> bool:
@@ -283,6 +302,11 @@ class PipelineLogger:
         """커스텀 통계 추가"""
         self.stats["custom_stats"][key] = value
     
+    # add_statistic은 add_stat의 별칭
+    def add_statistic(self, key: str, value: Any):
+        """커스텀 통계 추가 (add_stat 별칭)"""
+        self.add_stat(key, value)
+    
     def increment_stat(self, key: str, amount: int = 1):
         """커스텀 통계 증가"""
         if key not in self.stats["custom_stats"]:
@@ -305,6 +329,74 @@ class PipelineLogger:
         """스킵 개수 증가"""
         self.stats["skip_count"] += count
     
+    # === 스테이지 관리 ===
+    
+    def start_stage(self):
+        """스테이지 시작 로그"""
+        self.info("=" * 60)
+        self.info(f"🚀 [{self.phase.upper()}] 파이프라인 시작")
+        self.info(f"⏰ 시작 시간: {self.start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        self.info(f"📁 로그 저장: {self.log_dir}")
+        self.info("=" * 60)
+    
+    def end_stage(self):
+        """스테이지 종료 로그"""
+        end_time = datetime.now(KST)
+        duration = (end_time - self.start_time).total_seconds()
+        
+        self.stats["end_time"] = end_time.isoformat()
+        self.stats["duration_seconds"] = round(duration, 2)
+        self.stats["duration_formatted"] = self._format_duration(duration)
+        
+        self.info("=" * 60)
+        self.info(f"🏁 [{self.phase.upper()}] 파이프라인 종료")
+        self.info(f"⏰ 종료 시간: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        self.info(f"⏱️ 소요 시간: {self.stats['duration_formatted']}")
+        self.info("=" * 60)
+    
+    def get_summary(self) -> Dict:
+        """현재까지의 요약 정보 반환"""
+        end_time = datetime.now(KST)
+        duration = (end_time - self.start_time).total_seconds()
+        
+        # 타이머 평균 계산
+        timers_summary = {}
+        for name, timer in self.stats["timers"].items():
+            if timer["count"] > 0:
+                avg = timer["total_seconds"] / timer["count"]
+                timers_summary[name] = {
+                    "count": timer["count"],
+                    "total_seconds": round(timer["total_seconds"], 2),
+                    "avg_seconds": round(avg, 3),
+                    "formatted": self._format_duration(timer["total_seconds"])
+                }
+        
+        return {
+            "phase": self.phase,
+            "started_at": self.start_time.strftime('%Y-%m-%d %H:%M:%S'),
+            "ended_at": end_time.strftime('%Y-%m-%d %H:%M:%S'),
+            "duration_seconds": round(duration, 2),
+            "duration_formatted": self._format_duration(duration),
+            "statistics": self.stats["custom_stats"],
+            "timers": timers_summary,
+            "success_count": self.stats["success_count"],
+            "error_count": self.stats["error_count"],
+            "skip_count": self.stats["skip_count"]
+        }
+    
+    def save_json_log(self):
+        """JSON 형식 로그 파일 저장 (report 폴더에)"""
+        summary = self.get_summary()
+        
+        # 파일명: phase_HHMMSS.json (날짜는 폴더에 있으므로 제거)
+        timestamp_str = self.start_time.strftime("%H%M%S")
+        json_file = self.report_dir / f"{self.phase}_{timestamp_str}.json"
+        
+        with open(json_file, 'w', encoding='utf-8') as f:
+            json.dump(summary, f, ensure_ascii=False, indent=2)
+        
+        self.info(f"📝 JSON 로그 저장: {json_file}")
+
     # === 요약 및 저장 ===
     
     def print_section(self, title: str):

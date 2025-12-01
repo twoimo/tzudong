@@ -11,10 +11,23 @@ import json
 import os
 import sys
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
 
 # 공통 유틸리티 함수 import
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
 from duplicate_checker import load_processed_urls, append_to_jsonl
+from data_utils import DataPathManager
+
+# 한국 시간대 (KST, UTC+9)
+KST = timezone(timedelta(hours=9))
+
+def get_today_folder() -> str:
+    """오늘 날짜 폴더명 반환 (PIPELINE_DATE 환경변수 우선)"""
+    pipeline_date = os.environ.get('PIPELINE_DATE')
+    if pipeline_date:
+        return pipeline_date
+    return datetime.now(KST).strftime('%y-%m-%d')
+
 
 def create_evaluation_targets():
     """
@@ -22,10 +35,18 @@ def create_evaluation_targets():
     """
     # 경로 설정
     current_dir = Path(__file__).parent
+    today_folder = get_today_folder()
+    
+    # 크롤링 데이터 경로 (날짜 폴더)
     crawling_dir = current_dir.parent.parent / "geminiCLI-restaurant-crawling"
-    input_file = crawling_dir / "tzuyang_restaurant_results_with_meta.jsonl"  # youtube_meta 포함 파일 사용
-    output_file = current_dir.parent / "tzuyang_restaurant_evaluation_selection.jsonl"
-    address_null_file = current_dir.parent / "tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl"
+    crawling_data_dir = crawling_dir / "data" / today_folder
+    input_file = crawling_data_dir / "tzuyang_restaurant_results_with_meta.jsonl"
+    
+    # 평가 데이터 경로 (날짜 폴더)
+    evaluation_data_dir = current_dir.parent / "data" / today_folder
+    evaluation_data_dir.mkdir(parents=True, exist_ok=True)
+    output_file = evaluation_data_dir / "tzuyang_restaurant_evaluation_selection.jsonl"
+    address_null_file = evaluation_data_dir / "tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl"
 
     print(f"입력 파일: {input_file}")
     print(f"출력 파일: {output_file}")
@@ -34,13 +55,25 @@ def create_evaluation_targets():
     if not input_file.exists():
         raise FileNotFoundError(f"입력 파일이 존재하지 않습니다: {input_file}")
 
-    # 1. 이미 처리된 youtube_link 수집 (유틸리티 함수 사용)
-    print(f"🔍 기존 처리 내역 확인 중...")
-    processed_links = load_processed_urls(str(output_file))
-    processed_links_null = load_processed_urls(str(address_null_file))
+    # 1. 이미 처리된 youtube_link 수집 - 모든 날짜 폴더에서
+    print(f"🔍 기존 처리 내역 확인 중 (모든 날짜 폴더)...")
+    
+    # 모든 날짜 폴더에서 처리된 링크 수집
+    data_manager = DataPathManager(current_dir.parent)
+    all_selection_files = data_manager.get_all_file_paths('tzuyang_restaurant_evaluation_selection.jsonl')
+    all_null_files = data_manager.get_all_file_paths('tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl')
+    
+    processed_links = set()
+    processed_links_null = set()
+    
+    for f in all_selection_files:
+        processed_links.update(load_processed_urls(str(f)))
+    for f in all_null_files:
+        processed_links_null.update(load_processed_urls(str(f)))
+    
     all_processed = processed_links | processed_links_null  # 합집합
     
-    print(f"✅ 이미 처리된 레코드:")
+    print(f"✅ 이미 처리된 레코드 (전체 이력):")
     print(f"   - Selection: {len(processed_links)}개")
     print(f"   - NotSelection: {len(processed_links_null)}개")
     print(f"   - 총합: {len(all_processed)}개\n")

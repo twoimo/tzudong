@@ -23,6 +23,17 @@ import subprocess
 import sys
 import os
 from pathlib import Path
+from datetime import datetime, timezone, timedelta
+
+# 한국 시간대 (KST, UTC+9)
+KST = timezone(timedelta(hours=9))
+
+def get_today_folder() -> str:
+    """오늘 날짜 폴더명 반환 (PIPELINE_DATE 환경변수 우선)"""
+    pipeline_date = os.environ.get('PIPELINE_DATE')
+    if pipeline_date:
+        return pipeline_date
+    return datetime.now(KST).strftime('%y-%m-%d')
 
 # 색상 코드
 class Colors:
@@ -310,12 +321,20 @@ def main():
     # 통계를 위한 딕셔너리
     stats = {}
     
-    # 파일 경로 (Perplexity와 동일한 구조)
-    selection_file = project_root / 'tzuyang_restaurant_evaluation_selection.jsonl'
-    rule_results_file = project_root / 'tzuyang_restaurant_evaluation_rule_results.jsonl'
-    laaj_results_file = project_root / 'tzuyang_restaurant_evaluation_results.jsonl'
-    laaj_errors_file = project_root / 'tzuyang_restaurant_evaluation_errors.jsonl'
-    transform_file = project_root / 'tzuyang_restaurant_transforms.jsonl'
+    # 날짜 폴더 경로
+    today_folder = get_today_folder()
+    data_dir = project_root / 'data' / today_folder
+    data_dir.mkdir(parents=True, exist_ok=True)
+    
+    print_info(f"날짜 폴더: {today_folder}")
+    print_info(f"데이터 디렉토리: {data_dir}\n")
+    
+    # 파일 경로 (날짜 폴더 기준)
+    selection_file = data_dir / 'tzuyang_restaurant_evaluation_selection.jsonl'
+    rule_results_file = data_dir / 'tzuyang_restaurant_evaluation_rule_results.jsonl'
+    laaj_results_file = data_dir / 'tzuyang_restaurant_evaluation_results.jsonl'
+    laaj_errors_file = data_dir / 'tzuyang_restaurant_evaluation_errors.jsonl'
+    transform_file = data_dir / 'tzuyang_restaurant_transforms.jsonl'
     
     print(f"{Colors.BOLD}{Colors.HEADER}{'='*80}{Colors.ENDC}")
     print(f"{Colors.BOLD}{Colors.HEADER}평가 파이프라인 시작{Colors.ENDC}")
@@ -376,11 +395,11 @@ def main():
     print(f"{Colors.ENDC}\n")
     
     print_info("출력 파일:")
-    print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_selection.jsonl'}")
-    print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_rule_results.jsonl'}")
-    print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_results.jsonl'} (성공)")
-    print(f"  📄 {project_root / 'tzuyang_restaurant_evaluation_errors.jsonl'} (실패)")
-    print(f"  📄 {project_root / 'tzuyang_restaurant_transforms.jsonl'} (변환 결과)")
+    print(f"  📄 {selection_file}")
+    print(f"  📄 {rule_results_file}")
+    print(f"  📄 {laaj_results_file} (성공)")
+    print(f"  📄 {laaj_errors_file} (실패)")
+    print(f"  📄 {transform_file} (변환 결과)")
     print()
 
 if __name__ == "__main__":

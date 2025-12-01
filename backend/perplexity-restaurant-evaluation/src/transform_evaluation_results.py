@@ -72,7 +72,8 @@ def transform_json_object(original_data, source_file_type):
     def get_location_data(eval_results, rest_name, is_missing_flag):
         loc_data = {
             "roadAddress": None, "jibunAddress": None, "englishAddress": None,
-            "addressElements": None, "geocoding_success": False, "geocoding_false_stage": None
+            "addressElements": None, "geocoding_success": False, "geocoding_false_stage": None,
+            "lat": None, "lng": None  # 좌표 추가
         }
         
         loc_match_item = None
@@ -97,6 +98,15 @@ def transform_json_object(original_data, source_file_type):
                 loc_data["jibunAddress"] = naver_address_data.get('jibunAddress')
                 loc_data["englishAddress"] = naver_address_data.get('englishAddress')
                 loc_data["addressElements"] = naver_address_data.get('addressElements')
+                # 좌표 추가 (x=경도, y=위도)
+                x = naver_address_data.get('x')
+                y = naver_address_data.get('y')
+                if x and y:
+                    try:
+                        loc_data["lng"] = float(x)  # x = 경도 (longitude)
+                        loc_data["lat"] = float(y)  # y = 위도 (latitude)
+                    except (ValueError, TypeError):
+                        pass
 
         if source_file_type == 'results' and is_missing_flag:
             loc_data["geocoding_false_stage"] = None
@@ -157,6 +167,8 @@ def transform_json_object(original_data, source_file_type):
                 "jibunAddress": loc_data["jibunAddress"],
                 "englishAddress": loc_data["englishAddress"],
                 "addressElements": loc_data["addressElements"],
+                "lat": loc_data["lat"],
+                "lng": loc_data["lng"],
                 "geocoding_success": loc_data["geocoding_success"],
                 "geocoding_false_stage": loc_data["geocoding_false_stage"],
                 "is_missing": False,
@@ -183,6 +195,8 @@ def transform_json_object(original_data, source_file_type):
                     "jibunAddress": loc_data["jibunAddress"],
                     "englishAddress": loc_data["englishAddress"],
                     "addressElements": loc_data["addressElements"],
+                    "lat": loc_data["lat"],
+                    "lng": loc_data["lng"],
                     "geocoding_success": loc_data["geocoding_success"],
                     "geocoding_false_stage": loc_data["geocoding_false_stage"],
                     "is_missing": True,
@@ -221,6 +235,8 @@ def transform_json_object(original_data, source_file_type):
                     "jibunAddress": loc_data["jibunAddress"],
                     "englishAddress": loc_data["englishAddress"],
                     "addressElements": loc_data["addressElements"],
+                    "lat": loc_data["lat"],
+                    "lng": loc_data["lng"],
                     "geocoding_success": loc_data["geocoding_success"],
                     "geocoding_false_stage": loc_data["geocoding_false_stage"],
                     "is_missing": True,
@@ -260,6 +276,8 @@ def transform_json_object(original_data, source_file_type):
                 "jibunAddress": loc_data["jibunAddress"],
                 "englishAddress": loc_data["englishAddress"],
                 "addressElements": loc_data["addressElements"],
+                "lat": loc_data["lat"],
+                "lng": loc_data["lng"],
                 "geocoding_success": loc_data["geocoding_success"],
                 "geocoding_false_stage": loc_data["geocoding_false_stage"],
                 "is_missing": is_missing,

@@ -50,14 +50,16 @@ ERROR_JSONL="$TODAY_PATH/tzuyang_crawling_errors.jsonl"
 OUTPUT_FILE="$TODAY_PATH/tzuyang_restaurant_results.jsonl"
 RETRY_ERROR_LOG="$TODAY_PATH/tzuyang_crawling_retry_errors.log"
 
-# 로그 설정 (날짜별 폴더)
+# 로그 설정 (새 폴더 구조: report/text/structured)
 LOG_BASE_DIR="$PROJECT_ROOT/../log/geminiCLI-restaurant"
-LOG_DIR=$(python3 "$DATA_UTILS_SCRIPT" log_path "$LOG_BASE_DIR" "$TODAY_FOLDER")
-mkdir -p "$LOG_DIR"
+LOG_REPORT_DIR=$(python3 "$DATA_UTILS_SCRIPT" log_type_path "$LOG_BASE_DIR" "report" "$TODAY_FOLDER")
+LOG_TEXT_DIR=$(python3 "$DATA_UTILS_SCRIPT" log_type_path "$LOG_BASE_DIR" "text" "$TODAY_FOLDER")
+LOG_STRUCTURED_DIR=$(python3 "$DATA_UTILS_SCRIPT" log_type_path "$LOG_BASE_DIR" "structured" "$TODAY_FOLDER")
+mkdir -p "$LOG_REPORT_DIR" "$LOG_TEXT_DIR" "$LOG_STRUCTURED_DIR"
 STAGE_NAME="crawling_retry"
 START_TIME=$(date +%s)
 START_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
-LOG_FILE="$LOG_DIR/${STAGE_NAME}_$(date +%Y%m%d_%H%M%S).json"
+LOG_FILE="$LOG_REPORT_DIR/${STAGE_NAME}_$(date +%H%M%S).json"
 
 # 시간 포맷팅 함수
 format_duration() {

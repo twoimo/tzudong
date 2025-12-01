@@ -15,7 +15,7 @@ console.log('📁 .env 파일 경로:', envPath);
 config({ path: envPath });
 
 // 로그 설정
-const LOG_DIR = path.resolve(__dirname, '../../log/geminiCLI-restaurant');
+const LOG_BASE_DIR = path.resolve(__dirname, '../../log/geminiCLI-restaurant');
 const STAGE_NAME = 'insert-supabase';
 
 // 한국 시간 (KST, UTC+9) 반환 함수
@@ -38,11 +38,6 @@ function formatKSTDateTime(date: Date): string {
 
 const startTime = getKSTDate();
 
-// 로그 디렉토리 생성
-if (!fs.existsSync(LOG_DIR)) {
-  fs.mkdirSync(LOG_DIR, { recursive: true });
-}
-
 // 날짜별 폴더 관리 함수
 function getTodayFolder(): string {
   // PIPELINE_DATE 환경변수가 있으면 우선 사용 (GitHub Actions에서 설정)
@@ -56,6 +51,12 @@ function getTodayFolder(): string {
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   const dd = String(now.getDate()).padStart(2, '0');
   return `${yy}-${mm}-${dd}`;
+}
+
+// 로그 디렉토리 생성 (supabase/yy-mm-dd/)
+const LOG_DIR = path.join(LOG_BASE_DIR, 'supabase', getTodayFolder());
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
 }
 
 function getLatestFolder(dataDir: string): string | null {
@@ -190,6 +191,8 @@ interface RestaurantData {
   jibunAddress: string | null;
   englishAddress: string | null;
   addressElements: any;
+  lat: number | null;
+  lng: number | null;
   geocoding_success: boolean;
   geocoding_false_stage: number | null;
   is_missing: boolean;
@@ -342,9 +345,9 @@ async function insertRestaurants(): Promise<{
           is_missing: data.is_missing,
           is_not_selected: data.is_notSelected || false,
           
-          // 위치 좌표
-          lat: data.origin_address?.lat || null,
-          lng: data.origin_address?.lng || null,
+          // 위치 좌표 (naver_address 지오코딩 결과)
+          lat: data.lat || null,
+          lng: data.lng || null,
           
           // 리뷰 통계
           review_count: 0

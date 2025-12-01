@@ -149,8 +149,11 @@ jobs:
           mkdir -p backend/geminiCLI-restaurant-crawling/data/$PIPELINE_DATE
           mkdir -p backend/geminiCLI-restaurant-evaluation/data/$PIPELINE_DATE
           
-          # 로그 폴더 생성 (날짜별)
-          mkdir -p backend/log/geminiCLI-restaurant/$PIPELINE_DATE
+          # 로그 폴더 생성 (새 구조: report/text/structured/supabase)
+          mkdir -p backend/log/geminiCLI-restaurant/report/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/text/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/structured/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/supabase/$PIPELINE_DATE
           echo "✅ 데이터 및 로그 폴더 생성 완료"
       
       # ============================
@@ -246,7 +249,10 @@ jobs:
         with:
           name: pipeline-logs-${{ github.run_number }}-${{ github.run_attempt }}
           path: |
-            backend/log/geminiCLI-restaurant/**/*.json
+            backend/log/geminiCLI-restaurant/report/**/*.json
+            backend/log/geminiCLI-restaurant/text/**/*.log
+            backend/log/geminiCLI-restaurant/structured/**/*.jsonl
+            backend/log/geminiCLI-restaurant/supabase/**/*.json
           retention-days: 30
           if-no-files-found: warn
       
@@ -382,9 +388,9 @@ jobs:
           echo "| 단계 | 소요 시간 | 시작 | 종료 |" >> $GITHUB_STEP_SUMMARY
           echo "|------|----------|------|------|" >> $GITHUB_STEP_SUMMARY
           
-          # 오늘 날짜 폴더의 로그 파일 확인
+          # 오늘 날짜 폴더의 로그 파일 확인 (새 구조: report 폴더)
           TODAY=$(date '+%y-%m-%d')
-          for log_file in "$LOG_DIR/$TODAY"/*.json "$LOG_DIR"/*/*.json; do
+          for log_file in "$LOG_DIR/report/$TODAY"/*.json; do
             if [ -f "$log_file" ]; then
               STAGE=$(jq -r '.stage // "unknown"' "$log_file" 2>/dev/null)
               DURATION=$(jq -r '.duration_formatted // "N/A"' "$log_file" 2>/dev/null)
@@ -398,7 +404,7 @@ jobs:
           echo "## 📋 상세 통계" >> $GITHUB_STEP_SUMMARY
           
           # 각 로그 파일의 통계 출력
-          for log_file in "$LOG_DIR/$TODAY"/*.json "$LOG_DIR"/*/*.json; do
+          for log_file in "$LOG_DIR/report/$TODAY"/*.json; do
             if [ -f "$log_file" ]; then
               STAGE=$(jq -r '.stage // "unknown"' "$log_file" 2>/dev/null)
               echo "" >> $GITHUB_STEP_SUMMARY
@@ -442,5 +448,4 @@ jobs:
             git commit -m "$COMMIT_MSG"
             git push
             echo "✅ 결과 파일 커밋 완료: $COMMIT_MSG"
-          fi
           fi

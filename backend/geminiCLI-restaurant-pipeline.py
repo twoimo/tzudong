@@ -521,12 +521,27 @@ def print_summary(phases: List[Tuple[str, bool]], start_time: datetime, backend_
 
 def main():
     """메인 실행 함수"""
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='GeminiCLI 레스토랑 데이터 전체 파이프라인')
+    parser.add_argument('--start-from', type=str, default='1',
+                        choices=['1', '1b', '1c', '2', '3', '4', '5'],
+                        help='시작할 Phase 선택 (1=크롤링, 1b=크롤링에러재처리, 1c=메타데이터, 2=평가, 3=에러재평가, 4=Transform, 5=DB삽입)')
+    parser.add_argument('--date', type=str, default=None,
+                        help='사용할 날짜 폴더 (예: 25-11-30). 기본값은 오늘')
+    args = parser.parse_args()
+    
+    # 날짜 폴더 설정
+    if args.date:
+        os.environ['PIPELINE_DATE'] = args.date
+    
     start_time = datetime.now(KST)
     today_folder = get_today_folder()
     
     print_header("🍜 GeminiCLI 레스토랑 데이터 전체 파이프라인")
     print(f"⏰ 시작 시간: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"📅 날짜 폴더: {today_folder}\n")
+    print(f"📅 날짜 폴더: {today_folder}")
+    print(f"🚀 시작 Phase: {args.start_from}\n")
     
     # 경로 설정
     backend_dir = Path(__file__).parent.resolve()
@@ -539,61 +554,83 @@ def main():
     
     # 파이프라인 단계 정의
     phases = []
+    start_phase = args.start_from
+    
+    # Phase 순서 정의
+    phase_order = ['1', '1b', '1c', '2', '3', '4', '5']
+    start_index = phase_order.index(start_phase)
     
     # Phase 1: 크롤링
-    print_info("Phase 1/6: 데이터 크롤링을 시작합니다...")
-    success = phase_1_crawling(backend_dir)
-    phases.append(("Phase 1: 데이터 크롤링 (Gemini CLI)", success))
-    if not success:
-        print_error("크롤링 단계 실패. 파이프라인을 중단합니다.")
-        print_summary(phases, start_time, backend_dir)
-        sys.exit(1)
+    if start_index <= phase_order.index('1'):
+        print_info("Phase 1/6: 데이터 크롤링을 시작합니다...")
+        success = phase_1_crawling(backend_dir)
+        phases.append(("Phase 1: 데이터 크롤링 (Gemini CLI)", success))
+        if not success:
+            print_error("크롤링 단계 실패. 파이프라인을 중단합니다.")
+            print_summary(phases, start_time, backend_dir)
+            sys.exit(1)
+    else:
+        phases.append(("Phase 1: 데이터 크롤링 (Gemini CLI)", True))  # 스킵됨
     
     # Phase 1b: 크롤링 에러 재처리
-    print_info("Phase 1b: 크롤링 에러 재처리를 시작합니다...")
-    success = phase_1b_crawling_retry(backend_dir)
-    phases.append(("Phase 1b: 크롤링 에러 재처리", success))
-    # 에러 재처리는 실패해도 계속 진행
+    if start_index <= phase_order.index('1b'):
+        print_info("Phase 1b: 크롤링 에러 재처리를 시작합니다...")
+        success = phase_1b_crawling_retry(backend_dir)
+        phases.append(("Phase 1b: 크롤링 에러 재처리", success))
+    else:
+        phases.append(("Phase 1b: 크롤링 에러 재처리", True))  # 스킵됨
     
     # Phase 1c: 메타데이터 추가
-    print_info("Phase 1c: YouTube 메타데이터를 추가합니다...")
-    success = phase_1c_add_metadata(backend_dir)
-    phases.append(("Phase 1c: YouTube 메타데이터 추가", success))
-    # 메타데이터 추가는 실패해도 계속 진행
+    if start_index <= phase_order.index('1c'):
+        print_info("Phase 1c: YouTube 메타데이터를 추가합니다...")
+        success = phase_1c_add_metadata(backend_dir)
+        phases.append(("Phase 1c: YouTube 메타데이터 추가", success))
+    else:
+        phases.append(("Phase 1c: YouTube 메타데이터 추가", True))  # 스킵됨
     
     # Phase 2: 평가
-    print_info("Phase 2/6: 데이터 평가를 시작합니다...")
-    success = phase_2_evaluation(backend_dir)
-    phases.append(("Phase 2: 데이터 평가 (Gemini CLI)", success))
-    if not success:
-        print_error("평가 단계 실패. 파이프라인을 중단합니다.")
-        print_summary(phases, start_time, backend_dir)
-        sys.exit(1)
+    if start_index <= phase_order.index('2'):
+        print_info("Phase 2/6: 데이터 평가를 시작합니다...")
+        success = phase_2_evaluation(backend_dir)
+        phases.append(("Phase 2: 데이터 평가 (Gemini CLI)", success))
+        if not success:
+            print_error("평가 단계 실패. 파이프라인을 중단합니다.")
+            print_summary(phases, start_time, backend_dir)
+            sys.exit(1)
+    else:
+        phases.append(("Phase 2: 데이터 평가 (Gemini CLI)", True))  # 스킵됨
     
     # Phase 3: LAAJ 에러 재평가
-    print_info("Phase 3/6: LAAJ 에러 재평가를 시작합니다...")
-    success = phase_3_retry_errors(backend_dir)
-    phases.append(("Phase 3: LAAJ 에러 재평가", success))
-    if not success:
-        print_warning("에러 재평가 실패. 계속 진행합니다...")
-        # 에러 재평가는 실패해도 계속 진행
+    if start_index <= phase_order.index('3'):
+        print_info("Phase 3/6: LAAJ 에러 재평가를 시작합니다...")
+        success = phase_3_retry_errors(backend_dir)
+        phases.append(("Phase 3: LAAJ 에러 재평가", success))
+        if not success:
+            print_warning("에러 재평가 실패. 계속 진행합니다...")
+    else:
+        phases.append(("Phase 3: LAAJ 에러 재평가", True))  # 스킵됨
     
     # Phase 4: Transform
-    print_info("Phase 4/6: 데이터 변환을 시작합니다...")
-    success = phase_4_transform(backend_dir)
-    phases.append(("Phase 4: 데이터 변환", success))
-    if not success:
-        print_error("데이터 변환 실패. 파이프라인을 중단합니다.")
-        print_summary(phases, start_time, backend_dir)
-        sys.exit(1)
+    if start_index <= phase_order.index('4'):
+        print_info("Phase 4/6: 데이터 변환을 시작합니다...")
+        success = phase_4_transform(backend_dir)
+        phases.append(("Phase 4: 데이터 변환", success))
+        if not success:
+            print_error("데이터 변환 실패. 파이프라인을 중단합니다.")
+            print_summary(phases, start_time, backend_dir)
+            sys.exit(1)
+    else:
+        phases.append(("Phase 4: 데이터 변환", True))  # 스킵됨
     
     # Phase 5: DB 삽입
-    print_info("Phase 5/6: DB 삽입을 시작합니다...")
-    success = phase_5_insert_db(backend_dir)
-    phases.append(("Phase 5: Supabase DB 삽입", success))
-    if not success:
-        print_warning("DB 삽입 실패.")
-        # DB 삽입은 실패해도 요약 출력
+    if start_index <= phase_order.index('5'):
+        print_info("Phase 5/6: DB 삽입을 시작합니다...")
+        success = phase_5_insert_db(backend_dir)
+        phases.append(("Phase 5: Supabase DB 삽입", success))
+        if not success:
+            print_warning("DB 삽입 실패.")
+    else:
+        phases.append(("Phase 5: Supabase DB 삽입", True))  # 스킵됨
     
     # 최종 결과 요약
     print_summary(phases, start_time, backend_dir)

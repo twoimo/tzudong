@@ -41,7 +41,7 @@ LOG_DIR = Path(__file__).parent.parent.parent / 'log' / 'geminiCLI-restaurant'
 
 # 로거 초기화
 logger = PipelineLogger(
-    stage_name="youtube-meta",
+    phase="youtube-meta",
     log_dir=LOG_DIR
 )
 

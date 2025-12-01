@@ -20,13 +20,13 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'utils'))
 from logger import PipelineLogger, LogLevel
 from data_utils import DataPathManager
 
-# .env 파일 로드 (backend 루트의 .env)
-env_path = Path(__file__).parent.parent.parent / '.env'
+# .env 파일 로드 (geminiCLI-restaurant-crawling 폴더의 .env)
+env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(env_path)
 
 # 설정
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY_BYEON')
-TZUYANG_CHANNEL_ID = 'UCG3YWct4Wwy1PiT3q2Vg-HA'  # 쯔양 채널 ID
+TZUYANG_CHANNEL_ID = 'UCfpaSruWW3S4dibonKXENjA'  # 쯔양 메인 채널 ID (tzuyang쯔양)
 
 # 데이터 경로 관리자 초기화
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -40,7 +40,7 @@ LOG_DIR = Path(__file__).parent.parent.parent / 'log' / 'geminiCLI-restaurant'
 
 # 로거 초기화
 logger = PipelineLogger(
-    stage_name="youtube-urls",
+    phase="youtube-urls",
     log_dir=LOG_DIR
 )
 

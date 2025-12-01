@@ -10,7 +10,7 @@ import os
 import re
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 
 # 한국 시간대 (KST, UTC+9)
 KST = timezone(timedelta(hours=9))
@@ -111,27 +111,77 @@ def ensure_data_folder(base_dir: Path) -> Path:
 
 def get_log_folder_path(log_base_dir: Path, date_folder: Optional[str] = None) -> Path:
     """
-    로그 폴더 경로 반환 (날짜별 폴더)
+    로그 폴더 경로 반환 (report 폴더의 날짜별 폴더)
+    
+    새 구조:
+        log_base_dir/
+        ├── report/yy-mm-dd/*.json
+        ├── text/yy-mm-dd/*.log
+        └── structured/yy-mm-dd/*.jsonl
     
     Args:
         log_base_dir: 로그 기본 디렉토리 (예: backend/log/geminiCLI-restaurant)
         date_folder: 날짜 폴더명 (yy-mm-dd). None이면 오늘 날짜 사용
     
     Returns:
-        로그 폴더 경로 (예: backend/log/geminiCLI-restaurant/25-12-01)
+        report 로그 폴더 경로 (예: backend/log/geminiCLI-restaurant/report/25-12-01)
     """
     if date_folder is None:
         date_folder = get_today_folder_name()
     
-    log_path = Path(log_base_dir) / date_folder
+    log_path = Path(log_base_dir) / "report" / date_folder
     log_path.mkdir(parents=True, exist_ok=True)
     return log_path
 
 
+def get_log_paths(log_base_dir: Path, date_folder: Optional[str] = None) -> Dict[str, Path]:
+    """
+    모든 로그 폴더 경로를 반환 (report, text, structured)
+    
+    Args:
+        log_base_dir: 로그 기본 디렉토리 (예: backend/log/geminiCLI-restaurant)
+        date_folder: 날짜 폴더명 (yy-mm-dd). None이면 오늘 날짜 사용
+    
+    Returns:
+        Dict with keys: 'report', 'text', 'structured'
+    """
+    if date_folder is None:
+        date_folder = get_today_folder_name()
+    
+    base = Path(log_base_dir)
+    paths = {
+        'report': base / "report" / date_folder,
+        'text': base / "text" / date_folder,
+        'structured': base / "structured" / date_folder
+    }
+    
+    # 모든 디렉토리 생성
+    for path in paths.values():
+        path.mkdir(parents=True, exist_ok=True)
+    
+    return paths
+
+
 def print_log_folder_path(log_base_dir: str, date_folder: Optional[str] = None) -> None:
-    """로그 폴더 경로 출력 (bash에서 호출용)"""
+    """로그 폴더 경로 출력 (bash에서 호출용) - report 폴더 반환"""
     log_path = get_log_folder_path(Path(log_base_dir), date_folder)
     print(str(log_path))
+
+
+def print_log_paths(log_base_dir: str, log_type: str, date_folder: Optional[str] = None) -> None:
+    """특정 타입의 로그 폴더 경로 출력 (bash에서 호출용)
+    
+    Args:
+        log_base_dir: 로그 기본 디렉토리
+        log_type: 'report', 'text', 'structured' 중 하나
+        date_folder: 날짜 폴더명 (yy-mm-dd). None이면 오늘 날짜 사용
+    """
+    paths = get_log_paths(Path(log_base_dir), date_folder)
+    if log_type in paths:
+        print(str(paths[log_type]))
+    else:
+        print(f"Unknown log type: {log_type}", file=sys.stderr)
+        sys.exit(1)
 
 
 class DataPathManager:
@@ -293,11 +343,13 @@ if __name__ == '__main__':
     if len(sys.argv) < 2:
         print("Usage: python data_utils.py <command> [args...]")
         print("Commands:")
-        print("  today_folder      - 오늘 날짜 폴더명 (yy-mm-dd)")
-        print("  latest_folder     - 최신 폴더명")
-        print("  today_path        - 오늘 폴더 전체 경로")
-        print("  latest_path       - 최신 폴더 전체 경로")
-        print("  log_path <dir>    - 로그 폴더 경로 (날짜별)")
+        print("  today_folder        - 오늘 날짜 폴더명 (yy-mm-dd)")
+        print("  latest_folder       - 최신 폴더명")
+        print("  today_path          - 오늘 폴더 전체 경로")
+        print("  latest_path         - 최신 폴더 전체 경로")
+        print("  log_path <dir>      - 로그 폴더 경로 (report/날짜별)")
+        print("  log_type_path <dir> <type> [date] - 특정 타입 로그 폴더 경로")
+        print("                      type: report, text, structured")
         sys.exit(1)
     
     command = sys.argv[1]
@@ -316,6 +368,12 @@ if __name__ == '__main__':
         log_base_dir = sys.argv[2] if len(sys.argv) > 2 else "."
         date_folder = sys.argv[3] if len(sys.argv) > 3 else None
         print_log_folder_path(log_base_dir, date_folder)
+    elif command == "log_type_path":
+        # python data_utils.py log_type_path <log_base_dir> <type> [date_folder]
+        log_base_dir = sys.argv[2] if len(sys.argv) > 2 else "."
+        log_type = sys.argv[3] if len(sys.argv) > 3 else "report"
+        date_folder = sys.argv[4] if len(sys.argv) > 4 else None
+        print_log_paths(log_base_dir, log_type, date_folder)
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)

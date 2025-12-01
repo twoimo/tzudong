@@ -32,7 +32,7 @@ LOG_DIR = Path(__file__).parent.parent.parent / 'log' / 'geminiCLI-restaurant'
 
 # 로거 초기화
 logger = PipelineLogger(
-    stage_name="evaluation-rule",
+    phase="evaluation-rule",
     log_dir=LOG_DIR
 )
 
@@ -93,6 +93,14 @@ def address_core(addr: str) -> str:
     a = re.sub(r'\d+', '', a)  # 숫자 제거
     a = re.sub(r'\s*\S+(원|쇼핑|園)', '', a)  # 건물명 제거 (한자 포함)
     return _norm_space(a)
+
+def remove_floor_info(addr: str) -> str:
+    """주소에서 층 정보 제거 (예: 3층, 지하1층, 지하 2층)"""
+    if not addr:
+        return ""
+    # 지하 N층, 지하N층, N층 패턴 제거 (맨 뒤에 있는 경우)
+    addr = re.sub(r'\s*(지하\s*\d+층|\d+층)\s*$', '', addr)
+    return addr.strip()
 
 def extract_region_from_address(addr: str) -> str:
     """주소에서 지역명 추출 (줄임말 지원)"""
@@ -193,7 +201,12 @@ def ncp_geocode_to_jibun_address(query: str) -> Optional[str]:
             if addresses:
                 # 첫 번째 결과의 지번주소 반환
                 addr = addresses[0].get("jibunAddress", "")
-                return _norm_space(addr) if addr else None
+                if addr:
+                    return _norm_space(addr)
+            # 결과가 없으면 다음 시도
+            if attempt < 2:
+                time.sleep(1)
+                continue
         except Exception as e:
             ncp_api_errors += 1
             logger.warning(f"지오코딩 실패 (시도 {attempt+1}/3): {query} - {e}")
@@ -268,7 +281,9 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     4) 일치하는 경우 naver_address에 지번주소, 도로명주소, lat, lng 저장
     """
     name = _norm_space(str(rec.get("name", "")))
-    origin_address = _norm_space(str(rec.get("address", "")))
+    origin_address_raw = _norm_space(str(rec.get("address", "")))
+    # 층 정보 제거 (지오코딩 비교용)
+    origin_address = remove_floor_info(origin_address_raw)
 
     # --- name 쿼리로 최대 5개 결과 받아오기 ---
     name_cands = naver_local_search_one(name, display=5)
@@ -362,7 +377,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
                 cand_lng = float(cand_geocoded[0].get("x", 0))
                 dist = haversine_m(geocoded_lat, geocoded_lng, cand_lat, cand_lng)
                 print(f"[DEBUG] {name}: 2단계 cand_jibun={cand_jibun}, cand_lat={cand_lat}, cand_lng={cand_lng}, dist={dist}")
-                if dist <= 30.0 and dist < min_dist:  # 30m 이내, 가장 가까운 것
+                if dist <= 20.0 and dist < min_dist:  # 20m 이내, 가장 가까운 것
                     min_dist = dist
                     best_cand = cand
         
@@ -377,13 +392,14 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
         matched_result = best_cand
 
     # --- 일치하는 결과의 상세 정보 저장 ---
-    # NCP 지오코딩으로 lat, lng 정보도 가져오기
-    geocoded_addresses = ncp_geocode_addresses(origin_address)
-    if geocoded_addresses and len(geocoded_addresses) > 0:
-        addr_info = geocoded_addresses[0]
+    # matched_result의 주소로 지오코딩해서 정확한 좌표 얻기
+    matched_addr = matched_result.get("address") or matched_result.get("roadAddress") or ""
+    matched_geocoded = ncp_geocode_addresses(matched_addr)
+    if matched_geocoded and len(matched_geocoded) > 0:
+        addr_info = matched_geocoded[0]
         naver_address = {
-            "roadAddress": matched_result.get("roadAddress", ""),
-            "jibunAddress": matched_result.get("address", ""),
+            "roadAddress": addr_info.get("roadAddress", ""),
+            "jibunAddress": addr_info.get("jibunAddress", ""),
             "englishAddress": addr_info.get("englishAddress", ""),
             "addressElements": addr_info.get("addressElements", []),
             "x": addr_info.get("x", ""),
@@ -391,15 +407,14 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
             "distance": min_dist if 'min_dist' in locals() else 0.0
         }
     else:
-        # 지오코딩 실패시 기본 정보로 채움
-        latlon = convert_mapx_mapy_to_wgs84(matched_result.get("mapx"), matched_result.get("mapy"))
+        # 지오코딩 실패시 빈값으로 저장 (주소와 좌표는 한 세트)
         naver_address = {
-            "roadAddress": matched_result.get("roadAddress", ""),
-            "jibunAddress": matched_result.get("address", ""),
+            "roadAddress": "",
+            "jibunAddress": "",
             "englishAddress": "",
             "addressElements": [],
-            "x": matched_result.get("mapx", ""),
-            "y": matched_result.get("mapy", ""),
+            "x": "",
+            "y": "",
             "distance": min_dist if 'min_dist' in locals() else 0.0
         }
 
