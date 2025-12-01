@@ -1,4 +1,4 @@
-/// <reference types="google.maps" />
+declare var google: any;
 import { useEffect, useRef, useState, memo, useCallback, useMemo } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
@@ -76,11 +76,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const memoizedFilters = useMemo(() => filters, [filters]);
   const { user } = useAuth();
   const mapRef = useRef<HTMLDivElement>(null);
-  const googleMapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const googleMapRef = useRef<any | null>(null);
+  const markersRef = useRef<any[]>([]);
   const detailPanelRef = useRef<HTMLDivElement>(null);
 
-  const [mapBounds, setMapBounds] = useState<google.maps.LatLngBounds | null>(null);
+  const [mapBounds, setMapBounds] = useState<any | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [panelWidth, setPanelWidth] = useState(0);
@@ -580,7 +580,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
             {loadError && (
               <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
                 <p className="text-xs text-destructive">
-                  로딩 중 오류 발생: {loadError.message}
+                  로딩 중 오류 발생: {(loadError as any).message}
                 </p>
                 <button
                   onClick={() => window.location.reload()}
