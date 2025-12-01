@@ -4,6 +4,26 @@
 
 set -e  # 에러 발생 시 즉시 종료
 
+# .env 파일 로드 (GitHub Actions에서 환경변수 전달용)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# .env 파일 경로들 (우선순위: 프로젝트 > backend)
+ENV_FILES=(
+    "$PROJECT_ROOT/.env"
+    "$PROJECT_ROOT/../.env"
+)
+
+for env_file in "${ENV_FILES[@]}"; do
+    if [ -f "$env_file" ]; then
+        echo "[$(date '+%H:%M:%S')] 📝 .env 파일 로드: $env_file"
+        set -a  # export all variables
+        source "$env_file"
+        set +a
+        break
+    fi
+done
+
 # Gemini 모델 설정 (gemini-2.5-pro 사용)
 export GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-pro}"
 
@@ -18,9 +38,7 @@ BLUE='\033[0;34m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# 설정
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# 설정 (SCRIPT_DIR, PROJECT_ROOT는 위에서 이미 정의됨)
 UTILS_DIR="$(cd "$PROJECT_ROOT/../utils" && pwd)"
 PROMPT_FILE="$PROJECT_ROOT/prompts/crawling_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_result.py"
@@ -147,8 +165,15 @@ log_success "Gemini CLI 확인 완료"
 
 # GEMINI_API_KEY 환경변수 확인 (headless 모드 필수)
 if [ -z "$GEMINI_API_KEY" ]; then
-    log_warning "GEMINI_API_KEY 환경변수가 설정되지 않았습니다"
-    log_info "API 키 없이 OAuth 인증이 필요할 수 있습니다"
+    # .env에서 GEMINI_API_KEY_BYEON을 GEMINI_API_KEY로 설정
+    if [ -n "$GEMINI_API_KEY_BYEON" ]; then
+        export GEMINI_API_KEY="$GEMINI_API_KEY_BYEON"
+        log_success "GEMINI_API_KEY 설정 완료 (from GEMINI_API_KEY_BYEON)"
+    else
+        log_error "GEMINI_API_KEY 환경변수가 설정되지 않았습니다"
+        log_error "headless 모드에서는 API 키가 필수입니다"
+        exit 1
+    fi
 else
     log_success "GEMINI_API_KEY 환경변수 확인 완료"
 fi

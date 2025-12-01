@@ -131,12 +131,18 @@ jobs:
           YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
           OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}
           GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           EOF
           
-          # 크롤링 .env (복사)
-          cp backend/.env backend/geminiCLI-restaurant-crawling/.env
+          # 크롤링 .env (GEMINI_API_KEY 포함)
+          cat > backend/geminiCLI-restaurant-crawling/.env << EOF
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}
+          GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}
+          YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
+          OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}
+          EOF
           
           # 평가 .env (네이버 API 추가)
           cat > backend/geminiCLI-restaurant-evaluation/.env << EOF
@@ -145,6 +151,7 @@ jobs:
           NCP_MAPS_KEY_ID_BYEON=${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
           NCP_MAPS_KEY_BYEON=${{ secrets.NCP_MAPS_KEY_BYEON }}
           GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           EOF
