@@ -7,7 +7,7 @@
 | 항목 | 설명 |
 |------|------|
 | **실행 브랜치** | `github-actions-restaurant` (데이터 전용 브랜치) |
-| **실행 주기** | 2일마다 KST 02:00 (UTC 17:00) 자동 실행 (main) |
+| **실행 주기** | 2일마다 KST 02:30 (UTC 17:30) 자동 실행 (main) |
 | **트리거** | `schedule` (main), `workflow_dispatch` (수동) |
 | **타임아웃** | 3시간 (180분) |
 | **결과 저장** | Supabase DB + GitHub 저장소 자동 커밋 |
