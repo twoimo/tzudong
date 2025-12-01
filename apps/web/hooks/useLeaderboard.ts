@@ -16,8 +16,8 @@ export const useLeaderboard = () => {
         queryFn: async () => {
             try {
                 // Get all profiles (모든 사용자)
-                const { data: profilesData, error: profilesError } = await supabase
-                    .from('profiles')
+                const { data: profilesData, error: profilesError } = await (supabase
+                    .from('profiles') as any)
                     .select('user_id, nickname')
                     .not('nickname', 'is', null)
                     .neq('nickname', '탈퇴한 사용자');
@@ -32,9 +32,9 @@ export const useLeaderboard = () => {
                 }
 
                 // Get all reviews for these users
-                const userIds = profilesData.map(profile => profile.user_id);
-                const { data: allReviewsData, error: allReviewsError } = await supabase
-                    .from('reviews')
+                const userIds = profilesData.map((profile: any) => profile.user_id);
+                const { data: allReviewsData, error: allReviewsError } = await (supabase
+                    .from('reviews') as any)
                     .select('id, user_id, is_verified')
                     .in('user_id', userIds);
 
@@ -45,11 +45,11 @@ export const useLeaderboard = () => {
                 // Get likes data for all reviews
                 let reviewIds: string[] = [];
                 if (allReviewsData) {
-                    reviewIds = allReviewsData.map(review => review.id);
+                    reviewIds = allReviewsData.map((review: any) => review.id);
                 }
 
-                const { data: likesData, error: likesError } = await supabase
-                    .from('review_likes')
+                const { data: likesData, error: likesError } = await (supabase
+                    .from('review_likes') as any)
                     .select('review_id')
                     .in('review_id', reviewIds);
 
@@ -65,14 +65,14 @@ export const useLeaderboard = () => {
                 // Create likes count map for each review
                 const reviewLikesMap = new Map<string, number>();
                 if (likesData) {
-                    likesData.forEach(like => {
+                    likesData.forEach((like: any) => {
                         const current = reviewLikesMap.get(like.review_id) || 0;
                         reviewLikesMap.set(like.review_id, current + 1);
                     });
                 }
 
                 if (allReviewsData && allReviewsData.length > 0) {
-                    allReviewsData.forEach(review => {
+                    allReviewsData.forEach((review: any) => {
                         // 총 리뷰 수 계산
                         const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
                         reviewCountMap.set(review.user_id, currentReviewCount + 1);
@@ -91,7 +91,7 @@ export const useLeaderboard = () => {
                 }
 
                 // Calculate user stats for all profiles
-                const users = profilesData.map(profile => {
+                const users = profilesData.map((profile: any) => {
                     const reviewCount = reviewCountMap.get(profile.user_id) || 0;
                     const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
                     const totalLikes = totalLikesMap.get(profile.user_id) || 0;
@@ -107,8 +107,8 @@ export const useLeaderboard = () => {
 
                 // Sort by review count and assign rank
                 return users
-                    .sort((a, b) => b.reviewCount - a.reviewCount)
-                    .map((user, index) => ({
+                    .sort((a: any, b: any) => b.reviewCount - a.reviewCount)
+                    .map((user: any, index: number) => ({
                         ...user,
                         rank: index + 1,
                     }));

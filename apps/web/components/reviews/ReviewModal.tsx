@@ -81,8 +81,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const { data: jjyangRestaurants = [] } = useQuery({
         queryKey: ['jjyang-restaurants'],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('restaurants')
+            const { data, error } = await (supabase
+                .from('restaurants') as any)
                 .select('id, name')
                 .order('name');
 
@@ -200,7 +200,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         }
 
         // 선택된 맛집 정보 가져오기
-        const selectedRestaurant = jjyangRestaurants.find(r => r.id === selectedRestaurantId);
+        const selectedRestaurant = (jjyangRestaurants as any[]).find((r: any) => r.id === selectedRestaurantId);
         if (!selectedRestaurant) {
             toast({
                 title: "맛집 선택 오류",
@@ -272,8 +272,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 throw new Error("카테고리를 선택해주세요");
             }
 
-            const { error: insertError } = await supabase
-                .from('reviews')
+            const { error: insertError } = await (supabase
+                .from('reviews') as any)
                 .insert({
                     user_id: user.id,
                     restaurant_id: selectedRestaurantId,
@@ -378,7 +378,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 </Select>
                                 {selectedRestaurantId && (
                                     <p className="text-xs text-muted-foreground">
-                                        선택된 맛집: {jjyangRestaurants.find(r => r.id === selectedRestaurantId)?.name}
+                                        선택된 맛집: {(jjyangRestaurants as any[]).find((r: any) => r.id === selectedRestaurantId)?.name}
                                     </p>
                                 )}
                             </div>
@@ -504,10 +504,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 <Card
                                     ref={verificationDropRef}
                                     className={`p-6 border-dashed transition-colors cursor-pointer ${isVerificationDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : verificationPhoto
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-gray-300 hover:border-primary/50'
+                                        ? 'border-primary bg-primary/5'
+                                        : verificationPhoto
+                                            ? 'border-green-300 bg-green-50/50'
+                                            : 'border-gray-300 hover:border-primary/50'
                                         }`}
                                     onDragOver={handleDragOver}
                                     onDragEnter={handleVerificationDragEnter}
@@ -645,10 +645,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 <Card
                                     ref={foodPhotosDropRef}
                                     className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : foodPhotos.length > 0
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-gray-300 hover:border-primary/50'
+                                        ? 'border-primary bg-primary/5'
+                                        : foodPhotos.length > 0
+                                            ? 'border-green-300 bg-green-50/50'
+                                            : 'border-gray-300 hover:border-primary/50'
                                         }`}
                                     onDragOver={handleDragOver}
                                     onDragEnter={handleFoodPhotosDragEnter}

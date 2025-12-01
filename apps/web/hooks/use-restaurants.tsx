@@ -47,9 +47,16 @@ function normalizeAddress(address: string): string {
         .toLowerCase();
 }
 
+type IntermediateRestaurant = DBRestaurant & {
+    mergedRestaurants?: DBRestaurant[];
+    mergedYoutubeLinks?: string[];
+    mergedTzuyangReviews?: string[];
+    mergedYoutubeMetas?: YoutubeMeta[];
+};
+
 // 레스토랑 병합 함수 (재사용 가능)
 export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
-    const restaurantMap = new Map<string, DBRestaurant & { mergedRestaurants?: DBRestaurant[] }>();
+    const restaurantMap = new Map<string, IntermediateRestaurant>();
 
     restaurants.forEach((restaurant: DBRestaurant) => {
         const currentName = restaurant.name || '';
@@ -144,7 +151,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
                     mergedRestaurants: mergedRestaurants,
                 };
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                restaurantMap.set(existingKey, updatedRestaurant as any);
+                restaurantMap.set(existingKey, updatedRestaurant);
 
                 merged = true;
                 break;
@@ -159,7 +166,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
     });
 
     // Map을 배열로 변환하고 호환성 속성 추가
-    const mergedRestaurants = Array.from(restaurantMap.values()).map((restaurant: DBRestaurant & { mergedRestaurants?: DBRestaurant[] }) => ({
+    const mergedRestaurants = Array.from(restaurantMap.values()).map((restaurant: IntermediateRestaurant) => ({
         ...restaurant,
         // 호환성 속성 추가
         address: restaurant.road_address || restaurant.jibun_address || '',

@@ -70,7 +70,7 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
             // 프로필이 존재하는 경우
             if (data && data.length > 0) {
-                const profileData = data[0];
+                const profileData = data[0] as any;
                 setProfile(profileData);
                 setNewNickname(profileData.nickname || "");
             } else {
@@ -97,8 +97,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
 
         setLoading(true);
         try {
-            const { error } = await supabase
-                .from('profiles')
+            const { error } = await (supabase
+                .from('profiles') as any)
                 .update({
                     nickname: newNickname.trim()
                 })
@@ -166,8 +166,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
         setLoading(true);
         try {
             // 1. 프로필 익명화 (삭제 대신 닉네임 변경)
-            const { error: profileError } = await supabase
-                .from('profiles')
+            const { error: profileError } = await (supabase
+                .from('profiles') as any)
                 .update({ nickname: '탈퇴한 사용자' })
                 .eq('user_id', user.id);
 

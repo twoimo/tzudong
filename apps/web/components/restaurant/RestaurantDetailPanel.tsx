@@ -57,9 +57,9 @@ export function RestaurantDetailPanel({
 
     // 카테고리 처리: categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
-        ? restaurant.categories
+        ? (restaurant.categories as string[])
         : restaurant?.categories
-            ? [restaurant.categories]
+            ? [restaurant.categories as unknown as string]
             : [];
 
     // 최적 레코드 선택: 가장 긴 이름 -> 가장 긴 지번 주소 순으로 우선순위
@@ -109,8 +109,8 @@ export function RestaurantDetailPanel({
         queryFn: async () => {
             try {
                 // 1. 해당 맛집의 승인된 리뷰 조회
-                const { data: reviewsData, error: reviewsError } = await supabase
-                    .from('reviews')
+                const { data: reviewsData, error: reviewsError } = await (supabase
+                    .from('reviews') as any)
                     .select('*')
                     .eq('restaurant_id', restaurant.id)
                     .eq('is_verified', true)
@@ -127,38 +127,38 @@ export function RestaurantDetailPanel({
                 }
 
                 // 2. 필요한 user_id 수집
-                const userIds = [...new Set(reviewsData.map(r => r.user_id))];
+                const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
 
                 // 3. Profiles 가져오기
-                const { data: profilesData } = await supabase
-                    .from('profiles')
+                const { data: profilesData } = await (supabase
+                    .from('profiles') as any)
                     .select('user_id, nickname')
                     .in('user_id', userIds);
 
                 // 4. Map으로 변환 (빠른 조회)
                 const profilesMap = new Map(
-                    (profilesData || []).map(p => [p.user_id, p.nickname])
+                    (profilesData || []).map((p: any) => [p.user_id, p.nickname])
                 );
 
                 // 6. 리뷰 좋아요 데이터 조회
-                const reviewIds = reviewsData.map(r => r.id);
-                const { data: likesData } = await supabase
-                    .from('review_likes')
+                const reviewIds = reviewsData.map((r: any) => r.id);
+                const { data: likesData } = await (supabase
+                    .from('review_likes') as any)
                     .select('review_id, user_id')
                     .in('review_id', reviewIds);
 
                 // 좋아요 수와 사용자 좋아요 상태 계산
                 const likesMap = new Map<string, { count: number; isLiked: boolean }>();
-                reviewIds.forEach(reviewId => {
-                    const likesForReview = likesData?.filter(like => like.review_id === reviewId) || [];
+                reviewIds.forEach((reviewId: string) => {
+                    const likesForReview = likesData?.filter((like: any) => like.review_id === reviewId) || [];
                     likesMap.set(reviewId, {
                         count: likesForReview.length,
-                        isLiked: user ? likesForReview.some(like => like.user_id === user.id) : false
+                        isLiked: user ? likesForReview.some((like: any) => like.user_id === user.id) : false
                     });
                 });
 
                 // 7. 리뷰 데이터 매핑
-                const reviews = reviewsData.map(review => {
+                const reviews = reviewsData.map((review: any) => {
                     const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
                     return {
                         id: review.id,
@@ -317,8 +317,8 @@ export function RestaurantDetailPanel({
         try {
             if (isCurrentlyLiked) {
                 // 좋아요 취소
-                const { error } = await supabase
-                    .from('review_likes')
+                const { error } = await (supabase
+                    .from('review_likes') as any)
                     .delete()
                     .eq('review_id', reviewId)
                     .eq('user_id', user.id);
@@ -326,8 +326,8 @@ export function RestaurantDetailPanel({
                 if (error) throw error;
             } else {
                 // 좋아요 추가
-                const { error } = await supabase
-                    .from('review_likes')
+                const { error } = await (supabase
+                    .from('review_likes') as any)
                     .insert({
                         review_id: reviewId,
                         user_id: user.id
@@ -420,7 +420,7 @@ export function RestaurantDetailPanel({
 
                                             return uniqueAds.length > 0 ? (
                                                 <>
-                                                    {uniqueAds.map((ad: string, index: number) => (
+                                                    {uniqueAds.map((ad: any, index: number) => (
                                                         <Badge
                                                             key={index}
                                                             variant="outline"

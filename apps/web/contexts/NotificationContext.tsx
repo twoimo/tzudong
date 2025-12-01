@@ -21,8 +21,8 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         }
 
         try {
-            const { data, error } = await supabase
-                .from('notifications')
+            const { data, error } = await (supabase
+                .from('notifications') as any)
                 .select('*')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
@@ -37,7 +37,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 }
                 setNotifications([]);
             } else {
-                const formattedNotifications: Notification[] = (data || []).map(n => ({
+                const formattedNotifications: Notification[] = (data || []).map((n: any) => ({
                     id: n.id,
                     type: n.type as NotificationType,
                     title: n.title,
@@ -77,13 +77,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 },
                 (payload) => {
                     const newNotification: Notification = {
-                        id: payload.new.id,
-                        type: payload.new.type as NotificationType,
-                        title: payload.new.title,
-                        message: payload.new.message,
-                        createdAt: new Date(payload.new.created_at),
-                        isRead: payload.new.is_read,
-                        data: payload.new.data || {}
+                        id: (payload.new as any).id,
+                        type: (payload.new as any).type as NotificationType,
+                        title: (payload.new as any).title,
+                        message: (payload.new as any).message,
+                        createdAt: new Date((payload.new as any).created_at),
+                        isRead: (payload.new as any).is_read,
+                        data: (payload.new as any).data || {}
                     };
                     setNotifications(prev => [newNotification, ...prev]);
                 }
@@ -104,7 +104,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     const markAsRead = async (id: string) => {
         try {
-            const { error } = await supabase.rpc('mark_notification_read', { notification_uuid: id });
+            const { error } = await (supabase as any).rpc('mark_notification_read', { notification_uuid: id });
             if (error) throw error;
 
             setNotifications(prev =>
@@ -121,7 +121,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     const markAllAsRead = async () => {
         try {
-            const { error } = await supabase.rpc('mark_all_notifications_read');
+            const { error } = await (supabase as any).rpc('mark_all_notifications_read');
             if (error) throw error;
 
             setNotifications(prev =>
@@ -140,7 +140,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         if (!user) return;
 
         try {
-            const { data, error } = await supabase.rpc('create_user_notification', {
+            const { data, error } = await (supabase as any).rpc('create_user_notification', {
                 p_user_id: user.id,
                 p_type: notification.type,
                 p_title: notification.title,
@@ -160,7 +160,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     const removeNotification = async (id: string) => {
         try {
-            const { error } = await supabase.rpc('delete_notification', { notification_uuid: id });
+            const { error } = await (supabase as any).rpc('delete_notification', { notification_uuid: id });
             if (error) throw error;
 
             setNotifications(prev => prev.filter(n => n.id !== id));
@@ -198,7 +198,7 @@ export const useNotifications = () => {
 // 관리자 공지사항 등록 알림 생성 함수 (모든 사용자에게)
 export const createAdminAnnouncement = async (title: string, message: string, customData?: Record<string, unknown>) => {
     try {
-        const { error } = await supabase.rpc('create_admin_announcement_notification', {
+        const { error } = await (supabase as any).rpc('create_admin_announcement_notification', {
             p_title: title,
             p_message: message,
             p_data: customData || {}
@@ -216,7 +216,7 @@ export const createNewRestaurantNotification = async (restaurantName: string, ad
     const message = `"${restaurantName}" 맛집이 쯔동여지도여지도에 새로 등록되었습니다!`;
 
     try {
-        const { error } = await supabase.rpc('create_new_restaurant_notification', {
+        const { error } = await (supabase as any).rpc('create_new_restaurant_notification', {
             p_title: title,
             p_message: message,
             p_data: {
@@ -235,7 +235,7 @@ export const createNewRestaurantNotification = async (restaurantName: string, ad
 // 사용자 랭킹 업데이트 알림 생성 함수
 export const createUserRankingNotification = async (userId: string, ranking: number, period: string = 'monthly') => {
     try {
-        const { error } = await supabase.rpc('create_ranking_notification', {
+        const { error } = await (supabase as any).rpc('create_ranking_notification', {
             p_user_id: userId,
             p_ranking: ranking,
             p_period: period
@@ -256,7 +256,7 @@ export const createUserNotification = async (
     customData?: Record<string, unknown>
 ) => {
     try {
-        const { error } = await supabase.rpc('create_user_notification', {
+        const { error } = await (supabase as any).rpc('create_user_notification', {
             p_user_id: userId,
             p_type: type,
             p_title: title,
