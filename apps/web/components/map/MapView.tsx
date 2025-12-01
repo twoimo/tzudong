@@ -1,3 +1,4 @@
+/// <reference types="google.maps" />
 import { useEffect, useRef, useState, memo, useCallback, useMemo } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 import { useGoogleMaps } from "@/hooks/use-google-maps";
