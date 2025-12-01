@@ -64,7 +64,7 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
                 .from('profiles')
                 .update({
                     nickname: nickname.trim()
-                })
+                } as any)
                 .eq('user_id', user.id);
 
             if (error) throw error;
