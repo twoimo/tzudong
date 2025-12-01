@@ -15,12 +15,12 @@ on:
           - transform
           - insert
   schedule:
-    # 2일마다 KST 03:00 (UTC 18:00) 자동 실행
-    # schedule은 default branch에서만 실행되므로 push 트리거 사용
-    - cron: '0 18 */2 * *'
-  push:
-    branches:
-      - github-actions-restaurant  # 이 브랜치에 push 시 자동 실행
+    # 2일마다 KST 02:00 (UTC 17:00) 자동 실행
+    - cron: '0 17 */2 * *'
+  # push 트리거 비활성화 - 수동 실행(workflow_dispatch) 사용 권장
+  # push:
+  #   branches:
+  #     - github-actions-restaurant
 
 env:
   PYTHON_VERSION: '3.11'

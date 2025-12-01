@@ -7,8 +7,8 @@
 | 항목 | 설명 |
 |------|------|
 | **실행 브랜치** | `github-actions-restaurant` (데이터 전용 브랜치) |
-| **실행 주기** | 2일마다 KST 03:00 (UTC 18:00) 자동 실행 (main) 또는 push 시 |
-| **트리거** | `schedule` (main), `push` (github-actions-restaurant), `workflow_dispatch` (수동) |
+| **실행 주기** | 2일마다 KST 02:00 (UTC 17:00) 자동 실행 (main) |
+| **트리거** | `schedule` (main), `workflow_dispatch` (수동) |
 | **타임아웃** | 3시간 (180분) |
 | **결과 저장** | Supabase DB + GitHub 저장소 자동 커밋 |
 
@@ -17,7 +17,6 @@
 | 트리거 | 실행 브랜치 | 데이터 저장 위치 |
 |--------|------------|-----------------|
 | `schedule` (2일마다) | main | main 브랜치에 커밋 |
-| `push` | github-actions-restaurant | github-actions-restaurant 브랜치에 커밋 |
 | `workflow_dispatch` (수동) | 선택한 브랜치 | 해당 브랜치에 커밋 |
 
 > **💡 권장**: `github-actions-restaurant` 브랜치에서 파이프라인을 실행하여 데이터를 분리 관리하세요.
