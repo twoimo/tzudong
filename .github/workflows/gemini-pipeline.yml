@@ -89,15 +89,20 @@ jobs:
       # 5. Gemini CLI 설치 (API 키 방식)
       # ============================
       - name: 🤖 Install Gemini CLI
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_BYEON }}
         run: |
-          # Gemini CLI 설치
-          npm install -g @anthropic-ai/claude-code 2>/dev/null || true
-          npm install -g @google/generative-ai-cli 2>/dev/null || true
+          # Gemini CLI 설치 (공식 패키지)
+          npm install -g @google/gemini-cli
+          
+          # 설치 확인
+          which gemini || echo "gemini not found in PATH"
+          gemini --version || echo "gemini version check failed"
           
           # Python SDK도 설치 (백업용)
           pip install google-generativeai
           
-          echo "✅ Gemini 설정 완료"
+          echo "✅ Gemini CLI 설치 완료"
       
       # ============================
       # 6. 환경 변수 파일 생성
