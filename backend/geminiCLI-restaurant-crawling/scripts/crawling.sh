@@ -22,13 +22,28 @@ for env_file in "${ENV_FILES[@]}"; do
     echo "[$(date '+%H:%M:%S')] 🔍 .env 파일 확인 중: $env_file"
     if [ -f "$env_file" ]; then
         echo "[$(date '+%H:%M:%S')] ✅ .env 파일 발견! 로드 중..."
+        echo "[$(date '+%H:%M:%S')] 📝 .env 파일 내용:"
+        cat "$env_file" | while read line; do
+            # 값은 마스킹하고 키만 표시
+            key=$(echo "$line" | cut -d'=' -f1)
+            val=$(echo "$line" | cut -d'=' -f2-)
+            if [ -n "$val" ]; then
+                echo "[$(date '+%H:%M:%S')]    $key=***설정됨***"
+            else
+                echo "[$(date '+%H:%M:%S')]    $key=(비어있음)"
+            fi
+        done
         set -a  # export all variables
         source "$env_file"
         set +a
         ENV_LOADED=true
         echo "[$(date '+%H:%M:%S')] 📝 .env 파일 로드 완료: $env_file"
-        # .env 내용 일부 확인 (값은 마스킹)
-        echo "[$(date '+%H:%M:%S')] 📝 GEMINI_API_KEY 설정됨: $([ -n \"$GEMINI_API_KEY\" ] && echo 'YES' || echo 'NO')"
+        # 로드 후 환경변수 확인
+        if [ -n "$GEMINI_API_KEY" ]; then
+            echo "[$(date '+%H:%M:%S')] ✅ GEMINI_API_KEY 로드됨 (길이: ${#GEMINI_API_KEY})"
+        else
+            echo "[$(date '+%H:%M:%S')] ❌ GEMINI_API_KEY 로드 안됨"
+        fi
         break
     else
         echo "[$(date '+%H:%M:%S')] ⚠️ 파일 없음: $env_file"
@@ -37,7 +52,11 @@ done
 
 if [ "$ENV_LOADED" = false ]; then
     echo "[$(date '+%H:%M:%S')] ⚠️ .env 파일을 찾지 못했습니다"
-    echo "[$(date '+%H:%M:%S')] 📝 현재 GEMINI_API_KEY 상태: $([ -n \"$GEMINI_API_KEY\" ] && echo 'YES (환경변수로 설정됨)' || echo 'NO')"
+    if [ -n "$GEMINI_API_KEY" ]; then
+        echo "[$(date '+%H:%M:%S')] ✅ GEMINI_API_KEY 환경변수로 이미 설정됨"
+    else
+        echo "[$(date '+%H:%M:%S')] ❌ GEMINI_API_KEY 환경변수 없음"
+    fi
 fi
 
 # Gemini 모델 설정 (gemini-2.5-pro 사용)
