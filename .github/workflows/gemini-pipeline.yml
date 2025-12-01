@@ -99,6 +99,23 @@ jobs:
           which gemini || echo "gemini not found in PATH"
           gemini --version || echo "gemini version check failed"
           
+          # Gemini CLI 설정 파일 생성 (API 키 인증용)
+          mkdir -p ~/.gemini
+          cat > ~/.gemini/settings.json << EOF
+          {
+            "auth": {
+              "type": "api-key"
+            },
+            "theme": "default",
+            "sandbox": false,
+            "yoloMode": true
+          }
+          EOF
+          
+          echo "✅ Gemini CLI 설정 완료"
+          echo "📁 설정 파일: ~/.gemini/settings.json"
+          cat ~/.gemini/settings.json
+          
           # Python SDK도 설치 (백업용)
           pip install google-generativeai
           
