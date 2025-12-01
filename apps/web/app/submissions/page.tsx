@@ -789,7 +789,7 @@ export default function RestaurantSubmissionsPage() {
                                 <Select
                                     value={selectedRestaurant?.id || ""}
                                     onValueChange={(value) => {
-                                        const restaurant = allRestaurants.find(r => r.id === value);
+                                        const restaurant = allRestaurants.find((r: any) => r.id === value);
                                         if (restaurant) {
                                             handleRestaurantSelect(restaurant);
                                         }
