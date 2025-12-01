@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setNeedsNicknameSetup(false);
             } else if (!data) {
                 setNeedsNicknameSetup(true);
-            } else if (data.nickname === "탈퇴한 사용자") {
+            } else if ((data as any).nickname === "탈퇴한 사용자") {
                 setNeedsNicknameSetup(true);
             } else {
                 setNeedsNicknameSetup(false);

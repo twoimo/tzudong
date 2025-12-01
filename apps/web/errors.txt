@@ -1,87 +1,16 @@
-components/profile/ProfileModal.tsx(75,44): error TS2339: Property 'nickname' does not exist on type 'never'.
-components/profile/ProfileModal.tsx(102,25): error TS2345: Argument of type '{ nickname: string; }' is not assignable to parameter of type 'never'.
-components/profile/ProfileModal.tsx(171,25): error TS2345: Argument of type '{ nickname: string; }' is not assignable to parameter of type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(59,11): error TS2322: Type 'string[] | string[][]' is not assignable to type 'string[]'.
-  Type 'string[][]' is not assignable to type 'string[]'.
-    Type 'string[]' is not assignable to type 'string'.
+components/layout/RankingWidget.tsx(17,33): error TS7006: Parameter 'u' implicitly has an 'any' type.
 components/restaurant/RestaurantDetailPanel.tsx(115,42): error TS18047: 'restaurant' is possibly 'null'.
-components/restaurant/RestaurantDetailPanel.tsx(130,68): error TS2339: Property 'user_id' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(140,54): error TS2339: Property 'user_id' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(140,65): error TS2339: Property 'nickname' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(144,58): error TS2339: Property 'id' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(153,75): error TS2339: Property 'review_id' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(156,74): error TS2339: Property 'user_id' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(162,59): error TS2339: Property 'id' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(164,36): error TS2339: Property 'id' does not exist on type 'never'.
 components/restaurant/RestaurantDetailPanel.tsx(165,41): error TS18047: 'restaurant' is possibly 'null'.
-components/restaurant/RestaurantDetailPanel.tsx(167,58): error TS2339: Property 'user_id' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(168,43): error TS2339: Property 'visited_at' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(169,45): error TS2339: Property 'created_at' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(170,41): error TS2339: Property 'content' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(171,44): error TS2339: Property 'is_verified' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(172,42): error TS2339: Property 'is_pinned' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(173,49): error TS2339: Property 'is_edited_by_admin' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(174,44): error TS2339: Property 'admin_note' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(175,40): error TS2339: Property 'food_photos' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(175,61): error TS2339: Property 'food_photos' does not exist on type 'never'.
-components/restaurant/RestaurantDetailPanel.tsx(176,42): error TS2339: Property 'categories' does not exist on type 'never'.
 components/restaurant/RestaurantDetailPanel.tsx(188,9): error TS1117: An object literal cannot have multiple properties with the same name.
 components/restaurant/RestaurantDetailPanel.tsx(188,20): error TS18047: 'restaurant' is possibly 'null'.
-components/restaurant/RestaurantDetailPanel.tsx(331,22): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(values: never, options?: { count?: "exact" | "planned" | "estimated" | undefined; } | undefined): PostgrestFilterBuilder<{ PostgrestVersion: "12"; }, never, never, null, "review_likes", never, "POST">', gave the following error.
-    Argument of type '{ review_id: string; user_id: string; }' is not assignable to parameter of type 'never'.
-  Overload 2 of 2, '(values: never[], options?: { count?: "exact" | "planned" | "estimated" | undefined; defaultToNull?: boolean | undefined; } | undefined): PostgrestFilterBuilder<{ PostgrestVersion: "12"; }, never, never, null, "review_likes", never, "POST">', gave the following error.
-    Object literal may only specify known properties, and 'review_id' does not exist in type 'never[]'.
-components/restaurant/RestaurantDetailPanel.tsx(423,68): error TS2345: Argument of type '(ad: string, index: number) => JSX.Element' is not assignable to parameter of type '(value: unknown, index: number, array: unknown[]) => Element'.
-  Types of parameters 'ad' and 'value' are incompatible.
-    Type 'unknown' is not assignable to type 'string'.
 components/restaurant/RestaurantDetailPanel.tsx(588,80): error TS18048: 'restaurant.mergedYoutubeLinks' is possibly 'undefined'.
 components/restaurant/RestaurantDetailPanel.tsx(604,80): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | URL | undefined'.
   Type 'null' is not assignable to type 'string | URL | undefined'.
-components/reviews/ReviewModal.tsx(203,66): error TS2339: Property 'id' does not exist on type 'never'.
-components/reviews/ReviewModal.tsx(277,18): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(values: never, options?: { count?: "exact" | "planned" | "estimated" | undefined; } | undefined): PostgrestFilterBuilder<{ PostgrestVersion: "12"; }, never, never, null, "reviews", never, "POST">', gave the following error.
-    Argument of type '{ user_id: string; restaurant_id: string; title: string; content: string; visited_at: string; verification_photo: string; food_photos: string[]; categories: ("치킨" | "중식" | "돈까스·회" | "피자" | "패스트푸드" | ... 9 more ... | "도시락")[]; is_verified: boolean; }' is not assignable to parameter of type 'never'.
-  Overload 2 of 2, '(values: never[], options?: { count?: "exact" | "planned" | "estimated" | undefined; defaultToNull?: boolean | undefined; } | undefined): PostgrestFilterBuilder<{ PostgrestVersion: "12"; }, never, never, null, "reviews", never, "POST">', gave the following error.
-    Object literal may only specify known properties, and 'user_id' does not exist in type 'never[]'.
-components/reviews/ReviewModal.tsx(280,50): error TS2339: Property 'name' does not exist on type 'never'.
-components/reviews/ReviewModal.tsx(373,73): error TS2339: Property 'id' does not exist on type 'never'.
-components/reviews/ReviewModal.tsx(373,95): error TS2339: Property 'id' does not exist on type 'never'.
-components/reviews/ReviewModal.tsx(374,61): error TS2339: Property 'name' does not exist on type 'never'.
-components/reviews/ReviewModal.tsx(381,80): error TS2339: Property 'id' does not exist on type 'never'.
-components/reviews/ReviewModal.tsx(381,110): error TS2339: Property 'name' does not exist on type 'never'.
+components/reviews/ReviewModal.tsx(372,65): error TS7006: Parameter 'restaurant' implicitly has an 'any' type.
 contexts/AuthContext.tsx(92,29): error TS2339: Property 'nickname' does not exist on type 'never'.
-contexts/NotificationContext.tsx(41,27): error TS2339: Property 'id' does not exist on type 'never'.
-contexts/NotificationContext.tsx(42,29): error TS2339: Property 'type' does not exist on type 'never'.
-contexts/NotificationContext.tsx(43,30): error TS2339: Property 'title' does not exist on type 'never'.
-contexts/NotificationContext.tsx(44,32): error TS2339: Property 'message' does not exist on type 'never'.
-contexts/NotificationContext.tsx(45,43): error TS2339: Property 'created_at' does not exist on type 'never'.
-contexts/NotificationContext.tsx(46,31): error TS2339: Property 'is_read' does not exist on type 'never'.
-contexts/NotificationContext.tsx(47,29): error TS2339: Property 'data' does not exist on type 'never'.
-contexts/NotificationContext.tsx(107,76): error TS2345: Argument of type '{ notification_uuid: string; }' is not assignable to parameter of type 'undefined'.
-contexts/NotificationContext.tsx(143,84): error TS2345: Argument of type '{ p_user_id: string; p_type: NotificationType; p_title: string; p_message: string; p_data: Record<string, unknown>; }' is not assignable to parameter of type 'undefined'.
-contexts/NotificationContext.tsx(163,73): error TS2345: Argument of type '{ notification_uuid: string; }' is not assignable to parameter of type 'undefined'.
-contexts/NotificationContext.tsx(201,88): error TS2345: Argument of type '{ p_title: string; p_message: string; p_data: Record<string, unknown>; }' is not assignable to parameter of type 'undefined'.
-contexts/NotificationContext.tsx(219,84): error TS2345: Argument of type '{ p_title: string; p_message: string; p_data: { restaurantName: string; address: string; }; }' is not assignable to parameter of type 'undefined'.
-contexts/NotificationContext.tsx(238,77): error TS2345: Argument of type '{ p_user_id: string; p_ranking: number; p_period: string; }' is not assignable to parameter of type 'undefined'.
-contexts/NotificationContext.tsx(259,74): error TS2345: Argument of type '{ p_user_id: string; p_type: NotificationType; p_title: string; p_message: string; p_data: Record<string, unknown>; }' is not assignable to parameter of type 'undefined'.
-hooks/use-restaurants.tsx(169,40): error TS2339: Property 'mergedYoutubeLinks' does not exist on type '{ id: string; unique_id: string; name: string; phone: string | null; categories: string[]; status: string; source_type: string; youtube_meta: Json; evaluation_results: Json; reasoning_basis: string | null; ... 18 more ...; updated_at: string; } & { ...; }'.
-hooks/use-restaurants.tsx(170,42): error TS2551: Property 'mergedTzuyangReviews' does not exist on type '{ id: string; unique_id: string; name: string; phone: string | null; categories: string[]; status: string; source_type: string; youtube_meta: Json; evaluation_results: Json; reasoning_basis: string | null; ... 18 more ...; updated_at: string; } & { ...; }'. Did you mean 'tzuyang_review'?
-hooks/use-restaurants.tsx(171,40): error TS2339: Property 'mergedYoutubeMetas' does not exist on type '{ id: string; unique_id: string; name: string; phone: string | null; categories: string[]; status: string; source_type: string; youtube_meta: Json; evaluation_results: Json; reasoning_basis: string | null; ... 18 more ...; updated_at: string; } & { ...; }'.
-hooks/useLeaderboard.ts(35,69): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(48,69): error TS2339: Property 'id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(69,65): error TS2339: Property 'review_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(70,49): error TS2339: Property 'review_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(77,78): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(78,51): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(81,36): error TS2339: Property 'is_verified' does not exist on type 'never'.
-hooks/useLeaderboard.ts(82,92): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(83,63): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(87,71): error TS2339: Property 'id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(88,71): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(89,50): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(95,68): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(96,84): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(97,66): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(100,37): error TS2339: Property 'user_id' does not exist on type 'never'.
-hooks/useLeaderboard.ts(101,43): error TS2339: Property 'nickname' does not exist on type 'never'.
+hooks/use-restaurants.tsx(154,48): error TS2345: Argument of type '{ name: string; lat: number; lng: number; categories: string[]; youtube_link: string | null; tzuyang_review: string | null; youtube_meta: YoutubeMeta; mergedYoutubeLinks: string[]; ... 24 more ...; updated_at: string; }' is not assignable to parameter of type 'IntermediateRestaurant'.
+  Type '{ name: string; lat: number; lng: number; categories: string[]; youtube_link: string | null; tzuyang_review: string | null; youtube_meta: YoutubeMeta; mergedYoutubeLinks: string[]; ... 24 more ...; updated_at: string; }' is not assignable to type '{ id: string; unique_id: string; name: string; phone: string | null; categories: string[]; status: string; source_type: string; youtube_meta: Json; evaluation_results: Json; reasoning_basis: string | null; ... 18 more ...; updated_at: string; }'.
+    Types of property 'youtube_meta' are incompatible.
+      Type 'YoutubeMeta' is not assignable to type 'Json'.
+        Type 'YoutubeMeta' is not assignable to type '{ [key: string]: Json | undefined; }'.
+          Index signature for type 'string' is missing in type 'YoutubeMeta'.

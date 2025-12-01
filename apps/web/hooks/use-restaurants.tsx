@@ -142,7 +142,7 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
                     categories: allCategories, // 모든 카테고리 배열
                     youtube_link: mergedYoutubeLinks[0] || null, // 첫 번째 링크 (DB 저장용)
                     tzuyang_review: mergedTzuyangReviews[0] || null, // 첫 번째 리뷰 (DB 저장용)
-                    youtube_meta: mergedYoutubeMetas[0] || null, // 가장 첫 번째 메타 (DB 저장용)
+                    youtube_meta: (mergedYoutubeMetas[0] || null) as any, // 가장 첫 번째 메타 (DB 저장용)
                     // 병합된 전체 배열 (UI 표시용)
                     mergedYoutubeLinks: mergedYoutubeLinks,
                     mergedTzuyangReviews: mergedTzuyangReviews,

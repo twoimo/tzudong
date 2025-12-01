@@ -14,7 +14,7 @@ export const RankingWidget = () => {
 
     // Find my rank
     const myRank = user
-        ? leaderboardData.find((u) => u.id === user.id)?.rank
+        ? leaderboardData.find((u: any) => u.id === user.id)?.rank
         : null;
 
     // Real-time online users

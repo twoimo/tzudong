@@ -105,9 +105,10 @@ export function RestaurantDetailPanel({
     // 실제 리뷰 데이터 가져오기
     const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
         queryKey: ['restaurant-reviews', restaurant?.id],
-        enabled: !!restaurant,
         queryFn: async () => {
             try {
+                if (!restaurant) return [];
+
                 // 1. 해당 맛집의 승인된 리뷰 조회
                 const { data: reviewsData, error: reviewsError } = await (supabase
                     .from('reviews') as any)
@@ -185,7 +186,7 @@ export function RestaurantDetailPanel({
                 return [];
             }
         },
-        enabled: !!restaurant.id
+        enabled: !!restaurant?.id
     });
 
     // 쯔양 구독자 리뷰 우선 표시 (닉네임에 '쯔양' 또는 'tzuyang'이 포함된 사용자)
@@ -585,7 +586,11 @@ export function RestaurantDetailPanel({
                                             {restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0 ? (
                                                 <div
                                                     className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                    onClick={() => window.open(restaurant.mergedYoutubeLinks[0], '_blank')}
+                                                    onClick={() => {
+                                                        if (restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) {
+                                                            window.open(restaurant.mergedYoutubeLinks[0], '_blank');
+                                                        }
+                                                    }}
                                                 >
                                                     {getYouTubeThumbnailUrl(restaurant.mergedYoutubeLinks[0]) && (
                                                         <img
@@ -601,7 +606,11 @@ export function RestaurantDetailPanel({
                                             ) : restaurant.youtube_link ? (
                                                 <div
                                                     className="relative cursor-pointer rounded-lg overflow-hidden group aspect-video"
-                                                    onClick={() => window.open(restaurant.youtube_link, '_blank')}
+                                                    onClick={() => {
+                                                        if (restaurant.youtube_link) {
+                                                            window.open(restaurant.youtube_link, '_blank');
+                                                        }
+                                                    }}
                                                 >
                                                     {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
                                                         <img

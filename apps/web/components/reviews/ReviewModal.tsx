@@ -369,7 +369,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         <SelectValue placeholder="쯔양이 방문한 맛집을 선택해주세요" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {jjyangRestaurants.map((restaurant) => (
+                                        {(jjyangRestaurants as any[]).map((restaurant: any) => (
                                             <SelectItem key={restaurant.id} value={restaurant.id}>
                                                 {restaurant.name}
                                             </SelectItem>
