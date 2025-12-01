@@ -164,8 +164,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 existingRestaurant = displayRestaurants.find(r =>
                     r.id === selectedRestaurant.id ||
                     (r.name === selectedRestaurant.name &&
-                        Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
-                        Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
+                        Math.abs((r.lat || 0) - (selectedRestaurant.lat || 0)) < 0.0001 &&
+                        Math.abs((r.lng || 0) - (selectedRestaurant.lng || 0)) < 0.0001)
                 );
             }
 
