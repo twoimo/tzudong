@@ -560,9 +560,9 @@ export function AdminRestaurantModal({
                 }
 
                 // 2. 공통 필드를 모든 기존 레코드에 업데이트
-                const { error: commonError } = await supabase
-                    .from("restaurants")
-                    .update(commonData as any)
+                const { error: commonError } = await (supabase
+                    .from("restaurants") as any)
+                    .update(commonData)
                     .in("id", existingIds);
 
                 if (commonError) throw commonError;
@@ -571,12 +571,12 @@ export function AdminRestaurantModal({
                 for (const review of formData.youtube_reviews) {
                     if (review.id.startsWith('new-')) continue; // 새 레코드는 스킵
 
-                    const { error: reviewError } = await supabase
-                        .from("restaurants")
+                    const { error: reviewError } = await (supabase
+                        .from("restaurants") as any)
                         .update({
                             youtube_link: review.youtube_link.trim() || null,
                             tzuyang_review: review.tzuyang_review.trim() || null,
-                        } as any)
+                        })
                         .eq("id", review.id);
 
                     if (reviewError) {
@@ -628,8 +628,8 @@ export function AdminRestaurantModal({
                     }
 
                     // 신규 레코드 생성
-                    const { error: insertError } = await supabase
-                        .from("restaurants")
+                    const { error: insertError } = await (supabase
+                        .from("restaurants") as any)
                         .insert({
                             ...commonData,
                             unique_id: uniqueId,
@@ -641,7 +641,7 @@ export function AdminRestaurantModal({
                             geocoding_success: true,
                             is_missing: false,
                             is_not_selected: false,
-                        } as any);
+                        });
 
                     if (insertError) {
                         console.error('신규 레코드 추가 실패:', insertError);
@@ -686,7 +686,7 @@ export function AdminRestaurantModal({
                     lng,
                 };
 
-                const { error } = await supabase.from("restaurants").insert(restaurantData as any);
+                const { error } = await (supabase.from("restaurants") as any).insert(restaurantData);
                 if (error) throw error;
 
                 toast.success("맛집이 등록되었습니다");
