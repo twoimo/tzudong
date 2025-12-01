@@ -107,7 +107,7 @@ export function EvaluationTable({
         </TableHeader>
         <TableBody>
           {records.map((record) => {
-            const thumbnailUrl = getThumbnailUrl(record.youtube_link);
+            const thumbnailUrl = record.youtube_link ? getThumbnailUrl(record.youtube_link) : null;
 
             return (
               <>

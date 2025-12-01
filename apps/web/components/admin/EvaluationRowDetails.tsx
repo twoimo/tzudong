@@ -451,7 +451,7 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
               </h4>
               {!evaluation_results.category_TF.eval_value && evaluation_results.category_TF.category_revision && (
                 <p className="text-sm">
-                  <strong>원본 카테고리:</strong> {restaurant_info.category} →
+                  <strong>원본 카테고리:</strong> {restaurant_info?.category} →
                   <strong className="ml-2">수정 카테고리:</strong> {evaluation_results.category_TF.category_revision}
                 </p>
               )}
