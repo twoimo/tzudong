@@ -196,7 +196,7 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       const conflictCheck = await checkDbConflict({
         jibunAddress: geocodingResult.data!.jibun_address,
         restaurantName: trimmedName,
-        youtubeLink: record.youtube_link,
+        youtubeLink: record.youtube_link || '',
       });
 
       if (conflictCheck.hasConflict) {
