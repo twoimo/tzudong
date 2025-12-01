@@ -6,10 +6,21 @@
 
 | 항목 | 설명 |
 |------|------|
-| **실행 주기** | 2일마다 KST 03:00 (UTC 18:00) 자동 실행 |
-| **트리거** | `schedule` (자동) 또는 `workflow_dispatch` (수동) |
+| **실행 브랜치** | `github-actions-restaurant` (데이터 전용 브랜치) |
+| **실행 주기** | 2일마다 KST 03:00 (UTC 18:00) 자동 실행 (main) 또는 push 시 |
+| **트리거** | `schedule` (main), `push` (github-actions-restaurant), `workflow_dispatch` (수동) |
 | **타임아웃** | 3시간 (180분) |
 | **결과 저장** | Supabase DB + GitHub 저장소 자동 커밋 |
+
+### 브랜치 전략
+
+| 트리거 | 실행 브랜치 | 데이터 저장 위치 |
+|--------|------------|-----------------|
+| `schedule` (2일마다) | main | main 브랜치에 커밋 |
+| `push` | github-actions-restaurant | github-actions-restaurant 브랜치에 커밋 |
+| `workflow_dispatch` (수동) | 선택한 브랜치 | 해당 브랜치에 커밋 |
+
+> **💡 권장**: `github-actions-restaurant` 브랜치에서 파이프라인을 실행하여 데이터를 분리 관리하세요.
 
 ---
 
@@ -78,9 +89,20 @@ backend/
 │
 └── log/
     └── geminiCLI-restaurant/
-        ├── youtube-urls_2025-12-01_03-00-15.json
-        ├── crawling_2025-12-01_03-01-30.json
-        └── ...
+        ├── report/
+        │   └── 25-12-01/
+        │       ├── crawling_143052.json
+        │       ├── evaluation-rule_150823.json
+        │       └── evaluation_160512.json
+        ├── text/
+        │   └── 25-12-01/
+        │       └── *.log
+        ├── structured/
+        │   └── 25-12-01/
+        │       └── *.jsonl
+        └── supabase/
+            └── 25-12-01/
+                └── insert-supabase_213642.json
 ```
 
 ### 📅 날짜 폴더 통일
@@ -116,7 +138,8 @@ GitHub 저장소의 Settings > Secrets and variables > Actions에서 설정:
 1. Actions 탭 클릭
 2. "🍜 GeminiCLI Restaurant Pipeline" 선택
 3. "Run workflow" 버튼 클릭
-4. 실행할 단계 선택:
+4. **"Use workflow from"에서 `github-actions-restaurant` 브랜치 선택**
+5. 실행할 단계 선택:
    - `all`: 전체 파이프라인
    - `crawling`: 크롤링만
    - `evaluation`: 평가만
@@ -126,13 +149,13 @@ GitHub 저장소의 Settings > Secrets and variables > Actions에서 설정:
 ### 2. GitHub CLI로 실행
 
 ```bash
-# 전체 파이프라인 실행
-gh workflow run "gemini-pipeline.yml" -f phase=all
+# github-actions-restaurant 브랜치에서 전체 파이프라인 실행
+gh workflow run "gemini-pipeline.yml" -f phase=all --ref github-actions-restaurant
 
 # 특정 단계만 실행
-gh workflow run "gemini-pipeline.yml" -f phase=crawling
-gh workflow run "gemini-pipeline.yml" -f phase=evaluation
-gh workflow run "gemini-pipeline.yml" -f phase=insert
+gh workflow run "gemini-pipeline.yml" -f phase=crawling --ref github-actions-restaurant
+gh workflow run "gemini-pipeline.yml" -f phase=evaluation --ref github-actions-restaurant
+gh workflow run "gemini-pipeline.yml" -f phase=insert --ref github-actions-restaurant
 ```
 
 ---
