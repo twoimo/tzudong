@@ -285,20 +285,31 @@ for i in "${!URLS[@]}"; do
     
     # YouTube 자막 가져오기 (참고 정보로 제공)
     TRANSCRIPT=""
+    TRANSCRIPT_ERROR=""
     if [ -f "$TRANSCRIPT_SCRIPT" ]; then
         TRANSCRIPT_START=$(date +%s)
-        TRANSCRIPT=$(python3 "$TRANSCRIPT_SCRIPT" "$URL" 50000 2>/dev/null || echo "")
+        # 에러 메시지를 캡처하기 위해 stderr를 별도 파일로 저장
+        TRANSCRIPT_STDERR="$PROJECT_ROOT/temp/transcript_stderr_$INDEX.log"
+        TRANSCRIPT=$(python3 "$TRANSCRIPT_SCRIPT" "$URL" 50000 2>"$TRANSCRIPT_STDERR") || true
+        TRANSCRIPT_ERROR=$(cat "$TRANSCRIPT_STDERR" 2>/dev/null || echo "")
         TRANSCRIPT_END=$(date +%s)
         TRANSCRIPT_DURATION=$((TRANSCRIPT_END - TRANSCRIPT_START))
         TOTAL_TRANSCRIPT_TIME=$((TOTAL_TRANSCRIPT_TIME + TRANSCRIPT_DURATION))
         
-        if [ -n "$TRANSCRIPT" ]; then
+        if [ -n "$TRANSCRIPT" ] && [[ ! "$TRANSCRIPT" == *"❌"* ]]; then
             log_debug "자막 로드 완료 (${#TRANSCRIPT}자, ${TRANSCRIPT_DURATION}s)"
             TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
         else
-            log_warning "자막 없음 - 검색 기반으로 진행 (${TRANSCRIPT_DURATION}s)"
+            if [ -n "$TRANSCRIPT_ERROR" ]; then
+                log_error "자막 가져오기 실패: $TRANSCRIPT_ERROR"
+            else
+                log_warning "자막 없음 - 검색 기반으로 진행 (${TRANSCRIPT_DURATION}s)"
+            fi
+            TRANSCRIPT=""
             TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
         fi
+    else
+        log_error "TRANSCRIPT_SCRIPT 파일 없음: $TRANSCRIPT_SCRIPT"
     fi
     
     # 프롬프트에 URL 삽입 (<유튜브 링크> 플레이스홀더 치환)
