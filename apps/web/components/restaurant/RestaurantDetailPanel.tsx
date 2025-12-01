@@ -173,7 +173,7 @@ export function RestaurantDetailPanel({
                         isEditedByAdmin: review.is_edited_by_admin || false,
                         admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                        category: review.categories?.[0] || review.category,
+                        category: review.categories?.[0] || '',
                         likeCount: likesInfo.count,
                         isLikedByUser: likesInfo.isLiked,
                     };

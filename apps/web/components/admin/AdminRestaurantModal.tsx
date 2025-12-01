@@ -450,8 +450,8 @@ export function AdminRestaurantModal({
                 `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`,
                 {
                     headers: {
-                        'X-NCP-APIGW-API-KEY-ID': clientId,
-                        'X-NCP-APIGW-API-KEY': clientSecret,
+                        'X-NCP-APIGW-API-KEY-ID': clientId || '',
+                        'X-NCP-APIGW-API-KEY': clientSecret || '',
                     }
                 }
             );
@@ -562,7 +562,7 @@ export function AdminRestaurantModal({
                 // 2. 공통 필드를 모든 기존 레코드에 업데이트
                 const { error: commonError } = await supabase
                     .from("restaurants")
-                    .update(commonData)
+                    .update(commonData as any)
                     .in("id", existingIds);
 
                 if (commonError) throw commonError;
@@ -576,7 +576,7 @@ export function AdminRestaurantModal({
                         .update({
                             youtube_link: review.youtube_link.trim() || null,
                             tzuyang_review: review.tzuyang_review.trim() || null,
-                        })
+                        } as any)
                         .eq("id", review.id);
 
                     if (reviewError) {
@@ -641,7 +641,7 @@ export function AdminRestaurantModal({
                             geocoding_success: true,
                             is_missing: false,
                             is_not_selected: false,
-                        });
+                        } as any);
 
                     if (insertError) {
                         console.error('신규 레코드 추가 실패:', insertError);
@@ -686,7 +686,7 @@ export function AdminRestaurantModal({
                     lng,
                 };
 
-                const { error } = await supabase.from("restaurants").insert(restaurantData);
+                const { error } = await supabase.from("restaurants").insert(restaurantData as any);
                 if (error) throw error;
 
                 toast.success("맛집이 등록되었습니다");
@@ -946,8 +946,8 @@ export function AdminRestaurantModal({
                                         <Card
                                             key={index}
                                             className={`p-3 cursor-pointer transition-all ${selectedGeocodingIndex === index
-                                                    ? 'border-primary bg-primary/5'
-                                                    : 'hover:border-primary/50'
+                                                ? 'border-primary bg-primary/5'
+                                                : 'hover:border-primary/50'
                                                 }`}
                                             onClick={() => handleSelectGeocodingResult(index)}
                                         >

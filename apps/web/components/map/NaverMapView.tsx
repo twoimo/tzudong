@@ -17,12 +17,7 @@ import { MapPin, Star, Users, ChefHat } from "lucide-react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
-// Naver Maps 타입 선언
-declare global {
-    interface Window {
-        naver: any;
-    }
-}
+
 
 
 interface NaverMapViewProps {
@@ -85,7 +80,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     useEffect(() => {
         if (selectedRestaurant && mapInstanceRef.current && !isGridMode) {
             // 검색된 맛집의 정확한 위치로 이동하고 줌 레벨 설정
-            const targetLatLng = new naver.maps.LatLng(selectedRestaurant.lat, selectedRestaurant.lng);
+            const targetLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
 
             // 줌 레벨을 16으로 설정 (개별 맛집이 보이는 수준)
             mapInstanceRef.current.setZoom(16);
@@ -93,7 +88,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             // 약간의 딜레이 후 지도 중앙 이동 (줌 애니메이션 완료 대기)
             setTimeout(() => {
                 if (mapInstanceRef.current && mapRef.current) {
-                    let adjustedLng = selectedRestaurant.lng;
+                    let adjustedLng = selectedRestaurant.lng!;
 
                     if (isPanelOpen && panelWidth > 0) {
                         // 지도의 전체 너비
@@ -116,10 +111,10 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         // 오른쪽 패널 때문에 → 지도 중심을 동쪽(+)으로 → 마커가 서쪽(왼쪽, 보이는 영역)으로
                         // 왼쪽 사이드바 때문에 → 지도 중심을 서쪽(-)으로 → 마커가 동쪽(오른쪽, 보이는 영역)으로
                         const offset = (rightPanelLngSpan / 2) - (leftSidebarLngSpan / 2);
-                        adjustedLng = selectedRestaurant.lng + offset;
+                        adjustedLng = selectedRestaurant.lng! + offset;
                     }
 
-                    const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat, adjustedLng);
+                    const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, adjustedLng);
 
                     // 부드러운 애니메이션으로 지도 중앙 이동
                     mapInstanceRef.current.panTo(centerLatLng, {
@@ -161,8 +156,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 existingRestaurant = displayRestaurants.find(r =>
                     mergedIds.includes(r.id) ||
                     (r.name === selectedRestaurant.name &&
-                        Math.abs(r.lat - selectedRestaurant.lat) < 0.0001 &&
-                        Math.abs(r.lng - selectedRestaurant.lng) < 0.0001)
+                        Math.abs((r.lat || 0) - (selectedRestaurant.lat || 0)) < 0.0001 &&
+                        Math.abs((r.lng || 0) - (selectedRestaurant.lng || 0)) < 0.0001)
                 );
             } else {
                 // 일반 데이터의 경우
@@ -192,7 +187,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             const { naver } = window;
 
             // 선택된 지역에 따라 지도 중심과 줌 레벨 설정
-            const regionConfig = selectedRegion ? REGION_MAP_CONFIG[selectedRegion] : REGION_MAP_CONFIG["전국"];
+            const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
+            const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
             const map = new naver.maps.Map(mapRef.current, {
                 center: new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]),
                 zoom: regionConfig.zoom,
@@ -292,7 +288,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     useEffect(() => {
         if (!mapInstanceRef.current) return;
 
-        const regionConfig = selectedRegion ? REGION_MAP_CONFIG[selectedRegion] : REGION_MAP_CONFIG["전국"];
+        const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
+        const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
         const { naver } = window;
 
         mapInstanceRef.current.setCenter(new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]));
@@ -310,8 +307,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             const existingRestaurant = restaurants.find(r =>
                 mergedIds.includes(r.id) ||
                 (r.name === searchedRestaurant.name &&
-                    Math.abs(r.lat - searchedRestaurant.lat) < 0.0001 &&
-                    Math.abs(r.lng - searchedRestaurant.lng) < 0.0001)
+                    Math.abs((r.lat || 0) - (searchedRestaurant.lat || 0)) < 0.0001 &&
+                    Math.abs((r.lng || 0) - (searchedRestaurant.lng || 0)) < 0.0001)
             );
             if (existingRestaurant) {
                 actualSearchedRestaurant = existingRestaurant;
@@ -325,7 +322,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         const { naver } = window;
 
         // 오프셋 없이 정확히 중앙에 배치
-        mapInstanceRef.current.setCenter(new naver.maps.LatLng(actualSearchedRestaurant.lat, actualSearchedRestaurant.lng));
+        mapInstanceRef.current.setCenter(new naver.maps.LatLng(actualSearchedRestaurant.lat!, actualSearchedRestaurant.lng!));
 
         mapInstanceRef.current.setZoom(14); // 맛집 상세 보기용 줌 레벨 (약간 줌아웃)
 
@@ -387,8 +384,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             return;
         }
 
-        // 마커 생성 대상
-        const markersToCreate = restaurantsToShow;
+        // 마커 생성 대상 (좌표가 있는 것만)
+        const markersToCreate = restaurantsToShow.filter(r => r.lat !== null && r.lng !== null);
 
         // 새 마커 배열 준비
         const newMarkers: any[] = [];
@@ -449,7 +446,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 `;
 
             const marker = new naver.maps.Marker({
-                position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                position: new naver.maps.LatLng(restaurant.lat!, restaurant.lng!),
                 map: mapInstanceRef.current,
                 icon: {
                     content: markerElement,
@@ -499,8 +496,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     // 병합된 데이터의 경우 이름과 좌표로도 비교
                     if (!isSelected) {
                         isSelected = selectedRestaurant.name === restaurant.name &&
-                            Math.abs(selectedRestaurant.lat - restaurant.lat) < 0.0001 &&
-                            Math.abs(selectedRestaurant.lng - restaurant.lng) < 0.0001;
+                            Math.abs((selectedRestaurant.lat || 0) - (restaurant.lat || 0)) < 0.0001 &&
+                            Math.abs((selectedRestaurant.lng || 0) - (restaurant.lng || 0)) < 0.0001;
                     }
 
                     // 병합된 데이터의 경우 mergedRestaurants로 확인
@@ -554,8 +551,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         // 병합된 데이터의 경우 이름과 좌표로도 비교
                         if (!isSelected) {
                             isSelected = selectedRestaurant.name === restaurant.name &&
-                                Math.abs(selectedRestaurant.lat - restaurant.lat) < 0.0001 &&
-                                Math.abs(selectedRestaurant.lng - restaurant.lng) < 0.0001;
+                                Math.abs((selectedRestaurant.lat || 0) - (restaurant.lat || 0)) < 0.0001 &&
+                                Math.abs((selectedRestaurant.lng || 0) - (restaurant.lng || 0)) < 0.0001;
                         }
 
                         // 병합된 데이터의 경우 mergedRestaurants로 확인

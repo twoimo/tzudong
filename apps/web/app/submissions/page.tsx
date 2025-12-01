@@ -91,7 +91,7 @@ export default function RestaurantSubmissionsPage() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_links, youtube_meta, tzuyang_reviews')
+                .select('id, unique_id, name, road_address, jibun_address, categories, phone, youtube_link, youtube_meta, tzuyang_review')
                 .eq('status', 'approved')
                 .order('name');
 
@@ -253,8 +253,8 @@ export default function RestaurantSubmissionsPage() {
             if (submissionMode === 'update' && selectedRestaurant) {
                 submissionData.restaurant_id = selectedRestaurant.id;
                 submissionData.unique_id = selectedRestaurant.unique_id; // unique_id 추가
-                submissionData.youtube_links = data.youtube_links; // 모든 유튜브 링크 배열
-                submissionData.tzuyang_reviews = data.tzuyang_reviews; // 모든 쯔양 리뷰 배열
+                // submissionData.youtube_links = data.youtube_links; // 컬럼 없음
+                // submissionData.tzuyang_reviews = data.tzuyang_reviews; // 컬럼 없음
 
                 // 동일 상호명 맛집들의 ID 목록 저장
                 if (selectedRestaurant.sameNameRestaurants && selectedRestaurant.sameNameRestaurants.length > 1) {
@@ -351,7 +351,7 @@ export default function RestaurantSubmissionsPage() {
     // 기존 맛집 선택 핸들러 - 동일한 상호명의 맛집들을 그룹화
     const handleRestaurantSelect = (restaurant: any) => {
         // 동일한 상호명을 가진 모든 맛집 찾기
-        const sameNameRestaurants = allRestaurants.filter(r => r.name === restaurant.name);
+        const sameNameRestaurants = allRestaurants.filter((r: any) => r.name === restaurant.name);
 
         const safeCategories = Array.isArray(restaurant.categories)
             ? restaurant.categories
@@ -366,29 +366,19 @@ export default function RestaurantSubmissionsPage() {
         const allTzuyangReviews: any[] = [];
 
         sameNameRestaurants.forEach((r, index) => {
-            // youtube_links 통합
-            if (Array.isArray(r.youtube_links)) {
-                r.youtube_links.forEach(link => {
-                    if (link && !allYoutubeLinks.includes(link)) {
-                        allYoutubeLinks.push(link);
-                    }
-                });
+            // youtube_links 통합 (단일 링크 처리)
+            if ((r as any).youtube_link && !allYoutubeLinks.includes((r as any).youtube_link)) {
+                allYoutubeLinks.push((r as any).youtube_link);
             }
 
             // youtube_meta는 각 레코드에 하나씩만 있으므로 첫 번째 값 저장
-            if (r.youtube_meta && !youtubeMeta) {
-                youtubeMeta = r.youtube_meta;
+            if ((r as any).youtube_meta && !youtubeMeta) {
+                youtubeMeta = (r as any).youtube_meta;
             }
 
-            // tzuyang_reviews 통합
-            if (Array.isArray(r.tzuyang_reviews)) {
-                r.tzuyang_reviews.forEach(review => {
-                    if (review) {
-                        allTzuyangReviews.push(review);
-                    }
-                });
-            } else if (typeof r.tzuyang_reviews === 'string' && r.tzuyang_reviews) {
-                allTzuyangReviews.push({ review: r.tzuyang_reviews });
+            // tzuyang_reviews 통합 (단일 리뷰 처리)
+            if ((r as any).tzuyang_review) {
+                allTzuyangReviews.push({ review: (r as any).tzuyang_review });
             }
         });
 
@@ -725,7 +715,7 @@ export default function RestaurantSubmissionsPage() {
                                         )}
 
                                         <a
-                                            href={submission.youtube_link}
+                                            href={submission.youtube_link || undefined}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="text-sm text-primary hover:underline flex items-center gap-1"
@@ -812,10 +802,10 @@ export default function RestaurantSubmissionsPage() {
                                         {(() => {
                                             // 상호명별로 그룹화
                                             const groupedByName = allRestaurants.reduce((acc, restaurant) => {
-                                                if (!acc[restaurant.name]) {
-                                                    acc[restaurant.name] = [];
+                                                if (!acc[(restaurant as any).name]) {
+                                                    acc[(restaurant as any).name] = [];
                                                 }
-                                                acc[restaurant.name].push(restaurant);
+                                                acc[(restaurant as any).name].push(restaurant);
                                                 return acc;
                                             }, {} as Record<string, typeof allRestaurants>);
 
@@ -823,12 +813,12 @@ export default function RestaurantSubmissionsPage() {
                                             return Object.entries(groupedByName).map(([name, restaurants]) => {
                                                 const representative = restaurants[0];
                                                 const count = restaurants.length;
-                                                const categoryDisplay = Array.isArray(representative.categories) && representative.categories.length > 0
-                                                    ? representative.categories[0]
-                                                    : (representative.categories || "기타");
+                                                const categoryDisplay = Array.isArray((representative as any).categories) && (representative as any).categories.length > 0
+                                                    ? (representative as any).categories[0]
+                                                    : ((representative as any).categories || "기타");
 
                                                 return (
-                                                    <SelectItem key={representative.id} value={representative.id}>
+                                                    <SelectItem key={(representative as any).id} value={(representative as any).id}>
                                                         {name} - {categoryDisplay}
                                                         {count > 1 && (
                                                             <span className="ml-2 text-xs text-muted-foreground">

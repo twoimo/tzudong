@@ -51,18 +51,18 @@ export function DbConflictResolutionPanel({
       );
 
       // 3. YouTube 링크 병합
-      const existingYoutubeLinks = existingRestaurant.youtube_links || [];
+      const existingYoutubeLinks = (existingRestaurant as any).youtube_links || [];
       const mergedYoutubeLinks = Array.from(
         new Set([...existingYoutubeLinks, record.youtube_link])
       );
 
       // 4. YouTube 메타 병합
-      const existingYoutubeMetas = existingRestaurant.youtube_metas || [];
+      const existingYoutubeMetas = (existingRestaurant as any).youtube_metas || [];
       const newMetas = record.youtube_meta ? [record.youtube_meta] : [];
       const mergedYoutubeMetas = [...existingYoutubeMetas, ...newMetas];
 
       // 5. 츄양 리뷰 병합
-      const existingReviews = existingRestaurant.tzuyang_reviews || [];
+      const existingReviews = (existingRestaurant as any).tzuyang_reviews || [];
       const newReviews = newInfo.tzuyang_review ? [newInfo.tzuyang_review] : [];
       const mergedReviews = [...existingReviews, ...newReviews];
 
@@ -75,9 +75,9 @@ export function DbConflictResolutionPanel({
           youtube_metas: mergedYoutubeMetas,
           tzuyang_reviews: mergedReviews,
           updated_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', existing.id)
-        .eq('updated_at', existingRestaurant.updated_at); // Optimistic Locking
+        .eq('updated_at', (existingRestaurant as any).updated_at); // Optimistic Locking
 
       if (updateError) {
         if (updateError.code === 'PGRST116') {
@@ -97,7 +97,7 @@ export function DbConflictResolutionPanel({
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', record.id);
 
       if (recordError) throw recordError;
@@ -135,7 +135,7 @@ export function DbConflictResolutionPanel({
         .update({
           status: 'hold',
           processed_at: new Date().toISOString(),
-        })
+        } as any)
         .eq('id', record.id);
 
       if (error) throw error;

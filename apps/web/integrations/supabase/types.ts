@@ -281,6 +281,54 @@ export interface Database {
                 }
             }
         }
+        Functions: {
+            mark_notification_read: {
+                Args: { notification_uuid: string }
+                Returns: void
+            }
+            mark_all_notifications_read: {
+                Args: Record<string, never>
+                Returns: void
+            }
+            create_user_notification: {
+                Args: {
+                    p_user_id: string
+                    p_type: string
+                    p_title: string
+                    p_message: string
+                    p_data: Json
+                }
+                Returns: void
+            }
+            delete_notification: {
+                Args: { notification_uuid: string }
+                Returns: void
+            }
+            create_admin_announcement_notification: {
+                Args: {
+                    p_title: string
+                    p_message: string
+                    p_data: Json
+                }
+                Returns: void
+            }
+            create_new_restaurant_notification: {
+                Args: {
+                    p_title: string
+                    p_message: string
+                    p_data: Json
+                }
+                Returns: void
+            }
+            create_ranking_notification: {
+                Args: {
+                    p_user_id: string
+                    p_ranking: number
+                    p_period: string
+                }
+                Returns: void
+            }
+        }
     }
 }
 

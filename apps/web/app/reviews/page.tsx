@@ -69,7 +69,7 @@ export default function ReviewsPage() {
                     .eq('is_verified', true)  // 승인된 리뷰만 조회
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false })
-                    .range(pageParam, pageParam + 49); // 한 페이지당 50개씩
+                    .range(pageParam, pageParam + 49) as any; // 한 페이지당 50개씩
 
                 if (reviewsError) {
                     console.error('❌ 리뷰 조회 실패:', reviewsError);
@@ -82,38 +82,38 @@ export default function ReviewsPage() {
                 }
 
                 // 2. 필요한 user_id와 restaurant_id 수집
-                const userIds = [...new Set(reviewsData.map(r => r.user_id))];
-                const restaurantIds = [...new Set(reviewsData.map(r => r.restaurant_id))];
+                const userIds = [...new Set((reviewsData as any[]).map((r: any) => r.user_id))];
+                const restaurantIds = [...new Set((reviewsData as any[]).map((r: any) => r.restaurant_id))];
 
                 // 3. Profiles 가져오기
                 const { data: profilesData } = await supabase
                     .from('profiles')
                     .select('user_id, nickname')
-                    .in('user_id', userIds);
+                    .in('user_id', userIds) as any;
 
                 // 4. Restaurants 가져오기
                 const { data: restaurantsData } = await supabase
                     .from('restaurants')
-                    .select('id, name, category')
-                    .in('id', restaurantIds);
+                    .select('id, name, categories')
+                    .in('id', restaurantIds) as any;
 
                 // 5. Map으로 변환 (빠른 조회)
                 const profilesMap = new Map(
-                    (profilesData || []).map(p => [p.user_id, p.nickname])
+                    (profilesData as any[] || []).map(p => [p.user_id, p.nickname])
                 );
-                const restaurantsMap = new Map(
-                    (restaurantsData || []).map(r => [r.id, { name: r.name, category: r.category }])
+                const restaurantsMap = new Map<string, { name: string, categories: string[] }>(
+                    (restaurantsData || []).map((r: any) => [r.id, { name: r.name, categories: r.categories }])
                 );
 
                 // 6. 리뷰 데이터 매핑
-                const reviews = reviewsData.map(review => {
+                const reviews = (reviewsData as any[]).map((review: any) => {
                     const restaurant = restaurantsMap.get(review.restaurant_id);
                     return {
                         id: review.id,
                         restaurantName: restaurant?.name || '알 수 없음',
                         restaurantCategories: Array.isArray(restaurant?.categories)
                             ? restaurant.categories
-                            : (restaurant?.categories ? [restaurant.categories] : [review.categories?.[0] || review.category || '기타']),
+                            : (restaurant?.categories ? restaurant.categories : [review.categories?.[0] || '기타']),
                         userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
@@ -123,7 +123,7 @@ export default function ReviewsPage() {
                         isEditedByAdmin: review.is_edited_by_admin || false,
                         admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                        category: review.categories?.[0] || review.category,
+                        category: review.categories?.[0] || '기타',
                     };
                 }) as Review[];
 
@@ -227,7 +227,7 @@ export default function ReviewsPage() {
 
         const { error } = await supabase
             .from('reviews')
-            .update({ is_pinned: true })
+            .update({ is_pinned: true } as any)
             .eq('id', reviewId);
 
         if (error) {
@@ -258,7 +258,7 @@ export default function ReviewsPage() {
 
         const { error } = await supabase
             .from('reviews')
-            .update({ is_pinned: false })
+            .update({ is_pinned: false } as any)
             .eq('id', reviewId);
 
         if (error) {
