@@ -15,8 +15,8 @@ on:
           - transform
           - insert
   schedule:
-    # 2일마다 KST 02:00 (UTC 17:00) 자동 실행
-    - cron: '0 17 */2 * *'
+    # 2일마다 KST 02:30 (UTC 17:30) 자동 실행
+    - cron: '30 17 */2 * *'
   # push 트리거 비활성화 - 수동 실행(workflow_dispatch) 사용 권장
   # push:
   #   branches:
