@@ -1,2 +1,23 @@
 $ next build
 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.5 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ Compiled successfully in 18.5s
+   Running TypeScript ...
+Failed to compile.
+
+./components/profile/NicknameSetupModal.tsx:65:25
+Type error: Argument of type 'any' is not assignable to parameter of type 'never'.
+
+[0m [90m 63 |[39m             [36mconst[39m { error } [33m=[39m [36mawait[39m supabase
+ [90m 64 |[39m                 [33m.[39m[36mfrom[39m([32m'profiles'[39m)
+[31m[1m>[22m[39m[90m 65 |[39m                 [33m.[39mupdate({
+ [90m    |[39m                         [31m[1m^[22m[39m
+ [90m 66 |[39m                     nickname[33m:[39m nickname[33m.[39mtrim()
+ [90m 67 |[39m                 } [36mas[39m any)
+ [90m 68 |[39m                 [33m.[39meq([32m'user_id'[39m[33m,[39m user[33m.[39mid)[33m;[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+error: script "build" exited with code 1

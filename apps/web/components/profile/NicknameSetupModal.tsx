@@ -60,11 +60,11 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
             }
 
             // 프로필 업데이트 (닉네임만)
-            const { error } = await supabase
-                .from('profiles')
+            const { error } = await (supabase
+                .from('profiles') as any)
                 .update({
                     nickname: nickname.trim()
-                } as any)
+                })
                 .eq('user_id', user.id);
 
             if (error) throw error;
