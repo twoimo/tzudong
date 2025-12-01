@@ -127,36 +127,37 @@ jobs:
       - name: 📝 Create .env files
         run: |
           # 메인 backend .env (Supabase + YouTube API + Gemini)
-          cat > backend/.env << EOF
-          YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
-          OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}
-          GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}
-          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EOF
+          echo "YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}" > backend/.env
+          echo "OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}" >> backend/.env
+          echo "GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/.env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/.env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> backend/.env
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> backend/.env
           
           # 크롤링 .env (GEMINI_API_KEY 포함)
-          cat > backend/geminiCLI-restaurant-crawling/.env << EOF
-          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}
-          GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}
-          YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
-          OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}
-          EOF
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}" > backend/geminiCLI-restaurant-crawling/.env
+          echo "GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-crawling/.env
+          echo "YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-crawling/.env
+          echo "OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-crawling/.env
           
           # 평가 .env (네이버 API 추가)
-          cat > backend/geminiCLI-restaurant-evaluation/.env << EOF
-          NAVER_CLIENT_ID_BYEON=${{ secrets.NAVER_CLIENT_ID_BYEON }}
-          NAVER_CLIENT_SECRET_BYEON=${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
-          NCP_MAPS_KEY_ID_BYEON=${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
-          NCP_MAPS_KEY_BYEON=${{ secrets.NCP_MAPS_KEY_BYEON }}
-          GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}
-          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}
-          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EOF
+          echo "NAVER_CLIENT_ID_BYEON=${{ secrets.NAVER_CLIENT_ID_BYEON }}" > backend/geminiCLI-restaurant-evaluation/.env
+          echo "NAVER_CLIENT_SECRET_BYEON=${{ secrets.NAVER_CLIENT_SECRET_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "NCP_MAPS_KEY_ID_BYEON=${{ secrets.NCP_MAPS_KEY_ID_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "NCP_MAPS_KEY_BYEON=${{ secrets.NCP_MAPS_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> backend/geminiCLI-restaurant-evaluation/.env
           
           echo "✅ .env 파일 생성 완료"
+          
+          # 확인용 (값은 마스킹)
+          echo ""
+          echo "📁 backend/geminiCLI-restaurant-crawling/.env 확인:"
+          echo "  - 파일 존재: $(test -f backend/geminiCLI-restaurant-crawling/.env && echo 'YES' || echo 'NO')"
+          echo "  - 줄 수: $(wc -l < backend/geminiCLI-restaurant-crawling/.env)"
+          echo "  - GEMINI_API_KEY 설정됨: $(grep -q 'GEMINI_API_KEY=.' backend/geminiCLI-restaurant-crawling/.env && echo 'YES (값 있음)' || echo 'NO (비어있음)')"
       
       # ============================
       # 8. 스크립트 실행 권한 부여

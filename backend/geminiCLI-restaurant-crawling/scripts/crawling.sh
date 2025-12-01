@@ -8,21 +8,37 @@ set -e  # 에러 발생 시 즉시 종료
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+echo "[$(date '+%H:%M:%S')] 📂 SCRIPT_DIR: $SCRIPT_DIR"
+echo "[$(date '+%H:%M:%S')] 📂 PROJECT_ROOT: $PROJECT_ROOT"
+
 # .env 파일 경로들 (우선순위: 프로젝트 > backend)
 ENV_FILES=(
     "$PROJECT_ROOT/.env"
     "$PROJECT_ROOT/../.env"
 )
 
+ENV_LOADED=false
 for env_file in "${ENV_FILES[@]}"; do
+    echo "[$(date '+%H:%M:%S')] 🔍 .env 파일 확인 중: $env_file"
     if [ -f "$env_file" ]; then
-        echo "[$(date '+%H:%M:%S')] 📝 .env 파일 로드: $env_file"
+        echo "[$(date '+%H:%M:%S')] ✅ .env 파일 발견! 로드 중..."
         set -a  # export all variables
         source "$env_file"
         set +a
+        ENV_LOADED=true
+        echo "[$(date '+%H:%M:%S')] 📝 .env 파일 로드 완료: $env_file"
+        # .env 내용 일부 확인 (값은 마스킹)
+        echo "[$(date '+%H:%M:%S')] 📝 GEMINI_API_KEY 설정됨: $([ -n \"$GEMINI_API_KEY\" ] && echo 'YES' || echo 'NO')"
         break
+    else
+        echo "[$(date '+%H:%M:%S')] ⚠️ 파일 없음: $env_file"
     fi
 done
+
+if [ "$ENV_LOADED" = false ]; then
+    echo "[$(date '+%H:%M:%S')] ⚠️ .env 파일을 찾지 못했습니다"
+    echo "[$(date '+%H:%M:%S')] 📝 현재 GEMINI_API_KEY 상태: $([ -n \"$GEMINI_API_KEY\" ] && echo 'YES (환경변수로 설정됨)' || echo 'NO')"
+fi
 
 # Gemini 모델 설정 (gemini-2.5-pro 사용)
 export GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-pro}"
