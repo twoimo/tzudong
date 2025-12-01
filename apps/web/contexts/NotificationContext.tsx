@@ -213,7 +213,7 @@ export const createAdminAnnouncement = async (title: string, message: string, cu
 // 신규 맛집 등록 알림 생성 함수 (모든 사용자에게)
 export const createNewRestaurantNotification = async (restaurantName: string, address: string, customData?: Record<string, unknown>) => {
     const title = '새로운 맛집 등록';
-    const message = `"${restaurantName}" 맛집이 쯔동여지도여지도에 새로 등록되었습니다!`;
+    const message = `"${restaurantName}" 맛집이 쯔동여지도에 새로 등록되었습니다!`;
 
     try {
         const { error } = await (supabase as any).rpc('create_new_restaurant_notification', {

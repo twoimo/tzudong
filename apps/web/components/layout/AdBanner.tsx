@@ -27,7 +27,7 @@ const AD_SLIDES: AdBannerSlide[] = [
     {
         id: 3,
         title: "동반 성장",
-        description: "쯔동여지도여지도와 더불어\n큰 뜻을 펼치시옵소서",
+        description: "쯔동여지도와 더불어\n큰 뜻을 펼치시옵소서",
 
     }
 ];

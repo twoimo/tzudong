@@ -365,7 +365,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     restaurantsToShow.forEach((restaurant) => {
       // selectedRestaurant 또는 searchedRestaurant와 비교하여 선택 상태 판단
       const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
-      
+
       console.log('[MapView] 마커 생성:', restaurant.name, 'isSelected:', isSelected, 'selectedRestaurant:', selectedRestaurant?.id, 'restaurant.id:', restaurant.id);
 
       // 카테고리별 적절한 이모티콘으로 변경
@@ -425,11 +425,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       markerElement.addEventListener("click", () => {
         console.log('[MapView] 마커 클릭:', restaurant.name);
-        
+
         // 1. 패널을 먼저 즉시 열기 (지도 이동 전에)
         onMarkerClick?.(restaurant);
         console.log('[MapView] onMarkerClick 호출 (패널 즉시 열기)');
-        
+
         // 2. selectedRestaurant 업데이트
         onRestaurantSelect?.(restaurant);
         console.log('[MapView] onRestaurantSelect 호출');
@@ -463,11 +463,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       // selectedRestaurant 또는 searchedRestaurant와 비교하여 활성화 상태 결정
       const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
-      
+
       if (isSelected) {
         console.log('[MapView] 마커 활성화:', restaurant.name, 'id:', restaurant.id);
       }
-      
+
       const markerElement = marker.content as HTMLElement;
       if (!markerElement) return;
 
@@ -566,7 +566,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           </div>
           <div className="space-y-3">
             <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              쯔동여지도여지도 로딩 중...
+              쯔동여지도 로딩 중...
             </h2>
             <p className="text-muted-foreground">
               맛있는 발견을 준비하고 있습니다

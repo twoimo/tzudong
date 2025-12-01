@@ -331,7 +331,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 <div className="flex flex-col h-full max-h-[90vh]">
                     <DialogHeader className="px-6 pt-6 pb-4 border-b">
                         <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                            쯔동여지도여지도 리뷰 작성
+                            쯔동여지도 리뷰 작성
                         </DialogTitle>
                         <DialogDescription>
                             쯔양이 방문한 맛집에 대한 방문 후기를 공유해주세요
@@ -504,10 +504,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 <Card
                                     ref={verificationDropRef}
                                     className={`p-6 border-dashed transition-colors cursor-pointer ${isVerificationDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : verificationPhoto
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-gray-300 hover:border-primary/50'
+                                        ? 'border-primary bg-primary/5'
+                                        : verificationPhoto
+                                            ? 'border-green-300 bg-green-50/50'
+                                            : 'border-gray-300 hover:border-primary/50'
                                         }`}
                                     onDragOver={handleDragOver}
                                     onDragEnter={handleVerificationDragEnter}
@@ -645,10 +645,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 <Card
                                     ref={foodPhotosDropRef}
                                     className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : foodPhotos.length > 0
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-gray-300 hover:border-primary/50'
+                                        ? 'border-primary bg-primary/5'
+                                        : foodPhotos.length > 0
+                                            ? 'border-green-300 bg-green-50/50'
+                                            : 'border-gray-300 hover:border-primary/50'
                                         }`}
                                     onDragOver={handleDragOver}
                                     onDragEnter={handleFoodPhotosDragEnter}

@@ -158,7 +158,7 @@ const StampPage = () => {
                         <div className="flex items-center gap-3">
                             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-2">
                                 <Trophy className="h-6 w-6 text-primary" />
-                                쯔동여지도여지도 도장
+                                쯔동여지도 도장
                             </h1>
                             <button
                                 onClick={() => setShowUnvisitedOnly(!showUnvisitedOnly)}

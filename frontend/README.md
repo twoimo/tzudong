@@ -283,7 +283,7 @@ const { data: youtubeResults } = await supabase
 
 ## 🎨 주요 페이지 및 검색 로직
 
-### 쯔동여지도여지도 홈/글로벌 (Home/Global Map)
+### 쯔동여지도 홈/글로벌 (Home/Global Map)
 
 **페이지 기능**:
 - 🗺️ 지도 기반 맛집 탐색
@@ -335,7 +335,7 @@ if (!isKoreanOnly && selectedRegion) {
 }
 ```
 
-### 쯔동여지도여지도 필터링 (Filtering Page)
+### 쯔동여지도 필터링 (Filtering Page)
 
 **페이지 기능**:
 - 📋 테이블 형식 맛집 목록
@@ -416,7 +416,7 @@ const convertedData = (data || []).map(r => ({
 - ✅ **실시간 검색**: 디바운스 후 자동 검색
 - ✅ **필터 유지**: 검색 시 현재 적용된 상태/평가 필터 유지
 
-### 쯔동여지도여지도 도장 (Stamp Page)
+### 쯔동여지도 도장 (Stamp Page)
 
 **페이지 기능**:
 - 📺 YouTube 영상이 있는 맛집 그리드 표시
@@ -426,7 +426,7 @@ const convertedData = (data || []).map(r => ({
 **검색 로직**: 
 - 검색 기능 없음 (전체 맛집 그리드 표시)
 
-### 쯔동여지도여지도 제보 (Submission Page)
+### 쯔동여지도 제보 (Submission Page)
 
 **페이지 기능**:
 - 📝 **신규 맛집 제보**:

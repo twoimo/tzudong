@@ -1,16 +1,42 @@
-components/layout/RankingWidget.tsx(17,33): error TS7006: Parameter 'u' implicitly has an 'any' type.
-components/restaurant/RestaurantDetailPanel.tsx(115,42): error TS18047: 'restaurant' is possibly 'null'.
-components/restaurant/RestaurantDetailPanel.tsx(165,41): error TS18047: 'restaurant' is possibly 'null'.
-components/restaurant/RestaurantDetailPanel.tsx(188,9): error TS1117: An object literal cannot have multiple properties with the same name.
-components/restaurant/RestaurantDetailPanel.tsx(188,20): error TS18047: 'restaurant' is possibly 'null'.
-components/restaurant/RestaurantDetailPanel.tsx(588,80): error TS18048: 'restaurant.mergedYoutubeLinks' is possibly 'undefined'.
-components/restaurant/RestaurantDetailPanel.tsx(604,80): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'string | URL | undefined'.
-  Type 'null' is not assignable to type 'string | URL | undefined'.
-components/reviews/ReviewModal.tsx(372,65): error TS7006: Parameter 'restaurant' implicitly has an 'any' type.
-contexts/AuthContext.tsx(92,29): error TS2339: Property 'nickname' does not exist on type 'never'.
-hooks/use-restaurants.tsx(154,48): error TS2345: Argument of type '{ name: string; lat: number; lng: number; categories: string[]; youtube_link: string | null; tzuyang_review: string | null; youtube_meta: YoutubeMeta; mergedYoutubeLinks: string[]; ... 24 more ...; updated_at: string; }' is not assignable to parameter of type 'IntermediateRestaurant'.
-  Type '{ name: string; lat: number; lng: number; categories: string[]; youtube_link: string | null; tzuyang_review: string | null; youtube_meta: YoutubeMeta; mergedYoutubeLinks: string[]; ... 24 more ...; updated_at: string; }' is not assignable to type '{ id: string; unique_id: string; name: string; phone: string | null; categories: string[]; status: string; source_type: string; youtube_meta: Json; evaluation_results: Json; reasoning_basis: string | null; ... 18 more ...; updated_at: string; }'.
-    Types of property 'youtube_meta' are incompatible.
-      Type 'YoutubeMeta' is not assignable to type 'Json'.
-        Type 'YoutubeMeta' is not assignable to type '{ [key: string]: Json | undefined; }'.
-          Index signature for type 'string' is missing in type 'YoutubeMeta'.
+$ next build
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.5 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ Compiled successfully in 15.5s
+   Running TypeScript ...
+   Collecting page data using 7 workers ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   Generating static pages using 7 workers (0/13) ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   Generating static pages using 7 workers (3/13) 
+   Generating static pages using 7 workers (6/13) 
+   Generating static pages using 7 workers (9/13) 
+ ✓ Generating static pages using 7 workers (13/13) in 2.4s
+   Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin/evaluations
+├ ○ /admin/reviews
+├ ○ /admin/submissions
+├ ○ /costs
+├ ○ /filtering
+├ ○ /global-map
+├ ○ /leaderboard
+├ ○ /reviews
+├ ○ /stamp
+└ ○ /submissions
+
+
+○  (Static)  prerendered as static content
+
