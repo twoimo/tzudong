@@ -5,7 +5,7 @@ $ next build
 
    Creating an optimized production build ...
 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
- ✓ Compiled successfully in 15.4s
+ ✓ Compiled successfully in 22.8s
    Running TypeScript ...
 Failed to compile.
 
