@@ -64,6 +64,7 @@
   },
   "devDependencies": {
     "@next/swc-win32-x64-msvc": "^16.0.5",
+    "@types/google.maps": "^3.58.1",
     "@types/node": "^22.16.5",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
