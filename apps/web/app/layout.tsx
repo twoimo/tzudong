@@ -1,8 +1,46 @@
 import type { Metadata } from "next";
+import { Noto_Serif_KR, Black_Han_Sans, Stylish, Gugi, Nanum_Brush_Script, Yeon_Sung } from "next/font/google";
 import { QueryProvider } from "./providers";
 import { AppProviders } from "./app-providers";
 import { MainLayout } from "@/components/layout/MainLayout";
 import "./globals.css";
+
+// [최적화] next/font로 Google Fonts 로드 - CLS 제거, 성능 개선
+const notoSerifKR = Noto_Serif_KR({
+    weight: ['400', '700'],
+    display: 'swap',
+    variable: '--font-noto-serif',
+});
+
+const blackHanSans = Black_Han_Sans({
+    weight: '400',
+    display: 'swap',
+    variable: '--font-black-han',
+});
+
+const stylish = Stylish({
+    weight: '400',
+    display: 'swap',
+    variable: '--font-stylish',
+});
+
+const gugi = Gugi({
+    weight: '400',
+    display: 'swap',
+    variable: '--font-gugi',
+});
+
+const nanumBrush = Nanum_Brush_Script({
+    weight: '400',
+    display: 'swap',
+    variable: '--font-nanum-brush',
+});
+
+const yeonSung = Yeon_Sung({
+    weight: '400',
+    display: 'swap',
+    variable: '--font-yeon-sung',
+});
 
 export const metadata: Metadata = {
     title: "쯔동여지도 - 쯔양 맛집 지도",
@@ -22,29 +60,25 @@ export const viewport = {
     maximumScale: 1,
 };
 
-// Google Fonts Preload
-const googleFontsLink = (
-    <>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-            href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Stylish&family=Gugi&family=Nanum+Brush+Script&family=Yeon+Sung&family=Noto+Serif+KR:wght@400;700&display=swap"
-            rel="stylesheet"
-        />
-    </>
-);
-
 export default function RootLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="ko" suppressHydrationWarning>
-            <head>
-                {googleFontsLink}
-            </head>
-            <body className="font-serif">
+        <html
+            lang="ko"
+            suppressHydrationWarning
+            className={`
+                ${notoSerifKR.variable}
+                ${blackHanSans.variable}
+                ${stylish.variable}
+                ${gugi.variable}
+                ${nanumBrush.variable}
+                ${yeonSung.variable}
+            `}
+        >
+            <body className={notoSerifKR.className}>
                 <QueryProvider>
                     <AppProviders>
                         <MainLayout>{children}</MainLayout>

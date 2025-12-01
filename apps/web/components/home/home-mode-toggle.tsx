@@ -1,5 +1,6 @@
 'use client'; // [CSR] onClick 이벤트 처리
 
+import { memo } from 'react';
 import { Button } from "@/components/ui/button";
 
 interface HomeModeToggleProps {
@@ -7,8 +8,8 @@ interface HomeModeToggleProps {
     onModeChange: (mode: 'domestic' | 'overseas') => void;
 }
 
-// [CSR] 국내/해외 모드 토글 버튼 - 사용자 클릭 이벤트 처리
-export default function HomeModeToggle({ mode, onModeChange }: HomeModeToggleProps) {
+// [최적화] React.memo로 불필요한 리렌더링 방지
+const HomeModeToggle = memo(function HomeModeToggle({ mode, onModeChange }: HomeModeToggleProps) {
     return (
         <div className="absolute top-6 left-4 z-10">
             <div className="flex items-center p-1 bg-white/90 backdrop-blur-md rounded-xl shadow-sm border border-gray-200/50">
@@ -37,4 +38,6 @@ export default function HomeModeToggle({ mode, onModeChange }: HomeModeTogglePro
             </div>
         </div>
     );
-}
+});
+
+export default HomeModeToggle;

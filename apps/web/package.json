@@ -6,7 +6,8 @@
     "dev": "next dev -p 8080",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "analyze": "set ANALYZE=true&& npm run build"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -63,6 +64,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.0.6",
     "@next/swc-win32-x64-msvc": "^16.0.5",
     "@types/google.maps": "^3.58.1",
     "@types/node": "^22.16.5",
