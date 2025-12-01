@@ -225,9 +225,9 @@ export default function ReviewsPage() {
             return;
         }
 
-        const { error } = await supabase
-            .from('reviews')
-            .update({ is_pinned: true } as any)
+        const { error } = await (supabase
+            .from('reviews') as any)
+            .update({ is_pinned: true })
             .eq('id', reviewId);
 
         if (error) {
@@ -256,9 +256,9 @@ export default function ReviewsPage() {
             return;
         }
 
-        const { error } = await supabase
-            .from('reviews')
-            .update({ is_pinned: false } as any)
+        const { error } = await (supabase
+            .from('reviews') as any)
+            .update({ is_pinned: false })
             .eq('id', reviewId);
 
         if (error) {
