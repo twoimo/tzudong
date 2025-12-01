@@ -7,9 +7,21 @@ Gemini CLI 크롤링 전체 파이프라인
 """
 
 import sys
+import os
 import subprocess
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
+
+# 한국 시간대 (KST, UTC+9)
+KST = timezone(timedelta(hours=9))
+
+
+def get_today_folder() -> str:
+    """오늘 날짜 폴더명 반환 (PIPELINE_DATE 환경변수 우선)"""
+    pipeline_date = os.environ.get('PIPELINE_DATE')
+    if pipeline_date:
+        return pipeline_date
+    return datetime.now(KST).strftime('%y-%m-%d')
 
 
 def print_header(title: str):
@@ -58,23 +70,29 @@ def run_command(command: list, description: str, cwd: Path = None) -> bool:
 
 def main():
     """파이프라인 메인 실행"""
-    start_time = datetime.now()
+    start_time = datetime.now(KST)
+    today_folder = get_today_folder()
     
     print_header("🍜 Gemini CLI 레스토랑 데이터 크롤링 파이프라인")
-    print(f"⏰ 시작 시간: {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+    print(f"⏰ 시작 시간: {start_time.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"📅 날짜 폴더: {today_folder}\n")
     
     # 경로 설정
     script_dir = Path(__file__).parent
     project_dir = script_dir.parent
+    data_dir = project_dir / "data" / today_folder
+    
+    # 날짜 폴더 생성
+    data_dir.mkdir(parents=True, exist_ok=True)
     
     # 스크립트 파일들
     youtube_urls_script = script_dir / "api-youtube-urls.py"
     crawling_script = script_dir / "crawling.sh"
     
-    # 출력 파일들 (crawling.sh와 동일하게)
-    urls_file = project_dir / "tzuyang_youtubeVideo_urls.txt"
-    results_file = project_dir / "tzuyang_restaurant_results.jsonl"
-    results_with_meta_file = project_dir / "tzuyang_restaurant_results_with_meta.jsonl"
+    # 출력 파일들 (날짜 폴더 기준)
+    urls_file = data_dir / "tzuyang_youtubeVideo_urls.txt"
+    results_file = data_dir / "tzuyang_restaurant_results.jsonl"
+    results_with_meta_file = data_dir / "tzuyang_restaurant_results_with_meta.jsonl"
     
     # 전체 파이프라인 실행 (URL 수집 → 크롤링 → 메타데이터)
     choice = "1"
@@ -125,20 +143,22 @@ def main():
         sys.exit(1)
     
     # 최종 결과
-    end_time = datetime.now()
+    end_time = datetime.now(KST)
     duration = end_time - start_time
     
     print_header("✅ 파이프라인 실행 완료")
     print(f"⏰ 종료 시간: {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"⏱️  소요 시간: {duration}")
+    print(f"📅 날짜 폴더: {today_folder}")
     print()
     
     print("📁 생성된 파일:")
     if urls_file.exists():
-        print(f"   1. {urls_file.name} - YouTube URL 목록")
-    print(f"   2. {results_file.name} - 레스토랑 데이터")
+        print(f"   1. {urls_file} - YouTube URL 목록")
+    if results_file.exists():
+        print(f"   2. {results_file} - 레스토랑 데이터")
     if results_with_meta_file.exists():
-        print(f"   3. {results_with_meta_file.name} - 최종 데이터 (메타 포함)")
+        print(f"   3. {results_with_meta_file} - 최종 데이터 (메타 포함)")
     print()
     print("=" * 80)
 

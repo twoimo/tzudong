@@ -69,12 +69,13 @@ geminiCLI-restaurant-evaluation/
 ├── .env                                                     # 환경변수
 ├── package.json                                             # npm 스크립트
 ├── tsconfig.json                                            # TypeScript 설정
-├── tzuyang_restaurant_evaluation_selection.jsonl            # 평가 대상 선별 결과
-├── tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl  # 주소 NULL 제외 목록
-├── tzuyang_restaurant_evaluation_rule_results.jsonl         # RULE 평가 결과
-├── tzuyang_restaurant_evaluation_results.jsonl              # LAAJ 평가 결과
-├── tzuyang_restaurant_evaluation_errors.jsonl               # 에러 로그
-├── tzuyang_restaurant_transforms.jsonl                      # DB 변환 결과
+├── data/
+│   └── yy-mm-dd/                                            # 날짜별 폴더 (예: 25-01-15)
+│       ├── tzuyang_restaurant_evaluation_selection.jsonl    # 평가 대상 선별 결과
+│       ├── tzuyang_restaurant_evaluation_rule_results.jsonl # RULE 평가 결과
+│       ├── tzuyang_restaurant_evaluation_results.jsonl      # LAAJ 평가 결과
+│       ├── tzuyang_restaurant_evaluation_errors.jsonl       # 에러 로그
+│       └── tzuyang_restaurant_transforms.jsonl              # DB 변환 결과
 ├── prompts/
 │   └── evaluation_prompt.txt                                # LAAJ 평가 프롬프트
 ├── scripts/
@@ -88,6 +89,24 @@ geminiCLI-restaurant-evaluation/
 │   └── retry_errors.sh                                      # 에러 재시도
 └── temp/                                                    # 임시 파일 (자동 생성/삭제)
 ```
+
+### 날짜 폴더 구조
+
+모든 데이터는 실행 날짜 기준 `yy-mm-dd` 형식 폴더에 저장됩니다:
+
+```
+data/
+├── 25-01-10/
+│   ├── tzuyang_restaurant_evaluation_selection.jsonl
+│   ├── tzuyang_restaurant_evaluation_results.jsonl
+│   └── ...
+├── 25-01-15/
+│   ├── tzuyang_restaurant_evaluation_selection.jsonl
+│   └── ...
+```
+
+- `PIPELINE_DATE` 환경변수 설정 시 해당 날짜 폴더 사용
+- 미설정 시 오늘 날짜 기준 폴더 자동 생성
 
 ---
 
@@ -203,14 +222,47 @@ npx tsx insert_to_supabase.ts
 ### 1. RULE 기반 평가
 
 #### 카테고리 검증
-- Naver Local Search API로 음식점 검색
-- 카테고리 매칭 검증 (15개 카테고리)
-- 결과: `category_valid` (boolean)
+- 크롤링된 카테고리가 유효한 15개 카테고리 목록에 포함되는지 확인
+- 유효 카테고리: `치킨, 중식, 돈까스·회, 피자, 패스트푸드, 찜·탕, 족발·보쌈, 분식, 카페·디저트, 한식, 고기, 양식, 아시안, 야식, 도시락`
+- 결과: `category_validity_TF` (boolean)
 
-#### 위치 검증
-- NCP Geocoding API로 좌표 검증
-- 주소-좌표 일치 확인
-- 결과: `location_valid` (boolean), 보정된 좌표
+#### 위치 검증 (2단계 매칭)
+
+**1단계: 지번주소 일치 비교**
+1. 크롤링된 주소(`origin_address`)에서 층 정보 제거 (예: `3층`, `지하1층`, `지하 2층`)
+2. NCP Geocoding API로 `origin_address` → 지번주소 변환
+3. 네이버 Local Search API로 음식점명 검색 (최대 5개)
+4. 검색 결과의 지번주소와 변환된 지번주소 비교
+5. 정확히 일치하면 **1단계 통과**
+
+**2단계: 거리 기반 매칭 (1단계 실패 시)**
+1. `origin_address`를 NCP Geocoding으로 좌표(lat, lng) 변환
+2. 검색 결과 후보들의 주소를 각각 좌표 변환
+3. 두 좌표 간 거리 계산 (Haversine 공식)
+4. **20m 이내**인 후보가 있으면 **2단계 통과**
+
+**결과 저장**
+- 매칭된 결과(`matched_result`)의 주소로 NCP Geocoding 호출
+- **최종 좌표(lat/lng)는 매칭된 결과를 지오코딩한 값**을 사용 (origin_address 좌표가 아님)
+- 주소와 좌표는 **한 세트**로 저장 (지오코딩 결과에서 모두 가져옴)
+- 지오코딩 실패 시 모든 필드 빈값으로 저장
+
+| 필드 | 설명 |
+|------|------|
+| `location_match_TF` | 위치 검증 성공 여부 (boolean) |
+| `naver_address.roadAddress` | 도로명주소 (지오코딩 결과) |
+| `naver_address.jibunAddress` | 지번주소 (지오코딩 결과) |
+| `naver_address.x` | 경도 (지오코딩 결과) |
+| `naver_address.y` | 위도 (지오코딩 결과) |
+| `falseMessage` | 실패 사유 (실패 시) |
+
+#### 실패 사유 종류
+| 메시지 | 설명 |
+|--------|------|
+| `1단계 실패: 주소 지오코딩 실패` | origin_address를 지번주소로 변환 실패 |
+| `1단계 실패: 검색 결과 없음` | 네이버 검색에서 음식점을 찾지 못함 |
+| `2단계 실패: 지오코딩 정보 없음` | 좌표 변환 실패 |
+| `2단계 실패: 20m 이내 후보 없음` | 거리 기반 매칭에서도 일치하는 후보 없음 |
 
 ### 2. LAAJ 기반 평가 (자막 기반)
 
@@ -334,7 +386,7 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 
 ## 📊 데이터 구조
 
-### 입력 데이터 (`tzuyang_restaurant_results_with_meta.jsonl`)
+### 입력 데이터 (`data/yy-mm-dd/tzuyang_restaurant_results_with_meta.jsonl`)
 
 ```json
 {
@@ -344,7 +396,7 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 }
 ```
 
-### RULE 평가 결과 (`tzuyang_restaurant_evaluation_rule_results.jsonl`)
+### RULE 평가 결과 (`data/yy-mm-dd/tzuyang_restaurant_evaluation_rule_results.jsonl`)
 
 ```json
 {
@@ -358,7 +410,7 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 }
 ```
 
-### LAAJ 평가 결과 (`tzuyang_restaurant_evaluation_results.jsonl`)
+### LAAJ 평가 결과 (`data/yy-mm-dd/tzuyang_restaurant_evaluation_results.jsonl`)
 
 ```json
 {
@@ -375,7 +427,7 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 }
 ```
 
-### 최종 변환 결과 (`tzuyang_restaurant_transforms.jsonl`)
+### 최종 변환 결과 (`data/yy-mm-dd/tzuyang_restaurant_transforms.jsonl`)
 
 ```json
 {
@@ -403,7 +455,21 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 | `parse_laaj_evaluation.py` | Gemini 응답 파싱 |
 | `transform_evaluation_results.py` | DB 형식으로 변환 |
 | `insert_to_supabase.ts` | Supabase 데이터베이스 삽입 |
-| `retry_errors.sh` | 실패한 항목 재시도 |
+| `retry_errors.sh` | 에러 파일 기반 재시도 (최대 5번) |
+
+### 에러 재처리
+
+LAAJ 평가 중 에러가 발생하면 `tzuyang_restaurant_evaluation_errors.jsonl`에 에러 항목이 저장됩니다.
+
+에러 재처리 실행:
+```bash
+# 날짜 폴더 지정 필수
+bash retry_errors.sh 25-01-15
+```
+
+- 에러 파일에서 항목을 읽어 재평가
+- 성공 시 에러 파일에서 해당 항목 삭제
+- 로그는 `log/geminiCLI-restaurant/yy-mm-dd/` 폴더에 저장
 
 ---
 

@@ -1,8 +1,9 @@
 #!/bin/bash
-# Gemini CLI 기반 음식점 크롤링 스크립트
-# GitHub Actions 환경에서 실행 가능하도록 설계
+# Gemini CLI 기반 크롤링 에러 재처리 스크립트
+# tzuyang_crawling_errors.jsonl에서 에러를 읽어 재크롤링 수행
+# 성공 시 에러 파일에서 해당 행 삭제
 
-set -e  # 에러 발생 시 즉시 종료
+# set -e 제거 - jq 파싱 실패 등에서 스크립트가 멈추지 않도록
 
 # Gemini 모델 설정 (gemini-2.5-pro 사용)
 export GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-pro}"
@@ -39,22 +40,15 @@ else
 fi
 
 TODAY_PATH="$DATA_DIR/$TODAY_FOLDER"
-LATEST_PATH=$(python3 "$DATA_UTILS_SCRIPT" latest_path "$DATA_DIR")
 
 # 디렉토리 생성
 mkdir -p "$TODAY_PATH"
+mkdir -p "$PROJECT_ROOT/temp"
 
-# 입력: 오늘 폴더 또는 최신 폴더의 URL 파일
-URL_FILE="${1:-$TODAY_PATH/tzuyang_youtubeVideo_urls.txt}"
-if [ ! -f "$URL_FILE" ] && [ -f "$LATEST_PATH/tzuyang_youtubeVideo_urls.txt" ]; then
-    URL_FILE="$LATEST_PATH/tzuyang_youtubeVideo_urls.txt"
-fi
-
-# 출력: 오늘 날짜 폴더에 저장
-OUTPUT_FILE="${2:-$TODAY_PATH/tzuyang_restaurant_results.jsonl}"
-ERROR_LOG="${3:-$TODAY_PATH/tzuyang_restaurant_errors.log}"
-# 에러 URL을 재처리할 수 있도록 JSONL로도 저장
+# 입력/출력 파일 경로
 ERROR_JSONL="$TODAY_PATH/tzuyang_crawling_errors.jsonl"
+OUTPUT_FILE="$TODAY_PATH/tzuyang_restaurant_results.jsonl"
+RETRY_ERROR_LOG="$TODAY_PATH/tzuyang_crawling_retry_errors.log"
 
 # 로그 설정 (새 폴더 구조: report/text/structured)
 LOG_BASE_DIR="$PROJECT_ROOT/../log/geminiCLI-restaurant"
@@ -62,14 +56,10 @@ LOG_REPORT_DIR=$(python3 "$DATA_UTILS_SCRIPT" log_type_path "$LOG_BASE_DIR" "rep
 LOG_TEXT_DIR=$(python3 "$DATA_UTILS_SCRIPT" log_type_path "$LOG_BASE_DIR" "text" "$TODAY_FOLDER")
 LOG_STRUCTURED_DIR=$(python3 "$DATA_UTILS_SCRIPT" log_type_path "$LOG_BASE_DIR" "structured" "$TODAY_FOLDER")
 mkdir -p "$LOG_REPORT_DIR" "$LOG_TEXT_DIR" "$LOG_STRUCTURED_DIR"
-STAGE_NAME="crawling"
+STAGE_NAME="crawling_retry"
 START_TIME=$(date +%s)
 START_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
 LOG_FILE="$LOG_REPORT_DIR/${STAGE_NAME}_$(date +%H%M%S).json"
-
-# 타이머 데이터를 저장할 임시 파일
-TIMER_DATA_FILE="$PROJECT_ROOT/temp/timer_data.json"
-echo '{}' > "$TIMER_DATA_FILE"
 
 # 시간 포맷팅 함수
 format_duration() {
@@ -108,24 +98,21 @@ log_debug() {
     echo -e "${CYAN}[$(date '+%H:%M:%S')] 🔍 $1${NC}"
 }
 
-# 디렉토리 생성
-mkdir -p "$PROJECT_ROOT/temp"
-
-log_info "============================================================"
-log_info "  Gemini CLI 음식점 크롤링 시작"
-log_info "============================================================"
-log_info "시작 시간: $START_DATETIME"
-log_info "Gemini 모델: $GEMINI_MODEL"
-log_info "오늘 날짜 폴더: $TODAY_FOLDER"
-log_info "입력 폴더: $(dirname "$URL_FILE")"
-log_info "출력 폴더: $(dirname "$OUTPUT_FILE")"
-
-# 인자 검증
-if [ ! -f "$URL_FILE" ]; then
-    log_error "URL 파일 없음: $URL_FILE"
-    exit 1
+# 에러 파일 확인
+if [ ! -f "$ERROR_JSONL" ]; then
+    log_info "에러 파일이 없습니다: $ERROR_JSONL"
+    log_success "재처리할 에러가 없습니다!"
+    exit 0
 fi
 
+# 에러 파일이 비어있는지 확인
+ERROR_COUNT=$(wc -l < "$ERROR_JSONL" 2>/dev/null | tr -d ' ')
+if [ "$ERROR_COUNT" -eq 0 ]; then
+    log_success "재처리할 에러가 없습니다!"
+    exit 0
+fi
+
+# 필수 파일 확인
 if [ ! -f "$PROMPT_FILE" ]; then
     log_error "프롬프트 파일 없음: $PROMPT_FILE"
     exit 1
@@ -143,79 +130,79 @@ if ! command -v gemini &> /dev/null; then
     exit 1
 fi
 
-log_success "Gemini CLI 확인 완료"
-
-# 통계 변수
-TOTAL=0
-SUCCESS=0
-FAILED=0
-GEMINI_CALLS=0
-TRANSCRIPT_SUCCESS=0
-TRANSCRIPT_FAILED=0
-TOTAL_GEMINI_TIME=0
-TOTAL_PARSE_TIME=0
-TOTAL_TRANSCRIPT_TIME=0
-
-# URL 목록 읽기 (macOS/zsh 호환)
-URLS=()
-while IFS= read -r line || [ -n "$line" ]; do
-    [ -n "$line" ] && URLS+=("$line")
-done < "$URL_FILE"
-TOTAL=${#URLS[@]}
+log_info "============================================================"
+log_info "  Gemini CLI 크롤링 에러 재처리 시작"
+log_info "============================================================"
+log_info "시작 시간: $START_DATETIME"
+log_info "Gemini 모델: $GEMINI_MODEL"
+log_info "날짜 폴더: $TODAY_FOLDER"
+log_info "에러 파일: $ERROR_JSONL"
+log_info "출력 파일: $OUTPUT_FILE"
+log_info "에러 수: $ERROR_COUNT"
+log_info ""
 
 # 이미 처리된 URL 로드 (중복 처리 방지) - 모든 날짜 폴더에서
 PROCESSED_URLS=""
-SKIPPED=0
-
-# 모든 날짜 폴더의 결과 파일에서 처리된 URL 수집
 for result_file in "$DATA_DIR"/*/tzuyang_restaurant_results.jsonl; do
     if [ -f "$result_file" ]; then
         URLS_FROM_FILE=$(jq -r '.youtube_link' "$result_file" 2>/dev/null | sort -u)
         PROCESSED_URLS="$PROCESSED_URLS"$'\n'"$URLS_FROM_FILE"
     fi
 done
-
-if [ -f "$OUTPUT_FILE" ]; then
-    URLS_FROM_OUTPUT=$(jq -r '.youtube_link' "$OUTPUT_FILE" 2>/dev/null | sort -u)
-    PROCESSED_URLS="$PROCESSED_URLS"$'\n'"$URLS_FROM_OUTPUT"
-fi
-
 PROCESSED_URLS=$(echo "$PROCESSED_URLS" | sort -u | grep -v '^$')
 PROCESSED_COUNT=$(echo "$PROCESSED_URLS" | grep -c . || echo "0")
 log_info "이미 처리된 URL (전체 이력): ${PROCESSED_COUNT}개"
-
-log_info "URL 파일: $URL_FILE"
-log_info "출력 파일: $OUTPUT_FILE"
-log_info "총 URL 수: $TOTAL"
-log_info ""
 
 # 프롬프트 템플릿 읽기
 PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
 log_debug "프롬프트 템플릿 로드 완료 (${#PROMPT_TEMPLATE}자)"
 
-# 각 URL 처리
-for i in "${!URLS[@]}"; do
-    URL="${URLS[$i]}"
-    INDEX=$((i + 1))
+# 통계 변수
+TOTAL=$ERROR_COUNT
+SUCCESS=0
+FAILED=0
+SKIPPED=0
+GEMINI_CALLS=0
+TOTAL_GEMINI_TIME=0
+TOTAL_PARSE_TIME=0
+TOTAL_TRANSCRIPT_TIME=0
+TRANSCRIPT_SUCCESS=0
+TRANSCRIPT_FAILED=0
+
+# 성공한 URL 저장용 임시 파일
+SUCCESS_URLS_FILE="$PROJECT_ROOT/temp/success_urls_retry.txt"
+> "$SUCCESS_URLS_FILE"
+
+# 각 에러 URL 처리
+LINE_NUM=0
+while IFS= read -r line || [ -n "$line" ]; do
+    LINE_NUM=$((LINE_NUM + 1))
     URL_START_TIME=$(date +%s)
     
     # 빈 줄 건너뛰기
-    if [ -z "$URL" ]; then
+    if [ -z "$line" ]; then
         continue
     fi
     
-    # 이미 처리된 URL 스킵
+    # JSON에서 URL 추출
+    URL=$(echo "$line" | jq -r '.youtube_link' 2>/dev/null)
+    
+    if [ -z "$URL" ] || [ "$URL" = "null" ]; then
+        log_warning "[$LINE_NUM/$TOTAL] URL 파싱 실패 - 스킵"
+        continue
+    fi
+    
+    # 이미 성공적으로 처리된 URL 스킵
     if echo "$PROCESSED_URLS" | grep -q "^$URL$"; then
         SKIPPED=$((SKIPPED + 1))
-        if [ $((SKIPPED % 50)) -eq 1 ]; then
-            log_warning "[$INDEX/$TOTAL] 이미 처리됨 (스킵 ${SKIPPED}개)"
-        fi
+        log_warning "[$LINE_NUM/$TOTAL] 이미 처리됨 - 스킵: $URL"
+        echo "$URL" >> "$SUCCESS_URLS_FILE"
         continue
     fi
     
-    log_info "[$INDEX/$TOTAL] 처리중: $URL"
+    log_info "[$LINE_NUM/$TOTAL] 재처리중: $URL"
     
-    # YouTube 자막 가져오기 (참고 정보로 제공)
+    # YouTube 자막 가져오기
     TRANSCRIPT=""
     if [ -f "$TRANSCRIPT_SCRIPT" ]; then
         TRANSCRIPT_START=$(date +%s)
@@ -228,12 +215,12 @@ for i in "${!URLS[@]}"; do
             log_debug "자막 로드 완료 (${#TRANSCRIPT}자, ${TRANSCRIPT_DURATION}s)"
             TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
         else
-            log_warning "자막 없음 - 검색 기반으로 진행 (${TRANSCRIPT_DURATION}s)"
+            log_warning "자막 없음 (${TRANSCRIPT_DURATION}s)"
             TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
         fi
     fi
     
-    # 프롬프트에 URL 삽입 (<유튜브 링크> 플레이스홀더 치환)
+    # 프롬프트에 URL 삽입
     PROMPT="${PROMPT_TEMPLATE//<유튜브 링크>/$URL}"
     
     # 자막이 있으면 프롬프트 끝에 추가
@@ -248,18 +235,13 @@ $TRANSCRIPT
 </참고: YouTube 자막>"
     fi
     
-    # 임시 응답 파일
-    TEMP_RESPONSE="$PROJECT_ROOT/temp/response_$INDEX.json"
-    
-    # Gemini CLI 호출 (GEMINI_MODEL 환경변수로 모델 설정)
-    # 프롬프트를 파일로 저장하고 -p 플래그로 전달 (각 요청이 독립적인 세션으로 실행)
-    # --yolo: 도구 사용 시 자동 승인 (확인 프롬프트 없이 진행)
-    # -p: 단일 프롬프트 모드 (이전 대화 히스토리 없이 독립 실행)
-    # stderr는 별도 파일로 분리 (JSON 파싱 오류 방지)
-    TEMP_PROMPT="$PROJECT_ROOT/temp/prompt_$INDEX.txt"
-    TEMP_STDERR="$PROJECT_ROOT/temp/stderr_$INDEX.log"
+    # 임시 파일
+    TEMP_RESPONSE="$PROJECT_ROOT/temp/retry_response_$LINE_NUM.json"
+    TEMP_PROMPT="$PROJECT_ROOT/temp/retry_prompt_$LINE_NUM.txt"
+    TEMP_STDERR="$PROJECT_ROOT/temp/retry_stderr_$LINE_NUM.log"
     echo "$PROMPT" > "$TEMP_PROMPT"
     
+    # Gemini CLI 호출
     GEMINI_START=$(date +%s)
     if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
         GEMINI_END=$(date +%s)
@@ -279,15 +261,16 @@ $TRANSCRIPT
             URL_END_TIME=$(date +%s)
             URL_DURATION=$((URL_END_TIME - URL_START_TIME))
             log_success "성공 ($SUCCESS/$TOTAL) - 총 ${URL_DURATION}s (Gemini: ${GEMINI_DURATION}s, Parse: ${PARSE_DURATION}s)"
+            
+            # 성공한 URL 기록 (에러 파일에서 삭제하기 위해)
+            echo "$URL" >> "$SUCCESS_URLS_FILE"
         else
             PARSE_END=$(date +%s)
             PARSE_DURATION=$((PARSE_END - PARSE_START))
             TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
             FAILED=$((FAILED + 1))
             log_error "파서 실패 ($FAILED/$TOTAL)"
-            echo "[$(date)] 파서 실패: $URL" >> "$ERROR_LOG"
-            # 에러 URL을 JSONL로 저장 (재처리용)
-            echo "{\"youtube_link\": \"$URL\", \"error_type\": \"parser_error\", \"timestamp\": \"$(date -Iseconds)\"}" >> "$ERROR_JSONL"
+            echo "[$(date)] 재처리 파서 실패: $URL" >> "$RETRY_ERROR_LOG"
         fi
     else
         GEMINI_END=$(date +%s)
@@ -296,37 +279,63 @@ $TRANSCRIPT
         GEMINI_CALLS=$((GEMINI_CALLS + 1))
         FAILED=$((FAILED + 1))
         log_error "Gemini CLI 호출 실패 ($FAILED/$TOTAL) - ${GEMINI_DURATION}s"
-        echo "[$(date)] Gemini CLI 실패: $URL" >> "$ERROR_LOG"
-        cat "$TEMP_RESPONSE" >> "$ERROR_LOG"
-        # 에러 URL을 JSONL로 저장 (재처리용)
-        echo "{\"youtube_link\": \"$URL\", \"error_type\": \"gemini_error\", \"timestamp\": \"$(date -Iseconds)\"}" >> "$ERROR_JSONL"
+        echo "[$(date)] 재처리 Gemini CLI 실패: $URL" >> "$RETRY_ERROR_LOG"
+        cat "$TEMP_STDERR" >> "$RETRY_ERROR_LOG" 2>/dev/null || true
     fi
     
     # 임시 파일 정리
-    rm -f "$TEMP_RESPONSE"
+    rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
     
     # Rate Limit 준수 (60 RPM = 1초 대기)
-    if [ $INDEX -lt $TOTAL ]; then
+    if [ $LINE_NUM -lt $TOTAL ]; then
         sleep 1
     fi
-done
+    
+done < "$ERROR_JSONL"
 
-# 크롤링 종료 시간
-CRAWL_END_TIME=$(date +%s)
-CRAWL_DURATION=$((CRAWL_END_TIME - START_TIME))
+# 성공한 URL을 에러 파일에서 제거
+if [ -s "$SUCCESS_URLS_FILE" ]; then
+    log_info ""
+    log_info "🗑️  성공한 URL을 에러 파일에서 제거 중..."
+    
+    TEMP_ERROR_FILE="$PROJECT_ROOT/temp/temp_crawling_errors.jsonl"
+    > "$TEMP_ERROR_FILE"
+    REMOVED_COUNT=0
+    
+    while IFS= read -r line || [ -n "$line" ]; do
+        URL=$(echo "$line" | jq -r '.youtube_link' 2>/dev/null)
+        if grep -q "^$URL$" "$SUCCESS_URLS_FILE" 2>/dev/null; then
+            REMOVED_COUNT=$((REMOVED_COUNT + 1))
+        else
+            echo "$line" >> "$TEMP_ERROR_FILE"
+        fi
+    done < "$ERROR_JSONL"
+    
+    mv "$TEMP_ERROR_FILE" "$ERROR_JSONL"
+    REMAINING=$(wc -l < "$ERROR_JSONL" 2>/dev/null | tr -d ' ')
+    log_success "에러 파일 업데이트 완료 (제거: ${REMOVED_COUNT}개, 남음: ${REMAINING}개)"
+fi
+
+# 임시 파일 정리
+rm -f "$SUCCESS_URLS_FILE"
+
+# 최종 종료 시간
+END_TIME=$(date +%s)
+END_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
+TOTAL_DURATION=$((END_TIME - START_TIME))
 
 # 결과 출력
 log_info ""
 log_info "========================================"
-log_success "크롤링 완료"
+log_success "크롤링 에러 재처리 완료"
 log_info "========================================"
-log_info "⏱️  총 소요 시간: $(format_duration $CRAWL_DURATION)"
+log_info "⏱️  총 소요 시간: $(format_duration $TOTAL_DURATION)"
 log_info ""
 log_info "📊 처리 통계:"
 log_success "  성공: $SUCCESS"
 log_warning "  건너뜀: $SKIPPED"
 log_error "  실패: $FAILED"
-log_info "  총 URL: $TOTAL"
+log_info "  총 에러: $TOTAL"
 log_info ""
 log_info "🤖 Gemini CLI 통계:"
 log_info "  총 호출 수: $GEMINI_CALLS"
@@ -340,47 +349,7 @@ log_info "📝 자막 통계:"
 log_info "  자막 성공: $TRANSCRIPT_SUCCESS"
 log_info "  자막 실패: $TRANSCRIPT_FAILED"
 log_info "  총 자막 시간: $(format_duration $TOTAL_TRANSCRIPT_TIME)"
-log_info ""
-log_info "⚙️  파서 통계:"
-log_info "  총 파싱 시간: $(format_duration $TOTAL_PARSE_TIME)"
 log_info "========================================"
-
-# ========================================
-# YouTube 메타데이터 추가
-# ========================================
-META_SUCCESS=0
-META_DURATION=0
-if [ $SUCCESS -gt 0 ]; then
-    log_info ""
-    log_info "========================================"
-    log_info "📹 YouTube 메타데이터 추가 중..."
-    log_info "========================================"
-    
-    OUTPUT_WITH_META="${OUTPUT_FILE%.jsonl}_with_meta.jsonl"
-    META_SCRIPT="$SCRIPT_DIR/api-youtube-meta.py"
-    
-    if [ -f "$META_SCRIPT" ]; then
-        META_START=$(date +%s)
-        if python3 "$META_SCRIPT" "$OUTPUT_FILE" "$OUTPUT_WITH_META"; then
-            META_END=$(date +%s)
-            META_DURATION=$((META_END - META_START))
-            META_SUCCESS=1
-            log_success "YouTube 메타데이터 추가 완료 ($(format_duration $META_DURATION))"
-            log_info "📂 메타데이터 포함 파일: $OUTPUT_WITH_META"
-        else
-            META_END=$(date +%s)
-            META_DURATION=$((META_END - META_START))
-            log_error "YouTube 메타데이터 추가 실패 ($(format_duration $META_DURATION))"
-        fi
-    else
-        log_warning "메타데이터 스크립트 없음, 스킵"
-    fi
-fi
-
-# 최종 종료 시간
-END_TIME=$(date +%s)
-END_DATETIME=$(date "+%Y-%m-%d %H:%M:%S")
-TOTAL_DURATION=$((END_TIME - START_TIME))
 
 # JSON 로그 저장
 cat > "$LOG_FILE" << EOF
@@ -392,7 +361,7 @@ cat > "$LOG_FILE" << EOF
   "duration_formatted": "$(format_duration $TOTAL_DURATION)",
   "gemini_model": "$GEMINI_MODEL",
   "statistics": {
-    "total_urls": $TOTAL,
+    "total_errors": $TOTAL,
     "success": $SUCCESS,
     "failed": $FAILED,
     "skipped": $SKIPPED,
@@ -414,15 +383,10 @@ cat > "$LOG_FILE" << EOF
     "total_time_seconds": $TOTAL_PARSE_TIME,
     "total_time_formatted": "$(format_duration $TOTAL_PARSE_TIME)"
   },
-  "meta_stats": {
-    "success": $META_SUCCESS,
-    "duration_seconds": $META_DURATION,
-    "duration_formatted": "$(format_duration $META_DURATION)"
-  },
   "files": {
-    "url_file": "$URL_FILE",
+    "error_file": "$ERROR_JSONL",
     "output_file": "$OUTPUT_FILE",
-    "error_log": "$ERROR_LOG"
+    "retry_error_log": "$RETRY_ERROR_LOG"
   }
 }
 EOF
@@ -430,23 +394,11 @@ EOF
 log_info ""
 log_success "로그 파일 저장: $LOG_FILE"
 
-# 최종 결과
-log_info ""
-log_info "========================================"
-log_success "🎉 전체 파이프라인 완료"
-log_info "========================================"
-log_info "시작: $START_DATETIME"
-log_info "종료: $END_DATETIME"
-log_info "총 소요 시간: $(format_duration $TOTAL_DURATION)"
-log_info ""
-log_info "📂 크롤링 결과: $OUTPUT_FILE"
-if [ -f "${OUTPUT_FILE%.jsonl}_with_meta.jsonl" ]; then
-    log_info "📂 메타 포함: ${OUTPUT_FILE%.jsonl}_with_meta.jsonl"
-fi
-log_info "📂 로그 파일: $LOG_FILE"
-log_info "========================================"
-
-# 실패가 있으면 종료 코드 1
-if [ $FAILED -gt 0 ]; then
-    exit 1
+# 최종 상태 출력
+REMAINING=$(wc -l < "$ERROR_JSONL" 2>/dev/null | tr -d ' ')
+if [ "$REMAINING" -eq 0 ]; then
+    log_success "🎉 모든 에러가 성공적으로 처리되었습니다!"
+else
+    log_warning "⚠️  아직 ${REMAINING}개의 에러가 남아있습니다."
+    log_info "   다시 실행하려면: $0"
 fi

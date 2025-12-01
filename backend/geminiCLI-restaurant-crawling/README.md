@@ -62,19 +62,40 @@ Gemini CLI는 YouTube 영상을 직접 시청할 수 없어서, **YouTube 자막
 geminiCLI-restaurant-crawling/
 ├── README.md                                    # 이 파일
 ├── .env                                         # 환경변수
-├── tzuyang_youtubeVideo_urls.txt                # 입력 URL 목록 (1줄에 1개)
-├── tzuyang_restaurant_results.jsonl             # 크롤링 결과
-├── tzuyang_restaurant_results_with_meta.jsonl   # 메타데이터 포함 결과
+├── data/
+│   └── yy-mm-dd/                                # 날짜별 폴더 (예: 25-01-15)
+│       ├── tzuyang_restaurant_results.jsonl             # 크롤링 결과
+│       ├── tzuyang_restaurant_results_with_meta.jsonl   # 메타데이터 포함 결과
+│       └── tzuyang_crawling_errors.jsonl                # 에러 URL 목록
 ├── prompts/
 │   └── crawling_prompt.txt                      # Gemini CLI 크롤링 프롬프트
 ├── scripts/
 │   ├── crawling.sh                              # 🔥 메인 크롤링 스크립트 (자막 포함)
+│   ├── retry_crawling_errors.sh                 # 에러 URL 재처리
 │   ├── crawling-pipeline.py                     # Python 파이프라인 래퍼
 │   ├── parse_result.py                          # Gemini 응답 파서
 │   ├── api-youtube-urls.py                      # YouTube URL 수집
 │   └── api-youtube-meta.py                      # YouTube 메타데이터 추가
 └── temp/                                        # 임시 파일 (자동 생성/삭제)
 ```
+
+### 날짜 폴더 구조
+
+모든 데이터는 실행 날짜 기준 `yy-mm-dd` 형식 폴더에 저장됩니다:
+
+```
+data/
+├── 25-01-10/
+│   ├── tzuyang_restaurant_results.jsonl
+│   ├── tzuyang_restaurant_results_with_meta.jsonl
+│   └── tzuyang_crawling_errors.jsonl
+├── 25-01-15/
+│   ├── tzuyang_restaurant_results.jsonl
+│   └── ...
+```
+
+- `PIPELINE_DATE` 환경변수 설정 시 해당 날짜 폴더 사용
+- 미설정 시 오늘 날짜 기준 폴더 자동 생성
 
 ---
 
@@ -180,7 +201,7 @@ python3 api-youtube-meta.py ../tzuyang_restaurant_results.jsonl ../tzuyang_resta
 
 ## 📊 데이터 구조
 
-### 출력 데이터 (`tzuyang_restaurant_results_with_meta.jsonl`)
+### 출력 데이터 (`data/yy-mm-dd/tzuyang_restaurant_results_with_meta.jsonl`)
 
 ```json
 {
@@ -225,10 +246,30 @@ python3 api-youtube-meta.py ../tzuyang_restaurant_results.jsonl ../tzuyang_resta
 | 스크립트 | 용도 |
 |----------|------|
 | `crawling.sh` | 메인 크롤링 스크립트 (자막 추출 + Gemini CLI 호출 + 메타데이터 추가) |
+| `retry_crawling_errors.sh` | 에러 URL 재처리 (최대 5번 재시도) |
 | `parse_result.py` | Gemini CLI 응답에서 JSON 추출 및 JSONL 저장 |
 | `api-youtube-urls.py` | 쯔양 채널의 모든 동영상 URL 수집 |
 | `api-youtube-meta.py` | YouTube API로 메타데이터 추가 (제목, 광고 정보 등) |
 | `crawling-pipeline.py` | Python에서 전체 크롤링 파이프라인 실행 |
+
+### 에러 재처리
+
+크롤링 중 에러가 발생하면 `tzuyang_crawling_errors.jsonl`에 에러 URL이 JSONL 형식으로 저장됩니다:
+
+```json
+{"url": "https://www.youtube.com/watch?v=xxx", "error_type": "transcript", "timestamp": "2025-01-15T10:30:00"}
+{"url": "https://www.youtube.com/watch?v=yyy", "error_type": "gemini", "timestamp": "2025-01-15T10:31:00"}
+```
+
+에러 재처리 실행:
+```bash
+# 날짜 폴더 지정 필수
+bash retry_crawling_errors.sh 25-01-15
+```
+
+- 에러 파일에서 URL을 읽어 재크롤링
+- 성공 시 에러 파일에서 해당 URL 삭제
+- 모든 날짜 폴더 내 데이터와 중복 체크
 
 ### 자막 추출 유틸리티
 

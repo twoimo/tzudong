@@ -6,27 +6,50 @@ tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl을
 tzuyang_restaurant_transforms.jsonl로 변환합니다.
 
 GeminiCLI 버전
+날짜별 폴더 구조: data/yy-mm-dd/
 """
 
 import json
 import os
 import hashlib
 import sys
+from pathlib import Path
+from datetime import datetime
 
 # 공통 유틸리티 함수 import
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../utils'))
 from duplicate_checker import load_processed_unique_ids
+from logger import PipelineLogger, LogLevel
+from data_utils import DataPathManager
 
-# --- 파일 경로 설정 ---
-# (필요시 이 경로를 실제 파일 위치에 맞게 수정하세요.)
-BASE_DIR = os.path.dirname(__file__) if '__file__' in locals() else os.getcwd()
+# 프로젝트 루트 및 데이터 경로 관리자
+PROJECT_ROOT = Path(__file__).parent.parent
+data_manager = DataPathManager(PROJECT_ROOT)
 
-# 입력 파일 경로
-INPUT_FILE_RESULTS = os.path.join(BASE_DIR, '../tzuyang_restaurant_evaluation_results.jsonl')
-INPUT_FILE_NOTSELECTION = os.path.join(BASE_DIR, '../tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl')
+# 로그 디렉토리 설정
+LOG_DIR = Path(__file__).parent.parent.parent / 'log' / 'geminiCLI-restaurant'
 
-# 최종 출력 파일
-OUTPUT_FILE = os.path.join(BASE_DIR, '../tzuyang_restaurant_transforms.jsonl')
+# 로거 초기화
+logger = PipelineLogger(
+    phase="transform",
+    log_dir=LOG_DIR
+)
+
+# --- 파일 경로 설정 (날짜별 폴더) ---
+today_folder = data_manager.get_today_folder()
+latest_folder = data_manager.get_latest_folder()
+
+# 입력: 오늘 또는 최신 폴더의 파일
+INPUT_FILE_RESULTS = today_folder / 'tzuyang_restaurant_evaluation_results.jsonl'
+if not INPUT_FILE_RESULTS.exists() and latest_folder:
+    INPUT_FILE_RESULTS = latest_folder / 'tzuyang_restaurant_evaluation_results.jsonl'
+
+INPUT_FILE_NOTSELECTION = today_folder / 'tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl'
+if not INPUT_FILE_NOTSELECTION.exists() and latest_folder:
+    INPUT_FILE_NOTSELECTION = latest_folder / 'tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl'
+
+# 출력: 오늘 폴더에 저장
+OUTPUT_FILE = today_folder / 'tzuyang_restaurant_transforms.jsonl'
 
 
 def generate_unique_id(youtube_link, name, review):
@@ -82,7 +105,8 @@ def transform_json_object(original_data, source_file_type):
     def get_location_data(eval_results, rest_name, is_missing_flag):
         loc_data = {
             "roadAddress": None, "jibunAddress": None, "englishAddress": None,
-            "addressElements": None, "geocoding_success": False, "geocoding_false_stage": None
+            "addressElements": None, "geocoding_success": False, "geocoding_false_stage": None,
+            "lat": None, "lng": None  # 좌표 추가
         }
         
         loc_match_item = None
@@ -107,6 +131,15 @@ def transform_json_object(original_data, source_file_type):
                 loc_data["jibunAddress"] = naver_address_data.get('jibunAddress')
                 loc_data["englishAddress"] = naver_address_data.get('englishAddress')
                 loc_data["addressElements"] = naver_address_data.get('addressElements')
+                # 좌표 추가 (x=경도, y=위도)
+                x = naver_address_data.get('x')
+                y = naver_address_data.get('y')
+                if x and y:
+                    try:
+                        loc_data["lng"] = float(x)  # x = 경도 (longitude)
+                        loc_data["lat"] = float(y)  # y = 위도 (latitude)
+                    except (ValueError, TypeError):
+                        pass
 
         if source_file_type == 'results' and is_missing_flag:
             loc_data["geocoding_false_stage"] = None
@@ -167,6 +200,8 @@ def transform_json_object(original_data, source_file_type):
                 "jibunAddress": loc_data["jibunAddress"],
                 "englishAddress": loc_data["englishAddress"],
                 "addressElements": loc_data["addressElements"],
+                "lat": loc_data["lat"],
+                "lng": loc_data["lng"],
                 "geocoding_success": loc_data["geocoding_success"],
                 "geocoding_false_stage": loc_data["geocoding_false_stage"],
                 "is_missing": False,
@@ -193,6 +228,8 @@ def transform_json_object(original_data, source_file_type):
                     "jibunAddress": loc_data["jibunAddress"],
                     "englishAddress": loc_data["englishAddress"],
                     "addressElements": loc_data["addressElements"],
+                    "lat": loc_data["lat"],
+                    "lng": loc_data["lng"],
                     "geocoding_success": loc_data["geocoding_success"],
                     "geocoding_false_stage": loc_data["geocoding_false_stage"],
                     "is_missing": True,
@@ -231,6 +268,8 @@ def transform_json_object(original_data, source_file_type):
                     "jibunAddress": loc_data["jibunAddress"],
                     "englishAddress": loc_data["englishAddress"],
                     "addressElements": loc_data["addressElements"],
+                    "lat": loc_data["lat"],
+                    "lng": loc_data["lng"],
                     "geocoding_success": loc_data["geocoding_success"],
                     "geocoding_false_stage": loc_data["geocoding_false_stage"],
                     "is_missing": True,
@@ -270,6 +309,8 @@ def transform_json_object(original_data, source_file_type):
                 "jibunAddress": loc_data["jibunAddress"],
                 "englishAddress": loc_data["englishAddress"],
                 "addressElements": loc_data["addressElements"],
+                "lat": loc_data["lat"],
+                "lng": loc_data["lng"],
                 "geocoding_success": loc_data["geocoding_success"],
                 "geocoding_false_stage": loc_data["geocoding_false_stage"],
                 "is_missing": is_missing,
@@ -283,9 +324,22 @@ def transform_json_object(original_data, source_file_type):
 
 # --- 메인 실행 로직 ---
 def main():
-    # 기존 output 파일에서 unique_id 로드 (append 모드를 위해)
-    print(f"📂 기존 파일 확인 중: {OUTPUT_FILE}")
-    written_ids = load_processed_unique_ids(OUTPUT_FILE)
+    logger.start_stage()
+    
+    logger.info("=" * 60)
+    logger.info("  평가 결과 변환 시작")
+    logger.info("=" * 60)
+    logger.info(f"입력 파일 (results): {INPUT_FILE_RESULTS}")
+    logger.info(f"입력 파일 (notSelection): {INPUT_FILE_NOTSELECTION}")
+    logger.info(f"출력 파일: {OUTPUT_FILE}")
+    
+    # 모든 날짜 폴더에서 unique_id 로드 (중복 방지)
+    logger.info(f"기존 파일 확인 중 (전체 이력)...")
+    written_ids = set()
+    
+    for transform_file in data_manager.get_all_file_paths('tzuyang_restaurant_transforms.jsonl'):
+        ids = load_processed_unique_ids(str(transform_file))
+        written_ids.update(ids)
     
     stats = {
         "results_lines": 0,
@@ -293,93 +347,135 @@ def main():
         "total_processed": 0,
         "total_written": 0,
         "total_skipped": 0,
-        "already_existed": len(written_ids)  # 이미 존재하는 항목 수
+        "already_existed": len(written_ids),  # 이미 존재하는 항목 수
+        "json_errors": 0,
+        "processing_errors": 0
     }
     
     if stats["already_existed"] > 0:
-        print(f"✅ 기존 파일에서 {stats['already_existed']}개의 unique_id 로드됨\n")
+        logger.info(f"기존 파일에서 {stats['already_existed']}개의 unique_id 로드됨 (전체 이력)")
     else:
-        print("📝 새 파일 생성 예정\n")
+        logger.info("새 파일 생성 예정")
 
     # 1. & 2. 파일 처리 및 쓰기 (append 모드로 변경)
     try:
+        # 출력 폴더 생성
+        OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        
         with open(OUTPUT_FILE, 'a', encoding='utf-8') as f_out:
             
             # --- 1. 'results' 파일 처리 ---
-            print(f"'{INPUT_FILE_RESULTS}' 파일 처리 시작...")
+            logger.info(f"'{INPUT_FILE_RESULTS}' 파일 처리 시작...")
             try:
-                with open(INPUT_FILE_RESULTS, 'r', encoding='utf-8') as f_in:
-                    for i, line in enumerate(f_in):
-                        stats["results_lines"] += 1
-                        try:
-                            data = json.loads(line)
-                            transformed_list = transform_json_object(data, source_file_type='results')
-                            
-                            for entry in transformed_list:
-                                stats["total_processed"] += 1
-                                uid = entry.get('unique_id')
+                with logger.timer("process_results_file"):
+                    with open(INPUT_FILE_RESULTS, 'r', encoding='utf-8') as f_in:
+                        for i, line in enumerate(f_in):
+                            stats["results_lines"] += 1
+                            try:
+                                data = json.loads(line)
+                                transformed_list = transform_json_object(data, source_file_type='results')
                                 
-                                if uid not in written_ids:
-                                    f_out.write(json.dumps(entry, ensure_ascii=False) + '\n')
-                                    written_ids.add(uid)
-                                    stats["total_written"] += 1
-                                else:
-                                    stats["total_skipped"] += 1
+                                for entry in transformed_list:
+                                    stats["total_processed"] += 1
+                                    uid = entry.get('unique_id')
                                     
-                        except json.JSONDecodeError:
-                            print(f"  [경고] '{INPUT_FILE_RESULTS}' {i+1}번째 줄 JSON 디코딩 실패. 건너뜁니다.")
-                        except Exception as e:
-                            print(f"  [오류] '{INPUT_FILE_RESULTS}' {i+1}번째 줄 처리 중 오류: {e}")
+                                    if uid not in written_ids:
+                                        f_out.write(json.dumps(entry, ensure_ascii=False) + '\n')
+                                        written_ids.add(uid)
+                                        stats["total_written"] += 1
+                                    else:
+                                        stats["total_skipped"] += 1
+                                        
+                            except json.JSONDecodeError:
+                                stats["json_errors"] += 1
+                                logger.warning(f"'{INPUT_FILE_RESULTS}' {i+1}번째 줄 JSON 디코딩 실패. 건너뜁니다.")
+                            except Exception as e:
+                                stats["processing_errors"] += 1
+                                logger.error(f"'{INPUT_FILE_RESULTS}' {i+1}번째 줄 처리 중 오류: {e}")
             except FileNotFoundError:
-                print(f"  [오류] '{INPUT_FILE_RESULTS}' 파일을 찾을 수 없습니다.")
+                logger.error(f"'{INPUT_FILE_RESULTS}' 파일을 찾을 수 없습니다.")
             except Exception as e:
-                print(f"  [오류] '{INPUT_FILE_RESULTS}' 파일 읽기 중 오류: {e}")
+                logger.error(f"'{INPUT_FILE_RESULTS}' 파일 읽기 중 오류: {e}")
 
             # --- 2. 'notSelection' 파일 처리 ---
-            print(f"'{INPUT_FILE_NOTSELECTION}' 파일 처리 시작...")
+            logger.info(f"'{INPUT_FILE_NOTSELECTION}' 파일 처리 시작...")
             try:
-                with open(INPUT_FILE_NOTSELECTION, 'r', encoding='utf-8') as f_in:
-                    for i, line in enumerate(f_in):
-                        stats["notselection_lines"] += 1
-                        try:
-                            data = json.loads(line)
-                            transformed_list = transform_json_object(data, source_file_type='notSelection')
-                            
-                            for entry in transformed_list:
-                                stats["total_processed"] += 1
-                                uid = entry.get('unique_id')
+                with logger.timer("process_notselection_file"):
+                    with open(INPUT_FILE_NOTSELECTION, 'r', encoding='utf-8') as f_in:
+                        for i, line in enumerate(f_in):
+                            stats["notselection_lines"] += 1
+                            try:
+                                data = json.loads(line)
+                                transformed_list = transform_json_object(data, source_file_type='notSelection')
                                 
-                                if uid not in written_ids:
-                                    f_out.write(json.dumps(entry, ensure_ascii=False) + '\n')
-                                    written_ids.add(uid)
-                                    stats["total_written"] += 1
-                                else:
-                                    stats["total_skipped"] += 1
+                                for entry in transformed_list:
+                                    stats["total_processed"] += 1
+                                    uid = entry.get('unique_id')
                                     
-                        except json.JSONDecodeError:
-                            print(f"  [경고] '{INPUT_FILE_NOTSELECTION}' {i+1}번째 줄 JSON 디코딩 실패. 건너뜁니다.")
-                        except Exception as e:
-                            print(f"  [오류] '{INPUT_FILE_NOTSELECTION}' {i+1}번째 줄 처리 중 오류: {e}")
+                                    if uid not in written_ids:
+                                        f_out.write(json.dumps(entry, ensure_ascii=False) + '\n')
+                                        written_ids.add(uid)
+                                        stats["total_written"] += 1
+                                    else:
+                                        stats["total_skipped"] += 1
+                                        
+                            except json.JSONDecodeError:
+                                stats["json_errors"] += 1
+                                logger.warning(f"'{INPUT_FILE_NOTSELECTION}' {i+1}번째 줄 JSON 디코딩 실패. 건너뜁니다.")
+                            except Exception as e:
+                                stats["processing_errors"] += 1
+                                logger.error(f"'{INPUT_FILE_NOTSELECTION}' {i+1}번째 줄 처리 중 오류: {e}")
             except FileNotFoundError:
-                print(f"  [오류] '{INPUT_FILE_NOTSELECTION}' 파일을 찾을 수 없습니다.")
+                logger.warning(f"'{INPUT_FILE_NOTSELECTION}' 파일을 찾을 수 없습니다.")
             except Exception as e:
-                print(f"  [오류] '{INPUT_FILE_NOTSELECTION}' 파일 읽기 중 오류: {e}")
+                logger.error(f"'{INPUT_FILE_NOTSELECTION}' 파일 읽기 중 오류: {e}")
     
     except Exception as e:
-        print(f"'{OUTPUT_FILE}' 파일 쓰기 중 치명적 오류 발생: {e}")
+        logger.error(f"'{OUTPUT_FILE}' 파일 쓰기 중 치명적 오류 발생: {e}")
         return
 
+    # 통계 저장
+    logger.add_statistic("results_lines", stats["results_lines"])
+    logger.add_statistic("notselection_lines", stats["notselection_lines"])
+    logger.add_statistic("already_existed", stats["already_existed"])
+    logger.add_statistic("total_processed", stats["total_processed"])
+    logger.add_statistic("total_written", stats["total_written"])
+    logger.add_statistic("total_skipped", stats["total_skipped"])
+    logger.add_statistic("json_errors", stats["json_errors"])
+    logger.add_statistic("processing_errors", stats["processing_errors"])
+    logger.add_statistic("final_total", stats["already_existed"] + stats["total_written"])
+
+    # 스테이지 종료 및 로그 저장
+    logger.end_stage()
+    summary = logger.get_summary()
+    
     # --- 3. 최종 통계 출력 ---
-    print("\n--- 🚀 작업 완료: 처리 통계 ---")
-    print(f"  'results' 파일 처리 라인: {stats['results_lines']} 개")
-    print(f"  'notSelection' 파일 처리 라인: {stats['notselection_lines']} 개")
-    print("-" * 30)
-    print(f"  기존에 있던 항목: {stats['already_existed']} 개")
-    print(f"  총 변환 시도 항목: {stats['total_processed']} 개")
-    print(f"  ✅ 새로 추가된 항목: {stats['total_written']} 개")
-    print(f"  ⏭️ 중복으로 건너뛴 항목: {stats['total_skipped']} 개")
-    print(f"\n결과가 '{OUTPUT_FILE}' 파일에 저장되었습니다.")
-    print(f"💾 총 항목 수: {stats['already_existed'] + stats['total_written']} 개")
+    logger.info("")
+    logger.info("=" * 60)
+    logger.success("작업 완료: 처리 통계")
+    logger.info("=" * 60)
+    logger.info(f"  시작 시간: {summary.get('started_at', 'N/A')}")
+    logger.info(f"  종료 시간: {summary.get('ended_at', 'N/A')}")
+    logger.info(f"  총 소요 시간: {summary.get('duration_formatted', 'N/A')}")
+    logger.info("")
+    logger.info(f"  'results' 파일 처리 라인: {stats['results_lines']}개")
+    logger.info(f"  'notSelection' 파일 처리 라인: {stats['notselection_lines']}개")
+    logger.info("-" * 30)
+    logger.info(f"  기존에 있던 항목: {stats['already_existed']}개")
+    logger.info(f"  총 변환 시도 항목: {stats['total_processed']}개")
+    logger.success(f"  새로 추가된 항목: {stats['total_written']}개")
+    logger.warning(f"  중복으로 건너뛴 항목: {stats['total_skipped']}개")
+    if stats["json_errors"] > 0:
+        logger.error(f"  JSON 오류: {stats['json_errors']}개")
+    if stats["processing_errors"] > 0:
+        logger.error(f"  처리 오류: {stats['processing_errors']}개")
+    logger.info("")
+    logger.info(f"결과가 '{OUTPUT_FILE}' 파일에 저장되었습니다.")
+    logger.success(f"총 항목 수: {stats['already_existed'] + stats['total_written']}개")
+    logger.info("=" * 60)
+    
+    # JSON 로그 저장
+    logger.save_json_log()
 
 if __name__ == "__main__":
     main()

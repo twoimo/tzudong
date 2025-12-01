@@ -9,7 +9,10 @@ Google Gemini CLI 기반의 YouTube 영상 음식점 크롤링 및 평가 시스
 - [시스템 개요](#시스템-개요)
 - [전체 아키텍처](#전체-아키텍처)
 - [빠른 시작](#빠른-시작)
+- [전체 파이프라인 실행](#전체-파이프라인-실행)
 - [상세 파이프라인](#상세-파이프라인)
+- [날짜별 폴더 관리](#날짜별-폴더-관리)
+- [중복 처리 시스템](#중복-처리-시스템)
 - [디렉토리 구조](#디렉토리-구조)
 - [환경 변수](#환경-변수)
 - [GitHub Actions](#github-actions)
@@ -27,8 +30,11 @@ Google Gemini CLI 기반의 YouTube 영상 음식점 크롤링 및 평가 시스
 - **Gemini CLI**: Google 공식 CLI 도구로 합법적 AI 호출
 - **YouTube 자막 활용**: youtube-transcript-api로 자막 추출 후 AI에 제공
 - **RULE + LAAJ**: 규칙 기반 + AI 기반 하이브리드 평가
+- **날짜별 폴더 관리**: `YY-MM-DD` 형식의 폴더로 일별 데이터 관리
+- **모든 날짜 폴더 스캔**: 중복 체크 시 전체 이력 확인
+- **에러 재처리**: 최대 5번까지 자동 재시도
 - **자동화**: GitHub Actions 지원
-- **중복 제거**: 기존 데이터와 중복 체크
+- **한국 시간대**: 모든 시간은 KST (UTC+9) 기준
 
 ### Perplexity vs GeminiCLI
 
@@ -66,9 +72,15 @@ Google Gemini CLI 기반의 YouTube 영상 음식점 크롤링 및 평가 시스
 └─────────────────────────────────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                    🔄 Phase 3: 에러 재시도                       │
+│                    🔄 Phase 1b: 크롤링 에러 재처리               │
 ├─────────────────────────────────────────────────────────────────┤
-│  tzuyang_restaurant_evaluation_errors.jsonl → Gemini CLI → 재평가  │
+│  data/yy-mm-dd/tzuyang_crawling_errors.jsonl → 최대 5번 재시도   │
+└─────────────────────────────────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    🔄 Phase 3: LAAJ 에러 재평가                  │
+├─────────────────────────────────────────────────────────────────┤
+│  data/yy-mm-dd/tzuyang_restaurant_evaluation_errors.jsonl → 최대 5번 재시도  │
 └─────────────────────────────────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -136,8 +148,8 @@ brew install jq  # macOS
 ### 2. 환경 변수 설정
 
 ```bash
-# backend/.env 파일 생성
-cp backend/.env.example backend/.env
+# backend/geminiCLI-restaurant-crawling/.env 파일 생성
+cp backend/geminiCLI-restaurant-crawling/.env.example backend/geminiCLI-restaurant-crawling/.env
 # 각 API 키 입력
 ```
 
@@ -145,7 +157,67 @@ cp backend/.env.example backend/.env
 
 ```bash
 cd backend
+source ../.venv/bin/activate
 python3 geminiCLI-restaurant-pipeline.py
+```
+
+---
+
+## 🚀 전체 파이프라인 실행
+
+### 기본 실행 (처음부터 끝까지)
+
+```bash
+cd backend
+python3 geminiCLI-restaurant-pipeline.py
+```
+
+### 🎯 중간 단계부터 실행하기
+
+`--start-from` 옵션을 사용하여 특정 Phase부터 시작할 수 있습니다:
+
+```bash
+# 메타데이터 추가(1c)부터 시작
+python3 geminiCLI-restaurant-pipeline.py --start-from 1c
+
+# 평가(2)부터 시작
+python3 geminiCLI-restaurant-pipeline.py --start-from 2
+
+# Transform(4)부터 시작
+python3 geminiCLI-restaurant-pipeline.py --start-from 4
+
+# DB 삽입(5)만 실행
+python3 geminiCLI-restaurant-pipeline.py --start-from 5
+```
+
+### 사용 가능한 Phase 옵션
+
+| 옵션 | Phase | 설명 |
+|------|-------|------|
+| `1` | 크롤링 | YouTube URL 수집 → Gemini CLI 크롤링 |
+| `1b` | 크롤링 에러 재처리 | 크롤링 실패 항목 재시도 (최대 5회) |
+| `1c` | 메타데이터 추가 | YouTube 메타데이터 보강 |
+| `2` | 평가 | 평가 대상 선정 → Rule 평가 → LAAJ 평가 |
+| `3` | LAAJ 에러 재평가 | 평가 실패 항목 재시도 (최대 5회) |
+| `4` | Transform | 데이터 변환 및 unique_id 생성 |
+| `5` | DB 삽입 | Supabase에 데이터 삽입 |
+
+### 📅 특정 날짜 데이터 처리
+
+`--date` 옵션으로 특정 날짜 폴더의 데이터를 처리할 수 있습니다:
+
+```bash
+# 25-11-30 데이터를 메타데이터 추가부터 처리
+python3 geminiCLI-restaurant-pipeline.py --start-from 1c --date 25-11-30
+
+# 25-11-30 데이터를 평가부터 처리
+python3 geminiCLI-restaurant-pipeline.py --start-from 2 --date 25-11-30
+```
+
+### 도움말
+
+```bash
+python3 geminiCLI-restaurant-pipeline.py --help
 ```
 
 ---
@@ -194,8 +266,80 @@ bash retry_errors.sh
 ### Phase 4: DB 삽입
 
 ```bash
-npx tsx insert_to_supabase.ts
+npx tsx scripts/insert_to_supabase.ts
 ```
+
+---
+
+## 📅 날짜별 폴더 관리
+
+모든 데이터는 `YY-MM-DD` 형식의 날짜 폴더로 관리됩니다.
+
+### 폴더 구조
+
+```
+geminiCLI-restaurant-crawling/
+└── data/
+    ├── 25-11-30/                              # 2025년 11월 30일 데이터
+    │   ├── tzuyang_youtubeVideo_urls.txt      # 수집된 URL 목록
+    │   ├── tzuyang_restaurant_results.jsonl   # 크롤링 결과
+    │   ├── tzuyang_restaurant_results_with_meta.jsonl
+    │   └── tzuyang_crawling_errors.jsonl      # 크롤링 에러
+    │
+    └── 25-12-01/                              # 2025년 12월 1일 데이터
+        └── ...
+
+geminiCLI-restaurant-evaluation/
+└── data/
+    ├── 25-11-30/
+    │   ├── tzuyang_restaurant_evaluation_selection.jsonl
+    │   ├── tzuyang_restaurant_evaluation_rule_results.jsonl
+    │   ├── tzuyang_restaurant_evaluation_results.jsonl
+    │   ├── tzuyang_restaurant_evaluation_errors.jsonl
+    │   └── tzuyang_restaurant_transforms.jsonl
+    │
+    └── 25-12-01/
+        └── ...
+```
+
+### 날짜 폴더 자동 생성
+
+- 파이프라인 실행 시 **오늘 날짜 폴더** 자동 생성
+- `PIPELINE_DATE` 환경변수 또는 `--date` 옵션으로 날짜 지정 가능
+- 모든 시간은 **한국 시간 (KST, UTC+9)** 기준
+
+### 데이터 유틸리티
+
+`backend/utils/data_utils.py` 제공 함수:
+- `get_today_folder()` - 오늘 날짜 폴더명 반환
+- `get_all_date_folders()` - 모든 날짜 폴더 목록 반환
+- `get_latest_folder()` - 가장 최근 날짜 폴더 반환
+- `DataPathManager` - 날짜별 경로 관리 클래스
+
+---
+
+## 🔐 중복 처리 시스템
+
+전체 파이프라인에서 **모든 날짜 폴더를 스캔**하여 중복 데이터를 자동으로 감지하고 제거합니다.
+
+### 중복 검사 전략
+
+| 단계 | 스크립트 | 중복 기준 | 스캔 범위 |
+|------|---------|----------|----------|
+| URL 수집 | `api-youtube-urls.py` | `youtube_link` | 모든 날짜 폴더 |
+| Gemini 크롤링 | `crawling.sh` | `youtube_link` | 모든 날짜 폴더의 결과 파일 |
+| 평가 대상 선정 | `evaluation-target-selection.py` | `youtube_link` | 모든 날짜 폴더 |
+| Rule 평가 | `evaluation-rule.py` | `youtube_link` | 모든 날짜 폴더 |
+| LAAJ 평가 | `evaluation.sh` | `youtube_link` | 모든 날짜 폴더의 결과+에러 파일 |
+| Transform | `transform_evaluation_results.py` | `unique_id` | 모든 날짜 폴더 |
+| DB 삽입 | `insert_to_supabase.ts` | `unique_id` | DB 조회 |
+
+### 중복 처리 최적화
+
+1. **메모리 기반 Set 사용** - O(1) 조회 속도
+2. **모든 날짜 폴더 스캔** - 전체 이력 중복 방지
+3. **Append 모드** - 기존 데이터 손실 방지
+4. **즉시 저장** - 처리 후 바로 append로 중단 시에도 안전
 
 ---
 
@@ -209,13 +353,16 @@ backend/
 ├── geminiCLI-restaurant-crawling/
 │   ├── README.md
 │   ├── .env
-│   ├── tzuyang_youtubeVideo_urls.txt          # 입력 URL 목록
-│   ├── tzuyang_restaurant_results.jsonl       # 크롤링 결과
-│   ├── tzuyang_restaurant_results_with_meta.jsonl  # 메타데이터 포함 결과
+│   ├── data/
+│   │   └── yy-mm-dd/                          # 날짜별 폴더 (예: 25-01-15)
+│   │       ├── tzuyang_restaurant_results.jsonl        # 크롤링 결과
+│   │       ├── tzuyang_restaurant_results_with_meta.jsonl  # 메타데이터 포함
+│   │       └── tzuyang_crawling_errors.jsonl           # 에러 URL 목록
 │   ├── prompts/
 │   │   └── crawling_prompt.txt
 │   └── scripts/
 │       ├── crawling.sh                        # 메인 크롤링
+│       ├── retry_crawling_errors.sh           # 에러 재처리
 │       ├── crawling-pipeline.py
 │       ├── parse_result.py
 │       ├── api-youtube-urls.py
@@ -226,11 +373,13 @@ backend/
 │   ├── .env
 │   ├── package.json
 │   ├── tsconfig.json
-│   ├── tzuyang_restaurant_evaluation_selection.jsonl     # 평가 대상 선별 결과
-│   ├── tzuyang_restaurant_evaluation_rule_results.jsonl  # RULE 평가 결과
-│   ├── tzuyang_restaurant_evaluation_results.jsonl       # LAAJ 평가 결과
-│   ├── tzuyang_restaurant_evaluation_errors.jsonl        # 에러 로그
-│   ├── tzuyang_restaurant_transforms.jsonl               # DB 변환 결과
+│   ├── data/
+│   │   └── yy-mm-dd/                          # 날짜별 폴더 (예: 25-01-15)
+│   │       ├── tzuyang_restaurant_evaluation_selection.jsonl    # 평가 대상 선별
+│   │       ├── tzuyang_restaurant_evaluation_rule_results.jsonl # RULE 평가 결과
+│   │       ├── tzuyang_restaurant_evaluation_results.jsonl      # LAAJ 평가 결과
+│   │       ├── tzuyang_restaurant_evaluation_errors.jsonl       # 에러 로그
+│   │       └── tzuyang_restaurant_transforms.jsonl              # DB 변환 결과
 │   ├── prompts/
 │   │   └── evaluation_prompt.txt
 │   └── scripts/
@@ -241,10 +390,20 @@ backend/
 │       ├── parse_laaj_evaluation.py
 │       ├── transform_evaluation_results.py
 │       ├── insert_to_supabase.ts
-│       └── retry_errors.sh
+│       └── retry_errors.sh                    # 에러 재처리
+│
+├── log/
+│   └── geminiCLI-restaurant/
+│       └── yy-mm-dd/                          # 날짜별 로그 폴더
+│           ├── crawling_{timestamp}.json
+│           ├── retry_crawling_{timestamp}.json
+│           ├── evaluation_{timestamp}.json
+│           └── retry_evaluation_{timestamp}.json
 │
 └── utils/
-    └── duplicate_checker.py                   # 중복 체크 유틸리티
+    ├── data_utils.py                          # 데이터/날짜 폴더 유틸리티
+    ├── duplicate_checker.py                   # 중복 체크 유틸리티
+    └── logger.py                              # 로깅 유틸리티
 ```
 
 ---

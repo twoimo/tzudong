@@ -860,7 +860,13 @@ for (const restaurant of restaurants) {
 - **2단계: 거리 기반 매칭 (1단계 실패 시)**
   - 원본 주소와 후보 주소의 lat/lng를 NCP 지오코딩으로 얻음
   - Haversine 공식으로 거리 계산
-  - **30m 이내** 가장 가까운 후보 선택
+  - **20m 이내** 가장 가까운 후보 선택
+
+- **결과 저장**
+  - 매칭된 결과(`matched_result`)의 주소로 NCP Geocoding 호출
+  - **최종 좌표(lat/lng)는 매칭된 결과를 지오코딩한 값**을 사용 (origin_address 좌표가 아님)
+  - 주소와 좌표는 한 세트로 저장
+  - 지오코딩 실패 시 모든 필드 빈값으로 저장
 
 ### 검색 쿼리 전략
 
