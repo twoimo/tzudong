@@ -139,11 +139,19 @@ fi
 # Gemini CLI 설치 확인
 if ! command -v gemini &> /dev/null; then
     log_error "Gemini CLI가 설치되지 않았습니다"
-    echo "설치 방법: npm install -g @google/generative-ai-cli" >&2
+    echo "설치 방법: npm install -g @google/gemini-cli" >&2
     exit 1
 fi
 
 log_success "Gemini CLI 확인 완료"
+
+# GEMINI_API_KEY 환경변수 확인 (headless 모드 필수)
+if [ -z "$GEMINI_API_KEY" ]; then
+    log_warning "GEMINI_API_KEY 환경변수가 설정되지 않았습니다"
+    log_info "API 키 없이 OAuth 인증이 필요할 수 있습니다"
+else
+    log_success "GEMINI_API_KEY 환경변수 확인 완료"
+fi
 
 # 통계 변수
 TOTAL=0
@@ -298,12 +306,19 @@ $TRANSCRIPT
         log_error "Gemini CLI 호출 실패 ($FAILED/$TOTAL) - ${GEMINI_DURATION}s"
         echo "[$(date)] Gemini CLI 실패: $URL" >> "$ERROR_LOG"
         cat "$TEMP_RESPONSE" >> "$ERROR_LOG"
+        # stderr 로그도 출력 (디버깅용)
+        if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
+            log_error "Gemini CLI stderr:"
+            cat "$TEMP_STDERR"
+            echo "[$(date)] Gemini CLI stderr:" >> "$ERROR_LOG"
+            cat "$TEMP_STDERR" >> "$ERROR_LOG"
+        fi
         # 에러 URL을 JSONL로 저장 (재처리용)
         echo "{\"youtube_link\": \"$URL\", \"error_type\": \"gemini_error\", \"timestamp\": \"$(date -Iseconds)\"}" >> "$ERROR_JSONL"
     fi
     
     # 임시 파일 정리
-    rm -f "$TEMP_RESPONSE"
+    rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_STDERR"
     
     # Rate Limit 준수 (60 RPM = 1초 대기)
     if [ $INDEX -lt $TOTAL ]; then
