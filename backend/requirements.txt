@@ -1,0 +1,7 @@
+# GeminiCLI Restaurant Pipeline Dependencies
+requests
+python-dotenv
+google-api-python-client
+openai
+youtube-transcript-api
+google-generativeai
