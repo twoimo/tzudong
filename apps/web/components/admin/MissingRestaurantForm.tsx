@@ -240,8 +240,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
     try {
       const mergeResult = await mergeRestaurantData({
         existingRestaurant,
-        newYoutubeLink: record!.youtube_link,
-        newYoutubeMeta: record!.youtube_meta,
+        newYoutubeLink: record!.youtube_link || '',
+        newYoutubeMeta: record!.youtube_meta || undefined,
         newTzuyangReview: trimmedTzuyangReview || record!.restaurant_info?.tzuyang_review,
         newCategory: trimmedCategory,
       });
@@ -251,8 +251,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       }
 
       // evaluation_record 상태 업데이트
-      const { error: updateError } = await supabase
-        .from('evaluation_records')
+      const { error: updateError } = await (supabase
+        .from('evaluation_records') as any)
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
@@ -286,8 +286,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
   // 새 레스토랑 등록 함수
   const registerNewRestaurant = async (geocodingData: any, trimmedName: string, trimmedPhone: string, trimmedCategory: string, trimmedTzuyangReview: string) => {
     try {
-      const { error: insertError } = await supabase
-        .from('restaurants')
+      const { error: insertError } = await (supabase
+        .from('restaurants') as any)
         .insert({
           name: trimmedName,
           road_address: geocodingData.road_address,
@@ -306,8 +306,8 @@ export function MissingRestaurantForm({ record, open, onOpenChange, onSuccess }:
       if (insertError) throw insertError;
 
       // evaluation_record 상태 업데이트
-      const { error: updateError } = await supabase
-        .from('evaluation_records')
+      const { error: updateError } = await (supabase
+        .from('evaluation_records') as any)
         .update({
           status: 'approved',
           processed_at: new Date().toISOString(),
