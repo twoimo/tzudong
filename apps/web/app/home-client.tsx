@@ -99,8 +99,45 @@ export default function HomeClient() {
         setPanelRestaurant(null);
     }, [mapMode]);
 
-    // [REMOVED] 새로고침 시 상태 유지 코드 제거 - 새로고침 시 초기 상태로 돌아감
-    // CustomEvent 및 sessionStorage 기반 상태 복원 로직을 제거했습니다.
+    // [CSR] 새로고침 시 상태 초기화 - sessionStorage 클리어
+    useEffect(() => {
+        // 컴포넌트 마운트 시 sessionStorage 클리어하여 초기 상태 보장
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('selectedRestaurant');
+            sessionStorage.removeItem('selectedRegion');
+        }
+    }, []);
+
+    // [CSR] 팝업에서 맛집 선택 시 이벤트 리스너
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+
+        const handleRestaurantSelected = (event: any) => {
+            const { restaurant, region } = event.detail;
+            console.log('[HomeClient] restaurant-selected 이벤트 수신:', restaurant?.name, region);
+
+            // 국내 맛집인 경우만 처리 (mapMode === 'domestic')
+            if (mapMode === 'domestic' && region) {
+                setSelectedRegion(region as Region);
+                setSelectedRestaurant(restaurant);
+                setSearchedRestaurant(restaurant);
+
+                // 약간의 딜레이를 주어 지도가 준비된 후 이동
+                setTimeout(() => {
+                    if (moveToRestaurant) {
+                        console.log('[HomeClient] 지도 이동 함수 호출');
+                        moveToRestaurant(restaurant);
+                    }
+                }, 300);
+            }
+        };
+
+        window.addEventListener('restaurant-selected', handleRestaurantSelected);
+
+        return () => {
+            window.removeEventListener('restaurant-selected', handleRestaurantSelected);
+        };
+    }, [mapMode, moveToRestaurant]);
 
     // [CSR] 글로벌 맛집 데이터 가져오기 (React Query)
     const { data: globalRestaurants = [] } = useQuery({
