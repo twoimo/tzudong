@@ -90,7 +90,7 @@ jobs:
       # ============================
       - name: 🤖 Install Gemini CLI
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_BYEON }}
+          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
         run: |
           # Gemini CLI 설치 (공식 패키지)
           npm install -g @google/gemini-cli
@@ -129,14 +129,16 @@ jobs:
           # 메인 backend .env (Supabase + YouTube API + Gemini)
           echo "YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}" > backend/.env
           echo "OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}" >> backend/.env
-          echo "GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/.env
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/.env
+          echo "GEMINI_API_KEY_BYEON=${{ secrets.GOOGLE_API_KEY_BYEON }}" >> backend/.env
+          echo "GEMINI_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}" >> backend/.env
+          echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}" >> backend/.env
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> backend/.env
           echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> backend/.env
           
           # 크롤링 .env (GEMINI_API_KEY 포함)
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}" > backend/geminiCLI-restaurant-crawling/.env
-          echo "GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-crawling/.env
+          echo "GEMINI_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}" > backend/geminiCLI-restaurant-crawling/.env
+          echo "GEMINI_API_KEY_BYEON=${{ secrets.GOOGLE_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-crawling/.env
+          echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-crawling/.env
           echo "YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-crawling/.env
           echo "OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-crawling/.env
           
@@ -145,8 +147,9 @@ jobs:
           echo "NAVER_CLIENT_SECRET_BYEON=${{ secrets.NAVER_CLIENT_SECRET_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
           echo "NCP_MAPS_KEY_ID_BYEON=${{ secrets.NCP_MAPS_KEY_ID_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
           echo "NCP_MAPS_KEY_BYEON=${{ secrets.NCP_MAPS_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
-          echo "GEMINI_API_KEY_BYEON=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "GEMINI_API_KEY_BYEON=${{ secrets.GOOGLE_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "GEMINI_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
+          echo "GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}" >> backend/geminiCLI-restaurant-evaluation/.env
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> backend/geminiCLI-restaurant-evaluation/.env
           echo "SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" >> backend/geminiCLI-restaurant-evaluation/.env
           
@@ -197,8 +200,8 @@ jobs:
         if: ${{ github.event.inputs.phase == 'all' || github.event_name == 'schedule' }}
         working-directory: backend
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_BYEON }}
-          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY_BYEON }}
+          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
         run: |
           echo "🍜 전체 파이프라인 시작..."
@@ -214,8 +217,8 @@ jobs:
         if: ${{ github.event.inputs.phase == 'crawling' }}
         working-directory: backend/geminiCLI-restaurant-crawling/scripts
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_BYEON }}
-          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY_BYEON }}
+          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
         run: |
           echo "📥 크롤링 단계 실행..."
@@ -226,8 +229,8 @@ jobs:
         if: ${{ github.event.inputs.phase == 'evaluation' }}
         working-directory: backend/geminiCLI-restaurant-evaluation/scripts
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY_BYEON }}
-          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY_BYEON }}
+          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
         run: |
           echo "📊 평가 단계 실행..."
