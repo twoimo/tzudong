@@ -1,2 +1,23 @@
 $ next build
 [baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+   ▲ Next.js 16.0.5 (Turbopack)
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+ ✓ Compiled successfully in 15.4s
+   Running TypeScript ...
+Failed to compile.
+
+./components/map/MapView.tsx:78:31
+Type error: Cannot find namespace 'google'.
+
+[0m [90m 76 |[39m   [36mconst[39m { user } [33m=[39m useAuth()[33m;[39m
+ [90m 77 |[39m   [36mconst[39m mapRef [33m=[39m useRef[33m<[39m[33mHTMLDivElement[39m[33m>[39m([36mnull[39m)[33m;[39m
+[31m[1m>[22m[39m[90m 78 |[39m   [36mconst[39m googleMapRef [33m=[39m useRef[33m<[39m[33mgoogle[39m[33m.[39mmaps[33m.[39m[33mMap[39m [33m|[39m [36mnull[39m[33m>[39m([36mnull[39m)[33m;[39m
+ [90m    |[39m                               [31m[1m^[22m[39m
+ [90m 79 |[39m   [36mconst[39m markersRef [33m=[39m useRef[33m<[39m[33mgoogle[39m[33m.[39mmaps[33m.[39mmarker[33m.[39m[33mAdvancedMarkerElement[39m[][33m>[39m([])[33m;[39m
+ [90m 80 |[39m   [36mconst[39m detailPanelRef [33m=[39m useRef[33m<[39m[33mHTMLDivElement[39m[33m>[39m([36mnull[39m)[33m;[39m
+ [90m 81 |[39m[0m
+Next.js build worker exited with code: 1 and signal: null
+error: script "build" exited with code 1
