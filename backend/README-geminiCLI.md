@@ -66,9 +66,15 @@ Google Gemini CLI 기반의 YouTube 영상 음식점 크롤링 및 평가 시스
 └─────────────────────────────────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                    🔄 Phase 3: 에러 재시도                       │
+│                    🔄 Phase 1b: 크롤링 에러 재처리               │
 ├─────────────────────────────────────────────────────────────────┤
-│  tzuyang_restaurant_evaluation_errors.jsonl → Gemini CLI → 재평가  │
+│  data/yy-mm-dd/tzuyang_crawling_errors.jsonl → 최대 5번 재시도   │
+└─────────────────────────────────────────────────────────────────┘
+                             ↓
+┌─────────────────────────────────────────────────────────────────┐
+│                    🔄 Phase 3: LAAJ 에러 재평가                  │
+├─────────────────────────────────────────────────────────────────┤
+│  data/yy-mm-dd/tzuyang_restaurant_evaluation_errors.jsonl → 최대 5번 재시도  │
 └─────────────────────────────────────────────────────────────────┘
                              ↓
 ┌─────────────────────────────────────────────────────────────────┐
@@ -209,13 +215,16 @@ backend/
 ├── geminiCLI-restaurant-crawling/
 │   ├── README.md
 │   ├── .env
-│   ├── tzuyang_youtubeVideo_urls.txt          # 입력 URL 목록
-│   ├── tzuyang_restaurant_results.jsonl       # 크롤링 결과
-│   ├── tzuyang_restaurant_results_with_meta.jsonl  # 메타데이터 포함 결과
+│   ├── data/
+│   │   └── yy-mm-dd/                          # 날짜별 폴더 (예: 25-01-15)
+│   │       ├── tzuyang_restaurant_results.jsonl        # 크롤링 결과
+│   │       ├── tzuyang_restaurant_results_with_meta.jsonl  # 메타데이터 포함
+│   │       └── tzuyang_crawling_errors.jsonl           # 에러 URL 목록
 │   ├── prompts/
 │   │   └── crawling_prompt.txt
 │   └── scripts/
 │       ├── crawling.sh                        # 메인 크롤링
+│       ├── retry_crawling_errors.sh           # 에러 재처리
 │       ├── crawling-pipeline.py
 │       ├── parse_result.py
 │       ├── api-youtube-urls.py
@@ -226,11 +235,13 @@ backend/
 │   ├── .env
 │   ├── package.json
 │   ├── tsconfig.json
-│   ├── tzuyang_restaurant_evaluation_selection.jsonl     # 평가 대상 선별 결과
-│   ├── tzuyang_restaurant_evaluation_rule_results.jsonl  # RULE 평가 결과
-│   ├── tzuyang_restaurant_evaluation_results.jsonl       # LAAJ 평가 결과
-│   ├── tzuyang_restaurant_evaluation_errors.jsonl        # 에러 로그
-│   ├── tzuyang_restaurant_transforms.jsonl               # DB 변환 결과
+│   ├── data/
+│   │   └── yy-mm-dd/                          # 날짜별 폴더 (예: 25-01-15)
+│   │       ├── tzuyang_restaurant_evaluation_selection.jsonl    # 평가 대상 선별
+│   │       ├── tzuyang_restaurant_evaluation_rule_results.jsonl # RULE 평가 결과
+│   │       ├── tzuyang_restaurant_evaluation_results.jsonl      # LAAJ 평가 결과
+│   │       ├── tzuyang_restaurant_evaluation_errors.jsonl       # 에러 로그
+│   │       └── tzuyang_restaurant_transforms.jsonl              # DB 변환 결과
 │   ├── prompts/
 │   │   └── evaluation_prompt.txt
 │   └── scripts/
@@ -241,10 +252,20 @@ backend/
 │       ├── parse_laaj_evaluation.py
 │       ├── transform_evaluation_results.py
 │       ├── insert_to_supabase.ts
-│       └── retry_errors.sh
+│       └── retry_errors.sh                    # 에러 재처리
+│
+├── log/
+│   └── geminiCLI-restaurant/
+│       └── yy-mm-dd/                          # 날짜별 로그 폴더
+│           ├── crawling_{timestamp}.json
+│           ├── retry_crawling_{timestamp}.json
+│           ├── evaluation_{timestamp}.json
+│           └── retry_evaluation_{timestamp}.json
 │
 └── utils/
-    └── duplicate_checker.py                   # 중복 체크 유틸리티
+    ├── data_utils.py                          # 데이터/날짜 폴더 유틸리티
+    ├── duplicate_checker.py                   # 중복 체크 유틸리티
+    └── logger.py                              # 로깅 유틸리티
 ```
 
 ---

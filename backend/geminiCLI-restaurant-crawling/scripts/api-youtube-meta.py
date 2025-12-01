@@ -4,7 +4,10 @@ YouTube 메타데이터 추가 스크립트
 - JSONL 파일의 각 레코드에 youtube_meta 추가
 - YouTube Data API v3 사용
 - OpenAI GPT-4o-mini로 광고 주체 분석
-- 기존 api-youtube-meta.py와 동일한 기능
+
+날짜별 폴더 구조: data/yy-mm-dd/
+- 입력: 인자로 받거나 오늘 폴더의 tzuyang_restaurant_results.jsonl
+- 출력: 오늘 폴더의 tzuyang_restaurant_results_with_meta.jsonl
 """
 
 import os
@@ -13,7 +16,13 @@ import json
 import re
 from pathlib import Path
 from typing import Dict, Any, Optional, List
+from datetime import datetime
 from dotenv import load_dotenv
+
+# 유틸리티 모듈 경로 추가
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'utils'))
+from logger import PipelineLogger, LogLevel
+from data_utils import DataPathManager
 
 try:
     from googleapiclient.discovery import build
@@ -27,20 +36,35 @@ except ImportError:
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(env_path)
 
+# 로그 디렉토리 설정
+LOG_DIR = Path(__file__).parent.parent.parent / 'log' / 'geminiCLI-restaurant'
+
+# 로거 초기화
+logger = PipelineLogger(
+    stage_name="youtube-meta",
+    log_dir=LOG_DIR
+)
+
 # API 클라이언트 초기화
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY_BYEON')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY_BYEON')
 
 if not YOUTUBE_API_KEY:
-    print("❌ YOUTUBE_API_KEY_BYEON 환경변수가 설정되지 않았습니다")
+    logger.error("YOUTUBE_API_KEY_BYEON 환경변수가 설정되지 않았습니다")
     sys.exit(1)
 
 if not OPENAI_API_KEY:
-    print("❌ OPENAI_API_KEY_BYEON 환경변수가 설정되지 않았습니다")
+    logger.error("OPENAI_API_KEY_BYEON 환경변수가 설정되지 않았습니다")
     sys.exit(1)
 
 youtube = build('youtube', 'v3', developerKey=YOUTUBE_API_KEY)
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
+
+# API 호출 통계
+youtube_api_calls = 0
+openai_api_calls = 0
+youtube_api_errors = 0
+openai_api_errors = 0
 
 
 def extract_video_id(url: str) -> Optional[str]:
@@ -85,26 +109,30 @@ def analyze_ad_content(text: str) -> Optional[List[str]]:
     Returns:
         광고 주체 리스트 또는 None
     """
+    global openai_api_calls, openai_api_errors
+    
     text_preview = text[:100]
     
     try:
-        response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            temperature=0.3,
-            messages=[
-                {
-                    "role": "system",
-                    "content": """광고/협찬/지원을 한 **정확한 주체들의 전체 이름(기업명 + 브랜드명 조합 또는 기관명 형태)**을 **리스트** 형식으로 모아 답변하세요.
+        with logger.timer("openai_api_call"):
+            response = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                temperature=0.3,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """광고/협찬/지원을 한 **정확한 주체들의 전체 이름(기업명 + 브랜드명 조합 또는 기관명 형태)**을 **리스트** 형식으로 모아 답변하세요.
 예시: ['하이트진로', '영양군청'], ['하림 멜팅피스']
 반드시 추측하지 않고 **본문 내용에 쓰여 있는 주체들을 모두 작성**해야 합니다.
 주체를 찾을 수 없거나 애매하면, 'None'을 출력합니다."""
-                },
-                {
-                    "role": "user",
-                    "content": text_preview
-                }
-            ]
-        )
+                    },
+                    {
+                        "role": "user",
+                        "content": text_preview
+                    }
+                ]
+            )
+        openai_api_calls += 1
         
         content = response.choices[0].message.content.strip()
         
@@ -134,7 +162,8 @@ def analyze_ad_content(text: str) -> Optional[List[str]]:
         return parsed if parsed else None
         
     except Exception as e:
-        print(f"⚠️  광고 분석 실패: {e}", file=sys.stderr)
+        openai_api_errors += 1
+        logger.warning(f"광고 분석 실패: {e}")
         return None
 
 
@@ -149,6 +178,8 @@ def get_video_info(video_id: str, existing_meta: Optional[Dict] = None) -> Dict[
     Returns:
         비디오 메타데이터 딕셔너리
     """
+    global youtube_api_calls, youtube_api_errors
+    
     video_info = {
         'title': None,
         'publishedAt': None,
@@ -169,6 +200,7 @@ def get_video_info(video_id: str, existing_meta: Optional[Dict] = None) -> Dict[
                 'duration': existing_meta['duration'],
                 'is_shorts': existing_meta.get('duration', 0) <= 180
             })
+            logger.debug(f"기존 메타 재사용: {video_id}")
         else:
             needs_youtube_api = True
         
@@ -184,13 +216,15 @@ def get_video_info(video_id: str, existing_meta: Optional[Dict] = None) -> Dict[
     if needs_youtube_api or needs_description:
         try:
             part = 'snippet,contentDetails'
-            response = youtube.videos().list(
-                part=part,
-                id=video_id
-            ).execute()
+            with logger.timer("youtube_api_call"):
+                response = youtube.videos().list(
+                    part=part,
+                    id=video_id
+                ).execute()
+            youtube_api_calls += 1
             
             if not response.get('items'):
-                print(f"⚠️  비디오 정보 없음: {video_id}", file=sys.stderr)
+                logger.warning(f"비디오 정보 없음: {video_id}")
                 return video_info
             
             item = response['items'][0]
@@ -223,7 +257,8 @@ def get_video_info(video_id: str, existing_meta: Optional[Dict] = None) -> Dict[
                     video_info['ads_info']['what_ads'] = None
         
         except Exception as e:
-            print(f"⚠️  YouTube API 오류 ({video_id}): {e}", file=sys.stderr)
+            youtube_api_errors += 1
+            logger.error(f"YouTube API 오류 ({video_id}): {e}")
     
     return video_info
 
@@ -236,14 +271,17 @@ def enrich_jsonl_with_youtube_meta(input_file: Path, output_file: Path) -> None:
         input_file: 입력 JSONL 파일 (크롤링 결과)
         output_file: 출력 JSONL 파일 (메타 추가)
     """
+    global youtube_api_calls, openai_api_calls
+    
     if not input_file.exists():
-        print(f"❌ 입력 파일 없음: {input_file}", file=sys.stderr)
+        logger.error(f"입력 파일 없음: {input_file}")
         sys.exit(1)
     
     # 기존 데이터 읽기
     existing_data = {}
+    reused_meta_count = 0
     if output_file.exists():
-        print(f"📂 기존 출력 파일 발견, youtube_meta 재사용")
+        logger.info("기존 출력 파일 발견, youtube_meta 재사용")
         with open(output_file, 'r', encoding='utf-8') as f:
             for line in f:
                 if not line.strip():
@@ -253,72 +291,145 @@ def enrich_jsonl_with_youtube_meta(input_file: Path, output_file: Path) -> None:
                     video_id = extract_video_id(record.get('youtube_link', ''))
                     if video_id and 'youtube_meta' in record:
                         existing_data[video_id] = record['youtube_meta']
+                        reused_meta_count += 1
                 except Exception:
                     pass
+        logger.info(f"재사용 가능한 메타: {reused_meta_count}개")
     
     # 입력 파일 읽기
     with open(input_file, 'r', encoding='utf-8') as f:
         lines = f.readlines()
     
     total = len(lines)
-    print(f"📊 총 {total}개 레코드 처리 시작")
+    logger.info(f"총 {total}개 레코드 처리 시작")
+    logger.add_statistic("total_records", total)
     
     # 출력 파일 쓰기
     success_count = 0
     error_count = 0
+    ads_detected = 0
+    shorts_count = 0
     
-    with open(output_file, 'w', encoding='utf-8') as f:
-        for idx, line in enumerate(lines, 1):
-            if not line.strip():
-                continue
-            
-            try:
-                record = json.loads(line)
-                youtube_url = record.get('youtube_link')
-                
-                if not youtube_url:
-                    print(f"⚠️  [{idx}/{total}] youtube_link 없음", file=sys.stderr)
-                    f.write(json.dumps(record, ensure_ascii=False) + '\n')
-                    error_count += 1
+    with logger.timer("process_all_records"):
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for idx, line in enumerate(lines, 1):
+                if not line.strip():
                     continue
                 
-                video_id = extract_video_id(youtube_url)
-                if not video_id:
-                    print(f"⚠️  [{idx}/{total}] 비디오 ID 추출 실패: {youtube_url}", file=sys.stderr)
+                try:
+                    record = json.loads(line)
+                    youtube_url = record.get('youtube_link')
+                    
+                    if not youtube_url:
+                        logger.warning(f"[{idx}/{total}] youtube_link 없음")
+                        f.write(json.dumps(record, ensure_ascii=False) + '\n')
+                        error_count += 1
+                        continue
+                    
+                    video_id = extract_video_id(youtube_url)
+                    if not video_id:
+                        logger.warning(f"[{idx}/{total}] 비디오 ID 추출 실패: {youtube_url}")
+                        f.write(json.dumps(record, ensure_ascii=False) + '\n')
+                        error_count += 1
+                        continue
+                    
+                    # 기존 메타 확인
+                    existing_meta = existing_data.get(video_id, record.get('youtube_meta'))
+                    
+                    # 메타 정보 가져오기
+                    logger.debug(f"[{idx}/{total}] 처리중: {video_id}")
+                    with logger.timer(f"get_video_info_{idx}"):
+                        video_info = get_video_info(video_id, existing_meta)
+                    
+                    # 통계 수집
+                    if video_info.get('ads_info', {}).get('is_ads'):
+                        ads_detected += 1
+                    if video_info.get('is_shorts'):
+                        shorts_count += 1
+                    
+                    # 레코드에 추가
+                    record['youtube_meta'] = video_info
                     f.write(json.dumps(record, ensure_ascii=False) + '\n')
+                    success_count += 1
+                    
+                    # 진행률 출력 (10개마다)
+                    if idx % 10 == 0:
+                        logger.info(f"진행률: {idx}/{total} ({idx*100//total}%)")
+                    
+                except Exception as e:
+                    logger.error(f"[{idx}/{total}] 처리 실패: {e}")
+                    f.write(line)
                     error_count += 1
-                    continue
-                
-                # 기존 메타 확인
-                existing_meta = existing_data.get(video_id, record.get('youtube_meta'))
-                
-                # 메타 정보 가져오기
-                print(f"[{idx}/{total}] 처리중: {video_id}")
-                video_info = get_video_info(video_id, existing_meta)
-                
-                # 레코드에 추가
-                record['youtube_meta'] = video_info
-                f.write(json.dumps(record, ensure_ascii=False) + '\n')
-                success_count += 1
-                
-            except Exception as e:
-                print(f"❌ [{idx}/{total}] 처리 실패: {e}", file=sys.stderr)
-                f.write(line)
-                error_count += 1
     
-    print(f"\n✅ 완료: {success_count}개 성공, {error_count}개 실패")
+    # 통계 저장
+    logger.add_statistic("success_count", success_count)
+    logger.add_statistic("error_count", error_count)
+    logger.add_statistic("reused_meta_count", reused_meta_count)
+    logger.add_statistic("youtube_api_calls", youtube_api_calls)
+    logger.add_statistic("openai_api_calls", openai_api_calls)
+    logger.add_statistic("youtube_api_errors", youtube_api_errors)
+    logger.add_statistic("openai_api_errors", openai_api_errors)
+    logger.add_statistic("ads_detected", ads_detected)
+    logger.add_statistic("shorts_count", shorts_count)
+    
+    if total > 0:
+        success_rate = success_count * 100 / total
+        logger.add_statistic("success_rate", f"{success_rate:.1f}%")
+    
+    logger.success(f"완료: {success_count}개 성공, {error_count}개 실패")
 
 
 def main():
     """메인 실행 함수"""
-    if len(sys.argv) < 3:
-        print("사용법: fetch_youtube_meta.py <input_jsonl> <output_jsonl>", file=sys.stderr)
-        sys.exit(1)
+    logger.start_stage()
     
-    input_file = Path(sys.argv[1])
-    output_file = Path(sys.argv[2])
+    # 데이터 경로 관리자 초기화
+    project_root = Path(__file__).parent.parent
+    data_manager = DataPathManager(project_root)
     
-    enrich_jsonl_with_youtube_meta(input_file, output_file)
+    # 인자가 있으면 사용, 없으면 오늘 폴더 경로 사용
+    if len(sys.argv) >= 3:
+        input_file = Path(sys.argv[1])
+        output_file = Path(sys.argv[2])
+    else:
+        # 오늘 날짜 폴더에서 입출력
+        today_folder = data_manager.get_today_folder()
+        input_file = today_folder / 'tzuyang_restaurant_results.jsonl'
+        output_file = today_folder / 'tzuyang_restaurant_results_with_meta.jsonl'
+    
+    logger.info("=" * 60)
+    logger.info("  YouTube 메타데이터 추가")
+    logger.info("=" * 60)
+    logger.info(f"입력 파일: {input_file}")
+    logger.info(f"출력 파일: {output_file}")
+    
+    try:
+        enrich_jsonl_with_youtube_meta(input_file, output_file)
+    except Exception as e:
+        logger.error(f"실행 중 오류 발생: {e}")
+        logger.add_statistic("fatal_error", str(e))
+        raise
+    finally:
+        # 스테이지 종료 및 로그 저장
+        logger.end_stage()
+        summary = logger.get_summary()
+        
+        # 요약 출력
+        logger.info("")
+        logger.info("=" * 60)
+        logger.info("  📊 실행 요약")
+        logger.info("=" * 60)
+        logger.info(f"  시작 시간: {summary.get('started_at', 'N/A')}")
+        logger.info(f"  종료 시간: {summary.get('ended_at', 'N/A')}")
+        logger.info(f"  총 소요 시간: {summary.get('duration_formatted', 'N/A')}")
+        logger.info("")
+        logger.info("  📈 통계:")
+        for key, value in summary.get('statistics', {}).items():
+            logger.info(f"    - {key}: {value}")
+        logger.info("=" * 60)
+        
+        # JSON 로그 저장
+        logger.save_json_log()
 
 
 if __name__ == '__main__':

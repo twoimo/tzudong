@@ -3,32 +3,170 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
+import { execSync } from 'child_process';
 
 // ES 모듈에서 __dirname 대체
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// frontend 폴더의 .env 파일 로드 (프로젝트 루트/.env가 없으면 frontend/.env 사용)
-const rootEnvPath = path.resolve(__dirname, '../../../.env');
-const frontendEnvPath = path.resolve(__dirname, '../../../frontend/.env');
-const envPath = fs.existsSync(rootEnvPath) ? rootEnvPath : frontendEnvPath;
+// .env 파일 로드 (geminiCLI-restaurant-evaluation/.env)
+const envPath = path.resolve(__dirname, '../.env');
 console.log('📁 .env 파일 경로:', envPath);
 config({ path: envPath });
+
+// 로그 설정
+const LOG_DIR = path.resolve(__dirname, '../../log/geminiCLI-restaurant');
+const STAGE_NAME = 'insert-supabase';
+
+// 한국 시간 (KST, UTC+9) 반환 함수
+function getKSTDate(): Date {
+  const now = new Date();
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utc + (9 * 60 * 60 * 1000));
+}
+
+function formatKSTDateTime(date: Date): string {
+  const kst = getKSTDate();
+  const yyyy = kst.getFullYear();
+  const mm = String(kst.getMonth() + 1).padStart(2, '0');
+  const dd = String(kst.getDate()).padStart(2, '0');
+  const hh = String(kst.getHours()).padStart(2, '0');
+  const mi = String(kst.getMinutes()).padStart(2, '0');
+  const ss = String(kst.getSeconds()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}+09:00`;
+}
+
+const startTime = getKSTDate();
+
+// 로그 디렉토리 생성
+if (!fs.existsSync(LOG_DIR)) {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+}
+
+// 날짜별 폴더 관리 함수
+function getTodayFolder(): string {
+  // PIPELINE_DATE 환경변수가 있으면 우선 사용 (GitHub Actions에서 설정)
+  const pipelineDate = process.env.PIPELINE_DATE;
+  if (pipelineDate) {
+    return pipelineDate;
+  }
+  
+  const now = getKSTDate();
+  const yy = String(now.getFullYear()).slice(-2);
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  return `${yy}-${mm}-${dd}`;
+}
+
+function getLatestFolder(dataDir: string): string | null {
+  if (!fs.existsSync(dataDir)) return null;
+  
+  const folders = fs.readdirSync(dataDir)
+    .filter(f => /^\d{2}-\d{2}-\d{2}$/.test(f))
+    .sort()
+    .reverse();
+  
+  return folders.length > 0 ? folders[0] : null;
+}
+
+function getAllTransformFiles(dataDir: string): string[] {
+  if (!fs.existsSync(dataDir)) return [];
+  
+  const files: string[] = [];
+  const folders = fs.readdirSync(dataDir)
+    .filter(f => /^\d{2}-\d{2}-\d{2}$/.test(f));
+  
+  for (const folder of folders) {
+    const filePath = path.join(dataDir, folder, 'tzuyang_restaurant_transforms.jsonl');
+    if (fs.existsSync(filePath)) {
+      files.push(filePath);
+    }
+  }
+  
+  return files;
+}
+
+// 데이터 경로 설정
+const DATA_DIR = path.resolve(__dirname, '../data');
+const TODAY_FOLDER = getTodayFolder();
+const LATEST_FOLDER = getLatestFolder(DATA_DIR);
+
+// 입력 파일 경로 결정
+let INPUT_FILE = path.join(DATA_DIR, TODAY_FOLDER, 'tzuyang_restaurant_transforms.jsonl');
+if (!fs.existsSync(INPUT_FILE) && LATEST_FOLDER) {
+  INPUT_FILE = path.join(DATA_DIR, LATEST_FOLDER, 'tzuyang_restaurant_transforms.jsonl');
+}
+
+// 시간 포맷팅 함수
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = seconds % 60;
+  
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${secs}s`;
+  } else {
+    return `${secs}s`;
+  }
+}
+
+function formatDateTime(date: Date): string {
+  const kst = getKSTDate();
+  const yyyy = kst.getFullYear();
+  const mm = String(kst.getMonth() + 1).padStart(2, '0');
+  const dd = String(kst.getDate()).padStart(2, '0');
+  const hh = String(kst.getHours()).padStart(2, '0');
+  const mi = String(kst.getMinutes()).padStart(2, '0');
+  const ss = String(kst.getSeconds()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}
+
+function getKSTTimeString(): string {
+  const kst = getKSTDate();
+  const hh = String(kst.getHours()).padStart(2, '0');
+  const mi = String(kst.getMinutes()).padStart(2, '0');
+  const ss = String(kst.getSeconds()).padStart(2, '0');
+  return `${hh}:${mi}:${ss}`;
+}
+
+// 로그 레벨별 출력 함수
+function logInfo(msg: string): void {
+  console.log(`[${getKSTTimeString()}] ℹ️  ${msg}`);
+}
+
+function logSuccess(msg: string): void {
+  console.log(`[${getKSTTimeString()}] ✅ ${msg}`);
+}
+
+function logWarning(msg: string): void {
+  console.log(`[${getKSTTimeString()}] ⚠️  ${msg}`);
+}
+
+function logError(msg: string): void {
+  console.error(`[${getKSTTimeString()}] ❌ ${msg}`);
+}
+
+function logDebug(msg: string): void {
+  console.log(`[${getKSTTimeString()}] 🔍 ${msg}`);
+}
 
 // Supabase 클라이언트 설정
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error('❌ SUPABASE_URL 또는 SUPABASE_KEY 환경변수가 설정되지 않았습니다.');
-  console.error('📍 SUPABASE_URL:', supabaseUrl || '(없음)');
-  console.error('🔑 SUPABASE_KEY:', supabaseKey ? '설정됨' : '(없음)');
+  logError('SUPABASE_URL 또는 SUPABASE_KEY 환경변수가 설정되지 않았습니다.');
+  logError(`SUPABASE_URL: ${supabaseUrl || '(없음)'}`);
+  logError(`SUPABASE_KEY: ${supabaseKey ? '설정됨' : '(없음)'}`);
   process.exit(1);
 }
 
-console.log('✅ 환경변수 로드 완료');
-console.log('📍 Supabase URL:', supabaseUrl);
-console.log('🔑 사용 중인 키:', supabaseKey.substring(0, 20) + '...');
+logSuccess('환경변수 로드 완료');
+logInfo(`Supabase URL: ${supabaseUrl}`);
+logDebug(`사용 중인 키: ${supabaseKey.substring(0, 20)}...`);
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -64,7 +202,7 @@ interface RestaurantData {
 // 하지만 명시적으로 비활성화하려면 SQL을 직접 실행해야 합니다.
 
 async function disableRLS() {
-  console.log('📝 RLS 정책을 비활성화합니다...');
+  logInfo('RLS 정책을 비활성화합니다...');
   
   const { error } = await supabase.rpc('exec_sql', {
     sql_query: `
@@ -74,14 +212,14 @@ async function disableRLS() {
   });
 
   if (error) {
-    console.error('⚠️  RLS 비활성화 실패 (서비스 키로 자동 우회됩니다):', error.message);
+    logWarning(`RLS 비활성화 실패 (서비스 키로 자동 우회됩니다): ${error.message}`);
   } else {
-    console.log('✅ RLS 정책이 비활성화되었습니다.');
+    logSuccess('RLS 정책이 비활성화되었습니다.');
   }
 }
 
 async function enableRLS() {
-  console.log('📝 RLS 정책을 다시 활성화합니다...');
+  logInfo('RLS 정책을 다시 활성화합니다...');
   
   const { error } = await supabase.rpc('exec_sql', {
     sql_query: `
@@ -91,31 +229,60 @@ async function enableRLS() {
   });
 
   if (error) {
-    console.error('❌ RLS 활성화 실패:', error.message);
+    logError(`RLS 활성화 실패: ${error.message}`);
   } else {
-    console.log('✅ RLS 정책이 활성화되었습니다.');
+    logSuccess('RLS 정책이 활성화되었습니다.');
   }
 }
 
-async function insertRestaurants() {
+async function insertRestaurants(): Promise<{
+  successCount: number;
+  failCount: number;
+  skippedCount: number;
+  restoredCount: number;
+  totalLines: number;
+  errors: Array<{ name: string; error: string }>;
+}> {
+  const stats = {
+    successCount: 0,
+    failCount: 0,
+    skippedCount: 0,
+    restoredCount: 0,
+    totalLines: 0,
+    errors: [] as Array<{ name: string; error: string }>
+  };
+
   try {
-    // JSONL 파일 읽기
-    const filePath = path.join(__dirname, '../tzuyang_restaurant_transforms.jsonl');
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-    const lines = fileContent.trim().split('\n');
+    // JSONL 파일 읽기 (날짜별 폴더에서)
+    logInfo(`입력 파일: ${INPUT_FILE}`);
+    logInfo(`오늘 날짜 폴더: ${TODAY_FOLDER}`);
     
-    console.log(`📊 총 ${lines.length}개의 레스토랑 데이터를 읽었습니다.\n`);
+    if (!fs.existsSync(INPUT_FILE)) {
+      logError(`입력 파일이 존재하지 않습니다: ${INPUT_FILE}`);
+      return stats;
+    }
+    
+    const fileContent = fs.readFileSync(INPUT_FILE, 'utf-8');
+    const lines = fileContent.trim().split('\n');
+    stats.totalLines = lines.length;
+    
+    logInfo(`총 ${lines.length}개의 레스토랑 데이터를 읽었습니다.`);
 
     // DB에서 모든 unique_id를 한번에 로드 (성능 개선)
-    console.log('🔍 DB에서 기존 unique_id를 로드하는 중...');
+    logInfo('DB에서 기존 unique_id를 로드하는 중...');
+    const dbLoadStart = Date.now();
+    
     const { data: existingRecords, error: fetchError } = await supabase
       .from('restaurants')
       .select('unique_id, status');
 
     if (fetchError) {
-      console.error('❌ DB 조회 실패:', fetchError.message);
+      logError(`DB 조회 실패: ${fetchError.message}`);
       throw fetchError;
     }
+
+    const dbLoadDuration = Date.now() - dbLoadStart;
+    logDebug(`DB 로드 시간: ${formatDuration(dbLoadDuration)}`);
 
     // 메모리에서 중복 체크를 위한 Set 생성
     const existingUniqueIds = new Set<string>();
@@ -130,14 +297,11 @@ async function insertRestaurants() {
       }
     }
 
-    console.log(`✅ 기존 레코드: ${existingUniqueIds.size}개 (삭제됨: ${deletedUniqueIds.size}개)\n`);
-
-    let successCount = 0;
-    let failCount = 0;
-    let skippedCount = 0;
-    const errors: Array<{ name: string; error: string }> = [];
+    logInfo(`기존 레코드: ${existingUniqueIds.size}개 (삭제됨: ${deletedUniqueIds.size}개)`);
 
     // 데이터 삽입
+    const insertStart = Date.now();
+    
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (!line) continue;
@@ -195,22 +359,25 @@ async function insertRestaurants() {
               .update({
                 ...restaurantData,
                 status: data.status || 'pending',
-                updated_at: new Date().toISOString(),
+                updated_at: formatKSTDateTime(getKSTDate()),
               })
               .eq('unique_id', data.unique_id);
 
             if (updateError) {
-              failCount++;
-              errors.push({ name: data.name, error: updateError.message });
-              console.log(`❌ [${i + 1}/${lines.length}] ${data.name} - 복원 실패: ${updateError.message}`);
+              stats.failCount++;
+              stats.errors.push({ name: data.name, error: updateError.message });
+              logError(`[${i + 1}/${lines.length}] ${data.name} - 복원 실패: ${updateError.message}`);
             } else {
-              successCount++;
-              console.log(`🔄 [${i + 1}/${lines.length}] ${data.name} - 복원 및 업데이트 성공`);
+              stats.restoredCount++;
+              stats.successCount++;
+              logSuccess(`[${i + 1}/${lines.length}] ${data.name} - 복원 및 업데이트 성공`);
             }
           } else {
             // 이미 active 레코드가 있으면 스킵
-            skippedCount++;
-            console.log(`⏭️  [${i + 1}/${lines.length}] ${data.name} - 이미 존재 (스킵)`);
+            stats.skippedCount++;
+            if (stats.skippedCount <= 10 || stats.skippedCount % 50 === 0) {
+              logDebug(`[${i + 1}/${lines.length}] ${data.name} - 이미 존재 (스킵)`);
+            }
           }
           continue;
         }
@@ -221,64 +388,119 @@ async function insertRestaurants() {
           .insert(restaurantData);
 
         if (error) {
-          failCount++;
+          stats.failCount++;
           const errorMsg = error.message || error.hint || JSON.stringify(error);
-          errors.push({ name: data.name, error: errorMsg });
-          console.log(`❌ [${i + 1}/${lines.length}] ${data.name} - 실패: ${errorMsg}`);
+          stats.errors.push({ name: data.name, error: errorMsg });
+          logError(`[${i + 1}/${lines.length}] ${data.name} - 실패: ${errorMsg}`);
         } else {
-          successCount++;
-          console.log(`✅ [${i + 1}/${lines.length}] ${data.name} - 성공`);
+          stats.successCount++;
+          logSuccess(`[${i + 1}/${lines.length}] ${data.name} - 성공`);
         }
 
         // 100개마다 잠시 대기 (Rate limit 방지)
         if ((i + 1) % 100 === 0) {
-          console.log(`\n⏳ 잠시 대기 중...\n`);
+          logInfo(`진행률: ${i + 1}/${lines.length} (${Math.round((i + 1) / lines.length * 100)}%)`);
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
       } catch (parseError: any) {
-        failCount++;
-        console.log(`❌ [${i + 1}/${lines.length}] JSON 파싱 실패: ${parseError.message}`);
+        stats.failCount++;
+        logError(`[${i + 1}/${lines.length}] JSON 파싱 실패: ${parseError.message}`);
       }
     }
 
-    // 결과 출력
-    console.log('\n' + '='.repeat(60));
-    console.log('📊 데이터 삽입 완료!');
-    console.log('='.repeat(60));
-    console.log(`✅ 성공: ${successCount}개`);
-    console.log(`⏭️  스킵: ${skippedCount}개 (이미 존재)`);
-    console.log(`❌ 실패: ${failCount}개`);
-    console.log('='.repeat(60));
+    const insertDuration = Date.now() - insertStart;
+    logInfo(`데이터 삽입 소요 시간: ${formatDuration(insertDuration)}`);
 
-    if (errors.length > 0) {
-      console.log('\n❌ 실패한 항목:');
-      errors.forEach(({ name, error }, idx) => {
-        console.log(`  ${idx + 1}. ${name}: ${error}`);
-      });
-    }
+    return stats;
 
   } catch (error: any) {
-    console.error('❌ 오류 발생:', error.message);
+    logError(`오류 발생: ${error.message}`);
     throw error;
   }
 }
 
 async function main() {
   try {
-    console.log('🚀 데이터 삽입을 시작합니다...\n');
+    logInfo('=' .repeat(60));
+    logInfo('  Supabase 데이터 삽입 시작');
+    logInfo('=' .repeat(60));
+    logInfo(`시작 시간: ${formatDateTime(startTime)}`);
     
     // 서비스 역할 키를 사용하면 RLS를 자동으로 우회하지만,
     // 명시적으로 비활성화하려면 아래 주석을 해제하세요.
     // await disableRLS();
     
-    await insertRestaurants();
+    const stats = await insertRestaurants();
     
     // await enableRLS();
     
-    console.log('\n✨ 모든 작업이 완료되었습니다!');
+    const endTime = getKSTDate();
+    const duration = endTime.getTime() - startTime.getTime();
+    
+    // 결과 출력
+    logInfo('');
+    logInfo('=' .repeat(60));
+    logSuccess('📊 데이터 삽입 완료');
+    logInfo('=' .repeat(60));
+    logInfo(`시작 시간: ${formatDateTime(startTime)}`);
+    logInfo(`종료 시간: ${formatDateTime(endTime)}`);
+    logInfo(`총 소요 시간: ${formatDuration(duration)}`);
+    logInfo('');
+    logInfo('📊 처리 통계:');
+    logSuccess(`  성공: ${stats.successCount}개`);
+    if (stats.restoredCount > 0) {
+      logInfo(`  복원: ${stats.restoredCount}개`);
+    }
+    logWarning(`  스킵: ${stats.skippedCount}개 (이미 존재)`);
+    if (stats.failCount > 0) {
+      logError(`  실패: ${stats.failCount}개`);
+    }
+    logInfo(`  총 라인: ${stats.totalLines}개`);
+    
+    if (stats.totalLines > 0) {
+      const successRate = ((stats.successCount / stats.totalLines) * 100).toFixed(1);
+      logInfo(`  성공률: ${successRate}%`);
+    }
+    logInfo('=' .repeat(60));
+
+    if (stats.errors.length > 0 && stats.errors.length <= 20) {
+      logError('실패한 항목:');
+      stats.errors.forEach(({ name, error }, idx) => {
+        logError(`  ${idx + 1}. ${name}: ${error}`);
+      });
+    }
+
+    // JSON 로그 저장 (한국 시간 기준 파일명)
+    const kstNow = getKSTDate();
+    const logFileName = `${STAGE_NAME}_${kstNow.getFullYear()}${String(kstNow.getMonth() + 1).padStart(2, '0')}${String(kstNow.getDate()).padStart(2, '0')}_${String(kstNow.getHours()).padStart(2, '0')}${String(kstNow.getMinutes()).padStart(2, '0')}${String(kstNow.getSeconds()).padStart(2, '0')}.json`;
+    const logFilePath = path.join(LOG_DIR, logFileName);
+    
+    const logData = {
+      stage: STAGE_NAME,
+      started_at: formatDateTime(startTime),
+      ended_at: formatDateTime(endTime),
+      duration_seconds: Math.floor(duration / 1000),
+      duration_formatted: formatDuration(duration),
+      statistics: {
+        total_lines: stats.totalLines,
+        success: stats.successCount,
+        failed: stats.failCount,
+        skipped: stats.skippedCount,
+        restored: stats.restoredCount,
+        success_rate: stats.totalLines > 0 
+          ? `${((stats.successCount / stats.totalLines) * 100).toFixed(1)}%` 
+          : 'N/A'
+      },
+      errors: stats.errors.slice(0, 50)  // 최대 50개만 저장
+    };
+    
+    fs.writeFileSync(logFilePath, JSON.stringify(logData, null, 2), 'utf-8');
+    logSuccess(`로그 파일 저장: ${logFilePath}`);
+    
+    logSuccess('모든 작업이 완료되었습니다!');
   } catch (error: any) {
-    console.error('❌ 작업 실패:', error.message);
+    logError(`작업 실패: ${error.message}`);
     process.exit(1);
   }
 }

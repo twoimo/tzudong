@@ -69,12 +69,13 @@ geminiCLI-restaurant-evaluation/
 ├── .env                                                     # 환경변수
 ├── package.json                                             # npm 스크립트
 ├── tsconfig.json                                            # TypeScript 설정
-├── tzuyang_restaurant_evaluation_selection.jsonl            # 평가 대상 선별 결과
-├── tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl  # 주소 NULL 제외 목록
-├── tzuyang_restaurant_evaluation_rule_results.jsonl         # RULE 평가 결과
-├── tzuyang_restaurant_evaluation_results.jsonl              # LAAJ 평가 결과
-├── tzuyang_restaurant_evaluation_errors.jsonl               # 에러 로그
-├── tzuyang_restaurant_transforms.jsonl                      # DB 변환 결과
+├── data/
+│   └── yy-mm-dd/                                            # 날짜별 폴더 (예: 25-01-15)
+│       ├── tzuyang_restaurant_evaluation_selection.jsonl    # 평가 대상 선별 결과
+│       ├── tzuyang_restaurant_evaluation_rule_results.jsonl # RULE 평가 결과
+│       ├── tzuyang_restaurant_evaluation_results.jsonl      # LAAJ 평가 결과
+│       ├── tzuyang_restaurant_evaluation_errors.jsonl       # 에러 로그
+│       └── tzuyang_restaurant_transforms.jsonl              # DB 변환 결과
 ├── prompts/
 │   └── evaluation_prompt.txt                                # LAAJ 평가 프롬프트
 ├── scripts/
@@ -88,6 +89,24 @@ geminiCLI-restaurant-evaluation/
 │   └── retry_errors.sh                                      # 에러 재시도
 └── temp/                                                    # 임시 파일 (자동 생성/삭제)
 ```
+
+### 날짜 폴더 구조
+
+모든 데이터는 실행 날짜 기준 `yy-mm-dd` 형식 폴더에 저장됩니다:
+
+```
+data/
+├── 25-01-10/
+│   ├── tzuyang_restaurant_evaluation_selection.jsonl
+│   ├── tzuyang_restaurant_evaluation_results.jsonl
+│   └── ...
+├── 25-01-15/
+│   ├── tzuyang_restaurant_evaluation_selection.jsonl
+│   └── ...
+```
+
+- `PIPELINE_DATE` 환경변수 설정 시 해당 날짜 폴더 사용
+- 미설정 시 오늘 날짜 기준 폴더 자동 생성
 
 ---
 
@@ -334,7 +353,7 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 
 ## 📊 데이터 구조
 
-### 입력 데이터 (`tzuyang_restaurant_results_with_meta.jsonl`)
+### 입력 데이터 (`data/yy-mm-dd/tzuyang_restaurant_results_with_meta.jsonl`)
 
 ```json
 {
@@ -344,7 +363,7 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 }
 ```
 
-### RULE 평가 결과 (`tzuyang_restaurant_evaluation_rule_results.jsonl`)
+### RULE 평가 결과 (`data/yy-mm-dd/tzuyang_restaurant_evaluation_rule_results.jsonl`)
 
 ```json
 {
@@ -358,7 +377,7 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 }
 ```
 
-### LAAJ 평가 결과 (`tzuyang_restaurant_evaluation_results.jsonl`)
+### LAAJ 평가 결과 (`data/yy-mm-dd/tzuyang_restaurant_evaluation_results.jsonl`)
 
 ```json
 {
@@ -375,7 +394,7 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 }
 ```
 
-### 최종 변환 결과 (`tzuyang_restaurant_transforms.jsonl`)
+### 최종 변환 결과 (`data/yy-mm-dd/tzuyang_restaurant_transforms.jsonl`)
 
 ```json
 {
@@ -403,7 +422,21 @@ YouTube 자막을 활용한 5가지 AI 신뢰도 평가:
 | `parse_laaj_evaluation.py` | Gemini 응답 파싱 |
 | `transform_evaluation_results.py` | DB 형식으로 변환 |
 | `insert_to_supabase.ts` | Supabase 데이터베이스 삽입 |
-| `retry_errors.sh` | 실패한 항목 재시도 |
+| `retry_errors.sh` | 에러 파일 기반 재시도 (최대 5번) |
+
+### 에러 재처리
+
+LAAJ 평가 중 에러가 발생하면 `tzuyang_restaurant_evaluation_errors.jsonl`에 에러 항목이 저장됩니다.
+
+에러 재처리 실행:
+```bash
+# 날짜 폴더 지정 필수
+bash retry_errors.sh 25-01-15
+```
+
+- 에러 파일에서 항목을 읽어 재평가
+- 성공 시 에러 파일에서 해당 항목 삭제
+- 로그는 `log/geminiCLI-restaurant/yy-mm-dd/` 폴더에 저장
 
 ---
 
