@@ -8,8 +8,10 @@ import { config } from 'dotenv';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// 메인 폴더의 .env 파일 로드
-const envPath = path.resolve(__dirname, '../../.env');
+// frontend 폴더의 .env 파일 로드 (프로젝트 루트/.env가 없으면 frontend/.env 사용)
+const rootEnvPath = path.resolve(__dirname, '../../.env');
+const frontendEnvPath = path.resolve(__dirname, '../../frontend/.env');
+const envPath = fs.existsSync(rootEnvPath) ? rootEnvPath : frontendEnvPath;
 console.log('📁 .env 파일 경로:', envPath);
 config({ path: envPath });
 
@@ -50,6 +52,8 @@ interface RestaurantData {
   jibunAddress: string | null;
   englishAddress: string | null;
   addressElements: any;
+  lat: number | null;
+  lng: number | null;
   geocoding_success: boolean;
   geocoding_false_stage: number | null;
   is_missing: boolean;
@@ -157,13 +161,11 @@ async function insertRestaurants() {
           source_type: data.source_type,
           
           // 유튜브 및 평가 정보
+          youtube_link: data.youtube_link,
           youtube_meta: data.youtube_meta,
           evaluation_results: data.evaluation_results,
           reasoning_basis: data.reasoning_basis,
-          tzuyang_reviews: data.tzuyang_review ? [{
-            review: data.tzuyang_review,
-            youtube_link: data.youtube_link
-          }] : [],
+          tzuyang_review: data.tzuyang_review || null,
           
           // 주소 정보
           origin_address: data.origin_address,
@@ -178,13 +180,9 @@ async function insertRestaurants() {
           is_missing: data.is_missing,
           is_not_selected: data.is_notSelected || false,
           
-          // 위치 좌표
-          lat: data.origin_address?.lat || null,
-          lng: data.origin_address?.lng || null,
-          
-          // 유튜브 링크 (배열)
-          youtube_links: [data.youtube_link],
-          youtube_metas: [data.youtube_meta],
+          // 위치 좌표 (naver_address 지오코딩 결과)
+          lat: data.lat || null,
+          lng: data.lng || null,
           
           // 리뷰 통계
           review_count: 0

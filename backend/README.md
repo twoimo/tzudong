@@ -816,7 +816,7 @@ python3 headless-evaluation-pipeline.py
 
 - 🤖 **완전 자동화**: 브라우저 UI 없이 전체 프로세스 실행
 - 🔄 **세션 자동 복원**: 세션 파일 자동 로드 및 재사용
-- � **통계 자동 수집**: `headless_stats/` 폴더에 JSON 형식 저장
+- 📊 **통계 자동 수집**: `headless_stats/` 폴더에 JSON 형식 저장
 - 🎯 **CI/CD 최적화**: GitHub Actions, Jenkins 등에서 바로 실행
 - 🏆 **서버 환경**: 백그라운드 실행 및 로그 자동 저장
 
@@ -904,7 +904,7 @@ SUPABASE_SERVICE_KEY=your_key
 
 ---
 
-## �📖 추가 문서
+## 📖 추가 문서
 
 - [크롤링 시스템 상세](./perplexity-restaurant-crawling/README.md)
 - [평가 시스템 상세](./perplexity-restaurant-evaluation/README.md)

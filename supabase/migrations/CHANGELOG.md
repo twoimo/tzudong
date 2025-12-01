@@ -1,9 +1,34 @@
-# 🔄 데이터베이스 최적화 변경사항 요약 (v3.2)
+# 🔄 데이터베이스 최적화 변경사항 요약 (v3.3)
 
 ## 📅 날짜
+- 2025년 11월 28일 - 버전 3.3 (geminiCLI source_type 추가)
 - 2025년 11월 7일 - 버전 3.0 (테이블 통합 및 승인 시스템)
 - 2025년 11월 7일 - 버전 3.1 (JSONL 삽입 함수 추가)
 - 2025년 11월 7일 - 버전 3.2 (source_type 컬럼 추가)
+
+---
+
+## 🆕 v3.3 변경사항 (2025-11-28)
+
+### 📍 restaurants 테이블 - source_type에 'geminiCLI' 값 추가
+**CHECK constraint 업데이트:**
+```sql
+-- 기존
+CHECK (source_type IN ('perplexity', 'user_submission', 'admin'))
+
+-- 변경 후
+CHECK (source_type IN ('perplexity', 'geminiCLI', 'user_submission', 'admin'))
+```
+
+**source_type 값 설명:**
+| 값 | 설명 |
+|---|---|
+| `perplexity` | Perplexity AI 크롤링 데이터 |
+| `geminiCLI` | Gemini CLI 크롤링 데이터 |
+| `admin` | 관리자가 직접 추가한 데이터 |
+| `user_submission` | 사용자가 제보한 데이터 |
+
+**마이그레이션 파일:** `20251128_add_geminicli_source_type.sql`
 
 ---
 
