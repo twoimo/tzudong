@@ -257,11 +257,23 @@ export default function StampPage() {
         if (filters.categories.length > 0) {
             result = result.filter(r => {
                 let restaurantCategories: string[] = [];
-                if (Array.isArray(r.category)) {
-                    restaurantCategories = r.category;
-                } else {
-                    restaurantCategories = [String(r.category)].filter(Boolean);
+                const categoryData = r.category || (r as any).categories;
+
+                if (Array.isArray(categoryData)) {
+                    restaurantCategories = categoryData;
+                } else if (typeof categoryData === 'string') {
+                    try {
+                        const parsed = JSON.parse(categoryData);
+                        if (Array.isArray(parsed)) {
+                            restaurantCategories = parsed;
+                        } else {
+                            restaurantCategories = [categoryData];
+                        }
+                    } catch {
+                        restaurantCategories = [categoryData];
+                    }
                 }
+
                 return filters.categories.some(filterCat => restaurantCategories.includes(filterCat));
             });
         }
@@ -300,8 +312,22 @@ export default function StampPage() {
                         bValue = b.name || "";
                         break;
                     case "category":
-                        aValue = a.category || "";
-                        bValue = b.category || "";
+                        const getCategory = (r: any) => {
+                            const categoryData = r.category || r.categories;
+                            if (Array.isArray(categoryData) && categoryData.length > 0) return categoryData[0];
+                            if (typeof categoryData === 'string') {
+                                try {
+                                    const parsed = JSON.parse(categoryData);
+                                    if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+                                    return categoryData;
+                                } catch {
+                                    return categoryData;
+                                }
+                            }
+                            return "";
+                        };
+                        aValue = getCategory(a);
+                        bValue = getCategory(b);
                         break;
                     case "fanVisits":
                         aValue = a.review_count || 0;
@@ -781,20 +807,35 @@ export default function StampPage() {
                                             )}
                                         </div>
                                         <div className="p-3">
-                                            <div className="flex items-center justify-between">
-                                                <h3 className="text-sm font-medium line-clamp-1" title={restaurant.name}>
-                                                    {restaurant.name}
-                                                </h3>
-                                                <div className="flex items-center gap-2 shrink-0">
-                                                    {Array.isArray(restaurant.category) && restaurant.category.length > 0 && restaurant.category[0] && (
-                                                        <Badge variant="secondary" className="text-[10px] px-1 h-5">
-                                                            {restaurant.category[0]}
-                                                        </Badge>
-                                                    )}
-                                                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                                                        리뷰 {restaurant.review_count || 0}
-                                                    </span>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <h3 className="text-sm font-medium truncate" title={restaurant.name}>
+                                                        {restaurant.name}
+                                                    </h3>
+                                                    {(() => {
+                                                        const categoryData = restaurant.category || (restaurant as any).categories;
+                                                        let category: string | null = null;
+                                                        if (Array.isArray(categoryData) && categoryData.length > 0) category = categoryData[0];
+                                                        else if (typeof categoryData === 'string') {
+                                                            try {
+                                                                const parsed = JSON.parse(categoryData);
+                                                                if (Array.isArray(parsed) && parsed.length > 0) category = parsed[0];
+                                                                else category = categoryData;
+                                                            } catch {
+                                                                category = categoryData;
+                                                            }
+                                                        }
+
+                                                        return category && (
+                                                            <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60">
+                                                                {category}
+                                                            </Badge>
+                                                        );
+                                                    })()}
                                                 </div>
+                                                <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                                                    리뷰 {restaurant.review_count || 0}
+                                                </span>
                                             </div>
                                         </div>
                                     </Card>
@@ -808,16 +849,21 @@ export default function StampPage() {
                             <Table>
                                 <TableHeader className="sticky top-0 bg-background z-20">
                                     <TableRow>
-                                        <TableHead className="w-[80px] text-center sticky left-0 bg-background z-10">상태</TableHead>
-                                        <TableHead className="min-w-[300px] cursor-pointer sticky left-[80px] bg-background z-10" onClick={() => handleSort("name")}>
-                                            맛집명 {getSortIcon("name")}
+                                        <TableHead className="w-[25%] min-w-[200px] cursor-pointer" onClick={() => handleSort("name")}>
+                                            <div className="flex items-center gap-1">
+                                                맛집명 {getSortIcon("name")}
+                                            </div>
                                         </TableHead>
-                                        <TableHead className="min-w-[120px] cursor-pointer" onClick={() => handleSort("category")}>
-                                            카테고리 {getSortIcon("category")}
+                                        <TableHead className="w-[15%] min-w-[100px] cursor-pointer" onClick={() => handleSort("category")}>
+                                            <div className="flex items-center gap-1">
+                                                카테고리 {getSortIcon("category")}
+                                            </div>
                                         </TableHead>
-                                        <TableHead className="min-w-[200px]">주소</TableHead>
-                                        <TableHead className="text-right cursor-pointer min-w-[100px]" onClick={() => handleSort("fanVisits")}>
-                                            리뷰수 {getSortIcon("fanVisits")}
+                                        <TableHead className="w-[50%] min-w-[250px]">주소</TableHead>
+                                        <TableHead className="w-[10%] min-w-[80px] text-center cursor-pointer" onClick={() => handleSort("fanVisits")}>
+                                            <div className="flex items-center justify-center gap-1">
+                                                리뷰수 {getSortIcon("fanVisits")}
+                                            </div>
                                         </TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -825,7 +871,22 @@ export default function StampPage() {
                                     {filteredAndSortedRestaurants.map((restaurant) => {
                                         const visited = isVisited(restaurant.id);
                                         const isSelected = selectedRestaurant?.id === restaurant.id;
-                                        const category = Array.isArray(restaurant.category) ? restaurant.category[0] : restaurant.category;
+                                        // 카테고리 데이터 추출 로직 개선
+                                        const categoryData = restaurant.category || (restaurant as any).categories;
+                                        let category: string | null = null;
+
+                                        if (Array.isArray(categoryData) && categoryData.length > 0) {
+                                            category = categoryData[0];
+                                        } else if (typeof categoryData === 'string') {
+                                            // JSON 문자열일 수 있으므로 파싱 시도
+                                            try {
+                                                const parsed = JSON.parse(categoryData);
+                                                if (Array.isArray(parsed) && parsed.length > 0) category = parsed[0];
+                                                else category = categoryData;
+                                            } catch {
+                                                category = categoryData;
+                                            }
+                                        }
                                         const youtubeLink = restaurant.youtube_link || '';
                                         const thumbnailUrl = youtubeLink ? getYouTubeThumbnailUrl(youtubeLink) : null;
 
@@ -838,10 +899,7 @@ export default function StampPage() {
                                                 )}
                                                 onClick={() => handleRestaurantClick(restaurant)}
                                             >
-                                                <TableCell className="text-center sticky left-0 bg-background">
-                                                    {visited && <span className="text-green-500 font-bold">✓</span>}
-                                                </TableCell>
-                                                <TableCell className="sticky left-[80px] bg-background">
+                                                <TableCell>
                                                     <div className="flex items-center gap-3">
                                                         {thumbnailUrl && (
                                                             <div className="w-24 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
@@ -862,15 +920,15 @@ export default function StampPage() {
                                                         </Badge>
                                                     )}
                                                 </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm truncate max-w-[200px]">
+                                                <TableCell className="text-muted-foreground text-sm truncate max-w-[400px]">
                                                     {restaurant.road_address || restaurant.jibun_address}
                                                 </TableCell>
-                                                <TableCell className="text-right">{restaurant.review_count || 0}</TableCell>
+                                                <TableCell className="text-center">{restaurant.review_count || 0}</TableCell>
                                             </TableRow>
                                         );
                                     })}
                                     <TableRow ref={loadMoreTableRef}>
-                                        <TableCell colSpan={5} className="h-4 p-0" />
+                                        <TableCell colSpan={4} className="h-4 p-0" />
                                     </TableRow>
                                 </TableBody>
                             </Table>
