@@ -35,6 +35,46 @@ const nextConfig = {
     experimental: {
         forceSwcTransforms: false,
     },
+    // Turbopack 설정 추가 (Next.js 16 호환성)
+    turbopack: {},
+    // Webpack 최적화 설정 추가
+    webpack: (config, { dev, isServer }) => {
+        if (!dev && !isServer) {
+            // 프로덕션 클라이언트 빌드에서만 적용
+            config.optimization = {
+                ...config.optimization,
+                splitChunks: {
+                    chunks: 'all',
+                    cacheGroups: {
+                        default: false,
+                        vendors: false,
+                        // 큰 라이브러리 자동 분리 (160KB 이상)
+                        lib: {
+                            test(module) {
+                                return module.size() > 160000;
+                            },
+                            name(module) {
+                                const packageNameMatch = module.context?.match(/[\\/]node_modules[\\/](.*?)([\\/]|$)/);
+                                const packageName = packageNameMatch ? packageNameMatch[1] : 'lib';
+                                return `npm.${packageName.replace('@', '')}`;
+                            },
+                            priority: 20,
+                            minChunks: 1,
+                            reuseExistingChunk: true,
+                        },
+                        // 공통 모듈 분리
+                        commons: {
+                            name: 'commons',
+                            minChunks: 2,
+                            priority: 10,
+                            reuseExistingChunk: true,
+                        },
+                    },
+                },
+            };
+        }
+        return config;
+    },
 };
 
 export default withBundleAnalyzer(nextConfig);
