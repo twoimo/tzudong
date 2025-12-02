@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, X } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, X, PenSquare, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ import { Card } from "@/components/ui/card";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
+import { ReviewModal } from "@/components/reviews/ReviewModal";
 
 // 지역 목록
 const REGIONS = [
@@ -273,6 +274,9 @@ export default function StampPage() {
     // Right Panel State
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRightPanelVisible, setIsRightPanelVisible] = useState(false);
+
+    // Review Modal State
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
     // User Stamp Data
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
@@ -649,12 +653,21 @@ export default function StampPage() {
         }
     }, [user, queryClient, selectedRestaurant?.id]);
 
+    const handleWriteReview = useCallback(() => {
+        if (!user) {
+            console.warn('로그인이 필요합니다.');
+            return;
+        }
+        setIsReviewModalOpen(true);
+    }, [user]);
+
     // --- Helpers ---
     const getSortIcon = useCallback((column: SortColumn) => {
         if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4" />;
         if (sortDirection === "asc") return <ArrowUp className="h-4 w-4" />;
         return <ArrowDown className="h-4 w-4" />;
     }, [sortColumn, sortDirection]);
+
 
     const activeFilterCount =
         (filters.searchQuery ? 1 : 0) +
@@ -679,374 +692,413 @@ export default function StampPage() {
     }
 
     return (
-        <PanelGroup direction="horizontal" className="h-full bg-background">
-            {/* Left Panel - Main Content */}
-            <Panel defaultSize={isRightPanelVisible ? 70 : 100} minSize={30} className="flex flex-col min-w-0">
-                {/* Header */}
-                <div className="border-b border-border bg-card p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                                    <Trophy className="h-6 w-6 text-primary" />
-                                    쯔동여지도 도장
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 ml-1 rounded-full hover:bg-muted"
-                                        onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
-                                        title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
-                                    >
-                                        {filters.showUnvisitedOnly ? (
-                                            <EyeOff className="h-5 w-5 text-muted-foreground" />
-                                        ) : (
-                                            <Eye className="h-5 w-5 text-muted-foreground" />
-                                        )}
-                                    </Button>
-                                </h1>
+        <>
+            <PanelGroup direction="horizontal" className="h-full bg-background">
+                {/* Left Panel - Main Content */}
+                <Panel defaultSize={isRightPanelVisible ? 70 : 100} minSize={30} className="flex flex-col min-w-0">
+                    {/* Header */}
+                    <div className="border-b border-border bg-card p-6">
+                        <div className="flex items-center justify-between mb-4">
+                            <div>
+                                <div className="flex items-center gap-3">
+                                    <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
+                                        <Trophy className="h-6 w-6 text-primary" />
+                                        쯔동여지도 도장
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 ml-1 rounded-full hover:bg-muted"
+                                            onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
+                                            title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
+                                        >
+                                            {filters.showUnvisitedOnly ? (
+                                                <EyeOff className="h-5 w-5 text-muted-foreground" />
+                                            ) : (
+                                                <Eye className="h-5 w-5 text-muted-foreground" />
+                                            )}
+                                        </Button>
+                                    </h1>
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    총 {filteredAndSortedRestaurants.length}개의 맛집
+                                    {activeFilterCount > 0 && (
+                                        <span className="ml-2 text-primary font-medium">
+                                            ({activeFilterCount}개 필터 적용 중)
+                                        </span>
+                                    )}
+                                </p>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                총 {filteredAndSortedRestaurants.length}개의 맛집
-                                {activeFilterCount > 0 && (
-                                    <span className="ml-2 text-primary font-medium">
-                                        ({activeFilterCount}개 필터 적용 중)
-                                    </span>
-                                )}
-                            </p>
+                            <div className="flex items-center gap-2">
+                                {/* View Toggle */}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                                    title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
+                                >
+                                    {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            {/* View Toggle */}
+
+                        {/* Filter Controls */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                            {/* 검색 */}
+                            <div className="lg:col-span-2">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                    <Input
+                                        placeholder="맛집명 검색..."
+                                        value={filters.searchQuery}
+                                        onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+                                        className="pl-9"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 지역 */}
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="justify-between">
+                                        <span className="truncate">
+                                            지역 {filters.regions.length > 0 && `(${filters.regions.length})`}
+                                        </span>
+                                        <Filter className="h-4 w-4 ml-2" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80" align="start">
+                                    <div className="space-y-2">
+                                        <h4 className="font-semibold text-sm mb-3">지역 선택</h4>
+                                        <ScrollArea className="h-64">
+                                            <div className="grid grid-cols-2 gap-2 pr-3">
+                                                {REGIONS.map((region) => (
+                                                    <div key={region} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`region-${region}`}
+                                                            checked={filters.regions.includes(region)}
+                                                            onCheckedChange={() => handleRegionToggle(region)}
+                                                        />
+                                                        <label
+                                                            htmlFor={`region-${region}`}
+                                                            className="text-sm cursor-pointer flex-1 whitespace-nowrap"
+                                                        >
+                                                            {region}
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+
+                            {/* 카테고리 */}
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="justify-between">
+                                        <span className="truncate">
+                                            카테고리 {filters.categories.length > 0 && `(${filters.categories.length})`}
+                                        </span>
+                                        <Filter className="h-4 w-4 ml-2" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-64" align="start">
+                                    <div className="space-y-2">
+                                        <h4 className="font-semibold text-sm mb-3">카테고리 선택</h4>
+                                        <ScrollArea className="h-64">
+                                            <div className="space-y-2 pr-3">
+                                                {RESTAURANT_CATEGORIES.map((category) => (
+                                                    <div key={category} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`category-${category}`}
+                                                            checked={filters.categories.includes(category)}
+                                                            onCheckedChange={() => {
+                                                                setFilters(prev => ({
+                                                                    ...prev,
+                                                                    categories: prev.categories.includes(category)
+                                                                        ? prev.categories.filter(c => c !== category)
+                                                                        : [...prev.categories, category]
+                                                                }));
+                                                            }}
+                                                        />
+                                                        <label
+                                                            htmlFor={`category-${category}`}
+                                                            className="text-sm cursor-pointer flex-1"
+                                                        >
+                                                            {category}
+                                                        </label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+
+                            {/* 리뷰 수 필터 */}
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" className="justify-between">
+                                        <span className="truncate">
+                                            리뷰 {filters.fanVisitsMin > 0 ? `${filters.fanVisitsMin}개 이상` : "전체"}
+                                        </span>
+                                        <Filter className="h-4 w-4 ml-2" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-80" align="start">
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center">
+                                            <h4 className="font-semibold text-sm">최소 리뷰 수</h4>
+                                            <span className="text-sm text-muted-foreground">{filters.fanVisitsMin}개 이상</span>
+                                        </div>
+                                        <Slider
+                                            defaultValue={[filters.fanVisitsMin]}
+                                            max={100}
+                                            step={1}
+                                            onValueChange={(value) => setFilters(prev => ({ ...prev, fanVisitsMin: value[0] }))}
+                                        />
+                                        <div className="flex justify-between text-xs text-muted-foreground">
+                                            <span>0개</span>
+                                            <span>100개+</span>
+                                        </div>
+                                    </div>
+                                </PopoverContent>
+                            </Popover>
+
+                            {/* 필터 초기화 */}
                             <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                                title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
+                                variant="outline"
+                                onClick={() => {
+                                    setFilters({
+                                        searchQuery: "",
+                                        categories: [],
+                                        regions: [],
+                                        fanVisitsMin: 0,
+                                        showUnvisitedOnly: false,
+                                    });
+                                    setSortColumn("fanVisits");
+                                    setSortDirection("desc");
+                                }}
+                                title="필터 초기화"
+                                disabled={activeFilterCount === 0}
+                                className={cn(activeFilterCount === 0 && "opacity-50 cursor-not-allowed")}
                             >
-                                {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
+                                필터 초기화
                             </Button>
                         </div>
                     </div>
 
-                    {/* Filter Controls */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
-                        {/* 검색 */}
-                        <div className="lg:col-span-2">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="맛집명 검색..."
-                                    value={filters.searchQuery}
-                                    onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                                    className="pl-9"
-                                />
-                            </div>
-                        </div>
-
-                        {/* 지역 */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between">
-                                    <span className="truncate">
-                                        지역 {filters.regions.length > 0 && `(${filters.regions.length})`}
-                                    </span>
-                                    <Filter className="h-4 w-4 ml-2" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80" align="start">
-                                <div className="space-y-2">
-                                    <h4 className="font-semibold text-sm mb-3">지역 선택</h4>
-                                    <ScrollArea className="h-64">
-                                        <div className="grid grid-cols-2 gap-2 pr-3">
-                                            {REGIONS.map((region) => (
-                                                <div key={region} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`region-${region}`}
-                                                        checked={filters.regions.includes(region)}
-                                                        onCheckedChange={() => handleRegionToggle(region)}
-                                                    />
-                                                    <label
-                                                        htmlFor={`region-${region}`}
-                                                        className="text-sm cursor-pointer flex-1 whitespace-nowrap"
-                                                    >
-                                                        {region}
-                                                    </label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </ScrollArea>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-
-                        {/* 카테고리 */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between">
-                                    <span className="truncate">
-                                        카테고리 {filters.categories.length > 0 && `(${filters.categories.length})`}
-                                    </span>
-                                    <Filter className="h-4 w-4 ml-2" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64" align="start">
-                                <div className="space-y-2">
-                                    <h4 className="font-semibold text-sm mb-3">카테고리 선택</h4>
-                                    <ScrollArea className="h-64">
-                                        <div className="space-y-2 pr-3">
-                                            {RESTAURANT_CATEGORIES.map((category) => (
-                                                <div key={category} className="flex items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`category-${category}`}
-                                                        checked={filters.categories.includes(category)}
-                                                        onCheckedChange={() => {
-                                                            setFilters(prev => ({
-                                                                ...prev,
-                                                                categories: prev.categories.includes(category)
-                                                                    ? prev.categories.filter(c => c !== category)
-                                                                    : [...prev.categories, category]
-                                                            }));
-                                                        }}
-                                                    />
-                                                    <label
-                                                        htmlFor={`category-${category}`}
-                                                        className="text-sm cursor-pointer flex-1"
-                                                    >
-                                                        {category}
-                                                    </label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </ScrollArea>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-
-                        {/* 리뷰 수 필터 */}
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="outline" className="justify-between">
-                                    <span className="truncate">
-                                        리뷰 {filters.fanVisitsMin > 0 ? `${filters.fanVisitsMin}개 이상` : "전체"}
-                                    </span>
-                                    <Filter className="h-4 w-4 ml-2" />
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-80" align="start">
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-center">
-                                        <h4 className="font-semibold text-sm">최소 리뷰 수</h4>
-                                        <span className="text-sm text-muted-foreground">{filters.fanVisitsMin}개 이상</span>
-                                    </div>
-                                    <Slider
-                                        defaultValue={[filters.fanVisitsMin]}
-                                        max={100}
-                                        step={1}
-                                        onValueChange={(value) => setFilters(prev => ({ ...prev, fanVisitsMin: value[0] }))}
+                    {/* Content Area */}
+                    <div className="flex-1 overflow-auto p-6 bg-background">
+                        {viewMode === 'grid' ? (
+                            /* Grid View */
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                {filteredAndSortedRestaurants.map((restaurant, index) => (
+                                    <RestaurantCard
+                                        key={`${restaurant.id}-${index}`}
+                                        restaurant={restaurant}
+                                        visited={isVisited(restaurant.id)}
+                                        isSelected={selectedRestaurant?.id === restaurant.id}
+                                        onClick={handleRestaurantClick}
                                     />
-                                    <div className="flex justify-between text-xs text-muted-foreground">
-                                        <span>0개</span>
-                                        <span>100개+</span>
-                                    </div>
-                                </div>
-                            </PopoverContent>
-                        </Popover>
-
-                        {/* 필터 초기화 */}
-                        <Button
-                            variant="outline"
-                            onClick={() => {
-                                setFilters({
-                                    searchQuery: "",
-                                    categories: [],
-                                    regions: [],
-                                    fanVisitsMin: 0,
-                                    showUnvisitedOnly: false,
-                                });
-                                setSortColumn("fanVisits");
-                                setSortDirection("desc");
-                            }}
-                            title="필터 초기화"
-                            disabled={activeFilterCount === 0}
-                            className={cn(activeFilterCount === 0 && "opacity-50 cursor-not-allowed")}
-                        >
-                            필터 초기화
-                        </Button>
-                    </div>
-                </div>
-
-                {/* Content Area */}
-                <div className="flex-1 overflow-auto p-6 bg-background">
-                    {viewMode === 'grid' ? (
-                        /* Grid View */
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                            {filteredAndSortedRestaurants.map((restaurant, index) => (
-                                <RestaurantCard
-                                    key={`${restaurant.id}-${index}`}
-                                    restaurant={restaurant}
-                                    visited={isVisited(restaurant.id)}
-                                    isSelected={selectedRestaurant?.id === restaurant.id}
-                                    onClick={handleRestaurantClick}
-                                />
-                            ))}
-                            <div ref={loadMoreRef} className="h-4 w-full" />
-                        </div>
-                    ) : (
-                        /* List View */
-                        <div className="border rounded-lg">
-                            <Table>
-                                <TableHeader className="sticky top-0 bg-background z-20">
-                                    <TableRow>
-                                        <TableHead className="w-[25%] min-w-[200px] cursor-pointer" onClick={() => handleSort("name")}>
-                                            <div className="flex items-center gap-1">
-                                                맛집명 {getSortIcon("name")}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead className="w-[15%] min-w-[100px] cursor-pointer" onClick={() => handleSort("category")}>
-                                            <div className="flex items-center gap-1">
-                                                카테고리 {getSortIcon("category")}
-                                            </div>
-                                        </TableHead>
-                                        <TableHead className="w-[50%] min-w-[250px]">주소</TableHead>
-                                        <TableHead className="w-[10%] min-w-[80px] text-center cursor-pointer" onClick={() => handleSort("fanVisits")}>
-                                            <div className="flex items-center justify-center gap-1">
-                                                리뷰수 {getSortIcon("fanVisits")}
-                                            </div>
-                                        </TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredAndSortedRestaurants.map((restaurant) => (
-                                        <RestaurantRow
-                                            key={restaurant.id}
-                                            restaurant={restaurant}
-                                            visited={isVisited(restaurant.id)}
-                                            isSelected={selectedRestaurant?.id === restaurant.id}
-                                            onClick={handleRestaurantClick}
-                                        />
-                                    ))}
-                                    <TableRow ref={loadMoreTableRef}>
-                                        <TableCell colSpan={4} className="h-4 p-0" />
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                        </div>
-                    )}
-
-                    {filteredAndSortedRestaurants.length === 0 && (
-                        <div className="text-center py-12">
-                            <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                            <p className="text-muted-foreground">검색 결과가 없습니다.</p>
-                        </div>
-                    )}
-                </div>
-            </Panel>
-
-            {/* Right Panel - Reviews */}
-            {isRightPanelVisible && (
-                <>
-                    <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
-                    <Panel defaultSize={30} minSize={20} maxSize={50} className="flex flex-col border-l border-border bg-card">
-                        <div className="p-6 border-b border-border bg-card flex flex-col justify-center min-h-[161px]">
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="space-y-1.5 overflow-hidden">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                        <h2 className="font-bold text-2xl truncate">
-                                            {selectedRestaurant?.name || "맛집 선택"}
-                                        </h2>
-                                        {(() => {
-                                            const category = parseCategory(selectedRestaurant?.category || (selectedRestaurant as any)?.categories);
-                                            return category && (
-                                                <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal bg-secondary/50 text-secondary-foreground/90">
-                                                    {category}
-                                                </Badge>
-                                            );
-                                        })()}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground truncate">
-                                        {selectedRestaurant?.road_address || selectedRestaurant?.jibun_address || "주소 정보 없음"}
-                                    </p>
-                                </div>
-                                <Button variant="ghost" size="icon" onClick={handleCloseRightPanel} className="h-8 w-8 shrink-0 -mt-1 -mr-2">
-                                    <X className="h-4 w-4" />
-                                </Button>
+                                ))}
+                                <div ref={loadMoreRef} className="h-4 w-full" />
                             </div>
-                        </div>
+                        ) : (
+                            /* List View */
+                            <div className="border rounded-lg">
+                                <Table>
+                                    <TableHeader className="sticky top-0 bg-background z-20">
+                                        <TableRow>
+                                            <TableHead className="w-[25%] min-w-[200px] cursor-pointer" onClick={() => handleSort("name")}>
+                                                <div className="flex items-center gap-1">
+                                                    맛집명 {getSortIcon("name")}
+                                                </div>
+                                            </TableHead>
+                                            <TableHead className="w-[15%] min-w-[100px] cursor-pointer" onClick={() => handleSort("category")}>
+                                                <div className="flex items-center gap-1">
+                                                    카테고리 {getSortIcon("category")}
+                                                </div>
+                                            </TableHead>
+                                            <TableHead className="w-[50%] min-w-[250px]">주소</TableHead>
+                                            <TableHead className="w-[10%] min-w-[80px] text-center cursor-pointer" onClick={() => handleSort("fanVisits")}>
+                                                <div className="flex items-center justify-center gap-1">
+                                                    리뷰수 {getSortIcon("fanVisits")}
+                                                </div>
+                                            </TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {filteredAndSortedRestaurants.map((restaurant) => (
+                                            <RestaurantRow
+                                                key={restaurant.id}
+                                                restaurant={restaurant}
+                                                visited={isVisited(restaurant.id)}
+                                                isSelected={selectedRestaurant?.id === restaurant.id}
+                                                onClick={handleRestaurantClick}
+                                            />
+                                        ))}
+                                        <TableRow ref={loadMoreTableRef}>
+                                            <TableCell colSpan={4} className="h-4 p-0" />
+                                        </TableRow>
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
 
-                        <ScrollArea className="flex-1 p-4">
-                            {selectedRestaurant ? (
-                                <div className="space-y-4">
-                                    <h3 className="font-semibold mb-2 flex items-center gap-2">
-                                        <Trophy className="h-4 w-4 text-primary" />
-                                        방문자 리뷰 ({selectedRestaurant.review_count || 0})
-                                    </h3>
+                        {filteredAndSortedRestaurants.length === 0 && (
+                            <div className="text-center py-12">
+                                <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                                <p className="text-muted-foreground">검색 결과가 없습니다.</p>
+                            </div>
+                        )}
+                    </div>
+                </Panel>
 
-                                    {restaurantReviews.length > 0 ? (
-                                        <div className="space-y-4">
-                                            {restaurantReviews.map((review) => (
-                                                <Card key={review.id} className="p-4">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-medium text-sm">{review.userName}</span>
-                                                            {review.isVerified && (
-                                                                <Badge variant="outline" className="text-[10px] border-green-500 text-green-500 px-1 py-0 h-4">
-                                                                    인증됨
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {new Date(review.visitedAt).toLocaleDateString()}
-                                                        </span>
-                                                    </div>
-
-                                                    {review.photos && review.photos.length > 0 && (
-                                                        <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
-                                                            {review.photos.map((photo, idx) => (
-                                                                <img
-                                                                    key={idx}
-                                                                    src={photo.url}
-                                                                    alt="리뷰 사진"
-                                                                    className="h-20 w-20 object-cover rounded-md flex-shrink-0"
-                                                                />
-                                                            ))}
-                                                        </div>
-                                                    )}
-
-                                                    <p className="text-sm whitespace-pre-wrap mb-3">{review.content}</p>
-
-                                                    <div className="flex items-center justify-between">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className={cn(
-                                                                "h-8 px-2 text-xs gap-1",
-                                                                review.isLikedByUser ? "text-red-500 hover:text-red-600" : "text-muted-foreground"
-                                                            )}
-                                                            onClick={() => toggleLike(review.id, review.isLikedByUser)}
-                                                        >
-                                                            <span className={review.isLikedByUser ? "fill-current" : ""}>♥</span>
-                                                            {review.likeCount}
-                                                        </Button>
-                                                    </div>
-                                                </Card>
-                                            ))}
-                                            <div ref={loadMoreReviewsRef} className="h-4" />
+                {/* Right Panel - Reviews */}
+                {isRightPanelVisible && (
+                    <>
+                        <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
+                        <Panel defaultSize={30} minSize={20} maxSize={50} className="flex flex-col border-l border-border bg-card">
+                            <div className="p-6 border-b border-border bg-card flex flex-col justify-center min-h-[161px]">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="space-y-1.5 overflow-hidden">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <h2 className="font-bold text-2xl truncate">
+                                                {selectedRestaurant?.name || "맛집 선택"}
+                                            </h2>
+                                            {(() => {
+                                                const category = parseCategory(selectedRestaurant?.category || (selectedRestaurant as any)?.categories);
+                                                return category && (
+                                                    <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal bg-secondary/50 text-secondary-foreground/90">
+                                                        {category}
+                                                    </Badge>
+                                                );
+                                            })()}
                                         </div>
-                                    ) : (
-                                        <div className="text-center py-8 text-muted-foreground text-sm">
-                                            아직 작성된 리뷰가 없습니다.
+                                        <p className="text-sm text-muted-foreground truncate">
+                                            {selectedRestaurant?.road_address || selectedRestaurant?.jibun_address || "주소 정보 없음"}
+                                        </p>
+                                    </div>
+                                    <Button variant="ghost" size="icon" onClick={handleCloseRightPanel} className="h-8 w-8 shrink-0 -mt-1 -mr-2">
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <ScrollArea className="flex-1 p-4">
+                                {selectedRestaurant ? (
+                                    <>
+                                        {/* 리뷰 섹션 헤더 */}
+                                        <div className="flex items-center justify-between gap-2 mb-4">
+                                            <h3 className="font-semibold flex items-center gap-2">
+                                                <Trophy className="h-4 w-4 text-primary" />
+                                                방문자 리뷰 ({selectedRestaurant.review_count || 0})
+                                            </h3>
+                                            <Button
+                                                onClick={handleWriteReview}
+                                                size="sm"
+                                                className="h-8 gap-1.5"
+                                                variant={restaurantReviews.length > 0 ? "outline" : "default"}
+                                            >
+                                                <PenSquare className="h-3.5 w-3.5" />
+                                                리뷰 작성
+                                            </Button>
                                         </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                                    <MapPin className="h-8 w-8 mb-2 opacity-50" />
-                                    <p>맛집을 선택하여<br />상세 정보를 확인하세요</p>
-                                </div>
-                            )}
-                        </ScrollArea>
-                    </Panel>
-                </>
-            )}
-        </PanelGroup>
+
+                                        {restaurantReviews.length > 0 ? (
+                                            <div className="space-y-4">
+                                                {restaurantReviews.map((review) => (
+                                                    <Card key={review.id} className="p-4">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-medium text-sm">{review.userName}</span>
+                                                                {review.isVerified && (
+                                                                    <Badge variant="outline" className="text-[10px] border-green-500 text-green-500 px-1 py-0 h-4">
+                                                                        인증됨
+                                                                    </Badge>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-xs text-muted-foreground">
+                                                                {new Date(review.visitedAt).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
+
+                                                        {review.photos && review.photos.length > 0 && (
+                                                            <div className="flex gap-2 overflow-x-auto pb-2 mb-2">
+                                                                {review.photos.map((photo, idx) => (
+                                                                    <img
+                                                                        key={idx}
+                                                                        src={photo.url}
+                                                                        alt="리뷰 사진"
+                                                                        className="h-20 w-20 object-cover rounded-md flex-shrink-0"
+                                                                    />
+                                                                ))}
+                                                            </div>
+                                                        )}
+
+                                                        <p className="text-sm whitespace-pre-wrap mb-3">{review.content}</p>
+
+                                                        <div className="flex items-center justify-between">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="sm"
+                                                                className={cn(
+                                                                    "h-8 px-2 text-xs gap-1",
+                                                                    review.isLikedByUser ? "text-red-500 hover:text-red-600" : "text-muted-foreground"
+                                                                )}
+                                                                onClick={() => toggleLike(review.id, review.isLikedByUser)}
+                                                            >
+                                                                <span className={review.isLikedByUser ? "fill-current" : ""}>♥</span>
+                                                                {review.likeCount}
+                                                            </Button>
+                                                        </div>
+                                                    </Card>
+                                                ))}
+                                                <div ref={loadMoreReviewsRef} className="h-4" />
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center px-4 text-center" style={{ minHeight: 'calc(100vh - 400px)' }}>
+                                                <div className="bg-muted/50 rounded-full p-4 mb-4">
+                                                    <PenSquare className="h-8 w-8 text-muted-foreground" />
+                                                </div>
+                                                <h4 className="font-semibold text-base mb-2">아직 작성된 리뷰가 없습니다</h4>
+                                                <p className="text-sm text-muted-foreground mb-4">
+                                                    첫 번째 리뷰를 작성하고<br />
+                                                    다른 팬들과 경험을 공유해보세요!
+                                                </p>
+                                                <Button
+                                                    onClick={handleWriteReview}
+                                                    className="gap-2"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                    첫 리뷰 작성하기
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                                        <MapPin className="h-8 w-8 mb-2 opacity-50" />
+                                        <p>맛집을 선택하여<br />상세 정보를 확인하세요</p>
+                                    </div>
+                                )}
+                            </ScrollArea>
+                        </Panel>
+                    </>
+                )}
+            </PanelGroup>
+
+            {/* Review Modal */}
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
+                    queryClient.invalidateQueries({ queryKey: ['user-stamp-reviews', user?.id] });
+                }}
+            />
+        </>
     );
 }
