@@ -1,12 +1,21 @@
 'use client';
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
 
 import HomeModeToggle from "../components/home/home-mode-toggle";
-import HomeControlPanel from "../components/home/home-control-panel";
-import HomeMapContainer from "../components/home/home-map-container";
+
+// 동적 임포트 - 큰 컴포넌트는 필요할 때만 로드
+const HomeControlPanel = dynamic(
+    () => import('../components/home/home-control-panel'),
+    { ssr: false }
+);
+
+const HomeMapContainer = dynamic(
+    () => import('../components/home/home-map-container'),
+    { ssr: false }
+);
 import { useHomeState } from "./hooks/useHomeState";
 import { useHomeHandlers } from "./hooks/useHomeHandlers";
 import { useRestaurantPopupListener } from "./hooks/useRestaurantPopupListener";
