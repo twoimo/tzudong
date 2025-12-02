@@ -949,50 +949,47 @@ export default function StampPage() {
                 <>
                     <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
                     <Panel defaultSize={30} minSize={20} maxSize={50} className="flex flex-col border-l border-border bg-card">
-                        <div className="p-4 border-b border-border flex items-center justify-between bg-muted/30">
-                            <h2 className="font-bold text-lg truncate pr-2">
-                                {selectedRestaurant?.name || "맛집 선택"}
-                            </h2>
-                            <Button variant="ghost" size="icon" onClick={handleCloseRightPanel} className="h-8 w-8">
-                                <X className="h-4 w-4" />
-                            </Button>
+                        <div className="p-6 border-b border-border bg-card flex flex-col justify-center min-h-[161px]">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-1.5 overflow-hidden">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <h2 className="font-bold text-2xl truncate">
+                                            {selectedRestaurant?.name || "맛집 선택"}
+                                        </h2>
+                                        {(() => {
+                                            const categoryData = selectedRestaurant?.category || (selectedRestaurant as any)?.categories;
+                                            let category: string | null = null;
+                                            if (Array.isArray(categoryData) && categoryData.length > 0) category = categoryData[0];
+                                            else if (typeof categoryData === 'string') {
+                                                try {
+                                                    const parsed = JSON.parse(categoryData);
+                                                    if (Array.isArray(parsed) && parsed.length > 0) category = parsed[0];
+                                                    else category = categoryData;
+                                                } catch {
+                                                    category = categoryData;
+                                                }
+                                            }
+
+                                            return category && (
+                                                <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal bg-secondary/50 text-secondary-foreground/90">
+                                                    {category}
+                                                </Badge>
+                                            );
+                                        })()}
+                                    </div>
+                                    <p className="text-sm text-muted-foreground truncate">
+                                        {selectedRestaurant?.road_address || selectedRestaurant?.jibun_address || "주소 정보 없음"}
+                                    </p>
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={handleCloseRightPanel} className="h-8 w-8 shrink-0 -mt-1 -mr-2">
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
 
                         <ScrollArea className="flex-1 p-4">
                             {selectedRestaurant ? (
                                 <div className="space-y-4">
-                                    {/* Restaurant Info Summary */}
-                                    <div className="mb-6">
-                                        <div className="aspect-video rounded-md overflow-hidden bg-muted mb-3">
-                                            {selectedRestaurant.youtube_link ? (
-                                                <img
-                                                    src={getYouTubeThumbnailUrl(selectedRestaurant.youtube_link) || ''}
-                                                    alt={selectedRestaurant.name}
-                                                    className="w-full h-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center">
-                                                    <MapPin className="h-8 w-8 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-sm text-muted-foreground">
-                                                {selectedRestaurant.road_address || selectedRestaurant.jibun_address}
-                                            </p>
-                                            <div className="flex flex-wrap gap-1">
-                                                {(Array.isArray(selectedRestaurant.category)
-                                                    ? selectedRestaurant.category
-                                                    : [selectedRestaurant.category]
-                                                ).map((cat, i) => (
-                                                    <Badge key={i} variant="secondary" className="text-xs">
-                                                        {cat}
-                                                    </Badge>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <h3 className="font-semibold mb-2 flex items-center gap-2">
                                         <Trophy className="h-4 w-4 text-primary" />
                                         방문자 리뷰 ({selectedRestaurant.review_count || 0})
