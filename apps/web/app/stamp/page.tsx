@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { CheckCircle, Trophy, MapPin, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 interface Restaurant {
     id: string;
@@ -146,12 +147,10 @@ export default function StampPage() {
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center space-y-4">
-                    <div className="animate-spin h-12 w-12 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
-                    <p className="text-muted-foreground">도장 데이터를 불러오는 중...</p>
-                </div>
-            </div>
+            <GlobalLoader
+                message="도장 데이터를 불러오는 중..."
+                subMessage="쯔양의 맛집 기록을 확인하고 있습니다"
+            />
         );
     }
 

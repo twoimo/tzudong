@@ -10,6 +10,7 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 };
 const USA_CENTER = { lat: 39.8283, lng: -98.5795 }; // 미국 중심
@@ -558,42 +559,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }
 
   if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center h-full bg-gradient-to-br from-background to-muted">
-        <div className="text-center space-y-6">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-16 w-16 border-4 border-primary/20 border-t-primary mx-auto"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-transparent border-r-secondary animate-spin mx-auto h-16 w-16" style={{ animationDuration: '1.5s' }}></div>
-          </div>
-          <div className="space-y-3">
-            <h2 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              쯔동여지도 로딩 중...
-            </h2>
-            <p className="text-muted-foreground">
-              맛있는 발견을 준비하고 있습니다
-            </p>
-            <div className="flex justify-center space-x-1">
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-              <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-            </div>
-            {loadError && (
-              <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
-                <p className="text-xs text-destructive">
-                  로딩 중 오류 발생: {(loadError as any).message}
-                </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="mt-2 px-3 py-1 bg-destructive text-destructive-foreground text-xs rounded hover:bg-destructive/90"
-                >
-                  새로고침
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
+    return <MapSkeleton />;
   }
 
   // API 키가 없으면 에러 표시

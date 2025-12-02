@@ -2,6 +2,7 @@
 import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import HomeClient from './home-client';
+import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
 
 // [SSR] 메타데이터 생성 - 검색 엔진 최적화
 export const metadata: Metadata = {
@@ -26,12 +27,7 @@ export default function HomePage() {
     return (
         // [SSR] Suspense로 스트리밍 렌더링 지원
         <Suspense fallback={
-            <div className="flex items-center justify-center h-screen w-screen bg-background">
-                <div className="text-center space-y-4">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="text-muted-foreground">지도를 불러오는 중...</p>
-                </div>
-            </div>
+            <MapSkeleton />
         }>
             {/* [CSR] 모든 클라이언트 로직은 HomeClient로 위임 */}
             <HomeClient />
