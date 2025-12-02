@@ -1,8 +1,8 @@
 'use client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, Menu, X, List, Grid, RefreshCw } from "lucide-react";
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,6 +73,186 @@ interface UserReview {
     is_verified: boolean;
 }
 
+// 유틸리티 함수들을 컴포넌트 외부로 이동
+const parseCategory = (categoryData: any): string | null => {
+    if (Array.isArray(categoryData) && categoryData.length > 0) return categoryData[0];
+    if (typeof categoryData === 'string') {
+        try {
+            const parsed = JSON.parse(categoryData);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+            return categoryData;
+        } catch {
+            return categoryData;
+        }
+    }
+    return null;
+};
+
+const extractYouTubeVideoId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? match[2] : null;
+};
+
+const getYouTubeThumbnailUrl = (url: string) => {
+    const videoId = extractYouTubeVideoId(url);
+    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
+};
+
+// 주소에서 지역 추출 (불변 데이터이므로 외부로)
+const regionPatterns = [
+    { pattern: /^서울|서울특별시/, region: "서울" },
+    { pattern: /^경기도|^경기/, region: "경기" },
+    { pattern: /^인천|인천광역시/, region: "인천" },
+    { pattern: /^부산|부산광역시/, region: "부산" },
+    { pattern: /^대구|대구광역시/, region: "대구" },
+    { pattern: /^광주|광주광역시/, region: "광주" },
+    { pattern: /^대전|대전광역시/, region: "대전" },
+    { pattern: /^울산|울산광역시/, region: "울산" },
+    { pattern: /^세종|세종특별자치시/, region: "세종" },
+    { pattern: /^강원|강원특별자치도|강원도/, region: "강원" },
+    { pattern: /^충청북도|^충북/, region: "충북" },
+    { pattern: /^충청남도|^충남/, region: "충남" },
+    { pattern: /^전라북도|^전북|^전북특별자치도/, region: "전북" },
+    { pattern: /^전라남도|^전남/, region: "전남" },
+    { pattern: /^경상북도|^경북/, region: "경북" },
+    { pattern: /^경상남도|^경남/, region: "경남" },
+    { pattern: /^제주|제주특별자치도/, region: "제주" },
+    { pattern: /미국|USA|United States/i, region: "미국" },
+    { pattern: /일본|Japan/i, region: "일본" },
+    { pattern: /태국|Thailand/i, region: "태국" },
+    { pattern: /인도네시아|Indonesia/i, region: "인도네시아" },
+    { pattern: /튀르키예|Turkey|Türkiye/i, region: "튀르키예" },
+    { pattern: /헝가리|Hungary/i, region: "헝가리" },
+    { pattern: /오스트레일리아|Australia/i, region: "오스트레일리아" },
+];
+
+const extractRegion = (roadAddress: string | null, jibunAddress: string | null): string => {
+    const address = roadAddress || jibunAddress || "";
+    if (!address) return "";
+    for (const { pattern, region } of regionPatterns) {
+        if (pattern.test(address)) return region;
+    }
+    return "";
+};
+
+// 리스트 아이템 컴포넌트 메모이제이션
+interface RestaurantCardProps {
+    restaurant: Restaurant;
+    visited: boolean;
+    isSelected: boolean;
+    onClick: (restaurant: Restaurant) => void;
+}
+
+const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: RestaurantCardProps) => {
+    const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+    const category = parseCategory(restaurant.category || (restaurant as any).categories);
+
+    return (
+        <Card
+            className={cn(
+                "relative overflow-hidden transition-all duration-300 cursor-pointer group",
+                visited ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg",
+                isSelected ? "ring-2 ring-primary" : ""
+            )}
+            onClick={() => onClick(restaurant)}
+        >
+            <div className="aspect-video relative">
+                {thumbnailUrl ? (
+                    <>
+                        <img
+                            src={thumbnailUrl}
+                            alt={`${restaurant.name} 썸네일`}
+                            className={cn(
+                                "w-full h-full object-cover transition-all duration-300",
+                                visited ? "grayscale opacity-60" : "group-hover:brightness-110"
+                            )}
+                        />
+                        {visited && (
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="text-red-500 font-bold text-2xl sm:text-3xl transform -rotate-12 border-4 border-red-500 rounded-lg p-1 opacity-80">
+                                    CLEAR
+                                </div>
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                        <MapPin className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                )}
+            </div>
+            <div className="p-3">
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <h3 className="text-sm font-medium truncate" title={restaurant.name}>
+                            {restaurant.name}
+                        </h3>
+                        {category && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60">
+                                {category}
+                            </Badge>
+                        )}
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                        리뷰 {restaurant.review_count || 0}
+                    </span>
+                </div>
+            </div>
+        </Card>
+    );
+});
+RestaurantCard.displayName = 'RestaurantCard';
+
+interface RestaurantRowProps {
+    restaurant: Restaurant;
+    visited: boolean;
+    isSelected: boolean;
+    onClick: (restaurant: Restaurant) => void;
+}
+
+const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: RestaurantRowProps) => {
+    const category = parseCategory(restaurant.category || (restaurant as any).categories);
+    const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+
+    return (
+        <TableRow
+            className={cn(
+                "cursor-pointer hover:bg-muted/50",
+                isSelected ? "bg-muted" : ""
+            )}
+            onClick={() => onClick(restaurant)}
+        >
+            <TableCell>
+                <div className="flex items-center gap-3">
+                    {thumbnailUrl && (
+                        <div className="w-24 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                            <img
+                                src={thumbnailUrl}
+                                alt={`${restaurant.name} 썸네일`}
+                                className="w-full h-full object-cover"
+                            />
+                        </div>
+                    )}
+                    <span className="font-medium">{restaurant.name}</span>
+                </div>
+            </TableCell>
+            <TableCell>
+                {category && (
+                    <Badge variant="outline">
+                        {category}
+                    </Badge>
+                )}
+            </TableCell>
+            <TableCell className="text-muted-foreground text-sm truncate max-w-[400px]">
+                {restaurant.road_address || restaurant.jibun_address}
+            </TableCell>
+            <TableCell className="text-center">{restaurant.review_count || 0}</TableCell>
+        </TableRow>
+    );
+});
+RestaurantRow.displayName = 'RestaurantRow';
+
 export default function StampPage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
@@ -133,7 +313,6 @@ export default function StampPage() {
         queryFn: async () => {
             if (!searchQuery.trim()) return [];
             try {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 const { data: restaurants, error } = await (supabase as any).rpc('search_restaurants_by_name', {
                     search_query: searchQuery.trim(),
                     search_categories: null,
@@ -157,7 +336,7 @@ export default function StampPage() {
         isLoading: isRestaurantsLoading,
         isFetchingNextPage: isFetchingNextRestaurantPage,
     } = useInfiniteQuery({
-        queryKey: ['restaurants-stamp'], // Key changed to avoid conflict
+        queryKey: ['restaurants-stamp'],
         queryFn: async ({ pageParam = 0 }) => {
             try {
                 const { data: restaurants, error } = await supabase
@@ -211,42 +390,6 @@ export default function StampPage() {
     const restaurants = useMemo(() => mergeRestaurants(rawRestaurants), [rawRestaurants, mergeRestaurants]);
     const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants), [allRestaurants, mergeRestaurants]);
 
-    // 주소에서 지역 추출
-    const extractRegion = (roadAddress: string | null, jibunAddress: string | null): string => {
-        const address = roadAddress || jibunAddress || "";
-        if (!address) return "";
-        const regionPatterns = [
-            { pattern: /^서울|서울특별시/, region: "서울" },
-            { pattern: /^경기도|^경기/, region: "경기" },
-            { pattern: /^인천|인천광역시/, region: "인천" },
-            { pattern: /^부산|부산광역시/, region: "부산" },
-            { pattern: /^대구|대구광역시/, region: "대구" },
-            { pattern: /^광주|광주광역시/, region: "광주" },
-            { pattern: /^대전|대전광역시/, region: "대전" },
-            { pattern: /^울산|울산광역시/, region: "울산" },
-            { pattern: /^세종|세종특별자치시/, region: "세종" },
-            { pattern: /^강원|강원특별자치도|강원도/, region: "강원" },
-            { pattern: /^충청북도|^충북/, region: "충북" },
-            { pattern: /^충청남도|^충남/, region: "충남" },
-            { pattern: /^전라북도|^전북|^전북특별자치도/, region: "전북" },
-            { pattern: /^전라남도|^전남/, region: "전남" },
-            { pattern: /^경상북도|^경북/, region: "경북" },
-            { pattern: /^경상남도|^경남/, region: "경남" },
-            { pattern: /^제주|제주특별자치도/, region: "제주" },
-            { pattern: /미국|USA|United States/i, region: "미국" },
-            { pattern: /일본|Japan/i, region: "일본" },
-            { pattern: /태국|Thailand/i, region: "태국" },
-            { pattern: /인도네시아|Indonesia/i, region: "인도네시아" },
-            { pattern: /튀르키예|Turkey|Türkiye/i, region: "튀르키예" },
-            { pattern: /헝가리|Hungary/i, region: "헝가리" },
-            { pattern: /오스트레일리아|Australia/i, region: "오스트레일리아" },
-        ];
-        for (const { pattern, region } of regionPatterns) {
-            if (pattern.test(address)) return region;
-        }
-        return "";
-    };
-
     const filteredAndSortedRestaurants = useMemo(() => {
         const sourceData = searchQuery.trim() ? mergedAllRestaurants : restaurants;
         if (!sourceData || sourceData.length === 0) return [];
@@ -256,8 +399,8 @@ export default function StampPage() {
         // 카테고리 필터
         if (filters.categories.length > 0) {
             result = result.filter(r => {
-                let restaurantCategories: string[] = [];
                 const categoryData = r.category || (r as any).categories;
+                let restaurantCategories: string[] = [];
 
                 if (Array.isArray(categoryData)) {
                     restaurantCategories = categoryData;
@@ -299,10 +442,6 @@ export default function StampPage() {
         // 정렬
         if (sortColumn && sortDirection) {
             result.sort((a, b) => {
-                // 방문 여부 정렬 (방문한 곳 우선) - 스탬프 페이지 특성상
-                // 하지만 필터링 페이지 로직을 따르려면 사용자가 선택한 정렬 기준을 우선해야 함
-                // 여기서는 사용자가 선택한 정렬 기준을 따름
-
                 let aValue: any;
                 let bValue: any;
 
@@ -312,22 +451,8 @@ export default function StampPage() {
                         bValue = b.name || "";
                         break;
                     case "category":
-                        const getCategory = (r: any) => {
-                            const categoryData = r.category || r.categories;
-                            if (Array.isArray(categoryData) && categoryData.length > 0) return categoryData[0];
-                            if (typeof categoryData === 'string') {
-                                try {
-                                    const parsed = JSON.parse(categoryData);
-                                    if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
-                                    return categoryData;
-                                } catch {
-                                    return categoryData;
-                                }
-                            }
-                            return "";
-                        };
-                        aValue = getCategory(a);
-                        bValue = getCategory(b);
+                        aValue = parseCategory(a.category || (a as any).categories) || "";
+                        bValue = parseCategory(b.category || (b as any).categories) || "";
                         break;
                     case "fanVisits":
                         aValue = a.review_count || 0;
@@ -476,35 +601,38 @@ export default function StampPage() {
 
 
     // --- Handlers ---
-    const handleRestaurantClick = (restaurant: Restaurant) => {
+    const handleRestaurantClick = useCallback((restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
         setIsRightPanelVisible(true);
-    };
+    }, []);
 
-    const handleCloseRightPanel = () => {
+    const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
         setSelectedRestaurant(null);
-    };
+    }, []);
 
-    const handleSort = (column: SortColumn) => {
-        if (sortColumn === column) {
-            setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-        } else {
-            setSortColumn(column);
-            setSortDirection("asc");
-        }
-    };
+    const handleSort = useCallback((column: SortColumn) => {
+        setSortColumn(prev => {
+            if (prev === column) {
+                setSortDirection(d => d === "asc" ? "desc" : "asc");
+                return column;
+            } else {
+                setSortDirection("asc");
+                return column;
+            }
+        });
+    }, []);
 
-    const handleRegionToggle = (region: string) => {
+    const handleRegionToggle = useCallback((region: string) => {
         setFilters(prev => ({
             ...prev,
             regions: prev.regions.includes(region)
                 ? prev.regions.filter(r => r !== region)
                 : [...prev.regions, region]
         }));
-    };
+    }, []);
 
-    const toggleLike = async (reviewId: string, currentIsLiked: boolean) => {
+    const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean) => {
         if (!user) {
             console.warn('로그인이 필요합니다.');
             return;
@@ -519,25 +647,14 @@ export default function StampPage() {
         } catch (error) {
             console.error('좋아요 토글 실패:', error);
         }
-    };
+    }, [user, queryClient, selectedRestaurant?.id]);
 
     // --- Helpers ---
-    const extractYouTubeVideoId = (url: string) => {
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-        const match = url.match(regExp);
-        return (match && match[2].length === 11) ? match[2] : null;
-    };
-
-    const getYouTubeThumbnailUrl = (url: string) => {
-        const videoId = extractYouTubeVideoId(url);
-        return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-    };
-
-    const getSortIcon = (column: SortColumn) => {
+    const getSortIcon = useCallback((column: SortColumn) => {
         if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4" />;
         if (sortDirection === "asc") return <ArrowUp className="h-4 w-4" />;
         return <ArrowDown className="h-4 w-4" />;
-    };
+    }, [sortColumn, sortDirection]);
 
     const activeFilterCount =
         (filters.searchQuery ? 1 : 0) +
@@ -734,9 +851,6 @@ export default function StampPage() {
                             </PopoverContent>
                         </Popover>
 
-                        {/* 방문 여부 토글 */}
-
-
                         {/* 필터 초기화 */}
                         <Button
                             variant="outline"
@@ -765,82 +879,15 @@ export default function StampPage() {
                     {viewMode === 'grid' ? (
                         /* Grid View */
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                            {filteredAndSortedRestaurants.map((restaurant, index) => {
-                                const youtubeLink = restaurant.youtube_link || '';
-                                const thumbnailUrl = youtubeLink ? getYouTubeThumbnailUrl(youtubeLink) : null;
-                                const visited = isVisited(restaurant.id);
-                                const isSelected = selectedRestaurant?.id === restaurant.id;
-
-                                return (
-                                    <Card
-                                        key={`${restaurant.id}-${index}`}
-                                        className={cn(
-                                            "relative overflow-hidden transition-all duration-300 cursor-pointer group",
-                                            visited ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg",
-                                            isSelected ? "ring-2 ring-primary" : ""
-                                        )}
-                                        onClick={() => handleRestaurantClick(restaurant)}
-                                    >
-                                        <div className="aspect-video relative">
-                                            {thumbnailUrl ? (
-                                                <>
-                                                    <img
-                                                        src={thumbnailUrl}
-                                                        alt={`${restaurant.name} 썸네일`}
-                                                        className={cn(
-                                                            "w-full h-full object-cover transition-all duration-300",
-                                                            visited ? "grayscale opacity-60" : "group-hover:brightness-110"
-                                                        )}
-                                                    />
-                                                    {visited && (
-                                                        <div className="absolute inset-0 flex items-center justify-center">
-                                                            <div className="text-red-500 font-bold text-2xl sm:text-3xl transform -rotate-12 border-4 border-red-500 rounded-lg p-1 opacity-80">
-                                                                CLEAR
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <div className="w-full h-full bg-muted flex items-center justify-center">
-                                                    <MapPin className="h-8 w-8 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className="p-3">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <h3 className="text-sm font-medium truncate" title={restaurant.name}>
-                                                        {restaurant.name}
-                                                    </h3>
-                                                    {(() => {
-                                                        const categoryData = restaurant.category || (restaurant as any).categories;
-                                                        let category: string | null = null;
-                                                        if (Array.isArray(categoryData) && categoryData.length > 0) category = categoryData[0];
-                                                        else if (typeof categoryData === 'string') {
-                                                            try {
-                                                                const parsed = JSON.parse(categoryData);
-                                                                if (Array.isArray(parsed) && parsed.length > 0) category = parsed[0];
-                                                                else category = categoryData;
-                                                            } catch {
-                                                                category = categoryData;
-                                                            }
-                                                        }
-
-                                                        return category && (
-                                                            <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal shrink-0 bg-secondary/50 text-secondary-foreground/90 hover:bg-secondary/60">
-                                                                {category}
-                                                            </Badge>
-                                                        );
-                                                    })()}
-                                                </div>
-                                                <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                                                    리뷰 {restaurant.review_count || 0}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                );
-                            })}
+                            {filteredAndSortedRestaurants.map((restaurant, index) => (
+                                <RestaurantCard
+                                    key={`${restaurant.id}-${index}`}
+                                    restaurant={restaurant}
+                                    visited={isVisited(restaurant.id)}
+                                    isSelected={selectedRestaurant?.id === restaurant.id}
+                                    onClick={handleRestaurantClick}
+                                />
+                            ))}
                             <div ref={loadMoreRef} className="h-4 w-full" />
                         </div>
                     ) : (
@@ -868,65 +915,15 @@ export default function StampPage() {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredAndSortedRestaurants.map((restaurant) => {
-                                        const visited = isVisited(restaurant.id);
-                                        const isSelected = selectedRestaurant?.id === restaurant.id;
-                                        // 카테고리 데이터 추출 로직 개선
-                                        const categoryData = restaurant.category || (restaurant as any).categories;
-                                        let category: string | null = null;
-
-                                        if (Array.isArray(categoryData) && categoryData.length > 0) {
-                                            category = categoryData[0];
-                                        } else if (typeof categoryData === 'string') {
-                                            // JSON 문자열일 수 있으므로 파싱 시도
-                                            try {
-                                                const parsed = JSON.parse(categoryData);
-                                                if (Array.isArray(parsed) && parsed.length > 0) category = parsed[0];
-                                                else category = categoryData;
-                                            } catch {
-                                                category = categoryData;
-                                            }
-                                        }
-                                        const youtubeLink = restaurant.youtube_link || '';
-                                        const thumbnailUrl = youtubeLink ? getYouTubeThumbnailUrl(youtubeLink) : null;
-
-                                        return (
-                                            <TableRow
-                                                key={restaurant.id}
-                                                className={cn(
-                                                    "cursor-pointer hover:bg-muted/50",
-                                                    isSelected ? "bg-muted" : ""
-                                                )}
-                                                onClick={() => handleRestaurantClick(restaurant)}
-                                            >
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        {thumbnailUrl && (
-                                                            <div className="w-24 h-16 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
-                                                                <img
-                                                                    src={thumbnailUrl}
-                                                                    alt={`${restaurant.name} 썸네일`}
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                        <span className="font-medium">{restaurant.name}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {category && (
-                                                        <Badge variant="outline">
-                                                            {category}
-                                                        </Badge>
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-muted-foreground text-sm truncate max-w-[400px]">
-                                                    {restaurant.road_address || restaurant.jibun_address}
-                                                </TableCell>
-                                                <TableCell className="text-center">{restaurant.review_count || 0}</TableCell>
-                                            </TableRow>
-                                        );
-                                    })}
+                                    {filteredAndSortedRestaurants.map((restaurant) => (
+                                        <RestaurantRow
+                                            key={restaurant.id}
+                                            restaurant={restaurant}
+                                            visited={isVisited(restaurant.id)}
+                                            isSelected={selectedRestaurant?.id === restaurant.id}
+                                            onClick={handleRestaurantClick}
+                                        />
+                                    ))}
                                     <TableRow ref={loadMoreTableRef}>
                                         <TableCell colSpan={4} className="h-4 p-0" />
                                     </TableRow>
@@ -957,19 +954,7 @@ export default function StampPage() {
                                             {selectedRestaurant?.name || "맛집 선택"}
                                         </h2>
                                         {(() => {
-                                            const categoryData = selectedRestaurant?.category || (selectedRestaurant as any)?.categories;
-                                            let category: string | null = null;
-                                            if (Array.isArray(categoryData) && categoryData.length > 0) category = categoryData[0];
-                                            else if (typeof categoryData === 'string') {
-                                                try {
-                                                    const parsed = JSON.parse(categoryData);
-                                                    if (Array.isArray(parsed) && parsed.length > 0) category = parsed[0];
-                                                    else category = categoryData;
-                                                } catch {
-                                                    category = categoryData;
-                                                }
-                                            }
-
+                                            const category = parseCategory(selectedRestaurant?.category || (selectedRestaurant as any)?.categories);
                                             return category && (
                                                 <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal bg-secondary/50 text-secondary-foreground/90">
                                                     {category}
