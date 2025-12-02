@@ -38,7 +38,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   // 기본 메뉴 항목
   const baseMenuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
-    { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => router.push("/filtering") },
+    // { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => router.push("/filtering") }, // Removed
     { icon: Trophy, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
     { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
     { icon: Send, label: "쯔동여지도 제보", path: "/submissions", onClick: () => router.push("/submissions") },

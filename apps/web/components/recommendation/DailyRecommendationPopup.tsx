@@ -70,6 +70,12 @@ export function DailyRecommendationPopup() {
 
     // 초기 로딩 후 팝업 표시 (홈/글로벌 페이지에서만)
     useEffect(() => {
+        // 홈이 아니면 팝업 닫기
+        if (!shouldShowPopup) {
+            setIsVisible(false);
+            return;
+        }
+
         // 이미 보여줬거나, 클라이언트가 아니면 리턴
         if (globalWindow.hasShownDailyPopup || typeof window === 'undefined') return;
 
@@ -88,7 +94,7 @@ export function DailyRecommendationPopup() {
         }
 
         // 로그인하고 미방문 맛집이 있고 홈/글로벌 페이지일 때만 표시
-        if (isLoggedIn && unvisitedRestaurants.length > 0 && shouldShowPopup) {
+        if (isLoggedIn && unvisitedRestaurants.length > 0) {
             const restaurant = selectRandomRestaurant();
             if (restaurant) {
                 setSelectedRestaurant(restaurant);
@@ -182,16 +188,26 @@ export function DailyRecommendationPopup() {
 
     const address = selectedRestaurant.road_address || selectedRestaurant.jibun_address || '주소 정보 없음';
 
+    // Portal을 사용하여 body에 직접 렌더링 (z-index 문제 해결)
+    // SSR 이슈 방지를 위해 document 체크
+    if (typeof document === 'undefined') return null;
+
+    // createPortal 사용을 위해 import 필요하지만, 여기서는 직접 구현 대신 createPortal을 사용하지 않고
+    // z-index를 매우 높게 설정하여 해결 시도 (Portal은 hydration mismatch 유발 가능성 있음)
+    // 하지만 사이드바 위로 올리려면 Portal이 가장 확실함.
+    // 여기서는 일단 z-index를 9999로 높여서 시도해보고, 안되면 Portal 도입.
+    // 기존 z-40 -> z-[100]으로 변경
+
     return (
-        <>
+        <div className="fixed inset-0 z-[100] pointer-events-none">
             {/* 오버레이 (선택사항 - 클릭 시 닫기) */}
             <div
-                className="fixed inset-0 bg-black/20 z-40 animate-in fade-in duration-300"
+                className="absolute inset-0 bg-black/50 pointer-events-auto animate-in fade-in duration-300"
                 onClick={handleClose}
             />
 
             {/* 광고 팝업 스타일 */}
-            <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-4 duration-500">
+            <div className="absolute bottom-6 right-6 pointer-events-auto animate-in slide-in-from-bottom-4 duration-500">
                 <Card
                     className="w-[320px] overflow-hidden shadow-2xl border-2 border-primary/30 cursor-pointer hover:shadow-primary/20 transition-all hover:scale-[1.02] bg-white font-serif"
                     onClick={handleCardClick}
@@ -277,6 +293,6 @@ export function DailyRecommendationPopup() {
                     </div>
                 </Card>
             </div>
-        </>
+        </div>
     );
 }

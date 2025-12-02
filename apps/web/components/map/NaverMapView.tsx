@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Star, Users, ChefHat } from "lucide-react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
 
 
@@ -614,21 +615,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
     // 로딩 중
     if (!isLoaded) {
-        return (
-            <div className="flex items-center justify-center h-full bg-muted">
-                <div className="text-center space-y-4">
-                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-                    <div className="space-y-2">
-                        <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-                            지도 로딩 중...
-                        </h2>
-                        <p className="text-muted-foreground">
-                            쯔양의 맛집을 불러오고 있습니다
-                        </p>
-                    </div>
-                </div>
-            </div>
-        );
+        return <MapSkeleton />;
     }
 
     // 그리드 모드에서는 기존 레이아웃 유지

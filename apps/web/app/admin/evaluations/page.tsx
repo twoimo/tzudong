@@ -12,6 +12,7 @@ import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm'
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { ClipboardCheck, Loader2 } from 'lucide-react';
+import { GlobalLoader } from "@/components/ui/global-loader";
 import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
 import {
@@ -906,9 +907,10 @@ export default function AdminEvaluationPage() {
   // 인증 로딩 중이거나 권한 확인 중일 때
   if (authLoading || (loading && allRecords.length === 0)) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
+      <GlobalLoader
+        message="관리자 데이터 검수 로딩 중..."
+        subMessage="데이터를 불러오고 있습니다"
+      />
     );
   }
 

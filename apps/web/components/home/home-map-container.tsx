@@ -8,6 +8,7 @@ import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailP
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChefHat, MapPin, Users } from "lucide-react";
+import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
 // [CSR] 지도 컴포넌트 지연 로딩 - 번들 사이즈 최적화
 const NaverMapView = lazy(() => import("@/components/map/NaverMapView"));
@@ -178,7 +179,7 @@ export default function HomeMapContainer({
 
     // [CSR] 단일 지도 모드 - 국내/해외 분기
     return (
-        <Suspense fallback={<div className="flex items-center justify-center h-full">지도 로딩 중...</div>}>
+        <Suspense fallback={<MapSkeleton />}>
             {mapMode === 'domestic' ? (
                 // [CSR] 국내 지도 - 네이버 맵 API 사용
                 <NaverMapView
