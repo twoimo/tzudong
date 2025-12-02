@@ -910,7 +910,6 @@ export default function AdminEvaluationPage() {
       <GlobalLoader
         message="관리자 데이터 검수 로딩 중..."
         subMessage="데이터를 불러오고 있습니다"
-        fullScreen
       />
     );
   }
