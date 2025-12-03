@@ -1,0 +1,17 @@
+{
+  "name": "gemini-restaurant-crawling-scripts",
+  "version": "1.0.0",
+  "description": "Gemini CLI 음식점 크롤링 스크립트",
+  "scripts": {
+    "transcript": "npx ts-node transcript-puppeteer.ts",
+    "transcript:dev": "npx ts-node transcript-puppeteer.ts --no-commit"
+  },
+  "dependencies": {
+    "puppeteer": "^24.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}
