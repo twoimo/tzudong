@@ -23,6 +23,8 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const DATA_DIR = path.join(PROJECT_ROOT, 'backend', 'geminiCLI-restaurant-crawling', 'data');
 
 const COMMIT_INTERVAL = 30;  // 30개마다 커밋
+const REST_INTERVAL = 100;   // 100개마다 휴식
+const REST_DURATION = 180000; // 3분 (180초)
 const DELAY_MIN = 1000;      // 1초
 const DELAY_MAX = 3000;      // 3초
 const PAGE_TIMEOUT = 60000;  // 60초 (페이지 로드)
@@ -559,7 +561,7 @@ async function main() {
   // 인자 파싱
   const args = process.argv.slice(2);
   let dateFolder = getTodayFolder(); // PIPELINE_DATE 환경변수 우선 사용
-  let maxUrls = 100;
+  let maxUrls = 300;
   let autoCommit = true;
   
   for (let i = 0; i < args.length; i++) {
@@ -662,6 +664,13 @@ async function main() {
       if (autoCommit && sinceLastCommit >= COMMIT_INTERVAL) {
         gitCommitAndPush(dateFolder, sinceLastCommit);
         sinceLastCommit = 0;
+      }
+      
+      // 100개마다 3분 휴식 (rate limit 방지)
+      if ((i + 1) % REST_INTERVAL === 0 && i < urlsToProcess.length - 1) {
+        log(`🛑 ${i + 1}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`, 'warning');
+        await new Promise(resolve => setTimeout(resolve, REST_DURATION));
+        log(`🚀 휴식 끝 - 수집 재개`, 'success');
       }
       
       // 딜레이
