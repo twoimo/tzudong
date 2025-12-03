@@ -103,35 +103,6 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
                                     rotate: [0, 45, -45, 180],
                                 }}
                                 transition={{
-                                    duration: 10 + Math.random() * 8, // Slower and more variable duration
-                                    repeat: Infinity,
-                                    delay: -Math.random() * 20, // Negative delay to start mid-animation
-                                    ease: "linear"
-                                }}
-                                style={{ left: `${Math.random() * 100}%`, top: -30 }}
-                            >
-                                {i % 2 === 0 ? "🍁" : "🍂"}
-                            </motion.div>
-                        ))}
-                    </>
-                );
-            case 'winter': // White (Baek) - Snow
-                return (
-                    <>
-                        {[...Array(20)].map((_, i) => (
-                            <motion.div
-                                key={`winter-${i}`}
-                                className={cn(
-                                    "absolute bg-stone-200/80 rounded-full pointer-events-none",
-                                    i % 3 === 0 ? "w-1.5 h-1.5 blur-[1px]" : "w-1 h-1"
-                                )}
-                                initial={{ opacity: 0, y: -20, x: Math.random() * 100 }}
-                                animate={{
-                                    opacity: [0, 0.9, 0],
-                                    y: [0, 100],
-                                    x: (Math.random() - 0.5) * 40,
-                                }}
-                                transition={{
                                     duration: 4 + Math.random() * 4,
                                     repeat: Infinity,
                                     delay: Math.random() * 2,

@@ -42,7 +42,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
-    const { isLoaded, loadError } = useNaverMaps();
+
+    // Naver Maps API 로드 (동적 임포트 후 컴포넌트가 마운트되면 로드)
+    const { isLoaded, loadError } = useNaverMaps({ autoLoad: true });
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
