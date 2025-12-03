@@ -54,6 +54,7 @@ export function RestaurantDetailPanel({
     const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | 'english' | null>(null);
     const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
+    const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
 
     // 카테고리 처리: categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -275,8 +276,25 @@ export function RestaurantDetailPanel({
     if (!restaurant) return null;
 
     const handleGetDirections = () => {
+        setIsDirectionSheetOpen(true);
+    };
+
+    const handleNaverMap = () => {
+        const url = `https://map.naver.com/v5/search/${encodeURIComponent(restaurant.name)}`;
+        window.open(url, '_blank');
+        setIsDirectionSheetOpen(false);
+    };
+
+    const handleGoogleMap = () => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
         window.open(url, '_blank');
+        setIsDirectionSheetOpen(false);
+    };
+
+    const handleKakaoMap = () => {
+        const url = `https://map.kakao.com/link/to/${encodeURIComponent(restaurant.name)},${restaurant.lat},${restaurant.lng}`;
+        window.open(url, '_blank');
+        setIsDirectionSheetOpen(false);
     };
 
     const handleRequestEditRestaurant = () => {
@@ -911,35 +929,111 @@ export function RestaurantDetailPanel({
 
                 {/* Footer Actions */}
                 {viewMode === 'detail' && (
-                    <div className="p-4 border-t border-border">
-                        <div className="grid gap-2" style={{ gridTemplateColumns: '2fr 3fr 2fr' }}>
-                            <Button
-                                onClick={handleRequestEditRestaurant}
-                                variant="outline"
-                                size="sm"
-                                className="flex flex-col gap-1 h-auto py-3 px-2"
-                            >
-                                <Edit className="h-4 w-4" />
-                                <span className="text-xs">수정 요청</span>
-                            </Button>
+                    <div className="border-t border-border">
+                        {/* Direction Options - 확장 시 표시 */}
+                        {isDirectionSheetOpen && (
+                            <div className="p-4 border-b border-border bg-muted/30 space-y-2 animate-in slide-in-from-bottom-2 duration-200">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <h4 className="text-sm font-semibold">길찾기 앱 선택</h4>
+                                        <p className="text-xs text-muted-foreground">원하시는 지도 앱으로 길찾기를 시작하세요</p>
+                                    </div>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsDirectionSheetOpen(false)}
+                                        className="h-8 w-8"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
 
-                            <Button
-                                onClick={handleGetDirections}
-                                className="flex flex-col gap-1 h-auto py-3 px-2 bg-gradient-primary hover:opacity-90"
-                            >
-                                <Navigation className="h-4 w-4" />
-                                <span className="text-xs font-medium">길찾기</span>
-                            </Button>
+                                {/* 네이버 지도 - 추천 */}
+                                <Button
+                                    onClick={handleNaverMap}
+                                    className="w-full min-h-[64px] h-auto bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white shadow-sm"
+                                >
+                                    <div className="flex items-center gap-3 w-full py-1">
+                                        <div className="w-9 h-9 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span className="text-green-600 font-black text-lg">N</span>
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <span className="text-sm font-bold">네이버 지도</span>
+                                                <Badge className="bg-yellow-400 text-green-900 text-[9px] px-1 py-0 h-3.5 border-0">추천</Badge>
+                                            </div>
+                                            <p className="text-[11px] text-green-50 opacity-90">국내 상세한 길안내 · 실시간 교통정보</p>
+                                        </div>
+                                    </div>
+                                </Button>
 
-                            <Button
-                                onClick={handleWriteReview}
-                                variant="outline"
-                                size="sm"
-                                className="flex flex-col gap-1 h-auto py-3 px-2"
-                            >
-                                <MessageSquare className="h-4 w-4" />
-                                <span className="text-xs">리뷰 작성</span>
-                            </Button>
+                                {/* 카카오맵 */}
+                                <Button
+                                    onClick={handleKakaoMap}
+                                    variant="outline"
+                                    className="w-full min-h-[64px] h-auto border-2 hover:bg-yellow-50 hover:border-yellow-400"
+                                >
+                                    <div className="flex items-center gap-3 w-full py-1">
+                                        <div className="w-9 h-9 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span className="text-gray-800 font-black text-lg">K</span>
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <div className="text-sm font-bold text-foreground mb-0.5">카카오맵</div>
+                                            <p className="text-[11px] text-muted-foreground">대중교통 · 주차 정보</p>
+                                        </div>
+                                    </div>
+                                </Button>
+
+                                {/* 구글 지도 */}
+                                <Button
+                                    onClick={handleGoogleMap}
+                                    variant="outline"
+                                    className="w-full min-h-[64px] h-auto border-2 hover:bg-blue-50 hover:border-blue-400"
+                                >
+                                    <div className="flex items-center gap-3 w-full py-1">
+                                        <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                                            <span className="text-white font-black text-lg">G</span>
+                                        </div>
+                                        <div className="flex-1 text-left">
+                                            <div className="text-sm font-bold text-foreground mb-0.5">구글 지도</div>
+                                            <p className="text-[11px] text-muted-foreground">글로벌 지도 · 위성 뷰</p>
+                                        </div>
+                                    </div>
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* Main Action Buttons */}
+                        <div className="p-4">
+                            <div className="grid gap-2" style={{ gridTemplateColumns: '2fr 3fr 2fr' }}>
+                                <Button
+                                    onClick={handleRequestEditRestaurant}
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex flex-col gap-1 h-auto py-3 px-2"
+                                >
+                                    <Edit className="h-4 w-4" />
+                                    <span className="text-xs">수정 요청</span>
+                                </Button>
+
+                                <Button
+                                    onClick={handleGetDirections}
+                                    className="flex flex-col gap-1 h-auto py-3 px-2 bg-gradient-primary hover:opacity-90"
+                                >
+                                    <Navigation className="h-4 w-4" />
+                                    <span className="text-xs font-medium">길찾기</span>
+                                </Button>
+
+                                <Button
+                                    onClick={handleWriteReview}
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex flex-col gap-1 h-auto py-3 px-2"
+                                >
+                                    <MessageSquare className="h-4 w-4" />
+                                    <span className="text-xs">리뷰 작성</span>
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}
