@@ -36,8 +36,8 @@ KST = timezone(timedelta(hours=9))
 
 # 프로젝트 경로
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
-CRAWLING_DATA_DIR = PROJECT_ROOT / "geminiCLI-restaurant-crawling" / "data"
-LOG_DIR = PROJECT_ROOT / "log" / "geminiCLI-restaurant"
+CRAWLING_DATA_DIR = PROJECT_ROOT / "backend" / "geminiCLI-restaurant-crawling" / "data"
+LOG_DIR = PROJECT_ROOT / "backend" / "log" / "geminiCLI-restaurant"
 
 # GitHub 설정
 GITHUB_TOKEN = os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN_BYEON')
