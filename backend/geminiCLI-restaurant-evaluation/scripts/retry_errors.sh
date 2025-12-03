@@ -258,7 +258,7 @@ while IFS= read -r line || [ -n "$line" ]; do
     log_info "[$LINE_NUM/$TOTAL] 재평가중: $YOUTUBE_LINK"
     log_debug "평가 대상 음식점: ${RESTAURANT_COUNT}개"
     
-    # YouTube 자막 가져오기
+    # YouTube 자막 가져오기 (필수 - 자막 없으면 평가 스킵)
     TRANSCRIPT_START=$(date +%s)
     TRANSCRIPT=$(python3 "$TRANSCRIPT_SCRIPT" "$YOUTUBE_LINK" 50000 2>/dev/null || echo "")
     TRANSCRIPT_END=$(date +%s)
@@ -269,8 +269,10 @@ while IFS= read -r line || [ -n "$line" ]; do
         log_debug "자막 로드 완료 (${#TRANSCRIPT}자, ${TRANSCRIPT_DURATION}s)"
         TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
     else
-        log_warning "자막 없음 (${TRANSCRIPT_DURATION}s)"
+        log_warning "[$LINE_NUM/$TOTAL] 건너뜀 - 자막 없음 (${TRANSCRIPT_DURATION}s)"
         TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
+        SKIPPED=$((SKIPPED + 1))
+        continue
     fi
     
     # 평가용 데이터 구성

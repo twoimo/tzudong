@@ -26,10 +26,50 @@ from pydantic import BaseModel
 # 프로젝트 루트 경로 설정
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 BACKEND_ROOT = Path(__file__).parent.parent
+LOG_DIR = BACKEND_ROOT / 'log' / 'geminiCLI-restaurant'
 sys.path.insert(0, str(BACKEND_ROOT / 'utils'))
 
 from services.youtube import collect_transcripts_for_urls, get_pending_urls
 from services.github import commit_and_push_transcripts
+
+# 로거 임포트
+try:
+    from logger import PipelineLogger
+except ImportError:
+    # 로거를 찾지 못하면 간단한 대체 로거 사용
+    class PipelineLogger:
+        def __init__(self, phase, log_dir=None, **kwargs): 
+            self.phase = phase
+            self._timers = {}
+        def info(self, msg, data=None, step=None): print(f"ℹ️ {msg}")
+        def success(self, msg, data=None, step=None): print(f"✅ {msg}")
+        def warning(self, msg, data=None, step=None): print(f"⚠️ {msg}")
+        def error(self, msg, data=None, step=None): print(f"❌ {msg}")
+        def debug(self, msg, data=None, step=None): print(f"🔍 {msg}")
+        def add_stat(self, key, value): pass
+        def add_statistic(self, key, value): pass
+        def increment_stat(self, key, amount=1): pass
+        def set_processed(self, count): pass
+        def increment_success(self, count=1): pass
+        def increment_error(self, count=1): pass
+        def increment_skip(self, count=1): pass
+        def timer(self, name): 
+            from contextlib import contextmanager
+            import time
+            @contextmanager
+            def _timer():
+                start = time.time()
+                try:
+                    yield
+                finally:
+                    elapsed = time.time() - start
+                    self._timers[name] = elapsed
+            return _timer()
+        def start_stage(self): pass
+        def end_stage(self): pass
+        def save_summary(self): return {}
+        def save_json_log(self): pass
+        def get_summary(self): return {}
 
 # 한국 시간대 (KST, UTC+9)
 KST = timezone(timedelta(hours=9))
@@ -154,12 +194,21 @@ async def collect_transcripts(request: TranscriptRequest, background_tasks: Back
     # 날짜 폴더 설정
     date_folder = request.date_folder or datetime.now(KST).strftime("%y-%m-%d")
     
+    # 로거 생성
+    logger = PipelineLogger(
+        phase="transcript-api",
+        log_dir=LOG_DIR
+    )
+    logger.info(f"🚀 /collect 엔드포인트 호출 - date_folder: {date_folder}, max_urls: {request.max_urls}, auto_commit: {request.auto_commit}")
+    
     try:
         # Transcript 수집
-        result = collect_transcripts_for_urls(
-            date_folder=date_folder,
-            max_urls=request.max_urls
-        )
+        with logger.timer("transcript_collect"):
+            result = collect_transcripts_for_urls(
+                date_folder=date_folder,
+                max_urls=request.max_urls,
+                logger=logger
+            )
         
         response = TranscriptResponse(
             success=result["success"],
@@ -176,19 +225,41 @@ async def collect_transcripts(request: TranscriptRequest, background_tasks: Back
         # 자동 커밋
         if request.auto_commit and result["success_count"] > 0:
             try:
-                commit_result = commit_and_push_transcripts(
-                    date_folder=date_folder,
-                    transcript_count=result["success_count"]
-                )
+                logger.info("📤 자동 커밋 시작...")
+                with logger.timer("git_commit"):
+                    commit_result = commit_and_push_transcripts(
+                        date_folder=date_folder,
+                        transcript_count=result["success_count"],
+                        logger=logger
+                    )
                 response.committed = commit_result["success"]
                 response.commit_message = commit_result.get("message")
+                if commit_result["success"]:
+                    logger.success(f"자동 커밋 성공: {commit_result.get('message')}")
+                else:
+                    logger.warning(f"자동 커밋 실패: {commit_result.get('message')}")
             except Exception as e:
                 response.committed = False
                 response.commit_message = f"커밋 실패: {str(e)}"
+                logger.error(f"자동 커밋 예외 발생: {str(e)}")
+        
+        # 통계 저장
+        logger.add_stat("endpoint", "/collect")
+        logger.add_stat("date_folder", date_folder)
+        logger.add_stat("total_urls", result["total_urls"])
+        logger.add_stat("success_count", result["success_count"])
+        logger.add_stat("failed_count", result["failed_count"])
+        logger.add_stat("skipped_count", result["skipped_count"])
+        logger.add_stat("committed", response.committed if hasattr(response, 'committed') else None)
+        
+        logger.success(f"/collect 요청 완료 - 성공: {result['success_count']}, 실패: {result['failed_count']}")
+        logger.save_summary()
         
         return response
         
     except Exception as e:
+        logger.error(f"/collect 요청 실패: {str(e)}")
+        logger.save_summary()
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -200,11 +271,30 @@ async def commit_only(date_folder: Optional[str] = None):
     """
     date_folder = date_folder or datetime.now(KST).strftime("%y-%m-%d")
     
+    # 로거 생성
+    logger = PipelineLogger(
+        phase="transcript-api-commit",
+        log_dir=LOG_DIR
+    )
+    logger.info(f"🚀 /commit 엔드포인트 호출 - date_folder: {date_folder}")
+    
     try:
-        result = commit_and_push_transcripts(
-            date_folder=date_folder,
-            transcript_count=0  # 개수 확인 안 함
-        )
+        with logger.timer("git_commit"):
+            result = commit_and_push_transcripts(
+                date_folder=date_folder,
+                transcript_count=0,  # 개수 확인 안 함
+                logger=logger
+            )
+        
+        if result["success"]:
+            logger.success(f"/commit 요청 완료 - 메시지: {result.get('message')}")
+        else:
+            logger.warning(f"/commit 요청 완료 (실패) - 메시지: {result.get('message')}")
+        
+        logger.add_stat("endpoint", "/commit")
+        logger.add_stat("date_folder", date_folder)
+        logger.add_stat("success", result["success"])
+        logger.save_summary()
         
         return {
             "success": result["success"],
@@ -213,6 +303,8 @@ async def commit_only(date_folder: Optional[str] = None):
         }
         
     except Exception as e:
+        logger.error(f"/commit 요청 실패: {str(e)}")
+        logger.save_summary()
         raise HTTPException(status_code=500, detail=str(e))
 
 
