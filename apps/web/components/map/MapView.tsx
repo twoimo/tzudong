@@ -44,6 +44,11 @@ interface MapViewProps {
   onMarkerClick?: (restaurant: Restaurant) => void;
   // 패널 너비 (동적 오프셋 계산용)
   panelWidth?: number;
+  activePanel?: 'map' | 'detail' | 'control';
+  onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
+  isPanelOpen?: boolean;
+  onPanelClose?: () => void;
+  onTogglePanelCollapse?: () => void;
 }
 
 // 에러 바운더리용 폴백 컴포넌트
@@ -72,7 +77,7 @@ const MapErrorFallback = ({ error, resetErrorBoundary }: { error: Error; resetEr
   </div>
 );
 
-const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant, onMarkerClick, panelWidth: propPanelWidth }: MapViewProps) => {
+const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminAddRestaurant, onAdminEditRestaurant, onRestaurantSelect, onMapReady, onRequestEditRestaurant, onMarkerClick, panelWidth: propPanelWidth, activePanel, onPanelClick, isPanelOpen: propIsPanelOpen, onPanelClose, onTogglePanelCollapse }: MapViewProps) => {
   // 필터 객체 메모이제이션
   const memoizedFilters = useMemo(() => filters, [filters]);
   const { user } = useAuth();
@@ -86,6 +91,17 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [panelWidth, setPanelWidth] = useState(0);
   const [showRestaurantCount, setShowRestaurantCount] = useState(false);
+  const [localIsPanelOpen, setLocalIsPanelOpen] = useState(false);
+
+  // props로 전달된 isPanelOpen이 있으면 우선 사용, 없으면 로컬 상태 사용
+  const isPanelOpen = propIsPanelOpen !== undefined ? propIsPanelOpen : localIsPanelOpen;
+  const setIsPanelOpen = (isOpen: boolean) => {
+    if (onTogglePanelCollapse) {
+      onTogglePanelCollapse();
+    } else {
+      setLocalIsPanelOpen(isOpen);
+    }
+  };
 
   // props로 전달된 panelWidth가 있으면 우선 사용
   const effectivePanelWidth = propPanelWidth !== undefined ? propPanelWidth : panelWidth;
@@ -597,7 +613,13 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     <ErrorBoundary FallbackComponent={MapErrorFallback}>
       <div className="relative w-full h-full flex">
         {/* Map container */}
-        <div ref={mapRef} className="flex-1 h-full" />
+        <div
+          ref={mapRef}
+          className="flex-1 h-full"
+          onClick={() => {
+            onPanelClick?.('map');
+          }}
+        />
 
 
         {/* Loading indicator */}
@@ -628,6 +650,40 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           </button>
         )}
 
+
+        {/* 레스토랑 상세 패널 - 고정 너비 400px, 애니메이션 적용, 클릭 시 앞으로 가져오기 */}
+        {selectedRestaurant && (
+          <div
+            className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
+            style={{ overflow: 'visible' }}
+            onClick={(e) => {
+              // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
+              e.stopPropagation();
+              onPanelClick?.('detail');
+            }}
+          >
+            <div ref={detailPanelRef} className="h-full w-[400px] bg-background border-l border-border">
+              <RestaurantDetailPanel
+                restaurant={selectedRestaurant}
+                onClose={() => {
+                  if (onPanelClose) onPanelClose();
+                  else setIsPanelOpen(false);
+                }}
+                onWriteReview={() => {
+                  setIsReviewModalOpen(true);
+                }}
+                onEditRestaurant={onAdminEditRestaurant ? () => {
+                  onAdminEditRestaurant(selectedRestaurant!);
+                } : undefined}
+                onRequestEditRestaurant={onRequestEditRestaurant ? () => {
+                  onRequestEditRestaurant(selectedRestaurant!);
+                } : undefined}
+                onToggleCollapse={() => setIsPanelOpen(!isPanelOpen)}
+                isPanelOpen={isPanelOpen}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Review Modal */}
         {selectedRestaurant && isReviewModalOpen && (
