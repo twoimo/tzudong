@@ -449,6 +449,12 @@ def collect_transcripts_for_urls(
             delay = random.uniform(2, 5)
             logger.debug(f"⏳ {delay:.1f}초 대기 (IP 차단 방지)...")
             time.sleep(delay)
+        
+        # 20개 URL마다 5~10초 추가 대기 (장기 차단 방지)
+        if i % 20 == 0:
+            long_delay = random.uniform(5, 10)
+            logger.info(f"⏳ {long_delay:.1f}초 장기 대기 ({i}개 처리 완료)...")
+            time.sleep(long_delay)
     
     # 결과 저장
     with logger.timer("save_transcripts"):
