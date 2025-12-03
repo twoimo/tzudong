@@ -370,45 +370,76 @@ async function collectTranscript(page: Page, videoId: string): Promise<Transcrip
 // ============================================================
 
 function gitCommitAndPush(dateFolder: string, count: number): boolean {
-  try {
-    const transcriptPath = `backend/geminiCLI-restaurant-crawling/data/${dateFolder}/tzuyang_restaurant_transcripts.json`;
-    
-    // Git 설정
-    execSync('git config user.name "Transcript Puppeteer"', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    execSync('git config user.email "transcript@local"', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    
-    // Push 전에 pull (충돌 방지)
+  const transcriptPath = `backend/geminiCLI-restaurant-crawling/data/${dateFolder}/tzuyang_restaurant_transcripts.json`;
+  const MAX_RETRIES = 3;
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      execSync('git pull --rebase origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    } catch {
-      // pull 실패해도 계속 진행 (첫 커밋일 수 있음)
-    }
-    
-    // Add
-    execSync(`git add "${transcriptPath}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    
-    // 변경사항 확인
-    try {
-      execSync('git diff --staged --quiet', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-      log('변경사항 없음 - 커밋 스킵', 'warning');
+      // Git 설정
+      execSync('git config user.name "Transcript Puppeteer"', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      execSync('git config user.email "transcript@local"', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      
+      // Pull 먼저 (원격 변경사항 가져오기)
+      try {
+        execSync('git pull --rebase origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+        log('Git pull 완료', 'info');
+      } catch {
+        // pull 실패해도 계속 진행 (첫 커밋일 수 있음)
+        log('Git pull 스킵 (새 브랜치일 수 있음)', 'warning');
+      }
+      
+      // Add
+      execSync(`git add "${transcriptPath}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      
+      // 변경사항 확인
+      try {
+        execSync('git diff --staged --quiet', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+        log('변경사항 없음 - 커밋 스킵', 'warning');
+        return true;
+      } catch {
+        // 변경사항 있음 - 계속 진행
+      }
+      
+      // Commit
+      const message = `📝 Transcript 수집 (Puppeteer): ${dateFolder} (+${count}개)`;
+      execSync(`git commit -m "${message}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      
+      // Push 전에 다시 pull (커밋 중 원격 변경이 있을 수 있음)
+      try {
+        execSync('git pull --rebase origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      } catch {
+        // pull 실패해도 push 시도
+      }
+      
+      // Push
+      execSync('git push origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      
+      log(`Git push 완료: +${count}개`, 'success');
       return true;
-    } catch {
-      // 변경사항 있음 - 계속 진행
+      
+    } catch (error) {
+      log(`Git 커밋/푸시 실패 (시도 ${attempt}/${MAX_RETRIES}): ${error}`, 'error');
+      
+      if (attempt < MAX_RETRIES) {
+        log(`5초 후 재시도...`, 'warning');
+        // 동기 sleep (5초)
+        execSync('sleep 5');
+        
+        // 충돌 해결 시도: stash → pull → stash pop
+        try {
+          execSync('git stash', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+          execSync('git pull --rebase origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+          execSync('git stash pop', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+          log('Git 충돌 해결 시도 완료', 'info');
+        } catch {
+          // stash 실패해도 다음 시도에서 처리
+        }
+      }
     }
-    
-    // Commit
-    const message = `📝 Transcript 수집 (Puppeteer): ${dateFolder} (+${count}개)`;
-    execSync(`git commit -m "${message}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    
-    // Push
-    execSync('git push origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    
-    log(`Git push 완료: +${count}개`, 'success');
-    return true;
-  } catch (error) {
-    log(`Git 커밋/푸시 실패: ${error}`, 'error');
-    return false;
   }
+  
+  log(`Git 커밋/푸시 최종 실패 (${MAX_RETRIES}회 시도)`, 'error');
+  return false;
 }
 
 // ============================================================
