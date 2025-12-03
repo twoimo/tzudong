@@ -53,7 +53,7 @@ export default function HomeControlPanel({
 }: HomeControlPanelProps) {
     return (
         <div
-            className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 transition-all duration-200 ${activePanel === 'control' ? 'z-[50]' : 'z-10'} hover:z-[50]`}
+            className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 transition-all duration-200 ${activePanel === 'control' ? 'z-[50]' : 'z-10'} hover:z-[50]`}
             onClick={(e) => {
                 e.stopPropagation();
                 onPanelClick?.('control');
