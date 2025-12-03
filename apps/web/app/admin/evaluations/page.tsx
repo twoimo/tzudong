@@ -11,7 +11,8 @@ import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
-import { ClipboardCheck, Loader2 } from 'lucide-react';
+import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { Input } from '@/components/ui/input';
 import { checkRestaurantDuplicate } from '@/lib/db-conflict-checker';
@@ -84,6 +85,10 @@ export default function AdminEvaluationPage() {
 
   // 테이블 뷰 토글 상태
   const [isAlternateView, setIsAlternateView] = useState(false);
+
+  // 자막 수집 상태
+  const [transcriptStatus, setTranscriptStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [transcriptMessage, setTranscriptMessage] = useState<string>('');
 
   // localStorage에서 상태 복원
   useEffect(() => {
@@ -904,6 +909,103 @@ export default function AdminEvaluationPage() {
     }
   };
 
+  // 자막 수집 핸들러 (로컬 FastAPI 서버 호출)
+  const handleCollectTranscripts = async () => {
+    setTranscriptStatus('loading');
+    setTranscriptMessage('자막 수집 중...');
+
+    try {
+      // 1. 먼저 상태 확인
+      const statusResponse = await fetch('http://localhost:8000/status');
+      if (!statusResponse.ok) {
+        throw new Error('FastAPI 서버에 연결할 수 없습니다. uvicorn main:app --reload 명령으로 서버를 시작하세요.');
+      }
+      
+      const statusData = await statusResponse.json();
+      
+      if (statusData.pending_urls === 0) {
+        setTranscriptStatus('success');
+        setTranscriptMessage(`수집할 새로운 URL이 없습니다. (기존 ${statusData.existing_transcripts}개)`);
+        toast({
+          title: '수집 완료',
+          description: `수집할 새로운 URL이 없습니다. 기존 ${statusData.existing_transcripts}개의 자막이 있습니다.`,
+        });
+        return;
+      }
+
+      setTranscriptMessage(`${statusData.pending_urls}개 URL 자막 수집 중...`);
+
+      // 2. 자막 수집 및 GitHub 커밋 실행
+      const collectResponse = await fetch('http://localhost:8000/collect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          auto_commit: true,  // 수집 후 자동 커밋
+        }),
+      });
+
+      if (!collectResponse.ok) {
+        const errorData = await collectResponse.json();
+        throw new Error(errorData.detail || '자막 수집 실패');
+      }
+
+      const result = await collectResponse.json();
+
+      if (result.success) {
+        setTranscriptStatus('success');
+        const commitInfo = result.committed ? ' → GitHub 커밋 완료!' : '';
+        setTranscriptMessage(`✅ ${result.success_count}개 수집 성공${commitInfo}`);
+        
+        toast({
+          title: '🎬 자막 수집 완료',
+          description: (
+            <div className="space-y-1">
+              <p>성공: {result.success_count}개, 실패: {result.failed_count}개</p>
+              {result.committed && (
+                <p className="text-green-600 font-medium">
+                  ✅ GitHub 커밋 완료! 파이프라인이 자동 실행됩니다.
+                </p>
+              )}
+            </div>
+          ),
+        });
+      } else {
+        throw new Error(result.message || '수집 실패');
+      }
+    } catch (error: unknown) {
+      console.error('자막 수집 실패:', error);
+      setTranscriptStatus('error');
+      
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
+      setTranscriptMessage(`❌ ${errorMessage}`);
+      
+      // 연결 오류인 경우 상세 안내
+      if (errorMessage.includes('연결할 수 없습니다') || errorMessage.includes('Failed to fetch')) {
+        toast({
+          variant: 'destructive',
+          title: '서버 연결 실패',
+          description: (
+            <div className="space-y-2">
+              <p>로컬 FastAPI 서버가 실행 중이 아닙니다.</p>
+              <code className="block text-xs bg-muted p-2 rounded">
+                cd backend/transcript-api<br />
+                uvicorn main:app --reload
+              </code>
+            </div>
+          ),
+        });
+      } else {
+        toast({
+          variant: 'destructive',
+          title: '자막 수집 실패',
+          description: errorMessage,
+        });
+      }
+    }
+  };
+
   // 인증 로딩 중이거나 권한 확인 중일 때
   if (authLoading || (loading && allRecords.length === 0)) {
     return (
@@ -953,6 +1055,28 @@ export default function AdminEvaluationPage() {
                   <rect x="3" y="14" width="7" height="7" />
                 </svg>
               </button>
+              {/* 자막 수집 버튼 */}
+              <Button
+                onClick={handleCollectTranscripts}
+                disabled={transcriptStatus === 'loading'}
+                variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'outline'}
+                size="sm"
+                className="gap-2"
+                title="로컬 FastAPI 서버를 통해 YouTube 자막을 수집하고 GitHub에 커밋합니다"
+              >
+                {transcriptStatus === 'loading' ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : transcriptStatus === 'success' ? (
+                  <CheckCircle2 className="h-4 w-4" />
+                ) : transcriptStatus === 'error' ? (
+                  <XCircle className="h-4 w-4" />
+                ) : (
+                  <FileText className="h-4 w-4" />
+                )}
+                <span className="text-sm font-medium">
+                  {transcriptStatus === 'loading' ? '수집 중...' : '자막 수집'}
+                </span>
+              </Button>
             </div>
             <p className="text-muted-foreground text-sm mt-1">
               필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
