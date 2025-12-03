@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -129,24 +130,39 @@ const SeasonalLogo: React.FC<SeasonalLogoProps> = ({ className }) => {
                         transition={{ duration: 1.5, ease: "easeOut" }}
                     >
                         {/* Base Logo Image */}
-                        <motion.img
-                            src="/sidebar-logo.png"
-                            alt="쯔동여지도"
-                            className="h-14 w-auto object-contain mix-blend-multiply opacity-90 drop-shadow-sm grayscale contrast-125"
+                        <motion.div
+                            className="relative h-14 w-auto"
                             // Subtle Floating Animation
                             animate={{ y: [0, -2, 0] }}
                             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                        />
+                        >
+                            <Image
+                                src="/sidebar-logo.png"
+                                alt="쯔동여지도"
+                                width={200}
+                                height={56}
+                                priority
+                                sizes="(max-width: 768px) 150px, 200px"
+                                className="h-14 w-auto object-contain mix-blend-multiply opacity-90 drop-shadow-sm grayscale contrast-125"
+                            />
+                        </motion.div>
                     </motion.div>
 
                     {/* Ink Bleeding / Breathing Effect Overlay */}
-                    <motion.img
-                        src="/sidebar-logo.png"
-                        alt=""
-                        className="absolute inset-0 h-14 w-auto object-contain mix-blend-multiply blur-[2px] opacity-0 pointer-events-none grayscale contrast-125"
+                    <motion.div
+                        className="absolute inset-0 h-14 w-auto"
                         animate={{ opacity: [0, 0.2, 0], scale: [1, 1.03, 1] }}
                         transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                    />
+                    >
+                        <Image
+                            src="/sidebar-logo.png"
+                            alt=""
+                            width={200}
+                            height={56}
+                            sizes="(max-width: 768px) 150px, 200px"
+                            className="h-14 w-auto object-contain mix-blend-multiply blur-[2px] opacity-0 pointer-events-none grayscale contrast-125"
+                        />
+                    </motion.div>
                 </div>
             </div>
 
