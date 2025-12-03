@@ -40,7 +40,7 @@ CRAWLING_DATA_DIR = PROJECT_ROOT / "backend" / "geminiCLI-restaurant-crawling" /
 LOG_DIR = PROJECT_ROOT / "backend" / "log" / "geminiCLI-restaurant"
 
 # GitHub 설정
-GITHUB_TOKEN = os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN_BYEON')
+GITHUB_TOKEN = os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN')
 GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/twoimo/tzudong')
 GITHUB_BRANCH = 'github-actions-restaurant'
 

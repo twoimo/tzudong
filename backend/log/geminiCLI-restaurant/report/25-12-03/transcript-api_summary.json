@@ -1,0 +1,178 @@
+{
+  "phase": "transcript-api",
+  "start_time": "2025-12-03T21:59:59.745421+09:00",
+  "end_time": "2025-12-03T22:00:42.636827+09:00",
+  "duration_seconds": 42.89,
+  "total_processed": 0,
+  "success_count": 17,
+  "error_count": 2,
+  "skip_count": 0,
+  "warnings": [
+    {
+      "message": "자동 커밋 실패: 현재 브랜치 확인 실패: fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'",
+      "data": null
+    }
+  ],
+  "errors": [
+    {
+      "message": "git 명령 실패: git rev-parse --abbrev-ref HEAD",
+      "data": {
+        "stderr": "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'"
+      }
+    },
+    {
+      "message": "현재 브랜치 확인 실패: fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'",
+      "data": null
+    }
+  ],
+  "timers": {
+    "get_pending_urls": {
+      "count": 1,
+      "total_seconds": 2.1,
+      "min_seconds": 2.099,
+      "max_seconds": 2.099,
+      "avg_seconds": 2.099
+    },
+    "fetch_transcript_su68Sm9TNys": {
+      "count": 1,
+      "total_seconds": 1.53,
+      "min_seconds": 1.529,
+      "max_seconds": 1.529,
+      "avg_seconds": 1.529
+    },
+    "fetch_transcript_G3pQQeL47wI": {
+      "count": 1,
+      "total_seconds": 1.79,
+      "min_seconds": 1.788,
+      "max_seconds": 1.788,
+      "avg_seconds": 1.788
+    },
+    "fetch_transcript_bxEDXFycaXw": {
+      "count": 1,
+      "total_seconds": 1.79,
+      "min_seconds": 1.789,
+      "max_seconds": 1.789,
+      "avg_seconds": 1.789
+    },
+    "fetch_transcript_AL6cbIJzdos": {
+      "count": 1,
+      "total_seconds": 1.71,
+      "min_seconds": 1.707,
+      "max_seconds": 1.707,
+      "avg_seconds": 1.707
+    },
+    "fetch_transcript_Su915VcW8Cc": {
+      "count": 1,
+      "total_seconds": 1.48,
+      "min_seconds": 1.476,
+      "max_seconds": 1.476,
+      "avg_seconds": 1.476
+    },
+    "fetch_transcript_iSb0LHcOMhs": {
+      "count": 1,
+      "total_seconds": 1.94,
+      "min_seconds": 1.937,
+      "max_seconds": 1.937,
+      "avg_seconds": 1.937
+    },
+    "fetch_transcript_8hWQnvVvLHQ": {
+      "count": 1,
+      "total_seconds": 1.44,
+      "min_seconds": 1.439,
+      "max_seconds": 1.439,
+      "avg_seconds": 1.439
+    },
+    "fetch_transcript_gmWgonsj6HA": {
+      "count": 1,
+      "total_seconds": 1.51,
+      "min_seconds": 1.511,
+      "max_seconds": 1.511,
+      "avg_seconds": 1.511
+    },
+    "fetch_transcript_FcVz29NKM-o": {
+      "count": 1,
+      "total_seconds": 1.71,
+      "min_seconds": 1.713,
+      "max_seconds": 1.713,
+      "avg_seconds": 1.713
+    },
+    "fetch_transcript_FcblabtVQKo": {
+      "count": 1,
+      "total_seconds": 1.58,
+      "min_seconds": 1.577,
+      "max_seconds": 1.577,
+      "avg_seconds": 1.577
+    },
+    "fetch_transcript_2zX2zFonIEE": {
+      "count": 1,
+      "total_seconds": 1.61,
+      "min_seconds": 1.614,
+      "max_seconds": 1.614,
+      "avg_seconds": 1.614
+    },
+    "fetch_transcript_rRAEFB6CiD0": {
+      "count": 1,
+      "total_seconds": 1.66,
+      "min_seconds": 1.662,
+      "max_seconds": 1.662,
+      "avg_seconds": 1.662
+    },
+    "fetch_transcript_M8whof-__nY": {
+      "count": 1,
+      "total_seconds": 1.45,
+      "min_seconds": 1.45,
+      "max_seconds": 1.45,
+      "avg_seconds": 1.45
+    },
+    "fetch_transcript_ayjSkDH_Vtw": {
+      "count": 1,
+      "total_seconds": 1.59,
+      "min_seconds": 1.593,
+      "max_seconds": 1.593,
+      "avg_seconds": 1.593
+    },
+    "fetch_transcript_f5SSnbtKr1Q": {
+      "count": 1,
+      "total_seconds": 1.48,
+      "min_seconds": 1.48,
+      "max_seconds": 1.48,
+      "avg_seconds": 1.48
+    },
+    "save_transcripts": {
+      "count": 1,
+      "total_seconds": 0.03,
+      "min_seconds": 0.034,
+      "max_seconds": 0.034,
+      "avg_seconds": 0.034
+    },
+    "transcript_collect": {
+      "count": 1,
+      "total_seconds": 42.86,
+      "min_seconds": 42.856,
+      "max_seconds": 42.856,
+      "avg_seconds": 42.856
+    },
+    "git_commit": {
+      "count": 1,
+      "total_seconds": 0.03,
+      "min_seconds": 0.031,
+      "max_seconds": 0.031,
+      "avg_seconds": 0.031
+    }
+  },
+  "custom_stats": {
+    "existing_transcripts": 0,
+    "pending_urls": 988,
+    "total_urls_to_process": 15,
+    "success_count": 15,
+    "failed_count": 0,
+    "total_transcripts_in_file": 15,
+    "output_file": "/Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json",
+    "endpoint": "/collect",
+    "date_folder": "25-12-03",
+    "total_urls": 15,
+    "skipped_count": 0,
+    "committed": false
+  },
+  "duration_formatted": "42.9초"
+}

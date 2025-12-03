@@ -16,7 +16,7 @@ from typing import Dict, Any, Optional, List
 KST = timezone(timedelta(hours=9))
 
 # 프로젝트 경로
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent  # tzudong 루트
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent  # tzudong 루트
 CRAWLING_DATA_DIR = PROJECT_ROOT / "backend" / "geminiCLI-restaurant-crawling" / "data"
 LOG_DIR = PROJECT_ROOT / "backend" / "log" / "geminiCLI-restaurant"
 
