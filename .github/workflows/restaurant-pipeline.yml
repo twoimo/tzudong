@@ -120,7 +120,7 @@ jobs:
       always() && 
       (github.event.inputs.step == 'all' || github.event.inputs.step == 'transcript-collection')
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     
     outputs:
       transcript_count: ${{ steps.collect.outputs.transcript_count }}

@@ -23,6 +23,8 @@ const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const DATA_DIR = path.join(PROJECT_ROOT, 'backend', 'geminiCLI-restaurant-crawling', 'data');
 
 const COMMIT_INTERVAL = 30;  // 30개마다 커밋
+const REST_INTERVAL = 100;   // 100개마다 휴식
+const REST_DURATION = 180000; // 3분 (180초)
 const DELAY_MIN = 1000;      // 1초
 const DELAY_MAX = 3000;      // 3초
 const PAGE_TIMEOUT = 60000;  // 60초 (페이지 로드)
@@ -370,45 +372,76 @@ async function collectTranscript(page: Page, videoId: string): Promise<Transcrip
 // ============================================================
 
 function gitCommitAndPush(dateFolder: string, count: number): boolean {
-  try {
-    const transcriptPath = `backend/geminiCLI-restaurant-crawling/data/${dateFolder}/tzuyang_restaurant_transcripts.json`;
-    
-    // Git 설정
-    execSync('git config user.name "Transcript Puppeteer"', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    execSync('git config user.email "transcript@local"', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    
-    // Push 전에 pull (충돌 방지)
+  const transcriptPath = `backend/geminiCLI-restaurant-crawling/data/${dateFolder}/tzuyang_restaurant_transcripts.json`;
+  const MAX_RETRIES = 3;
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      execSync('git pull --rebase origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    } catch {
-      // pull 실패해도 계속 진행 (첫 커밋일 수 있음)
-    }
-    
-    // Add
-    execSync(`git add "${transcriptPath}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    
-    // 변경사항 확인
-    try {
-      execSync('git diff --staged --quiet', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-      log('변경사항 없음 - 커밋 스킵', 'warning');
+      // Git 설정
+      execSync('git config user.name "Transcript Puppeteer"', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      execSync('git config user.email "transcript@local"', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      
+      // Pull 먼저 (원격 변경사항 가져오기)
+      try {
+        execSync('git pull --rebase origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+        log('Git pull 완료', 'info');
+      } catch {
+        // pull 실패해도 계속 진행 (첫 커밋일 수 있음)
+        log('Git pull 스킵 (새 브랜치일 수 있음)', 'warning');
+      }
+      
+      // Add
+      execSync(`git add "${transcriptPath}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      
+      // 변경사항 확인
+      try {
+        execSync('git diff --staged --quiet', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+        log('변경사항 없음 - 커밋 스킵', 'warning');
+        return true;
+      } catch {
+        // 변경사항 있음 - 계속 진행
+      }
+      
+      // Commit
+      const message = `📝 Transcript 수집 (Puppeteer): ${dateFolder} (+${count}개)`;
+      execSync(`git commit -m "${message}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      
+      // Push 전에 다시 pull (커밋 중 원격 변경이 있을 수 있음)
+      try {
+        execSync('git pull --rebase origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      } catch {
+        // pull 실패해도 push 시도
+      }
+      
+      // Push
+      execSync('git push origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      
+      log(`Git push 완료: +${count}개`, 'success');
       return true;
-    } catch {
-      // 변경사항 있음 - 계속 진행
+      
+    } catch (error) {
+      log(`Git 커밋/푸시 실패 (시도 ${attempt}/${MAX_RETRIES}): ${error}`, 'error');
+      
+      if (attempt < MAX_RETRIES) {
+        log(`5초 후 재시도...`, 'warning');
+        // 동기 sleep (5초)
+        execSync('sleep 5');
+        
+        // 충돌 해결 시도: stash → pull → stash pop
+        try {
+          execSync('git stash', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+          execSync('git pull --rebase origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+          execSync('git stash pop', { cwd: PROJECT_ROOT, stdio: 'pipe' });
+          log('Git 충돌 해결 시도 완료', 'info');
+        } catch {
+          // stash 실패해도 다음 시도에서 처리
+        }
+      }
     }
-    
-    // Commit
-    const message = `📝 Transcript 수집 (Puppeteer): ${dateFolder} (+${count}개)`;
-    execSync(`git commit -m "${message}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    
-    // Push
-    execSync('git push origin github-actions-restaurant', { cwd: PROJECT_ROOT, stdio: 'pipe' });
-    
-    log(`Git push 완료: +${count}개`, 'success');
-    return true;
-  } catch (error) {
-    log(`Git 커밋/푸시 실패: ${error}`, 'error');
-    return false;
   }
+  
+  log(`Git 커밋/푸시 최종 실패 (${MAX_RETRIES}회 시도)`, 'error');
+  return false;
 }
 
 // ============================================================
@@ -528,7 +561,7 @@ async function main() {
   // 인자 파싱
   const args = process.argv.slice(2);
   let dateFolder = getTodayFolder(); // PIPELINE_DATE 환경변수 우선 사용
-  let maxUrls = 100;
+  let maxUrls = 300;
   let autoCommit = true;
   
   for (let i = 0; i < args.length; i++) {
@@ -631,6 +664,13 @@ async function main() {
       if (autoCommit && sinceLastCommit >= COMMIT_INTERVAL) {
         gitCommitAndPush(dateFolder, sinceLastCommit);
         sinceLastCommit = 0;
+      }
+      
+      // 100개마다 3분 휴식 (rate limit 방지)
+      if ((i + 1) % REST_INTERVAL === 0 && i < urlsToProcess.length - 1) {
+        log(`🛑 ${i + 1}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`, 'warning');
+        await new Promise(resolve => setTimeout(resolve, REST_DURATION));
+        log(`🚀 휴식 끝 - 수집 재개`, 'success');
       }
       
       // 딜레이
