@@ -4,8 +4,10 @@ import { useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
+import { toast } from "sonner";
 
 import HomeModeToggle from "../components/home/home-mode-toggle";
+import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
 // 동적 임포트 - 큰 컴포넌트는 필요할 때만 로드
 const HomeControlPanel = dynamic(
@@ -32,11 +34,17 @@ const EditRestaurantModal = dynamic(
     { ssr: false }
 );
 
+const RestaurantSubmissionModal = dynamic(
+    () => import('@/components/modals/RestaurantSubmissionModal'),
+    { ssr: false }
+);
+
 export default function HomeClient() {
-    const { isAdmin } = useAuth();
+    const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
+    const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
@@ -74,8 +82,21 @@ export default function HomeClient() {
 
     const onAdminEditRestaurant = isAdmin ? handlers.handleAdminEditRestaurant : undefined;
 
+    const handleSubmissionButtonClick = () => {
+        if (!user) {
+            toast.error('맛집 제보는 로그인 후 이용 가능합니다');
+            return;
+        }
+        setIsSubmissionModalOpen(true);
+    };
+
     return (
         <>
+            {/* 맛집 제보 플로팅 버튼 */}
+            <SubmissionFloatingButton
+                onClick={handleSubmissionButtonClick}
+                isSidebarOpen={isSidebarOpen}
+            />
             <HomeModeToggle
                 mode={mapMode}
                 onModeChange={(mode) => {
@@ -158,6 +179,12 @@ export default function HomeClient() {
                     }}
                 />
             )}
+
+            {/* 맛집 제보 모달 */}
+            <RestaurantSubmissionModal
+                isOpen={isSubmissionModalOpen}
+                onClose={() => setIsSubmissionModalOpen(false)}
+            />
         </>
     );
 }

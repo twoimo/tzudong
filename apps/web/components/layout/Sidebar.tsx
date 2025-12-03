@@ -1,4 +1,4 @@
-import { Home, Filter, Trophy, Stamp, MessageSquare, DollarSign, Send, Shield, ClipboardCheck } from "lucide-react";
+import { Home, Filter, Trophy, Stamp, MessageSquare, DollarSign, Shield, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRouter, usePathname } from "next/navigation";
@@ -41,7 +41,6 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     // { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => router.push("/filtering") }, // Removed
     { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
     { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
-    { icon: Send, label: "쯔동여지도 제보", path: "/submissions", onClick: () => router.push("/submissions") },
   ];
 
   // 관리자에게만 보이는 메뉴

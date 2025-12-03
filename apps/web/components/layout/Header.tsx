@@ -254,6 +254,10 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
                 <User className="mr-2 h-4 w-4" />
                 프로필
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => window.location.href = '/mypage'} className="text-stone-900 hover:bg-stone-200/50">
+                <User className="mr-2 h-4 w-4" />
+                마이페이지
+              </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-stone-800/10" />
               <DropdownMenuItem onClick={onLogout} className="text-stone-900 hover:bg-stone-200/50">
                 <LogOut className="mr-2 h-4 w-4" />
