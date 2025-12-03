@@ -16,10 +16,6 @@ on:
           - url-collection
           - transcript-collection
           - crawling-evaluation
-      max_urls:
-        description: 'URL 수집 최대 개수 (기본: 30)'
-        required: false
-        default: '30'
 
 env:
   PYTHON_VERSION: '3.11'
@@ -83,7 +79,6 @@ jobs:
         working-directory: backend/geminiCLI-restaurant-crawling/scripts
         env:
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
-          MAX_URLS: ${{ github.event.inputs.max_urls }}
         run: |
           echo "🚀 YouTube URL 수집 시작..."
           python3 api-youtube-urls.py

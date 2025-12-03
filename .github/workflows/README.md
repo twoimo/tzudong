@@ -155,8 +155,7 @@ backend/
 2. **"🍜 Restaurant Pipeline (통합)"** 선택
 3. **"Run workflow"** 클릭
 4. `step` 선택 (all / url-collection / transcript-collection / crawling-evaluation)
-5. `max_urls` 입력 (URL 수집 최대 개수, 기본: 30)
-6. **"Run workflow"** 버튼 클릭
+5. **"Run workflow"** 버튼 클릭
 
 ### GitHub CLI에서 실행
 
@@ -164,7 +163,6 @@ backend/
 # 전체 파이프라인
 gh workflow run "restaurant-pipeline.yml" \
   -f step=all \
-  -f max_urls=30 \
   --ref github-actions-restaurant
 
 # URL 수집만
