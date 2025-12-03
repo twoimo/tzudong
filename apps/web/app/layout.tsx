@@ -42,6 +42,13 @@ export default function RootLayout({
             suppressHydrationWarning
             className={notoSerifKR.variable}
         >
+            <head>
+                {/* Network Performance: Preconnect to external domains */}
+                <link rel="preconnect" href="https://ssl.pstatic.net" crossOrigin="anonymous" />
+                <link rel="preconnect" href="https://oapi.map.naver.com" crossOrigin="anonymous" />
+                <link rel="dns-prefetch" href="https://nrbe.pstatic.net" />
+                <link rel="dns-prefetch" href="https://kr-col-ext.nelo.navercorp.com" />
+            </head>
             <body className={notoSerifKR.className}>
                 <QueryProvider>
                     <AppProviders>
