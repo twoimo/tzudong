@@ -95,16 +95,6 @@ export default function HomeControlPanel({
                         isKoreanOnly={mapMode === 'domestic'}
                     />
                 </Suspense>
-
-                {/* [CSR] 그리드 모드 토글 - 클릭 이벤트 */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onGridModeToggle}
-                    className="flex items-center gap-2"
-                >
-                    {isGridMode ? <Map className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
-                </Button>
             </div>
         </div>
     );

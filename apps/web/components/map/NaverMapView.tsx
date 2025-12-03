@@ -9,7 +9,6 @@ import { Restaurant, Region } from "@/types/restaurant";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -48,7 +47,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [panelWidth, setPanelWidth] = useState(0); // 패널 너비 상태
 
     // selectedRestaurant가 설정되면 자동으로 패널 열기
     useEffect(() => {
@@ -58,26 +56,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             setIsPanelOpen(false);
         }
     }, [selectedRestaurant, isGridMode]);
-
-    // 패널 너비 측정 (ResizeObserver 사용)
-    useEffect(() => {
-        if (!detailPanelRef.current || !isPanelOpen) {
-            setPanelWidth(0);
-            return;
-        }
-
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                setPanelWidth(entry.contentRect.width);
-            }
-        });
-
-        resizeObserver.observe(detailPanelRef.current);
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [isPanelOpen]);
 
     // 선택된 맛집이 변경될 때 지도 중앙 재조정
     useEffect(() => {
@@ -93,7 +71,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 if (mapInstanceRef.current && mapRef.current) {
                     let adjustedLng = selectedRestaurant.lng!;
 
-                    if (isPanelOpen && panelWidth > 0) {
+                    if (isPanelOpen) {
                         // 지도의 전체 너비
                         const mapWidth = mapRef.current.clientWidth;
 
@@ -104,8 +82,8 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         const bounds = mapInstanceRef.current.getBounds();
                         const lngSpan = bounds.maxX() - bounds.minX();
 
-                        // 오른쪽 패널이 가리는 경도 범위
-                        const rightPanelLngSpan = lngSpan * (panelWidth / mapWidth);
+                        // 오른쪽 패널이 가리는 경도 범위 (고정 너비 400px)
+                        const rightPanelLngSpan = lngSpan * (400 / mapWidth);
 
                         // 왼쪽 사이드바가 가리는 경도 범위
                         const leftSidebarLngSpan = lngSpan * (sidebarWidth / mapWidth);
@@ -126,7 +104,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 }
             }, 50);
         }
-    }, [selectedRestaurant, isGridMode, isPanelOpen, panelWidth]);
+    }, [selectedRestaurant, isGridMode, isPanelOpen]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
@@ -649,11 +627,11 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         );
     }
 
-    // 단일 지도 모드에서는 resizable 패널 적용
+    // 단일 지도 모드에서는 Flexbox 레이아웃 적용 (고정 너비 패널)
     return (
-        <PanelGroup direction="horizontal" className="h-full">
-            {/* 지도 패널 */}
-            <Panel id="map-panel" order={1} defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} className="relative">
+        <div className="h-full flex relative overflow-hidden">
+            {/* 지도 영역 */}
+            <div className="flex-1 h-full relative z-0">
                 {/* 지도 컨테이너 */}
                 <div ref={mapRef} className="w-full h-full" />
 
@@ -675,19 +653,15 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         </span>
                     </div>
                 )}
-            </Panel>
+            </div>
 
-            {/* Resize Handle */}
-            {selectedRestaurant && isPanelOpen && (
-                <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
-                    <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
-                </PanelResizeHandle>
-            )}
-
-            {/* 레스토랑 상세 패널 */}
-            {selectedRestaurant && isPanelOpen && (
-                <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={33}>
-                    <div ref={detailPanelRef} className="h-full">
+            {/* 레스토랑 상세 패널 - 고정 너비 400px, 애니메이션 적용 */}
+            {selectedRestaurant && (
+                <div
+                    className={`h-full relative z-20 shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'}`}
+                    style={{ overflow: 'visible' }}
+                >
+                    <div ref={detailPanelRef} className="h-full w-[400px] bg-background border-l border-border">
                         <RestaurantDetailPanel
                             restaurant={selectedRestaurant}
                             onClose={() => setIsPanelOpen(false)}
@@ -700,9 +674,11 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                             onRequestEditRestaurant={onRequestEditRestaurant ? () => {
                                 onRequestEditRestaurant(selectedRestaurant);
                             } : undefined}
+                            onToggleCollapse={() => setIsPanelOpen(!isPanelOpen)}
+                            isPanelOpen={isPanelOpen}
                         />
                     </div>
-                </Panel>
+                </div>
             )}
 
 
@@ -716,7 +692,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     toast.success("리뷰가 성공적으로 등록되었습니다!");
                 }}
             />
-        </PanelGroup>
+        </div>
     );
 });
 

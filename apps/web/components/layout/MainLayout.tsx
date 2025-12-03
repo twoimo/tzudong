@@ -101,7 +101,7 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
             <div className={cn(
                 "flex-1 flex flex-col overflow-hidden transition-all duration-300",
-                isSidebarOpen ? "ml-64" : "ml-0"
+                isSidebarOpen ? "ml-64" : "ml-16"
             )}>
                 <Header
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
