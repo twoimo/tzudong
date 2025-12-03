@@ -108,7 +108,12 @@ def commit_and_push_transcripts(
     logger: Optional[PipelineLogger] = None
 ) -> Dict[str, Any]:
     """
-    Transcript 파일을 GitHub에 커밋하고 푸시
+    Transcript 파일과 로그 파일을 GitHub에 커밋하고 푸시
+    
+    새로운 방식:
+    1. 커밋 전에 로그를 "성공"으로 미리 작성
+    2. transcript + 로그 파일 함께 커밋
+    3. 실패 시에만 로컬에 실패 로그 추가
     
     Args:
         date_folder: 날짜 폴더 (예: "25-12-02")
@@ -170,11 +175,11 @@ def commit_and_push_transcripts(
         except Exception as e:
             logger.warning(f"로컬 데이터 백업 실패: {e}")
     
-    # Step 2: 원격 변경사항 pull
+    # Step 2: 원격 변경사항 pull (rebase)
     logger.info("📥 원격 변경사항 pull 중...")
     success, msg = run_git_command(["git", "pull", "--rebase", "origin", TARGET_BRANCH], logger=logger)
     if not success:
-        logger.warning(f"pull 실패 (새 브랜치일 수 있음): {msg}")
+        logger.warning(f"pull 실패 (계속 진행): {msg}")
     else:
         logger.success("pull 완료")
     
@@ -207,77 +212,77 @@ def commit_and_push_transcripts(
             "message": f"Transcript 파일이 없습니다: {transcript_file}"
         }
     
-    # 파일 추가
+    # Step 6: 커밋할 파일 목록 (transcript + 로그)
     files_to_add = [str(transcript_file.relative_to(PROJECT_ROOT))]
     if error_file.exists():
         files_to_add.append(str(error_file.relative_to(PROJECT_ROOT)))
     
+    # 로그 디렉토리도 추가 (오늘 날짜 폴더)
+    log_dirs = [
+        LOG_DIR / "text" / date_folder,
+        LOG_DIR / "structured" / date_folder,
+        LOG_DIR / "report" / date_folder,
+    ]
+    for log_dir in log_dirs:
+        if log_dir.exists():
+            try:
+                rel_path = str(log_dir.relative_to(PROJECT_ROOT))
+                files_to_add.append(rel_path)
+            except ValueError:
+                pass
+    
     logger.add_stat("files_to_commit", files_to_add)
+    logger.info(f"📝 커밋할 파일/폴더: {len(files_to_add)}개")
     
+    # Step 7: 성공 로그 미리 작성 (커밋에 포함)
+    logger.success("✅ 커밋 준비 완료")
+    logger.add_stat("status", "success")
+    logger.add_stat("branch", TARGET_BRANCH)
+    logger.add_stat("committed", True)
+    logger.end_stage()
+    logger.save_json_log()
+    
+    # Step 8: 파일 추가 (로그 없이 조용히)
     for file_path in files_to_add:
-        success, msg = run_git_command(["git", "add", file_path], logger=logger)
-        if not success:
-            logger.warning(f"git add 실패: {file_path} - {msg}")
+        run_git_command(["git", "add", file_path], logger=None)
     
-    # 변경사항 확인
-    success, diff_output = run_git_command(["git", "diff", "--staged", "--name-only"], logger=logger)
+    # Step 9: 변경사항 확인
+    success, diff_output = run_git_command(["git", "diff", "--staged", "--name-only"], logger=None)
     if not diff_output:
-        logger.info("변경사항 없음 (이미 커밋됨)")
-        logger.add_stat("status", "no_changes")
-        logger.end_stage()
-        logger.save_json_log()
         return {
             "success": True,
             "message": "변경사항 없음 (이미 커밋됨)"
         }
     
-    logger.info(f"📝 변경된 파일: {diff_output}")
+    # Step 10: 커밋
     
-    # 커밋
+    # Step 10: 커밋
     commit_msg = f"📝 Transcript 수집: {date_folder}"
     if transcript_count > 0:
         commit_msg += f" ({transcript_count}개)"
     
     # Git 설정 (커밋용)
-    run_git_command(["git", "config", "user.name", "Transcript API"], logger=logger)
-    run_git_command(["git", "config", "user.email", "transcript-api@local"], logger=logger)
+    run_git_command(["git", "config", "user.name", "Transcript API"], logger=None)
+    run_git_command(["git", "config", "user.email", "transcript-api@local"], logger=None)
     
-    with logger.timer("git_commit"):
-        success, msg = run_git_command(["git", "commit", "-m", commit_msg], logger=logger)
+    success, msg = run_git_command(["git", "commit", "-m", commit_msg], logger=None)
     
     if not success:
-        logger.error(f"커밋 실패: {msg}")
-        logger.add_stat("status", "commit_failed")
-        logger.end_stage()
-        logger.save_json_log()
+        _log_commit_failure(date_folder, f"커밋 실패: {msg}")
         return {
             "success": False,
             "message": f"커밋 실패: {msg}"
         }
     
-    logger.success(f"커밋 완료: {commit_msg}")
-    logger.add_stat("commit_message", commit_msg)
-    
-    # 푸시
-    with logger.timer("git_push"):
-        success, msg = run_git_command(["git", "push", "origin", TARGET_BRANCH], logger=logger)
+    # Step 11: 푸시
+    success, msg = run_git_command(["git", "push", "origin", TARGET_BRANCH], logger=None)
     
     if not success:
-        logger.error(f"푸시 실패: {msg}")
-        logger.add_stat("status", "push_failed")
-        logger.end_stage()
-        logger.save_json_log()
+        _log_commit_failure(date_folder, f"푸시 실패: {msg}")
         return {
             "success": False,
             "message": f"푸시 실패: {msg}. 수동으로 'git push origin {TARGET_BRANCH}' 실행하세요."
         }
-    
-    logger.success(f"푸시 완료: origin/{TARGET_BRANCH}")
-    logger.add_stat("status", "success")
-    logger.add_stat("branch", TARGET_BRANCH)
-    
-    logger.end_stage()
-    logger.save_json_log()
     
     return {
         "success": True,
@@ -286,6 +291,26 @@ def commit_and_push_transcripts(
         "branch": TARGET_BRANCH,
         "files": files_to_add
     }
+
+
+def _log_commit_failure(date_folder: str, error_msg: str):
+    """
+    커밋/푸시 실패 시 로컬에 실패 로그 추가
+    (GitHub에 올라간 "성공" 로그와 별개로 로컬에만 기록)
+    """
+    failure_log_dir = LOG_DIR / "report" / date_folder
+    failure_log_dir.mkdir(parents=True, exist_ok=True)
+    
+    failure_log_file = failure_log_dir / "commit_failures.log"
+    
+    timestamp = datetime.now(KST).strftime("%Y-%m-%d %H:%M:%S")
+    log_entry = f"[{timestamp}] ❌ {error_msg}\n"
+    log_entry += f"           ↳ 위 성공 로그는 실제로는 실패입니다\n\n"
+    
+    with open(failure_log_file, 'a', encoding='utf-8') as f:
+        f.write(log_entry)
+    
+    print(f"❌ 커밋 실패 로그 저장: {failure_log_file}")
 
 
 def check_git_status() -> Dict[str, Any]:
