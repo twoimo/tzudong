@@ -6,10 +6,10 @@ GitHub 커밋/푸시 서비스
 """
 
 import subprocess
-import os
+import sys
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # 한국 시간대 (KST, UTC+9)
 KST = timezone(timedelta(hours=9))
@@ -17,12 +17,49 @@ KST = timezone(timedelta(hours=9))
 # 프로젝트 경로
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent  # tzudong 루트
 CRAWLING_DATA_DIR = PROJECT_ROOT / "backend" / "geminiCLI-restaurant-crawling" / "data"
+LOG_DIR = PROJECT_ROOT / "backend" / "log" / "geminiCLI-restaurant"
 
 # 타겟 브랜치
 TARGET_BRANCH = "github-actions-restaurant"
 
+# 로거 임포트
+sys.path.insert(0, str(PROJECT_ROOT / 'backend' / 'utils'))
+try:
+    from logger import PipelineLogger
+except ImportError:
+    # 로거를 찾지 못하면 간단한 대체 로거 사용
+    class PipelineLogger:
+        def __init__(self, phase, log_dir=None, **kwargs): 
+            self.phase = phase
+            self._timers = {}
+        def info(self, msg, data=None, step=None): print(f"ℹ️ {msg}")
+        def success(self, msg, data=None, step=None): print(f"✅ {msg}")
+        def warning(self, msg, data=None, step=None): print(f"⚠️ {msg}")
+        def error(self, msg, data=None, step=None): print(f"❌ {msg}")
+        def debug(self, msg, data=None, step=None): print(f"🔍 {msg}")
+        def add_stat(self, key, value): pass
+        def add_stat(self, key, value): pass
+        def increment_stat(self, key, amount=1): pass
+        def timer(self, name): 
+            from contextlib import contextmanager
+            import time
+            @contextmanager
+            def _timer():
+                start = time.time()
+                try:
+                    yield
+                finally:
+                    elapsed = time.time() - start
+                    self._timers[name] = elapsed
+            return _timer()
+        def start_stage(self): pass
+        def end_stage(self): pass
+        def save_summary(self): return {}
+        def save_json_log(self): pass
+        def get_summary(self): return {}
 
-def run_git_command(command: list, cwd: Path = None) -> tuple[bool, str]:
+
+def run_git_command(command: list, cwd: Path = None, logger: Optional[PipelineLogger] = None) -> tuple[bool, str]:
     """Git 명령어 실행"""
     try:
         result = subprocess.run(
@@ -32,14 +69,19 @@ def run_git_command(command: list, cwd: Path = None) -> tuple[bool, str]:
             text=True,
             check=True
         )
+        if logger:
+            logger.debug(f"git 명령 성공: {' '.join(command)}")
         return True, result.stdout.strip()
     except subprocess.CalledProcessError as e:
+        if logger:
+            logger.error(f"git 명령 실패: {' '.join(command)}", {"stderr": e.stderr.strip()})
         return False, e.stderr.strip()
 
 
 def commit_and_push_transcripts(
     date_folder: str,
-    transcript_count: int = 0
+    transcript_count: int = 0,
+    logger: Optional[PipelineLogger] = None
 ) -> Dict[str, Any]:
     """
     Transcript 파일을 GitHub에 커밋하고 푸시
@@ -47,35 +89,57 @@ def commit_and_push_transcripts(
     Args:
         date_folder: 날짜 폴더 (예: "25-12-02")
         transcript_count: 수집된 transcript 수 (커밋 메시지용)
+        logger: PipelineLogger 인스턴스 (None이면 새로 생성)
     
     Returns:
         결과 딕셔너리
     """
+    # 로거 생성 (없으면 새로 생성)
+    if logger is None:
+        logger = PipelineLogger(phase="transcript-commit", log_dir=LOG_DIR)
+    
+    logger.start_stage()
+    logger.info(f"📅 날짜 폴더: {date_folder}")
+    logger.info(f"🎯 타겟 브랜치: {TARGET_BRANCH}")
+    
     # 현재 브랜치 확인
-    success, current_branch = run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"])
+    success, current_branch = run_git_command(["git", "rev-parse", "--abbrev-ref", "HEAD"], logger=logger)
     if not success:
+        logger.error(f"현재 브랜치 확인 실패: {current_branch}")
+        logger.end_stage()
+        logger.save_json_log()
         return {
             "success": False,
             "message": f"현재 브랜치 확인 실패: {current_branch}"
         }
     
+    logger.add_stat("current_branch", current_branch)
+    
     # 타겟 브랜치가 아니면 경고
     if current_branch != TARGET_BRANCH:
-        print(f"⚠️ 현재 브랜치: {current_branch} (타겟: {TARGET_BRANCH})")
+        logger.warning(f"현재 브랜치: {current_branch} (타겟: {TARGET_BRANCH})")
         # 브랜치 전환 시도
-        success, msg = run_git_command(["git", "checkout", TARGET_BRANCH])
+        success, msg = run_git_command(["git", "checkout", TARGET_BRANCH], logger=logger)
         if not success:
+            logger.error(f"브랜치 전환 실패: {msg}")
+            logger.end_stage()
+            logger.save_json_log()
             return {
                 "success": False,
                 "message": f"브랜치 전환 실패: {msg}"
             }
-        print(f"✅ 브랜치 전환: {TARGET_BRANCH}")
+        logger.success(f"브랜치 전환 완료: {TARGET_BRANCH}")
     
     # Transcript 파일 경로
     transcript_file = CRAWLING_DATA_DIR / date_folder / "tzuyang_restaurant_transcripts.json"
     error_file = CRAWLING_DATA_DIR / date_folder / "tzuyang_transcript_errors.json"
     
+    logger.info(f"📁 Transcript 파일: {transcript_file}")
+    
     if not transcript_file.exists():
+        logger.error(f"Transcript 파일이 없습니다: {transcript_file}")
+        logger.end_stage()
+        logger.save_json_log()
         return {
             "success": False,
             "message": f"Transcript 파일이 없습니다: {transcript_file}"
@@ -86,47 +150,72 @@ def commit_and_push_transcripts(
     if error_file.exists():
         files_to_add.append(str(error_file.relative_to(PROJECT_ROOT)))
     
+    logger.add_stat("files_to_commit", files_to_add)
+    
     for file_path in files_to_add:
-        success, msg = run_git_command(["git", "add", file_path])
+        success, msg = run_git_command(["git", "add", file_path], logger=logger)
         if not success:
-            print(f"⚠️ git add 실패: {file_path} - {msg}")
+            logger.warning(f"git add 실패: {file_path} - {msg}")
     
     # 변경사항 확인
-    success, diff_output = run_git_command(["git", "diff", "--staged", "--name-only"])
+    success, diff_output = run_git_command(["git", "diff", "--staged", "--name-only"], logger=logger)
     if not diff_output:
+        logger.info("변경사항 없음 (이미 커밋됨)")
+        logger.add_stat("status", "no_changes")
+        logger.end_stage()
+        logger.save_json_log()
         return {
             "success": True,
             "message": "변경사항 없음 (이미 커밋됨)"
         }
     
+    logger.info(f"📝 변경된 파일: {diff_output}")
+    
     # 커밋
-    now = datetime.now(KST)
     commit_msg = f"📝 Transcript 수집: {date_folder}"
     if transcript_count > 0:
         commit_msg += f" ({transcript_count}개)"
     
     # Git 설정 (커밋용)
-    run_git_command(["git", "config", "user.name", "Transcript API"])
-    run_git_command(["git", "config", "user.email", "transcript-api@local"])
+    run_git_command(["git", "config", "user.name", "Transcript API"], logger=logger)
+    run_git_command(["git", "config", "user.email", "transcript-api@local"], logger=logger)
     
-    success, msg = run_git_command(["git", "commit", "-m", commit_msg])
+    with logger.timer("git_commit"):
+        success, msg = run_git_command(["git", "commit", "-m", commit_msg], logger=logger)
+    
     if not success:
+        logger.error(f"커밋 실패: {msg}")
+        logger.add_stat("status", "commit_failed")
+        logger.end_stage()
+        logger.save_json_log()
         return {
             "success": False,
             "message": f"커밋 실패: {msg}"
         }
     
-    print(f"✅ 커밋 완료: {commit_msg}")
+    logger.success(f"커밋 완료: {commit_msg}")
+    logger.add_stat("commit_message", commit_msg)
     
     # 푸시
-    success, msg = run_git_command(["git", "push", "origin", TARGET_BRANCH])
+    with logger.timer("git_push"):
+        success, msg = run_git_command(["git", "push", "origin", TARGET_BRANCH], logger=logger)
+    
     if not success:
+        logger.error(f"푸시 실패: {msg}")
+        logger.add_stat("status", "push_failed")
+        logger.end_stage()
+        logger.save_json_log()
         return {
             "success": False,
             "message": f"푸시 실패: {msg}. 수동으로 'git push origin {TARGET_BRANCH}' 실행하세요."
         }
     
-    print(f"✅ 푸시 완료: origin/{TARGET_BRANCH}")
+    logger.success(f"푸시 완료: origin/{TARGET_BRANCH}")
+    logger.add_stat("status", "success")
+    logger.add_stat("branch", TARGET_BRANCH)
+    
+    logger.end_stage()
+    logger.save_json_log()
     
     return {
         "success": True,
