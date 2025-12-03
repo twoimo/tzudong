@@ -69,42 +69,54 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             // 약간의 딜레이 후 지도 중앙 이동 (줌 애니메이션 완료 대기)
             setTimeout(() => {
                 if (mapInstanceRef.current && mapRef.current) {
-                    let adjustedLng = selectedRestaurant.lng!;
+                    // 지도 중심 이동
+                    const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
 
-                    if (isPanelOpen) {
-                        // 지도의 전체 너비
-                        const mapWidth = mapRef.current.clientWidth;
-
-                        // 왼쪽 사이드바 너비 (256px = 64 * 4, Tailwind의 w-64)
-                        const sidebarWidth = 256;
-
-                        // 현재 지도의 경도 범위
-                        const bounds = mapInstanceRef.current.getBounds();
-                        const lngSpan = bounds.maxX() - bounds.minX();
-
-                        // 오른쪽 패널이 가리는 경도 범위 (고정 너비 400px)
-                        const rightPanelLngSpan = lngSpan * (400 / mapWidth);
-
-                        // 왼쪽 사이드바가 가리는 경도 범위
-                        const leftSidebarLngSpan = lngSpan * (sidebarWidth / mapWidth);
-
-                        // 보이는 영역의 중심으로 이동
-                        // 오른쪽 패널 때문에 → 지도 중심을 동쪽(+)으로 → 마커가 서쪽(왼쪽, 보이는 영역)으로
-                        // 왼쪽 사이드바 때문에 → 지도 중심을 서쪽(-)으로 → 마커가 동쪽(오른쪽, 보이는 영역)으로
-                        const offset = (rightPanelLngSpan / 2) - (leftSidebarLngSpan / 2);
-                        adjustedLng = selectedRestaurant.lng! + offset;
-                    }
-
-                    const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, adjustedLng);
-
-                    // 부드러운 애니메이션으로 지도 중앙 이동
                     mapInstanceRef.current.panTo(centerLatLng, {
                         duration: 300
                     });
                 }
             }, 50);
         }
-    }, [selectedRestaurant, isGridMode, isPanelOpen]);
+    }, [selectedRestaurant, isGridMode]);
+
+    // 패널 열림/닫힘 상태 변경 시 지도 리사이즈 및 중심 이동 (애니메이션 시간 고려)
+    useEffect(() => {
+        if (!mapInstanceRef.current || !selectedRestaurant) return;
+
+        const handleResize = () => {
+            const map = mapInstanceRef.current;
+            if (map) {
+                naver.maps.Event.trigger(map, 'resize');
+                const center = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
+                map.panTo(center, { duration: 300 });
+            }
+        };
+
+        // 패널 애니메이션(300ms)이 끝난 직후 실행
+        const timer = setTimeout(handleResize, 320);
+
+        return () => clearTimeout(timer);
+    }, [isPanelOpen, selectedRestaurant]);
+
+    // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
+    useEffect(() => {
+        if (!mapInstanceRef.current) return;
+
+        const handleWindowResize = () => {
+            const map = mapInstanceRef.current;
+            if (map) {
+                naver.maps.Event.trigger(map, 'resize');
+                if (selectedRestaurant) {
+                    const center = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
+                    map.panTo(center, { duration: 0 }); // 리사이즈 시에는 즉시 이동
+                }
+            }
+        };
+
+        window.addEventListener('resize', handleWindowResize);
+        return () => window.removeEventListener('resize', handleWindowResize);
+    }, [selectedRestaurant]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
