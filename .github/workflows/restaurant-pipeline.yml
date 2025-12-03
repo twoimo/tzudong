@@ -1,6 +1,9 @@
 name: 🍜 Restaurant Pipeline (통합)
 
 on:
+  schedule:
+    # 2일마다 KST 02:00 (UTC 17:00) 실행
+    - cron: '0 17 */2 * *'
   workflow_dispatch:
     inputs:
       step:
