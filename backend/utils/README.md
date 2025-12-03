@@ -430,6 +430,7 @@ for (const restaurant of restaurants) {
 ## 🔗 관련 문서
 
 - [Backend 전체 시스템](../README.md)
+- [Gemini CLI 파이프라인](../README-geminiCLI.md)
 - [크롤링 시스템](../perplexity-restaurant-crawling/README.md)
 - [평가 시스템](../perplexity-restaurant-evaluation/README.md)
 
