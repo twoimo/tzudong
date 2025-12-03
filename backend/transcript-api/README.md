@@ -86,8 +86,40 @@ backend/geminiCLI-restaurant-crawling/data/{날짜}/
 ## 워크플로우
 
 1. **URL 수집** (GitHub Actions - 2일마다 자동)
-2. **Transcript 수집** (로컬 FastAPI - UI 버튼 클릭)
+2. **Transcript 수집** (로컬 FastAPI - 관리자 UI 버튼 클릭)
 3. **크롤링 + 평가** (GitHub Actions - transcript 커밋 감지 시 자동)
+
+## 관리자 UI에서 사용하기
+
+1. 서버 실행:
+   ```bash
+   cd backend/transcript-api
+   uvicorn main:app --port 8000
+   ```
+
+2. 프론트엔드 실행:
+   ```bash
+   cd apps/web
+   npm run dev
+   ```
+
+3. 관리자 페이지(`/admin/evaluations`) 접속
+4. 헤더의 **"자막 수집"** 버튼 클릭
+5. 수집 완료 후 자동으로 GitHub에 커밋/푸시됨 → Actions 워크플로우 트리거
+
+## 로그 파일
+
+로그는 다음 구조로 저장됩니다:
+
+```
+backend/log/geminiCLI-restaurant/
+├── report/{yy-mm-dd}/    # JSON 요약 리포트
+│   └── transcript-api_HHMMSS.json
+├── text/{yy-mm-dd}/      # 텍스트 로그
+│   └── transcript-api.log
+└── structured/{yy-mm-dd}/ # 구조화된 JSONL 로그
+    └── transcript-api.jsonl
+```
 
 ## CLI 사용
 
