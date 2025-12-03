@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLayout } from "@/contexts/LayoutContext";
 
 import HomeModeToggle from "../components/home/home-mode-toggle";
 
@@ -33,10 +34,16 @@ const EditRestaurantModal = dynamic(
 
 export default function HomeClient() {
     const { isAdmin } = useAuth();
+    const { isSidebarOpen } = useLayout();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
+    const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
+
+    // 레이아웃 치수 계산
+    const leftSidebarWidth = isSidebarOpen ? 256 : 64;
+    const rightPanelWidth = state.isPanelOpen ? 400 : 0;
 
     // 이벤트 핸들러 커스텀 훅
     const handlers = useHomeHandlers({
@@ -54,7 +61,6 @@ export default function HomeClient() {
         setPanelRestaurant: state.setPanelRestaurant,
         setSelectedRestaurant: state.setSelectedRestaurant,
         setGridSelectedRestaurants: state.setGridSelectedRestaurants,
-        setIsGridMode: state.setIsGridMode,
         setMoveToRestaurant: state.setMoveToRestaurant,
     });
 
@@ -86,24 +92,23 @@ export default function HomeClient() {
                 mapMode={mapMode}
                 selectedRegion={state.selectedRegion}
                 selectedCountry={state.selectedCountry}
-                selectedCategories={state.selectedCategories}
+                selectedCategories={state.filters.categories}
                 filters={state.filters}
                 countryCounts={state.countryCounts}
-                isGridMode={state.isGridMode}
                 onRegionChange={handlers.handleRegionChange}
                 onCountryChange={handlers.handleCountryChange}
                 onCategoryChange={handlers.handleCategoryChange}
                 onRestaurantSelect={handlers.handleRestaurantSelect}
                 onRestaurantSearch={handlers.handleRestaurantSearch}
                 onSearchExecute={handlers.switchToSingleMap}
-                onGridModeToggle={() => state.setIsGridMode(!state.isGridMode)}
+                activePanel={activePanel}
+                onPanelClick={setActivePanel}
+                leftSidebarWidth={leftSidebarWidth}
+                rightPanelWidth={rightPanelWidth}
             />
 
             <HomeMapContainer
                 mapMode={mapMode}
-                isGridMode={state.isGridMode}
-                gridRegions={state.gridRegions}
-                gridSelectedRestaurants={state.gridSelectedRestaurants}
                 filters={state.filters}
                 selectedRegion={state.selectedRegion}
                 selectedCountry={state.selectedCountry}
@@ -115,14 +120,14 @@ export default function HomeClient() {
                 onAdminEditRestaurant={onAdminEditRestaurant}
                 onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
                 onRestaurantSelect={state.setSelectedRestaurant}
-                onGridRestaurantSelect={handlers.handleGridRestaurantSelect}
-                onGridRestaurantClose={handlers.handleGridRestaurantClose}
                 onSwitchToSingleMap={handlers.switchToSingleMap}
                 onMapReady={handlers.handleMapReady}
                 onMarkerClick={handlers.handleMarkerClick}
                 onPanelClose={handlers.handlePanelClose}
                 onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
                 onTogglePanelCollapse={handlers.handlePanelClose}
+                activePanel={activePanel}
+                onPanelClick={setActivePanel}
             />
 
             <EditRestaurantModal

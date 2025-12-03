@@ -17,9 +17,6 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
-
-
-
 interface NaverMapViewProps {
     filters: FilterState;
     selectedRegion: Region | null;
@@ -32,9 +29,24 @@ interface NaverMapViewProps {
     isGridMode?: boolean;
     gridSelectedRestaurant?: Restaurant | null; // 그리드 모드에서 각 그리드별 선택된 맛집
     onRestaurantSelect?: (restaurant: Restaurant) => void;
+    activePanel?: 'map' | 'detail' | 'control';
+    onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
 }
 
-const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminEditRestaurant, onRequestEditRestaurant, isGridMode = false, gridSelectedRestaurant, onRestaurantSelect }: NaverMapViewProps) => {
+const NaverMapView = memo(({
+    filters,
+    selectedRegion,
+    searchedRestaurant,
+    selectedRestaurant,
+    refreshTrigger,
+    onAdminEditRestaurant,
+    onRequestEditRestaurant,
+    isGridMode = false,
+    gridSelectedRestaurant,
+    onRestaurantSelect,
+    activePanel,
+    onPanelClick
+}: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
@@ -47,6 +59,7 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [showRestaurantCount, setShowRestaurantCount] = useState(false); // 맛집 개수 표시 여부
 
     // selectedRestaurant가 설정되면 자동으로 패널 열기
     useEffect(() => {
@@ -128,10 +141,17 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     // 지역 변경 시 로딩 중에도 이전 마커를 유지하기 위한 상태
     const [previousRestaurants, setPreviousRestaurants] = useState<Restaurant[]>([]);
 
-    // restaurants가 변경될 때 이전 데이터를 저장
+    // restaurants가 변경될 때 이전 데이터를 저장하고, 개수 표시를 3초간 활성화
     useEffect(() => {
         if (restaurants.length > 0 && !isLoadingRestaurants) {
             setPreviousRestaurants(restaurants);
+
+            // 맛집 개수가 있을 때만 배지 표시 및 타이머 설정
+            setShowRestaurantCount(true);
+            const timer = setTimeout(() => {
+                setShowRestaurantCount(false);
+            }, 3000);
+            return () => clearTimeout(timer);
         }
     }, [restaurants, isLoadingRestaurants]);
 
@@ -627,9 +647,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     </div>
                 )}
 
-                {/* 레스토랑 개수 표시 */}
-                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                {/* 레스토랑 개수 표시 (3초 후 사라짐) */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
                         <span className="text-sm font-medium">
                             🔥 {restaurants.length}개의 맛집 발견
                         </span>
@@ -643,7 +663,12 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     return (
         <div className="h-full flex relative overflow-hidden">
             {/* 지도 영역 */}
-            <div className="flex-1 h-full relative z-0">
+            <div
+                className="flex-1 h-full relative z-0"
+                onClick={() => {
+                    onPanelClick?.('map');
+                }}
+            >
                 {/* 지도 컨테이너 */}
                 <div ref={mapRef} className="w-full h-full" />
 
@@ -657,9 +682,9 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     </div>
                 )}
 
-                {/* 레스토랑 개수 표시 */}
-                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                {/* 레스토랑 개수 표시 (3초 후 사라짐) */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
                         <span className="text-sm font-medium">
                             🔥 {restaurants.length}개의 맛집 발견
                         </span>
@@ -667,11 +692,16 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 )}
             </div>
 
-            {/* 레스토랑 상세 패널 - 고정 너비 400px, 애니메이션 적용 */}
+            {/* 레스토랑 상세 패널 - 고정 너비 400px, 애니메이션 적용, 클릭 시 앞으로 가져오기 */}
             {selectedRestaurant && (
                 <div
-                    className={`h-full relative z-20 shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'}`}
+                    className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
                     style={{ overflow: 'visible' }}
+                    onClick={(e) => {
+                        // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
+                        e.stopPropagation();
+                        onPanelClick?.('detail');
+                    }}
                 >
                     <div ref={detailPanelRef} className="h-full w-[400px] bg-background border-l border-border">
                         <RestaurantDetailPanel
@@ -681,10 +711,10 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                                 setIsReviewModalOpen(true);
                             }}
                             onEditRestaurant={onAdminEditRestaurant ? () => {
-                                onAdminEditRestaurant(selectedRestaurant);
+                                onAdminEditRestaurant(selectedRestaurant!);
                             } : undefined}
                             onRequestEditRestaurant={onRequestEditRestaurant ? () => {
-                                onRequestEditRestaurant(selectedRestaurant);
+                                onRequestEditRestaurant(selectedRestaurant!);
                             } : undefined}
                             onToggleCollapse={() => setIsPanelOpen(!isPanelOpen)}
                             isPanelOpen={isPanelOpen}
@@ -711,4 +741,3 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 NaverMapView.displayName = 'NaverMapView';
 
 export default NaverMapView;
-

@@ -11,15 +11,16 @@ import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
 import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
 import { DailyRecommendationPopup } from '@/components/recommendation/DailyRecommendationPopup';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLayout } from '@/contexts/LayoutContext';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { supabase } from '@/integrations/supabase/client';
 
-export function MainLayout({ children }: { children: React.ReactNode }) {
+export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
     const queryClient = useQueryClient();
     const pathname = usePathname();
-    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const { isSidebarOpen, setIsSidebarOpen } = useLayout();
     const [isCenteredLayout, setIsCenteredLayout] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -150,5 +151,15 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
 
             <DailyRecommendationPopup />
         </div>
+    );
+}
+
+import { LayoutProvider } from '@/contexts/LayoutContext';
+
+export function MainLayout({ children }: { children: React.ReactNode }) {
+    return (
+        <LayoutProvider>
+            <MainLayoutContent>{children}</MainLayoutContent>
+        </LayoutProvider>
     );
 }

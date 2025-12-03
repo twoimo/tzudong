@@ -22,7 +22,6 @@ interface UseHomeHandlersProps {
     setPanelRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
     setSelectedRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
     setGridSelectedRestaurants: React.Dispatch<React.SetStateAction<{ [key: string]: Restaurant | null }>>;
-    setIsGridMode: React.Dispatch<React.SetStateAction<boolean>>;
     setMoveToRestaurant: React.Dispatch<React.SetStateAction<((restaurant: Restaurant) => void) | null>>;
 }
 
@@ -42,7 +41,6 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         setPanelRestaurant,
         setSelectedRestaurant,
         setGridSelectedRestaurants,
-        setIsGridMode,
         setMoveToRestaurant,
     } = props;
 
@@ -153,7 +151,6 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
     };
 
     const switchToSingleMap = (region?: Region | null) => {
-        setIsGridMode(false);
         if (region !== undefined) {
             setSelectedRegion(region);
             setSelectedRestaurant(null);
