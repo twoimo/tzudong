@@ -3,14 +3,25 @@
 YouTube Transcript 수집 서비스
 
 youtube-transcript-api를 사용하여 YouTube 자막을 수집합니다.
+GitHub API를 통해 원격 브랜치의 파일을 확인합니다.
 """
 
 import json
 import re
 import sys
+import os
+import base64
+import time
+import random
+import requests
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Any
 from datetime import datetime, timezone, timedelta
+from dotenv import load_dotenv
+
+# .env 파일 로드
+env_path = Path(__file__).parent.parent / '.env'
+load_dotenv(env_path)
 
 # youtube-transcript-api 임포트
 try:
@@ -25,8 +36,24 @@ KST = timezone(timedelta(hours=9))
 
 # 프로젝트 경로
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
-CRAWLING_DATA_DIR = PROJECT_ROOT / "geminiCLI-restaurant-crawling" / "data"
-LOG_DIR = PROJECT_ROOT / "log" / "geminiCLI-restaurant"
+CRAWLING_DATA_DIR = PROJECT_ROOT / "backend" / "geminiCLI-restaurant-crawling" / "data"
+LOG_DIR = PROJECT_ROOT / "backend" / "log" / "geminiCLI-restaurant"
+
+# GitHub 설정
+GITHUB_TOKEN = os.getenv('GITHUB_PERSONAL_ACCESS_TOKEN')
+GITHUB_REPO = os.getenv('GITHUB_REPO', 'https://github.com/twoimo/tzudong')
+GITHUB_BRANCH = 'github-actions-restaurant'
+
+# GitHub API 설정
+def parse_github_repo(repo_url: str) -> Tuple[str, str]:
+    """GitHub URL에서 owner/repo 추출"""
+    # https://github.com/twoimo/tzudong -> twoimo, tzudong
+    match = re.search(r'github\.com/([^/]+)/([^/]+)', repo_url)
+    if match:
+        return match.group(1), match.group(2).replace('.git', '')
+    return '', ''
+
+GITHUB_OWNER, GITHUB_REPO_NAME = parse_github_repo(GITHUB_REPO)
 
 # 로거 임포트 (utils 폴더에서)
 sys.path.insert(0, str(PROJECT_ROOT / 'utils'))
@@ -90,6 +117,150 @@ def extract_video_id(url: str) -> Optional[str]:
     return None
 
 
+# ============================
+# GitHub API 함수
+# ============================
+
+def get_github_headers() -> Dict[str, str]:
+    """GitHub API 헤더 생성"""
+    headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'transcript-api'
+    }
+    if GITHUB_TOKEN:
+        headers['Authorization'] = f'token {GITHUB_TOKEN}'
+    return headers
+
+
+def list_github_directories(path: str) -> List[str]:
+    """GitHub 브랜치에서 디렉토리 목록 조회"""
+    if not GITHUB_OWNER or not GITHUB_REPO_NAME:
+        return []
+    
+    url = f'https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO_NAME}/contents/{path}'
+    params = {'ref': GITHUB_BRANCH}
+    
+    try:
+        response = requests.get(url, headers=get_github_headers(), params=params, timeout=10)
+        if response.status_code == 200:
+            items = response.json()
+            return [item['name'] for item in items if item['type'] == 'dir']
+        else:
+            print(f"⚠️ GitHub API 디렉토리 조회 실패: {response.status_code}")
+            return []
+    except Exception as e:
+        print(f"⚠️ GitHub API 오류: {e}")
+        return []
+
+
+def get_github_file_content(path: str) -> Optional[str]:
+    """GitHub 브랜치에서 파일 내용 가져오기"""
+    if not GITHUB_OWNER or not GITHUB_REPO_NAME:
+        return None
+    
+    url = f'https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO_NAME}/contents/{path}'
+    params = {'ref': GITHUB_BRANCH}
+    
+    try:
+        response = requests.get(url, headers=get_github_headers(), params=params, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('encoding') == 'base64':
+                content = base64.b64decode(data['content']).decode('utf-8')
+                return content
+        return None
+    except Exception as e:
+        print(f"⚠️ GitHub 파일 조회 오류: {e}")
+        return None
+
+
+def get_pending_urls_from_github() -> Tuple[List[str], Dict[str, Any]]:
+    """
+    GitHub 원격 브랜치에서 URL과 기존 transcript 확인
+    
+    Returns:
+        (pending_urls, existing_transcripts)
+    """
+    all_urls = set()
+    existing_transcripts = {}
+    
+    # GitHub에서 날짜 폴더 목록 가져오기
+    data_path = 'backend/geminiCLI-restaurant-crawling/data'
+    date_folders = list_github_directories(data_path)
+    
+    if not date_folders:
+        print("⚠️ GitHub에서 날짜 폴더를 찾을 수 없습니다. 로컬 파일로 fallback합니다.")
+        return get_pending_urls_from_local()
+    
+    print(f"📂 GitHub에서 {len(date_folders)}개 날짜 폴더 발견")
+    
+    for folder in date_folders:
+        # URL 파일 가져오기
+        url_file_path = f'{data_path}/{folder}/tzuyang_youtubeVideo_urls.txt'
+        content = get_github_file_content(url_file_path)
+        if content:
+            for line in content.strip().split('\n'):
+                line = line.strip()
+                if line:
+                    all_urls.add(line)
+        
+        # Transcript 파일 가져오기
+        transcript_file_path = f'{data_path}/{folder}/tzuyang_restaurant_transcripts.json'
+        content = get_github_file_content(transcript_file_path)
+        if content:
+            try:
+                data = json.loads(content)
+                for item in data:
+                    youtube_link = item.get("youtube_link")
+                    if youtube_link:
+                        existing_transcripts[youtube_link] = item
+            except json.JSONDecodeError:
+                pass
+    
+    # 아직 수집 안 된 URL 필터링
+    pending_urls = [url for url in all_urls if url not in existing_transcripts]
+    
+    print(f"📊 GitHub 조회 결과: 전체 URL {len(all_urls)}개, 기존 자막 {len(existing_transcripts)}개, 대기 {len(pending_urls)}개")
+    
+    return pending_urls, existing_transcripts
+
+
+def get_pending_urls_from_local() -> Tuple[List[str], Dict[str, Any]]:
+    """
+    로컬 파일 시스템에서 URL과 기존 transcript 확인 (fallback)
+    """
+    all_urls = set()
+    existing_transcripts = {}
+    
+    if CRAWLING_DATA_DIR.exists():
+        for folder in CRAWLING_DATA_DIR.iterdir():
+            if folder.is_dir():
+                # URL 파일
+                url_file = folder / "tzuyang_youtubeVideo_urls.txt"
+                if url_file.exists():
+                    with open(url_file, 'r', encoding='utf-8') as f:
+                        for line in f:
+                            line = line.strip()
+                            if line:
+                                all_urls.add(line)
+                
+                # Transcript 파일
+                transcript_file = folder / "tzuyang_restaurant_transcripts.json"
+                if transcript_file.exists():
+                    try:
+                        with open(transcript_file, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                            for item in data:
+                                youtube_link = item.get("youtube_link")
+                                if youtube_link:
+                                    existing_transcripts[youtube_link] = item
+                    except Exception:
+                        pass
+    
+    pending_urls = [url for url in all_urls if url not in existing_transcripts]
+    return pending_urls, existing_transcripts
+
+
 def get_transcript_for_video(video_id: str) -> Tuple[Optional[List[Dict]], Optional[str]]:
     """
     단일 영상의 자막 가져오기
@@ -145,6 +316,7 @@ def get_transcript_for_video(video_id: str) -> Tuple[Optional[List[Dict]], Optio
 def get_pending_urls(date_folder: str) -> Tuple[List[str], Dict[str, Any]]:
     """
     수집 대기 중인 URL 목록 조회
+    GitHub API 우선, 실패 시 로컬 fallback
     
     Args:
         date_folder: 날짜 폴더 (예: "25-12-02")
@@ -152,42 +324,13 @@ def get_pending_urls(date_folder: str) -> Tuple[List[str], Dict[str, Any]]:
     Returns:
         (pending_urls, existing_transcripts)
     """
-    # URL 파일 경로 (모든 날짜 폴더에서 검색)
-    all_urls = set()
-    
-    # 모든 날짜 폴더에서 URL 수집
-    if CRAWLING_DATA_DIR.exists():
-        for folder in CRAWLING_DATA_DIR.iterdir():
-            if folder.is_dir():
-                url_file = folder / "tzuyang_youtubeVideo_urls.txt"
-                if url_file.exists():
-                    with open(url_file, 'r', encoding='utf-8') as f:
-                        for line in f:
-                            line = line.strip()
-                            if line:
-                                all_urls.add(line)
-    
-    # 이미 수집된 transcript 로드 (모든 날짜 폴더에서)
-    existing_transcripts = {}
-    if CRAWLING_DATA_DIR.exists():
-        for folder in CRAWLING_DATA_DIR.iterdir():
-            if folder.is_dir():
-                transcript_file = folder / "tzuyang_restaurant_transcripts.json"
-                if transcript_file.exists():
-                    try:
-                        with open(transcript_file, 'r', encoding='utf-8') as f:
-                            data = json.load(f)
-                            for item in data:
-                                youtube_link = item.get("youtube_link")
-                                if youtube_link:
-                                    existing_transcripts[youtube_link] = item
-                    except Exception:
-                        pass
-    
-    # 아직 수집 안 된 URL 필터링
-    pending_urls = [url for url in all_urls if url not in existing_transcripts]
-    
-    return pending_urls, existing_transcripts
+    # GitHub API로 조회 시도
+    if GITHUB_TOKEN and GITHUB_OWNER and GITHUB_REPO_NAME:
+        print(f"🔍 GitHub 브랜치 '{GITHUB_BRANCH}'에서 파일 확인 중...")
+        return get_pending_urls_from_github()
+    else:
+        print("⚠️ GitHub 토큰이 없습니다. 로컬 파일로 확인합니다.")
+        return get_pending_urls_from_local()
 
 
 def collect_transcripts_for_urls(
@@ -243,10 +386,10 @@ def collect_transcripts_for_urls(
             "output_file": str(output_file)
         }
     
-    # 최대 URL 수 제한
-    if max_urls:
-        pending_urls = pending_urls[:max_urls]
-        logger.info(f"🔢 최대 URL 제한: {max_urls}개")
+    # 최대 URL 수 제한 (기본 15개 - IP 차단 방지)
+    max_urls = max_urls or 15
+    pending_urls = pending_urls[:max_urls]
+    logger.info(f"🔢 최대 URL 제한: {max_urls}개 (IP 차단 방지)")
     
     # 기존 데이터 로드 (이 날짜 폴더의)
     transcripts = []
@@ -300,6 +443,12 @@ def collect_transcripts_for_urls(
             failed_count += 1
             failed_urls.append({"url": url, "error": error})
             logger.error(f"[{i}/{total}] {video_id} ❌ {error}")
+        
+        # 3개 URL마다 2~5초 랜덤 대기 (IP 차단 방지)
+        if i % 3 == 0:
+            delay = random.uniform(2, 5)
+            logger.debug(f"⏳ {delay:.1f}초 대기 (IP 차단 방지)...")
+            time.sleep(delay)
     
     # 결과 저장
     with logger.timer("save_transcripts"):

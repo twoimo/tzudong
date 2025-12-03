@@ -1,0 +1,188 @@
+{
+  "phase": "transcript-api",
+  "start_time": "2025-12-03T22:21:46.016645+09:00",
+  "end_time": "2025-12-03T22:22:46.841783+09:00",
+  "duration_seconds": 60.83,
+  "total_processed": 0,
+  "success_count": 21,
+  "error_count": 1,
+  "skip_count": 0,
+  "warnings": [
+    {
+      "message": "pull 실패 (새 브랜치일 수 있음): error: cannot pull with rebase: You have unstaged changes.\nerror: please commit or stash them.",
+      "data": null
+    }
+  ],
+  "errors": [
+    {
+      "message": "git 명령 실패: git pull --rebase origin github-actions-restaurant",
+      "data": {
+        "stderr": "error: cannot pull with rebase: You have unstaged changes.\nerror: please commit or stash them."
+      }
+    }
+  ],
+  "timers": {
+    "get_pending_urls": {
+      "count": 1,
+      "total_seconds": 3.61,
+      "min_seconds": 3.614,
+      "max_seconds": 3.614,
+      "avg_seconds": 3.614
+    },
+    "fetch_transcript_B9adR8DN830": {
+      "count": 1,
+      "total_seconds": 5.09,
+      "min_seconds": 5.086,
+      "max_seconds": 5.086,
+      "avg_seconds": 5.086
+    },
+    "fetch_transcript_MnLGiP3e714": {
+      "count": 1,
+      "total_seconds": 1.9,
+      "min_seconds": 1.902,
+      "max_seconds": 1.902,
+      "avg_seconds": 1.902
+    },
+    "fetch_transcript_t3Bt1ooBrnk": {
+      "count": 1,
+      "total_seconds": 1.94,
+      "min_seconds": 1.94,
+      "max_seconds": 1.94,
+      "avg_seconds": 1.94
+    },
+    "fetch_transcript_bVNb3YIH5TI": {
+      "count": 1,
+      "total_seconds": 2.39,
+      "min_seconds": 2.386,
+      "max_seconds": 2.386,
+      "avg_seconds": 2.386
+    },
+    "fetch_transcript_Qe5w3eSHhUE": {
+      "count": 1,
+      "total_seconds": 2.13,
+      "min_seconds": 2.127,
+      "max_seconds": 2.127,
+      "avg_seconds": 2.127
+    },
+    "fetch_transcript_qdrjjcJE-KI": {
+      "count": 1,
+      "total_seconds": 1.84,
+      "min_seconds": 1.842,
+      "max_seconds": 1.842,
+      "avg_seconds": 1.842
+    },
+    "fetch_transcript_OON0kwUgOlw": {
+      "count": 1,
+      "total_seconds": 2.45,
+      "min_seconds": 2.453,
+      "max_seconds": 2.453,
+      "avg_seconds": 2.453
+    },
+    "fetch_transcript_DncejNvRvTM": {
+      "count": 1,
+      "total_seconds": 2.44,
+      "min_seconds": 2.44,
+      "max_seconds": 2.44,
+      "avg_seconds": 2.44
+    },
+    "fetch_transcript_hjYYEklZsgM": {
+      "count": 1,
+      "total_seconds": 2.11,
+      "min_seconds": 2.112,
+      "max_seconds": 2.112,
+      "avg_seconds": 2.112
+    },
+    "fetch_transcript_FGJdgoU5L_s": {
+      "count": 1,
+      "total_seconds": 2.5,
+      "min_seconds": 2.495,
+      "max_seconds": 2.495,
+      "avg_seconds": 2.495
+    },
+    "fetch_transcript_aYL9E6fKNLI": {
+      "count": 1,
+      "total_seconds": 2.06,
+      "min_seconds": 2.065,
+      "max_seconds": 2.065,
+      "avg_seconds": 2.065
+    },
+    "fetch_transcript_BFIw0bXtMq0": {
+      "count": 1,
+      "total_seconds": 2.2,
+      "min_seconds": 2.203,
+      "max_seconds": 2.203,
+      "avg_seconds": 2.203
+    },
+    "fetch_transcript_0VmT9F7y81s": {
+      "count": 1,
+      "total_seconds": 1.89,
+      "min_seconds": 1.887,
+      "max_seconds": 1.887,
+      "avg_seconds": 1.887
+    },
+    "fetch_transcript_BubHdc2NayQ": {
+      "count": 1,
+      "total_seconds": 2.42,
+      "min_seconds": 2.418,
+      "max_seconds": 2.418,
+      "avg_seconds": 2.418
+    },
+    "fetch_transcript_FPg95PvRbew": {
+      "count": 1,
+      "total_seconds": 1.69,
+      "min_seconds": 1.691,
+      "max_seconds": 1.691,
+      "avg_seconds": 1.691
+    },
+    "save_transcripts": {
+      "count": 1,
+      "total_seconds": 0.05,
+      "min_seconds": 0.047,
+      "max_seconds": 0.047,
+      "avg_seconds": 0.047
+    },
+    "transcript_collect": {
+      "count": 1,
+      "total_seconds": 58.62,
+      "min_seconds": 58.617,
+      "max_seconds": 58.617,
+      "avg_seconds": 58.617
+    },
+    "git_commit": {
+      "count": 2,
+      "total_seconds": 2.24,
+      "min_seconds": 0.036,
+      "max_seconds": 2.203,
+      "avg_seconds": 1.119
+    },
+    "git_push": {
+      "count": 1,
+      "total_seconds": 1.99,
+      "min_seconds": 1.988,
+      "max_seconds": 1.988,
+      "avg_seconds": 1.988
+    }
+  },
+  "custom_stats": {
+    "existing_transcripts": 15,
+    "pending_urls": 973,
+    "total_urls_to_process": 15,
+    "success_count": 15,
+    "failed_count": 0,
+    "total_transcripts_in_file": 30,
+    "output_file": "/Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json",
+    "current_branch": "github-actions-restaurant",
+    "files_to_commit": [
+      "backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json"
+    ],
+    "commit_message": "📝 Transcript 수집: 25-12-03 (15개)",
+    "status": "success",
+    "branch": "github-actions-restaurant",
+    "endpoint": "/collect",
+    "date_folder": "25-12-03",
+    "total_urls": 15,
+    "skipped_count": 15,
+    "committed": true
+  },
+  "duration_formatted": "1분 0초"
+}

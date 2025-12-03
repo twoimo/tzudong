@@ -1,8 +1,12 @@
 // [SSR] 서버 컴포넌트 - SEO 최적화 및 초기 로딩 성능 개선
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
-import HomeClient from './home-client';
+import dynamic from 'next/dynamic';
 import { MapSkeleton } from '@/components/skeletons/MapSkeleton';
+
+// [OPTIMIZATION] 동적 import로 초기 번들 크기 감소 (예상 TBT 개선: ~200ms)
+const HomeClient = dynamic(() => import('./home-client'), {
+    loading: () => <MapSkeleton />
+});
 
 // [SSR] 메타데이터 생성 - 검색 엔진 최적화
 export const metadata: Metadata = {
@@ -25,12 +29,7 @@ export const metadata: Metadata = {
 // [SSR] 서버 컴포넌트 홈 페이지 - 빠른 초기 렌더링
 export default function HomePage() {
     return (
-        // [SSR] Suspense로 스트리밍 렌더링 지원
-        <Suspense fallback={
-            <MapSkeleton />
-        }>
-            {/* [CSR] 모든 클라이언트 로직은 HomeClient로 위임 */}
-            <HomeClient />
-        </Suspense>
+        // [OPTIMIZATION] 동적 import가 자체 로딩 처리
+        <HomeClient />
     );
 }
