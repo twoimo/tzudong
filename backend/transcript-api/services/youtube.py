@@ -386,10 +386,10 @@ def collect_transcripts_for_urls(
             "output_file": str(output_file)
         }
     
-    # 최대 URL 수 제한
-    if max_urls:
-        pending_urls = pending_urls[:max_urls]
-        logger.info(f"🔢 최대 URL 제한: {max_urls}개")
+    # 최대 URL 수 제한 (기본 15개 - IP 차단 방지)
+    max_urls = max_urls or 15
+    pending_urls = pending_urls[:max_urls]
+    logger.info(f"🔢 최대 URL 제한: {max_urls}개 (IP 차단 방지)")
     
     # 기존 데이터 로드 (이 날짜 폴더의)
     transcripts = []
@@ -449,12 +449,6 @@ def collect_transcripts_for_urls(
             delay = random.uniform(2, 5)
             logger.debug(f"⏳ {delay:.1f}초 대기 (IP 차단 방지)...")
             time.sleep(delay)
-        
-        # 20개 URL마다 5~10초 추가 대기 (장기 차단 방지)
-        if i % 20 == 0:
-            long_delay = random.uniform(5, 10)
-            logger.info(f"⏳ {long_delay:.1f}초 장기 대기 ({i}개 처리 완료)...")
-            time.sleep(long_delay)
     
     # 결과 저장
     with logger.timer("save_transcripts"):
