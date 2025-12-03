@@ -1,11 +1,29 @@
 # 🎬 Transcript API
 
-YouTube 자막을 로컬에서 수집하고 GitHub에 자동 커밋하는 FastAPI 서버입니다.
+YouTube 자막 수집 및 GitHub 커밋을 위한 FastAPI 서버입니다.
 
-## 왜 필요한가?
+> ⚠️ **참고**: 현재 메인 자막 수집은 **Puppeteer 기반 스크립트**(`transcript-puppeteer.ts`)로 이전되었습니다.
+> 이 API는 로컬 관리용 보조 도구로 사용됩니다.
 
-GitHub Actions는 Azure 클라우드에서 실행되며, **YouTube가 클라우드 IP를 차단**합니다.
-따라서 자막 수집은 로컬에서 실행해야 합니다.
+## 주요 자막 수집 방식
+
+### 🆕 Puppeteer 기반 (권장)
+
+```bash
+cd backend/geminiCLI-restaurant-crawling/scripts
+npx ts-node transcript-puppeteer.ts --date 25-12-04
+```
+
+- **1차**: maestra.ai (Primary)
+- **2차**: tubetranscript.com (Fallback)
+- GitHub Actions에서도 실행 가능
+- 30개마다 자동 커밋
+
+### FastAPI (이 서버)
+
+로컬에서 관리자 UI와 연동하여 사용:
+- 상태 확인
+- 수동 GitHub 커밋/푸시
 
 ## 설치
 
@@ -74,22 +92,43 @@ backend/geminiCLI-restaurant-crawling/data/{날짜}/
 [
   {
     "youtube_link": "https://www.youtube.com/watch?v=xxx",
+    "language": "ko",
+    "collected_at": "2025-12-04T10:30:00+09:00",
     "transcript": [
       {"start": 0.0, "text": "안녕하세요"},
       {"start": 2.5, "text": "오늘은..."}
-    ],
-    "collected_at": "2025-12-02T10:30:00+09:00"
+    ]
   }
 ]
 ```
 
+- **start**: 시작 시간 (초 단위, float)
+- **text**: 자막 텍스트
+- **collected_at**: 수집 시간 (KST, ISO 8601)
+
 ## 워크플로우
 
-1. **URL 수집** (GitHub Actions - 2일마다 자동)
-2. **Transcript 수집** (로컬 FastAPI - 관리자 UI 버튼 클릭)
-3. **크롤링 + 평가** (GitHub Actions - transcript 커밋 감지 시 자동)
+### GitHub Actions 통합 워크플로우 (권장)
 
-## 관리자 UI에서 사용하기
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  🍜 Restaurant Pipeline (통합)                                   │
+│  📄 .github/workflows/restaurant-pipeline.yml                   │
+├─────────────────────────────────────────────────────────────────┤
+│  1️⃣ url-collection      → YouTube URL 수집                      │
+│  2️⃣ transcript-collection → Puppeteer 자막 수집 (자동 커밋)      │
+│  3️⃣ crawling-evaluation → 크롤링 + 평가 + DB 삽입               │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+GitHub Actions에서 전체 파이프라인 실행:
+```bash
+gh workflow run "restaurant-pipeline.yml" \
+  -f step=all \
+  --ref github-actions-restaurant
+```
+
+### 로컬 API 사용 (보조)
 
 1. 서버 실행:
    ```bash
@@ -104,8 +143,7 @@ backend/geminiCLI-restaurant-crawling/data/{날짜}/
    ```
 
 3. 관리자 페이지(`/admin/evaluations`) 접속
-4. 헤더의 **"자막 수집"** 버튼 클릭
-5. 수집 완료 후 자동으로 GitHub에 커밋/푸시됨 → Actions 워크플로우 트리거
+4. 상태 확인 및 수동 커밋
 
 ## 로그 파일
 
@@ -141,3 +179,11 @@ python services/github.py --status
 1. **브랜치**: `github-actions-restaurant` 브랜치에 커밋됩니다
 2. **Git 설정**: 커밋 시 자동으로 user.name, user.email 설정됨
 3. **푸시 권한**: GitHub에 푸시하려면 로컬에 인증이 설정되어 있어야 함
+
+---
+
+## 관련 문서
+
+- [Puppeteer 자막 수집 스크립트](../geminiCLI-restaurant-crawling/scripts/transcript-puppeteer.ts)
+- [크롤링 시스템 README](../geminiCLI-restaurant-crawling/README.md)
+- [GitHub Actions README](../../.github/workflows/README.md)
