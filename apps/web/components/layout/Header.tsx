@@ -17,6 +17,7 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -24,13 +25,26 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   onProfileClick?: () => void;
+  onMyPageClick?: () => void;
   isCenteredLayout?: boolean;
   onToggleCenteredLayout?: () => void;
 }
 
-const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, isCenteredLayout = false, onToggleCenteredLayout }: HeaderProps) => {
+const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
+  const pathname = usePathname();
+
+  const handleMyPageClick = () => {
+    // 홈 페이지에서는 CustomEvent로 패널 열기
+    if (pathname === '/') {
+      window.dispatchEvent(new CustomEvent('openMyPage'));
+    } else if (onMyPageClick) {
+      onMyPageClick();
+    } else {
+      window.location.href = '/mypage';
+    }
+  };
 
   const toggleTheme = () => {
     // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
@@ -254,7 +268,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
                 <User className="mr-2 h-4 w-4" />
                 프로필
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.location.href = '/mypage'} className="text-stone-900 hover:bg-stone-200/50">
+              <DropdownMenuItem onClick={handleMyPageClick} className="text-stone-900 hover:bg-stone-200/50">
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
               </DropdownMenuItem>

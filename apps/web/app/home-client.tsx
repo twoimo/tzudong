@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
@@ -39,12 +39,18 @@ const RestaurantSubmissionModal = dynamic(
     { ssr: false }
 );
 
+const MyPagePanel = dynamic(
+    () => import('@/components/profile/MyPagePanel'),
+    { ssr: false }
+);
+
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
     const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
+    const [isMyPagePanelOpen, setIsMyPagePanelOpen] = useState(false);
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
@@ -89,6 +95,16 @@ export default function HomeClient() {
         }
         setIsSubmissionModalOpen(true);
     };
+
+    // 헤더에서 마이페이지 열기 이벤트 리스너
+    useEffect(() => {
+        const handleMyPageOpen = () => {
+            setIsMyPagePanelOpen(true);
+        };
+
+        window.addEventListener('openMyPage', handleMyPageOpen);
+        return () => window.removeEventListener('openMyPage', handleMyPageOpen);
+    }, []);
 
     return (
         <>
@@ -185,6 +201,16 @@ export default function HomeClient() {
                 isOpen={isSubmissionModalOpen}
                 onClose={() => setIsSubmissionModalOpen(false)}
             />
+
+            {/* 마이페이지 패널 */}
+            {isMyPagePanelOpen && (
+                <div className="fixed top-16 right-0 h-[calc(100vh-64px)] w-[400px] z-50 shadow-xl bg-background border-l border-border">
+                    <MyPagePanel
+                        isOpen={isMyPagePanelOpen}
+                        onClose={() => setIsMyPagePanelOpen(false)}
+                    />
+                </div>
+            )}
         </>
     );
 }
