@@ -77,8 +77,10 @@ NC='\033[0m' # No Color
 UTILS_DIR="$(cd "$PROJECT_ROOT/../utils" && pwd)"
 PROMPT_FILE="$PROJECT_ROOT/prompts/crawling_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_result.py"
-TRANSCRIPT_SCRIPT="$UTILS_DIR/get_transcript.py"
 DATA_UTILS_SCRIPT="$UTILS_DIR/data_utils.py"
+
+# Transcript JSON 파일명 (로컬 FastAPI에서 생성)
+TRANSCRIPT_FILENAME="tzuyang_restaurant_transcripts.json"
 
 # 날짜별 폴더 경로 계산
 DATA_DIR="$PROJECT_ROOT/data"
@@ -97,11 +99,28 @@ LATEST_PATH=$(python3 "$DATA_UTILS_SCRIPT" latest_path "$DATA_DIR")
 # 디렉토리 생성
 mkdir -p "$TODAY_PATH"
 
-# 입력: 오늘 폴더 또는 최신 폴더의 URL 파일
-URL_FILE="${1:-$TODAY_PATH/tzuyang_youtubeVideo_urls.txt}"
-if [ ! -f "$URL_FILE" ] && [ -f "$LATEST_PATH/tzuyang_youtubeVideo_urls.txt" ]; then
-    URL_FILE="$LATEST_PATH/tzuyang_youtubeVideo_urls.txt"
-fi
+# ============================
+# 입력: 모든 날짜 폴더의 URL 파일을 합침
+# ============================
+# 임시 파일에 모든 URL 수집 (중복 제거)
+ALL_URLS_TEMP="$PROJECT_ROOT/temp/all_urls.txt"
+mkdir -p "$PROJECT_ROOT/temp"
+> "$ALL_URLS_TEMP"  # 파일 초기화
+
+URL_FILE_COUNT=0
+for url_file in "$DATA_DIR"/*/tzuyang_youtubeVideo_urls.txt; do
+    if [ -f "$url_file" ]; then
+        cat "$url_file" >> "$ALL_URLS_TEMP"
+        URL_FILE_COUNT=$((URL_FILE_COUNT + 1))
+    fi
+done
+
+# 중복 제거 및 빈 줄 제거
+sort -u "$ALL_URLS_TEMP" | grep -v '^$' > "${ALL_URLS_TEMP}.sorted"
+mv "${ALL_URLS_TEMP}.sorted" "$ALL_URLS_TEMP"
+
+# URL 파일로 사용
+URL_FILE="$ALL_URLS_TEMP"
 
 # 출력: 오늘 날짜 폴더에 저장
 OUTPUT_FILE="${2:-$TODAY_PATH/tzuyang_restaurant_results.jsonl}"
@@ -170,12 +189,13 @@ log_info "============================================================"
 log_info "시작 시간: $START_DATETIME"
 log_info "Gemini 모델: $GEMINI_MODEL"
 log_info "오늘 날짜 폴더: $TODAY_FOLDER"
-log_info "입력 폴더: $(dirname "$URL_FILE")"
+log_info "URL 파일 소스: ${URL_FILE_COUNT}개 폴더에서 수집"
 log_info "출력 폴더: $(dirname "$OUTPUT_FILE")"
 
 # 인자 검증
-if [ ! -f "$URL_FILE" ]; then
-    log_error "URL 파일 없음: $URL_FILE"
+if [ ! -f "$URL_FILE" ] || [ ! -s "$URL_FILE" ]; then
+    log_error "URL 파일 없음 또는 비어있음: $URL_FILE"
+    log_error "먼저 api-youtube-urls.yml을 실행하여 URL을 수집하세요."
     exit 1
 fi
 
@@ -222,7 +242,7 @@ TRANSCRIPT_SUCCESS=0
 TRANSCRIPT_FAILED=0
 TOTAL_GEMINI_TIME=0
 TOTAL_PARSE_TIME=0
-TOTAL_TRANSCRIPT_TIME=0
+NO_TRANSCRIPT_COUNT=0
 
 # URL 목록 읽기 (macOS/zsh 호환)
 URLS=()
@@ -257,9 +277,43 @@ log_info "출력 파일: $OUTPUT_FILE"
 log_info "총 URL 수: $TOTAL"
 log_info ""
 
+# ============================
+# Transcript JSON 파일 로드 (모든 날짜 폴더에서)
+# ============================
+log_info "📝 Transcript 파일 로드 중..."
+
+# 모든 transcript를 임시 파일에 모음
+TRANSCRIPT_TEMP="$PROJECT_ROOT/temp/all_transcripts.json"
+echo '{}' > "$TRANSCRIPT_TEMP"
+
+TRANSCRIPT_FILE_COUNT=0
+TOTAL_TRANSCRIPT_COUNT=0
+
+for transcript_file in "$DATA_DIR"/*/"$TRANSCRIPT_FILENAME"; do
+    if [ -f "$transcript_file" ]; then
+        TRANSCRIPT_FILE_COUNT=$((TRANSCRIPT_FILE_COUNT + 1))
+        FILE_COUNT=$(jq 'length' "$transcript_file" 2>/dev/null || echo "0")
+        TOTAL_TRANSCRIPT_COUNT=$((TOTAL_TRANSCRIPT_COUNT + FILE_COUNT))
+        log_debug "  Transcript 파일 발견: $transcript_file ($FILE_COUNT개)"
+    fi
+done
+
+log_info "📝 Transcript 파일: ${TRANSCRIPT_FILE_COUNT}개, 총 ${TOTAL_TRANSCRIPT_COUNT}개의 자막"
+
+if [ $TOTAL_TRANSCRIPT_COUNT -eq 0 ]; then
+    log_error "⚠️ Transcript가 없습니다. 로컬 FastAPI로 자막을 먼저 수집하세요."
+    log_error "   cd backend/transcript-api && uvicorn main:app --reload"
+    exit 1
+fi
+
 # 프롬프트 템플릿 읽기
 PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
 log_debug "프롬프트 템플릿 로드 완료 (${#PROMPT_TEMPLATE}자)"
+
+# Transcript 없는 URL 카운트
+NO_TRANSCRIPT_COUNT=0
+NO_TRANSCRIPT_LOG="$TODAY_PATH/tzuyang_no_transcript.log"
+> "$NO_TRANSCRIPT_LOG"  # 로그 파일 초기화
 
 # 각 URL 처리
 for i in "${!URLS[@]}"; do
@@ -283,33 +337,40 @@ for i in "${!URLS[@]}"; do
     
     log_info "[$INDEX/$TOTAL] 처리중: $URL"
     
-    # YouTube 자막 가져오기 (참고 정보로 제공)
+    # ============================
+    # Transcript JSON에서 자막 조회
+    # ============================
     TRANSCRIPT=""
-    TRANSCRIPT_ERROR=""
-    if [ -f "$TRANSCRIPT_SCRIPT" ]; then
-        TRANSCRIPT_START=$(date +%s)
-        # 에러 메시지를 캡처하기 위해 stderr를 별도 파일로 저장
-        TRANSCRIPT_STDERR="$PROJECT_ROOT/temp/transcript_stderr_$INDEX.log"
-        TRANSCRIPT=$(python3 "$TRANSCRIPT_SCRIPT" "$URL" 50000 2>"$TRANSCRIPT_STDERR") || true
-        TRANSCRIPT_ERROR=$(cat "$TRANSCRIPT_STDERR" 2>/dev/null || echo "")
-        TRANSCRIPT_END=$(date +%s)
-        TRANSCRIPT_DURATION=$((TRANSCRIPT_END - TRANSCRIPT_START))
-        TOTAL_TRANSCRIPT_TIME=$((TOTAL_TRANSCRIPT_TIME + TRANSCRIPT_DURATION))
-        
-        if [ -n "$TRANSCRIPT" ] && [[ ! "$TRANSCRIPT" == *"❌"* ]]; then
-            log_debug "자막 로드 완료 (${#TRANSCRIPT}자, ${TRANSCRIPT_DURATION}s)"
-            TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
-        else
-            if [ -n "$TRANSCRIPT_ERROR" ]; then
-                log_error "자막 가져오기 실패: $TRANSCRIPT_ERROR"
-            else
-                log_warning "자막 없음 - 검색 기반으로 진행 (${TRANSCRIPT_DURATION}s)"
+    TRANSCRIPT_FOUND=false
+    
+    # 모든 날짜 폴더의 transcript 파일에서 검색
+    for transcript_file in "$DATA_DIR"/*/"$TRANSCRIPT_FILENAME"; do
+        if [ -f "$transcript_file" ]; then
+            # jq로 해당 URL의 transcript 추출
+            # transcript 배열을 텍스트로 변환 (start + text)
+            TRANSCRIPT=$(jq -r --arg url "$URL" '
+                .[] | select(.youtube_link == $url) | 
+                .transcript | 
+                map("[\((.start / 60 | floor | tostring | if length < 2 then "0" + . else . end)):\((.start % 60 | floor | tostring | if length < 2 then "0" + . else . end))] \(.text)") | 
+                join("\n")
+            ' "$transcript_file" 2>/dev/null)
+            
+            if [ -n "$TRANSCRIPT" ]; then
+                TRANSCRIPT_FOUND=true
+                log_debug "자막 발견: $(echo "$TRANSCRIPT" | wc -c | tr -d ' ')자 (from $transcript_file)"
+                TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
+                break
             fi
-            TRANSCRIPT=""
-            TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
         fi
-    else
-        log_error "TRANSCRIPT_SCRIPT 파일 없음: $TRANSCRIPT_SCRIPT"
+    done
+    
+    # Transcript가 없으면 스킵
+    if [ "$TRANSCRIPT_FOUND" = false ]; then
+        NO_TRANSCRIPT_COUNT=$((NO_TRANSCRIPT_COUNT + 1))
+        TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
+        log_warning "[$INDEX/$TOTAL] ⚠️ Transcript 없음 - 스킵: $URL"
+        echo "$URL" >> "$NO_TRANSCRIPT_LOG"
+        continue
     fi
     
     # 프롬프트에 URL 삽입 (<유튜브 링크> 플레이스홀더 치환)
@@ -410,7 +471,8 @@ log_info "⏱️  총 소요 시간: $(format_duration $CRAWL_DURATION)"
 log_info ""
 log_info "📊 처리 통계:"
 log_success "  성공: $SUCCESS"
-log_warning "  건너뜀: $SKIPPED"
+log_warning "  건너뜀 (이미 처리됨): $SKIPPED"
+log_warning "  건너뜀 (Transcript 없음): $NO_TRANSCRIPT_COUNT"
 log_error "  실패: $FAILED"
 log_info "  총 URL: $TOTAL"
 log_info ""
@@ -422,10 +484,12 @@ if [ $GEMINI_CALLS -gt 0 ]; then
     log_info "  평균 Gemini 시간: $(format_duration $AVG_GEMINI)"
 fi
 log_info ""
-log_info "📝 자막 통계:"
-log_info "  자막 성공: $TRANSCRIPT_SUCCESS"
-log_info "  자막 실패: $TRANSCRIPT_FAILED"
-log_info "  총 자막 시간: $(format_duration $TOTAL_TRANSCRIPT_TIME)"
+log_info "📝 Transcript 통계:"
+log_info "  Transcript 있음: $TRANSCRIPT_SUCCESS"
+log_info "  Transcript 없음: $TRANSCRIPT_FAILED"
+if [ $NO_TRANSCRIPT_COUNT -gt 0 ]; then
+    log_warning "  ⚠️ Transcript 없는 URL 로그: $NO_TRANSCRIPT_LOG"
+fi
 log_info ""
 log_info "⚙️  파서 통계:"
 log_info "  총 파싱 시간: $(format_duration $TOTAL_PARSE_TIME)"
@@ -481,7 +545,8 @@ cat > "$LOG_FILE" << EOF
     "total_urls": $TOTAL,
     "success": $SUCCESS,
     "failed": $FAILED,
-    "skipped": $SKIPPED,
+    "skipped_already_processed": $SKIPPED,
+    "skipped_no_transcript": $NO_TRANSCRIPT_COUNT,
     "success_rate": "$(echo "scale=2; $SUCCESS * 100 / ($SUCCESS + $FAILED + 1)" | bc 2>/dev/null || echo "N/A")%"
   },
   "gemini_stats": {
@@ -491,10 +556,9 @@ cat > "$LOG_FILE" << EOF
     "average_time_seconds": $((GEMINI_CALLS > 0 ? TOTAL_GEMINI_TIME / GEMINI_CALLS : 0))
   },
   "transcript_stats": {
-    "success": $TRANSCRIPT_SUCCESS,
-    "failed": $TRANSCRIPT_FAILED,
-    "total_time_seconds": $TOTAL_TRANSCRIPT_TIME,
-    "total_time_formatted": "$(format_duration $TOTAL_TRANSCRIPT_TIME)"
+    "found": $TRANSCRIPT_SUCCESS,
+    "not_found": $TRANSCRIPT_FAILED,
+    "no_transcript_log": "$NO_TRANSCRIPT_LOG"
   },
   "parser_stats": {
     "total_time_seconds": $TOTAL_PARSE_TIME,
