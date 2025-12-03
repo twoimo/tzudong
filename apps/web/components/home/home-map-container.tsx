@@ -37,6 +37,8 @@ interface HomeMapContainerProps {
     onPanelClose: () => void;
     onReviewModalOpen: () => void;
     onTogglePanelCollapse?: () => void;
+    activePanel?: 'map' | 'detail' | 'control';
+    onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
 }
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
@@ -64,6 +66,8 @@ export default function HomeMapContainer({
     onPanelClose,
     onReviewModalOpen,
     onTogglePanelCollapse,
+    activePanel,
+    onPanelClick,
 }: HomeMapContainerProps) {
     if (isGridMode) {
         // [CSR] 그리드 모드: 2x2 그리드로 4개 지역 표시 - 복수 지도 인스턴스
@@ -193,6 +197,8 @@ export default function HomeMapContainer({
                     onRequestEditRestaurant={onRequestEditRestaurant}
                     isGridMode={false}
                     onRestaurantSelect={onRestaurantSelect}
+                    activePanel={activePanel}
+                    onPanelClick={onPanelClick}
                 />
             ) : (
                 // [CSR] 해외 지도 - Flexbox 레이아웃으로 변경 (고정 너비 패널)

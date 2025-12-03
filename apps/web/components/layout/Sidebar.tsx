@@ -62,7 +62,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col h-screen shadow-xl",
+        "fixed left-0 top-0 z-40 hover:z-[60] bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col h-screen shadow-xl",
         isOpen ? "w-64" : "w-16"
       )}
     >

@@ -17,9 +17,6 @@ import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
-
-
-
 interface NaverMapViewProps {
     filters: FilterState;
     selectedRegion: Region | null;
@@ -32,9 +29,24 @@ interface NaverMapViewProps {
     isGridMode?: boolean;
     gridSelectedRestaurant?: Restaurant | null; // 그리드 모드에서 각 그리드별 선택된 맛집
     onRestaurantSelect?: (restaurant: Restaurant) => void;
+    activePanel?: 'map' | 'detail' | 'control';
+    onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
 }
 
-const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminEditRestaurant, onRequestEditRestaurant, isGridMode = false, gridSelectedRestaurant, onRestaurantSelect }: NaverMapViewProps) => {
+const NaverMapView = memo(({
+    filters,
+    selectedRegion,
+    searchedRestaurant,
+    selectedRestaurant,
+    refreshTrigger,
+    onAdminEditRestaurant,
+    onRequestEditRestaurant,
+    isGridMode = false,
+    gridSelectedRestaurant,
+    onRestaurantSelect,
+    activePanel,
+    onPanelClick
+}: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
@@ -643,7 +655,12 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
     return (
         <div className="h-full flex relative overflow-hidden">
             {/* 지도 영역 */}
-            <div className="flex-1 h-full relative z-0">
+            <div
+                className="flex-1 h-full relative z-0"
+                onClick={() => {
+                    onPanelClick?.('map');
+                }}
+            >
                 {/* 지도 컨테이너 */}
                 <div ref={mapRef} className="w-full h-full" />
 
@@ -667,11 +684,16 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                 )}
             </div>
 
-            {/* 레스토랑 상세 패널 - 고정 너비 400px, 애니메이션 적용 */}
+            {/* 레스토랑 상세 패널 - 고정 너비 400px, 애니메이션 적용, 클릭 시 앞으로 가져오기 */}
             {selectedRestaurant && (
                 <div
-                    className={`h-full relative z-20 shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'}`}
+                    className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'}`}
                     style={{ overflow: 'visible' }}
+                    onClick={(e) => {
+                        // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
+                        e.stopPropagation();
+                        onPanelClick?.('detail');
+                    }}
                 >
                     <div ref={detailPanelRef} className="h-full w-[400px] bg-background border-l border-border">
                         <RestaurantDetailPanel
@@ -681,10 +703,10 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                                 setIsReviewModalOpen(true);
                             }}
                             onEditRestaurant={onAdminEditRestaurant ? () => {
-                                onAdminEditRestaurant(selectedRestaurant);
+                                onAdminEditRestaurant(selectedRestaurant!);
                             } : undefined}
                             onRequestEditRestaurant={onRequestEditRestaurant ? () => {
-                                onRequestEditRestaurant(selectedRestaurant);
+                                onRequestEditRestaurant(selectedRestaurant!);
                             } : undefined}
                             onToggleCollapse={() => setIsPanelOpen(!isPanelOpen)}
                             isPanelOpen={isPanelOpen}
@@ -711,4 +733,3 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
 NaverMapView.displayName = 'NaverMapView';
 
 export default NaverMapView;
-
