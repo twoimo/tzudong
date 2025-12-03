@@ -122,6 +122,7 @@ export default function HomeClient() {
                 onMarkerClick={handlers.handleMarkerClick}
                 onPanelClose={handlers.handlePanelClose}
                 onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
+                onTogglePanelCollapse={handlers.handlePanelClose}
             />
 
             <EditRestaurantModal

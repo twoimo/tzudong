@@ -1,9 +1,8 @@
-'use client'; // [CSR] 지도 라이브러리 및 브라우저 API 사용
+'use client';
 
 import { Suspense, lazy } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +36,7 @@ interface HomeMapContainerProps {
     onMarkerClick: (restaurant: Restaurant) => void;
     onPanelClose: () => void;
     onReviewModalOpen: () => void;
+    onTogglePanelCollapse?: () => void;
 }
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
@@ -63,6 +63,7 @@ export default function HomeMapContainer({
     onMarkerClick,
     onPanelClose,
     onReviewModalOpen,
+    onTogglePanelCollapse,
 }: HomeMapContainerProps) {
     if (isGridMode) {
         // [CSR] 그리드 모드: 2x2 그리드로 4개 지역 표시 - 복수 지도 인스턴스
@@ -194,9 +195,10 @@ export default function HomeMapContainer({
                     onRestaurantSelect={onRestaurantSelect}
                 />
             ) : (
-                // [CSR] 해외 지도 - 패널 그룹으로 지도와 상세 정보 분할
-                <PanelGroup direction="horizontal" className="w-full h-full">
-                    <Panel id="map-panel" order={1} defaultSize={panelRestaurant && isPanelOpen ? 75 : 100} minSize={40} maxSize={80}>
+                // [CSR] 해외 지도 - Flexbox 레이아웃으로 변경 (고정 너비 패널)
+                <div className="w-full h-full flex relative overflow-hidden">
+                    {/* 지도 영역 */}
+                    <div className="flex-1 h-full relative z-0">
                         <MapView
                             filters={filters}
                             selectedCountry={selectedCountry}
@@ -209,19 +211,15 @@ export default function HomeMapContainer({
                             onMapReady={onMapReady}
                             onMarkerClick={onMarkerClick}
                         />
-                    </Panel>
+                    </div>
 
-                    {/* [CSR] 리사이즈 핸들 - 드래그 인터랙션 */}
-                    {panelRestaurant && isPanelOpen && (
-                        <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
-                            <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
-                        </PanelResizeHandle>
-                    )}
-
-                    {/* [CSR] 맛집 상세 패널 - 조건부 렌더링 */}
-                    {panelRestaurant && isPanelOpen && (
-                        <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={33}>
-                            <div className="h-full">
+                    {/* [CSR] 맛집 상세 패널 - 고정 너비 400px, 애니메이션 적용 */}
+                    {panelRestaurant && (
+                        <div
+                            className={`h-full relative z-20 shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'}`}
+                            style={{ overflow: 'visible' }} // 버튼이 밖으로 튀어나와야 함
+                        >
+                            <div className="h-full w-[400px] bg-background border-l border-border">
                                 <RestaurantDetailPanel
                                     restaurant={panelRestaurant}
                                     onClose={onPanelClose}
@@ -232,11 +230,13 @@ export default function HomeMapContainer({
                                     onRequestEditRestaurant={() => {
                                         onRequestEditRestaurant(panelRestaurant);
                                     }}
+                                    onToggleCollapse={onTogglePanelCollapse}
+                                    isPanelOpen={isPanelOpen}
                                 />
                             </div>
-                        </Panel>
+                        </div>
                     )}
-                </PanelGroup>
+                </div>
             )}
         </Suspense>
     );

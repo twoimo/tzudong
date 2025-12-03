@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -19,6 +19,8 @@ interface RestaurantDetailPanelProps {
     onWriteReview?: () => void;
     onEditRestaurant?: () => void;
     onRequestEditRestaurant?: (restaurant: Restaurant) => void;
+    onToggleCollapse?: () => void;
+    isPanelOpen?: boolean;
 }
 
 interface Review {
@@ -45,6 +47,8 @@ export function RestaurantDetailPanel({
     onWriteReview,
     onEditRestaurant,
     onRequestEditRestaurant,
+    onToggleCollapse,
+    isPanelOpen = true,
 }: RestaurantDetailPanelProps) {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
@@ -392,7 +396,23 @@ export function RestaurantDetailPanel({
 
     return (
         <>
-            <div className="h-full flex flex-col bg-background border-l border-border">
+            <div className="h-full flex flex-col bg-background border-l border-border relative">
+                {/* 플로팅 접기/펼치기 버튼 - 패널 좌측 가장자리 */}
+                {onToggleCollapse && (
+                    <button
+                        onClick={onToggleCollapse}
+                        className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex items-center justify-center w-6 h-12 bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group"
+                        title={isPanelOpen ? "패널 접기" : "패널 펼치기"}
+                        aria-label={isPanelOpen ? "패널 접기" : "패널 펼치기"}
+                    >
+                        {isPanelOpen ? (
+                            <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                        ) : (
+                            <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                        )}
+                    </button>
+                )}
+
                 {/* Header */}
                 <div className="p-4 border-b border-border">
                     <div className="flex items-start justify-between gap-2">
@@ -472,9 +492,6 @@ export function RestaurantDetailPanel({
                                     <Settings className="h-4 w-4" />
                                 </Button>
                             )}
-                            <Button variant="ghost" size="icon" onClick={onClose}>
-                                <X className="h-4 w-4" />
-                            </Button>
                         </div>
                     </div>
 
