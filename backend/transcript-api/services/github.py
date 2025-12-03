@@ -7,9 +7,10 @@ GitHub 커밋/푸시 서비스
 
 import subprocess
 import sys
+import json
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 # 한국 시간대 (KST, UTC+9)
 KST = timezone(timedelta(hours=9))
@@ -78,6 +79,29 @@ def run_git_command(command: list, cwd: Path = None, logger: Optional[PipelineLo
         return False, e.stderr.strip()
 
 
+def merge_transcripts(local: List[Dict], remote: List[Dict]) -> List[Dict]:
+    """
+    로컬과 원격 transcript 데이터를 merge (중복 제거)
+    youtube_link를 기준으로 중복 제거, 로컬 데이터 우선
+    """
+    # youtube_link를 key로 사용
+    merged = {}
+    
+    # 원격 데이터 먼저 추가
+    for item in remote:
+        link = item.get("youtube_link")
+        if link:
+            merged[link] = item
+    
+    # 로컬 데이터로 덮어쓰기 (로컬 우선)
+    for item in local:
+        link = item.get("youtube_link")
+        if link:
+            merged[link] = item
+    
+    return list(merged.values())
+
+
 def commit_and_push_transcripts(
     date_folder: str,
     transcript_count: int = 0,
@@ -130,7 +154,23 @@ def commit_and_push_transcripts(
             }
         logger.success(f"브랜치 전환 완료: {TARGET_BRANCH}")
     
-    # 원격 변경사항 pull (충돌 방지)
+    # Transcript 파일 경로
+    transcript_file = CRAWLING_DATA_DIR / date_folder / "tzuyang_restaurant_transcripts.json"
+    error_file = CRAWLING_DATA_DIR / date_folder / "tzuyang_transcript_errors.json"
+    
+    logger.info(f"📁 Transcript 파일: {transcript_file}")
+    
+    # Step 1: 로컬 데이터 백업 (pull 전에)
+    local_transcripts: List[Dict] = []
+    if transcript_file.exists():
+        try:
+            with open(transcript_file, 'r', encoding='utf-8') as f:
+                local_transcripts = json.load(f)
+            logger.info(f"📦 로컬 데이터 백업: {len(local_transcripts)}개")
+        except Exception as e:
+            logger.warning(f"로컬 데이터 백업 실패: {e}")
+    
+    # Step 2: 원격 변경사항 pull
     logger.info("📥 원격 변경사항 pull 중...")
     success, msg = run_git_command(["git", "pull", "--rebase", "origin", TARGET_BRANCH], logger=logger)
     if not success:
@@ -138,11 +178,25 @@ def commit_and_push_transcripts(
     else:
         logger.success("pull 완료")
     
-    # Transcript 파일 경로
-    transcript_file = CRAWLING_DATA_DIR / date_folder / "tzuyang_restaurant_transcripts.json"
-    error_file = CRAWLING_DATA_DIR / date_folder / "tzuyang_transcript_errors.json"
+    # Step 3: 원격 데이터 로드 (pull 후)
+    remote_transcripts: List[Dict] = []
+    if transcript_file.exists():
+        try:
+            with open(transcript_file, 'r', encoding='utf-8') as f:
+                remote_transcripts = json.load(f)
+            logger.info(f"📥 원격 데이터 로드: {len(remote_transcripts)}개")
+        except Exception as e:
+            logger.warning(f"원격 데이터 로드 실패: {e}")
     
-    logger.info(f"📁 Transcript 파일: {transcript_file}")
+    # Step 4: 로컬 + 원격 데이터 merge (중복 제거)
+    merged_transcripts = merge_transcripts(local_transcripts, remote_transcripts)
+    logger.info(f"🔀 Merge 완료: 로컬 {len(local_transcripts)}개 + 원격 {len(remote_transcripts)}개 → {len(merged_transcripts)}개")
+    
+    # Step 5: merge된 데이터 저장
+    if merged_transcripts:
+        with open(transcript_file, 'w', encoding='utf-8') as f:
+            json.dump(merged_transcripts, f, ensure_ascii=False, indent=2)
+        logger.success(f"💾 Merge된 데이터 저장 완료: {len(merged_transcripts)}개")
     
     if not transcript_file.exists():
         logger.error(f"Transcript 파일이 없습니다: {transcript_file}")
