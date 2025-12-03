@@ -912,7 +912,7 @@ export function RestaurantDetailPanel({
                 {/* Footer Actions */}
                 {viewMode === 'detail' && (
                     <div className="p-4 border-t border-border">
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid gap-2" style={{ gridTemplateColumns: '2fr 3fr 2fr' }}>
                             <Button
                                 onClick={handleRequestEditRestaurant}
                                 variant="outline"
@@ -928,7 +928,7 @@ export function RestaurantDetailPanel({
                                 className="flex flex-col gap-1 h-auto py-3 px-2 bg-gradient-primary hover:opacity-90"
                             >
                                 <Navigation className="h-4 w-4" />
-                                <span className="text-xs">길찾기</span>
+                                <span className="text-xs font-medium">길찾기</span>
                             </Button>
 
                             <Button
