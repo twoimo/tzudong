@@ -59,7 +59,7 @@ export default function HomeControlPanel({
                 onPanelClick?.('control');
             }}
         >
-            <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
+            <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-xl hover:border-primary/50">
                 {/* [CSR] 지역/국가 선택 - 드롭다운 인터랙션 */}
                 {mapMode === 'domestic' ? (
                     <RegionSelector
