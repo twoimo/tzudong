@@ -1,15 +1,16 @@
 name: 📹 YouTube URL 수집
 
+# 임시 비활성화 - restaurant-pipeline.yml에서 통합 관리
 on:
   workflow_dispatch:
     inputs:
-      channel:
-        description: '채널명 (현재는 tzuyang만 지원)'
+      disabled:
+        description: '이 워크플로우는 비활성화되었습니다'
         required: false
-        default: 'tzuyang'
-  schedule:
-    # 2일마다 KST 02:00 (UTC 17:00) 자동 실행
-    - cron: '0 17 */2 * *'
+        default: 'true'
+  # schedule:
+  #   # 2일마다 KST 02:00 (UTC 17:00) 자동 실행
+  #   - cron: '0 17 */2 * *'
 
 env:
   PYTHON_VERSION: '3.11'
