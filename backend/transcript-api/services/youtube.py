@@ -11,6 +11,8 @@ import re
 import sys
 import os
 import base64
+import time
+import random
 import requests
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict, Any
@@ -441,6 +443,12 @@ def collect_transcripts_for_urls(
             failed_count += 1
             failed_urls.append({"url": url, "error": error})
             logger.error(f"[{i}/{total}] {video_id} ❌ {error}")
+        
+        # 3개 URL마다 2~5초 랜덤 대기 (IP 차단 방지)
+        if i % 3 == 0:
+            delay = random.uniform(2, 5)
+            logger.debug(f"⏳ {delay:.1f}초 대기 (IP 차단 방지)...")
+            time.sleep(delay)
     
     # 결과 저장
     with logger.timer("save_transcripts"):
