@@ -26,8 +26,11 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 UTILS_DIR="$(cd "$PROJECT_ROOT/../utils" && pwd)"
 PROMPT_FILE="$PROJECT_ROOT/prompts/evaluation_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_laaj_evaluation.py"
-TRANSCRIPT_SCRIPT="$UTILS_DIR/get_transcript.py"
 DATA_UTILS_SCRIPT="$UTILS_DIR/data_utils.py"
+
+# 수집쪽 데이터 디렉토리 (transcript 파일 위치)
+CRAWLING_DATA_DIR="$PROJECT_ROOT/../geminiCLI-restaurant-crawling/data"
+TRANSCRIPT_FILENAME="tzuyang_restaurant_transcripts.json"
 
 # 날짜별 폴더 경로 계산
 DATA_DIR="$PROJECT_ROOT/data"
@@ -269,26 +272,39 @@ while IFS= read -r line; do
     log_info "[$LINE_NUM/$TOTAL] 평가중: $YOUTUBE_LINK"
     log_debug "평가 대상 음식점: ${RESTAURANT_COUNT}개"
     
-    # YouTube 자막 가져오기 (필수 - 자막 없으면 평가 스킵)
+    # 수집쪽 transcript 파일에서 자막 가져오기
     TRANSCRIPT=""
-    if [ -f "$TRANSCRIPT_SCRIPT" ]; then
-        TRANSCRIPT_START=$(date +%s)
-        TRANSCRIPT=$(python3 "$TRANSCRIPT_SCRIPT" "$YOUTUBE_LINK" 50000 2>/dev/null || echo "")
-        TRANSCRIPT_END=$(date +%s)
-        TRANSCRIPT_DURATION=$((TRANSCRIPT_END - TRANSCRIPT_START))
-        TOTAL_TRANSCRIPT_TIME=$((TOTAL_TRANSCRIPT_TIME + TRANSCRIPT_DURATION))
-        
-        if [ -n "$TRANSCRIPT" ]; then
-            log_debug "자막 로드 완료 (${#TRANSCRIPT}자, ${TRANSCRIPT_DURATION}s)"
-            TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
-        else
-            log_warning "[$LINE_NUM/$TOTAL] 건너뜀 - 자막 없음 (${TRANSCRIPT_DURATION}s)"
-            TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
-            SKIPPED=$((SKIPPED + 1))
-            continue
+    TRANSCRIPT_FOUND=false
+    TRANSCRIPT_START=$(date +%s)
+    
+    # 모든 날짜 폴더에서 transcript 검색
+    for transcript_file in "$CRAWLING_DATA_DIR"/*/"$TRANSCRIPT_FILENAME"; do
+        if [ -f "$transcript_file" ]; then
+            # jq로 해당 URL의 transcript 추출 (start + text 형식으로 변환)
+            TRANSCRIPT=$(jq -r --arg url "$YOUTUBE_LINK" '
+                .[] | select(.youtube_link == $url) | 
+                .transcript | 
+                map("[" + ((.start / 60 | floor | tostring) + ":" + ((.start % 60 | floor) | tostring | if length == 1 then "0" + . else . end)) + "] " + .text) | 
+                join("\n")
+            ' "$transcript_file" 2>/dev/null)
+            
+            if [ -n "$TRANSCRIPT" ] && [ "$TRANSCRIPT" != "null" ]; then
+                TRANSCRIPT_FOUND=true
+                log_debug "자막 발견: $(echo "$TRANSCRIPT" | wc -c | tr -d ' ')자 (from $transcript_file)"
+                break
+            fi
         fi
+    done
+    
+    TRANSCRIPT_END=$(date +%s)
+    TRANSCRIPT_DURATION=$((TRANSCRIPT_END - TRANSCRIPT_START))
+    TOTAL_TRANSCRIPT_TIME=$((TOTAL_TRANSCRIPT_TIME + TRANSCRIPT_DURATION))
+    
+    if [ "$TRANSCRIPT_FOUND" = true ]; then
+        TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
     else
-        log_warning "[$LINE_NUM/$TOTAL] 건너뜀 - 자막 스크립트 없음"
+        log_warning "[$LINE_NUM/$TOTAL] 건너뜀 - Transcript 없음 (수집쪽 데이터에 없음)"
+        TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
         SKIPPED=$((SKIPPED + 1))
         continue
     fi
