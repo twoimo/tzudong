@@ -219,7 +219,7 @@ jobs:
         run: |
           echo "🍜 크롤링 시작 (transcript 기반)..."
           echo "📅 파이프라인 날짜: $PIPELINE_DATE"
-          zsh crawling.sh
+          bash crawling.sh
       
       # ============================
       # 10. 평가 실행
