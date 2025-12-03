@@ -1,5 +1,6 @@
 'use client';
 
+import { memo } from 'react';
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -10,7 +11,8 @@ interface SubmissionFloatingButtonProps {
     className?: string;
 }
 
-export default function SubmissionFloatingButton({
+// [OPTIMIZATION] React.memo로 불필요한 리렌더링 방지
+const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
     onClick,
     isSidebarOpen,
     className
@@ -39,4 +41,6 @@ export default function SubmissionFloatingButton({
             <Send className="h-6 w-6" />
         </Button>
     );
-}
+});
+
+export default SubmissionFloatingButton;
