@@ -62,8 +62,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 bg-sidebar border-r border-sidebar-border transition-colors duration-300 ease-in-out flex flex-col h-screen w-64 shadow-xl",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        "fixed left-0 top-0 z-40 bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col h-screen shadow-xl",
+        isOpen ? "w-64" : "w-16"
       )}
     >
       {/* 한지 질감 오버레이 - 더 선명하게 */}
@@ -77,14 +77,20 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       {/* 우측 테두리 강조 */}
       <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-stone-800/20 to-transparent pointer-events-none z-0" />
 
-      {/* 로고 영역 - "쯔동여지도" 5글자만 크게 조선100년체로 가운데 배치 */}
-      <div className="h-16 border-b border-stone-800/10 relative z-10">
+      {/* 로고 영역 */}
+      <div className="h-16 border-b border-stone-800/10 relative z-10 flex items-center justify-center overflow-hidden">
         <div className="cursor-pointer w-full h-full" onClick={() => router.push("/")}>
-          <SeasonalLogo />
+          {isOpen ? (
+            <SeasonalLogo />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <Home className="h-6 w-6 text-stone-600" />
+            </div>
+          )}
         </div>
       </div>
 
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto relative z-10">
+      <nav className={cn("flex-1 space-y-1 overflow-y-auto relative z-10", isOpen ? "p-4" : "p-2")}>
         {menuItems.map((item, index) => {
           const isActive = pathname === item.path;
           const isHomePage = item.path === "/";
@@ -93,8 +99,10 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
             <Button
               key={index}
               variant="ghost"
+              title={!isOpen ? item.label : undefined}
               className={cn(
-                "w-full justify-start gap-3 font-serif text-base h-11 transition-all duration-200",
+                "w-full font-serif text-base h-11 transition-all duration-200",
+                isOpen ? "justify-start gap-3" : "justify-center p-0",
                 isActive
                   ? "bg-stone-800 text-white shadow-md hover:bg-stone-700 hover:text-white"
                   : "text-stone-600 hover:bg-stone-200/50 hover:text-stone-900"
@@ -109,25 +117,31 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
               disabled={!item.onClick}
             >
               <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-stone-400")} />
-              <span>{item.label}</span>
-              {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" />}
+              {isOpen && (
+                <>
+                  <span>{item.label}</span>
+                  {isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-red-500" />}
+                </>
+              )}
             </Button>
           );
         })}
       </nav>
 
-      <div className="p-4 space-y-4 relative z-10">
-        {/* 광고 배너 */}
-        <AdBanner />
+      {isOpen && (
+        <div className="p-4 space-y-4 relative z-10">
+          {/* 광고 배너 */}
+          <AdBanner />
 
-        {/* 버전 정보 */}
-        <div className="border-t border-stone-800/10 pt-4 text-center">
-          <div className="text-xs text-stone-400 font-serif space-y-1">
-            <p>쯔동여지도 v1.5.3</p>
-            <p className="text-stone-300">@ 2025 Tzudong</p>
+          {/* 버전 정보 */}
+          <div className="border-t border-stone-800/10 pt-4 text-center">
+            <div className="text-xs text-stone-400 font-serif space-y-1">
+              <p>쯔동여지도 v1.5.3</p>
+              <p className="text-stone-300">@ 2025 Tzudong</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 };
