@@ -911,32 +911,36 @@ export function RestaurantDetailPanel({
 
                 {/* Footer Actions */}
                 {viewMode === 'detail' && (
-                    <div className="p-4 border-t border-border space-y-2">
-                        <Button
-                            onClick={handleGetDirections}
-                            variant="outline"
-                            className="w-full gap-2"
-                        >
-                            <Navigation className="h-4 w-4" />
-                            길찾기
-                        </Button>
+                    <div className="p-4 border-t border-border">
+                        <div className="grid grid-cols-3 gap-2">
+                            <Button
+                                onClick={handleRequestEditRestaurant}
+                                variant="outline"
+                                size="sm"
+                                className="flex flex-col gap-1 h-auto py-3 px-2"
+                            >
+                                <Edit className="h-4 w-4" />
+                                <span className="text-xs">수정 요청</span>
+                            </Button>
 
-                        <Button
-                            onClick={handleRequestEditRestaurant}
-                            variant="outline"
-                            className="w-full gap-2"
-                        >
-                            <Edit className="h-4 w-4" />
-                            맛집 수정 요청
-                        </Button>
+                            <Button
+                                onClick={handleGetDirections}
+                                className="flex flex-col gap-1 h-auto py-3 px-2 bg-gradient-primary hover:opacity-90"
+                            >
+                                <Navigation className="h-4 w-4" />
+                                <span className="text-xs">길찾기</span>
+                            </Button>
 
-                        <Button
-                            onClick={handleWriteReview}
-                            className="w-full bg-gradient-primary hover:opacity-90 gap-2"
-                        >
-                            <MessageSquare className="h-4 w-4" />
-                            리뷰 작성하기
-                        </Button>
+                            <Button
+                                onClick={handleWriteReview}
+                                variant="outline"
+                                size="sm"
+                                className="flex flex-col gap-1 h-auto py-3 px-2"
+                            >
+                                <MessageSquare className="h-4 w-4" />
+                                <span className="text-xs">리뷰 작성</span>
+                            </Button>
+                        </div>
                     </div>
                 )}
 
