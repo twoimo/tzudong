@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
+import { toast } from "sonner";
 
 import HomeModeToggle from "../components/home/home-mode-toggle";
+import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
 // 동적 임포트 - 큰 컴포넌트는 필요할 때만 로드
 const HomeControlPanel = dynamic(
@@ -32,11 +34,23 @@ const EditRestaurantModal = dynamic(
     { ssr: false }
 );
 
+const RestaurantSubmissionModal = dynamic(
+    () => import('@/components/modals/RestaurantSubmissionModal'),
+    { ssr: false }
+);
+
+const MyPagePanel = dynamic(
+    () => import('@/components/profile/MyPagePanel'),
+    { ssr: false }
+);
+
 export default function HomeClient() {
-    const { isAdmin } = useAuth();
+    const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
+    const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
+    const [isMyPagePanelOpen, setIsMyPagePanelOpen] = useState(false);
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
@@ -74,8 +88,31 @@ export default function HomeClient() {
 
     const onAdminEditRestaurant = isAdmin ? handlers.handleAdminEditRestaurant : undefined;
 
+    const handleSubmissionButtonClick = () => {
+        if (!user) {
+            toast.error('맛집 제보는 로그인 후 이용 가능합니다');
+            return;
+        }
+        setIsSubmissionModalOpen(true);
+    };
+
+    // 헤더에서 마이페이지 열기 이벤트 리스너
+    useEffect(() => {
+        const handleMyPageOpen = () => {
+            setIsMyPagePanelOpen(true);
+        };
+
+        window.addEventListener('openMyPage', handleMyPageOpen);
+        return () => window.removeEventListener('openMyPage', handleMyPageOpen);
+    }, []);
+
     return (
         <>
+            {/* 맛집 제보 플로팅 버튼 */}
+            <SubmissionFloatingButton
+                onClick={handleSubmissionButtonClick}
+                isSidebarOpen={isSidebarOpen}
+            />
             <HomeModeToggle
                 mode={mapMode}
                 onModeChange={(mode) => {
@@ -157,6 +194,22 @@ export default function HomeClient() {
                         state.setAdminRestaurantToEdit(null);
                     }}
                 />
+            )}
+
+            {/* 맛집 제보 모달 */}
+            <RestaurantSubmissionModal
+                isOpen={isSubmissionModalOpen}
+                onClose={() => setIsSubmissionModalOpen(false)}
+            />
+
+            {/* 마이페이지 패널 */}
+            {isMyPagePanelOpen && (
+                <div className="fixed top-16 right-0 h-[calc(100vh-64px)] w-[400px] z-50 shadow-xl bg-background border-l border-border">
+                    <MyPagePanel
+                        isOpen={isMyPagePanelOpen}
+                        onClose={() => setIsMyPagePanelOpen(false)}
+                    />
+                </div>
             )}
         </>
     );
