@@ -62,3 +62,74 @@ Use '--' to separate paths from revisions, like this:
 'git <command> [<revision>...] -- [<file>...]'
 [2025-12-03T22:00:42.636755+09:00] [SUCCESS] /collect 요청 완료 - 성공: 15, 실패: 0
 [2025-12-03T22:00:42.637368+09:00] [INFO] 📁 요약 저장됨: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_summary.json
+[2025-12-03T22:21:46.016970+09:00] [INFO] ============================================================
+[2025-12-03T22:21:46.018491+09:00] [INFO] 🚀 [TRANSCRIPT-API] 파이프라인 시작
+[2025-12-03T22:21:46.019050+09:00] [INFO] ⏰ 시작 시간: 2025-12-03 22:21:46
+[2025-12-03T22:21:46.019317+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant
+[2025-12-03T22:21:46.019541+09:00] [INFO]    📄 text: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/text/25-12-03
+[2025-12-03T22:21:46.019767+09:00] [INFO]    📊 structured: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-03
+[2025-12-03T22:21:46.019963+09:00] [INFO]    📋 report: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03
+[2025-12-03T22:21:46.020142+09:00] [INFO] ============================================================
+[2025-12-03T22:21:46.020321+09:00] [INFO] 🚀 /collect 엔드포인트 호출 - date_folder: 25-12-03, max_urls: None, auto_commit: True
+[2025-12-03T22:21:46.020815+09:00] [INFO] ============================================================
+[2025-12-03T22:21:46.021396+09:00] [INFO] 🚀 [TRANSCRIPT-API] 파이프라인 시작
+[2025-12-03T22:21:46.021943+09:00] [INFO] ⏰ 시작 시간: 2025-12-03 22:21:46
+[2025-12-03T22:21:46.022557+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03
+[2025-12-03T22:21:46.023172+09:00] [INFO] ============================================================
+[2025-12-03T22:21:46.024373+09:00] [INFO] 📅 날짜 폴더: 25-12-03
+[2025-12-03T22:21:46.025133+09:00] [INFO] 📁 출력 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json
+[2025-12-03T22:21:49.641110+09:00] [INFO] 🔢 최대 URL 제한: 15개 (IP 차단 방지)
+[2025-12-03T22:21:49.648956+09:00] [INFO] 📂 기존 데이터 로드: 15개
+[2025-12-03T22:21:49.649876+09:00] [INFO] 📹 Transcript 수집 시작: 15개 URL
+[2025-12-03T22:21:54.736088+09:00] [SUCCESS] [1/15] B9adR8DN830 ✅ (70 segments)
+[2025-12-03T22:21:56.638125+09:00] [SUCCESS] [2/15] MnLGiP3e714 ✅ (182 segments)
+[2025-12-03T22:21:58.578667+09:00] [SUCCESS] [3/15] t3Bt1ooBrnk ✅ (250 segments)
+[2025-12-03T22:22:05.107720+09:00] [SUCCESS] [4/15] bVNb3YIH5TI ✅ (290 segments)
+[2025-12-03T22:22:07.235541+09:00] [SUCCESS] [5/15] Qe5w3eSHhUE ✅ (225 segments)
+[2025-12-03T22:22:09.078695+09:00] [SUCCESS] [6/15] qdrjjcJE-KI ✅ (218 segments)
+[2025-12-03T22:22:15.848149+09:00] [SUCCESS] [7/15] OON0kwUgOlw ✅ (131 segments)
+[2025-12-03T22:22:18.289151+09:00] [SUCCESS] [8/15] DncejNvRvTM ✅ (299 segments)
+[2025-12-03T22:22:20.402206+09:00] [SUCCESS] [9/15] hjYYEklZsgM ✅ (169 segments)
+[2025-12-03T22:22:26.321287+09:00] [SUCCESS] [10/15] FGJdgoU5L_s ✅ (347 segments)
+[2025-12-03T22:22:28.388436+09:00] [SUCCESS] [11/15] aYL9E6fKNLI ✅ (316 segments)
+[2025-12-03T22:22:30.592943+09:00] [SUCCESS] [12/15] BFIw0bXtMq0 ✅ (256 segments)
+[2025-12-03T22:22:36.328706+09:00] [SUCCESS] [13/15] 0VmT9F7y81s ✅ (201 segments)
+[2025-12-03T22:22:38.747851+09:00] [SUCCESS] [14/15] BubHdc2NayQ ✅ (430 segments)
+[2025-12-03T22:22:40.439525+09:00] [SUCCESS] [15/15] FPg95PvRbew ✅ (289 segments)
+[2025-12-03T22:22:44.634636+09:00] [SUCCESS] 📁 Transcript 저장 완료: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json
+[2025-12-03T22:22:44.635119+09:00] [INFO] ✅ 수집 완료: 성공 15, 실패 0
+[2025-12-03T22:22:44.635287+09:00] [INFO] ============================================================
+[2025-12-03T22:22:44.635398+09:00] [INFO] 🏁 [TRANSCRIPT-API] 파이프라인 종료
+[2025-12-03T22:22:44.635497+09:00] [INFO] ⏰ 종료 시간: 2025-12-03 22:22:44
+[2025-12-03T22:22:44.635586+09:00] [INFO] ⏱️ 소요 시간: 58.6초
+[2025-12-03T22:22:44.635685+09:00] [INFO] ============================================================
+[2025-12-03T22:22:44.636303+09:00] [INFO] 📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_222146.json
+[2025-12-03T22:22:44.637776+09:00] [INFO] 📤 자동 커밋 시작...
+[2025-12-03T22:22:44.637956+09:00] [INFO] ============================================================
+[2025-12-03T22:22:44.638055+09:00] [INFO] 🚀 [TRANSCRIPT-API] 파이프라인 시작
+[2025-12-03T22:22:44.638161+09:00] [INFO] ⏰ 시작 시간: 2025-12-03 22:21:46
+[2025-12-03T22:22:44.638261+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03
+[2025-12-03T22:22:44.638352+09:00] [INFO] ============================================================
+[2025-12-03T22:22:44.638433+09:00] [INFO] 📅 날짜 폴더: 25-12-03
+[2025-12-03T22:22:44.638519+09:00] [INFO] 🎯 타겟 브랜치: github-actions-restaurant
+[2025-12-03T22:22:44.665310+09:00] [INFO] 📁 Transcript 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json
+[2025-12-03T22:22:44.671907+09:00] [INFO] 📦 로컬 데이터 백업: 30개
+[2025-12-03T22:22:44.672139+09:00] [INFO] 📥 원격 변경사항 pull 중...
+[2025-12-03T22:22:44.698385+09:00] [ERROR] git 명령 실패: git pull --rebase origin github-actions-restaurant | {"stderr": "error: cannot pull with rebase: You have unstaged changes.\nerror: please commit or stash them."}
+[2025-12-03T22:22:44.698761+09:00] [WARNING] pull 실패 (새 브랜치일 수 있음): error: cannot pull with rebase: You have unstaged changes.
+error: please commit or stash them.
+[2025-12-03T22:22:44.704936+09:00] [INFO] 📥 원격 데이터 로드: 30개
+[2025-12-03T22:22:44.705618+09:00] [INFO] 🔀 Merge 완료: 로컬 30개 + 원격 30개 → 30개
+[2025-12-03T22:22:44.733118+09:00] [SUCCESS] 💾 Merge된 데이터 저장 완료: 30개
+[2025-12-03T22:22:44.783029+09:00] [INFO] 📝 변경된 파일: backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json
+[2025-12-03T22:22:44.849195+09:00] [SUCCESS] 커밋 완료: 📝 Transcript 수집: 25-12-03 (15개)
+[2025-12-03T22:22:46.837679+09:00] [SUCCESS] 푸시 완료: origin/github-actions-restaurant
+[2025-12-03T22:22:46.838324+09:00] [INFO] ============================================================
+[2025-12-03T22:22:46.838467+09:00] [INFO] 🏁 [TRANSCRIPT-API] 파이프라인 종료
+[2025-12-03T22:22:46.838589+09:00] [INFO] ⏰ 종료 시간: 2025-12-03 22:22:46
+[2025-12-03T22:22:46.838707+09:00] [INFO] ⏱️ 소요 시간: 1분 0초
+[2025-12-03T22:22:46.838828+09:00] [INFO] ============================================================
+[2025-12-03T22:22:46.839440+09:00] [INFO] 📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_222146.json
+[2025-12-03T22:22:46.841195+09:00] [SUCCESS] 자동 커밋 성공: 커밋 및 푸시 완료: 📝 Transcript 수집: 25-12-03 (15개)
+[2025-12-03T22:22:46.841551+09:00] [SUCCESS] /collect 요청 완료 - 성공: 15, 실패: 0
+[2025-12-03T22:22:46.842634+09:00] [INFO] 📁 요약 저장됨: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_summary.json

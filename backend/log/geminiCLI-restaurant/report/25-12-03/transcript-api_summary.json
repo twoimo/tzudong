@@ -1,178 +1,188 @@
 {
   "phase": "transcript-api",
-  "start_time": "2025-12-03T21:59:59.745421+09:00",
-  "end_time": "2025-12-03T22:00:42.636827+09:00",
-  "duration_seconds": 42.89,
+  "start_time": "2025-12-03T22:21:46.016645+09:00",
+  "end_time": "2025-12-03T22:22:46.841783+09:00",
+  "duration_seconds": 60.83,
   "total_processed": 0,
-  "success_count": 17,
-  "error_count": 2,
+  "success_count": 21,
+  "error_count": 1,
   "skip_count": 0,
   "warnings": [
     {
-      "message": "자동 커밋 실패: 현재 브랜치 확인 실패: fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'",
+      "message": "pull 실패 (새 브랜치일 수 있음): error: cannot pull with rebase: You have unstaged changes.\nerror: please commit or stash them.",
       "data": null
     }
   ],
   "errors": [
     {
-      "message": "git 명령 실패: git rev-parse --abbrev-ref HEAD",
+      "message": "git 명령 실패: git pull --rebase origin github-actions-restaurant",
       "data": {
-        "stderr": "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'"
+        "stderr": "error: cannot pull with rebase: You have unstaged changes.\nerror: please commit or stash them."
       }
-    },
-    {
-      "message": "현재 브랜치 확인 실패: fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'",
-      "data": null
     }
   ],
   "timers": {
     "get_pending_urls": {
       "count": 1,
-      "total_seconds": 2.1,
-      "min_seconds": 2.099,
-      "max_seconds": 2.099,
-      "avg_seconds": 2.099
+      "total_seconds": 3.61,
+      "min_seconds": 3.614,
+      "max_seconds": 3.614,
+      "avg_seconds": 3.614
     },
-    "fetch_transcript_su68Sm9TNys": {
+    "fetch_transcript_B9adR8DN830": {
       "count": 1,
-      "total_seconds": 1.53,
-      "min_seconds": 1.529,
-      "max_seconds": 1.529,
-      "avg_seconds": 1.529
+      "total_seconds": 5.09,
+      "min_seconds": 5.086,
+      "max_seconds": 5.086,
+      "avg_seconds": 5.086
     },
-    "fetch_transcript_G3pQQeL47wI": {
+    "fetch_transcript_MnLGiP3e714": {
       "count": 1,
-      "total_seconds": 1.79,
-      "min_seconds": 1.788,
-      "max_seconds": 1.788,
-      "avg_seconds": 1.788
+      "total_seconds": 1.9,
+      "min_seconds": 1.902,
+      "max_seconds": 1.902,
+      "avg_seconds": 1.902
     },
-    "fetch_transcript_bxEDXFycaXw": {
-      "count": 1,
-      "total_seconds": 1.79,
-      "min_seconds": 1.789,
-      "max_seconds": 1.789,
-      "avg_seconds": 1.789
-    },
-    "fetch_transcript_AL6cbIJzdos": {
-      "count": 1,
-      "total_seconds": 1.71,
-      "min_seconds": 1.707,
-      "max_seconds": 1.707,
-      "avg_seconds": 1.707
-    },
-    "fetch_transcript_Su915VcW8Cc": {
-      "count": 1,
-      "total_seconds": 1.48,
-      "min_seconds": 1.476,
-      "max_seconds": 1.476,
-      "avg_seconds": 1.476
-    },
-    "fetch_transcript_iSb0LHcOMhs": {
+    "fetch_transcript_t3Bt1ooBrnk": {
       "count": 1,
       "total_seconds": 1.94,
-      "min_seconds": 1.937,
-      "max_seconds": 1.937,
-      "avg_seconds": 1.937
+      "min_seconds": 1.94,
+      "max_seconds": 1.94,
+      "avg_seconds": 1.94
     },
-    "fetch_transcript_8hWQnvVvLHQ": {
+    "fetch_transcript_bVNb3YIH5TI": {
       "count": 1,
-      "total_seconds": 1.44,
-      "min_seconds": 1.439,
-      "max_seconds": 1.439,
-      "avg_seconds": 1.439
+      "total_seconds": 2.39,
+      "min_seconds": 2.386,
+      "max_seconds": 2.386,
+      "avg_seconds": 2.386
     },
-    "fetch_transcript_gmWgonsj6HA": {
+    "fetch_transcript_Qe5w3eSHhUE": {
       "count": 1,
-      "total_seconds": 1.51,
-      "min_seconds": 1.511,
-      "max_seconds": 1.511,
-      "avg_seconds": 1.511
+      "total_seconds": 2.13,
+      "min_seconds": 2.127,
+      "max_seconds": 2.127,
+      "avg_seconds": 2.127
     },
-    "fetch_transcript_FcVz29NKM-o": {
+    "fetch_transcript_qdrjjcJE-KI": {
       "count": 1,
-      "total_seconds": 1.71,
-      "min_seconds": 1.713,
-      "max_seconds": 1.713,
-      "avg_seconds": 1.713
+      "total_seconds": 1.84,
+      "min_seconds": 1.842,
+      "max_seconds": 1.842,
+      "avg_seconds": 1.842
     },
-    "fetch_transcript_FcblabtVQKo": {
+    "fetch_transcript_OON0kwUgOlw": {
       "count": 1,
-      "total_seconds": 1.58,
-      "min_seconds": 1.577,
-      "max_seconds": 1.577,
-      "avg_seconds": 1.577
+      "total_seconds": 2.45,
+      "min_seconds": 2.453,
+      "max_seconds": 2.453,
+      "avg_seconds": 2.453
     },
-    "fetch_transcript_2zX2zFonIEE": {
+    "fetch_transcript_DncejNvRvTM": {
       "count": 1,
-      "total_seconds": 1.61,
-      "min_seconds": 1.614,
-      "max_seconds": 1.614,
-      "avg_seconds": 1.614
+      "total_seconds": 2.44,
+      "min_seconds": 2.44,
+      "max_seconds": 2.44,
+      "avg_seconds": 2.44
     },
-    "fetch_transcript_rRAEFB6CiD0": {
+    "fetch_transcript_hjYYEklZsgM": {
       "count": 1,
-      "total_seconds": 1.66,
-      "min_seconds": 1.662,
-      "max_seconds": 1.662,
-      "avg_seconds": 1.662
+      "total_seconds": 2.11,
+      "min_seconds": 2.112,
+      "max_seconds": 2.112,
+      "avg_seconds": 2.112
     },
-    "fetch_transcript_M8whof-__nY": {
+    "fetch_transcript_FGJdgoU5L_s": {
       "count": 1,
-      "total_seconds": 1.45,
-      "min_seconds": 1.45,
-      "max_seconds": 1.45,
-      "avg_seconds": 1.45
+      "total_seconds": 2.5,
+      "min_seconds": 2.495,
+      "max_seconds": 2.495,
+      "avg_seconds": 2.495
     },
-    "fetch_transcript_ayjSkDH_Vtw": {
+    "fetch_transcript_aYL9E6fKNLI": {
       "count": 1,
-      "total_seconds": 1.59,
-      "min_seconds": 1.593,
-      "max_seconds": 1.593,
-      "avg_seconds": 1.593
+      "total_seconds": 2.06,
+      "min_seconds": 2.065,
+      "max_seconds": 2.065,
+      "avg_seconds": 2.065
     },
-    "fetch_transcript_f5SSnbtKr1Q": {
+    "fetch_transcript_BFIw0bXtMq0": {
       "count": 1,
-      "total_seconds": 1.48,
-      "min_seconds": 1.48,
-      "max_seconds": 1.48,
-      "avg_seconds": 1.48
+      "total_seconds": 2.2,
+      "min_seconds": 2.203,
+      "max_seconds": 2.203,
+      "avg_seconds": 2.203
+    },
+    "fetch_transcript_0VmT9F7y81s": {
+      "count": 1,
+      "total_seconds": 1.89,
+      "min_seconds": 1.887,
+      "max_seconds": 1.887,
+      "avg_seconds": 1.887
+    },
+    "fetch_transcript_BubHdc2NayQ": {
+      "count": 1,
+      "total_seconds": 2.42,
+      "min_seconds": 2.418,
+      "max_seconds": 2.418,
+      "avg_seconds": 2.418
+    },
+    "fetch_transcript_FPg95PvRbew": {
+      "count": 1,
+      "total_seconds": 1.69,
+      "min_seconds": 1.691,
+      "max_seconds": 1.691,
+      "avg_seconds": 1.691
     },
     "save_transcripts": {
       "count": 1,
-      "total_seconds": 0.03,
-      "min_seconds": 0.034,
-      "max_seconds": 0.034,
-      "avg_seconds": 0.034
+      "total_seconds": 0.05,
+      "min_seconds": 0.047,
+      "max_seconds": 0.047,
+      "avg_seconds": 0.047
     },
     "transcript_collect": {
       "count": 1,
-      "total_seconds": 42.86,
-      "min_seconds": 42.856,
-      "max_seconds": 42.856,
-      "avg_seconds": 42.856
+      "total_seconds": 58.62,
+      "min_seconds": 58.617,
+      "max_seconds": 58.617,
+      "avg_seconds": 58.617
     },
     "git_commit": {
+      "count": 2,
+      "total_seconds": 2.24,
+      "min_seconds": 0.036,
+      "max_seconds": 2.203,
+      "avg_seconds": 1.119
+    },
+    "git_push": {
       "count": 1,
-      "total_seconds": 0.03,
-      "min_seconds": 0.031,
-      "max_seconds": 0.031,
-      "avg_seconds": 0.031
+      "total_seconds": 1.99,
+      "min_seconds": 1.988,
+      "max_seconds": 1.988,
+      "avg_seconds": 1.988
     }
   },
   "custom_stats": {
-    "existing_transcripts": 0,
-    "pending_urls": 988,
+    "existing_transcripts": 15,
+    "pending_urls": 973,
     "total_urls_to_process": 15,
     "success_count": 15,
     "failed_count": 0,
-    "total_transcripts_in_file": 15,
+    "total_transcripts_in_file": 30,
     "output_file": "/Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json",
+    "current_branch": "github-actions-restaurant",
+    "files_to_commit": [
+      "backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json"
+    ],
+    "commit_message": "📝 Transcript 수집: 25-12-03 (15개)",
+    "status": "success",
+    "branch": "github-actions-restaurant",
     "endpoint": "/collect",
     "date_folder": "25-12-03",
     "total_urls": 15,
-    "skipped_count": 0,
-    "committed": false
+    "skipped_count": 15,
+    "committed": true
   },
-  "duration_formatted": "42.9초"
+  "duration_formatted": "1분 0초"
 }
