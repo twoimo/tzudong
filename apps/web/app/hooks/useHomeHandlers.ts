@@ -21,7 +21,6 @@ interface UseHomeHandlersProps {
     setIsPanelOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setPanelRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
     setSelectedRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
-    setGridSelectedRestaurants: React.Dispatch<React.SetStateAction<{ [key: string]: Restaurant | null }>>;
     setMoveToRestaurant: React.Dispatch<React.SetStateAction<((restaurant: Restaurant) => void) | null>>;
 }
 
@@ -40,7 +39,6 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         setIsPanelOpen,
         setPanelRestaurant,
         setSelectedRestaurant,
-        setGridSelectedRestaurants,
         setMoveToRestaurant,
     } = props;
 
@@ -136,19 +134,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         setSelectedRestaurant(restaurant);
     };
 
-    const handleGridRestaurantSelect = (region: Region, restaurant: Restaurant) => {
-        setGridSelectedRestaurants(prev => ({
-            ...prev,
-            [region]: restaurant,
-        }));
-    };
 
-    const handleGridRestaurantClose = (region: Region) => {
-        setGridSelectedRestaurants(prev => ({
-            ...prev,
-            [region]: null,
-        }));
-    };
 
     const switchToSingleMap = (region?: Region | null) => {
         if (region !== undefined) {
@@ -189,8 +175,6 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         handleCountryChange,
         handleRestaurantSelect,
         handleRestaurantSearch,
-        handleGridRestaurantSelect,
-        handleGridRestaurantClose,
         switchToSingleMap,
         handleMapReady,
         handleMarkerClick,

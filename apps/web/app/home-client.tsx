@@ -60,7 +60,6 @@ export default function HomeClient() {
         setIsPanelOpen: state.setIsPanelOpen,
         setPanelRestaurant: state.setPanelRestaurant,
         setSelectedRestaurant: state.setSelectedRestaurant,
-        setGridSelectedRestaurants: state.setGridSelectedRestaurants,
         setMoveToRestaurant: state.setMoveToRestaurant,
     });
 
