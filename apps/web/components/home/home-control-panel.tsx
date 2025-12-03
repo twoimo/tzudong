@@ -56,7 +56,6 @@ export default function HomeControlPanel({
     const [leftPosition, setLeftPosition] = useState<string>('50%');
     const panelRef = useRef<HTMLDivElement>(null);
 
-    // 화면 크기 및 패널 크기 기반으로 충돌 감지
     // 화면 크기 및 패널 크기 기반으로 충돌 감지 및 위치 계산
     useEffect(() => {
         const updateLayout = () => {

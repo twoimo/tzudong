@@ -59,6 +59,7 @@ const NaverMapView = memo(({
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
+    const [showRestaurantCount, setShowRestaurantCount] = useState(false); // 맛집 개수 표시 여부
 
     // selectedRestaurant가 설정되면 자동으로 패널 열기
     useEffect(() => {
@@ -140,10 +141,17 @@ const NaverMapView = memo(({
     // 지역 변경 시 로딩 중에도 이전 마커를 유지하기 위한 상태
     const [previousRestaurants, setPreviousRestaurants] = useState<Restaurant[]>([]);
 
-    // restaurants가 변경될 때 이전 데이터를 저장
+    // restaurants가 변경될 때 이전 데이터를 저장하고, 개수 표시를 3초간 활성화
     useEffect(() => {
         if (restaurants.length > 0 && !isLoadingRestaurants) {
             setPreviousRestaurants(restaurants);
+
+            // 맛집 개수가 있을 때만 배지 표시 및 타이머 설정
+            setShowRestaurantCount(true);
+            const timer = setTimeout(() => {
+                setShowRestaurantCount(false);
+            }, 3000);
+            return () => clearTimeout(timer);
         }
     }, [restaurants, isLoadingRestaurants]);
 
@@ -639,9 +647,9 @@ const NaverMapView = memo(({
                     </div>
                 )}
 
-                {/* 레스토랑 개수 표시 */}
-                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                {/* 레스토랑 개수 표시 (3초 후 사라짐) */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
                         <span className="text-sm font-medium">
                             🔥 {restaurants.length}개의 맛집 발견
                         </span>
@@ -674,9 +682,9 @@ const NaverMapView = memo(({
                     </div>
                 )}
 
-                {/* 레스토랑 개수 표시 */}
-                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+                {/* 레스토랑 개수 표시 (3초 후 사라짐) */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
                         <span className="text-sm font-medium">
                             🔥 {restaurants.length}개의 맛집 발견
                         </span>

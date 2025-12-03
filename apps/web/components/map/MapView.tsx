@@ -85,6 +85,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
   const [panelWidth, setPanelWidth] = useState(0);
+  const [showRestaurantCount, setShowRestaurantCount] = useState(false);
 
   // props로 전달된 panelWidth가 있으면 우선 사용
   const effectivePanelWidth = propPanelWidth !== undefined ? propPanelWidth : panelWidth;
@@ -233,6 +234,17 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }), [mapBounds, memoizedFilters, selectedCountry, isLoaded]);
 
   const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantsOptions);
+
+  // 맛집 개수 표시 자동 숨김 처리
+  useEffect(() => {
+    if (restaurants.length > 0 && !isLoadingRestaurants) {
+      setShowRestaurantCount(true);
+      const timer = setTimeout(() => {
+        setShowRestaurantCount(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [restaurants, isLoadingRestaurants]);
 
   // 마커를 표시할 맛집 목록 (기존 restaurants + 검색된 맛집)
   const restaurantsToShow = useMemo(() => {
@@ -597,8 +609,8 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
         )}
 
         {/* Restaurant count */}
-        {!isLoadingRestaurants && restaurants.length > 0 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
+        {!isLoadingRestaurants && restaurants.length > 0 && showRestaurantCount && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
             <span className="text-sm font-medium">
               🔥 {restaurants.length}개의 맛집 발견
             </span>
