@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { Menu, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -112,7 +112,7 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
           onClick={onToggleSidebar}
           className="hover:bg-stone-200/50 text-stone-700 font-serif transition-colors"
         >
-          <Menu className="h-5 w-5" />
+          <PanelLeft className="h-5 w-5" />
         </Button>
       </div>
 

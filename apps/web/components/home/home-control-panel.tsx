@@ -28,6 +28,8 @@ interface HomeControlPanelProps {
     onRestaurantSearch: (restaurant: any) => void;
     onSearchExecute: (region?: Region | null) => void;
     onGridModeToggle: () => void;
+    activePanel?: 'map' | 'detail' | 'control';
+    onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
 }
 
 // [CSR] 지역/국가 선택, 카테고리 필터, 검색 통합 패널 - 모든 사용자 입력 처리
@@ -46,10 +48,18 @@ export default function HomeControlPanel({
     onRestaurantSearch,
     onSearchExecute,
     onGridModeToggle,
+    activePanel,
+    onPanelClick,
 }: HomeControlPanelProps) {
     return (
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-10">
-            <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg">
+        <div
+            className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 transition-all duration-200 ${activePanel === 'control' ? 'z-[50]' : 'z-10'} hover:z-[60]`}
+            onClick={(e) => {
+                e.stopPropagation();
+                onPanelClick?.('control');
+            }}
+        >
+            <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border p-3 shadow-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-xl hover:border-primary/50">
                 {/* [CSR] 지역/국가 선택 - 드롭다운 인터랙션 */}
                 {mapMode === 'domestic' ? (
                     <RegionSelector
@@ -95,16 +105,6 @@ export default function HomeControlPanel({
                         isKoreanOnly={mapMode === 'domestic'}
                     />
                 </Suspense>
-
-                {/* [CSR] 그리드 모드 토글 - 클릭 이벤트 */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onGridModeToggle}
-                    className="flex items-center gap-2"
-                >
-                    {isGridMode ? <Map className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
-                </Button>
             </div>
         </div>
     );

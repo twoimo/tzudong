@@ -9,7 +9,6 @@ import { Restaurant, Region } from "@/types/restaurant";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -17,9 +16,6 @@ import { MapPin, Star, Users, ChefHat } from "lucide-react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
-
-
-
 
 interface NaverMapViewProps {
     filters: FilterState;
@@ -33,20 +29,36 @@ interface NaverMapViewProps {
     isGridMode?: boolean;
     gridSelectedRestaurant?: Restaurant | null; // 그리드 모드에서 각 그리드별 선택된 맛집
     onRestaurantSelect?: (restaurant: Restaurant) => void;
+    activePanel?: 'map' | 'detail' | 'control';
+    onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
 }
 
-const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, selectedRestaurant, refreshTrigger, onAdminEditRestaurant, onRequestEditRestaurant, isGridMode = false, gridSelectedRestaurant, onRestaurantSelect }: NaverMapViewProps) => {
+const NaverMapView = memo(({
+    filters,
+    selectedRegion,
+    searchedRestaurant,
+    selectedRestaurant,
+    refreshTrigger,
+    onAdminEditRestaurant,
+    onRequestEditRestaurant,
+    isGridMode = false,
+    gridSelectedRestaurant,
+    onRestaurantSelect,
+    activePanel,
+    onPanelClick
+}: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
     const markersRef = useRef<any[]>([]);
     const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
-    const { isLoaded, loadError } = useNaverMaps();
+
+    // Naver Maps API 로드 (동적 임포트 후 컴포넌트가 마운트되면 로드)
+    const { isLoaded, loadError } = useNaverMaps({ autoLoad: true });
 
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [panelWidth, setPanelWidth] = useState(0); // 패널 너비 상태
 
     // selectedRestaurant가 설정되면 자동으로 패널 열기
     useEffect(() => {
@@ -56,26 +68,6 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             setIsPanelOpen(false);
         }
     }, [selectedRestaurant, isGridMode]);
-
-    // 패널 너비 측정 (ResizeObserver 사용)
-    useEffect(() => {
-        if (!detailPanelRef.current || !isPanelOpen) {
-            setPanelWidth(0);
-            return;
-        }
-
-        const resizeObserver = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                setPanelWidth(entry.contentRect.width);
-            }
-        });
-
-        resizeObserver.observe(detailPanelRef.current);
-
-        return () => {
-            resizeObserver.disconnect();
-        };
-    }, [isPanelOpen]);
 
     // 선택된 맛집이 변경될 때 지도 중앙 재조정
     useEffect(() => {
@@ -89,42 +81,54 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
             // 약간의 딜레이 후 지도 중앙 이동 (줌 애니메이션 완료 대기)
             setTimeout(() => {
                 if (mapInstanceRef.current && mapRef.current) {
-                    let adjustedLng = selectedRestaurant.lng!;
+                    // 지도 중심 이동
+                    const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
 
-                    if (isPanelOpen && panelWidth > 0) {
-                        // 지도의 전체 너비
-                        const mapWidth = mapRef.current.clientWidth;
-
-                        // 왼쪽 사이드바 너비 (256px = 64 * 4, Tailwind의 w-64)
-                        const sidebarWidth = 256;
-
-                        // 현재 지도의 경도 범위
-                        const bounds = mapInstanceRef.current.getBounds();
-                        const lngSpan = bounds.maxX() - bounds.minX();
-
-                        // 오른쪽 패널이 가리는 경도 범위
-                        const rightPanelLngSpan = lngSpan * (panelWidth / mapWidth);
-
-                        // 왼쪽 사이드바가 가리는 경도 범위
-                        const leftSidebarLngSpan = lngSpan * (sidebarWidth / mapWidth);
-
-                        // 보이는 영역의 중심으로 이동
-                        // 오른쪽 패널 때문에 → 지도 중심을 동쪽(+)으로 → 마커가 서쪽(왼쪽, 보이는 영역)으로
-                        // 왼쪽 사이드바 때문에 → 지도 중심을 서쪽(-)으로 → 마커가 동쪽(오른쪽, 보이는 영역)으로
-                        const offset = (rightPanelLngSpan / 2) - (leftSidebarLngSpan / 2);
-                        adjustedLng = selectedRestaurant.lng! + offset;
-                    }
-
-                    const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, adjustedLng);
-
-                    // 부드러운 애니메이션으로 지도 중앙 이동
                     mapInstanceRef.current.panTo(centerLatLng, {
                         duration: 300
                     });
                 }
             }, 50);
         }
-    }, [selectedRestaurant, isGridMode, isPanelOpen, panelWidth]);
+    }, [selectedRestaurant, isGridMode]);
+
+    // 패널 열림/닫힘 상태 변경 시 지도 리사이즈 및 중심 이동 (애니메이션 시간 고려)
+    useEffect(() => {
+        if (!mapInstanceRef.current || !selectedRestaurant) return;
+
+        const handleResize = () => {
+            const map = mapInstanceRef.current;
+            if (map) {
+                naver.maps.Event.trigger(map, 'resize');
+                const center = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
+                map.panTo(center, { duration: 300 });
+            }
+        };
+
+        // 패널 애니메이션(300ms)이 끝난 직후 실행
+        const timer = setTimeout(handleResize, 320);
+
+        return () => clearTimeout(timer);
+    }, [isPanelOpen, selectedRestaurant]);
+
+    // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
+    useEffect(() => {
+        if (!mapInstanceRef.current) return;
+
+        const handleWindowResize = () => {
+            const map = mapInstanceRef.current;
+            if (map) {
+                naver.maps.Event.trigger(map, 'resize');
+                if (selectedRestaurant) {
+                    const center = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
+                    map.panTo(center, { duration: 0 }); // 리사이즈 시에는 즉시 이동
+                }
+            }
+        };
+
+        window.addEventListener('resize', handleWindowResize);
+        return () => window.removeEventListener('resize', handleWindowResize);
+    }, [selectedRestaurant]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
@@ -647,11 +651,16 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
         );
     }
 
-    // 단일 지도 모드에서는 resizable 패널 적용
+    // 단일 지도 모드에서는 Flexbox 레이아웃 적용 (고정 너비 패널)
     return (
-        <PanelGroup direction="horizontal" className="h-full">
-            {/* 지도 패널 */}
-            <Panel id="map-panel" order={1} defaultSize={selectedRestaurant && isPanelOpen ? 75 : 100} minSize={40} className="relative">
+        <div className="h-full flex relative overflow-hidden">
+            {/* 지도 영역 */}
+            <div
+                className="flex-1 h-full relative z-0"
+                onClick={() => {
+                    onPanelClick?.('map');
+                }}
+            >
                 {/* 지도 컨테이너 */}
                 <div ref={mapRef} className="w-full h-full" />
 
@@ -673,19 +682,20 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                         </span>
                     </div>
                 )}
-            </Panel>
+            </div>
 
-            {/* Resize Handle */}
-            {selectedRestaurant && isPanelOpen && (
-                <PanelResizeHandle className="w-2 bg-border hover:bg-primary/20 transition-colors relative">
-                    <div className="absolute inset-y-0 left-1/2 transform -translate-x-1/2 w-1 bg-muted-foreground/30 rounded-full"></div>
-                </PanelResizeHandle>
-            )}
-
-            {/* 레스토랑 상세 패널 */}
-            {selectedRestaurant && isPanelOpen && (
-                <Panel id="detail-panel" order={2} defaultSize={25} minSize={20} maxSize={33}>
-                    <div ref={detailPanelRef} className="h-full">
+            {/* 레스토랑 상세 패널 - 고정 너비 400px, 애니메이션 적용, 클릭 시 앞으로 가져오기 */}
+            {selectedRestaurant && (
+                <div
+                    className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
+                    style={{ overflow: 'visible' }}
+                    onClick={(e) => {
+                        // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
+                        e.stopPropagation();
+                        onPanelClick?.('detail');
+                    }}
+                >
+                    <div ref={detailPanelRef} className="h-full w-[400px] bg-background border-l border-border">
                         <RestaurantDetailPanel
                             restaurant={selectedRestaurant}
                             onClose={() => setIsPanelOpen(false)}
@@ -693,14 +703,16 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                                 setIsReviewModalOpen(true);
                             }}
                             onEditRestaurant={onAdminEditRestaurant ? () => {
-                                onAdminEditRestaurant(selectedRestaurant);
+                                onAdminEditRestaurant(selectedRestaurant!);
                             } : undefined}
                             onRequestEditRestaurant={onRequestEditRestaurant ? () => {
-                                onRequestEditRestaurant(selectedRestaurant);
+                                onRequestEditRestaurant(selectedRestaurant!);
                             } : undefined}
+                            onToggleCollapse={() => setIsPanelOpen(!isPanelOpen)}
+                            isPanelOpen={isPanelOpen}
                         />
                     </div>
-                </Panel>
+                </div>
             )}
 
 
@@ -714,11 +726,10 @@ const NaverMapView = memo(({ filters, selectedRegion, searchedRestaurant, select
                     toast.success("리뷰가 성공적으로 등록되었습니다!");
                 }}
             />
-        </PanelGroup>
+        </div>
     );
 });
 
 NaverMapView.displayName = 'NaverMapView';
 
 export default NaverMapView;
-

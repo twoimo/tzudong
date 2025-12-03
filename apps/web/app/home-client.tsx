@@ -34,6 +34,7 @@ const EditRestaurantModal = dynamic(
 export default function HomeClient() {
     const { isAdmin } = useAuth();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
+    const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
@@ -86,7 +87,7 @@ export default function HomeClient() {
                 mapMode={mapMode}
                 selectedRegion={state.selectedRegion}
                 selectedCountry={state.selectedCountry}
-                selectedCategories={state.selectedCategories}
+                selectedCategories={state.filters.categories}
                 filters={state.filters}
                 countryCounts={state.countryCounts}
                 isGridMode={state.isGridMode}
@@ -97,6 +98,8 @@ export default function HomeClient() {
                 onRestaurantSearch={handlers.handleRestaurantSearch}
                 onSearchExecute={handlers.switchToSingleMap}
                 onGridModeToggle={() => state.setIsGridMode(!state.isGridMode)}
+                activePanel={activePanel}
+                onPanelClick={setActivePanel}
             />
 
             <HomeMapContainer
@@ -122,6 +125,9 @@ export default function HomeClient() {
                 onMarkerClick={handlers.handleMarkerClick}
                 onPanelClose={handlers.handlePanelClose}
                 onReviewModalOpen={() => state.setIsReviewModalOpen(true)}
+                onTogglePanelCollapse={handlers.handlePanelClose}
+                activePanel={activePanel}
+                onPanelClick={setActivePanel}
             />
 
             <EditRestaurantModal
