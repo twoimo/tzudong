@@ -1,0 +1,64 @@
+[2025-12-03T21:59:59.745660+09:00] [INFO] ============================================================
+[2025-12-03T21:59:59.746352+09:00] [INFO] 🚀 [TRANSCRIPT-API] 파이프라인 시작
+[2025-12-03T21:59:59.746599+09:00] [INFO] ⏰ 시작 시간: 2025-12-03 21:59:59
+[2025-12-03T21:59:59.746920+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant
+[2025-12-03T21:59:59.747379+09:00] [INFO]    📄 text: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/text/25-12-03
+[2025-12-03T21:59:59.747682+09:00] [INFO]    📊 structured: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-03
+[2025-12-03T21:59:59.748035+09:00] [INFO]    📋 report: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03
+[2025-12-03T21:59:59.748375+09:00] [INFO] ============================================================
+[2025-12-03T21:59:59.749048+09:00] [INFO] 🚀 /collect 엔드포인트 호출 - date_folder: 25-12-03, max_urls: None, auto_commit: True
+[2025-12-03T21:59:59.749716+09:00] [INFO] ============================================================
+[2025-12-03T21:59:59.750319+09:00] [INFO] 🚀 [TRANSCRIPT-API] 파이프라인 시작
+[2025-12-03T21:59:59.751576+09:00] [INFO] ⏰ 시작 시간: 2025-12-03 21:59:59
+[2025-12-03T21:59:59.752880+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03
+[2025-12-03T21:59:59.753761+09:00] [INFO] ============================================================
+[2025-12-03T21:59:59.754039+09:00] [INFO] 📅 날짜 폴더: 25-12-03
+[2025-12-03T21:59:59.754314+09:00] [INFO] 📁 출력 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json
+[2025-12-03T22:00:01.853457+09:00] [INFO] 🔢 최대 URL 제한: 15개 (IP 차단 방지)
+[2025-12-03T22:00:01.854242+09:00] [INFO] 📹 Transcript 수집 시작: 15개 URL
+[2025-12-03T22:00:03.383352+09:00] [SUCCESS] [1/15] su68Sm9TNys ✅ (283 segments)
+[2025-12-03T22:00:05.172255+09:00] [SUCCESS] [2/15] G3pQQeL47wI ✅ (229 segments)
+[2025-12-03T22:00:06.962409+09:00] [SUCCESS] [3/15] bxEDXFycaXw ✅ (259 segments)
+[2025-12-03T22:00:11.740405+09:00] [SUCCESS] [4/15] AL6cbIJzdos ✅ (198 segments)
+[2025-12-03T22:00:13.216870+09:00] [SUCCESS] [5/15] Su915VcW8Cc ✅ (1973 segments)
+[2025-12-03T22:00:15.155465+09:00] [SUCCESS] [6/15] iSb0LHcOMhs ✅ (10 segments)
+[2025-12-03T22:00:18.648371+09:00] [SUCCESS] [7/15] 8hWQnvVvLHQ ✅ (328 segments)
+[2025-12-03T22:00:20.161060+09:00] [SUCCESS] [8/15] gmWgonsj6HA ✅ (296 segments)
+[2025-12-03T22:00:21.875562+09:00] [SUCCESS] [9/15] FcVz29NKM-o ✅ (344 segments)
+[2025-12-03T22:00:27.112259+09:00] [SUCCESS] [10/15] FcblabtVQKo ✅ (16 segments)
+[2025-12-03T22:00:28.726999+09:00] [SUCCESS] [11/15] 2zX2zFonIEE ✅ (215 segments)
+[2025-12-03T22:00:30.390336+09:00] [SUCCESS] [12/15] rRAEFB6CiD0 ✅ (481 segments)
+[2025-12-03T22:00:35.154098+09:00] [SUCCESS] [13/15] M8whof-__nY ✅ (213 segments)
+[2025-12-03T22:00:36.748203+09:00] [SUCCESS] [14/15] ayjSkDH_Vtw ✅ (223 segments)
+[2025-12-03T22:00:38.230334+09:00] [SUCCESS] [15/15] f5SSnbtKr1Q ✅ (271 segments)
+[2025-12-03T22:00:42.603002+09:00] [SUCCESS] 📁 Transcript 저장 완료: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json
+[2025-12-03T22:00:42.603464+09:00] [INFO] ✅ 수집 완료: 성공 15, 실패 0
+[2025-12-03T22:00:42.603666+09:00] [INFO] ============================================================
+[2025-12-03T22:00:42.603819+09:00] [INFO] 🏁 [TRANSCRIPT-API] 파이프라인 종료
+[2025-12-03T22:00:42.603946+09:00] [INFO] ⏰ 종료 시간: 2025-12-03 22:00:42
+[2025-12-03T22:00:42.604054+09:00] [INFO] ⏱️ 소요 시간: 42.9초
+[2025-12-03T22:00:42.604196+09:00] [INFO] ============================================================
+[2025-12-03T22:00:42.604806+09:00] [INFO] 📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_215959.json
+[2025-12-03T22:00:42.605465+09:00] [INFO] 📤 자동 커밋 시작...
+[2025-12-03T22:00:42.605627+09:00] [INFO] ============================================================
+[2025-12-03T22:00:42.605740+09:00] [INFO] 🚀 [TRANSCRIPT-API] 파이프라인 시작
+[2025-12-03T22:00:42.605859+09:00] [INFO] ⏰ 시작 시간: 2025-12-03 21:59:59
+[2025-12-03T22:00:42.605968+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03
+[2025-12-03T22:00:42.606076+09:00] [INFO] ============================================================
+[2025-12-03T22:00:42.606183+09:00] [INFO] 📅 날짜 폴더: 25-12-03
+[2025-12-03T22:00:42.606329+09:00] [INFO] 🎯 타겟 브랜치: github-actions-restaurant
+[2025-12-03T22:00:42.635145+09:00] [ERROR] git 명령 실패: git rev-parse --abbrev-ref HEAD | {"stderr": "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'"}
+[2025-12-03T22:00:42.635629+09:00] [ERROR] 현재 브랜치 확인 실패: fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+[2025-12-03T22:00:42.635751+09:00] [INFO] ============================================================
+[2025-12-03T22:00:42.635837+09:00] [INFO] 🏁 [TRANSCRIPT-API] 파이프라인 종료
+[2025-12-03T22:00:42.635928+09:00] [INFO] ⏰ 종료 시간: 2025-12-03 22:00:42
+[2025-12-03T22:00:42.636007+09:00] [INFO] ⏱️ 소요 시간: 42.9초
+[2025-12-03T22:00:42.636084+09:00] [INFO] ============================================================
+[2025-12-03T22:00:42.636500+09:00] [INFO] 📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_215959.json
+[2025-12-03T22:00:42.636663+09:00] [WARNING] 자동 커밋 실패: 현재 브랜치 확인 실패: fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.
+Use '--' to separate paths from revisions, like this:
+'git <command> [<revision>...] -- [<file>...]'
+[2025-12-03T22:00:42.636755+09:00] [SUCCESS] /collect 요청 완료 - 성공: 15, 실패: 0
+[2025-12-03T22:00:42.637368+09:00] [INFO] 📁 요약 저장됨: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_summary.json
