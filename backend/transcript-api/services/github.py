@@ -130,6 +130,14 @@ def commit_and_push_transcripts(
             }
         logger.success(f"브랜치 전환 완료: {TARGET_BRANCH}")
     
+    # 원격 변경사항 pull (충돌 방지)
+    logger.info("📥 원격 변경사항 pull 중...")
+    success, msg = run_git_command(["git", "pull", "--rebase", "origin", TARGET_BRANCH], logger=logger)
+    if not success:
+        logger.warning(f"pull 실패 (새 브랜치일 수 있음): {msg}")
+    else:
+        logger.success("pull 완료")
+    
     # Transcript 파일 경로
     transcript_file = CRAWLING_DATA_DIR / date_folder / "tzuyang_restaurant_transcripts.json"
     error_file = CRAWLING_DATA_DIR / date_folder / "tzuyang_transcript_errors.json"
