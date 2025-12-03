@@ -1,25 +1,18 @@
 name: 🍜 크롤링 + 평가 파이프라인
 
+# 임시 비활성화 - restaurant-pipeline.yml에서 통합 관리
 on:
   workflow_dispatch:
     inputs:
-      phase:
-        description: '실행할 단계 선택'
-        required: true
-        default: 'all'
-        type: choice
-        options:
-          - all
-          - crawling
-          - evaluation
-          - transform
-          - insert
-  # Transcript 파일이 커밋되면 자동 실행
-  push:
-    branches:
-      - github-actions-restaurant
-    paths:
-      - 'backend/geminiCLI-restaurant-crawling/data/**/tzuyang_restaurant_transcripts.json'
+      disabled:
+        description: '이 워크플로우는 비활성화되었습니다'
+        required: false
+        default: 'true'
+  # push:
+  #   branches:
+  #     - github-actions-restaurant
+  #   paths:
+  #     - 'backend/geminiCLI-restaurant-crawling/data/**/tzuyang_restaurant_transcripts.json'
 
 env:
   PYTHON_VERSION: '3.11'
