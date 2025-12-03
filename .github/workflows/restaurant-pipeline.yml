@@ -193,6 +193,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
+          # 원격 변경사항 먼저 pull (다른 커밋과 충돌 방지)
+          git pull --rebase origin github-actions-restaurant || true
+          
           git add backend/geminiCLI-restaurant-crawling/data/ 2>/dev/null || true
           
           if git diff --staged --quiet; then
