@@ -1,0 +1,397 @@
+name: 🍜 Restaurant Pipeline (통합)
+
+on:
+  workflow_dispatch:
+    inputs:
+      step:
+        description: '실행할 단계 선택'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - url-collection
+          - transcript-collection
+          - crawling-evaluation
+      max_urls:
+        description: 'URL 수집 최대 개수 (기본: 30)'
+        required: false
+        default: '30'
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+  TZ: 'Asia/Seoul'
+
+jobs:
+  # ============================
+  # 1. YouTube URL 수집
+  # ============================
+  url-collection:
+    if: ${{ github.event.inputs.step == 'all' || github.event.inputs.step == 'url-collection' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      url_count: ${{ steps.collect.outputs.url_count }}
+      has_urls: ${{ steps.collect.outputs.has_urls }}
+      pipeline_date: ${{ steps.date.outputs.pipeline_date }}
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: github-actions-restaurant
+      
+      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+      
+      - name: 🐍 Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests python-dotenv google-api-python-client
+          echo "✅ Python 패키지 설치 완료"
+      
+      - name: 📝 Create .env file
+        run: |
+          echo "YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}" > backend/geminiCLI-restaurant-crawling/.env
+          echo "✅ .env 파일 생성 완료"
+      
+      - name: 📅 Set Pipeline Date
+        id: date
+        run: |
+          PIPELINE_DATE=$(date '+%y-%m-%d')
+          echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
+          echo "pipeline_date=$PIPELINE_DATE" >> $GITHUB_OUTPUT
+          echo "📅 파이프라인 날짜: $PIPELINE_DATE"
+          
+          mkdir -p backend/geminiCLI-restaurant-crawling/data/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/report/$PIPELINE_DATE
+      
+      - name: 📹 Collect YouTube URLs
+        id: collect
+        working-directory: backend/geminiCLI-restaurant-crawling/scripts
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          MAX_URLS: ${{ github.event.inputs.max_urls }}
+        run: |
+          echo "🚀 YouTube URL 수집 시작..."
+          python3 api-youtube-urls.py
+          
+          URL_FILE="../data/$PIPELINE_DATE/tzuyang_youtubeVideo_urls.txt"
+          if [ -f "$URL_FILE" ]; then
+            URL_COUNT=$(wc -l < "$URL_FILE" | tr -d ' ')
+            echo "✅ 수집된 URL: $URL_COUNT 개"
+            echo "url_count=$URL_COUNT" >> $GITHUB_OUTPUT
+            echo "has_urls=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ 신규 URL 없음"
+            echo "url_count=0" >> $GITHUB_OUTPUT
+            echo "has_urls=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: 📤 Commit URL results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add backend/geminiCLI-restaurant-crawling/data/ 2>/dev/null || true
+          git add backend/log/geminiCLI-restaurant/ 2>/dev/null || true
+          
+          if git diff --staged --quiet; then
+            echo "📭 변경사항 없음"
+          else
+            git commit -m "🤖 Auto: YouTube URL 수집 (${{ env.PIPELINE_DATE }})"
+            git push
+            echo "✅ URL 커밋 완료"
+          fi
+
+  # ============================
+  # 2. Transcript 수집 (Puppeteer)
+  # ============================
+  transcript-collection:
+    needs: url-collection
+    if: |
+      always() && 
+      (github.event.inputs.step == 'all' || github.event.inputs.step == 'transcript-collection')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    outputs:
+      transcript_count: ${{ steps.collect.outputs.transcript_count }}
+      has_transcripts: ${{ steps.collect.outputs.has_transcripts }}
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: github-actions-restaurant
+          fetch-depth: 0
+      
+      - name: 🔄 Pull latest changes
+        run: |
+          git pull origin github-actions-restaurant || true
+      
+      - name: 📦 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      
+      - name: 📦 Install Node.js dependencies
+        working-directory: backend/geminiCLI-restaurant-crawling/scripts
+        run: |
+          npm install
+          echo "✅ Node.js 패키지 설치 완료"
+      
+      - name: 📅 Set Pipeline Date
+        run: |
+          PIPELINE_DATE=$(date '+%y-%m-%d')
+          echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
+          echo "📅 파이프라인 날짜: $PIPELINE_DATE"
+          
+          mkdir -p backend/geminiCLI-restaurant-crawling/data/$PIPELINE_DATE
+      
+      - name: 📝 Collect Transcripts (Puppeteer)
+        id: collect
+        working-directory: backend/geminiCLI-restaurant-crawling/scripts
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "🚀 Transcript 수집 시작 (Puppeteer)..."
+          
+          # Git 설정
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Transcript 수집 실행
+          npx ts-node transcript-puppeteer.ts 2>&1 | tee transcript-output.log
+          
+          # 결과 확인
+          TRANSCRIPT_FILE="../data/$PIPELINE_DATE/tzuyang_restaurant_transcripts.json"
+          if [ -f "$TRANSCRIPT_FILE" ]; then
+            COUNT=$(jq 'length' "$TRANSCRIPT_FILE" 2>/dev/null || echo "0")
+            echo "✅ 수집된 Transcript: $COUNT 개"
+            echo "transcript_count=$COUNT" >> $GITHUB_OUTPUT
+            echo "has_transcripts=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️ Transcript 없음"
+            echo "transcript_count=0" >> $GITHUB_OUTPUT
+            echo "has_transcripts=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: 📤 Final Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add backend/geminiCLI-restaurant-crawling/data/ 2>/dev/null || true
+          
+          if git diff --staged --quiet; then
+            echo "📭 변경사항 없음"
+          else
+            git commit -m "🤖 Auto: Transcript 수집 완료 (${{ env.PIPELINE_DATE }})"
+            git push
+            echo "✅ 최종 커밋 완료"
+          fi
+
+  # ============================
+  # 3. 크롤링 + 평가
+  # ============================
+  crawling-evaluation:
+    needs: transcript-collection
+    if: |
+      always() &&
+      (github.event.inputs.step == 'all' || github.event.inputs.step == 'crawling-evaluation')
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: github-actions-restaurant
+          fetch-depth: 0
+      
+      - name: 🔄 Pull latest changes
+        run: |
+          git pull origin github-actions-restaurant || true
+      
+      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+      
+      - name: 📦 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: backend/geminiCLI-restaurant-evaluation/package-lock.json
+      
+      - name: 🔧 Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      
+      - name: 🐍 Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests python-dotenv google-api-python-client openai
+      
+      - name: 📦 Install Node.js dependencies
+        working-directory: backend/geminiCLI-restaurant-evaluation
+        run: npm install
+      
+      - name: 🤖 Install Gemini CLI
+        env:
+          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+        run: |
+          npm install -g @google/gemini-cli
+          mkdir -p ~/.gemini
+          cat > ~/.gemini/settings.json << EOF
+          {
+            "auth": { "type": "api-key" },
+            "theme": "default",
+            "sandbox": false,
+            "yoloMode": true
+          }
+          EOF
+          pip install google-generativeai
+      
+      - name: 📝 Create .env files
+        run: |
+          cat > backend/geminiCLI-restaurant-crawling/.env << EOF
+          GEMINI_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GEMINI_API_KEY_BYEON=${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
+          YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
+          OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}
+          EOF
+          
+          cat > backend/geminiCLI-restaurant-evaluation/.env << EOF
+          NAVER_CLIENT_ID_BYEON=${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON=${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+          NCP_MAPS_KEY_ID_BYEON=${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
+          NCP_MAPS_KEY_BYEON=${{ secrets.NCP_MAPS_KEY_BYEON }}
+          GEMINI_API_KEY_BYEON=${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GEMINI_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          EOF
+      
+      - name: 🔐 Set script permissions
+        run: |
+          chmod +x backend/geminiCLI-restaurant-crawling/scripts/*.sh
+          chmod +x backend/geminiCLI-restaurant-evaluation/scripts/*.sh 2>/dev/null || true
+      
+      - name: 📅 Set Pipeline Date
+        run: |
+          PIPELINE_DATE=$(date '+%y-%m-%d')
+          echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
+          
+          mkdir -p backend/geminiCLI-restaurant-crawling/data/$PIPELINE_DATE
+          mkdir -p backend/geminiCLI-restaurant-evaluation/data/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/report/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/text/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/structured/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/supabase/$PIPELINE_DATE
+      
+      - name: 🍜 Run Crawling
+        working-directory: backend/geminiCLI-restaurant-crawling/scripts
+        env:
+          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+        run: |
+          echo "🍜 크롤링 시작..."
+          bash crawling.sh
+      
+      - name: 📊 Run Evaluation
+        working-directory: backend/geminiCLI-restaurant-evaluation/scripts
+        env:
+          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+        run: |
+          echo "📊 평가 시작..."
+          python3 evaluation-pipeline.py
+      
+      - name: 📊 Upload Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pipeline-results-${{ github.run_number }}
+          path: |
+            backend/geminiCLI-restaurant-crawling/data/**/*.jsonl
+            backend/geminiCLI-restaurant-crawling/data/**/*.json
+            backend/geminiCLI-restaurant-evaluation/data/**/*.jsonl
+          retention-days: 30
+          if-no-files-found: warn
+      
+      - name: 📤 Commit Results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add backend/geminiCLI-restaurant-crawling/data/ 2>/dev/null || true
+          git add backend/geminiCLI-restaurant-evaluation/data/ 2>/dev/null || true
+          git add backend/log/geminiCLI-restaurant/ 2>/dev/null || true
+          
+          if git diff --staged --quiet; then
+            echo "📭 변경사항 없음"
+          else
+            git commit -m "🤖 Auto: 크롤링+평가 완료 (${{ env.PIPELINE_DATE }})"
+            git push
+            echo "✅ 결과 커밋 완료"
+          fi
+
+  # ============================
+  # Summary
+  # ============================
+  summary:
+    needs: [url-collection, transcript-collection, crawling-evaluation]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📝 Generate Summary
+        run: |
+          echo "# 🍜 Restaurant Pipeline 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📅 실행 정보" >> $GITHUB_STEP_SUMMARY
+          echo "- **실행 시간**: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')" >> $GITHUB_STEP_SUMMARY
+          echo "- **실행 단계**: ${{ github.event.inputs.step }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "## 📊 단계별 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 1️⃣ URL 수집" >> $GITHUB_STEP_SUMMARY
+          echo "- **상태**: ${{ needs.url-collection.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **수집된 URL**: ${{ needs.url-collection.outputs.url_count || '0' }} 개" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 2️⃣ Transcript 수집" >> $GITHUB_STEP_SUMMARY
+          echo "- **상태**: ${{ needs.transcript-collection.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **수집된 Transcript**: ${{ needs.transcript-collection.outputs.transcript_count || '0' }} 개" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          echo "### 3️⃣ 크롤링 + 평가" >> $GITHUB_STEP_SUMMARY
+          echo "- **상태**: ${{ needs.crawling-evaluation.result }}" >> $GITHUB_STEP_SUMMARY

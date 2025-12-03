@@ -39,20 +39,38 @@ YouTube URL 목록          자막 추출           Gemini CLI            YouTub
 
 ### YouTube 자막 활용
 
-Gemini CLI는 YouTube 영상을 직접 시청할 수 없어서, **YouTube 자막(Transcript)**을 자동으로 가져와 프롬프트에 함께 제공합니다:
+Gemini CLI는 YouTube 영상을 직접 시청할 수 없어서, **YouTube 자막(Transcript)**을 자동으로 가져와 프롬프트에 함께 제공합니다.
 
-- `youtube-transcript-api`를 사용하여 자막 추출
-- 타임스탬프 형식: `[MM:SS] 자막 텍스트`
-- 최대 50,000자 (약 12,500 토큰)
-- 자동 생성 자막도 지원 (별도 표시)
+#### 자막 수집 방식 (Puppeteer)
 
+**Puppeteer 기반** 웹 스크래핑으로 자막을 수집합니다:
+
+1. **1차: maestra.ai** (Primary)
+   - `https://maestra.ai/tools/youtube-transcript-generator?url={VIDEO_URL}`
+   - Caption 모드로 전환하여 정확한 타임스탬프 추출
+   - `data-start` 속성에서 시작 시간(초) 파싱
+
+2. **2차: tubetranscript.com** (Fallback)
+   - `https://www.tubetranscript.com/ko/transcript/{VIDEO_ID}`
+   - maestra.ai 실패 시 자동 폴백
+
+#### 자막 데이터 형식
+
+```json
+{
+  "youtube_link": "https://www.youtube.com/watch?v=xxx",
+  "language": "ko",
+  "collected_at": "2025-12-04T01:30:00+09:00",
+  "transcript": [
+    {"start": 0.0, "text": "안녕하세요"},
+    {"start": 2.5, "text": "오늘은 군산 맛집 투어입니다"}
+  ]
+}
 ```
-예시:
-[00:41] (군산시 산북동)
-[01:20] 여기다 '산북동달구지'
-[03:52] 역대급으로 곱이 가득 차 있어요
-[06:18] 당일 도축한 소만 취급해요
-```
+
+- 타임스탬프: 초 단위 (float)
+- 자동 커밋: 30개마다 GitHub에 자동 커밋
+- 중복 검사: 모든 날짜 폴더의 기존 데이터와 비교
 
 ---
 
@@ -63,19 +81,25 @@ geminiCLI-restaurant-crawling/
 ├── README.md                                    # 이 파일
 ├── .env                                         # 환경변수
 ├── data/
-│   └── yy-mm-dd/                                # 날짜별 폴더 (예: 25-01-15)
+│   └── yy-mm-dd/                                # 날짜별 폴더 (예: 25-12-04)
+│       ├── tzuyang_youtubeVideo_urls.txt                # YouTube URL 목록
+│       ├── tzuyang_restaurant_transcripts.json          # 🆕 Puppeteer 수집 자막
 │       ├── tzuyang_restaurant_results.jsonl             # 크롤링 결과
 │       ├── tzuyang_restaurant_results_with_meta.jsonl   # 메타데이터 포함 결과
-│       └── tzuyang_crawling_errors.jsonl                # 에러 URL 목록
+│       ├── tzuyang_transcript_errors.json               # 자막 수집 에러
+│       └── tzuyang_crawling_errors.jsonl                # 크롤링 에러 URL
 ├── prompts/
 │   └── crawling_prompt.txt                      # Gemini CLI 크롤링 프롬프트
 ├── scripts/
-│   ├── crawling.sh                              # 🔥 메인 크롤링 스크립트 (자막 포함)
+│   ├── transcript-puppeteer.ts                  # 🆕 Puppeteer 자막 수집 스크립트
+│   ├── crawling.sh                              # 메인 크롤링 스크립트
 │   ├── retry_crawling_errors.sh                 # 에러 URL 재처리
 │   ├── crawling-pipeline.py                     # Python 파이프라인 래퍼
 │   ├── parse_result.py                          # Gemini 응답 파서
 │   ├── api-youtube-urls.py                      # YouTube URL 수집
-│   └── api-youtube-meta.py                      # YouTube 메타데이터 추가
+│   ├── api-youtube-meta.py                      # YouTube 메타데이터 추가
+│   ├── package.json                             # Node.js 의존성 (Puppeteer)
+│   └── tsconfig.json                            # TypeScript 설정
 └── temp/                                        # 임시 파일 (자동 생성/삭제)
 ```
 
@@ -85,17 +109,18 @@ geminiCLI-restaurant-crawling/
 
 ```
 data/
-├── 25-01-10/
-│   ├── tzuyang_restaurant_results.jsonl
-│   ├── tzuyang_restaurant_results_with_meta.jsonl
-│   └── tzuyang_crawling_errors.jsonl
-├── 25-01-15/
-│   ├── tzuyang_restaurant_results.jsonl
+├── 25-12-03/
+│   ├── tzuyang_youtubeVideo_urls.txt              # URL 목록
+│   ├── tzuyang_restaurant_transcripts.json        # 자막 (Puppeteer 수집)
+│   ├── tzuyang_restaurant_results.jsonl           # 크롤링 결과
+│   ├── tzuyang_restaurant_results_with_meta.jsonl # 메타데이터 포함
+│   └── tzuyang_transcript_errors.json             # 자막 에러 로그
+├── 25-12-04/
 │   └── ...
 ```
 
 - `PIPELINE_DATE` 환경변수 설정 시 해당 날짜 폴더 사용
-- 미설정 시 오늘 날짜 기준 폴더 자동 생성
+- 미설정 시 오늘 날짜 기준 폴더 자동 생성 (KST 기준)
 
 ---
 
@@ -245,48 +270,51 @@ python3 api-youtube-meta.py ../tzuyang_restaurant_results.jsonl ../tzuyang_resta
 
 | 스크립트 | 용도 |
 |----------|------|
-| `crawling.sh` | 메인 크롤링 스크립트 (자막 추출 + Gemini CLI 호출 + 메타데이터 추가) |
+| `transcript-puppeteer.ts` | 🆕 Puppeteer 기반 자막 수집 (maestra.ai + tubetranscript.com) |
+| `crawling.sh` | 메인 크롤링 스크립트 (Gemini CLI 호출 + 메타데이터 추가) |
 | `retry_crawling_errors.sh` | 에러 URL 재처리 (최대 5번 재시도) |
 | `parse_result.py` | Gemini CLI 응답에서 JSON 추출 및 JSONL 저장 |
 | `api-youtube-urls.py` | 쯔양 채널의 모든 동영상 URL 수집 |
 | `api-youtube-meta.py` | YouTube API로 메타데이터 추가 (제목, 광고 정보 등) |
 | `crawling-pipeline.py` | Python에서 전체 크롤링 파이프라인 실행 |
 
+### Puppeteer 자막 수집
+
+```bash
+cd scripts
+
+# 기본 실행 (오늘 날짜 폴더)
+npx ts-node transcript-puppeteer.ts
+
+# 특정 날짜
+npx ts-node transcript-puppeteer.ts --date 25-12-03
+
+# 최대 URL 수 지정
+npx ts-node transcript-puppeteer.ts --max 50
+```
+
+**수집 흐름**:
+1. `tzuyang_youtubeVideo_urls.txt`에서 URL 읽기
+2. 기존 transcript와 중복 검사
+3. maestra.ai에서 자막 수집 시도
+4. 실패 시 tubetranscript.com으로 폴백
+5. 30개마다 GitHub 자동 커밋
+
+**에러 처리**:
+- 수집 실패한 URL은 `tzuyang_transcript_errors.json`에 저장
+- 에러 유형: `maestra_fallback_failed`, `no_transcript` 등
+
 ### 에러 재처리
 
-크롤링 중 에러가 발생하면 `tzuyang_crawling_errors.jsonl`에 에러 URL이 JSONL 형식으로 저장됩니다:
+크롤링 중 에러가 발생하면 `tzuyang_crawling_errors.jsonl`에 에러 URL이 저장됩니다:
 
 ```json
-{"url": "https://www.youtube.com/watch?v=xxx", "error_type": "transcript", "timestamp": "2025-01-15T10:30:00"}
-{"url": "https://www.youtube.com/watch?v=yyy", "error_type": "gemini", "timestamp": "2025-01-15T10:31:00"}
+{"url": "https://www.youtube.com/watch?v=xxx", "error_type": "gemini", "timestamp": "2025-12-04T10:30:00"}
 ```
 
-에러 재처리 실행:
+에러 재처리:
 ```bash
-# 날짜 폴더 지정 필수
-bash retry_crawling_errors.sh 25-01-15
-```
-
-- 에러 파일에서 URL을 읽어 재크롤링
-- 성공 시 에러 파일에서 해당 URL 삭제
-- 모든 날짜 폴더 내 데이터와 중복 체크
-
-### 자막 추출 유틸리티
-
-자막 추출은 `backend/utils/get_transcript.py`를 사용합니다:
-
-```bash
-# 단독 실행
-python3 ../utils/get_transcript.py "https://www.youtube.com/watch?v=QuwlZxZHHq0" 50000
-```
-
-출력 예시:
-```
-[자동 생성된 자막입니다]
-[00:00] (소곱창 1.5kg)
-[00:41] (군산시 산북동)
-[01:20] 여기다 '산북동달구지'
-...
+bash retry_crawling_errors.sh 25-12-04
 ```
 
 ---

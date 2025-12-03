@@ -434,8 +434,9 @@ def collect_transcripts_for_urls(
         if transcript_data:
             transcripts.append({
                 "youtube_link": url,
-                "transcript": transcript_data,
-                "collected_at": datetime.now(KST).isoformat()
+                "language": "korean",
+                "collected_at": datetime.now(KST).isoformat(),
+                "transcript": transcript_data
             })
             success_count += 1
             logger.success(f"[{i}/{total}] {video_id} ✅ ({len(transcript_data)} segments)")
@@ -444,11 +445,15 @@ def collect_transcripts_for_urls(
             failed_urls.append({"url": url, "error": error})
             logger.error(f"[{i}/{total}] {video_id} ❌ {error}")
         
-        # 3개 URL마다 2~5초 랜덤 대기 (IP 차단 방지)
+        # 매 요청마다 1~2초 대기 (IP 차단 방지)
+        delay = random.uniform(1, 2)
+        time.sleep(delay)
+        
+        # 3개마다 추가로 3~10초 대기
         if i % 3 == 0:
-            delay = random.uniform(2, 5)
-            logger.debug(f"⏳ {delay:.1f}초 대기 (IP 차단 방지)...")
-            time.sleep(delay)
+            extra_delay = random.uniform(3, 10)
+            logger.debug(f"⏳ 추가 대기 {extra_delay:.1f}초...")
+            time.sleep(extra_delay)
     
     # 결과 저장
     with logger.timer("save_transcripts"):

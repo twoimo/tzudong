@@ -1,89 +1,71 @@
 # 🍜 GeminiCLI Restaurant Pipeline
 
-쯔양 유튜브 채널의 음식점 정보를 자동으로 수집하고 평가하는 3-part 파이프라인입니다.
+쯔양 유튜브 채널의 음식점 정보를 자동으로 수집하고 평가하는 **통합 파이프라인**입니다.
 
 ## 📋 개요
 
 | 항목 | 설명 |
 |------|------|
+| **워크플로우** | `restaurant-pipeline.yml` (통합 워크플로우) |
 | **실행 브랜치** | `github-actions-restaurant` (데이터 전용 브랜치) |
 | **결과 저장** | Supabase DB + GitHub 저장소 자동 커밋 |
 
-### 🎯 파이프라인 분리 이유
-
-YouTube Transcript API는 클라우드 IP (GitHub Actions/Azure)를 차단하기 때문에, 파이프라인을 3개로 분리했습니다:
-
-| 단계 | 실행 환경 | 워크플로우/도구 |
-|------|----------|----------------|
-| 1️⃣ URL 수집 | GitHub Actions | `api-youtube-urls.yml` |
-| 2️⃣ Transcript 수집 | 로컬 (FastAPI) | `transcript-api/` |
-| 3️⃣ 크롤링 + 평가 | GitHub Actions | `crawling-evaluation.yml` |
-
 ---
 
-## 🔄 3-Part 파이프라인
+## 🔄 통합 파이프라인
+
+### 📄 `restaurant-pipeline.yml`
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                         3-PART PIPELINE ARCHITECTURE                        │
+│                    🍜 Restaurant Pipeline (통합)                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  PART 1: URL 수집 (GitHub Actions - 2일마다 자동)                            │
-│  📄 api-youtube-urls.yml                                                    │
+│  1️⃣ url-collection                                                          │
+│  📹 YouTube URL 수집                                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  • 쯔양 채널에서 YouTube Video URL 수집                                      │
+│  • 쯔양 채널에서 YouTube Video URL 수집 (api-youtube-urls.py)               │
 │  • 모든 날짜 폴더의 기존 URL과 중복 검사                                       │
-│  • 신규 URL만 저장 및 자동 커밋                                               │
+│  • 신규 URL만 저장 → 자동 커밋                                               │
 │                                                                             │
 │  OUTPUT: data/{yy-mm-dd}/tzuyang_youtubeVideo_urls.txt                      │
-│                                                                             │
 └────────────────────────────────────┬────────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  PART 2: Transcript 수집 (로컬 FastAPI - 수동)                               │
-│  📁 backend/transcript-api/                                                 │
+│  2️⃣ transcript-collection                                                   │
+│  📝 Transcript 수집 (Puppeteer)                                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ⚠️ YouTube가 클라우드 IP를 차단하므로 로컬에서 실행 필요                      │
-│                                                                             │
-│  1. FastAPI 서버 실행: uvicorn main:app --reload                            │
-│  2. 웹 UI에서 "Transcript 수집" 버튼 클릭                                    │
-│  3. 수집 완료 후 "GitHub 커밋" 버튼 클릭                                      │
+│  • Puppeteer 기반 자막 수집 (transcript-puppeteer.ts)                        │
+│  • 1차: maestra.ai (Primary)                                                │
+│  • 2차: tubetranscript.com (Fallback)                                       │
+│  • 30개마다 자동 커밋                                                        │
 │                                                                             │
 │  OUTPUT: data/{yy-mm-dd}/tzuyang_restaurant_transcripts.json                │
-│                                                                             │
 └────────────────────────────────────┬────────────────────────────────────────┘
-                                     │ (Push 트리거)
+                                     │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│  PART 3: 크롤링 + 평가 (GitHub Actions - Push시 자동 또는 수동)               │
-│  📄 crawling-evaluation.yml                                                 │
+│  3️⃣ crawling-evaluation                                                     │
+│  🍜 크롤링 + 평가                                                            │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  1️⃣ 크롤링 (crawling.sh)                                                    │
-│     └── 모든 날짜 폴더의 URL + Transcript 읽기                               │
-│     └── Transcript가 있는 URL만 처리 (없으면 스킵)                            │
+│     └── Transcript 있는 URL만 처리                                          │
 │     └── Gemini CLI로 음식점 정보 추출                                        │
 │         ↓                                                                   │
 │  2️⃣ 메타데이터 추가 (api-youtube-meta.py)                                   │
 │     └── YouTube API + OpenAI로 광고 분석                                     │
 │         ↓                                                                   │
-│  3️⃣ LAAJ 평가 (evaluation.sh)                                              │
-│     └── Gemini CLI로 5개 항목 평가                                           │
-│         ↓                                                                   │
-│  4️⃣ RULE 평가 (evaluation-rule.py)                                         │
+│  3️⃣ 평가 (evaluation-pipeline.py)                                          │
+│     └── LAAJ 평가 + RULE 평가                                               │
 │     └── Naver API로 위치 정합성 검증                                         │
 │         ↓                                                                   │
-│  5️⃣ 변환 (transform_evaluation_results.py)                                 │
-│     └── 최종 데이터 형식으로 변환                                             │
-│         ↓                                                                   │
-│  6️⃣ DB 삽입 (insert_to_supabase.ts)                                        │
+│  4️⃣ 변환 및 DB 삽입                                                         │
 │     └── Supabase에 데이터 저장                                               │
 │                                                                             │
-│  OUTPUT: data/{yy-mm-dd}/tzuyang_restaurant_results.jsonl 외 다수            │
+│  OUTPUT: data/{yy-mm-dd}/tzuyang_restaurant_*.jsonl                         │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -94,118 +76,127 @@ YouTube Transcript API는 클라우드 IP (GitHub Actions/Azure)를 차단하기
 
 | 파일 | 설명 | 트리거 |
 |------|------|--------|
-| `api-youtube-urls.yml` | URL 수집 | 2일마다 자동, 수동 |
-| `crawling-evaluation.yml` | 크롤링 + 평가 | Transcript 커밋 시, 수동 |
+| `restaurant-pipeline.yml` | 통합 파이프라인 (URL → Transcript → 크롤링+평가) | 수동 (workflow_dispatch) |
+
+### 실행 옵션
+
+워크플로우 실행 시 `step` 파라미터로 단계 선택 가능:
+
+| step 옵션 | 설명 |
+|-----------|------|
+| `all` | 전체 파이프라인 (기본값) |
+| `url-collection` | 1단계: URL 수집만 |
+| `transcript-collection` | 2단계: Transcript 수집만 |
+| `crawling-evaluation` | 3단계: 크롤링+평가만 |
 
 ---
 
 ## 📂 날짜별 폴더 구조
 
-모든 결과 파일은 파이프라인 시작 날짜 기준으로 동일한 폴더에 저장됩니다.
+모든 결과 파일은 파이프라인 시작 날짜(KST) 기준으로 동일한 폴더에 저장됩니다.
 
 ```
 backend/
 ├── geminiCLI-restaurant-crawling/
+│   ├── scripts/
+│   │   ├── transcript-puppeteer.ts     # Puppeteer 자막 수집 스크립트
+│   │   ├── crawling.sh                 # 크롤링 스크립트
+│   │   ├── api-youtube-urls.py         # URL 수집
+│   │   └── api-youtube-meta.py         # 메타데이터 추가
 │   └── data/
-│       ├── 25-12-01/
+│       ├── 25-12-03/
 │       │   ├── tzuyang_youtubeVideo_urls.txt           # URL 목록
-│       │   ├── tzuyang_restaurant_transcripts.json     # Transcript (로컬 수집)
+│       │   ├── tzuyang_restaurant_transcripts.json     # Transcript (Puppeteer)
+│       │   ├── tzuyang_transcript_errors.json          # Transcript 에러
 │       │   ├── tzuyang_restaurant_results.jsonl        # 크롤링 결과
 │       │   ├── tzuyang_restaurant_results_with_meta.jsonl
-│       │   ├── tzuyang_no_transcript.log               # Transcript 없는 URL
-│       │   └── tzuyang_restaurant_errors.log
-│       └── 25-12-03/
+│       │   └── tzuyang_crawling_errors.jsonl
+│       └── 25-12-04/
 │           └── ...
 │
 ├── geminiCLI-restaurant-evaluation/
 │   └── data/
-│       ├── 25-12-01/
-│       │   ├── tzuyang_restaurant_evaluation_selection.jsonl
-│       │   ├── tzuyang_restaurant_evaluation_rule_results.jsonl
-│       │   ├── tzuyang_restaurant_evaluation_results.jsonl
-│       │   ├── tzuyang_restaurant_evaluation_errors.jsonl
-│       │   └── tzuyang_restaurant_transforms.jsonl
-│       └── 25-12-03/
-│           └── ...
-│
-├── transcript-api/                                     # FastAPI 서버
-│   ├── main.py
-│   ├── requirements.txt
-│   └── services/
-│       ├── youtube.py                                  # Transcript 수집
-│       └── github.py                                   # Git 커밋/푸시
+│       └── 25-12-04/
+│           ├── tzuyang_restaurant_evaluation_selection.jsonl
+│           ├── tzuyang_restaurant_evaluation_rule_results.jsonl
+│           ├── tzuyang_restaurant_evaluation_results.jsonl
+│           └── tzuyang_restaurant_transforms.jsonl
 │
 └── log/
     └── geminiCLI-restaurant/
         ├── report/{yy-mm-dd}/
         ├── text/{yy-mm-dd}/
-        ├── structured/{yy-mm-dd}/
-        └── supabase/{yy-mm-dd}/
+        └── structured/{yy-mm-dd}/
+```
+
+### Transcript JSON 형식
+
+```json
+[
+  {
+    "youtube_link": "https://www.youtube.com/watch?v=xxx",
+    "language": "ko",
+    "collected_at": "2025-12-04T01:30:00+09:00",
+    "transcript": [
+      {"start": 0.0, "text": "안녕하세요"},
+      {"start": 2.5, "text": "오늘은 맛집 투어입니다"}
+    ]
+  }
+]
 ```
 
 ---
 
 ## 🚀 실행 방법
 
-### Part 1: URL 수집 (자동/수동)
+### GitHub 웹 UI에서 실행
 
-**자동 실행**: 2일마다 KST 02:00 (UTC 17:00)
+1. Actions 탭으로 이동
+2. **"🍜 Restaurant Pipeline (통합)"** 선택
+3. **"Run workflow"** 클릭
+4. `step` 선택 (all / url-collection / transcript-collection / crawling-evaluation)
+5. `max_urls` 입력 (URL 수집 최대 개수, 기본: 30)
+6. **"Run workflow"** 버튼 클릭
 
-**수동 실행**:
-```bash
-# GitHub CLI
-gh workflow run "api-youtube-urls.yml" --ref github-actions-restaurant
+### GitHub CLI에서 실행
 
-# 또는 GitHub 웹에서
-# Actions > "📺 YouTube URL 수집" > Run workflow
-```
-
-### Part 2: Transcript 수집 (로컬)
-
-```bash
-# 1. FastAPI 서버 시작
-cd backend/transcript-api
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
-
-# 2. API 엔드포인트
-# GET  http://localhost:8000/status      # 상태 확인
-# POST http://localhost:8000/collect     # Transcript 수집
-# POST http://localhost:8000/commit      # GitHub 커밋
-
-# 3. 또는 웹 UI에서
-# - "Transcript 수집" 버튼 클릭
-# - 완료 후 "GitHub 커밋" 버튼 클릭
-```
-
-**Transcript JSON 형식**:
-```json
-[
-  {
-    "youtube_link": "https://www.youtube.com/watch?v=...",
-    "transcript": [
-      {"start": 0.0, "text": "안녕하세요"},
-      {"start": 2.5, "text": "오늘은..."}
-    ],
-    "collected_at": "2025-01-15T10:30:00"
-  }
-]
-```
-
-### Part 3: 크롤링 + 평가 (자동/수동)
-
-**자동 실행**: Transcript 파일이 커밋되면 자동 트리거
-
-**수동 실행**:
 ```bash
 # 전체 파이프라인
-gh workflow run "crawling-evaluation.yml" -f phase=all --ref github-actions-restaurant
+gh workflow run "restaurant-pipeline.yml" \
+  -f step=all \
+  -f max_urls=30 \
+  --ref github-actions-restaurant
 
-# 특정 단계만
-gh workflow run "crawling-evaluation.yml" -f phase=crawling --ref github-actions-restaurant
-gh workflow run "crawling-evaluation.yml" -f phase=evaluation --ref github-actions-restaurant
-gh workflow run "crawling-evaluation.yml" -f phase=transform --ref github-actions-restaurant
-gh workflow run "crawling-evaluation.yml" -f phase=insert --ref github-actions-restaurant
+# URL 수집만
+gh workflow run "restaurant-pipeline.yml" \
+  -f step=url-collection \
+  --ref github-actions-restaurant
+
+# Transcript 수집만
+gh workflow run "restaurant-pipeline.yml" \
+  -f step=transcript-collection \
+  --ref github-actions-restaurant
+
+# 크롤링+평가만
+gh workflow run "restaurant-pipeline.yml" \
+  -f step=crawling-evaluation \
+  --ref github-actions-restaurant
+```
+
+### 로컬에서 실행 (테스트용)
+
+```bash
+cd backend/geminiCLI-restaurant-crawling/scripts
+
+# Transcript 수집 (Puppeteer)
+npx ts-node transcript-puppeteer.ts --date 25-12-04
+
+# 크롤링
+bash crawling.sh
+
+# 평가
+cd ../../geminiCLI-restaurant-evaluation/scripts
+python3 evaluation-pipeline.py
 ```
 
 ---
@@ -291,25 +282,34 @@ GitHub 저장소의 Settings > Secrets and variables > Actions에서 설정:
 
 ### Transcript 수집 실패
 
-```
-❌ 로컬에서만 실행 가능
-YouTube가 클라우드 IP를 차단합니다.
-```
-→ 로컬에서 FastAPI 서버 실행 후 수집
+**증상**: `maestra_fallback_failed` 에러
+
+**해결**:
+1. maestra.ai와 tubetranscript.com 모두 해당 영상의 자막이 없음
+2. 영상이 자막을 제공하지 않는 경우 (라이브 등)
+3. `tzuyang_transcript_errors.json`에서 실패 URL 확인
 
 ### 크롤링 스킵됨
 
-```
-⏭️ No transcript found for URL, skipping
-```
-→ 해당 URL의 Transcript를 먼저 수집해야 함
+**증상**: `No transcript found for URL, skipping`
 
-### 파이프라인이 트리거 안 됨
+**해결**: 해당 URL의 Transcript를 먼저 수집해야 함
+```bash
+# Transcript 수집 단계만 재실행
+gh workflow run "restaurant-pipeline.yml" \
+  -f step=transcript-collection \
+  --ref github-actions-restaurant
+```
 
-Transcript 커밋 후에도 크롤링이 시작 안 되면:
-1. 커밋 경로 확인: `backend/geminiCLI-restaurant-crawling/data/**/tzuyang_restaurant_transcripts.json`
-2. 브랜치 확인: `github-actions-restaurant`
-3. 수동으로 워크플로우 실행
+### 파이프라인 중간 단계 실패
+
+**해결**: 실패한 단계만 재실행
+```bash
+# 예: 크롤링+평가만 재실행
+gh workflow run "restaurant-pipeline.yml" \
+  -f step=crawling-evaluation \
+  --ref github-actions-restaurant
+```
 
 ### 중복 데이터 문제
 
