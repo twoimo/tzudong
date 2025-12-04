@@ -192,6 +192,22 @@ if [ -f "$META_FILE" ]; then
 else
     log_warning "youtube_meta 파일 없음 - youtube_meta 없이 진행합니다."
 fi
+
+# ============================
+# No Transcript 영구 제외 목록 로드 (크롤링쪽에서 관리)
+# ============================
+NO_TRANSCRIPT_DIR="$CRAWL_DATA_DIR/no_transcript_link"
+NO_TRANSCRIPT_PERMANENT="$NO_TRANSCRIPT_DIR/no_transcript_permanent.json"
+
+# 영구 제외 목록 (retry_num >= 3) 로드
+if [ -f "$NO_TRANSCRIPT_PERMANENT" ]; then
+    PERMANENT_SKIP_URLS=$(jq -r '.[] | select(.retry_num >= 3) | .youtube_link' "$NO_TRANSCRIPT_PERMANENT" 2>/dev/null || echo "")
+    PERMANENT_SKIP_COUNT=$(echo "$PERMANENT_SKIP_URLS" | grep -c . || echo "0")
+    log_info "📛 영구 제외 URL (retry >= 3): ${PERMANENT_SKIP_COUNT}개"
+else
+    PERMANENT_SKIP_URLS=""
+    log_info "📛 영구 제외 목록 파일 없음"
+fi
 log_info ""
 
 # 통계 변수
@@ -236,6 +252,12 @@ while IFS= read -r line; do
     EVALUATION_TARGET=$(echo "$line" | jq -c '.evaluation_target')
     RESTAURANTS=$(echo "$line" | jq -c '.restaurants')
     
+    # 영구 제외 URL 스킵 (retry_num >= 3)
+    if echo "$PERMANENT_SKIP_URLS" | grep -q "^$YOUTUBE_LINK$"; then
+        SKIPPED=$((SKIPPED + 1))
+        continue
+    fi
+    
     # youtube_meta는 크롤링 결과 파일에서 로드한 META_MAP에서 가져옴
     YOUTUBE_META="${META_MAP["$YOUTUBE_LINK"]}"
     if [[ -z "$YOUTUBE_META" ]]; then
@@ -275,6 +297,7 @@ while IFS= read -r line; do
     # 수집쪽 transcript 파일에서 자막 가져오기
     TRANSCRIPT=""
     TRANSCRIPT_FOUND=false
+    TRANSCRIPT_LANGUAGE=""
     TRANSCRIPT_START=$(date +%s)
     
     # 모든 날짜 폴더에서 transcript 검색
@@ -288,9 +311,14 @@ while IFS= read -r line; do
                 join("\n")
             ' "$transcript_file" 2>/dev/null)
             
+            # language 필드도 추출
+            TRANSCRIPT_LANGUAGE=$(jq -r --arg url "$YOUTUBE_LINK" '
+                .[] | select(.youtube_link == $url) | .language // "unknown"
+            ' "$transcript_file" 2>/dev/null)
+            
             if [ -n "$TRANSCRIPT" ] && [ "$TRANSCRIPT" != "null" ]; then
                 TRANSCRIPT_FOUND=true
-                log_debug "자막 발견: $(echo "$TRANSCRIPT" | wc -c | tr -d ' ')자 (from $transcript_file)"
+                log_debug "자막 발견: $(echo "$TRANSCRIPT" | wc -c | tr -d ' ')자, 언어: $TRANSCRIPT_LANGUAGE (from $transcript_file)"
                 break
             fi
         fi
@@ -303,7 +331,7 @@ while IFS= read -r line; do
     if [ "$TRANSCRIPT_FOUND" = true ]; then
         TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
     else
-        log_warning "[$LINE_NUM/$TOTAL] 건너뜀 - Transcript 없음 (수집쪽 데이터에 없음)"
+        log_warning "[$LINE_NUM/$TOTAL] 건너뜀 - Transcript 없음"
         TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
         SKIPPED=$((SKIPPED + 1))
         continue
@@ -319,11 +347,14 @@ while IFS= read -r line; do
     PROMPT="${PROMPT_TEMPLATE//\{restaurant_data\}/$EVALUATION_DATA}"
     
     # 자막이 있으면 프롬프트 끝에 추가
+    # 자막이 있으면 프롬프트 끝에 추가 (언어 정보 포함)
     if [ -n "$TRANSCRIPT" ]; then
         PROMPT="$PROMPT
 
 <참고: YouTube 자막>
 아래는 해당 영상의 자막입니다. 유튜버의 실제 발언, 음식점 언급, 리뷰 내용을 확인하는 데 참고하세요.
+[자막 언어: $TRANSCRIPT_LANGUAGE]
+※ 자막이 한국어가 아닐 수 있지만, 모든 평가 결과(eval_basis 등)는 반드시 한국어로 작성하세요.
 ---
 $TRANSCRIPT
 ---
