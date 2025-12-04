@@ -344,13 +344,13 @@ for i in "${!URLS[@]}"; do
     fi
     
     # 영구 제외 URL 스킵 (retry_num >= 3)
-    if echo "$PERMANENT_SKIP_URLS" | grep -q "^$URL$"; then
+    if [ -n "$PERMANENT_SKIP_URLS" ] && echo "$PERMANENT_SKIP_URLS" | grep -q "^$URL$"; then
         SKIPPED=$((SKIPPED + 1))
         continue
     fi
     
     # 이미 처리된 URL 스킵
-    if echo "$PROCESSED_URLS" | grep -q "^$URL$"; then
+    if [ -n "$PROCESSED_URLS" ] && echo "$PROCESSED_URLS" | grep -q "^$URL$"; then
         SKIPPED=$((SKIPPED + 1))
         if [ $((SKIPPED % 50)) -eq 1 ]; then
             log_warning "[$INDEX/$TOTAL] 이미 처리됨 (스킵 ${SKIPPED}개)"
