@@ -348,6 +348,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
         run: |
           echo "🍜 크롤링 시작..."
