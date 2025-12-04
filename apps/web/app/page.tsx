@@ -18,11 +18,21 @@ export const metadata: Metadata = {
         description: '쯔양이 방문한 전국 및 해외 맛집을 지도에서 확인하세요',
         type: 'website',
         locale: 'ko_KR',
+        siteName: '쯔동여지도',
+        images: [
+            {
+                url: '/og-image-1.png',
+                width: 1200,
+                height: 630,
+                alt: '쯔동여지도 - 쯔양 맛집 지도',
+            },
+        ],
     },
     twitter: {
         card: 'summary_large_image',
         title: '쯔동여지도 - 쯔양 맛집 지도',
         description: '쯔양이 방문한 전국 및 해외 맛집을 지도에서 확인하세요',
+        images: ['/og-image-1.png'],
     },
 };
 
