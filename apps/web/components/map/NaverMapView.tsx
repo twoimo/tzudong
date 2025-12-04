@@ -31,6 +31,8 @@ interface NaverMapViewProps {
     onRestaurantSelect?: (restaurant: Restaurant) => void;
     activePanel?: 'map' | 'detail' | 'control';
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
+    onMarkerClick?: (restaurant: Restaurant) => void; // 외부 패널 열기
+    externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
 }
 
 const NaverMapView = memo(({
@@ -45,7 +47,9 @@ const NaverMapView = memo(({
     gridSelectedRestaurant,
     onRestaurantSelect,
     activePanel,
-    onPanelClick
+    onPanelClick,
+    onMarkerClick,
+    externalPanelOpen,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
@@ -69,6 +73,13 @@ const NaverMapView = memo(({
             setIsPanelOpen(false);
         }
     }, [selectedRestaurant, isGridMode]);
+
+    // 외부에서 패널 닫기 요청 시 닫기 (externalPanelOpen이 false면 닫기)
+    useEffect(() => {
+        if (externalPanelOpen === false) {
+            setIsPanelOpen(false);
+        }
+    }, [externalPanelOpen]);
 
     // 선택된 맛집이 변경될 때 지도 중앙 재조정
     useEffect(() => {
@@ -470,16 +481,16 @@ const NaverMapView = memo(({
 
             // 마커 클릭 이벤트
             naver.maps.Event.addListener(marker, "click", () => {
-                // 즉시 selectedRestaurant 설정 (마커 활성화)
-                if (onRestaurantSelect) {
-                    onRestaurantSelect(restaurant);
+                // 외부 onMarkerClick이 있으면 호출 (외부 패널 관리)
+                if (onMarkerClick) {
+                    onMarkerClick(restaurant);
+                } else {
+                    // 기존 동작: 내부 패널 열기
+                    if (onRestaurantSelect) {
+                        onRestaurantSelect(restaurant);
+                    }
+                    setIsPanelOpen(true);
                 }
-
-                // 패널 열기 (마커 클릭 시에만)
-                setIsPanelOpen(true);
-
-                // searchedRestaurant는 설정하지 않음 (지도 이동 방지)
-                // selectedRestaurant만으로 마커 활성화
             }); newMarkers.push(marker);
         });
 

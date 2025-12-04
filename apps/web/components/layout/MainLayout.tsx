@@ -112,6 +112,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     onProfileClick={() => setIsProfileModalOpen(true)}
                     isCenteredLayout={isCenteredLayout}
                     onToggleCenteredLayout={shouldShowCenteredLayoutButton ? () => setIsCenteredLayout(!isCenteredLayout) : undefined}
+                    isAdmin={isAdmin}
                 />
 
                 <main className={cn(
