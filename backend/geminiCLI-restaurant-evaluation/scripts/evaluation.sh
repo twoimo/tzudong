@@ -353,32 +353,57 @@ $TRANSCRIPT
         GEMINI_CALLS=$((GEMINI_CALLS + 1))
         log_debug "Gemini CLI 응답 완료 (${GEMINI_DURATION}s)"
         
-        # 파서 실행
-        PARSE_START=$(date +%s)
-        if python3 "$PARSER_SCRIPT" \
-            --youtube-link "$YOUTUBE_LINK" \
-            --response-file "$TEMP_RESPONSE" \
-            --output-file "$OUTPUT_FILE" \
-            --evaluation-target "$EVALUATION_TARGET" \
-            --restaurants "$RESTAURANTS" \
-            --youtube-meta-file "$TEMP_META" \
-            --rule-results-file "$INPUT_FILE"; then
-            
-            PARSE_END=$(date +%s)
-            PARSE_DURATION=$((PARSE_END - PARSE_START))
-            TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
-            SUCCESS=$((SUCCESS + 1))
-            
-            RECORD_END_TIME=$(date +%s)
-            RECORD_DURATION=$((RECORD_END_TIME - RECORD_START_TIME))
-            log_success "성공 ($SUCCESS/$TOTAL) - 총 ${RECORD_DURATION}s (Gemini: ${GEMINI_DURATION}s, Parse: ${PARSE_DURATION}s)"
-        else
-            PARSE_END=$(date +%s)
-            PARSE_DURATION=$((PARSE_END - PARSE_START))
-            TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
+        # 파서 실행 (최대 2회 시도)
+        PARSE_SUCCESS=false
+        for PARSE_ATTEMPT in 1 2; do
+            PARSE_START=$(date +%s)
+            if python3 "$PARSER_SCRIPT" \
+                --youtube-link "$YOUTUBE_LINK" \
+                --response-file "$TEMP_RESPONSE" \
+                --output-file "$OUTPUT_FILE" \
+                --evaluation-target "$EVALUATION_TARGET" \
+                --restaurants "$RESTAURANTS" \
+                --youtube-meta-file "$TEMP_META" \
+                --rule-results-file "$INPUT_FILE"; then
+                
+                PARSE_END=$(date +%s)
+                PARSE_DURATION=$((PARSE_END - PARSE_START))
+                TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
+                SUCCESS=$((SUCCESS + 1))
+                PARSE_SUCCESS=true
+                
+                RECORD_END_TIME=$(date +%s)
+                RECORD_DURATION=$((RECORD_END_TIME - RECORD_START_TIME))
+                log_success "성공 ($SUCCESS/$TOTAL) - 총 ${RECORD_DURATION}s (Gemini: ${GEMINI_DURATION}s, Parse: ${PARSE_DURATION}s)"
+                break
+            else
+                PARSE_END=$(date +%s)
+                PARSE_DURATION=$((PARSE_END - PARSE_START))
+                TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
+                
+                if [ $PARSE_ATTEMPT -eq 1 ]; then
+                    log_warning "파서 실패 (1차 시도) - Gemini 재호출 중..."
+                    sleep 1
+                    # Gemini CLI 재호출
+                    GEMINI_START=$(date +%s)
+                    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                        GEMINI_END=$(date +%s)
+                        GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
+                        TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
+                        GEMINI_CALLS=$((GEMINI_CALLS + 1))
+                        log_debug "Gemini CLI 재시도 응답 완료 (${GEMINI_DURATION}s)"
+                    else
+                        log_error "Gemini CLI 재시도 실패"
+                        break
+                    fi
+                fi
+            fi
+        done
+        
+        if [ "$PARSE_SUCCESS" = false ]; then
             FAILED=$((FAILED + 1))
-            log_error "파서 실패 ($FAILED/$TOTAL)"
-            echo "[$(date)] 파서 실패: $YOUTUBE_LINK" >> "$ERROR_LOG"
+            log_error "파서 실패 (2회 시도 후) ($FAILED/$TOTAL)"
+            echo "[$(date)] 파서 실패 (2회 시도 후): $YOUTUBE_LINK" >> "$ERROR_LOG"
             
             # 에러 레코드 저장 (youtube_meta 포함) - 파일에서 읽기
             ERROR_RECORD=$(echo "$line" | jq -c --slurpfile meta "$TEMP_META" '. + {youtube_meta: $meta[0]}')

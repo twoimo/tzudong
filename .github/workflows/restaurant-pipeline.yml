@@ -379,9 +379,25 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+          NCP_MAPS_KEY_ID_BYEON: ${{ secrets.NCP_MAPS_KEY_ID_BYEON }}
+          NCP_MAPS_KEY_BYEON: ${{ secrets.NCP_MAPS_KEY_BYEON }}
         run: |
           echo "📊 평가 시작..."
           python3 evaluation-pipeline.py
+      
+      - name: 🗄️ Upload to Supabase
+        working-directory: backend/geminiCLI-restaurant-evaluation
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+        run: |
+          echo "🗄️ Supabase 업로드 시작..."
+          npm install
+          npx ts-node scripts/insert_to_supabase.ts
+          echo "✅ Supabase 업로드 완료"
       
       - name: 📊 Upload Artifacts
         uses: actions/upload-artifact@v4
