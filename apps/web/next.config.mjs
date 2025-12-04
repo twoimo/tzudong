@@ -12,6 +12,14 @@ const withBundleAnalyzer = bundleAnalyzer({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
+        // [OPTIMIZATION] 이미지 최적화 설정 (예상 LCP 개선: ~300ms)
+        formats: ['image/avif', 'image/webp'], // AVIF 우선, WebP fallback
+        deviceSizes: [640, 750, 828, 1080, 1200, 1920], // 반응형 이미지 크기
+        imageSizes: [16, 32, 48, 64, 96, 128, 256, 384], // 아이콘/썸네일 크기
+        minimumCacheTTL: 60, // 캐시 TTL (초) - 성능 개선
+        dangerouslyAllowSVG: true, // SVG 허용
+        contentDispositionType: 'attachment', // SVG 보안
+        contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
         remotePatterns: [
             {
                 protocol: 'https',

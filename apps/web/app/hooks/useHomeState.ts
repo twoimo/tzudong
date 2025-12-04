@@ -22,7 +22,6 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
     const [searchedRestaurant, setSearchedRestaurant] = useState<Restaurant | null>(null);
 
     // UI 모드
-    const [isGridMode, setIsGridMode] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [restaurantToEdit, setRestaurantToEdit] = useState<Restaurant | null>(null);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -52,14 +51,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
     });
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-    // 그리드 모드
-    const gridRegions = ["서울특별시", "부산광역시", "대구광역시", "인천광역시"] as Region[];
-    const [gridSelectedRestaurants, setGridSelectedRestaurants] = useState<{ [key: string]: Restaurant | null }>({
-        "서울특별시": null,
-        "부산광역시": null,
-        "대구광역시": null,
-        "인천광역시": null,
-    });
+
 
     // mapMode 변경 시 초기화
     useEffect(() => {
@@ -135,8 +127,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         setSelectedCountry,
         searchedRestaurant,
         setSearchedRestaurant,
-        isGridMode,
-        setIsGridMode,
+
         isEditModalOpen,
         setIsEditModalOpen,
         restaurantToEdit,
@@ -157,9 +148,6 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         setFilters,
         selectedCategories,
         setSelectedCategories,
-        gridRegions,
-        gridSelectedRestaurants,
-        setGridSelectedRestaurants,
         countryCounts,
     };
 }

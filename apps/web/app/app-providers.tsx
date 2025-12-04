@@ -13,12 +13,15 @@ import { Toaster as Sonner } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { NotificationProvider } from '@/contexts/NotificationContext';
+import { WebVitals } from '@/lib/web-vitals';
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
     return (
         <AuthProvider>
             <NotificationProvider>
                 <TooltipProvider>
+                    {/* [OPTIMIZATION] 성능 지표 모니터링 */}
+                    <WebVitals />
                     <Toaster />
                     <Sonner />
                     <DailyRecommendationPopup />

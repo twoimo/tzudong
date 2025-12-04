@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter, ClipboardList, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -17,6 +17,7 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { usePathname } from "next/navigation";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -24,13 +25,45 @@ interface HeaderProps {
   onOpenAuth: () => void;
   onLogout: () => void;
   onProfileClick?: () => void;
+  onMyPageClick?: () => void;
   isCenteredLayout?: boolean;
   onToggleCenteredLayout?: () => void;
+  isAdmin?: boolean;
 }
 
-const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, isCenteredLayout = false, onToggleCenteredLayout }: HeaderProps) => {
+const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
+  const pathname = usePathname();
+
+  const handleMyPageClick = () => {
+    // 홈 페이지에서는 CustomEvent로 패널 열기
+    if (pathname === '/') {
+      window.dispatchEvent(new CustomEvent('openMyPage'));
+    } else if (onMyPageClick) {
+      onMyPageClick();
+    } else {
+      window.location.href = '/mypage';
+    }
+  };
+
+  const handleAdminSubmissionsClick = () => {
+    if (pathname === '/') {
+      window.dispatchEvent(new CustomEvent('openAdminSubmissions'));
+    } else {
+      // 홈으로 이동 후 패널 열기
+      window.location.href = '/';
+    }
+  };
+
+  const handleAdminReviewsClick = () => {
+    if (pathname === '/') {
+      window.dispatchEvent(new CustomEvent('openAdminReviews'));
+    } else {
+      // 홈으로 이동 후 패널 열기
+      window.location.href = '/';
+    }
+  };
 
   const toggleTheme = () => {
     // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
@@ -254,6 +287,23 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
                 <User className="mr-2 h-4 w-4" />
                 프로필
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleMyPageClick} className="text-stone-900 hover:bg-stone-200/50">
+                <User className="mr-2 h-4 w-4" />
+                마이페이지
+              </DropdownMenuItem>
+              {isAdmin && (
+                <>
+                  <DropdownMenuSeparator className="bg-stone-800/10" />
+                  <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
+                    <ClipboardList className="mr-2 h-4 w-4" />
+                    제보관리
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-stone-900 hover:bg-stone-200/50">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    리뷰관리
+                  </DropdownMenuItem>
+                </>
+              )}
               <DropdownMenuSeparator className="bg-stone-800/10" />
               <DropdownMenuItem onClick={onLogout} className="text-stone-900 hover:bg-stone-200/50">
                 <LogOut className="mr-2 h-4 w-4" />

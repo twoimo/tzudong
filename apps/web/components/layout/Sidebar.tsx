@@ -1,12 +1,12 @@
-import { Home, Filter, Trophy, Stamp, MessageSquare, DollarSign, Send, Shield, ClipboardCheck } from "lucide-react";
+import { Home, Trophy, Stamp, DollarSign, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import Image from "next/image";
 import AdBanner from "./AdBanner";
-import SeasonalLogo from "@/components/common/SeasonalLogo";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -38,26 +38,18 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   // 기본 메뉴 항목
   const baseMenuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
-    // { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => router.push("/filtering") }, // Removed
     { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
     { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
-    { icon: Send, label: "쯔동여지도 제보", path: "/submissions", onClick: () => router.push("/submissions") },
-  ];
-
-  // 관리자에게만 보이는 메뉴
-  const adminMenuItems = (user && isAdmin) ? [
-    { icon: Shield, label: "관리자 제보 관리", path: "/admin/submissions", onClick: () => router.push("/admin/submissions") },
-    { icon: MessageSquare, label: "관리자 리뷰 관리", path: "/admin/reviews", onClick: () => router.push("/admin/reviews") },
-    { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
-  ] : [];
-
-  // 공통 메뉴
-  const commonMenuItems = [
     { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
   ];
 
+  // 관리자 메뉴 (데이터 검수 - 월 서버 운영 비용 아래에 표시)
+  const adminMenuItems = (user && isAdmin) ? [
+    { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
+  ] : [];
+
   // 모든 메뉴 합치기
-  const menuItems = [...baseMenuItems, ...adminMenuItems, ...commonMenuItems];
+  const menuItems = [...baseMenuItems, ...adminMenuItems];
 
   return (
     <aside
@@ -79,13 +71,19 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
 
       {/* 로고 영역 */}
       <div className="h-16 border-b border-stone-800/10 relative z-10 flex items-center justify-center overflow-hidden">
-        <div className="cursor-pointer w-full h-full" onClick={() => router.push("/")}>
+        <div className="cursor-pointer w-full h-full flex items-center justify-center px-4" onClick={() => router.push("/")}>
           {isOpen ? (
-            <SeasonalLogo />
+            <Image
+              src="/sidebar-logo.png"
+              alt="쯔동여지도"
+              width={200}
+              height={56}
+              priority
+              sizes="(max-width: 768px) 150px, 200px"
+              className="h-12 w-auto object-contain mix-blend-multiply opacity-90 drop-shadow-sm grayscale contrast-125"
+            />
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <Home className="h-6 w-6 text-stone-600" />
-            </div>
+            <Home className="h-6 w-6 text-stone-600" />
           )}
         </div>
       </div>
