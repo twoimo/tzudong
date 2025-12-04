@@ -1,0 +1,314 @@
+name: 🔑 API 키 테스트
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-keys:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: github-actions-restaurant
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: pip install requests python-dotenv
+
+      # ============================================
+      # 실제 실패했던 쿼리들로 테스트
+      # ============================================
+      - name: 🧪 실제 실패 쿼리 테스트 (이전 401 에러 케이스)
+        env:
+          NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os
+          import requests
+          import urllib.parse
+
+          print("=" * 60)
+          print("실제 파이프라인에서 실패했던 쿼리들로 테스트")
+          print("=" * 60)
+
+          client_id = os.getenv("NAVER_CLIENT_ID_BYEON", "")
+          client_secret = os.getenv("NAVER_CLIENT_SECRET_BYEON", "")
+
+          print(f"NAVER_CLIENT_ID_BYEON 길이: {len(client_id)}")
+          print(f"NAVER_CLIENT_SECRET_BYEON 길이: {len(client_secret)}")
+
+          # 이전에 401로 실패했던 실제 쿼리들
+          test_queries = [
+              "짬뽕지존 울산 동구 전하동",
+              "장충족발 서울 중구 장충동",
+              "한양짬뽕 충남 천안시",
+              "맛집",  # 단순 테스트용
+          ]
+
+          headers = {
+              "X-Naver-Client-Id": client_id,
+              "X-Naver-Client-Secret": client_secret,
+          }
+
+          success = 0
+          fail = 0
+          
+          for query in test_queries:
+              url = "https://openapi.naver.com/v1/search/local.json"
+              params = {"query": query, "display": 5}
+              
+              try:
+                  resp = requests.get(url, params=params, headers=headers, timeout=10)
+                  print(f"\n🔍 쿼리: '{query}'")
+                  if resp.status_code == 200:
+                      data = resp.json()
+                      items = data.get("items", [])
+                      print(f"   ✅ 응답: {resp.status_code} (결과 {len(items)}개)")
+                      for i, item in enumerate(items[:3]):  # 상위 3개만 출력
+                          import re
+                          title = re.sub(r'</?b>', '', item.get('title', ''))
+                          address = item.get('address', '')
+                          roadAddress = item.get('roadAddress', '')
+                          print(f"   [{i+1}] {title}")
+                          print(f"       지번: {address}")
+                          print(f"       도로명: {roadAddress}")
+                      success += 1
+                  else:
+                      print(f"   ❌ 응답: {resp.status_code}")
+                      print(f"   에러: {resp.text[:200]}")
+                      fail += 1
+              except Exception as e:
+                  print(f"   ❌ 예외: {e}")
+                  fail += 1
+
+          print()
+          print("=" * 60)
+          print(f"결과: 성공 {success}/{len(test_queries)}, 실패 {fail}/{len(test_queries)}")
+          print("=" * 60)
+          
+          if fail > 0:
+              exit(1)
+          PYTHON_SCRIPT
+
+      # ============================================
+      # 방법 1: .env 파일 생성 후 dotenv로 로드
+      # ============================================
+      - name: 📝 방법1 - .env 파일 생성
+        run: |
+          cat > test.env << EOF
+          NAVER_CLIENT_ID_BYEON=${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON=${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+          EOF
+          echo "✅ .env 파일 생성됨"
+
+      - name: 🧪 방법1 - .env에서 로드하여 테스트
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os
+          import requests
+          from dotenv import load_dotenv
+
+          print("=" * 50)
+          print("방법 1: .env 파일에서 dotenv로 로드")
+          print("=" * 50)
+
+          # .env 파일 로드
+          load_dotenv('test.env')
+
+          client_id = os.getenv("NAVER_CLIENT_ID_BYEON", "")
+          client_secret = os.getenv("NAVER_CLIENT_SECRET_BYEON", "")
+
+          print(f"NAVER_CLIENT_ID_BYEON 길이: {len(client_id)}")
+          print(f"NAVER_CLIENT_SECRET_BYEON 길이: {len(client_secret)}")
+
+          if len(client_id) == 0 or len(client_secret) == 0:
+              print("❌ 키가 비어있음!")
+          else:
+              # 실제 API 호출 테스트
+              url = "https://openapi.naver.com/v1/search/local.json"
+              params = {"query": "맛집", "display": 1}
+              headers = {
+                  "X-Naver-Client-Id": client_id,
+                  "X-Naver-Client-Secret": client_secret,
+              }
+              resp = requests.get(url, params=params, headers=headers)
+              print(f"API 응답 코드: {resp.status_code}")
+              if resp.status_code == 200:
+                  print("✅ 방법1 성공!")
+              else:
+                  print(f"❌ 방법1 실패: {resp.text[:200]}")
+          PYTHON_SCRIPT
+
+      # ============================================
+      # 방법 2: 환경변수로 직접 전달
+      # ============================================
+      - name: 🧪 방법2 - 환경변수로 직접 전달하여 테스트
+        env:
+          NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import os
+          import requests
+
+          print("=" * 50)
+          print("방법 2: 환경변수로 직접 전달")
+          print("=" * 50)
+
+          client_id = os.getenv("NAVER_CLIENT_ID_BYEON", "")
+          client_secret = os.getenv("NAVER_CLIENT_SECRET_BYEON", "")
+
+          print(f"NAVER_CLIENT_ID_BYEON 길이: {len(client_id)}")
+          print(f"NAVER_CLIENT_SECRET_BYEON 길이: {len(client_secret)}")
+
+          if len(client_id) == 0 or len(client_secret) == 0:
+              print("❌ 키가 비어있음!")
+          else:
+              # 실제 API 호출 테스트
+              url = "https://openapi.naver.com/v1/search/local.json"
+              params = {"query": "맛집", "display": 1}
+              headers = {
+                  "X-Naver-Client-Id": client_id,
+                  "X-Naver-Client-Secret": client_secret,
+              }
+              resp = requests.get(url, params=params, headers=headers)
+              print(f"API 응답 코드: {resp.status_code}")
+              if resp.status_code == 200:
+                  print("✅ 방법2 성공!")
+              else:
+                  print(f"❌ 방법2 실패: {resp.text[:200]}")
+          PYTHON_SCRIPT
+
+      # ============================================
+      # 방법 3: 쉘에서 직접 curl 테스트
+      # ============================================
+      - name: 🧪 방법3 - curl로 직접 테스트
+        env:
+          NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+        run: |
+          echo "=" 
+          echo "방법 3: curl로 직접 테스트"
+          echo "="
+          echo "NAVER_CLIENT_ID_BYEON 길이: ${#NAVER_CLIENT_ID_BYEON}"
+          echo "NAVER_CLIENT_SECRET_BYEON 길이: ${#NAVER_CLIENT_SECRET_BYEON}"
+          
+          HTTP_CODE=$(curl -s -o /tmp/response.txt -w "%{http_code}" \
+            "https://openapi.naver.com/v1/search/local.json?query=%EB%A7%9B%EC%A7%91&display=1" \
+            -H "X-Naver-Client-Id: ${NAVER_CLIENT_ID_BYEON}" \
+            -H "X-Naver-Client-Secret: ${NAVER_CLIENT_SECRET_BYEON}")
+          
+          echo "API 응답 코드: $HTTP_CODE"
+          if [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ 방법3 성공!"
+          else
+            echo "❌ 방법3 실패:"
+            cat /tmp/response.txt | head -c 200
+          fi
+
+      # ============================================
+      # 방법 4: subprocess로 자식 프로세스 실행 (실제 파이프라인 구조)
+      # ============================================
+      - name: 📝 방법4용 자식 스크립트 생성
+        run: |
+          cat > child_script.py << 'CHILD_SCRIPT'
+          import os
+          import requests
+          from dotenv import load_dotenv
+
+          print("=" * 50)
+          print("자식 프로세스에서 실행됨")
+          print("=" * 50)
+
+          # .env 파일 로드 시도 (실제 evaluation-rule.py와 동일)
+          load_dotenv('test.env', override=False)
+
+          client_id = os.getenv("NAVER_CLIENT_ID_BYEON", "")
+          client_secret = os.getenv("NAVER_CLIENT_SECRET_BYEON", "")
+
+          print(f"NAVER_CLIENT_ID_BYEON 길이: {len(client_id)}")
+          print(f"NAVER_CLIENT_SECRET_BYEON 길이: {len(client_secret)}")
+
+          if len(client_id) == 0 or len(client_secret) == 0:
+              print("❌ 키가 비어있음!")
+              exit(1)
+          else:
+              url = "https://openapi.naver.com/v1/search/local.json"
+              params = {"query": "맛집", "display": 1}
+              headers = {
+                  "X-Naver-Client-Id": client_id,
+                  "X-Naver-Client-Secret": client_secret,
+              }
+              resp = requests.get(url, params=params, headers=headers)
+              print(f"API 응답 코드: {resp.status_code}")
+              if resp.status_code == 200:
+                  print("✅ 자식 프로세스 API 호출 성공!")
+              else:
+                  print(f"❌ 자식 프로세스 API 호출 실패: {resp.text[:200]}")
+                  exit(1)
+          CHILD_SCRIPT
+
+      - name: 🧪 방법4 - subprocess로 자식 프로세스 실행 (env 전달 O)
+        env:
+          NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
+          NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import subprocess
+          import os
+
+          print("=" * 50)
+          print("방법 4: subprocess (부모 env 자동 상속)")
+          print("=" * 50)
+
+          # subprocess.run은 기본적으로 부모의 환경변수를 상속함
+          result = subprocess.run(
+              ["python3", "child_script.py"],
+              capture_output=True,
+              text=True
+          )
+          print(result.stdout)
+          if result.stderr:
+              print("STDERR:", result.stderr)
+          print(f"Exit code: {result.returncode}")
+          if result.returncode == 0:
+              print("✅ 방법4 성공!")
+          else:
+              print("❌ 방법4 실패!")
+          PYTHON_SCRIPT
+
+      - name: 🧪 방법5 - subprocess로 자식 프로세스 실행 (env 전달 X, .env만 의존)
+        run: |
+          python3 << 'PYTHON_SCRIPT'
+          import subprocess
+          import os
+
+          print("=" * 50)
+          print("방법 5: subprocess (env 비움, .env 파일만 의존)")
+          print("=" * 50)
+
+          # 환경변수를 비우고 실행 (PATH만 유지)
+          empty_env = {"PATH": os.environ.get("PATH", "")}
+          
+          result = subprocess.run(
+              ["python3", "child_script.py"],
+              capture_output=True,
+              text=True,
+              env=empty_env
+          )
+          print(result.stdout)
+          if result.stderr:
+              print("STDERR:", result.stderr)
+          print(f"Exit code: {result.returncode}")
+          if result.returncode == 0:
+              print("✅ 방법5 성공! (.env 파일에서 로드됨)")
+          else:
+              print("❌ 방법5 실패! (환경변수 없이는 .env 의존)")
+          PYTHON_SCRIPT
