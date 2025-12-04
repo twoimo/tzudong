@@ -496,6 +496,46 @@ log_info "  총 파싱 시간: $(format_duration $TOTAL_PARSE_TIME)"
 log_info "========================================"
 
 # ========================================
+# 좌표 Enrichment (카카오 API)
+# ========================================
+ENRICH_SUCCESS=0
+ENRICH_DURATION=0
+ENRICH_COUNT=0
+if [ $SUCCESS -gt 0 ]; then
+    log_info ""
+    log_info "========================================"
+    log_info "📍 좌표 Enrichment 시작 (카카오 API)..."
+    log_info "========================================"
+    
+    ENRICH_SCRIPT="$SCRIPT_DIR/enrich-coordinates.js"
+    
+    if [ -f "$ENRICH_SCRIPT" ]; then
+        ENRICH_START=$(date +%s)
+        # node 실행 전 npm 패키지 확인 (PROJECT_ROOT에서 실행)
+        if [ -f "$PROJECT_ROOT/package.json" ]; then
+            cd "$PROJECT_ROOT"
+            npm install --silent 2>/dev/null || true
+            cd "$SCRIPT_DIR"
+        fi
+        
+        if node "$ENRICH_SCRIPT" "$OUTPUT_FILE" 2>&1 | tee -a "$LOG_TEXT_DIR/enrich_coordinates.log"; then
+            ENRICH_END=$(date +%s)
+            ENRICH_DURATION=$((ENRICH_END - ENRICH_START))
+            ENRICH_SUCCESS=1
+            # 보완된 좌표 개수 추출 (로그에서 파싱)
+            ENRICH_COUNT=$(grep -o '좌표 보완됨: [0-9]*' "$LOG_TEXT_DIR/enrich_coordinates.log" | grep -o '[0-9]*' || echo "0")
+            log_success "좌표 Enrichment 완료 ($(format_duration $ENRICH_DURATION)) - ${ENRICH_COUNT}개 보완"
+        else
+            ENRICH_END=$(date +%s)
+            ENRICH_DURATION=$((ENRICH_END - ENRICH_START))
+            log_warning "좌표 Enrichment 실패 ($(format_duration $ENRICH_DURATION))"
+        fi
+    else
+        log_warning "좌표 Enrichment 스크립트 없음, 스킵: $ENRICH_SCRIPT"
+    fi
+fi
+
+# ========================================
 # YouTube 메타데이터 추가
 # ========================================
 META_SUCCESS=0
@@ -568,6 +608,12 @@ cat > "$LOG_FILE" << EOF
     "success": $META_SUCCESS,
     "duration_seconds": $META_DURATION,
     "duration_formatted": "$(format_duration $META_DURATION)"
+  },
+  "enrich_stats": {
+    "success": $ENRICH_SUCCESS,
+    "enriched_count": $ENRICH_COUNT,
+    "duration_seconds": $ENRICH_DURATION,
+    "duration_formatted": "$(format_duration $ENRICH_DURATION)"
   },
   "files": {
     "url_file": "$URL_FILE",

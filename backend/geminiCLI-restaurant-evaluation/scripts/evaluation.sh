@@ -1,8 +1,8 @@
-#!/usr/bin/env zsh
+#!/usr/bin/env bash
 # Gemini CLI 기반 LAAJ 음식점 평가 스크립트
 # RULE 평가 결과를 입력으로 받아 5개 LAAJ 평가 항목을 평가합니다.
 # GitHub Actions 환경에서 실행 가능하도록 설계
-# Note: zsh 사용 (macOS 기본 bash는 3.x로 연관 배열 미지원)
+# Note: bash 4.x 이상 필요 (연관 배열 사용)
 
 set -e  # 에러 발생 시 즉시 종료
 
