@@ -84,8 +84,9 @@ jobs:
           python3 api-youtube-urls.py
           
           URL_FILE="../data/$PIPELINE_DATE/tzuyang_youtubeVideo_urls.txt"
-          if [ -f "$URL_FILE" ]; then
-            URL_COUNT=$(wc -l < "$URL_FILE" | tr -d ' ')
+          if [ -f "$URL_FILE" ] && [ -s "$URL_FILE" ]; then
+            # 빈 줄 제외하고 실제 URL만 카운트
+            URL_COUNT=$(grep -c 'youtube.com' "$URL_FILE" 2>/dev/null || echo "0")
             echo "✅ 수집된 URL: $URL_COUNT 개"
             echo "url_count=$URL_COUNT" >> $GITHUB_OUTPUT
             echo "has_urls=true" >> $GITHUB_OUTPUT
@@ -125,6 +126,7 @@ jobs:
     outputs:
       transcript_count: ${{ steps.collect.outputs.transcript_count }}
       has_transcripts: ${{ steps.collect.outputs.has_transcripts }}
+      pipeline_date: ${{ steps.date.outputs.pipeline_date }}
     
     permissions:
       contents: write
@@ -152,10 +154,18 @@ jobs:
           echo "✅ Node.js 패키지 설치 완료"
       
       - name: 📅 Set Pipeline Date
+        id: date
         run: |
-          PIPELINE_DATE=$(date '+%y-%m-%d')
+          # url-collection에서 전달받은 날짜가 있으면 사용, 없으면 현재 날짜
+          if [ -n "${{ needs.url-collection.outputs.pipeline_date }}" ]; then
+            PIPELINE_DATE="${{ needs.url-collection.outputs.pipeline_date }}"
+            echo "📅 url-collection에서 전달받은 날짜 사용: $PIPELINE_DATE"
+          else
+            PIPELINE_DATE=$(date '+%y-%m-%d')
+            echo "📅 현재 날짜 사용 (중간 단계 실행): $PIPELINE_DATE"
+          fi
           echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
-          echo "📅 파이프라인 날짜: $PIPELINE_DATE"
+          echo "pipeline_date=$PIPELINE_DATE" >> $GITHUB_OUTPUT
           
           mkdir -p backend/geminiCLI-restaurant-crawling/data/$PIPELINE_DATE
       
@@ -210,7 +220,7 @@ jobs:
   # 3. 크롤링 + 평가
   # ============================
   crawling-evaluation:
-    needs: transcript-collection
+    needs: [url-collection, transcript-collection]
     if: |
       always() &&
       (github.event_name == 'schedule' || github.event.inputs.step == 'all' || github.event.inputs.step == 'crawling-evaluation')
@@ -303,9 +313,23 @@ jobs:
           chmod +x backend/geminiCLI-restaurant-evaluation/scripts/*.sh 2>/dev/null || true
       
       - name: 📅 Set Pipeline Date
+        id: date
         run: |
-          PIPELINE_DATE=$(date '+%y-%m-%d')
+          # transcript-collection에서 전달받은 날짜가 있으면 사용
+          # url-collection에서 전달받은 날짜가 있으면 사용
+          # 둘 다 없으면 현재 날짜 사용 (중간 단계 실행)
+          if [ -n "${{ needs.transcript-collection.outputs.pipeline_date }}" ]; then
+            PIPELINE_DATE="${{ needs.transcript-collection.outputs.pipeline_date }}"
+            echo "📅 transcript-collection에서 전달받은 날짜 사용: $PIPELINE_DATE"
+          elif [ -n "${{ needs.url-collection.outputs.pipeline_date }}" ]; then
+            PIPELINE_DATE="${{ needs.url-collection.outputs.pipeline_date }}"
+            echo "📅 url-collection에서 전달받은 날짜 사용: $PIPELINE_DATE"
+          else
+            PIPELINE_DATE=$(date '+%y-%m-%d')
+            echo "📅 현재 날짜 사용 (중간 단계 실행): $PIPELINE_DATE"
+          fi
           echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
+          echo "pipeline_date=$PIPELINE_DATE" >> $GITHUB_OUTPUT
           
           mkdir -p backend/geminiCLI-restaurant-crawling/data/$PIPELINE_DATE
           mkdir -p backend/geminiCLI-restaurant-evaluation/data/$PIPELINE_DATE
