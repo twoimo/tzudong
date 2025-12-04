@@ -1,0 +1,48 @@
+{"timestamp": "2025-12-05T05:34:07.280526+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.280730+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "🚀 [TRANSFORM] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-05T05:34:07.280818+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "⏰ 시작 시간: 2025-12-05 05:34:07", "data": null}
+{"timestamp": "2025-12-05T05:34:07.280893+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant", "data": null}
+{"timestamp": "2025-12-05T05:34:07.280966+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "   📄 text: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/text/25-12-05", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281030+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "   📊 structured: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-05", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281091+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "   📋 report: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-05", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281153+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281344+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281418+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "🚀 [TRANSFORM] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281482+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "⏰ 시작 시간: 2025-12-05 05:34:07", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281570+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-05", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281633+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281687+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281740+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "  평가 결과 변환 시작", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281802+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281858+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "입력 파일 (results): /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_evaluation_results.jsonl", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281923+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "입력 파일 (notSelection): /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl", "data": null}
+{"timestamp": "2025-12-05T05:34:07.281989+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "출력 파일: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_transforms.jsonl", "data": null}
+{"timestamp": "2025-12-05T05:34:07.282048+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "기존 파일 확인 중 (전체 이력)...", "data": null}
+{"timestamp": "2025-12-05T05:34:07.309889+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "기존 파일에서 938개의 unique_id 로드됨 (전체 이력)", "data": null}
+{"timestamp": "2025-12-05T05:34:07.310089+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "'/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_evaluation_results.jsonl' 파일 처리 시작...", "data": null}
+{"timestamp": "2025-12-05T05:34:07.310511+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "'/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl' 파일 처리 시작...", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311463+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311564+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "🏁 [TRANSFORM] 파이프라인 종료", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311637+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "⏰ 종료 시간: 2025-12-05 05:34:07", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311696+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "⏱️ 소요 시간: 0.0초", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311751+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311826+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311882+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311936+09:00", "level": "SUCCESS", "phase": "transform", "step": null, "message": "작업 완료: 처리 통계", "data": null}
+{"timestamp": "2025-12-05T05:34:07.311992+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312048+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "  시작 시간: 2025-12-05 05:34:07", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312103+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "  종료 시간: 2025-12-05 05:34:07", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312157+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "  총 소요 시간: 0.0초", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312212+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312266+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "  'results' 파일 처리 라인: 1개", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312319+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "  'notSelection' 파일 처리 라인: 2개", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312381+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "------------------------------", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312439+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "  기존에 있던 항목: 938개", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312511+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "  총 변환 시도 항목: 25개", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312579+09:00", "level": "SUCCESS", "phase": "transform", "step": null, "message": "  새로 추가된 항목: 25개", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312635+09:00", "level": "WARNING", "phase": "transform", "step": null, "message": "  중복으로 건너뛴 항목: 0개", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312695+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312751+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "결과가 '/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_transforms.jsonl' 파일에 저장되었습니다.", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312814+09:00", "level": "SUCCESS", "phase": "transform", "step": null, "message": "총 항목 수: 963개", "data": null}
+{"timestamp": "2025-12-05T05:34:07.312871+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T05:34:07.313244+09:00", "level": "INFO", "phase": "transform", "step": null, "message": "📝 JSON 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-05/transform_053407.json", "data": null}
