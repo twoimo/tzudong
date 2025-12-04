@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Clock, Trash2, Youtube, X } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, Trash2, Youtube, X, ChevronRight, ChevronLeft } from "lucide-react";
 
 interface RestaurantSubmission {
     id: string;
@@ -29,9 +29,11 @@ interface RestaurantSubmission {
 interface MyPagePanelProps {
     isOpen: boolean;
     onClose: () => void;
+    onToggleCollapse?: () => void;
+    isCollapsed?: boolean;
 }
 
-export default function MyPagePanel({ isOpen, onClose }: MyPagePanelProps) {
+export default function MyPagePanel({ isOpen, onClose, onToggleCollapse, isCollapsed }: MyPagePanelProps) {
     const { user } = useAuth();
     const queryClient = useQueryClient();
 
@@ -157,7 +159,23 @@ export default function MyPagePanel({ isOpen, onClose }: MyPagePanelProps) {
     };
 
     return (
-        <div className="h-full flex flex-col bg-background">
+        <div className="h-full flex flex-col bg-background border-l border-border relative">
+            {/* 플로팅 접기/펼치기 버튼 - 패널 좌측 가장자리 */}
+            {onToggleCollapse && (
+                <button
+                    onClick={onToggleCollapse}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex items-center justify-center w-6 h-12 bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group"
+                    title={isCollapsed ? "패널 펼치기" : "패널 접기"}
+                    aria-label={isCollapsed ? "패널 펼치기" : "패널 접기"}
+                >
+                    {!isCollapsed ? (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                    ) : (
+                        <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                    )}
+                </button>
+            )}
+
             {/* 헤더 */}
             <div className="flex items-center justify-between p-4 border-b border-border bg-card">
                 <div>

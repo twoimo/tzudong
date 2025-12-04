@@ -1,10 +1,9 @@
-import { Home, Filter, Trophy, Stamp, MessageSquare, DollarSign, Shield, ClipboardCheck } from "lucide-react";
+import { Home, Trophy, Stamp, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import AdBanner from "./AdBanner";
 import SeasonalLogo from "@/components/common/SeasonalLogo";
 
@@ -16,7 +15,6 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
-  const { user, isAdmin } = useAuth();
 
   // 레스토랑 데이터 프리페치 함수
   const prefetchRestaurants = async () => {
@@ -35,28 +33,13 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     });
   };
 
-  // 기본 메뉴 항목
-  const baseMenuItems = [
+  // 메뉴 항목 (관리자 메뉴는 헤더 드롭다운으로 이동됨)
+  const menuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
-    // { icon: Filter, label: "쯔동여지도 필터링", path: "/filtering", onClick: () => router.push("/filtering") }, // Removed
     { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
     { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
-  ];
-
-  // 관리자에게만 보이는 메뉴
-  const adminMenuItems = (user && isAdmin) ? [
-    { icon: Shield, label: "관리자 제보 관리", path: "/admin/submissions", onClick: () => router.push("/admin/submissions") },
-    { icon: MessageSquare, label: "관리자 리뷰 관리", path: "/admin/reviews", onClick: () => router.push("/admin/reviews") },
-    { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
-  ] : [];
-
-  // 공통 메뉴
-  const commonMenuItems = [
     { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
   ];
-
-  // 모든 메뉴 합치기
-  const menuItems = [...baseMenuItems, ...adminMenuItems, ...commonMenuItems];
 
   return (
     <aside

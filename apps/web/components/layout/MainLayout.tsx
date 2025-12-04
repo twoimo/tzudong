@@ -72,7 +72,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
         }
     }, [user?.id, queryClient]);
 
-    const shouldShowCenteredLayoutButton = pathname !== '/' && pathname !== '/global' && pathname !== '/filtering';
+    const shouldShowCenteredLayoutButton = pathname !== '/';
 
     const handleLogout = async () => {
         try {
@@ -112,6 +112,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     onProfileClick={() => setIsProfileModalOpen(true)}
                     isCenteredLayout={isCenteredLayout}
                     onToggleCenteredLayout={shouldShowCenteredLayoutButton ? () => setIsCenteredLayout(!isCenteredLayout) : undefined}
+                    isAdmin={isAdmin}
                 />
 
                 <main className={cn(
