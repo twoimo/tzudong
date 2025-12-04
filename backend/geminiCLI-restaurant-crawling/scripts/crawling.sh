@@ -310,6 +310,23 @@ fi
 PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
 log_debug "프롬프트 템플릿 로드 완료 (${#PROMPT_TEMPLATE}자)"
 
+# ============================
+# No Transcript 영구 제외 목록 로드
+# ============================
+NO_TRANSCRIPT_DIR="$DATA_DIR/no_transcript_link"
+NO_TRANSCRIPT_PERMANENT="$NO_TRANSCRIPT_DIR/no_transcript_permanent.json"
+mkdir -p "$NO_TRANSCRIPT_DIR"
+
+# 파일이 없으면 빈 배열로 초기화
+if [ ! -f "$NO_TRANSCRIPT_PERMANENT" ]; then
+    echo '[]' > "$NO_TRANSCRIPT_PERMANENT"
+fi
+
+# 영구 제외 목록 (retry_num >= 3) 로드
+PERMANENT_SKIP_URLS=$(jq -r '.[] | select(.retry_num >= 3) | .youtube_link' "$NO_TRANSCRIPT_PERMANENT" 2>/dev/null || echo "")
+PERMANENT_SKIP_COUNT=$(echo "$PERMANENT_SKIP_URLS" | grep -c . || echo "0")
+log_info "📛 영구 제외 URL (retry >= 3): ${PERMANENT_SKIP_COUNT}개"
+
 # Transcript 없는 URL 카운트
 NO_TRANSCRIPT_COUNT=0
 NO_TRANSCRIPT_LOG="$TODAY_PATH/tzuyang_no_transcript.log"
@@ -323,6 +340,12 @@ for i in "${!URLS[@]}"; do
     
     # 빈 줄 건너뛰기
     if [ -z "$URL" ]; then
+        continue
+    fi
+    
+    # 영구 제외 URL 스킵 (retry_num >= 3)
+    if echo "$PERMANENT_SKIP_URLS" | grep -q "^$URL$"; then
+        SKIPPED=$((SKIPPED + 1))
         continue
     fi
     
@@ -342,6 +365,7 @@ for i in "${!URLS[@]}"; do
     # ============================
     TRANSCRIPT=""
     TRANSCRIPT_FOUND=false
+    TRANSCRIPT_LANGUAGE=""
     
     # 모든 날짜 폴더의 transcript 파일에서 검색
     for transcript_file in "$DATA_DIR"/*/"$TRANSCRIPT_FILENAME"; do
@@ -355,20 +379,46 @@ for i in "${!URLS[@]}"; do
                 join("\n")
             ' "$transcript_file" 2>/dev/null)
             
+            # language 필드도 추출
+            TRANSCRIPT_LANGUAGE=$(jq -r --arg url "$URL" '
+                .[] | select(.youtube_link == $url) | .language // "unknown"
+            ' "$transcript_file" 2>/dev/null)
+            
             if [ -n "$TRANSCRIPT" ]; then
                 TRANSCRIPT_FOUND=true
-                log_debug "자막 발견: $(echo "$TRANSCRIPT" | wc -c | tr -d ' ')자 (from $transcript_file)"
+                log_debug "자막 발견: $(echo "$TRANSCRIPT" | wc -c | tr -d ' ')자, 언어: $TRANSCRIPT_LANGUAGE (from $transcript_file)"
                 TRANSCRIPT_SUCCESS=$((TRANSCRIPT_SUCCESS + 1))
                 break
             fi
         fi
     done
     
-    # Transcript가 없으면 스킵
+    # Transcript가 없으면 스킵 + retry_num 증가
     if [ "$TRANSCRIPT_FOUND" = false ]; then
         NO_TRANSCRIPT_COUNT=$((NO_TRANSCRIPT_COUNT + 1))
         TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
-        log_warning "[$INDEX/$TOTAL] ⚠️ Transcript 없음 - 스킵: $URL"
+        
+        # no_transcript_permanent.json에 retry_num 증가
+        CURRENT_RETRY=$(jq -r --arg url "$URL" '.[] | select(.youtube_link == $url) | .retry_num' "$NO_TRANSCRIPT_PERMANENT" 2>/dev/null || echo "0")
+        if [ -z "$CURRENT_RETRY" ] || [ "$CURRENT_RETRY" = "null" ]; then
+            CURRENT_RETRY=0
+        fi
+        NEW_RETRY=$((CURRENT_RETRY + 1))
+        
+        # 기존 항목 업데이트 또는 새 항목 추가
+        if [ "$CURRENT_RETRY" -eq 0 ]; then
+            # 새 항목 추가
+            jq --arg url "$URL" --argjson retry "$NEW_RETRY" '. += [{"youtube_link": $url, "retry_num": $retry}]' "$NO_TRANSCRIPT_PERMANENT" > "${NO_TRANSCRIPT_PERMANENT}.tmp" && mv "${NO_TRANSCRIPT_PERMANENT}.tmp" "$NO_TRANSCRIPT_PERMANENT"
+        else
+            # 기존 항목 업데이트
+            jq --arg url "$URL" --argjson retry "$NEW_RETRY" '(.[] | select(.youtube_link == $url) | .retry_num) = $retry' "$NO_TRANSCRIPT_PERMANENT" > "${NO_TRANSCRIPT_PERMANENT}.tmp" && mv "${NO_TRANSCRIPT_PERMANENT}.tmp" "$NO_TRANSCRIPT_PERMANENT"
+        fi
+        
+        if [ "$NEW_RETRY" -ge 3 ]; then
+            log_warning "[$INDEX/$TOTAL] ⚠️ Transcript 없음 (retry $NEW_RETRY/3) - 영구 제외: $URL"
+        else
+            log_warning "[$INDEX/$TOTAL] ⚠️ Transcript 없음 (retry $NEW_RETRY/3) - 스킵: $URL"
+        fi
         echo "$URL" >> "$NO_TRANSCRIPT_LOG"
         continue
     fi
@@ -376,12 +426,14 @@ for i in "${!URLS[@]}"; do
     # 프롬프트에 URL 삽입 (<유튜브 링크> 플레이스홀더 치환)
     PROMPT="${PROMPT_TEMPLATE//<유튜브 링크>/$URL}"
     
-    # 자막이 있으면 프롬프트 끝에 추가
+    # 자막이 있으면 프롬프트 끝에 추가 (언어 정보 포함)
     if [ -n "$TRANSCRIPT" ]; then
         PROMPT="$PROMPT
 
 <참고: YouTube 자막>
 아래는 해당 영상의 자막입니다. 음식점 이름, 위치 힌트, 메뉴 정보 등을 파악하는 데 참고하세요.
+[자막 언어: $TRANSCRIPT_LANGUAGE]
+※ 자막이 한국어가 아닐 수 있지만, 모든 결과(reasoning_basis, tzuyang_review 등)는 반드시 한국어로 작성하세요.
 ---
 $TRANSCRIPT
 ---
@@ -408,24 +460,49 @@ $TRANSCRIPT
         GEMINI_CALLS=$((GEMINI_CALLS + 1))
         log_debug "Gemini CLI 응답 완료 (${GEMINI_DURATION}s)"
         
-        # 파서 실행
-        PARSE_START=$(date +%s)
-        if python3 "$PARSER_SCRIPT" "$URL" "$TEMP_RESPONSE" "$OUTPUT_FILE"; then
-            PARSE_END=$(date +%s)
-            PARSE_DURATION=$((PARSE_END - PARSE_START))
-            TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
-            SUCCESS=$((SUCCESS + 1))
-            
-            URL_END_TIME=$(date +%s)
-            URL_DURATION=$((URL_END_TIME - URL_START_TIME))
-            log_success "성공 ($SUCCESS/$TOTAL) - 총 ${URL_DURATION}s (Gemini: ${GEMINI_DURATION}s, Parse: ${PARSE_DURATION}s)"
-        else
-            PARSE_END=$(date +%s)
-            PARSE_DURATION=$((PARSE_END - PARSE_START))
-            TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
+        # 파서 실행 (최대 2회 시도)
+        PARSE_SUCCESS=false
+        for PARSE_ATTEMPT in 1 2; do
+            PARSE_START=$(date +%s)
+            if python3 "$PARSER_SCRIPT" "$URL" "$TEMP_RESPONSE" "$OUTPUT_FILE"; then
+                PARSE_END=$(date +%s)
+                PARSE_DURATION=$((PARSE_END - PARSE_START))
+                TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
+                SUCCESS=$((SUCCESS + 1))
+                PARSE_SUCCESS=true
+                
+                URL_END_TIME=$(date +%s)
+                URL_DURATION=$((URL_END_TIME - URL_START_TIME))
+                log_success "성공 ($SUCCESS/$TOTAL) - 총 ${URL_DURATION}s (Gemini: ${GEMINI_DURATION}s, Parse: ${PARSE_DURATION}s)"
+                break
+            else
+                PARSE_END=$(date +%s)
+                PARSE_DURATION=$((PARSE_END - PARSE_START))
+                TOTAL_PARSE_TIME=$((TOTAL_PARSE_TIME + PARSE_DURATION))
+                
+                if [ $PARSE_ATTEMPT -eq 1 ]; then
+                    log_warning "파서 실패 (1차 시도) - 재시도 중..."
+                    sleep 1
+                    # Gemini CLI 재호출
+                    GEMINI_START=$(date +%s)
+                    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                        GEMINI_END=$(date +%s)
+                        GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
+                        TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
+                        GEMINI_CALLS=$((GEMINI_CALLS + 1))
+                        log_debug "Gemini CLI 재시도 응답 완료 (${GEMINI_DURATION}s)"
+                    else
+                        log_error "Gemini CLI 재시도 실패"
+                        break
+                    fi
+                fi
+            fi
+        done
+        
+        if [ "$PARSE_SUCCESS" = false ]; then
             FAILED=$((FAILED + 1))
-            log_error "파서 실패 ($FAILED/$TOTAL)"
-            echo "[$(date)] 파서 실패: $URL" >> "$ERROR_LOG"
+            log_error "파서 실패 (2회 시도 후) ($FAILED/$TOTAL)"
+            echo "[$(date)] 파서 실패 (2회 시도 후): $URL" >> "$ERROR_LOG"
             # 에러 URL을 JSONL로 저장 (재처리용)
             echo "{\"youtube_link\": \"$URL\", \"error_type\": \"parser_error\", \"timestamp\": \"$(date -Iseconds)\"}" >> "$ERROR_JSONL"
         fi
