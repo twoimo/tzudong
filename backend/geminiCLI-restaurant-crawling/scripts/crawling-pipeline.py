@@ -3,7 +3,9 @@
 Gemini CLI 크롤링 전체 파이프라인
 1. YouTube URL 수집 (api-youtube-urls.py)
 2. Gemini CLI 레스토랑 데이터 수집 (crawling.sh)
-3. YouTube 메타데이터 추가 (api-youtube-meta.py)
+   - 크롤링 (lat/lng = null)
+   - 좌표 Enrichment (카카오 API)
+   - YouTube 메타데이터 추가
 """
 
 import sys

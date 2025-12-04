@@ -26,15 +26,15 @@ Google Gemini CLI를 사용한 YouTube 영상 기반 음식점 정보 크롤링 
 ### 파이프라인 흐름
 
 ```
-YouTube URL 목록          자막 추출           Gemini CLI            YouTube API
-     │                        │                   │                      │
-     ▼                        ▼                   ▼                      ▼
-┌──────────┐           ┌──────────┐        ┌──────────┐           ┌──────────┐
-│ youtube_ │ ────────▶ │ youtube- │ ─────▶ │ crawling │ ────────▶ │ crawling │
-│ urls.txt │   각 URL  │transcript│ 프롬프트│ _results │  메타추가  │ _results │
-└──────────┘   자막추출 │ -api     │ 에 삽입 │  .jsonl  │           │ _with_   │
-                        └──────────┘        └──────────┘           │ meta.jsonl│
-                                                                   └──────────┘
+YouTube URL 목록          자막 추출           Gemini CLI         좌표 Enrichment      YouTube API
+     │                        │                   │                    │                   │
+     ▼                        ▼                   ▼                    ▼                   ▼
+┌──────────┐           ┌──────────┐        ┌──────────┐         ┌──────────┐        ┌──────────┐
+│ youtube_ │ ────────▶ │ youtube- │ ─────▶ │ crawling │ ──────▶ │ enrich-  │ ─────▶ │ crawling │
+│ urls.txt │   각 URL  │transcript│ 프롬프트│ _results │ 카카오   │coordinates│  메타   │ _results │
+└──────────┘   자막추출 │ -api     │ 에 삽입 │  .jsonl  │ API     │   .js    │  추가   │ _with_   │
+                        └──────────┘        │(lat=null)│         │          │         │ meta.jsonl│
+                                            └──────────┘         └──────────┘         └──────────┘
 ```
 
 ### YouTube 자막 활용
@@ -80,11 +80,12 @@ Gemini CLI는 YouTube 영상을 직접 시청할 수 없어서, **YouTube 자막
 geminiCLI-restaurant-crawling/
 ├── README.md                                    # 이 파일
 ├── .env                                         # 환경변수
+├── package.json                                 # Node.js 의존성 (좌표 enrichment)
 ├── data/
 │   └── yy-mm-dd/                                # 날짜별 폴더 (예: 25-12-04)
 │       ├── tzuyang_youtubeVideo_urls.txt                # YouTube URL 목록
 │       ├── tzuyang_restaurant_transcripts.json          # 🆕 Puppeteer 수집 자막
-│       ├── tzuyang_restaurant_results.jsonl             # 크롤링 결과
+│       ├── tzuyang_restaurant_results.jsonl             # 크롤링 결과 (좌표 포함)
 │       ├── tzuyang_restaurant_results_with_meta.jsonl   # 메타데이터 포함 결과
 │       ├── tzuyang_transcript_errors.json               # 자막 수집 에러
 │       └── tzuyang_crawling_errors.jsonl                # 크롤링 에러 URL
@@ -93,6 +94,7 @@ geminiCLI-restaurant-crawling/
 ├── scripts/
 │   ├── transcript-puppeteer.ts                  # 🆕 Puppeteer 자막 수집 스크립트
 │   ├── crawling.sh                              # 메인 크롤링 스크립트
+│   ├── enrich-coordinates.js                    # 🆕 카카오 API 좌표 보완 스크립트
 │   ├── retry_crawling_errors.sh                 # 에러 URL 재처리
 │   ├── crawling-pipeline.py                     # Python 파이프라인 래퍼
 │   ├── parse_result.py                          # Gemini 응답 파서
@@ -271,12 +273,38 @@ python3 api-youtube-meta.py ../tzuyang_restaurant_results.jsonl ../tzuyang_resta
 | 스크립트 | 용도 |
 |----------|------|
 | `transcript-puppeteer.ts` | 🆕 Puppeteer 기반 자막 수집 (maestra.ai + tubetranscript.com) |
-| `crawling.sh` | 메인 크롤링 스크립트 (Gemini CLI 호출 + 메타데이터 추가) |
+| `crawling.sh` | 메인 크롤링 스크립트 (Gemini CLI + 좌표 보완 + 메타데이터) |
+| `enrich-coordinates.js` | 🆕 카카오 API로 주소 → 좌표 변환 (후처리) |
 | `retry_crawling_errors.sh` | 에러 URL 재처리 (최대 5번 재시도) |
 | `parse_result.py` | Gemini CLI 응답에서 JSON 추출 및 JSONL 저장 |
 | `api-youtube-urls.py` | 쯔양 채널의 모든 동영상 URL 수집 |
 | `api-youtube-meta.py` | YouTube API로 메타데이터 추가 (제목, 광고 정보 등) |
 | `crawling-pipeline.py` | Python에서 전체 크롤링 파이프라인 실행 |
+
+### 좌표 Enrichment (카카오 API)
+
+Gemini CLI는 좌표(lat/lng)를 직접 가져올 수 없어서, **카카오 지오코딩 API**로 후처리합니다.
+
+**동작 방식:**
+1. 크롤링 결과에서 `lat: null`인 음식점 필터링
+2. `address` 필드로 카카오 API 호출
+3. 좌표를 받아서 `lat`, `lng` 필드 업데이트
+4. API 실패 시 `null` 유지 (기존 데이터 변경 없음)
+
+**환경변수 설정:**
+```bash
+# .env
+KAKAO_REST_API_KEY=your_kakao_rest_api_key
+```
+
+**수동 실행:**
+```bash
+# JSONL 파일 좌표 보완
+node scripts/enrich-coordinates.js data/25-12-04/tzuyang_restaurant_results.jsonl
+
+# JSON 파일 좌표 보완
+node scripts/enrich-coordinates.js temp/result.json
+```
 
 ### Puppeteer 자막 수집
 
