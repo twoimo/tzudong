@@ -279,7 +279,7 @@ def step3_ai_evaluation(script_dir: Path) -> bool:
     os.chmod(evaluation_script, 0o755)
     
     return run_command(
-        ["zsh", str(evaluation_script)],
+        ["bash", str(evaluation_script)],
         "AI 평가 (Gemini CLI)",
         cwd=str(script_dir)
     )

@@ -53,16 +53,20 @@
 │                                                                             │
 │  1️⃣ 크롤링 (crawling.sh)                                                    │
 │     └── Transcript 있는 URL만 처리                                          │
-│     └── Gemini CLI로 음식점 정보 추출                                        │
+│     └── Gemini CLI로 음식점 정보 추출 (lat/lng = null)                       │
 │         ↓                                                                   │
-│  2️⃣ 메타데이터 추가 (api-youtube-meta.py)                                   │
+│  2️⃣ 좌표 Enrichment (enrich-coordinates.js) 🆕                              │
+│     └── 카카오 지오코딩 API로 주소 → 좌표 변환                                │
+│     └── lat/lng가 null인 항목만 처리                                         │
+│         ↓                                                                   │
+│  3️⃣ 메타데이터 추가 (api-youtube-meta.py)                                   │
 │     └── YouTube API + OpenAI로 광고 분석                                     │
 │         ↓                                                                   │
-│  3️⃣ 평가 (evaluation-pipeline.py)                                          │
+│  4️⃣ 평가 (evaluation-pipeline.py)                                          │
 │     └── LAAJ 평가 + RULE 평가                                               │
 │     └── Naver API로 위치 정합성 검증                                         │
 │         ↓                                                                   │
-│  4️⃣ 변환 및 DB 삽입                                                         │
+│  5️⃣ 변환 및 DB 삽입                                                         │
 │     └── Supabase에 데이터 저장                                               │
 │                                                                             │
 │  OUTPUT: data/{yy-mm-dd}/tzuyang_restaurant_*.jsonl                         │
@@ -101,6 +105,7 @@ backend/
 │   ├── scripts/
 │   │   ├── transcript-puppeteer.ts     # Puppeteer 자막 수집 스크립트
 │   │   ├── crawling.sh                 # 크롤링 스크립트
+│   │   ├── enrich-coordinates.js       # 🆕 카카오 API 좌표 보완
 │   │   ├── api-youtube-urls.py         # URL 수집
 │   │   └── api-youtube-meta.py         # 메타데이터 추가
 │   └── data/
@@ -208,6 +213,7 @@ GitHub 저장소의 Settings > Secrets and variables > Actions에서 설정:
 | `YOUTUBE_API_KEY_BYEON` | YouTube Data API v3 | URL 수집, 메타데이터 |
 | `GOOGLE_API_KEY_BYEON` | Google Gemini API | 크롤링, 평가 |
 | `OPENAI_API_KEY_BYEON` | OpenAI API (광고 분석) | 메타데이터 |
+| `KAKAO_REST_API_KEY` | 🆕 카카오 지오코딩 API | 좌표 Enrichment |
 | `NAVER_CLIENT_ID_BYEON` | Naver 검색 API | RULE 평가 |
 | `NAVER_CLIENT_SECRET_BYEON` | Naver 검색 API | RULE 평가 |
 | `NCP_MAPS_KEY_ID_BYEON` | Naver Cloud Maps API | RULE 평가 |
@@ -313,6 +319,20 @@ gh workflow run "restaurant-pipeline.yml" \
 
 1. 해당 날짜 폴더의 파일 확인
 2. 필요시 해당 날짜 폴더 삭제 후 재실행
+
+### 좌표 Enrichment 실패
+
+**증상**: lat/lng가 계속 null
+
+**원인**:
+1. `KAKAO_REST_API_KEY` Secret 미설정
+2. 카카오 API 키 비활성화 (카카오 개발자 콘솔에서 확인)
+3. 주소 형식이 인식되지 않음
+
+**해결**:
+1. GitHub Secrets에 `KAKAO_REST_API_KEY` 등록 확인
+2. 카카오 개발자 콘솔에서 앱 상태 및 카카오맵 서비스 활성화 확인
+3. 좌표 실패해도 데이터는 null로 유지되어 손실 없음
 
 ---
 
