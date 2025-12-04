@@ -1,6 +1,6 @@
 'use client'; // [CSR] 사용자 입력 및 상호작용 처리
 
-import { Suspense, lazy, useState, useRef, useEffect } from 'react';
+import { Suspense, lazy, useState, useRef, useEffect, useCallback } from 'react';
 import { Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,11 @@ import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
 // [CSR] 코드 스플리팅으로 성능 최적화
 const RegionSelector = lazy(() => import("@/components/region/RegionSelector"));
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
+
+// 펼쳤을 때 패널의 최소 너비 (850px)
+const EXPANDED_PANEL_WIDTH = 850;
+// 축소됐을 때 패널의 대략적인 너비 (아이콘 3개 + padding)
+const COLLAPSED_PANEL_WIDTH = 150;
 
 interface HomeControlPanelProps {
     mapMode: 'domestic' | 'overseas';
@@ -51,12 +56,15 @@ export default function HomeControlPanel({
     leftSidebarWidth = 64,
     rightPanelWidth = 0,
 }: HomeControlPanelProps) {
-    const [isObscured, setIsObscured] = useState(false);
+    // 마우스가 패널 위에 있는지 여부
+    const [isHovered, setIsHovered] = useState(false);
+    // 패널이 좌우 패널과 겹치는지 여부
+    const [canOverlap, setCanOverlap] = useState(false);
 
     const [leftPosition, setLeftPosition] = useState<string>('50%');
     const panelRef = useRef<HTMLDivElement>(null);
 
-    // 화면 크기 및 패널 크기 기반으로 충돌 감지 및 위치 계산
+    // 화면 크기 및 패널 크기 기반으로 겹침 가능 여부 및 위치 계산
     useEffect(() => {
         const updateLayout = () => {
             if (!panelRef.current) return;
@@ -64,15 +72,19 @@ export default function HomeControlPanel({
             const windowWidth = window.innerWidth;
             const availableWidth = windowWidth - leftSidebarWidth - rightPanelWidth;
 
-            // 1. 충돌 감지
-            // 패널이 가용 공간보다 크거나, 여유 공간이 부족하면 가려진 것으로 판단 (여유 공간 40px)
-            // 확장된 상태의 대략적인 너비를 850px로 가정하고 체크
-            const estimatedExpandedWidth = 850;
-            setIsObscured(availableWidth < estimatedExpandedWidth);
+            // 1. 겹침 가능 여부 계산
+            // 최소 필요 너비 = max(좌+축소패널+우, 펼친패널)
+            // 축소된 상태에서 좌우 패널과 함께 배치될 때 필요한 너비
+            const collapsedLayoutWidth = leftSidebarWidth + COLLAPSED_PANEL_WIDTH + rightPanelWidth;
+            // 두 가지 중 더 큰 값이 필요한 최소 화면 너비
+            const minRequiredWidth = Math.max(collapsedLayoutWidth, EXPANDED_PANEL_WIDTH);
 
-            // 2. 위치 계산 (JS로 정확하게 계산)
-            // 가용 영역의 중심점 계산
-            // 시작점(leftSidebarWidth) + 가용너비/2
+            // 화면 너비가 최소 필요 너비보다 작으면 겹칠 가능성 있음
+            setCanOverlap(windowWidth < minRequiredWidth);
+
+            // 2. 위치 계산 (가용 영역의 정확한 중심점)
+            // 가용 영역: leftSidebarWidth ~ (windowWidth - rightPanelWidth)
+            // 중심점: leftSidebarWidth + (가용너비 / 2)
             const centerOfVisibleArea = leftSidebarWidth + (availableWidth / 2);
             setLeftPosition(`${centerOfVisibleArea}px`);
         };
@@ -82,8 +94,33 @@ export default function HomeControlPanel({
         return () => window.removeEventListener('resize', updateLayout);
     }, [leftSidebarWidth, rightPanelWidth]);
 
-    // activePanel이 'control'이거나, 가려지지 않았을 때 확장됨
-    const isExpanded = activePanel === 'control' || !isObscured;
+    // 패널 외부 마우스 이동 감지 (겹침 상태에서만 축소)
+    useEffect(() => {
+        if (!canOverlap) return; // 겹침 가능하지 않으면 리스너 불필요
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!panelRef.current) return;
+
+            const rect = panelRef.current.getBoundingClientRect();
+            // 마우스가 패널 영역 내에 있는지 확인 (여유 공간 10px 추가)
+            const isInsidePanel =
+                e.clientX >= rect.left - 10 &&
+                e.clientX <= rect.right + 10 &&
+                e.clientY >= rect.top - 10 &&
+                e.clientY <= rect.bottom + 10;
+
+            setIsHovered(isInsidePanel);
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        return () => document.removeEventListener('mousemove', handleMouseMove);
+    }, [canOverlap]);
+
+    // 확장 조건:
+    // 1. activePanel이 'control'인 경우 (명시적 선택)
+    // 2. 겹침 가능하지 않은 경우 (공간 충분)
+    // 3. 겹침 가능하지만 마우스가 패널 위에 있는 경우
+    const isExpanded = activePanel === 'control' || !canOverlap || isHovered;
 
     return (
         <div
@@ -98,11 +135,16 @@ export default function HomeControlPanel({
                 onPanelClick?.('control');
             }}
         >
-            <div className={`
-                flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border shadow-lg transition-all duration-300 ease-in-out
-                ${isExpanded ? 'p-3 scale-100 opacity-100' : 'p-2 scale-95 opacity-90 hover:scale-100 hover:opacity-100'}
-                hover:shadow-xl hover:border-primary/50
-            `}>
+            <div
+                className={`
+                    flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border shadow-lg transition-all duration-300 ease-in-out
+                    ${isExpanded ? 'p-3 scale-100 opacity-100' : 'p-2 scale-95 opacity-90 hover:scale-100 hover:opacity-100'}
+                    hover:shadow-xl hover:border-primary/50
+                `}
+                style={{
+                    minWidth: isExpanded ? EXPANDED_PANEL_WIDTH : undefined
+                }}
+            >
                 {isExpanded ? (
                     // 확장된 상태: 전체 컨트롤 패널 표시
                     <>
