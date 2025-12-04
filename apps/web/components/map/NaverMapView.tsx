@@ -129,58 +129,61 @@ const NaverMapView = memo(({
         }
     }, [selectedRestaurant, isGridMode, isPanelOpen, externalPanelOpen, isPanelCollapsed]);
 
-    // 패널 열림/닫힘/접힘 상태 변경 시 지도 중심 이동 (델타 오프셋 적용)
+    // 패널 열림/닫힘/접힘 상태 변경 시 지도 중심 부드럽게 이동
     useEffect(() => {
         if (!mapInstanceRef.current) return;
 
-        const panelWidth = 400; // 패널 고정 너비
+        const panelWidth = 400;
 
         // 현재 패널 상태 계산
         const isCurrentlyOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
         const wasPreviouslyOpen = prevPanelOpenRef.current;
 
-        // 상태가 변하지 않으면 아무것도 하지 않음
-        if (isCurrentlyOpen === wasPreviouslyOpen) return;
-
-        const handleResize = () => {
+        // 상태가 변하지 않으면 리사이즈만 트리거
+        if (isCurrentlyOpen === wasPreviouslyOpen) {
+            // 패널 상태 변화 없이 리사이즈만 필요한 경우
             const map = mapInstanceRef.current;
-            if (map && mapRef.current) {
+            if (map) {
                 naver.maps.Event.trigger(map, 'resize');
-
-                try {
-                    const currentCenter = map.getCenter();
-                    const projection = map.getProjection();
-                    const centerPoint = projection.fromCoordToOffset(currentCenter);
-
-                    // 델타 오프셋 계산: 열림 -> +offset, 닫힘 -> -offset
-                    let deltaX = 0;
-                    if (isCurrentlyOpen && !wasPreviouslyOpen) {
-                        // 패널이 열림: 지도 중심을 왼쪽으로 이동 (마커가 오른쪽으로)
-                        deltaX = panelWidth / 2;
-                    } else if (!isCurrentlyOpen && wasPreviouslyOpen) {
-                        // 패널이 닫힘: 지도 중심을 오른쪽으로 복귀
-                        deltaX = -(panelWidth / 2);
-                    }
-
-                    if (deltaX !== 0) {
-                        const offsetPoint = new naver.maps.Point(
-                            centerPoint.x + deltaX,
-                            centerPoint.y
-                        );
-                        const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
-                        map.panTo(offsetLatLng, { duration: 300 });
-                    }
-                } catch (e) {
-                    // 프로젝션이 준비되지 않은 경우 무시
-                }
             }
+            return;
+        }
 
-            // 이전 상태 업데이트
-            prevPanelOpenRef.current = isCurrentlyOpen;
+        // 이전 상태 즉시 업데이트 (중복 트리거 방지)
+        prevPanelOpenRef.current = isCurrentlyOpen;
+
+        const handleMapCenter = () => {
+            const map = mapInstanceRef.current;
+            if (!map || !mapRef.current) return;
+
+            naver.maps.Event.trigger(map, 'resize');
+
+            try {
+                const currentCenter = map.getCenter();
+                const projection = map.getProjection();
+                const centerPoint = projection.fromCoordToOffset(currentCenter);
+
+                // 델타 오프셋: 열림 +200px, 닫힘 -200px
+                const deltaX = isCurrentlyOpen ? (panelWidth / 2) : -(panelWidth / 2);
+
+                const offsetPoint = new naver.maps.Point(
+                    centerPoint.x + deltaX,
+                    centerPoint.y
+                );
+                const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+
+                // 자연스러운 이징 애니메이션 (easeOutCubic 효과)
+                map.panTo(offsetLatLng, {
+                    duration: 250,
+                    easing: 'easeOutCubic'
+                });
+            } catch (e) {
+                // 프로젝션 준비 안됨 - 무시
+            }
         };
 
-        // 패널 애니메이션(300ms)이 끝난 직후 실행
-        const timer = setTimeout(handleResize, 320);
+        // 패널 트랜지션과 동시에 시작 (더 자연스러운 동기화)
+        const timer = setTimeout(handleMapCenter, 50);
 
         return () => clearTimeout(timer);
     }, [isPanelOpen, externalPanelOpen, isPanelCollapsed]);
