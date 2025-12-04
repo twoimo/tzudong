@@ -51,7 +51,8 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
     if (pathname === '/') {
       window.dispatchEvent(new CustomEvent('openAdminSubmissions'));
     } else {
-      window.location.href = '/admin/submissions';
+      // 홈으로 이동 후 패널 열기
+      window.location.href = '/';
     }
   };
 
@@ -59,7 +60,8 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
     if (pathname === '/') {
       window.dispatchEvent(new CustomEvent('openAdminReviews'));
     } else {
-      window.location.href = '/admin/reviews';
+      // 홈으로 이동 후 패널 열기
+      window.location.href = '/';
     }
   };
 

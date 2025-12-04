@@ -72,7 +72,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
         }
     }, [user?.id, queryClient]);
 
-    const shouldShowCenteredLayoutButton = pathname !== '/' && pathname !== '/global' && pathname !== '/filtering';
+    const shouldShowCenteredLayoutButton = pathname !== '/';
 
     const handleLogout = async () => {
         try {
