@@ -21,7 +21,8 @@ from duplicate_checker import load_processed_urls, append_to_jsonl
 from logger import PipelineLogger, LogLevel
 from data_utils import DataPathManager
 
-load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'))
+# 환경변수 우선, .env는 보조로 사용 (GitHub Actions 환경변수가 우선됨)
+load_dotenv(os.path.join(os.path.dirname(__file__), '../.env'), override=False)
 
 # 프로젝트 루트 및 데이터 경로 관리자
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -58,6 +59,12 @@ NAVER_CLIENT_ID     = os.getenv("NAVER_CLIENT_ID_BYEON", "")
 NAVER_CLIENT_SECRET = os.getenv("NAVER_CLIENT_SECRET_BYEON", "")
 NCP_KEY_ID          = os.getenv("NCP_MAPS_KEY_ID_BYEON", "")
 NCP_KEY             = os.getenv("NCP_MAPS_KEY_BYEON", "")
+
+# 디버그: API 키 로드 확인
+print(f"[DEBUG] NAVER_CLIENT_ID_BYEON 길이: {len(NAVER_CLIENT_ID)}")
+print(f"[DEBUG] NAVER_CLIENT_SECRET_BYEON 길이: {len(NAVER_CLIENT_SECRET)}")
+print(f"[DEBUG] NCP_MAPS_KEY_ID_BYEON 길이: {len(NCP_KEY_ID)}")
+print(f"[DEBUG] NCP_MAPS_KEY_BYEON 길이: {len(NCP_KEY)}")
 
 LOCAL_URL   = "https://openapi.naver.com/v1/search/local.json"  # name/address 검색
 GEOCODE_URL = "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"  # addresses 얻기
