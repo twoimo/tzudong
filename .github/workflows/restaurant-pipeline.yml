@@ -27,7 +27,7 @@ jobs:
   # 1. YouTube URL 수집
   # ============================
   url-collection:
-    if: ${{ github.event.inputs.step == 'all' || github.event.inputs.step == 'url-collection' }}
+    if: ${{ github.event_name == 'schedule' || github.event.inputs.step == 'all' || github.event.inputs.step == 'url-collection' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     
@@ -118,7 +118,7 @@ jobs:
     needs: url-collection
     if: |
       always() && 
-      (github.event.inputs.step == 'all' || github.event.inputs.step == 'transcript-collection')
+      (github.event_name == 'schedule' || github.event.inputs.step == 'all' || github.event.inputs.step == 'transcript-collection')
     runs-on: ubuntu-latest
     timeout-minutes: 120
     
@@ -213,7 +213,7 @@ jobs:
     needs: transcript-collection
     if: |
       always() &&
-      (github.event.inputs.step == 'all' || github.event.inputs.step == 'crawling-evaluation')
+      (github.event_name == 'schedule' || github.event.inputs.step == 'all' || github.event.inputs.step == 'crawling-evaluation')
     runs-on: ubuntu-latest
     timeout-minutes: 180
     
