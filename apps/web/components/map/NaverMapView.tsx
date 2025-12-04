@@ -105,24 +105,60 @@ const NaverMapView = memo(({
             // 현재 줌 레벨 확인
             const currentZoom = map.getZoom();
             const targetZoom = 16;
+            const zoomDiff = Math.abs(currentZoom - targetZoom);
 
-            // 줌 변경이 필요한 경우 부드러운 애니메이션으로 전환
-            // 깜빡임 방지: setZoom 대신 줌과 중심을 함께 애니메이션
-            const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
+            // 현재 중심과 목표 좌표 간 거리 계산 (Haversine 공식 간소화)
+            const currentCenter = map.getCenter();
+            const targetLat = selectedRestaurant.lat!;
+            const targetLng = selectedRestaurant.lng!;
+            const currentLat = currentCenter.lat();
+            const currentLng = currentCenter.lng();
+
+            // 거리 계산 (대략적인 km 단위)
+            const latDiff = Math.abs(targetLat - currentLat);
+            const lngDiff = Math.abs(targetLng - currentLng);
+            // 한국 위도 기준 1도 ≈ 111km (위도), 1도 ≈ 88km (경도)
+            const distanceKm = Math.sqrt(
+                Math.pow(latDiff * 111, 2) + Math.pow(lngDiff * 88, 2)
+            );
+
+            // 임계값 설정
+            const ZOOM_THRESHOLD = 4; // 줌 차이 4 이상이면 즉시 전환
+            const DISTANCE_THRESHOLD_KM = 50; // 50km 이상이면 즉시 전환
+
+            // 즉시 전환 필요 여부
+            const shouldInstantTransition = zoomDiff >= ZOOM_THRESHOLD || distanceKm >= DISTANCE_THRESHOLD_KM;
+
+            const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
 
             // 우측 패널 상태 확인
             const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
+
+            // 패널 오프셋 적용된 좌표 계산
+            const getOffsetLatLng = () => {
+                try {
+                    if (isAnyPanelOpen) {
+                        const projection = map.getProjection();
+                        const centerPoint = projection.fromCoordToOffset(centerLatLng);
+                        const offsetPoint = new naver.maps.Point(
+                            centerPoint.x + (panelWidth / 2),
+                            centerPoint.y
+                        );
+                        return projection.fromOffsetToCoord(offsetPoint);
+                    }
+                } catch (e) {
+                    // 프로젝션 준비 안됨
+                }
+                return centerLatLng;
+            };
 
             const moveToCenter = () => {
                 if (!map || !mapRef.current) return;
 
                 try {
                     if (isAnyPanelOpen) {
-                        // 패널이 열려있으면 지도 중심을 왼쪽으로 조정
                         const projection = map.getProjection();
                         const centerPoint = projection.fromCoordToOffset(centerLatLng);
-
-                        // 패널 너비의 절반만큼 오른쪽으로 이동 (마커가 가시 영역 중앙에 오도록)
                         const offsetPoint = new naver.maps.Point(
                             centerPoint.x + (panelWidth / 2),
                             centerPoint.y
@@ -131,19 +167,29 @@ const NaverMapView = memo(({
 
                         map.panTo(offsetLatLng, { duration: 300, easing: 'easeOutCubic' });
                     } else {
-                        // 패널이 없거나 접혀있으면 정확한 중앙으로 이동
                         map.panTo(centerLatLng, { duration: 300, easing: 'easeOutCubic' });
                     }
                 } catch (e) {
-                    // 프로젝션이 준비되지 않은 경우 단순 중앙 이동
                     map.panTo(centerLatLng, { duration: 300 });
                 }
             };
 
-            // 줌 변경이 필요한 경우
-            if (currentZoom !== targetZoom && shouldRecenter) {
-                // 부드러운 줌 전환 (깜빡임 방지)
-                // 먼저 줌 변경 후 중앙 이동
+            if (!shouldRecenter) {
+                return; // 중앙 정렬 필요 없음
+            }
+
+            // 즉시 전환 (줌 차이가 크거나 거리가 멀 때)
+            if (shouldInstantTransition) {
+                // 즉시 줌 및 중심 설정 (애니메이션 없이)
+                map.setZoom(targetZoom);
+                const finalLatLng = getOffsetLatLng();
+                map.setCenter(finalLatLng);
+                return;
+            }
+
+            // 부드러운 전환 (줌 차이가 작고 거리가 가까울 때)
+            if (currentZoom !== targetZoom) {
+                // 부드러운 줌 전환
                 map.morph(centerLatLng, targetZoom, {
                     duration: 400,
                     easing: 'easeOutCubic'
@@ -155,7 +201,7 @@ const NaverMapView = memo(({
                         moveToCenter();
                     }
                 }, 450);
-            } else if (shouldRecenter) {
+            } else {
                 // 줌 변경 없이 중앙 이동만
                 setTimeout(moveToCenter, 50);
             }
