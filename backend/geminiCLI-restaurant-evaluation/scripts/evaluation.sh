@@ -253,7 +253,7 @@ while IFS= read -r line; do
     RESTAURANTS=$(echo "$line" | jq -c '.restaurants')
     
     # 영구 제외 URL 스킵 (retry_num >= 3)
-    if echo "$PERMANENT_SKIP_URLS" | grep -q "^$YOUTUBE_LINK$"; then
+    if [ -n "$PERMANENT_SKIP_URLS" ] && echo "$PERMANENT_SKIP_URLS" | grep -q "^$YOUTUBE_LINK$"; then
         SKIPPED=$((SKIPPED + 1))
         continue
     fi
@@ -265,7 +265,7 @@ while IFS= read -r line; do
     fi
     
     # 이미 처리된 레코드인지 확인
-    if echo "$PROCESSED_LINKS" | grep -q "^$YOUTUBE_LINK$"; then
+    if [ -n "$PROCESSED_LINKS" ] && echo "$PROCESSED_LINKS" | grep -q "^$YOUTUBE_LINK$"; then
         SKIPPED=$((SKIPPED + 1))
         if [ $((SKIPPED % 100)) -eq 1 ]; then
             log_warning "[$LINE_NUM/$TOTAL] 건너뜀 (이미 처리됨)"
