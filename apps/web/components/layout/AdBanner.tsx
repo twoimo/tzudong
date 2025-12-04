@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Scroll } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,6 @@ interface AdBannerSlide {
     id: number;
     title: string;
     description: string;
-
 }
 
 // 광고 배너 슬라이드 데이터 (옛스러운 말투 적용)
@@ -16,38 +15,39 @@ const AD_SLIDES: AdBannerSlide[] = [
         id: 1,
         title: "광고주 모집",
         description: "귀하의 맛집을\n천하에 널리 알리옵소서",
-
     },
     {
         id: 2,
         title: "명당 자리",
         description: "수많은 미식가들이\n오가는 길목이옵니다",
-
     },
     {
         id: 3,
         title: "동반 성장",
         description: "쯔동여지도와 더불어\n큰 뜻을 펼치시옵소서",
-
     }
 ];
 
 const AdBanner = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // 자동 슬라이드 전환
     useEffect(() => {
         if (!isAutoPlaying) return;
 
-        const interval = setInterval(() => {
+        timeoutRef.current = setTimeout(() => {
             setCurrentSlide((prev) => (prev + 1) % AD_SLIDES.length);
         }, 5000);
 
-        return () => clearInterval(interval);
-    }, [isAutoPlaying]);
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
+    }, [isAutoPlaying, currentSlide]);
 
     const goToSlide = (index: number) => {
+        if (index === currentSlide) return;
         setCurrentSlide(index);
         setIsAutoPlaying(false);
         setTimeout(() => setIsAutoPlaying(true), 5000);
@@ -55,12 +55,16 @@ const AdBanner = () => {
 
     const nextSlide = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        goToSlide((currentSlide + 1) % AD_SLIDES.length);
+        setCurrentSlide((prev) => (prev + 1) % AD_SLIDES.length);
+        setIsAutoPlaying(false);
+        setTimeout(() => setIsAutoPlaying(true), 5000);
     };
 
     const prevSlide = (e?: React.MouseEvent) => {
         e?.stopPropagation();
-        goToSlide((currentSlide - 1 + AD_SLIDES.length) % AD_SLIDES.length);
+        setCurrentSlide((prev) => (prev - 1 + AD_SLIDES.length) % AD_SLIDES.length);
+        setIsAutoPlaying(false);
+        setTimeout(() => setIsAutoPlaying(true), 5000);
     };
 
     const currentAd = AD_SLIDES[currentSlide];
@@ -70,7 +74,7 @@ const AdBanner = () => {
             className="relative w-full h-64 rounded-lg overflow-hidden group select-none shadow-md"
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
-            style={{ backgroundColor: '#fdfbf7' }} // 한지 색상
+            style={{ backgroundColor: '#fdfbf7' }}
         >
             {/* 한지 질감 오버레이 */}
             <div className="absolute inset-0 opacity-40 pointer-events-none"
@@ -81,15 +85,14 @@ const AdBanner = () => {
             <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
             <div className="absolute inset-0 border-4 border-stone-800/10 rounded-lg pointer-events-none" />
 
-            {/* 컨텐츠 */}
+            {/* 슬라이드 컨텐츠 */}
             <div className="relative h-full flex flex-col items-center justify-center text-center p-6 z-10">
-
                 {/* 상단 장식 */}
                 <div className="mb-3 text-stone-500 opacity-60">
                     <Scroll className="w-6 h-6" />
                 </div>
 
-                {/* 제목 (세로쓰기 느낌을 주는 폰트와 레이아웃) */}
+                {/* 제목 */}
                 <h3 className="text-2xl font-serif font-bold text-stone-900 mb-3 tracking-widest drop-shadow-sm">
                     {currentAd.title}
                 </h3>
@@ -98,8 +101,6 @@ const AdBanner = () => {
                 <p className="text-base font-serif text-stone-700 whitespace-pre-line leading-loose mb-3 opacity-90">
                     {currentAd.description}
                 </p>
-
-
 
                 {/* 버튼 */}
                 <Button
@@ -116,7 +117,7 @@ const AdBanner = () => {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto"
+                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto transition-all duration-200"
                     onClick={prevSlide}
                 >
                     <ChevronLeft className="h-5 w-5" />
@@ -124,7 +125,7 @@ const AdBanner = () => {
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto"
+                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto transition-all duration-200"
                     onClick={nextSlide}
                 >
                     <ChevronRight className="h-5 w-5" />
@@ -132,7 +133,7 @@ const AdBanner = () => {
             </div>
 
             {/* 하단 인디케이터 */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2.5 z-20">
                 {AD_SLIDES.map((_, index) => (
                     <button
                         key={index}
@@ -141,10 +142,10 @@ const AdBanner = () => {
                             goToSlide(index);
                         }}
                         className={cn(
-                            "w-2 h-2 rounded-full transition-all duration-300 border border-stone-400",
+                            "w-2 h-2 rounded-full transition-all duration-300 ease-out",
                             currentSlide === index
-                                ? "bg-stone-800 scale-110"
-                                : "bg-transparent hover:bg-stone-300"
+                                ? "bg-stone-700 scale-110 shadow-sm"
+                                : "bg-stone-400/60 hover:bg-stone-500 scale-100"
                         )}
                         aria-label={`슬라이드 ${index + 1}로 이동`}
                     />

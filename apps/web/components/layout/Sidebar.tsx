@@ -40,20 +40,16 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
     { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
     { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
+    { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
   ];
 
-  // 관리자 메뉴 (데이터 검수만 사이드바에 유지)
+  // 관리자 메뉴 (데이터 검수 - 월 서버 운영 비용 아래에 표시)
   const adminMenuItems = (user && isAdmin) ? [
     { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
   ] : [];
 
-  // 공통 메뉴
-  const commonMenuItems = [
-    { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
-  ];
-
   // 모든 메뉴 합치기
-  const menuItems = [...baseMenuItems, ...adminMenuItems, ...commonMenuItems];
+  const menuItems = [...baseMenuItems, ...adminMenuItems];
 
   return (
     <aside
