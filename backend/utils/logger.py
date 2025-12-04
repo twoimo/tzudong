@@ -93,8 +93,12 @@ class PipelineLogger:
         self.start_time = datetime.now(KST)
         self.start_timestamp = self.start_time.isoformat()
         
-        # 날짜 폴더명 (yy-mm-dd)
-        self.date_folder = self.start_time.strftime("%y-%m-%d")
+        # 날짜 폴더명 (PIPELINE_DATE 환경변수 우선, 없으면 현재 시간)
+        pipeline_date = os.environ.get('PIPELINE_DATE')
+        if pipeline_date:
+            self.date_folder = pipeline_date
+        else:
+            self.date_folder = self.start_time.strftime("%y-%m-%d")
         
         # 로그 기본 디렉토리 설정
         if log_dir:
