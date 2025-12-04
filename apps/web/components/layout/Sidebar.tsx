@@ -5,8 +5,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import Image from "next/image";
 import AdBanner from "./AdBanner";
-import SeasonalLogo from "@/components/common/SeasonalLogo";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -75,13 +75,19 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
 
       {/* 로고 영역 */}
       <div className="h-16 border-b border-stone-800/10 relative z-10 flex items-center justify-center overflow-hidden">
-        <div className="cursor-pointer w-full h-full" onClick={() => router.push("/")}>
+        <div className="cursor-pointer w-full h-full flex items-center justify-center px-4" onClick={() => router.push("/")}>
           {isOpen ? (
-            <SeasonalLogo />
+            <Image
+              src="/sidebar-logo.png"
+              alt="쯔동여지도"
+              width={200}
+              height={56}
+              priority
+              sizes="(max-width: 768px) 150px, 200px"
+              className="h-12 w-auto object-contain mix-blend-multiply opacity-90 drop-shadow-sm grayscale contrast-125"
+            />
           ) : (
-            <div className="flex items-center justify-center h-full">
-              <Home className="h-6 w-6 text-stone-600" />
-            </div>
+            <Home className="h-6 w-6 text-stone-600" />
           )}
         </div>
       </div>
