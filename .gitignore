@@ -5,3 +5,8 @@ dist/
 coverage/
 .vscode/
 __pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+*.egg-info/

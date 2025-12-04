@@ -57,7 +57,8 @@ Google Gemini CLI 기반의 YouTube 영상 음식점 크롤링 및 평가 시스
 │  tzuyang_youtubeVideo_urls.txt                                  │
 │        ↓ youtube-transcript-api (자막 추출)                     │
 │        ↓ Gemini CLI (자막 + 프롬프트로 음식점 추출)             │
-│        ↓ tzuyang_restaurant_results.jsonl                       │
+│        ↓ tzuyang_restaurant_results.jsonl (lat/lng = null)      │
+│        ↓ 카카오 API (주소 → 좌표 변환)                          │
 │        ↓ YouTube API (메타데이터 추가)                          │
 │        → tzuyang_restaurant_results_with_meta.jsonl             │
 └─────────────────────────────────────────────────────────────────┘
@@ -239,6 +240,12 @@ python3 crawling-pipeline.py
 **입력**: `tzuyang_youtubeVideo_urls.txt` (YouTube URL 목록)
 **출력**: `tzuyang_restaurant_results_with_meta.jsonl`
 
+**크롤링 내부 처리 순서**:
+1. YouTube 자막 추출 (youtube-transcript-api)
+2. Gemini CLI로 음식점 정보 추출 (lat/lng = null)
+3. 카카오 지오코딩 API로 좌표 보완 (`enrich-coordinates.js`)
+4. YouTube API로 메타데이터 추가
+
 ### Phase 2: 평가
 
 ```bash
@@ -362,6 +369,7 @@ backend/
 │   │   └── crawling_prompt.txt
 │   └── scripts/
 │       ├── crawling.sh                        # 메인 크롤링
+│       ├── enrich-coordinates.js              # 🆕 카카오 API 좌표 보완
 │       ├── retry_crawling_errors.sh           # 에러 재처리
 │       ├── crawling-pipeline.py
 │       ├── parse_result.py
@@ -420,6 +428,9 @@ YOUTUBE_API_KEY_BYEON=your_youtube_api_key
 # OpenAI (광고 분석)
 OPENAI_API_KEY_BYEON=your_openai_api_key
 
+# Kakao 지오코딩 (좌표 변환)
+KAKAO_REST_API_KEY=your_kakao_rest_api_key
+
 # ===== 평가 =====
 # Naver Local Search API
 NAVER_CLIENT_ID=your_naver_client_id
@@ -440,6 +451,7 @@ SUPABASE_KEY=your_supabase_key
 |-----|----------|
 | YouTube Data API | [Google Cloud Console](https://console.cloud.google.com/) |
 | OpenAI | [OpenAI Platform](https://platform.openai.com/) |
+| Kakao 지오코딩 | [Kakao Developers](https://developers.kakao.com/) |
 | Naver Local Search | [Naver Developers](https://developers.naver.com/) |
 | NCP Geocoding | [Naver Cloud Platform](https://www.ncloud.com/) |
 | Supabase | [Supabase Dashboard](https://supabase.com/) |
@@ -463,6 +475,7 @@ GitHub → Actions → "GeminiCLI Restaurant Pipeline" → "Run workflow"
 | `GEMINI_API_TOKEN` | Gemini CLI 인증 토큰 |
 | `YOUTUBE_API_KEY` | YouTube Data API 키 |
 | `OPENAI_API_KEY` | OpenAI API 키 |
+| `KAKAO_REST_API_KEY` | 카카오 지오코딩 API 키 |
 | `NAVER_CLIENT_ID` | Naver API Client ID |
 | `NAVER_CLIENT_SECRET` | Naver API Client Secret |
 | `NCP_CLIENT_ID` | NCP Geocoding Client ID |
@@ -486,6 +499,7 @@ on:
 |--------|------|------|
 | Gemini CLI | 60 RPM, 1000 RPD | 1초 대기 |
 | YouTube Data API | 10,000 units/day | - |
+| Kakao 지오코딩 | 무료 300,000 calls/day | 0.2초 대기 |
 | Naver Local Search | 25,000 calls/day | 0.1초 대기 |
 | NCP Geocoding | 100,000 calls/day | - |
 | OpenAI | 티어별 상이 | - |
