@@ -66,16 +66,26 @@ jobs:
               
               try:
                   resp = requests.get(url, params=params, headers=headers, timeout=10)
+                  print(f"\n🔍 쿼리: '{query}'")
                   if resp.status_code == 200:
                       data = resp.json()
                       items = data.get("items", [])
-                      print(f"✅ '{query}' → {resp.status_code} (결과 {len(items)}개)")
+                      print(f"   ✅ 응답: {resp.status_code} (결과 {len(items)}개)")
+                      for i, item in enumerate(items[:3]):  # 상위 3개만 출력
+                          import re
+                          title = re.sub(r'</?b>', '', item.get('title', ''))
+                          address = item.get('address', '')
+                          roadAddress = item.get('roadAddress', '')
+                          print(f"   [{i+1}] {title}")
+                          print(f"       지번: {address}")
+                          print(f"       도로명: {roadAddress}")
                       success += 1
                   else:
-                      print(f"❌ '{query}' → {resp.status_code}: {resp.text[:100]}")
+                      print(f"   ❌ 응답: {resp.status_code}")
+                      print(f"   에러: {resp.text[:200]}")
                       fail += 1
               except Exception as e:
-                  print(f"❌ '{query}' → 예외: {e}")
+                  print(f"   ❌ 예외: {e}")
                   fail += 1
 
           print()
