@@ -32,6 +32,7 @@ interface HomeMapContainerProps {
     activePanel?: 'map' | 'detail' | 'control';
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     externalPanelOpen?: boolean; // 외부 패널이 열려있지 않을 때 NaverMap 내부 패널 닫기
+    isPanelCollapsed?: boolean; // 패널 접기 상태
 }
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
@@ -57,6 +58,7 @@ export default function HomeMapContainer({
     activePanel,
     onPanelClick,
     externalPanelOpen,
+    isPanelCollapsed,
 }: HomeMapContainerProps) {
     // [CSR] 단일 지도 모드
     return (
@@ -75,6 +77,7 @@ export default function HomeMapContainer({
                     onPanelClick={onPanelClick}
                     onMarkerClick={onMarkerClick}
                     externalPanelOpen={externalPanelOpen}
+                    isPanelCollapsed={isPanelCollapsed}
                 />
             ) : (
                 <Suspense fallback={<MapSkeleton />}>

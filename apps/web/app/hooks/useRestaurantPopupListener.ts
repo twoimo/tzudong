@@ -7,10 +7,11 @@ interface UseRestaurantPopupListenerProps {
     setSelectedRegion: React.Dispatch<React.SetStateAction<Region | null>>;
     setSelectedRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
     setSearchedRestaurant: React.Dispatch<React.SetStateAction<Restaurant | null>>;
+    openDetailPanel?: (restaurant: Restaurant) => void; // 상세 패널 열기 콜백
 }
 
 export function useRestaurantPopupListener(props: UseRestaurantPopupListenerProps) {
-    const { mapMode, moveToRestaurant, setSelectedRegion, setSelectedRestaurant, setSearchedRestaurant } = props;
+    const { mapMode, moveToRestaurant, setSelectedRegion, setSelectedRestaurant, setSearchedRestaurant, openDetailPanel } = props;
 
     useEffect(() => {
         if (typeof window === 'undefined') return;
@@ -24,6 +25,11 @@ export function useRestaurantPopupListener(props: UseRestaurantPopupListenerProp
                 setSelectedRegion(region as Region);
                 setSelectedRestaurant(restaurant);
                 setSearchedRestaurant(restaurant);
+
+                // 상세 패널 열기 (외부 패널 관리)
+                if (openDetailPanel) {
+                    openDetailPanel(restaurant);
+                }
 
                 // 약간의 딜레이를 주어 지도가 준비된 후 이동
                 setTimeout(() => {
@@ -40,5 +46,5 @@ export function useRestaurantPopupListener(props: UseRestaurantPopupListenerProp
         return () => {
             window.removeEventListener('restaurant-selected', handleRestaurantSelected);
         };
-    }, [mapMode, moveToRestaurant, setSelectedRegion, setSelectedRestaurant, setSearchedRestaurant]);
+    }, [mapMode, moveToRestaurant, setSelectedRegion, setSelectedRestaurant, setSearchedRestaurant, openDetailPanel]);
 }

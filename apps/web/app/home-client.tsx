@@ -55,6 +55,8 @@ const AdminReviewPanel = dynamic(
     { ssr: false }
 );
 
+import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
+
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
@@ -145,6 +147,7 @@ export default function HomeClient() {
         setSelectedRegion: state.setSelectedRegion,
         setSelectedRestaurant: state.setSelectedRestaurant,
         setSearchedRestaurant: state.setSearchedRestaurant,
+        openDetailPanel, // 팝업 클릭 시 상세 패널 열기
     });
 
     const onAdminEditRestaurant = isAdmin ? handlers.handleAdminEditRestaurant : undefined;
@@ -245,6 +248,7 @@ export default function HomeClient() {
                 activePanel={activePanel}
                 onPanelClick={setActivePanel}
                 externalPanelOpen={activeRightPanel === null}
+                isPanelCollapsed={isPanelCollapsed}
             />
 
             <EditRestaurantModal
@@ -284,54 +288,46 @@ export default function HomeClient() {
             />
 
             {/* 마이페이지 패널 */}
-            {activeRightPanel === 'mypage' && (
-                <div
-                    className={`fixed top-16 right-0 h-[calc(100vh-64px)] z-50 shadow-xl bg-background transition-all duration-300 ${isPanelCollapsed ? 'w-0' : 'w-[400px]'}`}
-                    style={{ overflow: 'visible' }}
-                >
-                    <div className="h-full w-[400px] bg-background border-l border-border">
-                        <MyPagePanel
-                            isOpen={!isPanelCollapsed}
-                            onClose={closeAllPanels}
-                            onToggleCollapse={togglePanelCollapse}
-                            isCollapsed={isPanelCollapsed}
-                        />
-                    </div>
-                </div>
-            )}
+            <RightPanelWrapper
+                isOpen={activeRightPanel === 'mypage'}
+                isCollapsed={isPanelCollapsed}
+            >
+                <MyPagePanel
+                    isOpen={!isPanelCollapsed}
+                    onClose={closeAllPanels}
+                    onToggleCollapse={togglePanelCollapse}
+                    isCollapsed={isPanelCollapsed}
+                />
+            </RightPanelWrapper>
 
             {/* 관리자 제보관리 패널 */}
-            {isAdmin && activeRightPanel === 'adminSubmissions' && (
-                <div
-                    className={`fixed top-16 right-0 h-[calc(100vh-64px)] z-50 shadow-xl bg-background transition-all duration-300 ${isPanelCollapsed ? 'w-0' : 'w-[400px]'}`}
-                    style={{ overflow: 'visible' }}
+            {isAdmin && (
+                <RightPanelWrapper
+                    isOpen={activeRightPanel === 'adminSubmissions'}
+                    isCollapsed={isPanelCollapsed}
                 >
-                    <div className="h-full w-[400px] bg-background border-l border-border">
-                        <AdminSubmissionPanel
-                            isOpen={!isPanelCollapsed}
-                            onClose={closeAllPanels}
-                            onToggleCollapse={togglePanelCollapse}
-                            isCollapsed={isPanelCollapsed}
-                        />
-                    </div>
-                </div>
+                    <AdminSubmissionPanel
+                        isOpen={!isPanelCollapsed}
+                        onClose={closeAllPanels}
+                        onToggleCollapse={togglePanelCollapse}
+                        isCollapsed={isPanelCollapsed}
+                    />
+                </RightPanelWrapper>
             )}
 
             {/* 관리자 리뷰관리 패널 */}
-            {isAdmin && activeRightPanel === 'adminReviews' && (
-                <div
-                    className={`fixed top-16 right-0 h-[calc(100vh-64px)] z-50 shadow-xl bg-background transition-all duration-300 ${isPanelCollapsed ? 'w-0' : 'w-[400px]'}`}
-                    style={{ overflow: 'visible' }}
+            {isAdmin && (
+                <RightPanelWrapper
+                    isOpen={activeRightPanel === 'adminReviews'}
+                    isCollapsed={isPanelCollapsed}
                 >
-                    <div className="h-full w-[400px] bg-background border-l border-border">
-                        <AdminReviewPanel
-                            isOpen={!isPanelCollapsed}
-                            onClose={closeAllPanels}
-                            onToggleCollapse={togglePanelCollapse}
-                            isCollapsed={isPanelCollapsed}
-                        />
-                    </div>
-                </div>
+                    <AdminReviewPanel
+                        isOpen={!isPanelCollapsed}
+                        onClose={closeAllPanels}
+                        onToggleCollapse={togglePanelCollapse}
+                        isCollapsed={isPanelCollapsed}
+                    />
+                </RightPanelWrapper>
             )}
         </>
     );

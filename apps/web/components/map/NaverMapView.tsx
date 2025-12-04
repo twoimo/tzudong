@@ -33,6 +33,7 @@ interface NaverMapViewProps {
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     onMarkerClick?: (restaurant: Restaurant) => void; // 외부 패널 열기
     externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
+    isPanelCollapsed?: boolean; // 패널 접기 상태 (접혀있으면 오프셋 없음)
 }
 
 const NaverMapView = memo(({
@@ -50,6 +51,7 @@ const NaverMapView = memo(({
     onPanelClick,
     onMarkerClick,
     externalPanelOpen,
+    isPanelCollapsed = false,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
@@ -81,39 +83,84 @@ const NaverMapView = memo(({
         }
     }, [externalPanelOpen]);
 
-    // 선택된 맛집이 변경될 때 지도 중앙 재조정
+    // 선택된 맛집이 변경될 때 지도 중앙 재조정 (모든 우측 패널 너비 고려)
     useEffect(() => {
         if (selectedRestaurant && mapInstanceRef.current && !isGridMode) {
-            // 검색된 맛집의 정확한 위치로 이동하고 줌 레벨 설정
-            const targetLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
+            const map = mapInstanceRef.current;
+            const panelWidth = 400; // 패널 고정 너비
 
             // 줌 레벨을 16으로 설정 (개별 맛집이 보이는 수준)
-            mapInstanceRef.current.setZoom(16);
+            map.setZoom(16);
 
             // 약간의 딜레이 후 지도 중앙 이동 (줌 애니메이션 완료 대기)
             setTimeout(() => {
-                if (mapInstanceRef.current && mapRef.current) {
-                    // 지도 중심 이동
+                if (map && mapRef.current) {
                     const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
 
-                    mapInstanceRef.current.panTo(centerLatLng, {
-                        duration: 300
-                    });
+                    try {
+                        // 우측 패널이 열림 & 접혀있지 않음
+                        // 내부 패널(isPanelOpen) 또는 외부 패널(externalPanelOpen===false)
+                        const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
+
+                        if (isAnyPanelOpen) {
+                            // 패널이 열려있으면 지도 중심을 왼쪽으로 조정
+                            const projection = map.getProjection();
+                            const centerPoint = projection.fromCoordToOffset(centerLatLng);
+
+                            // 패널 너비의 절반만큼 오른쪽으로 이동 (마커가 가시 영역 중앙에 오도록)
+                            const offsetPoint = new naver.maps.Point(
+                                centerPoint.x + (panelWidth / 2),
+                                centerPoint.y
+                            );
+                            const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+
+                            map.panTo(offsetLatLng, { duration: 300 });
+                        } else {
+                            // 패널이 없거나 접혀있으면 정확한 중앙으로 이동
+                            map.panTo(centerLatLng, { duration: 300 });
+                        }
+                    } catch (e) {
+                        // 프로젝션이 준비되지 않은 경우 단순 중앙 이동
+                        map.panTo(centerLatLng, { duration: 300 });
+                    }
                 }
             }, 50);
         }
-    }, [selectedRestaurant, isGridMode]);
+    }, [selectedRestaurant, isGridMode, isPanelOpen, externalPanelOpen, isPanelCollapsed]);
 
-    // 패널 열림/닫힘 상태 변경 시 지도 리사이즈 및 중심 이동 (애니메이션 시간 고려)
+    // 패널 열림/닫힘 상태 변경 시 지도 리사이즈 및 중심 이동 (모든 패널 고려)
     useEffect(() => {
         if (!mapInstanceRef.current || !selectedRestaurant) return;
 
+        const panelWidth = 400; // 패널 고정 너비
+
         const handleResize = () => {
             const map = mapInstanceRef.current;
-            if (map) {
+            if (map && mapRef.current) {
                 naver.maps.Event.trigger(map, 'resize');
-                const center = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
-                map.panTo(center, { duration: 300 });
+
+                // 패널 열림 시 오프셋 적용
+                const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
+
+                try {
+                    const projection = map.getProjection();
+                    const centerPoint = projection.fromCoordToOffset(centerLatLng);
+
+                    // 패널이 열림 & 접혀있지 않음일 때만 오프셋 적용
+                    const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
+                    const offsetX = isAnyPanelOpen ? panelWidth / 2 : 0;
+
+                    const offsetPoint = new naver.maps.Point(
+                        centerPoint.x + offsetX,
+                        centerPoint.y
+                    );
+                    const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+
+                    map.panTo(offsetLatLng, { duration: 300 });
+                } catch (e) {
+                    // 프로젝션이 준비되지 않은 경우 단순 중앙 이동
+                    map.panTo(centerLatLng, { duration: 300 });
+                }
             }
         };
 
@@ -121,7 +168,7 @@ const NaverMapView = memo(({
         const timer = setTimeout(handleResize, 320);
 
         return () => clearTimeout(timer);
-    }, [isPanelOpen, selectedRestaurant]);
+    }, [isPanelOpen, externalPanelOpen, isPanelCollapsed, selectedRestaurant]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
     useEffect(() => {
@@ -703,8 +750,8 @@ const NaverMapView = memo(({
                 )}
             </div>
 
-            {/* 레스토랑 상세 패널 - 고정 너비 400px, 애니메이션 적용, 클릭 시 앞으로 가져오기 */}
-            {selectedRestaurant && (
+            {/* 레스토랑 상세 패널 - 외부 onMarkerClick이 없을 때만 렌더링 (외부 패널 관리가 아닌 경우에만) */}
+            {selectedRestaurant && !onMarkerClick && (
                 <div
                     className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
                     style={{ overflow: 'visible' }}
