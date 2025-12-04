@@ -352,6 +352,7 @@ jobs:
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
         run: |
           echo "🍜 크롤링 시작..."
+          export KAKAO_REST_API_KEY="${KAKAO_REST_API_KEY}"
           bash crawling.sh
       
       - name: 📤 Commit Crawling Results
