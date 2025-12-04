@@ -321,3 +321,22 @@ gh workflow run "restaurant-pipeline.yml" \
 - [프로젝트 설정 가이드](../../docs/SETUP_GUIDE.md)
 - [데이터베이스 스키마](../../docs/DATABASE_SCHEMA.dbml)
 - [제품 스펙](../../docs/PRODUCT_SPEC.md)
+
+---
+
+## 🚫 비활성화된 워크플로우
+
+아래 워크플로우들은 현재 비활성화되어 있습니다.
+
+| 파일 | 용도 | 상태 |
+|------|------|------|
+| `api-youtube-urls.yml` | YouTube URL 수집 (단독 실행) | 🔴 비활성화 |
+| `crawling-evaluation.yml` | 크롤링+평가 (단독 실행) | 🔴 비활성화 |
+
+### ⚠️ 나중에 사용할 용도
+
+현재 자막 수집에 사용하는 2개 사이트(**maestra.ai**, **tubetranscript.com**)가 막힐 경우, 이 워크플로우들을 활성화하여 **Perplexity 기반 자막 수집** 방식으로 전환할 수 있습니다.
+
+**활성화 방법:**
+1. 해당 yml 파일의 `on:` 섹션에서 주석 해제
+2. 또는 GitHub Actions UI에서 수동 실행
