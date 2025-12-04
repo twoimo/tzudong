@@ -136,7 +136,9 @@ export default function HomeClient() {
         // 그 다음 상세 패널 열기
         state.setPanelRestaurant(restaurant);
         state.setSelectedRestaurant(restaurant);
-        state.setSearchedRestaurant(restaurant);
+        // 주의: 마커 클릭 시에는 searchedRestaurant를 설정하지 않음
+        // searchedRestaurant가 설정되면 setCenter/setZoom이 즉시 호출되어 화면 깜빡임 발생
+        // 대신 selectedRestaurant 변경으로 애니메이션 있는 panTo가 호출됨
         state.setIsPanelOpen(true);
     };
 
