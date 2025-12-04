@@ -396,7 +396,7 @@ jobs:
         run: |
           echo "🗄️ Supabase 업로드 시작..."
           npm install
-          npx ts-node scripts/insert_to_supabase.ts
+          npx tsx scripts/insert_to_supabase.ts
           echo "✅ Supabase 업로드 완료"
       
       - name: 📊 Upload Artifacts
