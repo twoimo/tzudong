@@ -59,6 +59,7 @@ const NaverMapView = memo(({
     const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
+    const prevPanelOpenRef = useRef<boolean>(false); // 이전 패널 열림 상태 추적 (오프셋 델타 계산용)
 
     // Naver Maps API 로드 (동적 임포트 후 컴포넌트가 마운트되면 로드)
     const { isLoaded, loadError } = useNaverMaps({ autoLoad: true });
@@ -128,47 +129,64 @@ const NaverMapView = memo(({
         }
     }, [selectedRestaurant, isGridMode, isPanelOpen, externalPanelOpen, isPanelCollapsed]);
 
-    // 패널 열림/닫힘 상태 변경 시 지도 리사이즈 및 중심 이동 (모든 패널 고려)
+    // 패널 열림/닫힘/접힘 상태 변경 시 지도 중심 부드럽게 이동
     useEffect(() => {
-        if (!mapInstanceRef.current || !selectedRestaurant) return;
+        if (!mapInstanceRef.current) return;
 
-        const panelWidth = 400; // 패널 고정 너비
+        const panelWidth = 400;
 
-        const handleResize = () => {
+        // 현재 패널 상태 계산
+        const isCurrentlyOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
+        const wasPreviouslyOpen = prevPanelOpenRef.current;
+
+        // 상태가 변하지 않으면 리사이즈만 트리거
+        if (isCurrentlyOpen === wasPreviouslyOpen) {
+            // 패널 상태 변화 없이 리사이즈만 필요한 경우
             const map = mapInstanceRef.current;
-            if (map && mapRef.current) {
+            if (map) {
                 naver.maps.Event.trigger(map, 'resize');
+            }
+            return;
+        }
 
-                // 패널 열림 시 오프셋 적용
-                const centerLatLng = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
+        // 이전 상태 즉시 업데이트 (중복 트리거 방지)
+        prevPanelOpenRef.current = isCurrentlyOpen;
 
-                try {
-                    const projection = map.getProjection();
-                    const centerPoint = projection.fromCoordToOffset(centerLatLng);
+        const handleMapCenter = () => {
+            const map = mapInstanceRef.current;
+            if (!map || !mapRef.current) return;
 
-                    // 패널이 열림 & 접혀있지 않음일 때만 오프셋 적용
-                    const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
-                    const offsetX = isAnyPanelOpen ? panelWidth / 2 : 0;
+            naver.maps.Event.trigger(map, 'resize');
 
-                    const offsetPoint = new naver.maps.Point(
-                        centerPoint.x + offsetX,
-                        centerPoint.y
-                    );
-                    const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+            try {
+                const currentCenter = map.getCenter();
+                const projection = map.getProjection();
+                const centerPoint = projection.fromCoordToOffset(currentCenter);
 
-                    map.panTo(offsetLatLng, { duration: 300 });
-                } catch (e) {
-                    // 프로젝션이 준비되지 않은 경우 단순 중앙 이동
-                    map.panTo(centerLatLng, { duration: 300 });
-                }
+                // 델타 오프셋: 열림 +200px, 닫힘 -200px
+                const deltaX = isCurrentlyOpen ? (panelWidth / 2) : -(panelWidth / 2);
+
+                const offsetPoint = new naver.maps.Point(
+                    centerPoint.x + deltaX,
+                    centerPoint.y
+                );
+                const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+
+                // 자연스러운 이징 애니메이션 (easeOutCubic 효과)
+                map.panTo(offsetLatLng, {
+                    duration: 250,
+                    easing: 'easeOutCubic'
+                });
+            } catch (e) {
+                // 프로젝션 준비 안됨 - 무시
             }
         };
 
-        // 패널 애니메이션(300ms)이 끝난 직후 실행
-        const timer = setTimeout(handleResize, 320);
+        // 패널 트랜지션과 동시에 시작 (더 자연스러운 동기화)
+        const timer = setTimeout(handleMapCenter, 50);
 
         return () => clearTimeout(timer);
-    }, [isPanelOpen, externalPanelOpen, isPanelCollapsed, selectedRestaurant]);
+    }, [isPanelOpen, externalPanelOpen, isPanelCollapsed]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
     useEffect(() => {

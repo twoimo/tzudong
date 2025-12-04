@@ -1,9 +1,10 @@
-import { Home, Trophy, Stamp, DollarSign } from "lucide-react";
+import { Home, Trophy, Stamp, DollarSign, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import AdBanner from "./AdBanner";
 import SeasonalLogo from "@/components/common/SeasonalLogo";
 
@@ -15,6 +16,7 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
+  const { user, isAdmin } = useAuth();
 
   // 레스토랑 데이터 프리페치 함수
   const prefetchRestaurants = async () => {
@@ -33,13 +35,25 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     });
   };
 
-  // 메뉴 항목 (관리자 메뉴는 헤더 드롭다운으로 이동됨)
-  const menuItems = [
+  // 기본 메뉴 항목
+  const baseMenuItems = [
     { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
     { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
     { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
+  ];
+
+  // 관리자 메뉴 (데이터 검수만 사이드바에 유지)
+  const adminMenuItems = (user && isAdmin) ? [
+    { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
+  ] : [];
+
+  // 공통 메뉴
+  const commonMenuItems = [
     { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
   ];
+
+  // 모든 메뉴 합치기
+  const menuItems = [...baseMenuItems, ...adminMenuItems, ...commonMenuItems];
 
   return (
     <aside
