@@ -237,18 +237,24 @@ const NaverMapView = memo(({
 
             naver.maps.Event.trigger(map, 'resize');
 
-            // 선택된 레스토랑이 있으면 해당 마커 기준으로 중앙 정렬
-            // 없으면 현재 중심 기준으로 오프셋 조정
-            const targetLatLng = selectedRestaurant
-                ? new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!)
-                : map.getCenter();
+            // 현재 중심점 가져오기
+            const currentCenter = map.getCenter();
 
             try {
                 const projection = map.getProjection();
-                const centerPoint = projection.fromCoordToOffset(targetLatLng);
+                const centerPoint = projection.fromCoordToOffset(currentCenter);
 
                 // 패널 오프셋 계산
-                const offsetX = isCurrentlyOpen ? (panelWidth / 2) : 0;
+                // 패널이 열리면: 지도를 왼쪽으로 (오프셋 +)
+                // 패널이 닫히거나 접히면: 지도를 오른쪽으로 (오프셋 -)
+                let offsetX = 0;
+                if (isCurrentlyOpen && !wasPreviouslyOpen) {
+                    // 패널 열림/펼침: 왼쪽으로 이동
+                    offsetX = panelWidth / 2;
+                } else if (!isCurrentlyOpen && wasPreviouslyOpen) {
+                    // 패널 닫힘/접힘: 오른쪽으로 이동 (원래 위치로 복귀)
+                    offsetX = -(panelWidth / 2);
+                }
 
                 const offsetPoint = new naver.maps.Point(
                     centerPoint.x + offsetX,
@@ -263,7 +269,7 @@ const NaverMapView = memo(({
                 });
             } catch (e) {
                 // 프로젝션 준비 안됨 - 단순 panTo 시도
-                map.panTo(targetLatLng, { duration: 250 });
+                map.panTo(currentCenter, { duration: 250 });
             }
         };
 

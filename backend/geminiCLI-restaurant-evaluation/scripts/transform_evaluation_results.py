@@ -309,7 +309,7 @@ def transform_json_object(original_data, source_file_type):
                 "lat": None,
                 "lng": None,
                 "geocoding_success": False,
-                "geocoding_false_stage": "not_restaurant",
+                "geocoding_false_stage": None,
                 "is_missing": False,
                 "is_notSelected": True,
                 "notSelected_reason": notSelected_reason,

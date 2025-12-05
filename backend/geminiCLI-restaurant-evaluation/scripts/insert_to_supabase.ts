@@ -242,7 +242,6 @@ async function insertRestaurants(): Promise<{
   successCount: number;
   failCount: number;
   skippedCount: number;
-  restoredCount: number;
   totalLines: number;
   errors: Array<{ name: string; error: string }>;
 }> {
@@ -250,7 +249,6 @@ async function insertRestaurants(): Promise<{
     successCount: 0,
     failCount: 0,
     skippedCount: 0,
-    restoredCount: 0,
     totalLines: 0,
     errors: [] as Array<{ name: string; error: string }>
   };
@@ -313,18 +311,14 @@ async function insertRestaurants(): Promise<{
 
     // 메모리에서 중복 체크를 위한 Set 생성
     const existingUniqueIds = new Set<string>();
-    const deletedUniqueIds = new Set<string>();
 
     if (existingRecords) {
       for (const record of existingRecords) {
         existingUniqueIds.add(record.unique_id);
-        if (record.status === 'deleted') {
-          deletedUniqueIds.add(record.unique_id);
-        }
       }
     }
 
-    logInfo(`기존 레코드: ${existingUniqueIds.size}개 (삭제됨: ${deletedUniqueIds.size}개)`);
+    logInfo(`기존 레코드: ${existingUniqueIds.size}개`);
 
     // 데이터 삽입
     const insertStart = Date.now();
@@ -379,34 +373,9 @@ async function insertRestaurants(): Promise<{
         };
 
         // 중복 체크 (메모리에서 빠르게 처리)
+        // 이미 존재하는 레코드는 deleted 여부와 관계없이 스킵
         if (existingUniqueIds.has(data.unique_id)) {
-          // deleted 레코드인 경우에만 복원
-          if (deletedUniqueIds.has(data.unique_id)) {
-            const { error: updateError } = await supabase
-              .from('restaurants')
-              .update({
-                ...restaurantData,
-                status: data.status || 'pending',
-                updated_at: formatKSTDateTime(getKSTDate()),
-              })
-              .eq('unique_id', data.unique_id);
-
-            if (updateError) {
-              stats.failCount++;
-              stats.errors.push({ name: data.name, error: updateError.message });
-              logError(`[${i + 1}/${lines.length}] ${data.name} - 복원 실패: ${updateError.message}`);
-            } else {
-              stats.restoredCount++;
-              stats.successCount++;
-              logSuccess(`[${i + 1}/${lines.length}] ${data.name} - 복원 및 업데이트 성공`);
-            }
-          } else {
-            // 이미 active 레코드가 있으면 스킵
-            stats.skippedCount++;
-            if (stats.skippedCount <= 10 || stats.skippedCount % 50 === 0) {
-              logDebug(`[${i + 1}/${lines.length}] ${data.name} - 이미 존재 (스킵)`);
-            }
-          }
+          stats.skippedCount++;
           continue;
         }
 
@@ -477,9 +446,6 @@ async function main() {
     logInfo('');
     logInfo('📊 처리 통계:');
     logSuccess(`  성공: ${stats.successCount}개`);
-    if (stats.restoredCount > 0) {
-      logInfo(`  복원: ${stats.restoredCount}개`);
-    }
     logWarning(`  스킵: ${stats.skippedCount}개 (이미 존재)`);
     if (stats.failCount > 0) {
       logError(`  실패: ${stats.failCount}개`);
@@ -515,7 +481,6 @@ async function main() {
         success: stats.successCount,
         failed: stats.failCount,
         skipped: stats.skippedCount,
-        restored: stats.restoredCount,
         success_rate: stats.totalLines > 0 
           ? `${((stats.successCount / stats.totalLines) * 100).toFixed(1)}%` 
           : 'N/A'
