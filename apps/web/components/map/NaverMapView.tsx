@@ -402,7 +402,6 @@ const NaverMapView = memo(({
                     position: naver.maps.Position.TOP_LEFT,
                 },
                 scaleControl: false,
-                mapDataControl: false,
                 // 성능 최적화 옵션들
                 background: '#ffffff', // 배경색 명시로 렌더링 최적화
             });
