@@ -119,16 +119,7 @@ const NaverMapView = memo(({
 
     // 선택된 맛집이 변경될 때 지도 중앙 재조정 (모든 우측 패널 너비 고려)
     useEffect(() => {
-        console.log('[NaverMapView] selectedRestaurant useEffect 시작', {
-            selectedRestaurant: selectedRestaurant?.name,
-            mapInstanceRef: !!mapInstanceRef.current,
-            isGridMode
-        });
-
-        if (!selectedRestaurant || !mapInstanceRef.current || isGridMode) {
-            console.log('[NaverMapView] 조기 return - 조건 불충족');
-            return;
-        }
+        if (!selectedRestaurant || !mapInstanceRef.current || isGridMode) return;
 
         const map = mapInstanceRef.current;
         const panelWidth = 400;
@@ -138,14 +129,13 @@ const NaverMapView = memo(({
         const currentId = selectedRestaurant.id;
         const prevId = prevSelectedRestaurantIdRef.current;
 
-        console.log('[NaverMapView] ID 비교:', { currentId, prevId });
+
 
         // 이전 선택된 레스토랑 ID 업데이트
         prevSelectedRestaurantIdRef.current = currentId;
 
         // 동일한 마커를 다시 클릭한 경우는 스킵
         if (currentId === prevId) {
-            console.log('[NaverMapView] 동일 마커 재클릭 - 스킵');
             return;
         }
 
@@ -164,13 +154,7 @@ const NaverMapView = memo(({
         const zoomDiff = Math.abs(currentZoom - targetZoom);
         const shouldInstantLoad = zoomDiff >= 4 || distanceKm >= 50;
 
-        console.log('[NaverMapView] 지도 이동:', {
-            currentZoom,
-            targetZoom,
-            zoomDiff,
-            distanceKm,
-            shouldInstantLoad
-        });
+
 
         // 오프셋 적용 함수
         const applyOffset = (baseLatLng: any) => {
@@ -189,7 +173,7 @@ const NaverMapView = memo(({
 
         if (shouldInstantLoad) {
             // 줌 차이가 크거나 거리가 멀면: 즉시 로드 (애니메이션 없음)
-            console.log('[NaverMapView] 즉시 로드 실행');
+
 
             // setZoom과 setCenter를 순차적으로 호출
             map.setZoom(targetZoom);
@@ -199,11 +183,11 @@ const NaverMapView = memo(({
             setTimeout(() => {
                 const offsetLatLng = applyOffset(centerLatLng);
                 map.setCenter(offsetLatLng);
-                console.log('[NaverMapView] 즉시 로드 완료, 최종 줌:', map.getZoom());
+
             }, 200);
         } else {
             // 가까운 거리: 부드러운 애니메이션
-            console.log('[NaverMapView] 부드러운 이동 실행');
+
             const offsetLatLng = applyOffset(centerLatLng);
             map.morph(offsetLatLng, targetZoom, {
                 duration: 400,
@@ -738,7 +722,6 @@ const NaverMapView = memo(({
                             );
                             const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
                             map.setCenter(offsetLatLng);
-                            console.log('[NaverMapView] 마커 클릭 - 최종 줌:', map.getZoom());
                         } catch (e) {
                             // 프로젝션 오류 시 기본 중심 설정
                             map.setCenter(new naver.maps.LatLng(targetLat, targetLng));
