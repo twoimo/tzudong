@@ -119,130 +119,78 @@ const NaverMapView = memo(({
 
     // 선택된 맛집이 변경될 때 지도 중앙 재조정 (모든 우측 패널 너비 고려)
     useEffect(() => {
-        if (selectedRestaurant && mapInstanceRef.current && !isGridMode) {
-            const map = mapInstanceRef.current;
-            const panelWidth = 400; // 패널 고정 너비
+        console.log('[NaverMapView] selectedRestaurant useEffect 시작', {
+            selectedRestaurant: selectedRestaurant?.name,
+            mapInstanceRef: !!mapInstanceRef.current,
+            isGridMode
+        });
 
-            // 현재 선택된 레스토랑 ID
-            const currentId = selectedRestaurant.id;
-            const prevId = prevSelectedRestaurantIdRef.current;
-
-            // 동일한 마커를 다시 클릭한 경우에도 중앙 정렬 실행
-            // (이전 ID와 같더라도 패널 접기 후 다시 클릭한 경우를 위해)
-            const shouldRecenter = currentId !== prevId || !isPanelOpen;
-
-            // 이전 선택된 레스토랑 ID 업데이트
-            prevSelectedRestaurantIdRef.current = currentId;
-
-            // 현재 줌 레벨 확인
-            const currentZoom = map.getZoom();
-            const targetZoom = 16;
-            const zoomDiff = Math.abs(currentZoom - targetZoom);
-
-            // 현재 중심과 목표 좌표 간 거리 계산 (Haversine 공식 간소화)
-            const currentCenter = map.getCenter();
-            const targetLat = selectedRestaurant.lat!;
-            const targetLng = selectedRestaurant.lng!;
-            const currentLat = currentCenter.lat();
-            const currentLng = currentCenter.lng();
-
-            // 거리 계산 (대략적인 km 단위)
-            const latDiff = Math.abs(targetLat - currentLat);
-            const lngDiff = Math.abs(targetLng - currentLng);
-            // 한국 위도 기준 1도 ≈ 111km (위도), 1도 ≈ 88km (경도)
-            const distanceKm = Math.sqrt(
-                Math.pow(latDiff * 111, 2) + Math.pow(lngDiff * 88, 2)
-            );
-
-            // 임계값 설정
-            const ZOOM_THRESHOLD = 4; // 줌 차이 4 이상이면 즉시 전환
-            const DISTANCE_THRESHOLD_KM = 50; // 50km 이상이면 즉시 전환
-
-            // 즉시 전환 필요 여부
-            const shouldInstantTransition = zoomDiff >= ZOOM_THRESHOLD || distanceKm >= DISTANCE_THRESHOLD_KM;
-
-            const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
-
-            // 우측 패널 상태 확인
-            // selectedRestaurant가 있으면 패널이 열릴 것이므로, 접힌 상태가 아니면 오프셋 적용
-            // 외부 패널(마이페이지 등)이 열려있어도 마커 클릭 시 상세 패널로 전환되므로 오프셋 필요
-            const isAnyPanelOpen = !isPanelCollapsed;
-
-            // 패널 오프셋 적용된 좌표 계산
-            const getOffsetLatLng = () => {
-                try {
-                    if (isAnyPanelOpen) {
-                        const projection = map.getProjection();
-                        const centerPoint = projection.fromCoordToOffset(centerLatLng);
-                        const offsetPoint = new naver.maps.Point(
-                            centerPoint.x + (panelWidth / 2),
-                            centerPoint.y
-                        );
-                        return projection.fromOffsetToCoord(offsetPoint);
-                    }
-                } catch (e) {
-                    // 프로젝션 준비 안됨
-                }
-                return centerLatLng;
-            };
-
-            const moveToCenter = () => {
-                if (!map || !mapRef.current) return;
-
-                try {
-                    if (isAnyPanelOpen) {
-                        const projection = map.getProjection();
-                        const centerPoint = projection.fromCoordToOffset(centerLatLng);
-                        const offsetPoint = new naver.maps.Point(
-                            centerPoint.x + (panelWidth / 2),
-                            centerPoint.y
-                        );
-                        const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
-
-                        map.panTo(offsetLatLng, { duration: 300, easing: 'easeOutCubic' });
-                    } else {
-                        map.panTo(centerLatLng, { duration: 300, easing: 'easeOutCubic' });
-                    }
-                } catch (e) {
-                    map.panTo(centerLatLng, { duration: 300 });
-                }
-            };
-
-            if (!shouldRecenter) {
-                return; // 중앙 정렬 필요 없음
-            }
-
-            // 즉시 전환 (줌 차이가 크거나 거리가 멀 때)
-            if (shouldInstantTransition) {
-                // 즉시 줌 및 중심 설정 (애니메이션 없이)
-                map.setZoom(targetZoom);
-                const finalLatLng = getOffsetLatLng();
-                map.setCenter(finalLatLng);
-                return;
-            }
-
-            // 부드러운 전환 (줌 차이가 작고 거리가 가까울 때)
-            if (currentZoom !== targetZoom) {
-                // 부드러운 줌 전환
-                map.morph(centerLatLng, targetZoom, {
-                    duration: 400,
-                    easing: 'easeOutCubic'
-                });
-
-                // 줌 완료 후 패널 오프셋 적용
-                setTimeout(() => {
-                    if (isAnyPanelOpen) {
-                        moveToCenter();
-                    }
-                }, 450);
-            } else {
-                // 줌 변경 없이 중앙 이동만
-                setTimeout(moveToCenter, 50);
-            }
+        if (!selectedRestaurant || !mapInstanceRef.current || isGridMode) {
+            console.log('[NaverMapView] 조기 return - 조건 불충족');
+            return;
         }
-    }, [selectedRestaurant, isGridMode, isPanelOpen, externalPanelOpen, isPanelCollapsed]);
+
+        const map = mapInstanceRef.current;
+        const panelWidth = 400;
+        const targetZoom = 16;
+
+        // 현재 선택된 레스토랑 ID
+        const currentId = selectedRestaurant.id;
+        const prevId = prevSelectedRestaurantIdRef.current;
+
+        console.log('[NaverMapView] ID 비교:', { currentId, prevId });
+
+        // 이전 선택된 레스토랑 ID 업데이트
+        prevSelectedRestaurantIdRef.current = currentId;
+
+        // 동일한 마커를 다시 클릭한 경우는 스킵
+        if (currentId === prevId) {
+            console.log('[NaverMapView] 동일 마커 재클릭 - 스킵');
+            return;
+        }
+
+        const targetLat = selectedRestaurant.lat!;
+        const targetLng = selectedRestaurant.lng!;
+        const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
+
+        // 오프셋 적용 함수
+        const applyOffset = (baseLatLng: any) => {
+            try {
+                const projection = map.getProjection();
+                const centerPoint = projection.fromCoordToOffset(baseLatLng);
+                const offsetPoint = new naver.maps.Point(
+                    centerPoint.x + (panelWidth / 2),
+                    centerPoint.y
+                );
+                return projection.fromOffsetToCoord(offsetPoint);
+            } catch (e) {
+                console.log('[NaverMapView] 오프셋 적용 실패:', e);
+                return baseLatLng;
+            }
+        };
+
+        console.log('[NaverMapView] 지도 이동 실행 - targetZoom:', targetZoom);
+
+        // morph로 줌과 중심을 동시에 변경 (먼저 마커 위치로 이동)
+        map.morph(centerLatLng, targetZoom, {
+            duration: 0, // 즉시 이동
+            easing: 'linear'
+        });
+
+        // morph 완료 후 오프셋 적용
+        setTimeout(() => {
+            try {
+                const offsetLatLng = applyOffset(centerLatLng);
+                map.setCenter(offsetLatLng);
+                console.log('[NaverMapView] 오프셋 적용 완료, 최종 줌:', map.getZoom());
+            } catch (e) {
+                console.log('[NaverMapView] 오프셋 적용 실패:', e);
+            }
+        }, 100);
+    }, [selectedRestaurant, isGridMode]);
 
     // 패널 열림/닫힘/접힘 상태 변경 시 지도 중심 부드럽게 이동
+    // (마커 클릭으로 인한 첫 패널 열림은 selectedRestaurant useEffect에서 처리하므로 제외)
     useEffect(() => {
         if (!mapInstanceRef.current) return;
 
@@ -264,6 +212,18 @@ const NaverMapView = memo(({
         // 이전 상태 즉시 업데이트 (중복 트리거 방지)
         prevPanelOpenRef.current = isCurrentlyOpen;
 
+        // 패널이 처음 열릴 때 (false → true) 맛집이 선택되어 있으면
+        // selectedRestaurant useEffect에서 이미 중심 이동을 처리했으므로 스킵
+        const hasRestaurant = !!(selectedRestaurant?.lat && selectedRestaurant?.lng);
+        if (!wasPreviouslyOpen && isCurrentlyOpen && hasRestaurant) {
+            // 리사이즈만 트리거하고 중심 이동은 스킵
+            const map = mapInstanceRef.current;
+            if (map) {
+                naver.maps.Event.trigger(map, 'resize');
+            }
+            return;
+        }
+
         const handleMapCenter = () => {
             const map = mapInstanceRef.current;
             if (!map || !mapRef.current) return;
@@ -272,14 +232,12 @@ const NaverMapView = memo(({
 
             try {
                 const projection = map.getProjection();
-                const hasRestaurant = !!(selectedRestaurant?.lat && selectedRestaurant?.lng);
 
-                // 기준 좌표: 선택된 맛집이 있으면 마커, 없으면 현재 지역 중심 (누적 방지)
+                // 기준 좌표: 선택된 맛집이 있으면 마커, 없으면 현재 지역 중심
                 let baseLatLng;
                 if (hasRestaurant) {
                     baseLatLng = new naver.maps.LatLng(selectedRestaurant!.lat!, selectedRestaurant!.lng!);
                 } else {
-                    // 지역 중심 좌표 사용
                     const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
                     const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
                     baseLatLng = new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]);
