@@ -168,7 +168,7 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
   // We wrap it in a container with a fixed height to make sure it renders like a slide.
 
   return (
-    <div className="flex flex-col h-[600px] border-t bg-gray-50/50">
+    <div className="flex flex-col border-t bg-gray-50/50">
       {/* 🔥 에러 알림 - 최상단 표시 (if present along with normal record) */}
       {showErrorAlert && (
         <div className="p-4 bg-background">
@@ -183,7 +183,7 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
       )}
 
       {/* Unified Detail View */}
-      <EvaluationDetailView record={record} className="flex-1" />
+      <EvaluationDetailView record={record} className="flex-1" autoHeight={true} />
     </div>
   );
 }
