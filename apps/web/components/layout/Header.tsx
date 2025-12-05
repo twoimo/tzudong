@@ -1,7 +1,7 @@
 import { RankingWidget } from "./RankingWidget";
 import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,6 +19,7 @@ import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import { getBannerAnnouncements, Announcement } from "@/types/announcement";
+import { useHydration } from "@/hooks/useHydration";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -35,9 +36,9 @@ interface HeaderProps {
 
 const BANNER_ROTATION_INTERVAL = 5000;
 
-const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick }: HeaderProps) => {
+const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
-  const [isHydrated, setIsHydrated] = useState(false);
+  const isHydrated = useHydration();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
 
@@ -46,11 +47,6 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
-
-  // Hydration 완료 감지
-  useEffect(() => {
-    setIsHydrated(true);
-  }, []);
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
@@ -440,5 +436,9 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
     </header>
   );
 };
+
+// React.memo로 래핑하여 props가 변경되지 않으면 리렌더링 방지
+const Header = memo(HeaderComponent);
+Header.displayName = "Header";
 
 export default Header;

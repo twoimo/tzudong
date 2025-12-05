@@ -1,28 +1,25 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Trophy, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
+import { useHydration } from "@/hooks/useHydration";
 
-export const RankingWidget = () => {
+const RankingWidgetComponent = () => {
     const { user } = useAuth();
     const [onlineUsers, setOnlineUsers] = useState(0);
-    const [isHydrated, setIsHydrated] = useState(false);
-
-    // Hydration 완료 감지
-    useEffect(() => {
-        setIsHydrated(true);
-    }, []);
+    const isHydrated = useHydration();
 
     // Fetch user ranking using shared hook
     const { data: leaderboardData = [] } = useLeaderboard();
 
-    // Find my rank
-    const myRank = user
-        ? leaderboardData.find((u: any) => u.id === user.id)?.rank
-        : null;
+    // Find my rank (메모이제이션)
+    const myRank = useMemo(() => {
+        if (!user) return null;
+        return leaderboardData.find((u: any) => u.id === user.id)?.rank ?? null;
+    }, [user, leaderboardData]);
 
     // Real-time online users
     useEffect(() => {
@@ -45,13 +42,14 @@ export const RankingWidget = () => {
         };
     }, [user]);
 
-    // Get rank color
-    const getRankColor = (rank: number) => {
-        if (rank === 1) return "text-yellow-500 border-yellow-500/20 bg-yellow-500/10";
-        if (rank === 2) return "text-gray-400 border-gray-400/20 bg-gray-400/10";
-        if (rank === 3) return "text-amber-600 border-amber-600/20 bg-amber-600/10";
+    // Get rank color (메모이제이션)
+    const rankColorClass = useMemo(() => {
+        if (!myRank) return "";
+        if (myRank === 1) return "text-yellow-500 border-yellow-500/20 bg-yellow-500/10";
+        if (myRank === 2) return "text-gray-400 border-gray-400/20 bg-gray-400/10";
+        if (myRank === 3) return "text-amber-600 border-amber-600/20 bg-amber-600/10";
         return "text-primary border-primary/20 bg-primary/10";
-    };
+    }, [myRank]);
 
     return (
         <div className={cn(
@@ -78,7 +76,7 @@ export const RankingWidget = () => {
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <div className={`flex items-center gap-1.5 text-sm font-medium px-2 py-1 rounded-md border ${getRankColor(myRank)}`}>
+                            <div className={`flex items-center gap-1.5 text-sm font-medium px-2 py-1 rounded-md border ${rankColorClass}`}>
                                 <Trophy className="h-4 w-4" />
                                 <span>{myRank}위</span>
                             </div>
@@ -92,3 +90,8 @@ export const RankingWidget = () => {
         </div>
     );
 };
+
+// React.memo로 래핑
+export const RankingWidget = memo(RankingWidgetComponent);
+RankingWidget.displayName = "RankingWidget";
+

@@ -1,7 +1,8 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo, useCallback } from "react";
 import { ChevronLeft, ChevronRight, Scroll } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useHydration } from "@/hooks/useHydration";
 
 interface AdBannerSlide {
     id: number;
@@ -28,16 +29,11 @@ const AD_SLIDES: AdBannerSlide[] = [
     }
 ];
 
-const AdBanner = () => {
+const AdBannerComponent = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-    const [isHydrated, setIsHydrated] = useState(false);
+    const isHydrated = useHydration();
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-    // Hydration 완료 감지
-    useEffect(() => {
-        setIsHydrated(true);
-    }, []);
 
     // 자동 슬라이드 전환
     useEffect(() => {
@@ -52,26 +48,32 @@ const AdBanner = () => {
         };
     }, [isAutoPlaying, currentSlide]);
 
-    const goToSlide = (index: number) => {
-        if (index === currentSlide) return;
-        setCurrentSlide(index);
+    // 핸들러 메모이제이션
+    const goToSlide = useCallback((index: number) => {
+        setCurrentSlide((prev) => {
+            if (index === prev) return prev;
+            return index;
+        });
         setIsAutoPlaying(false);
         setTimeout(() => setIsAutoPlaying(true), 5000);
-    };
+    }, []);
 
-    const nextSlide = (e?: React.MouseEvent) => {
+    const nextSlide = useCallback((e?: React.MouseEvent) => {
         e?.stopPropagation();
         setCurrentSlide((prev) => (prev + 1) % AD_SLIDES.length);
         setIsAutoPlaying(false);
         setTimeout(() => setIsAutoPlaying(true), 5000);
-    };
+    }, []);
 
-    const prevSlide = (e?: React.MouseEvent) => {
+    const prevSlide = useCallback((e?: React.MouseEvent) => {
         e?.stopPropagation();
         setCurrentSlide((prev) => (prev - 1 + AD_SLIDES.length) % AD_SLIDES.length);
         setIsAutoPlaying(false);
         setTimeout(() => setIsAutoPlaying(true), 5000);
-    };
+    }, []);
+
+    const handleMouseEnter = useCallback(() => setIsAutoPlaying(false), []);
+    const handleMouseLeave = useCallback(() => setIsAutoPlaying(true), []);
 
     const currentAd = AD_SLIDES[currentSlide];
 
@@ -81,8 +83,8 @@ const AdBanner = () => {
                 "relative w-full h-64 rounded-lg overflow-hidden group select-none shadow-md transition-opacity duration-300",
                 isHydrated ? "opacity-100" : "opacity-0"
             )}
-            onMouseEnter={() => setIsAutoPlaying(false)}
-            onMouseLeave={() => setIsAutoPlaying(true)}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             style={{ backgroundColor: '#fdfbf7' }}
         >
             {/* 한지 질감 오버레이 */}
@@ -163,5 +165,9 @@ const AdBanner = () => {
         </div>
     );
 };
+
+// React.memo로 래핑
+const AdBanner = memo(AdBannerComponent);
+AdBanner.displayName = "AdBanner";
 
 export default AdBanner;
