@@ -7,9 +7,13 @@ import { getTopAnnouncement, Announcement } from '@/types/announcement';
 
 interface AnnouncementBannerProps {
     onAnnouncementClick: (announcement: Announcement) => void;
+    rightPanelWidth?: number;
 }
 
-export default function AnnouncementBanner({ onAnnouncementClick }: AnnouncementBannerProps) {
+export default function AnnouncementBanner({
+    onAnnouncementClick,
+    rightPanelWidth = 0,
+}: AnnouncementBannerProps) {
     const [announcement, setAnnouncement] = useState<Announcement | null>(null);
     const [isVisible, setIsVisible] = useState(true);
     const [isDismissed, setIsDismissed] = useState(false);
@@ -46,8 +50,11 @@ export default function AnnouncementBanner({ onAnnouncementClick }: Announcement
 
     return (
         <div
-            className="absolute top-0 left-0 right-0 z-40 cursor-pointer"
+            className="absolute top-0 left-0 z-40 cursor-pointer transition-all duration-300"
             onClick={handleClick}
+            style={{
+                right: rightPanelWidth,
+            }}
         >
             <div className="mx-4 mt-4">
                 <div

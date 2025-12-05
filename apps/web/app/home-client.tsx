@@ -237,6 +237,7 @@ export default function HomeClient() {
                     setSelectedAnnouncement(announcement);
                     openPanel('announcementDetail');
                 }}
+                rightPanelWidth={rightPanelWidth}
             />
 
             <HomeControlPanel
