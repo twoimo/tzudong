@@ -286,30 +286,31 @@ const NaverMapView = memo(({
     ]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
+    // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동 (디바운스 적용)
     useEffect(() => {
         if (!mapInstanceRef.current) return;
 
-        const handleWindowResize = () => {
-            const map = mapInstanceRef.current;
-            if (map) {
-                naver.maps.Event.trigger(map, 'resize');
+        let resizeTimer: NodeJS.Timeout;
 
-                // 리사이즈 시에는 현재 선택된 맛집이 있으면 그곳을 유지 (오프셋 적용은 통합 로직이 처리해주거나 여기서 강제)
-                // 하지만 통합 로직은 state 변경에 반응하므로, window resize 이벤트에는 별도로 반응해줘야 함.
-                // 여기서는 간단히 리사이즈만 하고, 만약 중심이 틀어졌다면 유저가 조작하거나 통합 로직이 돌 것임.
-                // 다만 selectedRestaurant가 있으면 강제로 센터링 다시 하는게 좋음.
-                if (selectedRestaurant) {
-                    // 여기서는 단순 panTo만 해도 통합 로직의 offset 계산 식과 일치하지 않을 수 있음.
-                    // 따라서 통합 로직과 동일한 계산을 수행하는 함수로 분리하거나, 
-                    // 여기서도 비슷한 계산을 해야 함. 
-                    // 일단은 resize trigger만으로도 Naver map이 왠만큼 중심을 잡으려 노력하므로 놔둠.
+        const handleWindowResize = () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const map = mapInstanceRef.current;
+                if (map) {
+                    naver.maps.Event.trigger(map, 'resize');
+                    // 리사이즈 후 중심 재조정 로직이 필요하다면 통합 useEffect가 prop이나 state 변경에 반응할 것임
+                    // 하지만 state 변경 없이 창 크기만 변했을 때는 여기서 처리가 필요할 수도 있음.
+                    // 현재는 'resize' 트리거만으로도 네이버 지도가 어느정도 중심을 유지함.
                 }
-            }
+            }, 100); // 100ms 디바운스
         };
 
         window.addEventListener('resize', handleWindowResize);
-        return () => window.removeEventListener('resize', handleWindowResize);
-    }, [selectedRestaurant]);
+        return () => {
+            window.removeEventListener('resize', handleWindowResize);
+            clearTimeout(resizeTimer);
+        };
+    }, []);
 
     // useRestaurants 옵션 메모이제이션
     const restaurantQueryOptions = useMemo(() => ({
