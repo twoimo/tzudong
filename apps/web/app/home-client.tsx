@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { toast } from "sonner";
@@ -60,7 +61,7 @@ const AnnouncementPanel = dynamic(
     { ssr: false }
 );
 
-import { Announcement } from '@/types/announcement';
+import { Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
 
@@ -77,6 +78,29 @@ export default function HomeClient() {
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+
+    // URL 쿼리 파라미터 처리
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    useEffect(() => {
+        const panelParam = searchParams.get('panel');
+        const announcementId = searchParams.get('announcementId');
+
+        if (panelParam === 'announcement' && announcementId) {
+            const announcement = DUMMY_ANNOUNCEMENTS.find(a => a.id === announcementId);
+            if (announcement) {
+                // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
+                setTimeout(() => {
+                    setSelectedAnnouncement(announcement);
+                    openPanel('announcement');
+
+                    // URL 정리 (선택사항 - 새로고침 시 다시 열리지 않게 하려면)
+                    router.replace('/', { scroll: false });
+                }, 500);
+            }
+        }
+    }, [searchParams, router]);
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
@@ -21,6 +21,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
     const queryClient = useQueryClient();
     const pathname = usePathname();
+    const router = useRouter(); // 추가
     const { isSidebarOpen, setIsSidebarOpen } = useLayout();
     const [isCenteredLayout, setIsCenteredLayout] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -118,6 +119,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                         // 홈 페이지에서 공지사항 패널 열기
                         if (pathname === '/') {
                             window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: announcement }));
+                        } else {
+                            // 다른 페이지에서는 홈으로 이동 후 패널 열기
+                            router.push(`/?panel=announcement&announcementId=${announcement.id}`);
                         }
                     }}
                 />
