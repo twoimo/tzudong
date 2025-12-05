@@ -74,7 +74,7 @@ export default function HomeClient() {
 
     // 통합 패널 상태 관리
     // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
-    type PanelType = 'mypage' | 'adminSubmissions' | 'adminReviews' | 'adminAnnouncements' | 'announcementDetail' | null;
+    type PanelType = 'mypage' | 'adminSubmissions' | 'adminReviews' | 'announcement' | null;
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
@@ -191,7 +191,8 @@ export default function HomeClient() {
 
         const handleAdminAnnouncementsOpen = () => {
             if (isAdmin) {
-                openPanel('adminAnnouncements');
+                setSelectedAnnouncement(null); // 목록부터 시작
+                openPanel('announcement');
             }
         };
 
@@ -228,9 +229,9 @@ export default function HomeClient() {
 
             {/* 공지사항 배너 - 지도 상단 */}
             <AnnouncementBanner
-                onAnnouncementClick={(announcement) => {
+                onAnnouncementClick={(announcement: Announcement) => {
                     setSelectedAnnouncement(announcement);
-                    openPanel('announcementDetail');
+                    openPanel('announcement');
                 }}
                 rightPanelWidth={rightPanelWidth}
             />
@@ -360,7 +361,7 @@ export default function HomeClient() {
 
             {/* 공지사항 패널 (관리자/사용자 통합) */}
             <RightPanelWrapper
-                isOpen={activeRightPanel === 'adminAnnouncements' || activeRightPanel === 'announcementDetail'}
+                isOpen={activeRightPanel === 'announcement'}
                 isCollapsed={isPanelCollapsed}
             >
                 <AnnouncementPanel
@@ -368,8 +369,8 @@ export default function HomeClient() {
                     onClose={closeAllPanels}
                     onToggleCollapse={togglePanelCollapse}
                     isCollapsed={isPanelCollapsed}
-                    isAdmin={isAdmin && activeRightPanel === 'adminAnnouncements'}
-                    initialAnnouncement={activeRightPanel === 'announcementDetail' ? selectedAnnouncement : null}
+                    isAdmin={isAdmin}
+                    initialAnnouncement={selectedAnnouncement}
                 />
             </RightPanelWrapper>
         </>
