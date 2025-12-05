@@ -26,7 +26,19 @@ const RankingWidgetComponent = () => {
         const channel = supabase.channel('online-users')
             .on('presence', { event: 'sync' }, () => {
                 const state = channel.presenceState();
-                setOnlineUsers(Object.keys(state).length);
+                // 고유 user_id만 카운트 (동일 유저의 여러 탭/브라우저를 1명으로 계산)
+                const uniqueUserIds = new Set<string>();
+                Object.values(state).forEach((presences: any[]) => {
+                    presences.forEach((presence: any) => {
+                        if (presence.user_id) {
+                            uniqueUserIds.add(presence.user_id);
+                        } else {
+                            // 비로그인 사용자는 각각 카운트
+                            uniqueUserIds.add(`anon_${Math.random()}`);
+                        }
+                    });
+                });
+                setOnlineUsers(uniqueUserIds.size);
             })
             .subscribe(async (status) => {
                 if (status === 'SUBSCRIBED') {
