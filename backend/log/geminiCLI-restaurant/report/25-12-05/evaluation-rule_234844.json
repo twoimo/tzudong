@@ -1,0 +1,36 @@
+{
+  "phase": "evaluation-rule",
+  "started_at": "2025-12-05 23:48:44",
+  "ended_at": "2025-12-05 23:50:29",
+  "duration_seconds": 104.87,
+  "duration_formatted": "1분 44초",
+  "statistics": {
+    "total_records_processed": 1,
+    "skipped_records": 23,
+    "total_restaurants": 7,
+    "success_restaurants": 3,
+    "failed_restaurants": 4,
+    "naver_api_calls": 21,
+    "ncp_api_calls": 60,
+    "naver_api_errors": 0,
+    "ncp_api_errors": 0,
+    "success_rate": "42.9%"
+  },
+  "timers": {
+    "process_record_1": {
+      "count": 1,
+      "total_seconds": 104.85,
+      "avg_seconds": 104.846,
+      "formatted": "1분 44초"
+    },
+    "process_all_records": {
+      "count": 1,
+      "total_seconds": 104.85,
+      "avg_seconds": 104.847,
+      "formatted": "1분 44초"
+    }
+  },
+  "success_count": 2,
+  "error_count": 1,
+  "skip_count": 0
+}
