@@ -1,22 +1,26 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Megaphone } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, Megaphone, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { getTopAnnouncement, Announcement } from '@/types/announcement';
+import { getBannerAnnouncements, Announcement } from '@/types/announcement';
 
 interface AnnouncementBannerProps {
     onAnnouncementClick: (announcement: Announcement) => void;
     rightPanelWidth?: number;
 }
 
+const ROTATION_INTERVAL = 5000; // 5초마다 전환
+
 export default function AnnouncementBanner({
     onAnnouncementClick,
     rightPanelWidth = 0,
 }: AnnouncementBannerProps) {
-    const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [currentIndex, setCurrentIndex] = useState(0);
     const [isVisible, setIsVisible] = useState(true);
     const [isDismissed, setIsDismissed] = useState(false);
+    const [isPaused, setIsPaused] = useState(false);
 
     useEffect(() => {
         // 세션 스토리지에서 닫힘 상태 확인
@@ -25,10 +29,31 @@ export default function AnnouncementBanner({
             setIsDismissed(true);
         }
 
-        // 최상위 우선순위 공지사항 가져오기
-        const topAnnouncement = getTopAnnouncement();
-        setAnnouncement(topAnnouncement);
+        // 배너 공지사항 목록 가져오기
+        const bannerAnnouncements = getBannerAnnouncements();
+        setAnnouncements(bannerAnnouncements);
     }, []);
+
+    // 자동 순환
+    useEffect(() => {
+        if (announcements.length <= 1 || isPaused || isDismissed) return;
+
+        const timer = setInterval(() => {
+            setCurrentIndex(prev => (prev + 1) % announcements.length);
+        }, ROTATION_INTERVAL);
+
+        return () => clearInterval(timer);
+    }, [announcements.length, isPaused, isDismissed]);
+
+    const handlePrev = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCurrentIndex(prev => (prev - 1 + announcements.length) % announcements.length);
+    }, [announcements.length]);
+
+    const handleNext = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        setCurrentIndex(prev => (prev + 1) % announcements.length);
+    }, [announcements.length]);
 
     const handleDismiss = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -38,20 +63,25 @@ export default function AnnouncementBanner({
     };
 
     const handleClick = () => {
-        if (announcement) {
-            onAnnouncementClick(announcement);
+        const currentAnnouncement = announcements[currentIndex];
+        if (currentAnnouncement) {
+            onAnnouncementClick(currentAnnouncement);
         }
     };
 
     // 공지사항이 없거나 닫힌 경우 렌더링하지 않음
-    if (!announcement || isDismissed || !isVisible) {
+    if (announcements.length === 0 || isDismissed || !isVisible) {
         return null;
     }
+
+    const currentAnnouncement = announcements[currentIndex];
 
     return (
         <div
             className="absolute top-0 left-0 z-40 cursor-pointer transition-all duration-300"
             onClick={handleClick}
+            onMouseEnter={() => setIsPaused(true)}
+            onMouseLeave={() => setIsPaused(false)}
             style={{
                 right: rightPanelWidth,
             }}
@@ -72,26 +102,52 @@ export default function AnnouncementBanner({
                         }}
                     />
 
-                    {/* 좌측: 아이콘 + 제목 */}
+                    {/* 좌측: 이전 버튼 (여러 개일 때만) */}
+                    {announcements.length > 1 && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handlePrev}
+                            className="h-6 w-6 flex-shrink-0 hover:bg-stone-200/50 text-stone-600 hover:text-stone-900 relative z-10 mr-1"
+                            aria-label="이전 공지"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </Button>
+                    )}
+
+                    {/* 중앙: 아이콘 + 제목 */}
                     <div className="flex items-center gap-3 flex-1 min-w-0 relative z-10">
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-800/10 flex items-center justify-center">
                             <Megaphone className="h-4 w-4 text-red-800" />
                         </div>
                         <span className="font-medium text-stone-800 truncate group-hover:text-red-800 transition-colors">
-                            {announcement.title}
+                            {currentAnnouncement.title}
                         </span>
                     </div>
 
-                    {/* 우측: 닫기 버튼 */}
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleDismiss}
-                        className="h-8 w-8 flex-shrink-0 hover:bg-stone-200/50 text-stone-600 hover:text-stone-900 relative z-10"
-                        aria-label="공지사항 닫기"
-                    >
-                        <X className="h-4 w-4" />
-                    </Button>
+                    {/* 우측: 다음 버튼 + 닫기 버튼 */}
+                    <div className="flex items-center gap-1 relative z-10">
+                        {announcements.length > 1 && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={handleNext}
+                                className="h-6 w-6 flex-shrink-0 hover:bg-stone-200/50 text-stone-600 hover:text-stone-900"
+                                aria-label="다음 공지"
+                            >
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleDismiss}
+                            className="h-8 w-8 flex-shrink-0 hover:bg-stone-200/50 text-stone-600 hover:text-stone-900"
+                            aria-label="공지사항 닫기"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
         </div>

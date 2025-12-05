@@ -61,7 +61,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
 
 이용에 불편을 드려 죄송하며, 더 나은 서비스로 보답하겠습니다.`,
         isActive: true,
-        showOnBanner: false,
+        showOnBanner: true,
         priority: 90,
         createdAt: '2025-12-03T14:30:00.000Z',
         updatedAt: '2025-12-03T14:30:00.000Z',
@@ -79,7 +79,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
 
 많은 참여 부탁드립니다!`,
         isActive: true,
-        showOnBanner: false,
+        showOnBanner: true,
         priority: 85,
         createdAt: '2025-11-28T10:00:00.000Z',
         updatedAt: '2025-12-01T08:00:00.000Z',
@@ -203,4 +203,11 @@ export const getTopAnnouncement = (): Announcement | null => {
         .filter(a => a.isActive && a.showOnBanner)
         .sort((a, b) => b.priority - a.priority);
     return bannerAnnouncements.length > 0 ? bannerAnnouncements[0] : null;
+};
+
+// 배너에 표시할 모든 공지사항 가져오기 (순환용)
+export const getBannerAnnouncements = (): Announcement[] => {
+    return DUMMY_ANNOUNCEMENTS
+        .filter(a => a.isActive && a.showOnBanner)
+        .sort((a, b) => b.priority - a.priority);
 };

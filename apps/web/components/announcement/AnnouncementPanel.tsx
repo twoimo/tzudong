@@ -99,6 +99,10 @@ export default function AnnouncementPanel({
                 a.id === id ? { ...a, isActive: !a.isActive, updatedAt: new Date().toISOString() } : a
             )
         );
+        // 상세보기 중인 공지사항도 업데이트
+        if (selectedAnnouncement?.id === id) {
+            setSelectedAnnouncement(prev => prev ? { ...prev, isActive: !prev.isActive, updatedAt: new Date().toISOString() } : null);
+        }
         toast.success('공지사항 상태가 변경되었습니다');
     };
 
@@ -108,6 +112,10 @@ export default function AnnouncementPanel({
                 a.id === id ? { ...a, showOnBanner: !a.showOnBanner, updatedAt: new Date().toISOString() } : a
             )
         );
+        // 상세보기 중인 공지사항도 업데이트
+        if (selectedAnnouncement?.id === id) {
+            setSelectedAnnouncement(prev => prev ? { ...prev, showOnBanner: !prev.showOnBanner, updatedAt: new Date().toISOString() } : null);
+        }
         toast.success('배너 노출 상태가 변경되었습니다');
     };
 
@@ -447,23 +455,59 @@ export default function AnnouncementPanel({
 
                                     {/* 관리자 액션 */}
                                     {isAdmin && (
-                                        <div className="flex gap-2 pt-4 border-t border-border">
+                                        <div className="grid grid-cols-2 gap-2 pt-4 border-t border-border">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleToggleActive(selectedAnnouncement.id)}
+                                                className="gap-1 text-xs"
+                                            >
+                                                {selectedAnnouncement.isActive ? (
+                                                    <>
+                                                        <EyeOff className="h-3 w-3" />
+                                                        비활성화
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Eye className="h-3 w-3" />
+                                                        활성화
+                                                    </>
+                                                )}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleToggleBanner(selectedAnnouncement.id)}
+                                                className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
+                                            >
+                                                {selectedAnnouncement.showOnBanner ? (
+                                                    <>
+                                                        <BellOff className="h-3 w-3" />
+                                                        배너해제
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Bell className="h-3 w-3" />
+                                                        배너노출
+                                                    </>
+                                                )}
+                                            </Button>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleEdit(selectedAnnouncement)}
-                                                className="gap-1"
+                                                className="gap-1 text-xs"
                                             >
-                                                <Edit2 className="h-4 w-4" />
+                                                <Edit2 className="h-3 w-3" />
                                                 수정
                                             </Button>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleDelete(selectedAnnouncement.id)}
-                                                className="gap-1 text-destructive hover:text-destructive"
+                                                className="gap-1 text-xs text-destructive hover:text-destructive"
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                                <Trash2 className="h-3 w-3" />
                                                 삭제
                                             </Button>
                                         </div>
