@@ -37,6 +37,7 @@ const BANNER_ROTATION_INTERVAL = 5000;
 
 const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
+  const [isHydrated, setIsHydrated] = useState(false);
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
 
@@ -45,6 +46,11 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
+
+  // Hydration 완료 감지
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
@@ -214,7 +220,10 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
       {/* 중앙: 공지 배너 (최대 너비) */}
       {currentBanner && (
         <div
-          className="flex-1 flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-colors group relative z-10"
+          className={cn(
+            "flex-1 flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
+            isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+          )}
           onClick={handleBannerClick}
           onMouseEnter={() => setIsBannerPaused(true)}
           onMouseLeave={() => setIsBannerPaused(false)}
@@ -247,9 +256,12 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
       )}
 
       {/* 우측: 위젯 및 버튼들 */}
-      <div className="flex items-center gap-2 relative z-10 flex-shrink-0">
+      <div className={cn(
+        "flex items-center gap-2 relative z-10 flex-shrink-0 transition-all duration-300",
+        isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+      )}>
         {/* 랭킹 및 접속자 위젯 */}
-        <RankingWidget />
+        {isHydrated && <RankingWidget />}
 
         {/* 한지 모드 토글 */}
         <Button
@@ -372,8 +384,8 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
           <Maximize className="h-5 w-5" />
         </Button>
 
-        {/* 로그인 상태 */}
-        {isLoggedIn && (
+        {/* 로그인 상태 - hydration 완료 후에만 렌더링 */}
+        {isHydrated && isLoggedIn && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 transition-colors">
@@ -415,8 +427,8 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
           </DropdownMenu>
         )}
 
-        {/* 로그인 버튼 */}
-        {!isLoggedIn && (
+        {/* 로그인 버튼 - hydration 완료 후에만 렌더링 */}
+        {isHydrated && !isLoggedIn && (
           <Button
             onClick={onOpenAuth}
             className="ml-2 bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md"
