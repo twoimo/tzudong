@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,6 +37,7 @@ export default function AdminAnnouncementPanel({
         title: '',
         content: '',
         isActive: true,
+        showOnBanner: false,
         priority: 50,
     });
 
@@ -45,6 +46,7 @@ export default function AdminAnnouncementPanel({
             title: '',
             content: '',
             isActive: true,
+            showOnBanner: false,
             priority: 50,
         });
         setSelectedAnnouncement(null);
@@ -61,6 +63,7 @@ export default function AdminAnnouncementPanel({
             title: announcement.title,
             content: announcement.content,
             isActive: announcement.isActive,
+            showOnBanner: announcement.showOnBanner,
             priority: announcement.priority,
         });
         setViewMode('edit');
@@ -82,6 +85,15 @@ export default function AdminAnnouncementPanel({
         toast.success('공지사항 상태가 변경되었습니다');
     };
 
+    const handleToggleBanner = (id: string) => {
+        setAnnouncements(prev =>
+            prev.map(a =>
+                a.id === id ? { ...a, showOnBanner: !a.showOnBanner, updatedAt: new Date().toISOString() } : a
+            )
+        );
+        toast.success('배너 노출 상태가 변경되었습니다');
+    };
+
     const handleSubmit = () => {
         if (!formData.title.trim()) {
             toast.error('제목을 입력해주세요');
@@ -100,6 +112,7 @@ export default function AdminAnnouncementPanel({
                 title: formData.title,
                 content: formData.content,
                 isActive: formData.isActive,
+                showOnBanner: formData.showOnBanner,
                 priority: formData.priority,
                 createdAt: now,
                 updatedAt: now,
@@ -115,6 +128,7 @@ export default function AdminAnnouncementPanel({
                             title: formData.title,
                             content: formData.content,
                             isActive: formData.isActive,
+                            showOnBanner: formData.showOnBanner,
                             priority: formData.priority,
                             updatedAt: now,
                         }
@@ -221,6 +235,11 @@ export default function AdminAnnouncementPanel({
                                                             >
                                                                 {announcement.isActive ? '게시중' : '비활성'}
                                                             </Badge>
+                                                            {announcement.showOnBanner && (
+                                                                <Badge variant="outline" className="text-orange-600 border-orange-400">
+                                                                    배너
+                                                                </Badge>
+                                                            )}
                                                         </div>
                                                         <p className="text-xs text-muted-foreground line-clamp-2">
                                                             {announcement.content}
@@ -257,6 +276,24 @@ export default function AdminAnnouncementPanel({
                                                             <>
                                                                 <Eye className="h-3 w-3" />
                                                                 활성화
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleToggleBanner(announcement.id)}
+                                                        className={`gap-1 text-xs ${announcement.showOnBanner ? 'text-orange-600' : ''}`}
+                                                    >
+                                                        {announcement.showOnBanner ? (
+                                                            <>
+                                                                <BellOff className="h-3 w-3" />
+                                                                배너해제
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Bell className="h-3 w-3" />
+                                                                배너노출
                                                             </>
                                                         )}
                                                     </Button>
@@ -335,6 +372,25 @@ export default function AdminAnnouncementPanel({
                                 />
                                 <span className="text-sm text-muted-foreground">
                                     {formData.isActive ? '게시중' : '비활성'}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <Label htmlFor="showOnBanner">메인화면 배너</Label>
+                                <p className="text-xs text-muted-foreground">
+                                    지도 위에 배너로 표시됩니다
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Switch
+                                    id="showOnBanner"
+                                    checked={formData.showOnBanner}
+                                    onCheckedChange={(checked) => setFormData({ ...formData, showOnBanner: checked })}
+                                />
+                                <span className="text-sm text-muted-foreground">
+                                    {formData.showOnBanner ? '노출' : '미노출'}
                                 </span>
                             </div>
                         </div>

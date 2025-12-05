@@ -6,6 +6,7 @@ export const AnnouncementSchema = z.object({
     title: z.string().min(1, '제목을 입력해주세요').max(100, '제목은 100자 이내로 입력해주세요'),
     content: z.string().min(1, '내용을 입력해주세요'),
     isActive: z.boolean().default(true),
+    showOnBanner: z.boolean().default(false), // 메인화면 배너에 노출
     priority: z.number().int().min(0).max(100).default(0),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
@@ -55,6 +56,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
 문의사항이 있으시면 언제든 연락 주세요.
 감사합니다.`,
         isActive: true,
+        showOnBanner: true,
         priority: 100,
         createdAt: '2025-12-01T09:00:00.000Z',
         updatedAt: '2025-12-01T09:00:00.000Z',
@@ -90,6 +92,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
 
 이용에 불편을 드려 죄송하며, 더 나은 서비스로 보답하겠습니다.`,
         isActive: true,
+        showOnBanner: false,
         priority: 90,
         createdAt: '2025-12-03T14:30:00.000Z',
         updatedAt: '2025-12-03T14:30:00.000Z',
@@ -119,6 +122,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
 
 많은 참여 부탁드립니다!`,
         isActive: false,
+        showOnBanner: false,
         priority: 50,
         createdAt: '2025-11-28T10:00:00.000Z',
         updatedAt: '2025-12-01T08:00:00.000Z',
@@ -132,8 +136,10 @@ export const getActiveAnnouncements = (): Announcement[] => {
         .sort((a, b) => b.priority - a.priority);
 };
 
-// 가장 높은 우선순위 공지사항 가져오기
+// 배너에 표시할 공지사항 가져오기 (isActive + showOnBanner인 것 중 가장 높은 우선순위)
 export const getTopAnnouncement = (): Announcement | null => {
-    const active = getActiveAnnouncements();
-    return active.length > 0 ? active[0] : null;
+    const bannerAnnouncements = DUMMY_ANNOUNCEMENTS
+        .filter(a => a.isActive && a.showOnBanner)
+        .sort((a, b) => b.priority - a.priority);
+    return bannerAnnouncements.length > 0 ? bannerAnnouncements[0] : null;
 };
