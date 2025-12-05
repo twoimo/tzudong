@@ -94,3 +94,51 @@
 {"timestamp": "2025-12-05T13:53:06.337026+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "결과 저장: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_evaluation_rule_results.jsonl", "data": null}
 {"timestamp": "2025-12-05T13:53:06.337063+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
 {"timestamp": "2025-12-05T13:53:06.337422+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "📝 JSON 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-05/evaluation-rule_134847.json", "data": null}
+{"timestamp": "2025-12-05T15:32:19.842507+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:32:19.842640+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "🚀 [EVALUATION-RULE] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-05T15:32:19.842727+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "⏰ 시작 시간: 2025-12-05 15:32:19", "data": null}
+{"timestamp": "2025-12-05T15:32:19.842803+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant", "data": null}
+{"timestamp": "2025-12-05T15:32:19.842873+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "   📄 text: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/text/25-12-05", "data": null}
+{"timestamp": "2025-12-05T15:32:19.842940+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "   📊 structured: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-05", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843004+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "   📋 report: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-05", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843071+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843405+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843487+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "🚀 [EVALUATION-RULE] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843574+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "⏰ 시작 시간: 2025-12-05 15:32:19", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843644+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-05", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843712+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843771+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843829+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "  RULE 기반 평가 시작", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843893+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:32:19.843952+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "입력 파일: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_evaluation_selection.jsonl", "data": null}
+{"timestamp": "2025-12-05T15:32:19.844017+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "출력 파일: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_evaluation_rule_results.jsonl", "data": null}
+{"timestamp": "2025-12-05T15:32:19.844126+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "기존 처리 내역 확인 중 (전체 이력)...", "data": null}
+{"timestamp": "2025-12-05T15:32:19.862026+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "이미 처리된 레코드 (전체 이력): 704개", "data": null}
+{"timestamp": "2025-12-05T15:33:52.413439+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "진행 중... 10개 처리 완료", "data": null}
+{"timestamp": "2025-12-05T15:36:29.263234+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "진행 중... 20개 처리 완료", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183159+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183304+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "🏁 [EVALUATION-RULE] 파이프라인 종료", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183390+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "⏰ 종료 시간: 2025-12-05 15:37:05", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183457+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "⏱️ 소요 시간: 4분 45초", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183521+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183660+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183727+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183786+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "  📊 실행 요약", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183863+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183921+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "  시작 시간: 2025-12-05 15:32:19", "data": null}
+{"timestamp": "2025-12-05T15:37:05.183983+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "  종료 시간: 2025-12-05 15:37:05", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184040+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "  총 소요 시간: 4분 45초", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184095+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184180+09:00", "level": "SUCCESS", "phase": "evaluation-rule", "step": null, "message": "처리 완료: 23개 객체 처리", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184236+09:00", "level": "WARNING", "phase": "evaluation-rule", "step": null, "message": "건너뛴 레코드: 0개", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184291+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "총 음식점: 54개", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184346+09:00", "level": "SUCCESS", "phase": "evaluation-rule", "step": null, "message": "성공: 37개", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184399+09:00", "level": "ERROR", "phase": "evaluation-rule", "step": null, "message": "실패: 17개", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184453+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184508+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "📡 API 통계:", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184567+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "  네이버 API 호출: 149회 (에러: 0)", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184623+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "  NCP API 호출: 203회 (에러: 0)", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184675+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184728+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "결과 저장: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-05/tzuyang_restaurant_evaluation_rule_results.jsonl", "data": null}
+{"timestamp": "2025-12-05T15:37:05.184787+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-05T15:37:05.185252+09:00", "level": "INFO", "phase": "evaluation-rule", "step": null, "message": "📝 JSON 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-05/evaluation-rule_153219.json", "data": null}

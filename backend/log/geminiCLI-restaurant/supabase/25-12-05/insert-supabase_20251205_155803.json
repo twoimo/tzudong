@@ -1,0 +1,217 @@
+{
+  "stage": "insert-supabase",
+  "started_at": "2025-12-05 15:58:03",
+  "ended_at": "2025-12-05 15:58:03",
+  "duration_seconds": 104,
+  "duration_formatted": "1m 44s",
+  "statistics": {
+    "total_lines": 1172,
+    "success": 198,
+    "failed": 180,
+    "skipped": 794,
+    "restored": 144,
+    "success_rate": "16.9%"
+  },
+  "errors": [
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    },
+    {
+      "name": null,
+      "error": "invalid input syntax for type integer: \"not_restaurant\""
+    }
+  ]
+}
