@@ -211,115 +211,115 @@ export function EvaluationSlideView({
             {/* Main Content Area - Split View */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Left: Video Player */}
-                <div className="w-[50%] bg-gray-100 flex flex-col justify-start items-center relative overflow-hidden group">
-                    {/* Background Thumbnail for Popup Mode */}
-                    {playerType === 'popup' && videoId && (
-                        <div
-                            className="absolute inset-0 bg-cover bg-center opacity-50 blur-sm scale-110"
-                            style={{ backgroundImage: `url(https://img.youtube.com/vi/${videoId}/hqdefault.jpg)` }}
-                        />
-                    )}
+                <div className="w-[50%] bg-accent/5 flex flex-col justify-start relative overflow-hidden group border-r">
+                    <div className="p-4 pb-0 w-full shrink-0">
+                        <div className="bg-white rounded-lg border p-3 shadow-sm relative overflow-hidden">
+                            {/* Background Thumbnail for Popup Mode */}
+                            {playerType === 'popup' && videoId && (
+                                <div
+                                    className="absolute inset-0 bg-cover bg-center opacity-50 blur-sm scale-110"
+                                    style={{ backgroundImage: `url(https://img.youtube.com/vi/${videoId}/hqdefault.jpg)` }}
+                                />
+                            )}
 
-                    {videoUrl && !videoError && playerType !== 'popup' ? (
-                        <div className="w-full aspect-video z-10 shadow-lg">
-                            <iframe
-                                width="100%"
-                                height="100%"
-                                src={videoUrl}
-                                title="Video player"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
-                                allowFullScreen
-                                className="w-full h-full block"
-                                onError={handleVideoError}
-                            />
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center text-white p-6 text-center z-10 w-full h-full bg-black/40 backdrop-blur-sm">
-                            {playerType === 'popup' && videoId ? (
-                                <div className="flex flex-col items-center">
-                                    <img
-                                        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-                                        alt="Thumbnail"
-                                        className="w-full max-w-[320px] h-auto rounded shadow-lg mb-6 border border-white/20"
+                            {videoUrl && !videoError && playerType !== 'popup' ? (
+                                <div className="w-full aspect-video z-10 shadow-lg">
+                                    <iframe
+                                        width="100%"
+                                        height="100%"
+                                        src={videoUrl}
+                                        title="Video player"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
+                                        allowFullScreen
+                                        className="w-full h-full block"
+                                        onError={handleVideoError}
                                     />
-                                    <Button
-                                        variant="default"
-                                        asChild
-                                        size="lg"
-                                        className="gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-base px-8 py-6 h-auto shadow-xl hover:scale-105 transition-transform"
-                                    >
-                                        <a href={currentRecord.youtube_link} target="_blank" rel="noopener noreferrer">
-                                            <ExternalLink className="w-6 h-6" /> 새 창에서 재생하기
-                                        </a>
-                                    </Button>
-                                    <div className="mt-6 space-y-1 text-center">
-                                        <p className="text-sm text-gray-200 font-medium">
-                                            임베드 제한된 영상입니다.
-                                        </p>
-                                        <p className="text-xs text-gray-400">
-                                            위 버튼을 눌러 유튜브 새 창에서 확인하세요.
-                                        </p>
-                                    </div>
                                 </div>
                             ) : (
-                                <>
-                                    {videoError ? (
-                                        <>
-                                            <AlertCircle className="w-10 h-10 mb-2 text-red-500" />
-                                            <p className="mb-2 text-sm">{playerType === 'youtube' ? '재생 불가' : '재생 실패'}</p>
-                                            <p className="text-xs text-gray-400 mb-4">플레이어 소스를 변경해보세요.</p>
-                                        </>
-                                    ) : videoId ? (
-                                        <p className="text-sm">로딩 중...</p>
-                                    ) : (
-                                        <p className="text-gray-400 text-sm">링크 없음</p>
-                                    )}
-                                </>
-                            )}
-
-                            {currentRecord.youtube_link && !videoId && (
-                                <div className="flex flex-col items-center gap-2 mt-6">
-                                    <Button variant="secondary" size="sm" className="h-7 text-xs bg-white/10 hover:bg-white/20 text-white border-0" onClick={() => window.open(currentRecord.youtube_link, '_blank')}>
-                                        <ExternalLink className="w-3 h-3 mr-1" /> YouTube에서 보기 (새 탭)
-                                    </Button>
-                                </div>
-                            )}
-
-                            {currentRecord.youtube_link && (
-                                <div className="absolute bottom-4 right-4">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="outline" size="sm" className="h-7 text-xs border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 bg-black/50 backdrop-blur-md">
-                                                <PlayCircle className="w-3 h-3 mr-1" />
-                                                {playerType === 'youtube' ? 'YouTube' : playerType === 'invidious' ? 'Invidious' : playerType === 'piped' ? 'Piped' : 'Popup 모드'}
+                                <div className="flex flex-col items-center justify-center text-white p-6 text-center z-10 w-full h-full bg-black/40 backdrop-blur-sm">
+                                    {playerType === 'popup' && videoId ? (
+                                        <div className="flex flex-col items-center">
+                                            <img
+                                                src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
+                                                alt="Thumbnail"
+                                                className="w-full max-w-[320px] h-auto rounded shadow-lg mb-6 border border-white/20"
+                                            />
+                                            <Button
+                                                variant="default"
+                                                asChild
+                                                size="lg"
+                                                className="gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-base px-8 py-6 h-auto shadow-xl hover:scale-105 transition-transform"
+                                            >
+                                                <a href={currentRecord.youtube_link} target="_blank" rel="noopener noreferrer">
+                                                    <ExternalLink className="w-6 h-6" /> 새 창에서 재생하기
+                                                </a>
                                             </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            <DropdownMenuItem onClick={() => setPlayerType('youtube')}>
-                                                YouTube (기본)
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setPlayerType('invidious')}>
-                                                Invidious (우회)
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setPlayerType('piped')}>
-                                                Piped (우회)
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => setPlayerType('popup')}>
-                                                Popup (팝업/새창)
-                                            </DropdownMenuItem>
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                            <div className="mt-6 space-y-1 text-center">
+                                                <p className="text-sm text-gray-200 font-medium">
+                                                    임베드 제한된 영상입니다.
+                                                </p>
+                                                <p className="text-xs text-gray-400">
+                                                    위 버튼을 눌러 유튜브 새 창에서 확인하세요.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {videoError ? (
+                                                <>
+                                                    <AlertCircle className="w-10 h-10 mb-2 text-red-500" />
+                                                    <p className="mb-2 text-sm">{playerType === 'youtube' ? '재생 불가' : '재생 실패'}</p>
+                                                    <p className="text-xs text-gray-400 mb-4">플레이어 소스를 변경해보세요.</p>
+                                                </>
+                                            ) : videoId ? (
+                                                <p className="text-sm">로딩 중...</p>
+                                            ) : (
+                                                <p className="text-gray-400 text-sm">링크 없음</p>
+                                            )}
+                                        </>
+                                    )}
+
+                                    {currentRecord.youtube_link && !videoId && (
+                                        <div className="flex flex-col items-center gap-2 mt-6">
+                                            <Button variant="secondary" size="sm" className="h-7 text-xs bg-white/10 hover:bg-white/20 text-white border-0" onClick={() => window.open(currentRecord.youtube_link, '_blank')}>
+                                                <ExternalLink className="w-3 h-3 mr-1" /> YouTube에서 보기 (새 탭)
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {currentRecord.youtube_link && (
+                                        <div className="absolute bottom-4 right-4">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="outline" size="sm" className="h-7 text-xs border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 bg-black/50 backdrop-blur-md">
+                                                        <PlayCircle className="w-3 h-3 mr-1" />
+                                                        {playerType === 'youtube' ? 'YouTube' : playerType === 'invidious' ? 'Invidious' : playerType === 'piped' ? 'Piped' : 'Popup 모드'}
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => setPlayerType('youtube')}>
+                                                        YouTube (기본)
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => setPlayerType('invidious')}>
+                                                        Invidious (우회)
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => setPlayerType('piped')}>
+                                                        Piped (우회)
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onClick={() => setPlayerType('popup')}>
+                                                        Popup (팝업/새창)
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
-                    )}
-                </div>
+                    </div>
 
-                {/* Right: Info & Evaluation - Expanded Layout based on Reference Image */}
-                <ScrollArea className="w-[50%] h-full border-l bg-accent/5">
-                    <div className="p-4 space-y-4 text-sm">
-
-                        {/* 0. Video Info */}
+                    {/* Left Bottom: Video Info (Moved from Right) */}
+                    <div className="w-full bg-accent/5 p-4 pt-4 overflow-y-auto flex-1 min-h-0">
                         <div className="bg-white rounded-lg border p-3 shadow-sm">
                             <h3 className="flex items-center gap-2 font-semibold text-base mb-2 text-gray-800">
                                 📹 영상 정보
@@ -351,6 +351,14 @@ export function EvaluationSlideView({
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Right: Info & Evaluation - Expanded Layout based on Reference Image */}
+                <ScrollArea className="w-[50%] h-full border-l bg-accent/5">
+                    <div className="p-4 space-y-4 text-sm">
+
+
 
                         {/* 1. Evaluation Details */}
                         <div className="bg-white rounded-lg border p-3 shadow-sm">
