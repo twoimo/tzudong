@@ -281,44 +281,80 @@ def transform_json_object(original_data, source_file_type):
                 flattened_results.append(output)
 
     # -----------------------------------------------------------------
-    # 2. 'notSelection' 파일 처리 (evaluation_target 기준)
+    # 2. 'notSelection' 파일 처리
     # -----------------------------------------------------------------
     elif source_file_type == 'notSelection':
-        for restaurant_name, is_target in evaluation_targets.items():
-            restaurant_data = next((r for r in restaurants_list if r.get('name') == restaurant_name), None)
-            is_missing = (restaurant_data is None)
+        notSelected_reason = original_data.get('notSelected_reason')
+        
+        # Case 1: no_restaurants 또는 all_names_null인 경우 - youtube_link만으로 unique_id 생성
+        if notSelected_reason in ['no_restaurants', 'all_names_null']:
+            # restaurants가 있으면 첫 번째 레코드 정보 사용 (reasoning_basis, tzuyang_review 등)
+            first_restaurant = restaurants_list[0] if restaurants_list else None
             
-            loc_data = get_location_data(None, restaurant_name, is_missing_flag=is_missing)
-            
-            tzuyang_review = restaurant_data.get('tzuyang_review') if restaurant_data else None
             output = {
                 "youtube_link": youtube_link,
-                "unique_id": generate_unique_id(youtube_link, restaurant_name, tzuyang_review),
-                "status": "pending", "youtube_meta": youtube_meta,
-                "name": restaurant_name,
-                "phone": restaurant_data.get('phone') if restaurant_data else None,
-                "category": restaurant_data.get('category') if restaurant_data else None,
-                "reasoning_basis": restaurant_data.get('reasoning_basis') if restaurant_data else None,
-                "tzuyang_review": tzuyang_review,
-                "origin_address": {
-                    "address": restaurant_data.get('address'),
-                    "lat": restaurant_data.get('lat'),
-                    "lng": restaurant_data.get('lng')
-                } if restaurant_data else None,
-                "roadAddress": loc_data["roadAddress"],
-                "jibunAddress": loc_data["jibunAddress"],
-                "englishAddress": loc_data["englishAddress"],
-                "addressElements": loc_data["addressElements"],
-                "lat": loc_data["lat"],
-                "lng": loc_data["lng"],
-                "geocoding_success": loc_data["geocoding_success"],
-                "geocoding_false_stage": loc_data["geocoding_false_stage"],
-                "is_missing": is_missing,
-                "is_notSelected": not is_target,
+                "unique_id": generate_unique_id(youtube_link, None, None),
+                "status": "pending",
+                "youtube_meta": youtube_meta,
+                "name": None,
+                "phone": None,
+                "category": first_restaurant.get('category') if first_restaurant else None,
+                "reasoning_basis": first_restaurant.get('reasoning_basis') if first_restaurant else None,
+                "tzuyang_review": first_restaurant.get('tzuyang_review') if first_restaurant else None,
+                "origin_address": None,
+                "roadAddress": None,
+                "jibunAddress": None,
+                "englishAddress": None,
+                "addressElements": None,
+                "lat": None,
+                "lng": None,
+                "geocoding_success": False,
+                "geocoding_false_stage": "not_restaurant",
+                "is_missing": False,
+                "is_notSelected": True,
+                "notSelected_reason": notSelected_reason,
                 "evaluation_results": None,
                 "source_type": "geminiCLI"
             }
             flattened_results.append(output)
+        
+        # Case 2: 기존 방식 - evaluation_target 기준 (address가 null인 경우 등)
+        else:
+            for restaurant_name, is_target in evaluation_targets.items():
+                restaurant_data = next((r for r in restaurants_list if r.get('name') == restaurant_name), None)
+                is_missing = (restaurant_data is None)
+                
+                loc_data = get_location_data(None, restaurant_name, is_missing_flag=is_missing)
+                
+                tzuyang_review = restaurant_data.get('tzuyang_review') if restaurant_data else None
+                output = {
+                    "youtube_link": youtube_link,
+                    "unique_id": generate_unique_id(youtube_link, restaurant_name, tzuyang_review),
+                    "status": "pending", "youtube_meta": youtube_meta,
+                    "name": restaurant_name,
+                    "phone": restaurant_data.get('phone') if restaurant_data else None,
+                    "category": restaurant_data.get('category') if restaurant_data else None,
+                    "reasoning_basis": restaurant_data.get('reasoning_basis') if restaurant_data else None,
+                    "tzuyang_review": tzuyang_review,
+                    "origin_address": {
+                        "address": restaurant_data.get('address'),
+                        "lat": restaurant_data.get('lat'),
+                        "lng": restaurant_data.get('lng')
+                    } if restaurant_data else None,
+                    "roadAddress": loc_data["roadAddress"],
+                    "jibunAddress": loc_data["jibunAddress"],
+                    "englishAddress": loc_data["englishAddress"],
+                    "addressElements": loc_data["addressElements"],
+                    "lat": loc_data["lat"],
+                    "lng": loc_data["lng"],
+                    "geocoding_success": loc_data["geocoding_success"],
+                    "geocoding_false_stage": loc_data["geocoding_false_stage"],
+                    "is_missing": is_missing,
+                    "is_notSelected": not is_target,
+                    "evaluation_results": None,
+                    "source_type": "geminiCLI"
+                }
+                flattened_results.append(output)
 
     return flattened_results
 

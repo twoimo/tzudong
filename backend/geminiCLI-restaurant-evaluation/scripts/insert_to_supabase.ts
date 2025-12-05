@@ -256,20 +256,44 @@ async function insertRestaurants(): Promise<{
   };
 
   try {
-    // JSONL 파일 읽기 (날짜별 폴더에서)
-    logInfo(`입력 파일: ${INPUT_FILE}`);
-    logInfo(`오늘 날짜 폴더: ${TODAY_FOLDER}`);
+    // 모든 날짜 폴더에서 transforms 파일 읽기
+    const allTransformFiles = getAllTransformFiles(DATA_DIR);
+    logInfo(`📂 모든 날짜 폴더에서 transforms 파일 검색 중...`);
+    logInfo(`   발견된 파일: ${allTransformFiles.length}개`);
     
-    if (!fs.existsSync(INPUT_FILE)) {
-      logError(`입력 파일이 존재하지 않습니다: ${INPUT_FILE}`);
+    if (allTransformFiles.length === 0) {
+      logError(`transforms 파일이 존재하지 않습니다.`);
       return stats;
     }
     
-    const fileContent = fs.readFileSync(INPUT_FILE, 'utf-8');
-    const lines = fileContent.trim().split('\n');
-    stats.totalLines = lines.length;
+    // 모든 파일에서 데이터 로드 (중복 제거용 Set)
+    const allLines: string[] = [];
+    const seenUniqueIds = new Set<string>();
     
-    logInfo(`총 ${lines.length}개의 레스토랑 데이터를 읽었습니다.`);
+    for (const filePath of allTransformFiles) {
+      const fileContent = fs.readFileSync(filePath, 'utf-8');
+      const lines = fileContent.trim().split('\n').filter(l => l.trim());
+      
+      for (const line of lines) {
+        try {
+          const data = JSON.parse(line);
+          const uniqueId = data.unique_id;
+          
+          // 파일 간 중복 체크 (같은 unique_id는 첫 번째만 사용)
+          if (uniqueId && !seenUniqueIds.has(uniqueId)) {
+            seenUniqueIds.add(uniqueId);
+            allLines.push(line);
+          }
+        } catch (e) {
+          // JSON 파싱 오류는 무시
+        }
+      }
+      
+      logDebug(`   ${path.basename(path.dirname(filePath))}: ${lines.length}개 로드`);
+    }
+    
+    stats.totalLines = allLines.length;
+    logInfo(`총 ${allLines.length}개의 레스토랑 데이터를 읽었습니다. (중복 제거 후)`);
 
     // DB에서 모든 unique_id를 한번에 로드 (성능 개선)
     logInfo('DB에서 기존 unique_id를 로드하는 중...');
@@ -304,6 +328,7 @@ async function insertRestaurants(): Promise<{
 
     // 데이터 삽입
     const insertStart = Date.now();
+    const lines = allLines;  // 변수명 호환성 유지
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
