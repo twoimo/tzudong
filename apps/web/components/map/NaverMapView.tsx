@@ -16,6 +16,7 @@ import { MapPin, Star, Users, ChefHat } from "lucide-react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
+import { useLayout } from "@/contexts/LayoutContext";
 
 interface NaverMapViewProps {
     filters: FilterState;
@@ -61,6 +62,10 @@ const NaverMapView = memo(({
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
     const prevPanelOpenRef = useRef<boolean>(false); // 이전 패널 열림 상태 추적 (오프셋 델타 계산용)
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
+    const prevSidebarOpenRef = useRef<boolean>(true); // 이전 사이드바 열림 상태 추적
+
+    // 사이드바 상태 가져오기
+    const { isSidebarOpen } = useLayout();
 
     // Naver Maps API 로드 (동적 임포트 후 컴포넌트가 마운트되면 로드)
     const { isLoaded, loadError } = useNaverMaps({ autoLoad: true });
@@ -297,6 +302,49 @@ const NaverMapView = memo(({
         window.addEventListener('resize', handleWindowResize);
         return () => window.removeEventListener('resize', handleWindowResize);
     }, [selectedRestaurant]);
+
+    // 사이드바 토글 시 지도 리사이즈 및 중심 조정
+    useEffect(() => {
+        if (!mapInstanceRef.current) return;
+
+        // 초기 렌더링 스킵
+        if (prevSidebarOpenRef.current === isSidebarOpen) return;
+
+        prevSidebarOpenRef.current = isSidebarOpen;
+
+        const map = mapInstanceRef.current;
+
+        // 사이드바 너비 변화: 열림(256px) <-> 닫힘(64px) = 192px 차이
+        const sidebarWidthDiff = 192;
+        const offsetX = isSidebarOpen ? sidebarWidthDiff / 2 : -sidebarWidthDiff / 2;
+
+        // 약간의 딜레이 후 리사이즈 트리거 (사이드바 애니메이션 동기화)
+        const timer = setTimeout(() => {
+            naver.maps.Event.trigger(map, 'resize');
+
+            try {
+                const currentCenter = map.getCenter();
+                const projection = map.getProjection();
+                const centerPoint = projection.fromCoordToOffset(currentCenter);
+
+                // 사이드바 변화에 따라 반대 방향으로 오프셋
+                const offsetPoint = new naver.maps.Point(
+                    centerPoint.x + offsetX,
+                    centerPoint.y
+                );
+                const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+
+                map.panTo(offsetLatLng, {
+                    duration: 300,
+                    easing: 'easeOutCubic'
+                });
+            } catch (e) {
+                // 프로젝션 오류 무시
+            }
+        }, 50);
+
+        return () => clearTimeout(timer);
+    }, [isSidebarOpen]);
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
