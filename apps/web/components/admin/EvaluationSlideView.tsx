@@ -77,7 +77,7 @@ export function EvaluationSlideView({
         if (currentRecord?.youtube_link) {
             const vidId = getYoutubeVideoId(currentRecord.youtube_link);
             if (vidId) {
-                // Autoplay disabled, added enablejsapi and origin for better embedding support
+                // Autoplay disabled, controls hidden, added enablejsapi and origin
                 const origin = typeof window !== 'undefined' ? window.location.origin : '';
                 setVideoUrl(`https://www.youtube.com/embed/${vidId}?autoplay=0&rel=0&enablejsapi=1&origin=${origin}`);
                 setVideoError(false);
@@ -192,18 +192,20 @@ export function EvaluationSlideView({
             {/* Main Content Area - Split View */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Left: Video Player */}
-                <div className="w-[50%] bg-black flex flex-col justify-center relative">
+                <div className="w-[50%] bg-black flex flex-col justify-center items-center">
                     {videoUrl && !videoError ? (
-                        <iframe
-                            width="100%"
-                            height="100%"
-                            src={videoUrl}
-                            title="Video player"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            className="absolute inset-0 w-full h-full"
-                            onError={handleVideoError}
-                        />
+                        <div className="w-full aspect-video">
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src={videoUrl}
+                                title="Video player"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
+                                allowFullScreen
+                                className="w-full h-full"
+                                onError={handleVideoError}
+                            />
+                        </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center text-white p-6 text-center bg-gray-900 h-full">
                             {videoError ? (
