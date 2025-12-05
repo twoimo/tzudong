@@ -285,7 +285,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
     return (
         <div className={cn("flex", autoHeight ? "h-auto" : "h-full overflow-hidden", className)}>
             {/* Left: Video Player */}
-            <div className={cn("w-[50%] bg-accent/5 flex flex-col justify-start relative group border-r", !autoHeight && "overflow-hidden")}>
+            <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-r", autoHeight ? "w-[40%]" : "w-[50%] overflow-hidden")}>
                 <div className="p-4 pb-0 w-full shrink-0">
                     <div className="bg-white rounded-lg border p-3 shadow-sm relative overflow-hidden">
                         {/* Background Thumbnail for Popup Mode */}
@@ -425,7 +425,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
 
             {/* Right: Info & Evaluation */}
             {autoHeight ? (
-                <div className="w-[50%] h-auto border-l bg-accent/5">
+                <div className="w-[60%] h-auto border-l bg-accent/5">
                     <RightContent />
                 </div>
             ) : (
