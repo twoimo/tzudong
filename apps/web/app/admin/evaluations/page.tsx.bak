@@ -38,13 +38,11 @@ export default function AdminEvaluationPage() {
 
 
 
-  // Server-side state
-  const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]);
+  const [allRecords, setAllRecords] = useState<EvaluationRecord[]>([]); // 전체 데이터 (검색용)
+  const [displayedRecords, setDisplayedRecords] = useState<EvaluationRecord[]>([]); // 화면에 표시될 데이터
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
-  const [totalCount, setTotalCount] = useState(0);
-
   const [stats, setStats] = useState<CategoryStats>({
     total: 0,
     pending: 0,
@@ -57,11 +55,10 @@ export default function AdminEvaluationPage() {
     not_selected: 0,
     deleted: 0,
   });
-
   const [selectedStatuses, setSelectedStatuses] = useState<EvaluationRecordStatus[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchResults, setSearchResults] = useState<EvaluationRecord[] | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState<string>(''); // 검색어 상태
+  const [searchResults, setSearchResults] = useState<EvaluationRecord[] | null>(null); // 검색 결과
+  const [isSearching, setIsSearching] = useState(false); // 검색 로딩 상태
   const [evalFilters, setEvalFilters] = useState<{
     visit_authenticity?: string;
     rb_inference_score?: string;
@@ -72,16 +69,12 @@ export default function AdminEvaluationPage() {
     category_TF?: string;
     status?: string;
   }>({});
-
   const [missingFormOpen, setMissingFormOpen] = useState(false);
   const [selectedMissingRecord, setSelectedMissingRecord] = useState<EvaluationRecord | null>(null);
   const [conflictPanelOpen, setConflictPanelOpen] = useState(false);
   const [selectedConflictRecord, setSelectedConflictRecord] = useState<EvaluationRecord | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEditRecord, setSelectedEditRecord] = useState<EvaluationRecord | null>(null);
-
-  // Pagination state
-  const [page, setPage] = useState(0);
 
   // 승인 확인 모달 상태
   const [showApprovalConfirm, setShowApprovalConfirm] = useState(false);
@@ -91,25 +84,22 @@ export default function AdminEvaluationPage() {
     address: string;
   } | null>(null);
 
+  // 테이블 뷰 토글 상태
   const [isAlternateView, setIsAlternateView] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
+  // 자막 수집 상태
   const [transcriptStatus, setTranscriptStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [transcriptMessage, setTranscriptMessage] = useState<string>('');
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const isInitialMount = useRef(true);
-  const hasCheckedAuth = useRef(false);
-
-  // Restore state from localStorage
+  // localStorage에서 상태 복원
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.selectedStatuses) setSelectedStatuses(parsed.selectedStatuses);
-        // Do not restore search query to prevent auto-search on load
-        // if (parsed.searchQuery) setSearchQuery(parsed.searchQuery);
+        if (parsed.searchQuery) setSearchQuery(parsed.searchQuery);
         if (parsed.evalFilters) setEvalFilters(parsed.evalFilters);
         if (parsed.isAlternateView) setIsAlternateView(parsed.isAlternateView);
       }
@@ -118,11 +108,30 @@ export default function AdminEvaluationPage() {
     }
   }, []);
 
-  // Save state to localStorage
+  // 오류 경고 다이얼로그
+  const [showConflictWarning, setShowConflictWarning] = useState(false);
+  const [conflictWarningData, setConflictWarningData] = useState<{
+    record: EvaluationRecord;
+    conflicts: Record<string, unknown>[];
+  } | null>(null);
+
+  // 무한 스크롤을 위한 scroll container ref
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // 첫 마운트 여부를 추적 (검색 자동 실행 방지)
+  const isInitialMount = useRef(true);
+
+  // 데이터 로드 여부 추적 (세션 동안 한 번만 로드)
+  const hasLoadedData = useRef(false);
+
+  // 권한 체크 완료 여부 추적 (초기 로드 시 한 번만 체크)
+  const hasCheckedAuth = useRef(false);
+
+  // 상태 변경 시 localStorage에 저장
   useEffect(() => {
     const stateToSave = {
       selectedStatuses,
-      // searchQuery, // Don't save search query
+      searchQuery,
       evalFilters,
       isAlternateView,
     };
@@ -131,13 +140,21 @@ export default function AdminEvaluationPage() {
     } catch (error) {
       console.error('Failed to save state:', error);
     }
-  }, [selectedStatuses, evalFilters, isAlternateView]);
+  }, [selectedStatuses, searchQuery, evalFilters, isAlternateView]);
 
-  // Auth check
+  // 인증 체크 및 관리자 권한 확인
   useEffect(() => {
-    if (authLoading) return;
-    if (hasCheckedAuth.current) return;
+    // 인증 로딩 중에는 아무것도 하지 않음 (로딩 완료 후 권한 체크)
+    if (authLoading) {
+      return;
+    }
 
+    // 이미 권한 체크를 완료했으면 다시 체크하지 않음 (재마운트 시 중복 체크 방지)
+    if (hasCheckedAuth.current) {
+      return;
+    }
+
+    // 인증 로딩이 완료된 후 권한 체크
     if (!user) {
       hasCheckedAuth.current = true;
       toast({
@@ -149,382 +166,474 @@ export default function AdminEvaluationPage() {
       return;
     }
 
-    if (!isAdmin) return;
+    // user는 있지만 isAdmin이 false인 경우 - 비동기 체크가 완료될 때까지 대기
+    if (!isAdmin) {
+      return;
+    }
 
+    // user도 있고 isAdmin도 true인 경우
     hasCheckedAuth.current = true;
-  }, [user, isAdmin, authLoading, router, toast]);
 
-  // Transform raw DB record to EvaluationRecord
-  const transformRecord = (r: Record<string, unknown>): EvaluationRecord => {
-    const evaluationResults = r.evaluation_results as Record<string, unknown> | null;
-    const restaurantInfo = {
-      name: r.name as string,
-      phone: r.phone as string | null,
-      category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
-      origin_address: (r.origin_address as Record<string, unknown>)?.address as string || r.road_address as string || r.jibun_address as string || '',
-      origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number || 0,
-      origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number || 0,
-      reasoning_basis: r.reasoning_basis as string || '',
-      tzuyang_review: r.tzuyang_review as string || '',
-      naver_address_info: r.road_address || r.jibun_address ? {
-        road_address: r.road_address as string | null,
-        jibun_address: r.jibun_address as string || '',
-        english_address: r.english_address as string | null,
-        address_elements: r.address_elements,
-        x: r.lng?.toString() || '',
-        y: r.lat?.toString() || '',
-      } : null,
-    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isAdmin, authLoading]);
 
-    return {
-      ...r,
-      restaurant_name: r.name,
-      youtube_link: r.youtube_link as string || '',
-      evaluation_results: evaluationResults,
-      restaurant_info: restaurantInfo,
-      youtube_meta: r.youtube_meta || null,
-    } as unknown as EvaluationRecord;
-  };
-
-  // Build Supabase Query based on filters
-  const buildQuery = useCallback((baseQuery: any) => {
-    let query = baseQuery;
-
-    // 1. Status Filter (Global & Local)
-    // "Deleted" logic: usually excluded unless specifically requested
-    const showDeleted = selectedStatuses.includes('deleted' as EvaluationRecordStatus);
-
-    if (showDeleted) {
-      query = query.eq('status', 'deleted');
-    } else {
-      query = query.neq('status', 'deleted');
-    }
-
-    // Specific Status Filter (from column header)
-    if (evalFilters.status) {
-      switch (evalFilters.status) {
-        case 'geocoding_failed':
-          query = query.eq('geocoding_success', false);
-          break;
-        case 'missing':
-          query = query.eq('is_missing', true);
-          break;
-        case 'not_selected':
-          query = query.eq('is_not_selected', true);
-          break;
-        case 'ready_for_approval':
-          // Complex filter for ready_for_approval
-          // Note: JSONB filtering syntax
-          query = query
-            .eq('geocoding_success', true)
-            .in('status', ['pending', 'hold'])
-            .eq('evaluation_results->visit_authenticity->>eval_value', '1')
-            .eq('evaluation_results->rb_inference_score->>eval_value', '1')
-            .eq('evaluation_results->rb_grounding_TF->>eval_value', 'true')
-            .eq('evaluation_results->review_faithfulness_score->>eval_value', '1')
-            .eq('evaluation_results->category_validity_TF->>eval_value', 'true')
-            .eq('evaluation_results->category_TF->>eval_value', 'true');
-          break;
-        default:
-          query = query.eq('status', evalFilters.status);
-          break;
-      }
-    } else {
-      // If no specific status filter is set, rely on 'selectedStatuses' sidebar
-      // But typically sidebar is for visualization stats, or bulk filtering?
-      // The original code:
-      // let filtered = selectedStatuses.includes('deleted') ...
-      // It seems generic status filtering was not fully tied to sidebar unless specifically implemented.
-      // The original code used `filtered = filtered.filter(status check)` which implies sidebar `selectedStatuses` 
-      // was NOT directly filtering the list except for 'deleted'.
-      // Wait, `selectedStatuses` in original code:
-      // "selectedStatuses에 'deleted'가 포함되어 있으면 deleted만 보여줌"
-      // "else baseRecords.filter(r => r.status !== 'deleted')"
-      // Effectively, if 'deleted' is NOT selected, we hide deleted.
-      // The sidebar selection in original code (CategorySidebar) primarily driven STATS, but `selectedStatuses` state 
-      // seems to be "View these statuses".
-      // Actually `CategorySidebar` `onSelectStatuses` updates `selectedStatuses`. 
-      // If `selectedStatuses` has items, should we filter by them?
-      // Original code: 
-      /*
-       // selectedStatuses에 'deleted'가 포함되어 있으면 deleted만 보여줌
-       let filtered = selectedStatuses.includes('deleted' as EvaluationRecordStatus)
-         ? baseRecords.filter(r => r.status === 'deleted')
-         : baseRecords.filter(r => r.status !== 'deleted');
-      */
-      // AND THEN:
-      /*
-         // 상태 필터링 (evalFilters.status)
-         if (evalFilters.status) { ... }
-      */
-      // It seems `selectedStatuses` was NOT used for general filtering in original code except for 'deleted'.
-      // Let's stick to that logic to avoid breaking behavior.
-    }
-
-    // JSONB Filters
-    if (evalFilters.visit_authenticity) {
-      query = query.eq('evaluation_results->visit_authenticity->>eval_value', evalFilters.visit_authenticity);
-    }
-    if (evalFilters.rb_inference_score) {
-      query = query.eq('evaluation_results->rb_inference_score->>eval_value', evalFilters.rb_inference_score);
-    }
-    if (evalFilters.rb_grounding_TF) {
-      // JSONB bool is stored as bool, but ->> operator returns text 'true'/'false'
-      query = query.eq('evaluation_results->rb_grounding_TF->>eval_value', evalFilters.rb_grounding_TF.toLowerCase());
-    }
-    if (evalFilters.review_faithfulness_score) {
-      // Original parsed as float, but exact match for 1 or 0 is fine with string check usually 
-      // unless it's 1.0. Assuming integer-like storage based on previous logic.
-      query = query.eq('evaluation_results->review_faithfulness_score->>eval_value', evalFilters.review_faithfulness_score);
-    }
-
-    if (evalFilters.geocoding_success) {
-      if (evalFilters.geocoding_success === 'true') {
-        query = query.eq('geocoding_success', true);
-      } else if (evalFilters.geocoding_success === 'false_match') {
-        query = query.eq('geocoding_success', false).not('geocoding_false_stage', 'is', null);
-      } else if (evalFilters.geocoding_success === 'false_geocode') {
-        query = query.eq('geocoding_success', false).is('geocoding_false_stage', null);
-      }
-    }
-
-    if (evalFilters.category_validity_TF) {
-      query = query.eq('evaluation_results->category_validity_TF->>eval_value', evalFilters.category_validity_TF.toLowerCase());
-    }
-
-    if (evalFilters.category_TF) {
-      query = query.eq('evaluation_results->category_TF->>eval_value', evalFilters.category_TF.toLowerCase());
-    }
-
-    return query;
-  }, [evalFilters, selectedStatuses]);
-
-  // Fetch Stats (Parallel Counts)
-  const fetchStats = useCallback(async () => {
-    try {
-      // We need counts for: pending, approved, hold, missing, db_conflict, ready_for_approval, geocoding_failed, not_selected, deleted
-      // Running multiple count queries in parallel.
-
-      // Helper
-      const getCount = async (filterFn: (q: any) => any) => {
-        let q = supabase.from('restaurants').select('*', { count: 'exact', head: true });
-        q = filterFn(q);
-        const { count } = await q;
-        return count || 0;
-      };
-
-      const [
-        total,
-        pending,
-        approved,
-        hold,
-        missing,
-        db_conflict,
-        not_selected,
-        deleted,
-        geocoding_failed,
-        ready_for_approval
-      ] = await Promise.all([
-        getCount(q => q.neq('status', 'deleted')), // Total (active)
-        getCount(q => q.eq('status', 'pending')),
-        getCount(q => q.eq('status', 'approved')),
-        getCount(q => q.eq('status', 'hold')),
-        getCount(q => q.eq('is_missing', true)),
-        getCount(q => q.eq('status', 'db_conflict')),
-        getCount(q => q.eq('is_not_selected', true)),
-        getCount(q => q.eq('status', 'deleted')),
-        getCount(q => q.eq('geocoding_success', false).neq('status', 'deleted')),
-        getCount(q => q
-          .eq('geocoding_success', true)
-          .in('status', ['pending', 'hold'])
-          .eq('evaluation_results->visit_authenticity->>eval_value', '1')
-          .eq('evaluation_results->rb_inference_score->>eval_value', '1')
-          .eq('evaluation_results->rb_grounding_TF->>eval_value', 'true')
-          .eq('evaluation_results->review_faithfulness_score->>eval_value', '1')
-          .eq('evaluation_results->category_validity_TF->>eval_value', 'true')
-          .eq('evaluation_results->category_TF->>eval_value', 'true')
-        )
-      ]);
-
-      setStats({
-        total,
-        pending,
-        approved,
-        hold,
-        missing,
-        db_conflict,
-        not_selected,
-        deleted,
-        geocoding_failed,
-        ready_for_approval
-      });
-
-    } catch (e) {
-      console.error('Failed to fetch stats', e);
-    }
-  }, []); // Stats definitions are static
-
-  // Fetch Records
-  const fetchRecords = useCallback(async (isLoadMore = false) => {
-    if (isSearching && searchQuery) return; // Don't fetch normal records if searching (handled by fuzzy search)
-    if (!user || !isAdmin) return;
-
-    try {
-      if (!isLoadMore) setLoading(true);
-      else setLoadingMore(true);
-
-      const targetPage = isLoadMore ? page + 1 : 0;
-      const from = targetPage * PAGE_SIZE;
-      const to = from + PAGE_SIZE - 1;
-
-      let query = supabase
-        .from('restaurants')
-        .select('*', { count: 'exact' });
-
-      query = buildQuery(query);
-
-      // Order by created_at desc
-      query = query.order('created_at', { ascending: false });
-
-      // Pagination
-      query = query.range(from, to);
-
-      const { data, error, count } = await query;
-
-      if (error) throw error;
-
-      const records = (data || []).map(transformRecord);
-
-      if (isLoadMore) {
-        setDisplayedRecords(prev => [...prev, ...records]);
-        setPage(targetPage);
-      } else {
-        setDisplayedRecords(records);
-        setPage(0);
-        if (count !== null) setTotalCount(count);
-      }
-
-      // Determine if there are more
-      // If we got fewer records than PAGE_SIZE, we are at the end
-      setHasMore(records.length === PAGE_SIZE);
-
-    } catch (error: any) {
-      console.error('Fetch error:', error);
-      toast({
-        variant: 'destructive',
-        title: '데이터 로드 실패',
-        description: error.message
-      });
-    } finally {
-      if (!isLoadMore) setLoading(false);
-      else setLoadingMore(false);
-    }
-  }, [page, buildQuery, toast, user, isAdmin, isSearching, searchQuery]);
-
-  // Initial Load & Stats
+  // YouTube 제목 퍼지 검색
   useEffect(() => {
-    if (user && isAdmin && !searchQuery) {
-      fetchStats();
-      fetchRecords();
+    // 첫 마운트 시에는 검색 실행하지 않음 (localStorage 복원으로 인한 자동 실행 방지)
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
     }
-  }, [user, isAdmin, fetchStats, fetchRecords]); // Adding fetchRecords here is safe because it's wrapped in useCallback which depends on filters
-
-  // Re-fetch when filters change (resetting page)
-  // Logic handled by `fetchRecords` dependency on `buildQuery` which depends on filters.
-  // But strictly `fetchRecords` changes when filters change.
-  // We want to trigger a fresh fetch (page 0) whenever filters change.
-  // Effectively `fetchRecords` *is* the trigger if we put it in useEffect.
-  // The above useEffect handles it.
-
-  // Search Logic (Preserved)
-  useEffect(() => {
     const performFuzzySearch = async () => {
       if (!searchQuery.trim()) {
         setSearchResults(null);
-        setIsSearching(false);
-        // If search is cleared, fetchRecords will run due to useEffect dependency removal?
-        // No, we need to explicitly re-fetch records if search is cleared?
-        // The above useEffect has `!searchQuery` condition. 
-        // If searchQuery becomes empty, it should re-trigger.
         return;
       }
 
       setIsSearching(true);
-      // setDisplayedRecords([]); // Optionally clear current list while searching
-
       try {
-        // @ts-expect-error - Supabase RPC
+        // @ts-expect-error - Supabase RPC 타입 문제
         const { data, error } = await supabase.rpc('search_restaurants_by_youtube_title', {
           search_query: searchQuery.trim(),
           max_results: 100,
-          include_all_status: true
+          include_all_status: true  // 관리자는 전체 상태 조회
         });
 
-        if (error) throw error;
+        if (error) {
+          console.error('RPC 에러:', error);
+          throw error;
+        }
 
-        const convertedData = ((data as Record<string, unknown>[]) || []).map(transformRecord);
-        setSearchResults(convertedData);
-        setDisplayedRecords(convertedData); // Search results replace displayed records directly
-        setHasMore(false); // Disable infinite scroll for search results (since max 100)
+        // 검색 결과를 EvaluationRecord 형식으로 변환
+        const convertedData = ((data as Record<string, unknown>[]) || []).map((r: Record<string, unknown>) => {
+          // evaluation_results 변환
+          const evaluationResults = r.evaluation_results as Record<string, unknown> | null;
 
+          // restaurant_info 생성
+          const restaurantInfo = {
+            name: r.name as string,
+            phone: r.phone as string | null,
+            category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
+            origin_address: (r.origin_address as Record<string, unknown>)?.address as string || r.road_address as string || r.jibun_address as string || '',
+            origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number || 0,
+            origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number || 0,
+            reasoning_basis: r.reasoning_basis as string || '',
+            tzuyang_review: r.tzuyang_review as string || '',
+            naver_address_info: r.road_address || r.jibun_address ? {
+              road_address: r.road_address as string | null,
+              jibun_address: r.jibun_address as string || '',
+              english_address: r.english_address as string | null,
+              address_elements: r.address_elements,
+              x: r.lng?.toString() || '',
+              y: r.lat?.toString() || '',
+            } : null,
+          };
+
+          return {
+            ...r,
+            // 호환성을 위한 별칭 추가
+            restaurant_name: r.name,
+            youtube_link: r.youtube_link as string || '',
+            // evaluation_results는 그대로 사용
+            evaluation_results: evaluationResults,
+            // restaurant_info 생성
+            restaurant_info: restaurantInfo,
+            // youtube_meta 처리 (JSON 직접 사용)
+            youtube_meta: r.youtube_meta || null,
+          };
+        });
+
+        setSearchResults(convertedData as unknown as EvaluationRecord[]);
       } catch (error) {
-        console.error('Search error:', error);
-        toast({ title: '검색 실패', variant: 'destructive' });
+        console.error('YouTube 제목 검색 실패:', error);
+        toast({
+          variant: 'destructive',
+          title: '검색 실패',
+          description: '영상 제목 검색 중 오류가 발생했습니다.',
+        });
+        setSearchResults(null);
       } finally {
         setIsSearching(false);
-        setLoading(false);
       }
     };
 
-    if (searchQuery) {
-      const timer = setTimeout(performFuzzySearch, 300);
-      return () => clearTimeout(timer);
-    } else {
-      // If search query is empty/cleared, ensure we are back to normal view
-      setSearchResults(null);
-      // fetchRecords() will be triggered by the main useEffect when !searchQuery
-    }
+    const debounceTimer = setTimeout(performFuzzySearch, 300);
+    return () => clearTimeout(debounceTimer);
   }, [searchQuery, toast]);
 
+  // 필터링 + 검색된 레코드
+  const filteredRecords = useMemo(() => {
+    // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
+    const baseRecords = searchResults || allRecords;
 
-  // Infinite Scroll Handler
-  const loadMoreRecords = () => {
-    if (!loadingMore && hasMore && !searchQuery) {
-      fetchRecords(true);
+    // selectedStatuses에 'deleted'가 포함되어 있으면 deleted만 보여줌
+    let filtered = selectedStatuses.includes('deleted' as EvaluationRecordStatus)
+      ? baseRecords.filter(r => r.status === 'deleted')
+      : baseRecords.filter(r => r.status !== 'deleted'); // deleted는 기본적으로 제외
+
+    // 상태 필터링 (evalFilters.status)
+    if (evalFilters.status) {
+      filtered = filtered.filter(r => {
+        let match = false;
+
+        switch (evalFilters.status) {
+          case 'geocoding_failed':
+            // 지오코딩 실패: geocoding_success가 false인 모든 레코드
+            match = !r.geocoding_success;
+            break;
+          case 'missing':
+            // Missing: is_missing이 true인 레코드
+            match = r.is_missing === true;
+            break;
+          case 'not_selected':
+            // 평가 미대상: is_not_selected가 true인 레코드
+            match = r.is_not_selected === true;
+            break;
+          case 'ready_for_approval':
+            // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드 + status가 pending이거나 hold인 경우만
+            match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+              r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+              r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+              r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+              r.geocoding_success === true &&
+              r.evaluation_results?.category_validity_TF?.eval_value === true &&
+              r.evaluation_results?.category_TF?.eval_value === true &&
+              (r.status === 'pending' || r.status === 'hold'); // 승인되지 않은 것만
+            break;
+          default:
+            // 일반 상태: status 필드와 일치하는 레코드
+            match = r.status === evalFilters.status;
+            break;
+        }
+
+        return match;
+      });
     }
-  };
 
-  // Scroll Listener
+    // 1. Visit Authenticity 필터 (0-3점)
+    if (evalFilters.visit_authenticity) {
+      const targetScore = parseInt(evalFilters.visit_authenticity);
+      filtered = filtered.filter(r =>
+        r.evaluation_results?.visit_authenticity?.eval_value === targetScore
+      );
+    }
+
+    // 2. RB Inference Score 필터 (0-2점)
+    if (evalFilters.rb_inference_score) {
+      const targetScore = parseInt(evalFilters.rb_inference_score);
+      filtered = filtered.filter(r =>
+        r.evaluation_results?.rb_inference_score?.eval_value === targetScore
+      );
+    }
+
+    // 3. RB Grounding TF 필터 (T/F)
+    if (evalFilters.rb_grounding_TF) {
+      const targetValue = evalFilters.rb_grounding_TF === 'True';
+      filtered = filtered.filter(r =>
+        r.evaluation_results?.rb_grounding_TF?.eval_value === targetValue
+      );
+    }
+
+    // 4. Review Faithfulness Score 필터 (0-1점)
+    if (evalFilters.review_faithfulness_score) {
+      const targetScore = parseFloat(evalFilters.review_faithfulness_score);
+      filtered = filtered.filter(r =>
+        r.evaluation_results?.review_faithfulness_score?.eval_value === targetScore
+      );
+    }
+
+    // 5. Geocoding Success 필터 (true/false_match/false_geocode)
+    if (evalFilters.geocoding_success) {
+      if (evalFilters.geocoding_success === 'true') {
+        // 지오코딩 성공
+        filtered = filtered.filter(r => r.geocoding_success === true);
+      } else if (evalFilters.geocoding_success === 'false_match') {
+        // 지오코딩 성공했으나 주소 매칭 실패
+        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage !== null);
+      } else if (evalFilters.geocoding_success === 'false_geocode') {
+        // 지오코딩 자체 실패
+        filtered = filtered.filter(r => r.geocoding_success === false && r.geocoding_false_stage === null);
+      }
+    }
+
+    // 6. Category Validity TF 필터 (T/F)
+    if (evalFilters.category_validity_TF) {
+      const targetValue = evalFilters.category_validity_TF === 'True';
+      filtered = filtered.filter(r =>
+        r.evaluation_results?.category_validity_TF?.eval_value === targetValue
+      );
+    }
+
+    // 7. Category TF 필터 (T/F)
+    if (evalFilters.category_TF) {
+      const targetValue = evalFilters.category_TF === 'True';
+      filtered = filtered.filter(r =>
+        r.evaluation_results?.category_TF?.eval_value === targetValue
+      );
+    }
+
+    // 8. Status 필터는 위에서 이미 처리됨
+
+    return filtered;
+  }, [allRecords, searchResults, selectedStatuses, evalFilters]);
+
+  // filteredRecords가 정의된 후에 useEffect 위치
+  useEffect(() => {
+    // 필터링된 레코드 내에서 현재 인덱스가 유효한지 확인
+    if (currentSlideIndex >= filteredRecords.length && filteredRecords.length > 0) {
+      setCurrentSlideIndex(0);
+    }
+  }, [filteredRecords.length, currentSlideIndex]);
+
+  // 더 많은 레코드 로드
+  const loadMoreRecords = useCallback(() => {
+    if (loadingMore || !hasMore) return;
+
+    setLoadingMore(true);
+    setTimeout(() => {
+      const currentLength = displayedRecords.length;
+      const newRecords = filteredRecords.slice(currentLength, currentLength + PAGE_SIZE);
+
+      setDisplayedRecords(prev => [...prev, ...newRecords]);
+      setHasMore(currentLength + PAGE_SIZE < filteredRecords.length);
+      setLoadingMore(false);
+    }, 100);
+  }, [displayedRecords.length, filteredRecords, loadingMore, hasMore]);
+
+  // 필터링 결과가 변경될 때마다 표시할 레코드 초기화
+  useEffect(() => {
+    setDisplayedRecords(filteredRecords.slice(0, PAGE_SIZE));
+    setHasMore(filteredRecords.length > PAGE_SIZE);
+  }, [filteredRecords]);
+
+  // 무한 스크롤 - Scroll Event 방식
   useEffect(() => {
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = scrollContainer;
-      if ((scrollTop + clientHeight) / scrollHeight > 0.8) {
+      const scrollPercentage = (scrollTop + clientHeight) / scrollHeight;
+
+      // 80% 이상 스크롤 시 다음 데이터 로드
+      if (scrollPercentage > 0.8 && hasMore && !loadingMore) {
         loadMoreRecords();
       }
     };
+
     scrollContainer.addEventListener('scroll', handleScroll);
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
-  }, [loadMoreRecords]); // loadMoreRecords depends on state
+  }, [hasMore, loadingMore, loadMoreRecords, displayedRecords.length, filteredRecords.length]);
 
-  // Update Record Helper
-  const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
-    setDisplayedRecords(prev => prev.map(r => r.id === recordId ? { ...r, ...updates } : r));
-    // Also update stats if status changed?
-    // Doing a full refetch of stats is safer but heavier. 
-    // Maybe just optimistic update or ignore for now.
-    // Ideally we re-fetch stats on mutation.
-    if (updates.status) {
-      fetchStats();
+  // 슬라이드 뷰에서 끝에 도달하면 추가 데이터 로드
+  useEffect(() => {
+    if (isAlternateView && hasMore && !loadingMore) {
+      // 현재 인덱스가 표시된 레코드의 끝부분(마지막 5개)에 도달하면 추가 로드
+      if (currentSlideIndex >= displayedRecords.length - 5) {
+        loadMoreRecords();
+      }
     }
+  }, [isAlternateView, currentSlideIndex, displayedRecords.length, hasMore, loadingMore, loadMoreRecords]);
+
+  // 전체 데이터 로드 (한 번만)
+  const loadAllRecords = useCallback(async () => {
+    try {
+      setLoading(true);
+
+      // 모든 레코드 조회 (restaurants 테이블에서)
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.warn('No data returned from restaurants');
+        setAllRecords([]);
+        setDisplayedRecords([]);
+        setStats({
+          total: 0,
+          pending: 0,
+          approved: 0,
+          ready_for_approval: 0,
+          hold: 0,
+          db_conflict: 0,
+          missing: 0,
+          geocoding_failed: 0,
+          not_selected: 0,
+          deleted: 0,
+        });
+        return;
+      }
+
+      // restaurants 테이블 데이터를 EvaluationRecord 형식으로 변환
+      const records = data.map((r: Record<string, unknown>) => {
+        // evaluation_results 변환
+        const evaluationResults = r.evaluation_results as Record<string, unknown> | null;
+
+        // restaurant_info 생성 (항상 생성)
+        const restaurantInfo = {
+          name: r.name as string,
+          phone: r.phone as string | null,
+          category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
+          origin_address: (r.origin_address as Record<string, unknown>)?.address as string || r.road_address as string || r.jibun_address as string || '',
+          origin_lat: (r.origin_address as Record<string, unknown>)?.lat as number || r.lat as number || 0,
+          origin_lng: (r.origin_address as Record<string, unknown>)?.lng as number || r.lng as number || 0,
+          reasoning_basis: r.reasoning_basis as string || '',
+          tzuyang_review: r.tzuyang_review as string || '',
+          naver_address_info: r.road_address || r.jibun_address ? {
+            road_address: r.road_address as string | null,
+            jibun_address: r.jibun_address as string || '',
+            english_address: r.english_address as string | null,
+            address_elements: r.address_elements,
+            x: r.lng?.toString() || '',
+            y: r.lat?.toString() || '',
+          } : null,
+        };
+
+        return {
+          ...r,
+          // 호환성을 위한 별칭 추가
+          restaurant_name: r.name,
+          youtube_link: r.youtube_link as string || '',
+          // evaluation_results는 그대로 사용 (JSONB 데이터)
+          evaluation_results: evaluationResults,
+          // restaurant_info 생성
+          restaurant_info: restaurantInfo,
+          // youtube_meta 처리
+          youtube_meta: r.youtube_meta || null,
+        };
+      });
+
+      setAllRecords(records as unknown as EvaluationRecord[]);
+
+      // 통계 계산 (deleted 제외, rejected 포함)
+      const typedRecords = records as unknown as EvaluationRecord[];
+      const deletedCount = typedRecords.filter(r => r.status === 'deleted').length;
+      const activeData = typedRecords.filter(r => r.status !== 'deleted');
+
+      const newStats: CategoryStats = {
+        total: activeData.length, // deleted 제외한 전체
+        pending: typedRecords.filter(r => r.status === 'pending').length,
+        approved: typedRecords.filter(r => r.status === 'approved').length,
+        hold: typedRecords.filter(r => r.status === 'hold').length,
+        missing: typedRecords.filter(r => r.is_missing).length,
+        db_conflict: typedRecords.filter(r => r.status === 'db_conflict').length,
+        ready_for_approval: typedRecords.filter(r =>
+          r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+          r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+          r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+          r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+          r.geocoding_success === true &&
+          r.evaluation_results?.category_validity_TF?.eval_value === true &&
+          r.evaluation_results?.category_TF?.eval_value === true &&
+          (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
+        ).length,
+        geocoding_failed: typedRecords.filter(r =>
+          !r.geocoding_success  // 지오코딩이 실패한 모든 레코드 (deleted 제외)
+        ).length,
+        not_selected: typedRecords.filter(r => r.is_not_selected).length,
+        deleted: deletedCount,
+      };
+      setStats(newStats);
+
+    } catch (error: unknown) {
+      console.error('데이터 로드 실패:', error);
+      toast({
+        variant: 'destructive',
+        title: '데이터 로드 실패',
+        description: error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.',
+      });
+      // 에러 발생 시에도 빈 배열로 설정하여 UI가 렌더링되도록
+      setAllRecords([]);
+      setDisplayedRecords([]);
+      setStats({
+        total: 0,
+        pending: 0,
+        approved: 0,
+        hold: 0,
+        missing: 0,
+        db_conflict: 0,
+        ready_for_approval: 0,
+        geocoding_failed: 0,
+        not_selected: 0,
+        deleted: 0,
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    // 이미 데이터를 로드했으면 건너뛰기 (컴포넌트 재마운트 시 중복 로드 방지)
+    if (hasLoadedData.current) {
+      return;
+    }
+
+    if (user && isAdmin && !authLoading) {
+      hasLoadedData.current = true;
+      loadAllRecords();
+    }
+    // loadAllRecords는 의존성에서 제외 (무한 루프 방지)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isAdmin, authLoading]);
+
+  // 개별 레코드 업데이트 (새로고침 없이 상태 반영)
+  const updateRecordInState = (recordId: string, updates: Partial<EvaluationRecord>) => {
+    setAllRecords(prev =>
+      prev.map(r => r.id === recordId ? { ...r, ...updates } : r)
+    );
   };
 
-  const recalculatedStats = useCallback(() => {
-    // No-op for server side stats, we use fetchStats
-    fetchStats();
-  }, [fetchStats]);
+  // 레코드 제거 (상태에서만)
+  const removeRecordFromState = (recordId: string) => {
+    setAllRecords(prev => prev.filter(r => r.id !== recordId));
+  };
+
+  // 통계 재계산 (현재 allRecords 기준)
+  const recalculateStats = () => {
+    const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
+    const activeData = allRecords.filter(r => r.status !== 'deleted');
+
+    const newStats: CategoryStats = {
+      total: activeData.length,
+      pending: allRecords.filter(r => r.status === 'pending').length,
+      approved: allRecords.filter(r => r.status === 'approved').length,
+      hold: allRecords.filter(r => r.status === 'hold').length,
+      db_conflict: allRecords.filter(r => r.status === 'db_conflict').length,
+      ready_for_approval: allRecords.filter(r =>
+        r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+        r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+        r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+        r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+        r.geocoding_success === true &&
+        r.evaluation_results?.category_validity_TF?.eval_value === true &&
+        r.evaluation_results?.category_TF?.eval_value === true &&
+        (r.status === 'pending' || r.status === 'hold') // 승인되지 않은 것만
+      ).length,
+      missing: allRecords.filter(r => r.is_missing).length,
+      geocoding_failed: allRecords.filter(r =>
+        !r.geocoding_success  // 지오코딩이 실패한 모든 레코드
+      ).length,
+      not_selected: allRecords.filter(r => r.is_not_selected).length,
+      deleted: deletedCount,
+    };
+
+    setStats(newStats);
+  };
+
+  // allRecords가 변경될 때마다 통계 재계산
+  useEffect(() => {
+    if (allRecords.length > 0) {
+      recalculateStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allRecords]);
 
   // 승인 핸들러 (오류 체크 포함)
   const handleApprove = async (record: EvaluationRecord) => {
@@ -918,7 +1027,7 @@ export default function AdminEvaluationPage() {
   };
 
   // 인증 로딩 중이거나 권한 확인 중일 때
-  if (authLoading || (loading && displayedRecords.length === 0)) {
+  if (authLoading || (loading && allRecords.length === 0)) {
     return (
       <GlobalLoader
         message="관리자 데이터 검수 로딩 중..."
@@ -986,7 +1095,7 @@ export default function AdminEvaluationPage() {
               </Button>
             </div>
             <p className="text-muted-foreground text-sm mt-1">
-              필터링: {totalCount}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
+              필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
             </p>
           </div>
 
@@ -1061,7 +1170,7 @@ export default function AdminEvaluationPage() {
                   {/* 모든 데이터 로드 완료 메시지 */}
                   {!hasMore && displayedRecords.length > 0 && (
                     <div className="text-center py-4 text-muted-foreground text-sm">
-                      모든 레코드를 불러왔습니다 ({displayedRecords.length}개 / 전체 {totalCount}개)
+                      모든 레코드를 불러왔습니다 ({displayedRecords.length}개 / 전체 {filteredRecords.length}개)
                     </div>
                   )}
                 </>
