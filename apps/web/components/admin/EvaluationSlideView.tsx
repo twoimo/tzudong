@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +49,8 @@ export function EvaluationSlideView({
     const currentRecord = records[currentIndex];
     const { toast } = useToast();
     const [videoError, setVideoError] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    // const [videoUrl, setVideoUrl] = useState<string | null>(null); // Removed: Derived state used instead
+    const [overrideVideoUrl, setOverrideVideoUrl] = useState<string | null>(null); // New: For fallbacks
     const [useFallback, setUseFallback] = useState(false);
     const [fallbackIndex, setFallbackIndex] = useState(0);
 
@@ -81,40 +82,33 @@ export function EvaluationSlideView({
 
     const videoId = getYoutubeVideoId(currentRecord?.youtube_link);
 
-    // 비디오 URL 초기화 로직
-    // 레코드가 바뀌면 초기 상태(YouTube Embed)로 리셋
-    useEffect(() => {
-        if (currentRecord?.youtube_link) {
-            const vidId = getYoutubeVideoId(currentRecord.youtube_link);
-            if (vidId) {
-                setVideoUrl(`https://www.youtube.com/embed/${vidId}?autoplay=1&rel=0`);
-                setVideoError(false);
-                setUseFallback(false);
-                setFallbackIndex(0);
-            } else {
-                setVideoUrl(null);
-            }
+    // Derived State for Default Video URL (No useEffect delay)
+    const defaultVideoUrl = useMemo(() => {
+        if (videoId) {
+            return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
         }
-    }, [currentRecord?.youtube_link, currentRecord?.id]);
+        return null;
+    }, [videoId]);
+
+    // Final Video URL to display
+    const finalVideoUrl = overrideVideoUrl || defaultVideoUrl;
+
 
     // 에러 핸들링 (자동) - iframe onError에서 호출됨
     const handleVideoError = () => {
         console.log("Video Error Triggered. Current Fallback Index:", fallbackIndex);
 
-        if (currentRecord?.youtube_link) {
-            const vidId = getYoutubeVideoId(currentRecord.youtube_link);
-            if (vidId) {
-                // 아직 모든 Fallback을 다 시도하지 않았다면 다음 Fallback 시도
-                if (fallbackIndex < FALLBACK_INSTANCES.length) {
-                    const nextInstance = FALLBACK_INSTANCES[fallbackIndex];
-                    console.log(`Switching to fallback instance: ${nextInstance}`);
+        if (videoId) {
+            // 아직 모든 Fallback을 다 시도하지 않았다면 다음 Fallback 시도
+            if (fallbackIndex < FALLBACK_INSTANCES.length) {
+                const nextInstance = FALLBACK_INSTANCES[fallbackIndex];
+                console.log(`Switching to fallback instance: ${nextInstance}`);
 
-                    setVideoUrl(`${nextInstance}${vidId}?autoplay=1`);
-                    setUseFallback(true);
-                    setFallbackIndex(prev => prev + 1);
-                    setVideoError(false); // 재시도 중이므로 에러 해제
-                    return;
-                }
+                setOverrideVideoUrl(`${nextInstance}${videoId}?autoplay=1`);
+                setUseFallback(true);
+                setFallbackIndex(prev => prev + 1);
+                setVideoError(false); // 재시도 중이므로 에러 해제
+                return;
             }
         }
 
@@ -127,7 +121,7 @@ export function EvaluationSlideView({
         if (videoId) {
             // 첫 번째 Fallback 인스턴스로 즉시 전환 (또는 현재 실패했다면 다음거)
             const instance = FALLBACK_INSTANCES[fallbackIndex % FALLBACK_INSTANCES.length];
-            setVideoUrl(`${instance}${videoId}?autoplay=1`);
+            setOverrideVideoUrl(`${instance}${videoId}?autoplay=1`);
             setUseFallback(true);
             setVideoError(false);
             setFallbackIndex(prev => prev + 1); // 다음을 준비
@@ -228,15 +222,15 @@ export function EvaluationSlideView({
             </div>
 
             {/* Main Content Area - Split View */}
-            <div className="flex-1 flex overflow-hidden">
+            <div className="flex-1 flex overflow-hidden" key={currentRecord.id}>
                 {/* Left: Video Player */}
                 <div className="w-[50%] bg-black flex flex-col justify-center relative group">
-                    {videoUrl ? (
+                    {finalVideoUrl ? (
                         <>
                             <iframe
                                 width="100%"
                                 height="100%"
-                                src={videoUrl}
+                                src={finalVideoUrl}
                                 title="Video player"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                                 allowFullScreen
