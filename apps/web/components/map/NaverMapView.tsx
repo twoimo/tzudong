@@ -189,12 +189,14 @@ const NaverMapView = memo(({
         const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
 
         // 2. 현재 UI 상태에 따른 오프셋 계산
+        // isPanelOpen: 맛집 상세 패널 열림 여부
+        // externalPanelOpen: false이면 외부 패널(마이페이지 등)이 열려있음을 의미 (home-client.tsx 로직 참조)
         const isDetailPanelOpen = isPanelOpen;
+        const isExternalPanelOpen = externalPanelOpen === false;
 
-        // activePanel prop이 있으면 외부 패널이 열린 상태로 간주
         const isRightPanelVisible =
             (!isPanelCollapsed) &&
-            (isDetailPanelOpen || (activePanel && activePanel !== 'map' && activePanel !== 'control'));
+            (isDetailPanelOpen || isExternalPanelOpen);
 
         const rightPanelWidth = isRightPanelVisible ? PANEL_WIDTH : 0;
 
