@@ -142,7 +142,7 @@ export default function HomeControlPanel({
                     hover:shadow-xl hover:border-primary/50
                 `}
                 style={{
-                    minWidth: isExpanded ? EXPANDED_PANEL_WIDTH : undefined
+                    // minWidth 제거: 콘텐츠 크기에 맞게 자동 조절
                 }}
             >
                 {isExpanded ? (
