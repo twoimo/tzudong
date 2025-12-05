@@ -254,7 +254,6 @@ const NaverMapView = memo(({
 
         // 상태가 변하지 않으면 리사이즈만 트리거
         if (isCurrentlyOpen === wasPreviouslyOpen) {
-            // 패널 상태 변화 없이 리사이즈만 필요한 경우
             const map = mapInstanceRef.current;
             if (map) {
                 naver.maps.Event.trigger(map, 'resize');
@@ -271,18 +270,20 @@ const NaverMapView = memo(({
 
             naver.maps.Event.trigger(map, 'resize');
 
+            // 선택된 맛집이 없으면 리사이즈만 하고 중심 이동은 하지 않음 (누적 방지)
+            const hasRestaurant = !!(selectedRestaurant?.lat && selectedRestaurant?.lng);
+            if (!hasRestaurant) {
+                return;
+            }
+
             try {
                 const projection = map.getProjection();
 
-                // 선택된 맛집이 있으면 마커 좌표를 기준으로, 없으면 현재 중심점 사용
-                const hasRestaurant = !!(selectedRestaurant?.lat && selectedRestaurant?.lng);
-                const baseCenter = hasRestaurant
-                    ? new naver.maps.LatLng(selectedRestaurant!.lat!, selectedRestaurant!.lng!)
-                    : map.getCenter();
+                // 항상 마커의 원본 좌표를 기준으로 오프셋 계산 (누적 불가)
+                const markerLatLng = new naver.maps.LatLng(selectedRestaurant!.lat!, selectedRestaurant!.lng!);
+                const centerPoint = projection.fromCoordToOffset(markerLatLng);
 
-                const centerPoint = projection.fromCoordToOffset(baseCenter);
-
-                // 패널 오프셋 계산 (마커 좌표 기준으로 계산하므로 누적되지 않음)
+                // 패널 열림 상태에 따라 오프셋 적용
                 const offsetX = isCurrentlyOpen ? panelWidth / 2 : 0;
 
                 const offsetPoint = new naver.maps.Point(
@@ -291,23 +292,16 @@ const NaverMapView = memo(({
                 );
                 const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
 
-                // 자연스러운 이징 애니메이션 (easeOutCubic 효과)
                 map.panTo(offsetLatLng, {
                     duration: 250,
                     easing: 'easeOutCubic'
                 });
             } catch (e) {
-                // 프로젝션 준비 안됨 - 단순 panTo 시도
-                const map = mapInstanceRef.current;
-                if (map) {
-                    map.panTo(map.getCenter(), { duration: 250 });
-                }
+                // 프로젝션 오류 - 무시
             }
         };
 
-        // 패널 트랜지션과 동시에 시작 (더 자연스러운 동기화)
         const timer = setTimeout(handleMapCenter, 50);
-
         return () => clearTimeout(timer);
     }, [isPanelOpen, externalPanelOpen, isPanelCollapsed, selectedRestaurant]);
 
@@ -339,26 +333,28 @@ const NaverMapView = memo(({
 
         const map = mapInstanceRef.current;
         const PANEL_WIDTH = 400;
-        const SIDEBAR_DIFF = 192; // 열림(256px) - 닫힘(64px)
-        const sidebarOffsetX = isSidebarOpen ? SIDEBAR_DIFF / 2 : -SIDEBAR_DIFF / 2;
 
         const timer = setTimeout(() => {
             naver.maps.Event.trigger(map, 'resize');
 
+            // 선택된 맛집이 없으면 리사이즈만 (누적 방지)
+            const hasRestaurant = !!(selectedRestaurant?.lat && selectedRestaurant?.lng);
+            if (!hasRestaurant) {
+                return;
+            }
+
             try {
                 const projection = map.getProjection();
-                const hasRestaurant = !!(selectedRestaurant?.lat && selectedRestaurant?.lng);
-                const isRightPanelOpen = (hasRestaurant && !isPanelCollapsed) || externalPanelOpen === false;
+                const isRightPanelOpen = !isPanelCollapsed || externalPanelOpen === false;
 
-                // 중심점 결정: 맛집 선택 시 마커 위치, 아니면 현재 중심
-                const baseCenter = hasRestaurant
-                    ? new naver.maps.LatLng(selectedRestaurant!.lat!, selectedRestaurant!.lng!)
-                    : map.getCenter();
+                // 항상 마커의 원본 좌표를 기준으로 오프셋 계산 (누적 불가)
+                const markerLatLng = new naver.maps.LatLng(selectedRestaurant!.lat!, selectedRestaurant!.lng!);
+                const centerPoint = projection.fromCoordToOffset(markerLatLng);
 
-                const centerPoint = projection.fromCoordToOffset(baseCenter);
-                const totalOffsetX = sidebarOffsetX + (isRightPanelOpen ? PANEL_WIDTH / 2 : 0);
+                // 우측 패널 열림 상태에 따라 오프셋 적용 (사이드바는 리사이즈로 자동 처리)
+                const offsetX = isRightPanelOpen ? PANEL_WIDTH / 2 : 0;
 
-                const offsetPoint = new naver.maps.Point(centerPoint.x + totalOffsetX, centerPoint.y);
+                const offsetPoint = new naver.maps.Point(centerPoint.x + offsetX, centerPoint.y);
                 const targetLatLng = projection.fromOffsetToCoord(offsetPoint);
 
                 map.panTo(targetLatLng, { duration: 300, easing: 'easeOutCubic' });
@@ -552,11 +548,12 @@ const NaverMapView = memo(({
         const map = mapInstanceRef.current;
         const panelWidth = 400;
 
-        // 패널이 열려있으면 오프셋 적용
-        const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
-
+        // 지역 중심 좌표 (절대 좌표 - 누적 불가)
         const targetCenter = new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]);
         map.setZoom(regionConfig.zoom);
+
+        // 패널 열림 상태 확인 (현재 값 참조)
+        const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
 
         if (isAnyPanelOpen) {
             // 패널 오프셋 적용하여 중심 이동
@@ -574,7 +571,8 @@ const NaverMapView = memo(({
         } else {
             map.setCenter(targetCenter);
         }
-    }, [selectedRegion, isPanelOpen, externalPanelOpen, isPanelCollapsed]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedRegion]); // 지역 변경 시에만 실행 (패널 상태 변경은 별도 로직에서 처리)
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
