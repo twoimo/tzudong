@@ -211,7 +211,7 @@ export function EvaluationSlideView({
             {/* Main Content Area - Split View */}
             <div className="flex-1 flex overflow-hidden">
                 {/* Left: Video Player */}
-                <div className="w-[50%] bg-black flex flex-col justify-center items-center relative overflow-hidden group">
+                <div className="w-[50%] bg-gray-100 flex flex-col justify-start items-center relative overflow-hidden group">
                     {/* Background Thumbnail for Popup Mode */}
                     {playerType === 'popup' && videoId && (
                         <div
@@ -221,7 +221,7 @@ export function EvaluationSlideView({
                     )}
 
                     {videoUrl && !videoError && playerType !== 'popup' ? (
-                        <div className="w-full aspect-video z-10">
+                        <div className="w-full aspect-video z-10 shadow-lg">
                             <iframe
                                 width="100%"
                                 height="100%"
@@ -229,7 +229,7 @@ export function EvaluationSlideView({
                                 title="Video player"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
                                 allowFullScreen
-                                className="w-full h-full"
+                                className="w-full h-full block"
                                 onError={handleVideoError}
                             />
                         </div>
