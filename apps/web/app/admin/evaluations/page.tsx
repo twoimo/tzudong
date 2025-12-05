@@ -81,6 +81,7 @@ export default function AdminEvaluationPage() {
   const [pendingApprovalRecord, setPendingApprovalRecord] = useState<EvaluationRecord | null>(null);
   const [conflictingRestaurantInfo, setConflictingRestaurantInfo] = useState<{
     name: string;
+    address: string;
   } | null>(null);
 
   // 테이블 뷰 토글 상태
