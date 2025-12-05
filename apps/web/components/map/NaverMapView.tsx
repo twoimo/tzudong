@@ -343,47 +343,52 @@ const NaverMapView = memo(({
             naver.maps.Event.trigger(map, 'resize');
 
             try {
-                // ref에서 최신 상태 가져오기
-                const { selectedRestaurant: currentRestaurant, isPanelOpen: panelOpen, isPanelCollapsed: panelCollapsed } = currentStateRef.current;
+                // 상태 확인
+                const hasSelectedRestaurant = !!(selectedRestaurant && selectedRestaurant.lat && selectedRestaurant.lng);
+                // 패널이 완전히 열려있는지 (접히지 않음)
+                const isDetailPanelExpanded = hasSelectedRestaurant && !isPanelCollapsed;
+                // 외부 패널 (공지사항, 마이페이지 등) 열려있는지
+                const isExternalPanelOpen = externalPanelOpen === false;
+                // 어떤 우측 패널이든 완전히 열려있는지 (오프셋 필요)
+                const isAnyRightPanelExpanded = isDetailPanelExpanded || isExternalPanelOpen;
 
-                console.log('[SidebarToggle] 상태:', {
-                    hasRestaurant: !!currentRestaurant,
-                    panelOpen,
-                    panelCollapsed,
+                console.log('[SidebarToggle] Props 상태:', {
+                    selectedRestaurant: selectedRestaurant?.name,
+                    hasSelectedRestaurant,
+                    isPanelCollapsed,
+                    externalPanelOpen,
+                    isDetailPanelExpanded,
+                    isExternalPanelOpen,
+                    isAnyRightPanelExpanded,
                     isSidebarOpen
                 });
 
-                if (currentRestaurant && currentRestaurant.lat && currentRestaurant.lng) {
-                    // 맛집이 선택된 상태 - 패널이 열려있는지 확인
-                    const isDetailPanelOpen = panelOpen && !panelCollapsed;
-                    const restaurantLatLng = new naver.maps.LatLng(currentRestaurant.lat, currentRestaurant.lng);
+                // 1. 맛집이 선택되어 있으면 마커를 중앙에 배치 (사이드바 오프셋 + 패널 오프셋)
+                if (hasSelectedRestaurant) {
+                    const restaurantLatLng = new naver.maps.LatLng(selectedRestaurant!.lat!, selectedRestaurant!.lng!);
+                    const projection = map.getProjection();
+                    const centerPoint = projection.fromCoordToOffset(restaurantLatLng);
 
-                    console.log('[SidebarToggle] 맛집 선택됨:', currentRestaurant.name, 'panelOpen:', isDetailPanelOpen);
+                    // 패널 오프셋 (패널이 열려있으면 적용)
+                    const panelOffset = isAnyRightPanelExpanded ? (panelWidth / 2) : 0;
+                    // 사이드바 오프셋은 항상 적용 (사이드바 토글 보정)
+                    const totalOffsetX = panelOffset + sidebarOffsetX;
 
-                    if (isDetailPanelOpen) {
-                        // 우측 패널이 열려있으면 패널 오프셋 적용
-                        const projection = map.getProjection();
-                        const centerPoint = projection.fromCoordToOffset(restaurantLatLng);
-                        const offsetPoint = new naver.maps.Point(
-                            centerPoint.x + (panelWidth / 2),
-                            centerPoint.y
-                        );
-                        const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+                    const offsetPoint = new naver.maps.Point(
+                        centerPoint.x + totalOffsetX,
+                        centerPoint.y
+                    );
+                    const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
 
-                        map.panTo(offsetLatLng, {
-                            duration: 300,
-                            easing: 'easeOutCubic'
-                        });
-                    } else {
-                        // 패널이 닫혀있으면 마커 위치로 이동
-                        map.panTo(restaurantLatLng, {
-                            duration: 300,
-                            easing: 'easeOutCubic'
-                        });
-                    }
-                } else {
-                    // 선택된 맛집이 없으면 현재 중심 기준으로 오프셋 조정
-                    console.log('[SidebarToggle] 맛집 미선택, 현재 중심 기준 오프셋 적용');
+                    console.log('[SidebarToggle] 실행: 맛집 마커 중앙 (패널:', panelOffset, '사이드바:', sidebarOffsetX, ')');
+
+                    map.panTo(offsetLatLng, {
+                        duration: 300,
+                        easing: 'easeOutCubic'
+                    });
+                }
+                // 2. 맛집 미선택 + 외부 패널 열림 - 사이드바 오프셋 적용
+                else if (isExternalPanelOpen) {
                     const currentCenter = map.getCenter();
                     const projection = map.getProjection();
                     const centerPoint = projection.fromCoordToOffset(currentCenter);
@@ -394,6 +399,27 @@ const NaverMapView = memo(({
                     );
                     const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
 
+                    console.log('[SidebarToggle] 실행: 외부 패널 + 사이드바 오프셋');
+
+                    map.panTo(offsetLatLng, {
+                        duration: 300,
+                        easing: 'easeOutCubic'
+                    });
+                }
+                // 3. 맛집 미선택 + 패널 닫힘 - 사이드바 오프셋만
+                else {
+                    const currentCenter = map.getCenter();
+                    const projection = map.getProjection();
+                    const centerPoint = projection.fromCoordToOffset(currentCenter);
+
+                    const offsetPoint = new naver.maps.Point(
+                        centerPoint.x + sidebarOffsetX,
+                        centerPoint.y
+                    );
+                    const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+
+                    console.log('[SidebarToggle] 실행: 사이드바 오프셋만');
+
                     map.panTo(offsetLatLng, {
                         duration: 300,
                         easing: 'easeOutCubic'
@@ -402,9 +428,10 @@ const NaverMapView = memo(({
             } catch (e) {
                 console.error('[SidebarToggle] 오류:', e);
             }
-        }, 150); // 딜레이를 100ms -> 150ms로 증가
+        }, 150);
 
         return () => clearTimeout(timer);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isSidebarOpen]); // 오직 사이드바 토글 시에만 실행
 
     const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
