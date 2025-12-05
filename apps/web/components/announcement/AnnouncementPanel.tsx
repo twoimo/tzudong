@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Megaphone, Plus, Edit2, Trash2, Calendar, Eye, EyeOff, Bell, BellOff, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -46,6 +46,8 @@ export default function AnnouncementPanel({
         showOnBanner: false,
         priority: 50,
     });
+    const [currentPage, setCurrentPage] = useState(1);
+    const ITEMS_PER_PAGE = 5;
 
     // initialAnnouncement가 변경되면 상세보기로 전환
     useEffect(() => {
@@ -97,6 +99,10 @@ export default function AnnouncementPanel({
                 a.id === id ? { ...a, isActive: !a.isActive, updatedAt: new Date().toISOString() } : a
             )
         );
+        // 상세보기 중인 공지사항도 업데이트
+        if (selectedAnnouncement?.id === id) {
+            setSelectedAnnouncement(prev => prev ? { ...prev, isActive: !prev.isActive, updatedAt: new Date().toISOString() } : null);
+        }
         toast.success('공지사항 상태가 변경되었습니다');
     };
 
@@ -106,6 +112,10 @@ export default function AnnouncementPanel({
                 a.id === id ? { ...a, showOnBanner: !a.showOnBanner, updatedAt: new Date().toISOString() } : a
             )
         );
+        // 상세보기 중인 공지사항도 업데이트
+        if (selectedAnnouncement?.id === id) {
+            setSelectedAnnouncement(prev => prev ? { ...prev, showOnBanner: !prev.showOnBanner, updatedAt: new Date().toISOString() } : null);
+        }
         toast.success('배너 노출 상태가 변경되었습니다');
     };
 
@@ -173,9 +183,14 @@ export default function AnnouncementPanel({
     };
 
     // 표시할 공지사항 (관리자: 우선순위 순, 사용자: 활성화된 것만)
-    const displayAnnouncements = isAdmin
+    const allDisplayAnnouncements = isAdmin
         ? announcements.sort((a, b) => b.priority - a.priority)
         : announcements.filter(a => a.isActive).sort((a, b) => b.priority - a.priority);
+
+    // 페이지네이션 계산
+    const totalPages = Math.ceil(allDisplayAnnouncements.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const displayAnnouncements = allDisplayAnnouncements.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
     return (
         <div className="h-full flex flex-col bg-background border-l border-border relative">
@@ -361,6 +376,51 @@ export default function AnnouncementPanel({
                                     </Card>
                                 ))
                             )}
+
+                            {/* 페이지네이션 */}
+                            {totalPages > 1 && (
+                                <div className="flex items-center justify-center gap-2 pt-2">
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => setCurrentPage(1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronsLeft className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground px-2">
+                                        {currentPage} / {totalPages}
+                                    </span>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={() => setCurrentPage(totalPages)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        <ChevronsRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     </ScrollArea>
                 )}
@@ -395,23 +455,59 @@ export default function AnnouncementPanel({
 
                                     {/* 관리자 액션 */}
                                     {isAdmin && (
-                                        <div className="flex gap-2 pt-4 border-t border-border">
+                                        <div className="grid grid-cols-2 gap-2 pt-4 border-t border-border">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleToggleActive(selectedAnnouncement.id)}
+                                                className="gap-1 text-xs"
+                                            >
+                                                {selectedAnnouncement.isActive ? (
+                                                    <>
+                                                        <EyeOff className="h-3 w-3" />
+                                                        비활성화
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Eye className="h-3 w-3" />
+                                                        활성화
+                                                    </>
+                                                )}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleToggleBanner(selectedAnnouncement.id)}
+                                                className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
+                                            >
+                                                {selectedAnnouncement.showOnBanner ? (
+                                                    <>
+                                                        <BellOff className="h-3 w-3" />
+                                                        배너해제
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Bell className="h-3 w-3" />
+                                                        배너노출
+                                                    </>
+                                                )}
+                                            </Button>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleEdit(selectedAnnouncement)}
-                                                className="gap-1"
+                                                className="gap-1 text-xs"
                                             >
-                                                <Edit2 className="h-4 w-4" />
+                                                <Edit2 className="h-3 w-3" />
                                                 수정
                                             </Button>
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 onClick={() => handleDelete(selectedAnnouncement.id)}
-                                                className="gap-1 text-destructive hover:text-destructive"
+                                                className="gap-1 text-xs text-destructive hover:text-destructive"
                                             >
-                                                <Trash2 className="h-4 w-4" />
+                                                <Trash2 className="h-3 w-3" />
                                                 삭제
                                             </Button>
                                         </div>

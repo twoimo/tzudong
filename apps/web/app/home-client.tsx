@@ -60,7 +60,6 @@ const AnnouncementPanel = dynamic(
     { ssr: false }
 );
 
-import AnnouncementBanner from '@/components/announcement/AnnouncementBanner';
 import { Announcement } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
@@ -74,7 +73,7 @@ export default function HomeClient() {
 
     // 통합 패널 상태 관리
     // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
-    type PanelType = 'mypage' | 'adminSubmissions' | 'adminReviews' | 'adminAnnouncements' | 'announcementDetail' | null;
+    type PanelType = 'mypage' | 'adminSubmissions' | 'adminReviews' | 'announcement' | null;
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
@@ -191,20 +190,29 @@ export default function HomeClient() {
 
         const handleAdminAnnouncementsOpen = () => {
             if (isAdmin) {
-                openPanel('adminAnnouncements');
+                setSelectedAnnouncement(null); // 목록부터 시작
+                openPanel('announcement');
             }
+        };
+
+        const handleAnnouncementDetailOpen = (e: Event) => {
+            const customEvent = e as CustomEvent<Announcement>;
+            setSelectedAnnouncement(customEvent.detail);
+            openPanel('announcement');
         };
 
         window.addEventListener('openMyPage', handleMyPageOpen);
         window.addEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
         window.addEventListener('openAdminReviews', handleAdminReviewsOpen);
         window.addEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
+        window.addEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
 
         return () => {
             window.removeEventListener('openMyPage', handleMyPageOpen);
             window.removeEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
             window.removeEventListener('openAdminReviews', handleAdminReviewsOpen);
             window.removeEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
+            window.removeEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
         };
     }, [isAdmin]);
 
@@ -224,15 +232,6 @@ export default function HomeClient() {
                     state.setSearchedRestaurant(null);
                     setMapMode(mode);
                 }}
-            />
-
-            {/* 공지사항 배너 - 지도 상단 */}
-            <AnnouncementBanner
-                onAnnouncementClick={(announcement) => {
-                    setSelectedAnnouncement(announcement);
-                    openPanel('announcementDetail');
-                }}
-                rightPanelWidth={rightPanelWidth}
             />
 
             <HomeControlPanel
@@ -360,7 +359,7 @@ export default function HomeClient() {
 
             {/* 공지사항 패널 (관리자/사용자 통합) */}
             <RightPanelWrapper
-                isOpen={activeRightPanel === 'adminAnnouncements' || activeRightPanel === 'announcementDetail'}
+                isOpen={activeRightPanel === 'announcement'}
                 isCollapsed={isPanelCollapsed}
             >
                 <AnnouncementPanel
@@ -368,8 +367,8 @@ export default function HomeClient() {
                     onClose={closeAllPanels}
                     onToggleCollapse={togglePanelCollapse}
                     isCollapsed={isPanelCollapsed}
-                    isAdmin={isAdmin && activeRightPanel === 'adminAnnouncements'}
-                    initialAnnouncement={activeRightPanel === 'announcementDetail' ? selectedAnnouncement : null}
+                    isAdmin={isAdmin}
+                    initialAnnouncement={selectedAnnouncement}
                 />
             </RightPanelWrapper>
         </>

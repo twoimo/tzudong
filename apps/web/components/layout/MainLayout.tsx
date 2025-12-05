@@ -15,6 +15,7 @@ import { useLayout } from '@/contexts/LayoutContext';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { supabase } from '@/integrations/supabase/client';
+import { Announcement } from '@/types/announcement';
 
 export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
@@ -113,6 +114,12 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     isCenteredLayout={isCenteredLayout}
                     onToggleCenteredLayout={shouldShowCenteredLayoutButton ? () => setIsCenteredLayout(!isCenteredLayout) : undefined}
                     isAdmin={isAdmin}
+                    onAnnouncementClick={(announcement: Announcement) => {
+                        // 홈 페이지에서 공지사항 패널 열기
+                        if (pathname === '/') {
+                            window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: announcement }));
+                        }
+                    }}
                 />
 
                 <main className={cn(

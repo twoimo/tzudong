@@ -7,19 +7,22 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import AdBanner from "./AdBanner";
+import { memo, useCallback, useMemo } from "react";
+import { useHydration } from "@/hooks/useHydration";
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
-const Sidebar = ({ isOpen }: SidebarProps) => {
+const SidebarComponent = ({ isOpen }: SidebarProps) => {
   const router = useRouter();
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { user, isAdmin } = useAuth();
+  const isHydrated = useHydration();
 
-  // 레스토랑 데이터 프리페치 함수
-  const prefetchRestaurants = async () => {
+  // 레스토랑 데이터 프리페치 함수 (useCallback으로 메모이제이션)
+  const prefetchRestaurants = useCallback(async () => {
     await queryClient.prefetchQuery({
       queryKey: ["restaurants", undefined, undefined, undefined, undefined, undefined, undefined],
       queryFn: async () => {
@@ -33,23 +36,24 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       },
       staleTime: 5 * 60 * 1000,
     });
-  };
+  }, [queryClient]);
 
-  // 기본 메뉴 항목
-  const baseMenuItems = [
-    { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
-    { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
-    { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
-    { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
-  ];
+  // 메뉴 아이템 메모이제이션
+  const menuItems = useMemo(() => {
+    const baseMenuItems = [
+      { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
+      { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
+      { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
+      { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
+    ];
 
-  // 관리자 메뉴 (데이터 검수 - 월 서버 운영 비용 아래에 표시)
-  const adminMenuItems = (user && isAdmin) ? [
-    { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
-  ] : [];
+    // 관리자 메뉴 (hydration 완료 후에만 표시)
+    const adminMenuItems = (isHydrated && user && isAdmin) ? [
+      { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
+    ] : [];
 
-  // 모든 메뉴 합치기
-  const menuItems = [...baseMenuItems, ...adminMenuItems];
+    return [...baseMenuItems, ...adminMenuItems];
+  }, [router, isHydrated, user, isAdmin]);
 
   return (
     <aside
@@ -127,7 +131,10 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       </nav>
 
       {isOpen && (
-        <div className="p-4 space-y-4 relative z-10">
+        <div className={cn(
+          "p-4 space-y-4 relative z-10 transition-opacity duration-300",
+          isHydrated ? "opacity-100" : "opacity-0"
+        )}>
           {/* 광고 배너 */}
           <AdBanner />
 
@@ -143,5 +150,9 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     </aside>
   );
 };
+
+// React.memo로 래핑하여 isOpen이 변경되지 않으면 리렌더링 방지
+const Sidebar = memo(SidebarComponent);
+Sidebar.displayName = "Sidebar";
 
 export default Sidebar;

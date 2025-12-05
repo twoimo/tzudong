@@ -1,7 +1,7 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter, ClipboardList, MessageSquare, Megaphone } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +18,8 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
+import { getBannerAnnouncements, Announcement } from "@/types/announcement";
+import { useHydration } from "@/hooks/useHydration";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -29,12 +31,62 @@ interface HeaderProps {
   isCenteredLayout?: boolean;
   onToggleCenteredLayout?: () => void;
   isAdmin?: boolean;
+  onAnnouncementClick?: (announcement: Announcement) => void;
 }
 
-const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false }: HeaderProps) => {
+const BANNER_ROTATION_INTERVAL = 5000;
+
+const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
+  const isHydrated = useHydration();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
+
+  // 공지 배너 상태
+  const [bannerAnnouncements, setBannerAnnouncements] = useState<Announcement[]>([]);
+  const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+  const [isBannerPaused, setIsBannerPaused] = useState(false);
+
+  useEffect(() => {
+    const dismissed = sessionStorage.getItem('announcementBannerDismissed');
+    if (dismissed) {
+      setIsBannerDismissed(true);
+    }
+    setBannerAnnouncements(getBannerAnnouncements());
+  }, []);
+
+  // 배너 자동 순환
+  useEffect(() => {
+    if (bannerAnnouncements.length <= 1 || isBannerPaused || isBannerDismissed) return;
+    const timer = setInterval(() => {
+      setCurrentBannerIndex(prev => (prev + 1) % bannerAnnouncements.length);
+    }, BANNER_ROTATION_INTERVAL);
+    return () => clearInterval(timer);
+  }, [bannerAnnouncements.length, isBannerPaused, isBannerDismissed]);
+
+  const handleBannerPrev = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentBannerIndex(prev => (prev - 1 + bannerAnnouncements.length) % bannerAnnouncements.length);
+  }, [bannerAnnouncements.length]);
+
+  const handleBannerNext = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentBannerIndex(prev => (prev + 1) % bannerAnnouncements.length);
+  }, [bannerAnnouncements.length]);
+
+  const handleBannerDismiss = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsBannerDismissed(true);
+    sessionStorage.setItem('announcementBannerDismissed', 'true');
+  };
+
+  const handleBannerClick = () => {
+    const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
+    if (currentAnnouncement && onAnnouncementClick) {
+      onAnnouncementClick(currentAnnouncement);
+    }
+  };
 
   const handleMyPageClick = () => {
     // 홈 페이지에서는 CustomEvent로 패널 열기
@@ -134,9 +186,11 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
     }
   };
 
+  const currentBanner = bannerAnnouncements[currentBannerIndex];
+
   return (
     <header
-      className="h-16 border-b border-stone-800/10 bg-card flex items-center justify-between px-4 shadow-sm z-10 relative transition-colors duration-300"
+      className="h-16 border-b border-stone-800/10 bg-card flex items-center px-4 shadow-sm z-10 relative transition-colors duration-300 gap-4"
     >
       {/* 한지 질감 오버레이 */}
       <div
@@ -147,7 +201,8 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
       {/* 전통 문양 테두리 */}
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-stone-800/20 to-transparent" />
 
-      <div className="flex items-center relative z-10">
+      {/* 좌측: 사이드바 토글 */}
+      <div className="flex items-center relative z-10 flex-shrink-0">
         <Button
           variant="ghost"
           size="icon"
@@ -158,9 +213,51 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
         </Button>
       </div>
 
-      <div className="flex items-center gap-2 relative z-10">
+      {/* 중앙: 공지 배너 (최대 너비) */}
+      {currentBanner && (
+        <div
+          className={cn(
+            "flex-1 flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
+            isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+          )}
+          onClick={handleBannerClick}
+          onMouseEnter={() => setIsBannerPaused(true)}
+          onMouseLeave={() => setIsBannerPaused(false)}
+        >
+          {bannerAnnouncements.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBannerPrev}
+              className="h-5 w-5 p-0 hover:bg-secondary text-muted-foreground flex-shrink-0"
+            >
+              <ChevronLeft className="h-3 w-3" />
+            </Button>
+          )}
+          <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
+          <span className="text-sm text-stone-700 font-medium truncate group-hover:text-red-800 transition-colors">
+            {currentBanner.title}
+          </span>
+          {bannerAnnouncements.length > 1 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleBannerNext}
+              className="h-5 w-5 p-0 hover:bg-secondary text-muted-foreground flex-shrink-0 ml-auto"
+            >
+              <ChevronRight className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      )}
+
+      {/* 우측: 위젯 및 버튼들 */}
+      <div className={cn(
+        "flex items-center gap-2 relative z-10 flex-shrink-0 transition-all duration-300",
+        isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+      )}>
         {/* 랭킹 및 접속자 위젯 */}
-        <RankingWidget />
+        {isHydrated && <RankingWidget />}
 
         {/* 한지 모드 토글 */}
         <Button
@@ -283,8 +380,8 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
           <Maximize className="h-5 w-5" />
         </Button>
 
-        {/* 로그인 상태 */}
-        {isLoggedIn && (
+        {/* 로그인 상태 - hydration 완료 후에만 렌더링 */}
+        {isHydrated && isLoggedIn && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 transition-colors">
@@ -326,8 +423,8 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
           </DropdownMenu>
         )}
 
-        {/* 로그인 버튼 */}
-        {!isLoggedIn && (
+        {/* 로그인 버튼 - hydration 완료 후에만 렌더링 */}
+        {isHydrated && !isLoggedIn && (
           <Button
             onClick={onOpenAuth}
             className="ml-2 bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md"
@@ -339,5 +436,9 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
     </header>
   );
 };
+
+// React.memo로 래핑하여 props가 변경되지 않으면 리렌더링 방지
+const Header = memo(HeaderComponent);
+Header.displayName = "Header";
 
 export default Header;

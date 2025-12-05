@@ -154,10 +154,11 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         console.log('[HomeClient] handleMarkerClick 호출:', restaurant.name);
         setPanelRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
-        setSearchedRestaurant(restaurant);
+        // 마커 클릭은 검색이 아니므로 searchedRestaurant는 설정하지 않음
+        // setSearchedRestaurant(restaurant); // 제거: searchedRestaurant useEffect와 충돌 방지
         setIsPanelOpen(true);
         console.log('[HomeClient] 패널 상태 업데이트 완료');
-    }, [setPanelRestaurant, setSelectedRestaurant, setSearchedRestaurant, setIsPanelOpen]);
+    }, [setPanelRestaurant, setSelectedRestaurant, setIsPanelOpen]);
 
     const handlePanelClose = useCallback(() => {
         setIsPanelOpen(false);
