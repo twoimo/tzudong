@@ -56,7 +56,7 @@ export function EvaluationSlideView({
     const { toast } = useToast();
     const [videoError, setVideoError] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
-    const [playerType, setPlayerType] = useState<'youtube' | 'invidious' | 'piped' | 'popup'>('youtube');
+    const [playerType, setPlayerType] = useState<'youtube' | 'popup'>('youtube');
 
     // 리코드 변경 시 플레이어 타입 초기화
     useEffect(() => {
@@ -92,12 +92,9 @@ export function EvaluationSlideView({
                 let url = '';
                 if (playerType === 'youtube') {
                     const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                    // autoplay=1, mute=1 (자동재생, 음소거)
-                    url = `https://www.youtube.com/embed/${vidId}?autoplay=1&mute=1&playsinline=1&rel=0&enablejsapi=1&origin=${origin}&controls=1`;
-                } else if (playerType === 'invidious') {
-                    url = `https://yewtu.be/embed/${vidId}?autoplay=1&mute=1&muted=1`;
-                } else if (playerType === 'piped') {
-                    url = `https://piped.video/embed/${vidId}?autoplay=1&mute=1&muted=1`;
+                    // autoplay=0, mute=1 (자동재생, 음소거)
+                    url = `https://www.youtube.com/embed/${vidId}?autoplay=0&mute=0&playsinline=1&rel=0&enablejsapi=1&origin=${origin}&controls=1`;
+
                 } else if (playerType === 'popup') {
                     setVideoUrl(null); // 팝업 모드는 iframe URL 없음 (UI 렌더링용)
                     setVideoError(false);
@@ -293,19 +290,14 @@ export function EvaluationSlideView({
                                                 <DropdownMenuTrigger asChild>
                                                     <Button variant="outline" size="sm" className="h-7 text-xs border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 bg-black/50 backdrop-blur-md">
                                                         <PlayCircle className="w-3 h-3 mr-1" />
-                                                        {playerType === 'youtube' ? 'YouTube' : playerType === 'invidious' ? 'Invidious' : playerType === 'piped' ? 'Piped' : 'Popup 모드'}
+                                                        {playerType === 'youtube' ? 'YouTube' : 'Popup 모드'}
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
                                                     <DropdownMenuItem onClick={() => setPlayerType('youtube')}>
                                                         YouTube (기본)
                                                     </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setPlayerType('invidious')}>
-                                                        Invidious (우회)
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onClick={() => setPlayerType('piped')}>
-                                                        Piped (우회)
-                                                    </DropdownMenuItem>
+
                                                     <DropdownMenuItem onClick={() => setPlayerType('popup')}>
                                                         Popup (팝업/새창)
                                                     </DropdownMenuItem>
