@@ -28,7 +28,7 @@ export type AnnouncementFormData = z.infer<typeof AnnouncementFormSchema>;
 export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     {
         id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-        title: '🎉 쯔동여지도 v2.0 업데이트 안내',
+        title: '쯔동여지도 v2.0 업데이트 안내',
         content: `안녕하세요, 쯔동여지도입니다!
 
 오랫동안 준비해온 대규모 업데이트를 드디어 공개합니다. 이번 업데이트에서는 사용자분들의 피드백을 적극 반영하여 더욱 편리하고 다양한 기능을 제공합니다.
@@ -48,7 +48,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'b2c3d4e5-f6a7-8901-bcde-f23456789012',
-        title: '📢 서버 점검 안내 (12/10 02:00~06:00)',
+        title: '서버 점검 안내 (12/10 02:00~06:00)',
         content: `서비스 안정화를 위한 정기 서버 점검이 예정되어 있습니다.
 
 점검 일시: 2025년 12월 10일 (화) 02:00 ~ 06:00 (4시간)
@@ -68,7 +68,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'c3d4e5f6-a7b8-9012-cdef-345678901234',
-        title: '🏆 12월 맛집 도장깨기 이벤트',
+        title: '12월 맛집 도장깨기 이벤트',
         content: `12월 한 달간 맛집 도장깨기 이벤트를 진행합니다!
 
 이벤트 기간: 2025년 12월 1일 ~ 31일
@@ -86,7 +86,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'd4e5f6a7-b8c9-0123-def0-456789012345',
-        title: '🍜 신규 맛집 50곳 추가 안내',
+        title: '신규 맛집 50곳 추가 안내',
         content: `쯔양이 최근 방문한 맛집 50곳이 새롭게 추가되었습니다!
 
 서울 15곳, 경기 12곳, 부산 8곳, 대구 5곳, 기타 지역 10곳이 추가되었습니다.
@@ -102,7 +102,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'e5f6a7b8-c9d0-1234-ef01-567890123456',
-        title: '📱 모바일 앱 출시 예정 안내',
+        title: '모바일 앱 출시 예정 안내',
         content: `쯔동여지도 모바일 앱이 곧 출시됩니다!
 
 출시 예정일: 2025년 1월 중순 (iOS/Android 동시 출시)
@@ -118,7 +118,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'f6a7b8c9-d0e1-2345-f012-678901234567',
-        title: '⚠️ 잘못된 맛집 정보 신고 기능 안내',
+        title: '잘못된 맛집 정보 신고 기능 안내',
         content: `맛집 정보가 잘못되었거나 폐업한 경우 신고해주세요!
 
 해당 맛집 상세 페이지에서 우측 상단 신고 버튼을 클릭하고, 신고 사유를 선택한 뒤 상세 내용을 작성해주시면 됩니다.
@@ -134,7 +134,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'a7b8c9d0-e1f2-3456-0123-789012345678',
-        title: '🎄 크리스마스 특별 이벤트',
+        title: '크리스마스 특별 이벤트',
         content: `크리스마스를 맞아 특별 이벤트를 진행합니다!
 
 12월 24일~25일 맛집 방문 인증 시 크리스마스 한정 뱃지가 지급되고, 리뷰 작성 시 포인트가 2배로 적립됩니다. 추첨을 통해 10명에게 기프티콘도 증정합니다.
@@ -148,7 +148,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'b8c9d0e1-f2a3-4567-1234-890123456789',
-        title: '💳 포인트 사용처 확대 안내',
+        title: '포인트 사용처 확대 안내',
         content: `적립한 포인트를 더 다양하게 사용할 수 있게 되었습니다!
 
 기존 뱃지 교환 외에도 기프티콘 교환, 제휴 맛집 할인 쿠폰 교환이 가능해졌습니다. 마이페이지의 포인트샵에서 확인해보세요.
@@ -162,7 +162,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'c9d0e1f2-a3b4-5678-2345-901234567890',
-        title: '🔧 리뷰 작성 기능 개선 안내',
+        title: '리뷰 작성 기능 개선 안내',
         content: `리뷰 작성 기능이 더욱 편리해졌습니다!
 
 사진 첨부 시 자동 압축 기능이 추가되어 대용량 사진도 빠르게 업로드할 수 있습니다. 임시저장 기능도 추가되어 작성 중인 리뷰가 사라지지 않습니다.
@@ -176,7 +176,7 @@ export const DUMMY_ANNOUNCEMENTS: Announcement[] = [
     },
     {
         id: 'd0e1f2a3-b4c5-6789-3456-012345678901',
-        title: '📍 위치 기반 맛집 추천 기능 추가',
+        title: '위치 기반 맛집 추천 기능 추가',
         content: `현재 위치를 기반으로 주변 맛집을 추천해드립니다!
 
 위치 권한을 허용하면 현재 위치에서 가까운 쯔양 추천 맛집을 거리순으로 확인할 수 있습니다. 카테고리별 필터링도 가능합니다.

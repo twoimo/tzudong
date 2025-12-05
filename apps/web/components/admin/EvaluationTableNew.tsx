@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/tooltip';
 import { ChevronDown, ChevronUp, Check, Pause, Trash2, AlertCircle, Edit, Menu, HelpCircle, RotateCcw, Search, X, Undo2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLayout } from '@/contexts/LayoutContext';
 import { EvaluationRowDetails } from './EvaluationRowDetails';
 
 interface EvaluationTableProps {
@@ -96,6 +97,7 @@ export function EvaluationTable({
   onFilterChange,
   onResetFilters,
 }: EvaluationTableProps) {
+  const { isSidebarOpen } = useLayout();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const rowRefs = useRef<{ [key: string]: HTMLTableRowElement | null }>({});
 
@@ -919,11 +921,18 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
 
               const detailRow = expandedId === record.id ? (
                 <TableRow key={`${record.id}-details`}>
-                  <TableCell colSpan={11} className="bg-muted/30">
-                    <EvaluationRowDetails
-                      record={record}
-                      onEdit={() => onEdit?.(record)}
-                    />
+                  <TableCell colSpan={11} className="p-0 border-0 bg-muted/30">
+                    <div
+                      className="sticky left-0 z-10"
+                      style={{
+                        width: `calc(100vw - ${isSidebarOpen ? '16rem' : '4rem'} - 3rem)`, // 사이드바 너비(16rem/4rem) + 여백(3rem) 제외
+                      }}
+                    >
+                      <EvaluationRowDetails
+                        record={record}
+                        onEdit={() => onEdit?.(record)}
+                      />
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : null;
