@@ -55,6 +55,19 @@ const AdminReviewPanel = dynamic(
     { ssr: false }
 );
 
+const AdminAnnouncementPanel = dynamic(
+    () => import('@/components/admin/AdminAnnouncementPanel'),
+    { ssr: false }
+);
+
+const AnnouncementDetailPanel = dynamic(
+    () => import('@/components/announcement/AnnouncementDetailPanel'),
+    { ssr: false }
+);
+
+import AnnouncementBanner from '@/components/announcement/AnnouncementBanner';
+import { Announcement } from '@/types/announcement';
+
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
 
 export default function HomeClient() {
@@ -66,8 +79,9 @@ export default function HomeClient() {
 
     // 통합 패널 상태 관리
     // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
-    type PanelType = 'mypage' | 'adminSubmissions' | 'adminReviews' | null;
+    type PanelType = 'mypage' | 'adminSubmissions' | 'adminReviews' | 'adminAnnouncements' | 'announcementDetail' | null;
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
+    const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
 
     // 상태 관리 커스텀 훅
@@ -180,14 +194,22 @@ export default function HomeClient() {
             }
         };
 
+        const handleAdminAnnouncementsOpen = () => {
+            if (isAdmin) {
+                openPanel('adminAnnouncements');
+            }
+        };
+
         window.addEventListener('openMyPage', handleMyPageOpen);
         window.addEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
         window.addEventListener('openAdminReviews', handleAdminReviewsOpen);
+        window.addEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
 
         return () => {
             window.removeEventListener('openMyPage', handleMyPageOpen);
             window.removeEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
             window.removeEventListener('openAdminReviews', handleAdminReviewsOpen);
+            window.removeEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
         };
     }, [isAdmin]);
 
@@ -206,6 +228,14 @@ export default function HomeClient() {
                     state.setSelectedRestaurant(null);
                     state.setSearchedRestaurant(null);
                     setMapMode(mode);
+                }}
+            />
+
+            {/* 공지사항 배너 - 지도 상단 */}
+            <AnnouncementBanner
+                onAnnouncementClick={(announcement) => {
+                    setSelectedAnnouncement(announcement);
+                    openPanel('announcementDetail');
                 }}
             />
 
@@ -331,6 +361,35 @@ export default function HomeClient() {
                     />
                 </RightPanelWrapper>
             )}
+
+            {/* 관리자 공지사항 관리 패널 */}
+            {isAdmin && (
+                <RightPanelWrapper
+                    isOpen={activeRightPanel === 'adminAnnouncements'}
+                    isCollapsed={isPanelCollapsed}
+                >
+                    <AdminAnnouncementPanel
+                        isOpen={!isPanelCollapsed}
+                        onClose={closeAllPanels}
+                        onToggleCollapse={togglePanelCollapse}
+                        isCollapsed={isPanelCollapsed}
+                    />
+                </RightPanelWrapper>
+            )}
+
+            {/* 공지사항 상세보기 패널 (일반 사용자) */}
+            <RightPanelWrapper
+                isOpen={activeRightPanel === 'announcementDetail'}
+                isCollapsed={isPanelCollapsed}
+            >
+                <AnnouncementDetailPanel
+                    isOpen={!isPanelCollapsed}
+                    onClose={closeAllPanels}
+                    onToggleCollapse={togglePanelCollapse}
+                    isCollapsed={isPanelCollapsed}
+                    initialAnnouncement={selectedAnnouncement}
+                />
+            </RightPanelWrapper>
         </>
     );
 }

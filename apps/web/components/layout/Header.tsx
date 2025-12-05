@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter, ClipboardList, MessageSquare } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter, ClipboardList, MessageSquare, Megaphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import {
@@ -59,6 +59,15 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
   const handleAdminReviewsClick = () => {
     if (pathname === '/') {
       window.dispatchEvent(new CustomEvent('openAdminReviews'));
+    } else {
+      // 홈으로 이동 후 패널 열기
+      window.location.href = '/';
+    }
+  };
+
+  const handleAdminAnnouncementsClick = () => {
+    if (pathname === '/') {
+      window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
     } else {
       // 홈으로 이동 후 패널 열기
       window.location.href = '/';
@@ -301,6 +310,10 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
                   <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     리뷰관리
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleAdminAnnouncementsClick} className="text-stone-900 hover:bg-stone-200/50">
+                    <Megaphone className="mr-2 h-4 w-4" />
+                    공지사항
                   </DropdownMenuItem>
                 </>
               )}
