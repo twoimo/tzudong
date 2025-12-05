@@ -376,8 +376,9 @@ $TRANSCRIPT
     # Gemini CLI 호출
     # -p: 단일 프롬프트 모드 (이전 대화 히스토리 없이 독립 실행)
     # --yolo: 도구 사용 자동 승인, stderr 분리
+    # Note: < /dev/null을 추가하여 stdin을 닫아 while read 루프와의 충돌 방지
     GEMINI_START=$(date +%s)
-    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
         GEMINI_END=$(date +%s)
         GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
         TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
@@ -415,9 +416,9 @@ $TRANSCRIPT
                 if [ $PARSE_ATTEMPT -eq 1 ]; then
                     log_warning "파서 실패 (1차 시도) - Gemini 재호출 중..."
                     sleep 1
-                    # Gemini CLI 재호출
+                    # Gemini CLI 재호출 (< /dev/null로 stdin 닫기)
                     GEMINI_START=$(date +%s)
-                    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
                         GEMINI_END=$(date +%s)
                         GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
                         TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))

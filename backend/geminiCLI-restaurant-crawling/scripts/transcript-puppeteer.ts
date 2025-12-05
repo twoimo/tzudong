@@ -21,6 +21,8 @@ import { execSync } from 'child_process';
 
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const DATA_DIR = path.join(PROJECT_ROOT, 'backend', 'geminiCLI-restaurant-crawling', 'data');
+const NO_TRANSCRIPT_DIR = path.join(DATA_DIR, 'no_transcript_link');
+const NO_TRANSCRIPT_PERMANENT = path.join(NO_TRANSCRIPT_DIR, 'no_transcript_permanent.json');
 
 const COMMIT_INTERVAL = 30;  // 30개마다 커밋
 const REST_INTERVAL = 100;   // 100개마다 휴식
@@ -43,6 +45,11 @@ interface TranscriptData {
   language: string;
   collected_at: string;
   transcript: TranscriptSegment[];
+}
+
+interface NoTranscriptEntry {
+  youtube_link: string;
+  retry_num: number;
 }
 
 // ============================================================
@@ -108,6 +115,46 @@ function log(message: string, type: 'info' | 'success' | 'error' | 'warning' = '
   const timestamp = new Date().toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul' });
   const icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
   console.log(`[${timestamp}] ${icons[type]} ${message}`);
+}
+
+/**
+ * no_transcript_permanent.json 업데이트
+ * 자막 수집 실패한 URL을 기록 (재시도 횟수 포함)
+ */
+function updateNoTranscriptPermanent(youtubeUrl: string): void {
+  try {
+    // 디렉토리 확인
+    if (!fs.existsSync(NO_TRANSCRIPT_DIR)) {
+      fs.mkdirSync(NO_TRANSCRIPT_DIR, { recursive: true });
+    }
+
+    // 기존 데이터 로드
+    let entries: NoTranscriptEntry[] = [];
+    if (fs.existsSync(NO_TRANSCRIPT_PERMANENT)) {
+      const content = fs.readFileSync(NO_TRANSCRIPT_PERMANENT, 'utf-8');
+      entries = JSON.parse(content);
+    }
+
+    // 이미 존재하는지 확인
+    const existingIndex = entries.findIndex(e => e.youtube_link === youtubeUrl);
+    if (existingIndex >= 0) {
+      // 재시도 횟수 증가
+      entries[existingIndex].retry_num += 1;
+      log(`no_transcript_permanent 업데이트: ${youtubeUrl} (retry: ${entries[existingIndex].retry_num})`, 'warning');
+    } else {
+      // 새로 추가
+      entries.push({
+        youtube_link: youtubeUrl,
+        retry_num: 1
+      });
+      log(`no_transcript_permanent 추가: ${youtubeUrl}`, 'warning');
+    }
+
+    // 저장
+    fs.writeFileSync(NO_TRANSCRIPT_PERMANENT, JSON.stringify(entries, null, 2), 'utf-8');
+  } catch (error) {
+    log(`no_transcript_permanent 업데이트 실패: ${error}`, 'error');
+  }
 }
 
 // ============================================================
@@ -654,6 +701,8 @@ async function main() {
         log(`[${i + 1}/${urlsToProcess.length}] ${videoId} ✅ (${result.transcript.length} segments, ${result.language})`, 'success');
       } else {
         failedCount++;
+        // no_transcript_permanent.json에 실패 기록 추가/업데이트
+        updateNoTranscriptPermanent(url);
         log(`[${i + 1}/${urlsToProcess.length}] ${videoId} ❌ 자막 없음`, 'error');
       }
       

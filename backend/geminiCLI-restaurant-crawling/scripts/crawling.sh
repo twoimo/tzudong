@@ -393,32 +393,12 @@ for i in "${!URLS[@]}"; do
         fi
     done
     
-    # Transcript가 없으면 스킵 + retry_num 증가
+    # Transcript가 없으면 스킵 (no_transcript_permanent.json 기록은 transcript-puppeteer.ts에서 처리)
     if [ "$TRANSCRIPT_FOUND" = false ]; then
         NO_TRANSCRIPT_COUNT=$((NO_TRANSCRIPT_COUNT + 1))
         TRANSCRIPT_FAILED=$((TRANSCRIPT_FAILED + 1))
         
-        # no_transcript_permanent.json에 retry_num 증가
-        CURRENT_RETRY=$(jq -r --arg url "$URL" '.[] | select(.youtube_link == $url) | .retry_num' "$NO_TRANSCRIPT_PERMANENT" 2>/dev/null || echo "0")
-        if [ -z "$CURRENT_RETRY" ] || [ "$CURRENT_RETRY" = "null" ]; then
-            CURRENT_RETRY=0
-        fi
-        NEW_RETRY=$((CURRENT_RETRY + 1))
-        
-        # 기존 항목 업데이트 또는 새 항목 추가
-        if [ "$CURRENT_RETRY" -eq 0 ]; then
-            # 새 항목 추가
-            jq --arg url "$URL" --argjson retry "$NEW_RETRY" '. += [{"youtube_link": $url, "retry_num": $retry}]' "$NO_TRANSCRIPT_PERMANENT" > "${NO_TRANSCRIPT_PERMANENT}.tmp" && mv "${NO_TRANSCRIPT_PERMANENT}.tmp" "$NO_TRANSCRIPT_PERMANENT"
-        else
-            # 기존 항목 업데이트
-            jq --arg url "$URL" --argjson retry "$NEW_RETRY" '(.[] | select(.youtube_link == $url) | .retry_num) = $retry' "$NO_TRANSCRIPT_PERMANENT" > "${NO_TRANSCRIPT_PERMANENT}.tmp" && mv "${NO_TRANSCRIPT_PERMANENT}.tmp" "$NO_TRANSCRIPT_PERMANENT"
-        fi
-        
-        if [ "$NEW_RETRY" -ge 3 ]; then
-            log_warning "[$INDEX/$TOTAL] ⚠️ Transcript 없음 (retry $NEW_RETRY/3) - 영구 제외: $URL"
-        else
-            log_warning "[$INDEX/$TOTAL] ⚠️ Transcript 없음 (retry $NEW_RETRY/3) - 스킵: $URL"
-        fi
+        log_warning "[$INDEX/$TOTAL] ⚠️ Transcript 없음 - 스킵: $URL"
         echo "$URL" >> "$NO_TRANSCRIPT_LOG"
         continue
     fi
@@ -452,8 +432,9 @@ $TRANSCRIPT
     TEMP_STDERR="$PROJECT_ROOT/temp/stderr_$INDEX.log"
     echo "$PROMPT" > "$TEMP_PROMPT"
     
+    # Note: < /dev/null을 추가하여 stdin을 닫아 while read 루프와의 충돌 방지
     GEMINI_START=$(date +%s)
-    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
         GEMINI_END=$(date +%s)
         GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
         TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
@@ -483,9 +464,9 @@ $TRANSCRIPT
                 if [ $PARSE_ATTEMPT -eq 1 ]; then
                     log_warning "파서 실패 (1차 시도) - 재시도 중..."
                     sleep 1
-                    # Gemini CLI 재호출
+                    # Gemini CLI 재호출 (< /dev/null로 stdin 닫기)
                     GEMINI_START=$(date +%s)
-                    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
                         GEMINI_END=$(date +%s)
                         GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
                         TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))

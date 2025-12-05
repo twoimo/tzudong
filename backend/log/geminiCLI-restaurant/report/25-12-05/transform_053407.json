@@ -1,0 +1,35 @@
+{
+  "phase": "transform",
+  "started_at": "2025-12-05 05:34:07",
+  "ended_at": "2025-12-05 05:34:07",
+  "duration_seconds": 0.03,
+  "duration_formatted": "0.0초",
+  "statistics": {
+    "results_lines": 1,
+    "notselection_lines": 2,
+    "already_existed": 938,
+    "total_processed": 25,
+    "total_written": 25,
+    "total_skipped": 0,
+    "json_errors": 0,
+    "processing_errors": 0,
+    "final_total": 963
+  },
+  "timers": {
+    "process_results_file": {
+      "count": 1,
+      "total_seconds": 0.0,
+      "avg_seconds": 0.0,
+      "formatted": "0.0초"
+    },
+    "process_notselection_file": {
+      "count": 1,
+      "total_seconds": 0.0,
+      "avg_seconds": 0.001,
+      "formatted": "0.0초"
+    }
+  },
+  "success_count": 3,
+  "error_count": 0,
+  "skip_count": 0
+}
