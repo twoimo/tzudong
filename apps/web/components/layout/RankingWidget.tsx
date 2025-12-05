@@ -4,10 +4,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Trophy, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
+import { cn } from "@/lib/utils";
 
 export const RankingWidget = () => {
     const { user } = useAuth();
     const [onlineUsers, setOnlineUsers] = useState(0);
+    const [isHydrated, setIsHydrated] = useState(false);
+
+    // Hydration 완료 감지
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
 
     // Fetch user ranking using shared hook
     const { data: leaderboardData = [] } = useLeaderboard();
@@ -47,7 +54,10 @@ export const RankingWidget = () => {
     };
 
     return (
-        <div className="flex items-center gap-3 mr-2">
+        <div className={cn(
+            "flex items-center gap-3 mr-2 transition-opacity duration-300",
+            isHydrated ? "opacity-100" : "opacity-0"
+        )}>
             {/* Online Users */}
             <TooltipProvider>
                 <Tooltip>

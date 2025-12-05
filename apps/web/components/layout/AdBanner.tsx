@@ -31,7 +31,13 @@ const AD_SLIDES: AdBannerSlide[] = [
 const AdBanner = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+    const [isHydrated, setIsHydrated] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Hydration 완료 감지
+    useEffect(() => {
+        setIsHydrated(true);
+    }, []);
 
     // 자동 슬라이드 전환
     useEffect(() => {
@@ -71,7 +77,10 @@ const AdBanner = () => {
 
     return (
         <div
-            className="relative w-full h-64 rounded-lg overflow-hidden group select-none shadow-md"
+            className={cn(
+                "relative w-full h-64 rounded-lg overflow-hidden group select-none shadow-md transition-opacity duration-300",
+                isHydrated ? "opacity-100" : "opacity-0"
+            )}
             onMouseEnter={() => setIsAutoPlaying(false)}
             onMouseLeave={() => setIsAutoPlaying(true)}
             style={{ backgroundColor: '#fdfbf7' }}

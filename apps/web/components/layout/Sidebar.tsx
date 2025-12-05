@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import AdBanner from "./AdBanner";
+import { useState, useEffect } from "react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -17,6 +18,12 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
   const pathname = usePathname();
   const queryClient = useQueryClient();
   const { user, isAdmin } = useAuth();
+  const [isHydrated, setIsHydrated] = useState(false);
+
+  // Hydration 완료 감지
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // 레스토랑 데이터 프리페치 함수
   const prefetchRestaurants = async () => {
@@ -43,8 +50,8 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
     { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
   ];
 
-  // 관리자 메뉴 (데이터 검수 - 월 서버 운영 비용 아래에 표시)
-  const adminMenuItems = (user && isAdmin) ? [
+  // 관리자 메뉴 (hydration 완료 후에만 표시)
+  const adminMenuItems = (isHydrated && user && isAdmin) ? [
     { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
   ] : [];
 
@@ -127,7 +134,10 @@ const Sidebar = ({ isOpen }: SidebarProps) => {
       </nav>
 
       {isOpen && (
-        <div className="p-4 space-y-4 relative z-10">
+        <div className={cn(
+          "p-4 space-y-4 relative z-10 transition-opacity duration-300",
+          isHydrated ? "opacity-100" : "opacity-0"
+        )}>
           {/* 광고 배너 */}
           <AdBanner />
 
