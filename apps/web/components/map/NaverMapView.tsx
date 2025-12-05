@@ -137,7 +137,9 @@ const NaverMapView = memo(({
             const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
 
             // 우측 패널 상태 확인
-            const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
+            // selectedRestaurant가 있으면 패널이 열릴 것이므로, 접힌 상태가 아니면 오프셋 적용
+            // 외부 패널(마이페이지 등)이 열려있어도 마커 클릭 시 상세 패널로 전환되므로 오프셋 필요
+            const isAnyPanelOpen = !isPanelCollapsed;
 
             // 패널 오프셋 적용된 좌표 계산
             const getOffsetLatLng = () => {
