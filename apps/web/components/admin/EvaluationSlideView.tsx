@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +15,7 @@ import {
     MapPin,
     RotateCcw,
     Undo2,
-    Trash2,
-    PlayCircle
+    Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -49,17 +48,8 @@ export function EvaluationSlideView({
     const currentRecord = records[currentIndex];
     const { toast } = useToast();
     const [videoError, setVideoError] = useState(false);
-    // const [videoUrl, setVideoUrl] = useState<string | null>(null); // Removed: Derived state used instead
-    const [overrideVideoUrl, setOverrideVideoUrl] = useState<string | null>(null); // New: For fallbacks
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const [useFallback, setUseFallback] = useState(false);
-    const [fallbackIndex, setFallbackIndex] = useState(0);
-
-    const FALLBACK_INSTANCES = [
-        'https://piped.video/embed/',
-        'https://invidious.fdn.fr/embed/',
-        'https://invidious.sipet.org/embed/',
-        'https://yewtu.be/embed/'
-    ];
 
     // YouTube ID 추출
     const getYoutubeVideoId = (url: string | undefined) => {
@@ -82,55 +72,33 @@ export function EvaluationSlideView({
 
     const videoId = getYoutubeVideoId(currentRecord?.youtube_link);
 
-    // Derived State for Default Video URL (No useEffect delay)
-    const defaultVideoUrl = useMemo(() => {
-        if (videoId) {
-            return `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    // 비디오 URL 초기화 로직
+    useEffect(() => {
+        if (currentRecord?.youtube_link) {
+            const vidId = getYoutubeVideoId(currentRecord.youtube_link);
+            if (vidId) {
+                // Autoplay disabled, added enablejsapi and origin for better embedding support
+                const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                setVideoUrl(`https://www.youtube.com/embed/${vidId}?autoplay=0&rel=0&enablejsapi=1&origin=${origin}`);
+                setVideoError(false);
+                setUseFallback(false);
+            } else {
+                setVideoUrl(null);
+            }
         }
-        return null;
-    }, [videoId]);
+    }, [currentRecord?.youtube_link, currentRecord?.id]);
 
-    // Final Video URL to display
-    const finalVideoUrl = overrideVideoUrl || defaultVideoUrl;
-
-
-    // 에러 핸들링 (자동) - iframe onError에서 호출됨
+    // 에러 핸들링
     const handleVideoError = () => {
-        console.log("Video Error Triggered. Current Fallback Index:", fallbackIndex);
-
-        if (videoId) {
-            // 아직 모든 Fallback을 다 시도하지 않았다면 다음 Fallback 시도
-            if (fallbackIndex < FALLBACK_INSTANCES.length) {
-                const nextInstance = FALLBACK_INSTANCES[fallbackIndex];
-                console.log(`Switching to fallback instance: ${nextInstance}`);
-
-                setOverrideVideoUrl(`${nextInstance}${videoId}?autoplay=1`);
+        if (!useFallback && currentRecord?.youtube_link) {
+            const vidId = getYoutubeVideoId(currentRecord.youtube_link);
+            if (vidId) {
+                setVideoUrl(`https://yewtu.be/embed/${vidId}?autoplay=0`);
                 setUseFallback(true);
-                setFallbackIndex(prev => prev + 1);
-                setVideoError(false); // 재시도 중이므로 에러 해제
                 return;
             }
         }
-
-        // 모든 Fallback 시도 후에도 실패하면 최종 에러 처리
         setVideoError(true);
-    };
-
-    // 수동 우회 실행 (사용자가 버튼 클릭 시)
-    const activateFallback = () => {
-        if (videoId) {
-            // 첫 번째 Fallback 인스턴스로 즉시 전환 (또는 현재 실패했다면 다음거)
-            const instance = FALLBACK_INSTANCES[fallbackIndex % FALLBACK_INSTANCES.length];
-            setOverrideVideoUrl(`${instance}${videoId}?autoplay=1`);
-            setUseFallback(true);
-            setVideoError(false);
-            setFallbackIndex(prev => prev + 1); // 다음을 준비
-
-            toast({
-                title: "우회 플레이어 실행",
-                description: "재생 제한을 우회하기 위해 대체 서버를 사용합니다.",
-            });
-        }
     };
 
     // 키보드 네비게이션
@@ -171,9 +139,9 @@ export function EvaluationSlideView({
     };
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-hidden relative">
+        <div className="flex flex-col h-full bg-background overflow-hidden">
             {/* Top Navigation Bar - Compact */}
-            <div className="flex items-center justify-between px-3 py-2 border-b shrink-0 h-14 bg-white z-10 relative">
+            <div className="flex items-center justify-between px-3 py-2 border-b shrink-0 h-14">
                 <div className="flex items-center gap-3 overflow-hidden">
                     <div className="flex items-center space-x-1 shrink-0">
                         <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => onNavigate(currentIndex - 1)} disabled={currentIndex <= 0}>
@@ -222,38 +190,51 @@ export function EvaluationSlideView({
             </div>
 
             {/* Main Content Area - Split View */}
-            <div className="flex-1 flex overflow-hidden" key={currentRecord.id}>
+            <div className="flex-1 flex overflow-hidden">
                 {/* Left: Video Player */}
-                <div className="w-[50%] bg-black flex flex-col justify-center relative group">
-                    {finalVideoUrl ? (
-                        <>
-                            <iframe
-                                width="100%"
-                                height="100%"
-                                src={finalVideoUrl}
-                                title="Video player"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                                className="absolute inset-0 w-full h-full"
-                                onError={handleVideoError}
-                            />
-                            {/* Manual Bypass Button Overlay (Visible on Hover or when needed) */}
-                            <div className="absolute top-4 right-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <Button
-                                    variant="secondary"
-                                    size="sm"
-                                    className="bg-black/50 hover:bg-black/80 text-white border border-white/20 backdrop-blur-sm"
-                                    onClick={activateFallback}
-                                >
-                                    <RotateCcw className="w-3 h-3 mr-2" />
-                                    {useFallback ? 'Invidious 사용 중' : '영상 미재생 시 우회(Bypass)'}
-                                </Button>
-                            </div>
-                        </>
+                <div className="w-[50%] bg-black flex flex-col justify-center relative">
+                    {videoUrl && !videoError ? (
+                        <iframe
+                            width="100%"
+                            height="100%"
+                            src={videoUrl}
+                            title="Video player"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                            className="absolute inset-0 w-full h-full"
+                            onError={handleVideoError}
+                        />
                     ) : (
                         <div className="flex flex-col items-center justify-center text-white p-6 text-center bg-gray-900 h-full">
-                            <AlertCircle className="w-10 h-10 mb-2 text-red-500" />
-                            <p className="text-gray-400 text-sm">재생할 수 있는 영상이 없습니다.</p>
+                            {videoError ? (
+                                <>
+                                    <AlertCircle className="w-10 h-10 mb-2 text-red-500" />
+                                    <p className="mb-2 text-sm">{useFallback ? '재생 실패' : '재생 불가'}</p>
+                                </>
+                            ) : videoId ? (
+                                <p className="text-sm">로딩 중...</p>
+                            ) : (
+                                <p className="text-gray-400 text-sm">링크 없음</p>
+                            )}
+
+                            {currentRecord.youtube_link && (
+                                <div className="flex flex-col items-center gap-2 mt-2">
+                                    <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => window.open(currentRecord.youtube_link, '_blank')}>
+                                        <ExternalLink className="w-3 h-3 mr-1" /> YouTube
+                                    </Button>
+                                    {videoError && !useFallback && (
+                                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => {
+                                            if (videoId) {
+                                                setVideoUrl(`https://yewtu.be/embed/${videoId}?autoplay=1`);
+                                                setUseFallback(true);
+                                                setVideoError(false);
+                                            }
+                                        }}>
+                                            <RotateCcw className="w-3 h-3 mr-1" /> 우회(Invidious)
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
@@ -264,18 +245,9 @@ export function EvaluationSlideView({
 
                         {/* 0. Video Info */}
                         <div className="bg-white rounded-lg border p-4 shadow-sm">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="flex items-center gap-2 font-semibold text-lg">
-                                    📹 영상 정보
-                                </h3>
-                                {/* 우회 버튼을 여기에도 배치 */}
-                                {!useFallback && (
-                                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={activateFallback}>
-                                        <PlayCircle className="w-3 h-3 mr-1" /> 영상이 안 나오나요?
-                                    </Button>
-                                )}
-                            </div>
-
+                            <h3 className="flex items-center gap-2 font-semibold text-lg mb-3">
+                                📹 영상 정보
+                            </h3>
                             <div className="space-y-2 text-sm">
                                 <div className="grid grid-cols-[80px_1fr] gap-2">
                                     <span className="font-medium text-gray-700">제목:</span>
