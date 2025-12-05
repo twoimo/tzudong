@@ -271,24 +271,19 @@ const NaverMapView = memo(({
 
             naver.maps.Event.trigger(map, 'resize');
 
-            // 현재 중심점 가져오기
-            const currentCenter = map.getCenter();
-
             try {
                 const projection = map.getProjection();
-                const centerPoint = projection.fromCoordToOffset(currentCenter);
 
-                // 패널 오프셋 계산
-                // 패널이 열리면: 지도를 왼쪽으로 (오프셋 +)
-                // 패널이 닫히거나 접히면: 지도를 오른쪽으로 (오프셋 -)
-                let offsetX = 0;
-                if (isCurrentlyOpen && !wasPreviouslyOpen) {
-                    // 패널 열림/펼침: 왼쪽으로 이동
-                    offsetX = panelWidth / 2;
-                } else if (!isCurrentlyOpen && wasPreviouslyOpen) {
-                    // 패널 닫힘/접힘: 오른쪽으로 이동 (원래 위치로 복귀)
-                    offsetX = -(panelWidth / 2);
-                }
+                // 선택된 맛집이 있으면 마커 좌표를 기준으로, 없으면 현재 중심점 사용
+                const hasRestaurant = !!(selectedRestaurant?.lat && selectedRestaurant?.lng);
+                const baseCenter = hasRestaurant
+                    ? new naver.maps.LatLng(selectedRestaurant!.lat!, selectedRestaurant!.lng!)
+                    : map.getCenter();
+
+                const centerPoint = projection.fromCoordToOffset(baseCenter);
+
+                // 패널 오프셋 계산 (마커 좌표 기준으로 계산하므로 누적되지 않음)
+                const offsetX = isCurrentlyOpen ? panelWidth / 2 : 0;
 
                 const offsetPoint = new naver.maps.Point(
                     centerPoint.x + offsetX,
@@ -303,7 +298,10 @@ const NaverMapView = memo(({
                 });
             } catch (e) {
                 // 프로젝션 준비 안됨 - 단순 panTo 시도
-                map.panTo(currentCenter, { duration: 250 });
+                const map = mapInstanceRef.current;
+                if (map) {
+                    map.panTo(map.getCenter(), { duration: 250 });
+                }
             }
         };
 
@@ -551,10 +549,32 @@ const NaverMapView = memo(({
         const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
         const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
         const { naver } = window;
+        const map = mapInstanceRef.current;
+        const panelWidth = 400;
 
-        mapInstanceRef.current.setCenter(new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]));
-        mapInstanceRef.current.setZoom(regionConfig.zoom);
-    }, [selectedRegion]);
+        // 패널이 열려있으면 오프셋 적용
+        const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
+
+        const targetCenter = new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]);
+        map.setZoom(regionConfig.zoom);
+
+        if (isAnyPanelOpen) {
+            // 패널 오프셋 적용하여 중심 이동
+            setTimeout(() => {
+                try {
+                    const projection = map.getProjection();
+                    const centerPoint = projection.fromCoordToOffset(targetCenter);
+                    const offsetPoint = new naver.maps.Point(centerPoint.x + panelWidth / 2, centerPoint.y);
+                    const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+                    map.setCenter(offsetLatLng);
+                } catch {
+                    map.setCenter(targetCenter);
+                }
+            }, 50);
+        } else {
+            map.setCenter(targetCenter);
+        }
+    }, [selectedRegion, isPanelOpen, externalPanelOpen, isPanelCollapsed]);
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
@@ -580,13 +600,24 @@ const NaverMapView = memo(({
         }
 
         const { naver } = window;
+        const map = mapInstanceRef.current;
+        const panelWidth = 400;
+        const targetCenter = new naver.maps.LatLng(actualSearchedRestaurant.lat!, actualSearchedRestaurant.lng!);
 
-        // 오프셋 없이 정확히 중앙에 배치
-        mapInstanceRef.current.setCenter(new naver.maps.LatLng(actualSearchedRestaurant.lat!, actualSearchedRestaurant.lng!));
+        map.setZoom(14); // 맛집 상세 보기용 줌 레벨
 
-        mapInstanceRef.current.setZoom(14); // 맛집 상세 보기용 줌 레벨 (약간 줌아웃)
-
-        // 검색된 맛집을 부모 컴포넌트 상태에 설정 (이미 위에서 처리됨)
+        // 패널이 열리므로 오프셋 적용
+        setTimeout(() => {
+            try {
+                const projection = map.getProjection();
+                const centerPoint = projection.fromCoordToOffset(targetCenter);
+                const offsetPoint = new naver.maps.Point(centerPoint.x + panelWidth / 2, centerPoint.y);
+                const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
+                map.setCenter(offsetLatLng);
+            } catch {
+                map.setCenter(targetCenter);
+            }
+        }, 50);
 
         // 패널 열기 (검색 시에만)
         setIsPanelOpen(true);
