@@ -60,7 +60,6 @@ const AnnouncementPanel = dynamic(
     { ssr: false }
 );
 
-import AnnouncementBanner from '@/components/announcement/AnnouncementBanner';
 import { Announcement } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
@@ -196,16 +195,24 @@ export default function HomeClient() {
             }
         };
 
+        const handleAnnouncementDetailOpen = (e: Event) => {
+            const customEvent = e as CustomEvent<Announcement>;
+            setSelectedAnnouncement(customEvent.detail);
+            openPanel('announcement');
+        };
+
         window.addEventListener('openMyPage', handleMyPageOpen);
         window.addEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
         window.addEventListener('openAdminReviews', handleAdminReviewsOpen);
         window.addEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
+        window.addEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
 
         return () => {
             window.removeEventListener('openMyPage', handleMyPageOpen);
             window.removeEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
             window.removeEventListener('openAdminReviews', handleAdminReviewsOpen);
             window.removeEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
+            window.removeEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
         };
     }, [isAdmin]);
 
@@ -225,15 +232,6 @@ export default function HomeClient() {
                     state.setSearchedRestaurant(null);
                     setMapMode(mode);
                 }}
-            />
-
-            {/* 공지사항 배너 - 지도 상단 */}
-            <AnnouncementBanner
-                onAnnouncementClick={(announcement: Announcement) => {
-                    setSelectedAnnouncement(announcement);
-                    openPanel('announcement');
-                }}
-                rightPanelWidth={rightPanelWidth}
             />
 
             <HomeControlPanel
