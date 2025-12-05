@@ -180,6 +180,26 @@ div[style*="z-index"]>div>.custom-marker {
   }
 }
 
+/* 맛집 개수 배지 fade-in/out 애니메이션 */
+@keyframes fadeInOut {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.95);
+  }
+  15% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  85% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.95);
+  }
+}
+
 .selected-marker {
   animation: pulse 2s infinite !important;
 }
