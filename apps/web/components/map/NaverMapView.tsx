@@ -178,7 +178,9 @@ const NaverMapView = memo(({
         // 이전 선택된 레스토랑 ID 업데이트
         prevSelectedRestaurantIdRef.current = currentId;
 
-        // 동일한 마커를 다시 클릭한 경우는 스킵
+        // 동일한 마커를 다시 클릭한 경우는 패널만 열고 지도 이동은 스킵할 수 있음
+        // 단, 패널이 닫혀있었다면 이동해야 할 수도 있음.
+        // 여기서는 ID가 같으면 이동 로직은 건너뜀 (이미 보고 있다고 가정)
         if (currentId === prevId) {
             return;
         }
@@ -196,10 +198,15 @@ const NaverMapView = memo(({
 
         // 줌 차이가 크거나 거리가 멀면 즉시 로드
         const zoomDiff = Math.abs(currentZoom - targetZoom);
+        // 사용자 요구사항: "맛잡 마커는 줌 차이가 너무 크면 로드하는 방식 그리고 서로 거리도 너무 멀면 로드해야해"
+        // 즉시 로드 (애니메이션 없이 이동) 조건
         const shouldInstantLoad = zoomDiff >= ZOOM_DIFF_THRESHOLD || distanceKm >= DISTANCE_KM_THRESHOLD;
 
         // 오프셋 적용 함수
-        const applyOffset = (baseLatLng: any) => {
+        const applyOffset = (baseLatLng: any, isInstant: boolean) => {
+            // 패널이 열릴 것이므로(혹은 이미 열려있음) 오프셋 적용
+            // activePanel이나 isPanelOpen 상태가 아직 반영 안되었을 수 있으므로 강제로 오프셋 적용 가정
+            // 하지만 여기서는 정확한 계산을 위해 현재 로직 유지
             try {
                 const projection = map.getProjection();
                 const centerPoint = projection.fromCoordToOffset(baseLatLng);
@@ -207,29 +214,52 @@ const NaverMapView = memo(({
                     centerPoint.x + (PANEL_WIDTH / 2),
                     centerPoint.y
                 );
-                return projection.fromOffsetToCoord(offsetPoint);
+                const finalLatLng = projection.fromOffsetToCoord(offsetPoint);
+
+                if (isInstant) {
+                    map.setCenter(finalLatLng);
+                } else {
+                    map.panTo(finalLatLng, { duration: 400, easing: 'easeOutCubic' });
+                }
             } catch (e) {
-                return baseLatLng;
+                if (isInstant) map.setCenter(baseLatLng);
+                else map.panTo(baseLatLng);
             }
         };
 
         if (shouldInstantLoad) {
-            // 줌 차이가 크거나 거리가 멀면: 즉시 로드 (애니메이션 없음)
+            // 줌 차이가 크거나 거리가 멀면: 즉시 로드
             map.setZoom(targetZoom);
-            map.setCenter(centerLatLng);
-
-            // 줌 적용 완료 후 오프셋 적용
+            // 줌 변경 후 좌표 설정
             setTimeout(() => {
-                const offsetLatLng = applyOffset(centerLatLng);
-                map.setCenter(offsetLatLng);
-            }, 200);
+                applyOffset(centerLatLng, true);
+            }, 0);
         } else {
             // 가까운 거리: 부드러운 애니메이션
-            const offsetLatLng = applyOffset(centerLatLng);
-            map.morph(offsetLatLng, targetZoom, {
-                duration: 400,
-                easing: 'easeOutCubic'
-            });
+            // morph는 줌과 이동을 동시에 하지만, 오프셋 계산이 복잡할 수 있음.
+            // 먼저 줌이 같은지 확인
+            if (currentZoom !== targetZoom) {
+                // 줌이 다르면 morph 사용 (오프셋 적용된 좌표로)
+                // 단, morph는 projection이 필요하므로 try-catch 내부 혹은 별도 처리
+                try {
+                    const projection = map.getProjection();
+                    const centerPoint = projection.fromCoordToOffset(centerLatLng);
+                    const offsetPoint = new naver.maps.Point(
+                        centerPoint.x + (PANEL_WIDTH / 2),
+                        centerPoint.y
+                    );
+                    const finalLatLng = projection.fromOffsetToCoord(offsetPoint);
+                    map.morph(finalLatLng, targetZoom, {
+                        duration: 400,
+                        easing: 'easeOutCubic'
+                    });
+                } catch (e) {
+                    map.morph(centerLatLng, targetZoom);
+                }
+            } else {
+                // 줌이 같으면 panTo (오프셋 적용)
+                applyOffset(centerLatLng, false);
+            }
         }
     }, [selectedRestaurant, isGridMode]);
 
@@ -547,7 +577,7 @@ const NaverMapView = memo(({
         };
     }, [isLoaded]);
 
-    // 지역 변경 시 지도 중심 이동
+    // 지역 변경 시 지도 중심 이동 (오직 지역이 변경되었을 때만)
     useEffect(() => {
         if (!mapInstanceRef.current) return;
 
@@ -556,29 +586,16 @@ const NaverMapView = memo(({
         const { naver } = window;
         const map = mapInstanceRef.current;
 
-        // 패널이 열려있으면 오프셋 적용
-        const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
-
+        // 화면 줌/이동
         const targetCenter = new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]);
         map.setZoom(regionConfig.zoom);
+        map.setCenter(targetCenter);
 
-        if (isAnyPanelOpen) {
-            // 패널 오프셋 적용하여 중심 이동
-            setTimeout(() => {
-                try {
-                    const projection = map.getProjection();
-                    const centerPoint = projection.fromCoordToOffset(targetCenter);
-                    const offsetPoint = new naver.maps.Point(centerPoint.x + PANEL_WIDTH / 2, centerPoint.y);
-                    const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
-                    map.setCenter(offsetLatLng);
-                } catch {
-                    map.setCenter(targetCenter);
-                }
-            }, 50);
-        } else {
-            map.setCenter(targetCenter);
-        }
-    }, [selectedRegion, isPanelOpen, externalPanelOpen, isPanelCollapsed]);
+        // 지역 변경 시에는 패널이 닫힌다고 가정하거나, 
+        // 패널 상태에 따른 오프셋은 panel effect에서 처리하도록 함.
+        // 여기서는 "기본 위치"로의 리셋만 담당.
+
+    }, [selectedRegion]); // 의존성에서 패널 상태 제거
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
@@ -728,37 +745,10 @@ const NaverMapView = memo(({
 
             // 마커 클릭 이벤트
             naver.maps.Event.addListener(marker, "click", () => {
-                const map = mapInstanceRef.current;
-                const targetZoom = 16;
-
-                // 클릭된 레스토랑 좌표 저장
-                const targetLat = restaurant.lat;
-                const targetLng = restaurant.lng;
-
-                // 먼저 지도 이동 수행
-                if (map && targetLat && targetLng) {
-                    const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
-
-                    // 즉시 줌 + 중심 설정
-                    map.setZoom(targetZoom);
-                    map.setCenter(centerLatLng);
-
-                    // 오프셋 적용 (패널 열림 고려)
-                    setTimeout(() => {
-                        try {
-                            const projection = map.getProjection();
-                            const centerPoint = projection.fromCoordToOffset(centerLatLng);
-                            const offsetPoint = new naver.maps.Point(
-                                centerPoint.x + (PANEL_WIDTH / 2),
-                                centerPoint.y
-                            );
-                            const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
-                            map.setCenter(offsetLatLng);
-                        } catch (e) {
-                            // 프로젝션 오류 무시
-                        }
-                    }, 100);
-                }
+                // 기존의 명령형 지도 이동 로직(setZoom, setCenter 등)을 제거하고
+                // 상태 기반으로 동작하도록 변경.
+                // onRestaurantSelect가 호출되면 selectedRestaurant 상태가 업데이트되고, 
+                // 이에 따라 useEffect가 동작하여 지도를 이동시킴.
 
                 // 외부 onMarkerClick이 있으면 호출 (외부 패널 관리)
                 if (onMarkerClick) {
