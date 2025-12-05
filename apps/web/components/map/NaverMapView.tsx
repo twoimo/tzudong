@@ -402,10 +402,6 @@ const NaverMapView = memo(({
                     position: naver.maps.Position.TOP_LEFT,
                 },
                 scaleControl: false,
-                logoControl: false,
-                logoControlOptions: {
-                    position: naver.maps.Position.BOTTOM_RIGHT,
-                },
                 mapDataControl: false,
                 // 성능 최적화 옵션들
                 background: '#ffffff', // 배경색 명시로 렌더링 최적화
@@ -418,70 +414,8 @@ const NaverMapView = memo(({
         }
     }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // 네이버 로고 숨기기 - 지도 로드 후 실행
-    useEffect(() => {
-        if (!mapInstanceRef.current) return;
-
-        const hideLogos = () => {
-            const logoSelectors = [
-                '.naver-logo',
-                '[class*="logo"]',
-                '[class*="Logo"]',
-                'img[alt*="naver" i]',
-                'img[alt*="네이버" i]',
-                'a[href*="naver.com"]',
-                'a[href*="navercorp.com"]',
-                '[title*="NAVER"]',
-                '[title*="네이버"]'
-            ];
-
-            logoSelectors.forEach(selector => {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach((element) => {
-                    const htmlElement = element as HTMLElement;
-                    if (htmlElement.offsetParent !== null) { // 화면에 실제로 표시되는 요소만
-                        htmlElement.style.setProperty('display', 'none', 'important');
-                        htmlElement.style.setProperty('visibility', 'hidden', 'important');
-                        htmlElement.style.setProperty('opacity', '0', 'important');
-                    }
-                });
-            });
-        };
-
-        // 초기 숨김 - 여러 타이밍으로 실행
-        const timeouts = [
-            setTimeout(hideLogos, 100),
-            setTimeout(hideLogos, 500),
-            setTimeout(hideLogos, 1000),
-            setTimeout(hideLogos, 2000)
-        ];
-
-        // MutationObserver로 동적 요소 감시
-        const observer = new MutationObserver((mutations) => {
-            let hasNewElements = false;
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    hasNewElements = true;
-                }
-            });
-            if (hasNewElements) {
-                setTimeout(hideLogos, 50);
-            }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class', 'style']
-        });
-
-        // 컴포넌트 언마운트 시 정리
-        return () => {
-            timeouts.forEach(clearTimeout);
-            observer.disconnect();
-        };
-    }, [isLoaded]);
+    // [삭제됨] 네이버 로고 숨김 로직은 약관 위반 소지가 있어 제거하였습니다.
+    // useEffect(() => { ... logo hiding logic ... }, [isLoaded]);
 
     // [삭제됨] 지역 변경 시 지도 중심 이동 로직은 위쪽의 통합 useEffect로 병합됨
     // useEffect(() => { ... }, [selectedRegion]);
