@@ -55,13 +55,8 @@ const AdminReviewPanel = dynamic(
     { ssr: false }
 );
 
-const AdminAnnouncementPanel = dynamic(
-    () => import('@/components/admin/AdminAnnouncementPanel'),
-    { ssr: false }
-);
-
-const AnnouncementDetailPanel = dynamic(
-    () => import('@/components/announcement/AnnouncementDetailPanel'),
+const AnnouncementPanel = dynamic(
+    () => import('@/components/announcement/AnnouncementPanel'),
     { ssr: false }
 );
 
@@ -363,32 +358,18 @@ export default function HomeClient() {
                 </RightPanelWrapper>
             )}
 
-            {/* 관리자 공지사항 관리 패널 */}
-            {isAdmin && (
-                <RightPanelWrapper
-                    isOpen={activeRightPanel === 'adminAnnouncements'}
-                    isCollapsed={isPanelCollapsed}
-                >
-                    <AdminAnnouncementPanel
-                        isOpen={!isPanelCollapsed}
-                        onClose={closeAllPanels}
-                        onToggleCollapse={togglePanelCollapse}
-                        isCollapsed={isPanelCollapsed}
-                    />
-                </RightPanelWrapper>
-            )}
-
-            {/* 공지사항 상세보기 패널 (일반 사용자) */}
+            {/* 공지사항 패널 (관리자/사용자 통합) */}
             <RightPanelWrapper
-                isOpen={activeRightPanel === 'announcementDetail'}
+                isOpen={activeRightPanel === 'adminAnnouncements' || activeRightPanel === 'announcementDetail'}
                 isCollapsed={isPanelCollapsed}
             >
-                <AnnouncementDetailPanel
+                <AnnouncementPanel
                     isOpen={!isPanelCollapsed}
                     onClose={closeAllPanels}
                     onToggleCollapse={togglePanelCollapse}
                     isCollapsed={isPanelCollapsed}
-                    initialAnnouncement={selectedAnnouncement}
+                    isAdmin={isAdmin && activeRightPanel === 'adminAnnouncements'}
+                    initialAnnouncement={activeRightPanel === 'announcementDetail' ? selectedAnnouncement : null}
                 />
             </RightPanelWrapper>
         </>

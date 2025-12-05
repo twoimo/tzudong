@@ -303,6 +303,10 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-stone-800/10" />
+                  <DropdownMenuItem onClick={handleAdminAnnouncementsClick} className="text-stone-900 hover:bg-stone-200/50">
+                    <Megaphone className="mr-2 h-4 w-4" />
+                    공지사항
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
@@ -310,10 +314,6 @@ const Header = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileCl
                   <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     리뷰관리
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminAnnouncementsClick} className="text-stone-900 hover:bg-stone-200/50">
-                    <Megaphone className="mr-2 h-4 w-4" />
-                    공지사항
                   </DropdownMenuItem>
                 </>
               )}
