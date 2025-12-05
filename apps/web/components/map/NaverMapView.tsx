@@ -183,7 +183,12 @@ const NaverMapView = memo(({
             targetLng = selectedRestaurant.lng;
             isRestaurantSelected = true;
         } else {
-            return;
+            // 맛집이 선택되지 않은 경우, 선택된 지역의 중심 좌표 사용
+            const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
+            const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
+            targetLat = regionConfig.center[0];
+            targetLng = regionConfig.center[1];
+            targetZoom = regionConfig.zoom;
         }
 
         const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
@@ -271,6 +276,7 @@ const NaverMapView = memo(({
 
     }, [
         selectedRestaurant,
+        selectedRegion,
         isGridMode,
         isSidebarOpen,
         isPanelOpen,
@@ -476,25 +482,8 @@ const NaverMapView = memo(({
         };
     }, [isLoaded]);
 
-    // 지역 변경 시 지도 중심 이동 (오직 지역이 변경되었을 때만)
-    useEffect(() => {
-        if (!mapInstanceRef.current) return;
-
-        const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
-        const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
-        const { naver } = window;
-        const map = mapInstanceRef.current;
-
-        // 화면 줌/이동
-        const targetCenter = new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]);
-        map.setZoom(regionConfig.zoom);
-        map.setCenter(targetCenter);
-
-        // 지역 변경 시에는 패널이 닫힌다고 가정하거나, 
-        // 패널 상태에 따른 오프셋은 panel effect에서 처리하도록 함.
-        // 여기서는 "기본 위치"로의 리셋만 담당.
-
-    }, [selectedRegion]); // 의존성에서 패널 상태 제거
+    // [삭제됨] 지역 변경 시 지도 중심 이동 로직은 위쪽의 통합 useEffect로 병합됨
+    // useEffect(() => { ... }, [selectedRegion]);
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
