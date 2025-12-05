@@ -129,8 +129,6 @@ const NaverMapView = memo(({
         const currentId = selectedRestaurant.id;
         const prevId = prevSelectedRestaurantIdRef.current;
 
-
-
         // 이전 선택된 레스토랑 ID 업데이트
         prevSelectedRestaurantIdRef.current = currentId;
 
@@ -154,8 +152,6 @@ const NaverMapView = memo(({
         const zoomDiff = Math.abs(currentZoom - targetZoom);
         const shouldInstantLoad = zoomDiff >= 4 || distanceKm >= 50;
 
-
-
         // 오프셋 적용 함수
         const applyOffset = (baseLatLng: any) => {
             try {
@@ -173,9 +169,6 @@ const NaverMapView = memo(({
 
         if (shouldInstantLoad) {
             // 줌 차이가 크거나 거리가 멀면: 즉시 로드 (애니메이션 없음)
-
-
-            // setZoom과 setCenter를 순차적으로 호출
             map.setZoom(targetZoom);
             map.setCenter(centerLatLng);
 
@@ -183,11 +176,9 @@ const NaverMapView = memo(({
             setTimeout(() => {
                 const offsetLatLng = applyOffset(centerLatLng);
                 map.setCenter(offsetLatLng);
-
             }, 200);
         } else {
             // 가까운 거리: 부드러운 애니메이션
-
             const offsetLatLng = applyOffset(centerLatLng);
             map.morph(offsetLatLng, targetZoom, {
                 duration: 400,
@@ -707,15 +698,11 @@ const NaverMapView = memo(({
                     map.setZoom(targetZoom);
                     map.setCenter(centerLatLng);
 
-                    // 마커 재생성 완료 후 (약 1초 소요) 줌과 중심 재확정
+                    // 오프셋 적용 (패널 열림 고려)
                     setTimeout(() => {
                         try {
-                            // 줌이 변경되었을 수 있으므로 다시 설정
-                            map.setZoom(targetZoom);
-
                             const projection = map.getProjection();
-                            const newCenterLatLng = new naver.maps.LatLng(targetLat, targetLng);
-                            const centerPoint = projection.fromCoordToOffset(newCenterLatLng);
+                            const centerPoint = projection.fromCoordToOffset(centerLatLng);
                             const offsetPoint = new naver.maps.Point(
                                 centerPoint.x + (panelWidth / 2),
                                 centerPoint.y
@@ -723,10 +710,9 @@ const NaverMapView = memo(({
                             const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
                             map.setCenter(offsetLatLng);
                         } catch (e) {
-                            // 프로젝션 오류 시 기본 중심 설정
-                            map.setCenter(new naver.maps.LatLng(targetLat, targetLng));
+                            // 프로젝션 오류 무시
                         }
-                    }, 1200); // 마커 재생성 완료 대기
+                    }, 100);
                 }
 
                 // 외부 onMarkerClick이 있으면 호출 (외부 패널 관리)
@@ -747,7 +733,8 @@ const NaverMapView = memo(({
 
         // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
         // 마커 표시 후 자동 이동하지 않음
-    }, [displayRestaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant, isGridMode, gridSelectedRestaurant, onRestaurantSelect]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [displayRestaurants, refreshTrigger, selectedRegion, searchedRestaurant, isGridMode, gridSelectedRestaurant, onRestaurantSelect]);
 
     // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
     useEffect(() => {
