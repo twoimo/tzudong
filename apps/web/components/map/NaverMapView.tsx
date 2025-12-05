@@ -315,6 +315,8 @@ const NaverMapView = memo(({
         const map = mapInstanceRef.current;
 
         // 사이드바 너비 변화: 열림(256px) <-> 닫힘(64px) = 192px 차이
+        // 사이드바 접으면 → 지도 영역이 왼쪽으로 확장 → 기존 중심이 오른쪽으로 치우침 → 왼쪽으로 보정
+        // 사이드바 펼치면 → 지도 영역이 오른쪽으로 축소 → 기존 중심이 왼쪽으로 치우침 → 오른쪽으로 보정
         const sidebarWidthDiff = 192;
         const offsetX = isSidebarOpen ? sidebarWidthDiff / 2 : -sidebarWidthDiff / 2;
 
