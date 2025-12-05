@@ -160,7 +160,7 @@ const RestaurantSearch = ({
         variant="outline"
         size="sm"
         onClick={toggleSearchType}
-        className="flex items-center gap-2 flex-shrink-0"
+        className="flex items-center gap-2 flex-shrink-0 order-last ml-auto"
         title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
       >
         {searchType === 'name' ? (
