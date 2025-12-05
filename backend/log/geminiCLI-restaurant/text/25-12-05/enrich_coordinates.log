@@ -172,3 +172,69 @@ To eliminate this warning, add "type": "module" to /home/runner/work/tzudong/tzu
 ✅ 좌표 보완 완료!
 📊 총 음식점 수: 49
 📍 좌표 보완됨: 34
+(node:7906) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/scripts/enrich-coordinates.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/scripts/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+📁 .env 경로: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/.env
+📖 JSONL 파일 읽기: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-05/tzuyang_restaurant_results.jsonl
+📊 24개 항목 발견
+
+🔄 [14/24] Namlı Gurme Karaköy
+🗺️  카카오 API 호출: Kemankeş Karamustafa Paşa, Rıhtım Cd. No:26, 34425 Beyoğlu/İstanbul, Türkiye
+🔍 카카오 키워드 검색: Kemankeş Karamustafa Paşa, Rıhtım Cd. No:26, 34425 Beyoğlu/İstanbul, Türkiye
+⚠️  좌표를 찾을 수 없음: Kemankeş Karamustafa Paşa, Rıhtım Cd. No:26, 34425 Beyoğlu/İstanbul, Türkiye
+
+🔄 [14/24] Balık Dürüm Mehmet Usta
+🗺️  카카오 API 호출: Kemankeş Karamustafa Paşa, Mumhane Cd. No:37/B, 34425 Beyoğlu/İstanbul, Türkiye
+🔍 카카오 키워드 검색: Kemankeş Karamustafa Paşa, Mumhane Cd. No:37/B, 34425 Beyoğlu/İstanbul, Türkiye
+⚠️  좌표를 찾을 수 없음: Kemankeş Karamustafa Paşa, Mumhane Cd. No:37/B, 34425 Beyoğlu/İstanbul, Türkiye
+
+🔄 [20/24] Yatai Ramen Osu (屋台ラーメン 大須)
+🗺️  카카오 API 호출: 愛知県名古屋市中区大須2-26-28
+🔍 카카오 키워드 검색: 愛知県名古屋市中区大須2-26-28
+⚠️  좌표를 찾을 수 없음: 愛知県名古屋市中区大須2-26-28
+
+🔄 [23/24] Kızılkayalar Hamburger
+🗺️  카카오 API 호출: Caferağa, Mühürdar Cd. No:16/A, 34710 Kadıköy/İstanbul
+🔍 카카오 키워드 검색: Caferağa, Mühürdar Cd. No:16/A, 34710 Kadıköy/İstanbul
+⚠️  좌표를 찾을 수 없음: Caferağa, Mühürdar Cd. No:16/A, 34710 Kadıköy/İstanbul
+
+🔄 [23/24] Reks Kokoreç
+🗺️  카카오 API 호출: Caferağa Mah., Kadife Sok., No:1/1B, Kadıköy, İstanbul
+🔍 카카오 키워드 검색: Caferağa Mah., Kadife Sok., No:1/1B, Kadıköy, İstanbul
+⚠️  좌표를 찾을 수 없음: Caferağa Mah., Kadife Sok., No:1/1B, Kadıköy, İstanbul
+
+🔄 [24/24] 가야축산
+🗺️  카카오 API 호출: 대전 서구 도마동 132-6
+✅ 좌표 획득: 대전 서구 도마동 132-6 → (36.3161940152242, 127.381552701058)
+
+🔄 [24/24] 춘향전
+🗺️  카카오 API 호출: 대전광역시 서구 도마4길 69
+✅ 좌표 획득: 대전광역시 서구 도마4길 69 → (36.3158892397982, 127.381212586927)
+
+🔄 [24/24] 고향시장
+🗺️  카카오 API 호출: 대전광역시 서구 도마4길 69
+✅ 좌표 획득: 대전광역시 서구 도마4길 69 → (36.3158892397982, 127.381212586927)
+
+🔄 [24/24] 와우족발
+🗺️  카카오 API 호출: 대전 서구 도마동 134-1
+✅ 좌표 획득: 대전 서구 도마동 134-1 → (36.3164077105392, 127.382334453602)
+
+🔄 [24/24] 맛있는칼국수
+🗺️  카카오 API 호출: 대전광역시 서구 도마4길 69
+✅ 좌표 획득: 대전광역시 서구 도마4길 69 → (36.3158892397982, 127.381212586927)
+
+🔄 [24/24] 도마큰시장 붕어빵
+🗺️  카카오 API 호출: 대전광역시 서구 도마4길 69
+✅ 좌표 획득: 대전광역시 서구 도마4길 69 → (36.3158892397982, 127.381212586927)
+
+🔄 [24/24] 평양옥
+🗺️  카카오 API 호출: 대전 서구 도마5길 61 1층
+✅ 좌표 획득: 대전 서구 도마5길 61 1층 → (36.3172703109889, 127.38157576347)
+
+💾 결과 저장: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-05/tzuyang_restaurant_results.jsonl
+
+✅ 좌표 보완 완료!
+📊 총 음식점 수: 56
+📍 좌표 보완됨: 7
