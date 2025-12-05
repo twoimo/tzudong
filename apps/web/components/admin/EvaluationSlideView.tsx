@@ -243,57 +243,55 @@ export function EvaluationSlideView({
 
                 {/* Right: Info & Evaluation - Expanded Layout based on Reference Image */}
                 <ScrollArea className="w-[50%] h-full border-l bg-accent/5">
-                    <div className="p-5 space-y-6 text-sm">
+                    <div className="p-4 space-y-4 text-sm">
 
                         {/* 0. Video Info */}
-                        <div className="bg-white rounded-lg border p-4 shadow-sm">
-                            <h3 className="flex items-center gap-2 font-semibold text-lg mb-3">
+                        <div className="bg-white rounded-lg border p-3 shadow-sm">
+                            <h3 className="flex items-center gap-2 font-semibold text-base mb-2 text-gray-800">
                                 📹 영상 정보
                             </h3>
-                            <div className="space-y-2 text-sm">
-                                <div className="grid grid-cols-[80px_1fr] gap-2">
-                                    <span className="font-medium text-gray-700">제목:</span>
-                                    <span className="break-words">{currentRecord.youtube_meta?.title || '-'}</span>
+                            <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-sm">
+                                <span className="text-gray-500 font-medium">제목:</span>
+                                <span className="break-words font-medium text-gray-900 line-clamp-2" title={currentRecord.youtube_meta?.title}>{currentRecord.youtube_meta?.title || '-'}</span>
 
-                                    <span className="font-medium text-gray-700">게시일:</span>
-                                    <span>{currentRecord.youtube_meta?.publishedAt ? new Date(currentRecord.youtube_meta.publishedAt).toLocaleDateString() : '-'}</span>
+                                <span className="text-gray-500 font-medium">게시일:</span>
+                                <span className="text-gray-700">{currentRecord.youtube_meta?.publishedAt ? new Date(currentRecord.youtube_meta.publishedAt).toLocaleDateString() : '-'}</span>
 
-                                    <span className="font-medium text-gray-700">광고 여부:</span>
-                                    <span>
-                                        {currentRecord.youtube_meta?.ads_info?.is_ads
-                                            ? `광고 있음 (${currentRecord.youtube_meta.ads_info.what_ads})`
-                                            : '광고 없음'}
-                                    </span>
+                                <span className="text-gray-500 font-medium">광고:</span>
+                                <span className="text-gray-700">
+                                    {currentRecord.youtube_meta?.ads_info?.is_ads
+                                        ? `있음 (${currentRecord.youtube_meta.ads_info.what_ads})`
+                                        : '없음'}
+                                </span>
 
-                                    <span className="font-medium text-gray-700">링크:</span>
-                                    <a
-                                        href={currentRecord.youtube_link}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-blue-600 hover:underline break-all"
-                                    >
-                                        {currentRecord.youtube_link}
-                                    </a>
-                                </div>
+                                <span className="text-gray-500 font-medium">링크:</span>
+                                <a
+                                    href={currentRecord.youtube_link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-blue-600 hover:underline truncate"
+                                >
+                                    {currentRecord.youtube_link}
+                                </a>
                             </div>
                         </div>
 
                         {/* 1. Evaluation Details */}
-                        <div className="bg-white rounded-lg border p-4 shadow-sm">
-                            <h3 className="flex items-center gap-2 font-semibold text-lg mb-4">
+                        <div className="bg-white rounded-lg border p-3 shadow-sm">
+                            <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
                                 📊 평가 상세
                             </h3>
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 {/* 1. Visit Authenticity */}
                                 <div className="pl-3 border-l-4 border-blue-500">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <Badge variant="outline" className="h-6 w-6 flex items-center justify-center p-0 rounded-sm bg-blue-50 text-blue-700 border-blue-200">1</Badge>
-                                        <span className="font-semibold text-gray-900">방문 여부 정확성:</span>
-                                        <span className={cn("font-bold", currentRecord.evaluation_results?.visit_authenticity?.eval_value === 1 ? "text-blue-600" : "text-gray-900")}>
-                                            {currentRecord.evaluation_results?.visit_authenticity?.eval_value ?? 0}점
+                                        <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-blue-50 text-blue-700 border-blue-200 text-[10px]">1</Badge>
+                                        <span className="font-semibold text-gray-900 text-sm">방문 여부 정확성:</span>
+                                        <span className={cn("font-bold text-sm", currentRecord.evaluation_results?.visit_authenticity?.eval_value === 1 ? "text-blue-600" : "text-gray-900")}>
+                                            {currentRecord.evaluation_results?.visit_authenticity?.eval_value ?? 0}
                                         </span>
                                     </div>
-                                    <p className="text-gray-600 leading-relaxed text-sm">
+                                    <p className="text-gray-600 leading-relaxed text-xs">
                                         {currentRecord.evaluation_results?.visit_authenticity?.eval_basis || '근거 내용 없음'}
                                     </p>
                                 </div>
@@ -301,13 +299,13 @@ export function EvaluationSlideView({
                                 {/* 2. Reasoning Basis Inference */}
                                 <div className="pl-3 border-l-4 border-purple-500">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <Badge variant="outline" className="h-6 w-6 flex items-center justify-center p-0 rounded-sm bg-purple-50 text-purple-700 border-purple-200">2</Badge>
-                                        <span className="font-semibold text-gray-900">추론 합리성 (reasoning_basis):</span>
-                                        <span className={cn("font-bold", currentRecord.evaluation_results?.rb_inference_score?.eval_value === 1 ? "text-purple-600" : "text-gray-900")}>
-                                            {currentRecord.evaluation_results?.rb_inference_score?.eval_value ?? 0}점
+                                        <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-purple-50 text-purple-700 border-purple-200 text-[10px]">2</Badge>
+                                        <span className="font-semibold text-gray-900 text-sm">추론 합리성:</span>
+                                        <span className={cn("font-bold text-sm", currentRecord.evaluation_results?.rb_inference_score?.eval_value === 1 ? "text-purple-600" : "text-gray-900")}>
+                                            {currentRecord.evaluation_results?.rb_inference_score?.eval_value ?? 0}
                                         </span>
                                     </div>
-                                    <p className="text-gray-600 leading-relaxed text-sm">
+                                    <p className="text-gray-600 leading-relaxed text-xs">
                                         {currentRecord.evaluation_results?.rb_inference_score?.eval_basis || '근거 내용 없음'}
                                     </p>
                                 </div>
@@ -315,13 +313,13 @@ export function EvaluationSlideView({
                                 {/* 3. Reasoning Basis Grounding */}
                                 <div className="pl-3 border-l-4 border-green-500">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <Badge variant="outline" className="h-6 w-6 flex items-center justify-center p-0 rounded-sm bg-green-50 text-green-700 border-green-200">3</Badge>
-                                        <span className="font-semibold text-gray-900">실제 근거 일치도 (reasoning_basis):</span>
-                                        <Badge className={cn("text-xs", currentRecord.evaluation_results?.rb_grounding_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
+                                        <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-green-50 text-green-700 border-green-200 text-[10px]">3</Badge>
+                                        <span className="font-semibold text-gray-900 text-sm">실제 근거 일치도:</span>
+                                        <Badge className={cn("text-[10px] h-5 px-1.5", currentRecord.evaluation_results?.rb_grounding_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
                                             {currentRecord.evaluation_results?.rb_grounding_TF?.eval_value ? "True" : "False"}
                                         </Badge>
                                     </div>
-                                    <p className="text-gray-600 leading-relaxed text-sm">
+                                    <p className="text-gray-600 leading-relaxed text-xs">
                                         {currentRecord.evaluation_results?.rb_grounding_TF?.eval_basis || '근거 내용 없음'}
                                     </p>
                                 </div>
@@ -329,13 +327,13 @@ export function EvaluationSlideView({
                                 {/* 4. Review Faithfulness */}
                                 <div className="pl-3 border-l-4 border-indigo-500">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <Badge variant="outline" className="h-6 w-6 flex items-center justify-center p-0 rounded-sm bg-indigo-50 text-indigo-700 border-indigo-200">4</Badge>
-                                        <span className="font-semibold text-gray-900">리뷰 충실도 (음식 리뷰):</span>
-                                        <span className={cn("font-bold", currentRecord.evaluation_results?.review_faithfulness_score?.eval_value === 1 ? "text-indigo-600" : "text-gray-900")}>
-                                            {currentRecord.evaluation_results?.review_faithfulness_score?.eval_value ?? 0}점
+                                        <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px]">4</Badge>
+                                        <span className="font-semibold text-gray-900 text-sm">리뷰 충실도:</span>
+                                        <span className={cn("font-bold text-sm", currentRecord.evaluation_results?.review_faithfulness_score?.eval_value === 1 ? "text-indigo-600" : "text-gray-900")}>
+                                            {currentRecord.evaluation_results?.review_faithfulness_score?.eval_value ?? 0}
                                         </span>
                                     </div>
-                                    <p className="text-gray-600 leading-relaxed text-sm">
+                                    <p className="text-gray-600 leading-relaxed text-xs">
                                         {currentRecord.evaluation_results?.review_faithfulness_score?.eval_basis || '근거 내용 없음'}
                                     </p>
                                 </div>
@@ -343,24 +341,24 @@ export function EvaluationSlideView({
                                 {/* 5. Geocoding */}
                                 <div className="pl-3 border-l-4 border-orange-500">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <Badge variant="outline" className="h-6 w-6 flex items-center justify-center p-0 rounded-sm bg-orange-50 text-orange-700 border-orange-200">5</Badge>
-                                        <span className="font-semibold text-gray-900">주소 정합성 (지오코딩 기반):</span>
-                                        <Badge className={cn("text-xs", currentRecord.geocoding_success ? "bg-green-600" : "bg-red-500")}>
+                                        <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-orange-50 text-orange-700 border-orange-200 text-[10px]">5</Badge>
+                                        <span className="font-semibold text-gray-900 text-sm">주소 정합성:</span>
+                                        <Badge className={cn("text-[10px] h-5 px-1.5", currentRecord.geocoding_success ? "bg-green-600" : "bg-red-500")}>
                                             {currentRecord.geocoding_success ? "성공" : "실패"}
                                         </Badge>
                                     </div>
-                                    <div className="text-gray-600 text-sm space-y-1 mt-1">
-                                        <p><span className="font-medium text-black">지번 주소:</span> {currentRecord.jibun_address || '-'}</p>
-                                        <p><span className="font-medium text-black">도로명 주소:</span> {currentRecord.road_address || '-'}</p>
+                                    <div className="text-gray-600 text-xs space-y-0.5 mt-0.5">
+                                        <p><span className="text-gray-500">지번:</span> {currentRecord.jibun_address || '-'}</p>
+                                        <p><span className="text-gray-500">도로명:</span> {currentRecord.road_address || '-'}</p>
                                     </div>
                                 </div>
 
                                 {/* 6. Category Validity */}
                                 <div className="pl-3 border-l-4 border-teal-500">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <Badge variant="outline" className="h-6 w-6 flex items-center justify-center p-0 rounded-sm bg-teal-50 text-teal-700 border-teal-200">6</Badge>
-                                        <span className="font-semibold text-gray-900">카테고리 유효성 (파싱 문제):</span>
-                                        <Badge className={cn("text-xs", currentRecord.evaluation_results?.category_validity_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
+                                        <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-teal-50 text-teal-700 border-teal-200 text-[10px]">6</Badge>
+                                        <span className="font-semibold text-gray-900 text-sm">카테고리 유효성:</span>
+                                        <Badge className={cn("text-[10px] h-5 px-1.5", currentRecord.evaluation_results?.category_validity_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
                                             {currentRecord.evaluation_results?.category_validity_TF?.eval_value ? "True" : "False"}
                                         </Badge>
                                     </div>
@@ -369,16 +367,15 @@ export function EvaluationSlideView({
                                 {/* 7. Category Match */}
                                 <div className="pl-3 border-l-4 border-yellow-500">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <Badge variant="outline" className="h-6 w-6 flex items-center justify-center p-0 rounded-sm bg-yellow-50 text-yellow-700 border-yellow-200">7</Badge>
-                                        <span className="font-semibold text-gray-900">카테고리 정합성:</span>
-                                        <Badge className={cn("text-xs", currentRecord.evaluation_results?.category_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
+                                        <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px]">7</Badge>
+                                        <span className="font-semibold text-gray-900 text-sm">카테고리 정합성:</span>
+                                        <Badge className={cn("text-[10px] h-5 px-1.5", currentRecord.evaluation_results?.category_TF?.eval_value ? "bg-green-600" : "bg-red-500")}>
                                             {currentRecord.evaluation_results?.category_TF?.eval_value ? "True" : "False"}
                                         </Badge>
-                                        {/* 수정됨 여부 체크? */}
                                         {currentRecord.evaluation_results?.category_TF?.category_revision && (
-                                            <Badge variant="outline" className="ml-2 text-yellow-700 border-yellow-300 bg-yellow-50">
-                                                {currentRecord.evaluation_results.category_TF.category_revision} (수정됨)
-                                            </Badge>
+                                            <span className="ml-2 text-xs text-yellow-700 font-medium">
+                                                (수정: {currentRecord.evaluation_results.category_TF.category_revision})
+                                            </span>
                                         )}
                                     </div>
                                 </div>
@@ -386,52 +383,78 @@ export function EvaluationSlideView({
                         </div>
 
                         {/* 2. Restaurant Info */}
-                        <div className="bg-white rounded-lg border p-4 shadow-sm">
-                            <h3 className="flex items-center gap-2 font-semibold text-lg mb-4">
+                        <div className="bg-white rounded-lg border p-3 shadow-sm">
+                            <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
                                 🍽️ 음식점 상세 정보
                             </h3>
-                            <div className="space-y-4 text-sm">
-                                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
-                                    <span className="font-bold">음식점명:</span>
-                                    <span>{currentRecord.restaurant_name || currentRecord.name}</span>
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                                {/* Row 1 */}
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-gray-500 text-xs font-medium">음식점명</span>
+                                    <span className="font-semibold text-gray-900 text-sm break-keep">{currentRecord.restaurant_name || currentRecord.name || '-'}</span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-gray-500 text-xs font-medium">카테고리</span>
+                                    <span className="text-gray-900 text-sm">{currentRecord.restaurant_info?.category || '-'}</span>
+                                </div>
 
-                                    <span className="font-bold">카테고리:</span>
-                                    <span>{currentRecord.restaurant_info?.category || '-'}</span>
-
-                                    <span className="font-bold">전화번호:</span>
-                                    <span>{currentRecord.phone || '-'}</span>
-
-                                    <span className="font-bold">원본 주소:</span>
-                                    <span>{currentRecord.restaurant_info?.origin_address || '-'}</span>
-
-                                    <span className="font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-600" /> Naver 도로명:</span>
-                                    <span>{currentRecord.restaurant_info?.naver_address_info?.road_address || '-'}</span>
-
-                                    <span className="font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-600" /> Naver 지번:</span>
-                                    <span>{currentRecord.restaurant_info?.naver_address_info?.jibun_address || '-'}</span>
-
-                                    <span className="font-bold flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-green-600" /> 좌표:</span>
+                                {/* Row 2 */}
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-gray-500 text-xs font-medium">전화번호</span>
+                                    <span className="text-gray-900 text-sm">{currentRecord.phone || '-'}</span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
+                                        좌표 (lat, lng)
+                                    </span>
                                     <span className="font-mono text-xs text-gray-600">
-                                        ({currentRecord.lat ?? '-'}, {currentRecord.lng ?? '-'})
+                                        {currentRecord.lat ?? '-'}, {currentRecord.lng ?? '-'}
                                     </span>
                                 </div>
-                                <div className="mt-4 p-3 bg-gray-100 rounded-md">
-                                    <h4 className="font-bold mb-1">reasoning_basis:</h4>
-                                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                                        {currentRecord.reasoning_basis || '-'}
-                                    </p>
+
+                                {/* Row 3 - Full Width Address */}
+                                <div className="col-span-2 flex flex-col gap-0.5">
+                                    <span className="text-gray-500 text-xs font-medium">원본 주소</span>
+                                    <span className="text-gray-900 text-sm">{currentRecord.restaurant_info?.origin_address || '-'}</span>
                                 </div>
-                                <div className="mt-4 p-3 bg-gray-100 rounded-md">
-                                    <h4 className="font-bold mb-1">tzuyang_review:</h4>
-                                    <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                                        {currentRecord.restaurant_info?.tzuyang_review || '-'}
-                                    </p>
+
+                                {/* Row 4 - Naver Addresses */}
+                                <div className="col-span-2 grid grid-cols-1 gap-1">
+                                    <div className="flex items-start gap-1.5">
+                                        <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 도로명</Badge>
+                                        <span className="text-sm text-gray-700 break-all">{currentRecord.restaurant_info?.naver_address_info?.road_address || '-'}</span>
+                                    </div>
+                                    <div className="flex items-start gap-1.5">
+                                        <Badge variant="outline" className="shrink-0 text-[10px] px-1 bg-green-50 text-green-700 border-green-200 h-5">Naver 지번</Badge>
+                                        <span className="text-sm text-gray-700 break-all">{currentRecord.restaurant_info?.naver_address_info?.jibun_address || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <Separator className="my-3" />
+
+                            <div className="space-y-3">
+                                <div>
+                                    <h4 className="font-bold text-xs text-gray-500 mb-1.5 uppercase">Reasoning Basis</h4>
+                                    <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
+                                        <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap break-keep">
+                                            {currentRecord.reasoning_basis || '-'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-xs text-gray-500 mb-1.5 uppercase">Tzuyang Review</h4>
+                                    <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
+                                        <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap break-keep">
+                                            {currentRecord.restaurant_info?.tzuyang_review || '-'}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Bottom Padding */}
-                        <div className="h-12" />
+                        <div className="h-8" />
                     </div>
                 </ScrollArea>
             </div>
