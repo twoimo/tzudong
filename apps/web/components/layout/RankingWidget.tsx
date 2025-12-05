@@ -65,7 +65,7 @@ const RankingWidgetComponent = () => {
                             <span className="font-medium">{onlineUsers}명</span>
                         </div>
                     </TooltipTrigger>
-                    <TooltipContent>
+                    <TooltipContent side="bottom">
                         <p>현재 접속 중인 사용자</p>
                     </TooltipContent>
                 </Tooltip>
@@ -81,7 +81,7 @@ const RankingWidgetComponent = () => {
                                 <span>{myRank}위</span>
                             </div>
                         </TooltipTrigger>
-                        <TooltipContent>
+                        <TooltipContent side="bottom">
                             <p>나의 실시간 랭킹</p>
                         </TooltipContent>
                     </Tooltip>

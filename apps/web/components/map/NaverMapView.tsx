@@ -1,7 +1,7 @@
 'use client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef, useState, memo } from "react";
+import { useEffect, useRef, useState, memo, useCallback, useMemo } from "react";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { FilterState } from "@/components/filters/FilterPanel";
@@ -36,6 +36,33 @@ interface NaverMapViewProps {
     externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
     isPanelCollapsed?: boolean; // 패널 접기 상태 (접혀있으면 오프셋 없음)
 }
+
+// 카테고리 아이콘 맵 (컴포넌트 외부에서 한 번만 생성)
+const CATEGORY_ICON_MAP: Record<string, string> = {
+    '고기': '🥩',
+    '치킨': '🍗',
+    '한식': '🍚',
+    '중식': '🥢',
+    '일식': '🍣',
+    '양식': '🍝',
+    '분식': '🥟',
+    '카페·디저트': '☕',
+    '아시안': '🍜',
+    '패스트푸드': '🍔',
+    '족발·보쌈': '🍖',
+    '돈까스·회': '🍱',
+    '피자': '🍕',
+    '찜·탕': '🥘',
+    '야식': '🌙',
+    '도시락': '🍱'
+};
+
+// 카테고리 아이콘 반환 함수 (외부에서 정의하여 재생성 방지)
+const getCategoryIcon = (category: string | string[] | null | undefined): string => {
+    if (!category) return '⭐';
+    const categoryStr = Array.isArray(category) ? category[0] : category;
+    return CATEGORY_ICON_MAP[categoryStr] || '⭐';
+};
 
 const NaverMapView = memo(({
     filters,
@@ -346,12 +373,15 @@ const NaverMapView = memo(({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isSidebarOpen]);
 
-    const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
+    // useRestaurants 옵션 메모이제이션
+    const restaurantQueryOptions = useMemo(() => ({
         category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
         region: selectedRegion || undefined,
         minReviews: filters.minReviews,
-        enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
-    });
+        enabled: isLoaded,
+    }), [filters.categories, filters.minReviews, selectedRegion, isLoaded]);
+
+    const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantQueryOptions);
 
     // 지역 변경 시 로딩 중에도 이전 마커를 유지하기 위한 상태
     const [previousRestaurants, setPreviousRestaurants] = useState<Restaurant[]>([]);
@@ -370,8 +400,10 @@ const NaverMapView = memo(({
         }
     }, [restaurants, isLoadingRestaurants]);
 
-    // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용)
-    const displayRestaurants = isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
+    // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용) - 메모이제이션
+    const displayRestaurants = useMemo(() => {
+        return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
+    }, [isLoadingRestaurants, previousRestaurants, restaurants]);
 
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
     useEffect(() => {
@@ -623,34 +655,6 @@ const NaverMapView = memo(({
             // 그리드 모드에서는 gridSelectedRestaurant, 단일 모드에서는 props의 selectedRestaurant 사용
             const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
             const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
-            // 카테고리별 적절한 이모티콘으로 변경
-            const getCategoryIcon = (category: string | string[] | null | undefined) => {
-                // category가 null이나 undefined면 기본값
-                if (!category) return '⭐';
-
-                // category가 배열이면 첫 번째 값 사용
-                const categoryStr = Array.isArray(category) ? category[0] : category;
-
-                const iconMap: { [key: string]: string } = {
-                    '고기': '🥩',
-                    '치킨': '🍗',
-                    '한식': '🍚',
-                    '중식': '🥢',
-                    '일식': '🍣',
-                    '양식': '🍝',
-                    '분식': '🥟',
-                    '카페·디저트': '☕',
-                    '아시안': '🍜',
-                    '패스트푸드': '🍔',
-                    '족발·보쌈': '🍖',
-                    '돈까스·회': '🍱',
-                    '피자': '🍕',
-                    '찜·탕': '🥘',
-                    '야식': '🌙',
-                    '도시락': '🍱'
-                };
-                return iconMap[categoryStr] || '⭐'; // 기본값은 별표
-            };
 
             // categories 필드 사용 (호환성 속성인 category도 사용 가능)
             const icon = getCategoryIcon(restaurant.categories || restaurant.category);
