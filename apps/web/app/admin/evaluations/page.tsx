@@ -11,7 +11,8 @@ import { EvaluationTable } from '@/components/admin/EvaluationTableNew';
 import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm';
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
-import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { EvaluationSlideView } from '@/components/admin/EvaluationSlideView';
+import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle, LayoutList, MonitorPlay } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { Input } from '@/components/ui/input';
@@ -80,11 +81,11 @@ export default function AdminEvaluationPage() {
   const [pendingApprovalRecord, setPendingApprovalRecord] = useState<EvaluationRecord | null>(null);
   const [conflictingRestaurantInfo, setConflictingRestaurantInfo] = useState<{
     name: string;
-    address: string;
   } | null>(null);
 
   // 테이블 뷰 토글 상태
   const [isAlternateView, setIsAlternateView] = useState(false);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
   // 자막 수집 상태
   const [transcriptStatus, setTranscriptStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -375,6 +376,14 @@ export default function AdminEvaluationPage() {
     return filtered;
   }, [allRecords, searchResults, selectedStatuses, evalFilters]);
 
+  // filteredRecords가 정의된 후에 useEffect 위치
+  useEffect(() => {
+    // 필터링된 레코드 내에서 현재 인덱스가 유효한지 확인
+    if (currentSlideIndex >= filteredRecords.length && filteredRecords.length > 0) {
+      setCurrentSlideIndex(0);
+    }
+  }, [filteredRecords.length, currentSlideIndex]);
+
   // 더 많은 레코드 로드
   const loadMoreRecords = useCallback(() => {
     if (loadingMore || !hasMore) return;
@@ -414,6 +423,16 @@ export default function AdminEvaluationPage() {
     scrollContainer.addEventListener('scroll', handleScroll);
     return () => scrollContainer.removeEventListener('scroll', handleScroll);
   }, [hasMore, loadingMore, loadMoreRecords, displayedRecords.length, filteredRecords.length]);
+
+  // 슬라이드 뷰에서 끝에 도달하면 추가 데이터 로드
+  useEffect(() => {
+    if (isAlternateView && hasMore && !loadingMore) {
+      // 현재 인덱스가 표시된 레코드의 끝부분(마지막 5개)에 도달하면 추가 로드
+      if (currentSlideIndex >= displayedRecords.length - 5) {
+        loadMoreRecords();
+      }
+    }
+  }, [isAlternateView, currentSlideIndex, displayedRecords.length, hasMore, loadingMore, loadMoreRecords]);
 
   // 전체 데이터 로드 (한 번만)
   const loadAllRecords = useCallback(async () => {
@@ -920,9 +939,9 @@ export default function AdminEvaluationPage() {
       if (!statusResponse.ok) {
         throw new Error('FastAPI 서버에 연결할 수 없습니다. uvicorn main:app --reload 명령으로 서버를 시작하세요.');
       }
-      
+
       const statusData = await statusResponse.json();
-      
+
       if (statusData.pending_urls === 0) {
         setTranscriptStatus('success');
         setTranscriptMessage(`수집할 새로운 URL이 없습니다. (기존 ${statusData.existing_transcripts}개)`);
@@ -957,7 +976,7 @@ export default function AdminEvaluationPage() {
         setTranscriptStatus('success');
         const commitInfo = result.committed ? ' → GitHub 커밋 완료!' : '';
         setTranscriptMessage(`✅ ${result.success_count}개 수집 성공${commitInfo}`);
-        
+
         toast({
           title: '🎬 자막 수집 완료',
           description: (
@@ -977,10 +996,10 @@ export default function AdminEvaluationPage() {
     } catch (error: unknown) {
       console.error('자막 수집 실패:', error);
       setTranscriptStatus('error');
-      
+
       const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';
       setTranscriptMessage(`❌ ${errorMessage}`);
-      
+
       // 연결 오류인 경우 상세 안내
       if (errorMessage.includes('연결할 수 없습니다') || errorMessage.includes('Failed to fetch')) {
         toast({
@@ -1032,37 +1051,36 @@ export default function AdminEvaluationPage() {
                 <ClipboardCheck className="h-6 w-6 text-primary" />
                 관리자 데이터 검수
               </h1>
-              <button
-                onClick={() => setIsAlternateView(!isAlternateView)}
-                className="p-2 rounded-md hover:bg-accent transition-colors"
-                title={isAlternateView ? "기본 뷰로 전환" : "대체 뷰로 전환"}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={isAlternateView ? "text-primary" : "text-muted-foreground"}
+
+              <div className="flex items-center gap-1 border-l pl-3 ml-2">
+                <Button
+                  variant={!isAlternateView ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setIsAlternateView(false)}
+                  title="리스트 뷰"
                 >
-                  <rect x="3" y="3" width="7" height="7" />
-                  <rect x="14" y="3" width="7" height="7" />
-                  <rect x="14" y="14" width="7" height="7" />
-                  <rect x="3" y="14" width="7" height="7" />
-                </svg>
-              </button>
-              {/* 자막 수집 버튼 */}
+                  <LayoutList className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={isAlternateView ? "secondary" : "ghost"}
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setIsAlternateView(true)}
+                  title="슬라이드 뷰"
+                >
+                  <MonitorPlay className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {/* 자막 수집 버튼 (아이콘 only) */}
               <Button
                 onClick={handleCollectTranscripts}
                 disabled={transcriptStatus === 'loading'}
                 variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'outline'}
-                size="sm"
-                className="gap-2"
-                title="로컬 FastAPI 서버를 통해 YouTube 자막을 수집하고 GitHub에 커밋합니다"
+                size="icon"
+                className="h-8 w-8 ml-2"
+                title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
               >
                 {transcriptStatus === 'loading' ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -1073,9 +1091,6 @@ export default function AdminEvaluationPage() {
                 ) : (
                   <FileText className="h-4 w-4" />
                 )}
-                <span className="text-sm font-medium">
-                  {transcriptStatus === 'loading' ? '수집 중...' : '자막 수집'}
-                </span>
               </Button>
             </div>
             <p className="text-muted-foreground text-sm mt-1">
@@ -1095,58 +1110,73 @@ export default function AdminEvaluationPage() {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* 테이블 영역 (무한 스크롤) */}
-        <div className="flex-1 overflow-hidden flex flex-col">
-          <div
-            ref={scrollContainerRef}
-            className="flex-1 p-4 overflow-auto"
-            id="scroll-container"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="w-8 h-8 animate-spin" />
-              </div>
-            ) : (
-              <>
-                <EvaluationTable
-                  records={displayedRecords}
-                  onApprove={handleApprove}
-                  onDelete={handleDelete}
-                  onRestore={handleRestore}
-                  onRegisterMissing={handleRegisterMissing}
-                  onResolveConflict={handleResolveConflict}
-                  onEdit={handleEdit}
-                  loading={loading || isSearching}
-                  evalFilters={evalFilters}
-                  isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  onFilterChange={(key, value) => {
-                    setEvalFilters(prev => ({
-                      ...prev,
-                      [key]: value === '' ? undefined : value
-                    }));
-                  }}
-                  onResetFilters={() => setEvalFilters({})}
-                />
+        {isAlternateView ? (
+          <EvaluationSlideView
+            records={displayedRecords} // 필터링된 결과 그대로 사용
+            currentIndex={currentSlideIndex}
+            onNavigate={setCurrentSlideIndex}
+            onApprove={handleApprove}
+            onDelete={handleDelete}
+            onRestore={handleRestore}
+            onRegisterMissing={handleRegisterMissing}
+            onResolveConflict={handleResolveConflict}
+            onEdit={handleEdit}
+            loading={loading}
+          />
+        ) : (
+          /* 테이블 영역 (무한 스크롤) */
+          <div className="flex-1 overflow-hidden flex flex-col">
+            <div
+              ref={scrollContainerRef}
+              className="flex-1 p-4 overflow-auto"
+              id="scroll-container"
+            >
+              {loading ? (
+                <div className="flex items-center justify-center h-full">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+              ) : (
+                <>
+                  <EvaluationTable
+                    records={displayedRecords}
+                    onApprove={handleApprove}
+                    onDelete={handleDelete}
+                    onRestore={handleRestore}
+                    onRegisterMissing={handleRegisterMissing}
+                    onResolveConflict={handleResolveConflict}
+                    onEdit={handleEdit}
+                    loading={loading || isSearching}
+                    evalFilters={evalFilters}
+                    isDeletedFilterActive={selectedStatuses.includes('deleted' as EvaluationRecordStatus)}
+                    searchQuery={searchQuery}
+                    onSearchChange={setSearchQuery}
+                    onFilterChange={(key, value) => {
+                      setEvalFilters(prev => ({
+                        ...prev,
+                        [key]: value === '' ? undefined : value
+                      }));
+                    }}
+                    onResetFilters={() => setEvalFilters({})}
+                  />
 
-                {/* 로딩 인디케이터 */}
-                {loadingMore && (
-                  <div className="flex justify-center py-4">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                )}
+                  {/* 로딩 인디케이터 */}
+                  {loadingMore && (
+                    <div className="flex justify-center py-4">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
 
-                {/* 모든 데이터 로드 완료 메시지 */}
-                {!hasMore && displayedRecords.length > 0 && (
-                  <div className="text-center py-4 text-muted-foreground text-sm">
-                    모든 레코드를 불러왔습니다 ({displayedRecords.length}개 / 전체 {filteredRecords.length}개)
-                  </div>
-                )}
-              </>
-            )}
+                  {/* 모든 데이터 로드 완료 메시지 */}
+                  {!hasMore && displayedRecords.length > 0 && (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      모든 레코드를 불러왔습니다 ({displayedRecords.length}개 / 전체 {filteredRecords.length}개)
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Missing 레스토랑 등록 폼 */}

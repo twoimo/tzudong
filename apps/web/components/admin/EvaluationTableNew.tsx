@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
   Table,
@@ -97,10 +97,50 @@ export function EvaluationTable({
   onResetFilters,
 }: EvaluationTableProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const rowRefs = useRef<{ [key: string]: HTMLTableRowElement | null }>({});
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
+
+  // 키보드 네비게이션 핸들러
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 입력 필드나 모달이 포커스된 경우 무시
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+
+        const currentIndex = records.findIndex(r => r.id === expandedId);
+        let nextIndex = -1;
+
+        if (e.key === 'ArrowDown') {
+          nextIndex = currentIndex < records.length - 1 ? currentIndex + 1 : 0;
+          if (currentIndex === -1 && records.length > 0) nextIndex = 0;
+        } else if (e.key === 'ArrowUp') {
+          nextIndex = currentIndex > 0 ? currentIndex - 1 : records.length - 1;
+          if (currentIndex === -1 && records.length > 0) nextIndex = records.length - 1;
+        }
+
+        if (nextIndex !== -1) {
+          const nextRecord = records[nextIndex];
+          setExpandedId(nextRecord.id);
+
+          // 스크롤 이동
+          const rowElement = rowRefs.current[nextRecord.id];
+          if (rowElement) {
+            rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [records, expandedId]);
 
   // 필터가 적용되어 있는지 확인
   const hasActiveFilters = Object.values(evalFilters).some(value => value !== undefined && value !== '');
@@ -663,12 +703,22 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
               }
 
               const mainRow = (
-                <TableRow key={record.id} className="hover:bg-muted/50">
+                <TableRow
+                  key={record.id}
+                  className={cn("hover:bg-muted/50 transition-colors cursor-pointer", expandedId === record.id && "bg-muted/30 border-l-4 border-l-primary")}
+                  ref={(el) => {
+                    if (el) rowRefs.current[record.id] = el;
+                  }}
+                  onClick={() => toggleExpand(record.id)}
+                >
                   <TableCell className="sticky left-0 bg-background">
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => toggleExpand(record.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand(record.id);
+                      }}
                     >
                       {expandedId === record.id ? (
                         <ChevronUp className="w-4 h-4" />
