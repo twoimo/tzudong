@@ -266,7 +266,7 @@ export default function HomeClient() {
                 onAdminEditRestaurant={onAdminEditRestaurant}
                 onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
                 onRestaurantSelect={state.setSelectedRestaurant}
-                onSwitchToSingleMap={handlers.switchToSingleMap}
+
                 onMapReady={handlers.handleMapReady}
                 onMarkerClick={openDetailPanel}
                 onPanelClose={closeAllPanels}

@@ -21,14 +21,14 @@ interface RestaurantSearchProps {
 
 type SearchType = 'name' | 'youtube';
 
-const RestaurantSearch = ({ 
-  onRestaurantSelect, 
-  onSearchExecute, 
-  onRestaurantSearch, 
-  className, 
-  filters, 
+const RestaurantSearch = ({
+  onRestaurantSelect,
+  onSearchExecute,
+  onRestaurantSearch,
+  className,
+  filters,
   selectedRegion,
-  isKoreanOnly = false 
+  isKoreanOnly = false
 }: RestaurantSearchProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [isFocused, setIsFocused] = useState(false);
@@ -55,8 +55,8 @@ const RestaurantSearch = ({
       try {
         if (searchType === 'name') {
           // 맛집 이름으로 검색
-          const categoriesToSearch = filters?.categories && filters.categories.length > 0 
-            ? filters.categories 
+          const categoriesToSearch = filters?.categories && filters.categories.length > 0
+            ? filters.categories
             : null;
 
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -155,6 +155,27 @@ const RestaurantSearch = ({
 
   return (
     <div ref={searchRef} className={cn("relative flex items-center gap-2", className)}>
+      {/* 검색 타입 토글 버튼 */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={toggleSearchType}
+        className="flex items-center gap-2 flex-shrink-0 order-last ml-auto"
+        title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
+      >
+        {searchType === 'name' ? (
+          <>
+            <MapPin className="h-4 w-4" />
+            <span className="hidden sm:inline">맛집명</span>
+          </>
+        ) : (
+          <>
+            <Video className="h-4 w-4" />
+            <span className="hidden sm:inline">유튜브</span>
+          </>
+        )}
+      </Button>
+
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -174,27 +195,6 @@ const RestaurantSearch = ({
         )}
       </div>
 
-      {/* 검색 타입 토글 버튼 */}
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={toggleSearchType}
-        className="flex items-center gap-2 flex-shrink-0"
-        title={searchType === 'name' ? "유튜브 제목으로 검색" : "맛집 이름으로 검색"}
-      >
-        {searchType === 'name' ? (
-          <>
-            <MapPin className="h-4 w-4" />
-            <span className="hidden sm:inline">맛집명</span>
-          </>
-        ) : (
-          <>
-            <Video className="h-4 w-4" />
-            <span className="hidden sm:inline">유튜브</span>
-          </>
-        )}
-      </Button>
-
       {/* 검색 결과 드롭다운 */}
       {showResults && (
         <div className="absolute bottom-full left-0 right-0 mb-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-64 overflow-y-auto">
@@ -213,29 +213,29 @@ const RestaurantSearch = ({
                   {isKoreanOnly && searchType === 'youtube' ? (
                     <div className="flex items-baseline gap-2 min-w-0">
                       <span className="font-medium flex-shrink-0">{restaurant.name}</span>
-                      {restaurant.youtube_meta && 
-                       typeof restaurant.youtube_meta === 'object' && 
-                       'title' in restaurant.youtube_meta && (
-                        <span className="text-xs text-muted-foreground truncate">
-                          ({(restaurant.youtube_meta as YoutubeMeta).title})
-                        </span>
-                      )}
+                      {restaurant.youtube_meta &&
+                        typeof restaurant.youtube_meta === 'object' &&
+                        'title' in restaurant.youtube_meta && (
+                          <span className="text-xs text-muted-foreground truncate">
+                            ({(restaurant.youtube_meta as YoutubeMeta).title})
+                          </span>
+                        )}
                     </div>
                   ) : (
                     /* 글로벌 또는 맛집명 검색: 음식점명만 */
                     <span className="font-medium">{restaurant.name}</span>
                   )}
-                  
+
                   {/* 글로벌 유튜브 검색: 유튜브 제목을 별도 줄로 표시 */}
-                  {!isKoreanOnly && searchType === 'youtube' && 
-                   restaurant.youtube_meta && 
-                   typeof restaurant.youtube_meta === 'object' && 
-                   'title' in restaurant.youtube_meta && (
-                    <span className="text-xs text-muted-foreground truncate">
-                      {(restaurant.youtube_meta as YoutubeMeta).title}
-                    </span>
-                  )}
-                  
+                  {!isKoreanOnly && searchType === 'youtube' &&
+                    restaurant.youtube_meta &&
+                    typeof restaurant.youtube_meta === 'object' &&
+                    'title' in restaurant.youtube_meta && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        {(restaurant.youtube_meta as YoutubeMeta).title}
+                      </span>
+                    )}
+
                   <span className="text-sm text-muted-foreground truncate">
                     {restaurant.address}
                   </span>

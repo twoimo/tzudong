@@ -314,7 +314,7 @@ const NaverMapView = memo(({
 
     // useRestaurants 옵션 메모이제이션
     const restaurantQueryOptions = useMemo(() => ({
-        category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
+        category: filters.categories.length > 0 ? filters.categories : undefined,
         region: selectedRegion || undefined,
         minReviews: filters.minReviews,
         enabled: isLoaded,
@@ -402,7 +402,6 @@ const NaverMapView = memo(({
                     position: naver.maps.Position.TOP_LEFT,
                 },
                 scaleControl: false,
-                mapDataControl: false,
                 // 성능 최적화 옵션들
                 background: '#ffffff', // 배경색 명시로 렌더링 최적화
             });

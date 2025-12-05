@@ -5,7 +5,7 @@ import { Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Grid3X3, Map, Globe, Filter, Search, Grid } from "lucide-react";
+import { Globe, Filter, Search } from "lucide-react";
 import CategoryFilter from "@/components/filters/CategoryFilter";
 import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
 
@@ -142,7 +142,7 @@ export default function HomeControlPanel({
                     hover:shadow-xl hover:border-primary/50
                 `}
                 style={{
-                    minWidth: isExpanded ? EXPANDED_PANEL_WIDTH : undefined
+                    // minWidth 제거: 콘텐츠 크기에 맞게 자동 조절
                 }}
             >
                 {isExpanded ? (
