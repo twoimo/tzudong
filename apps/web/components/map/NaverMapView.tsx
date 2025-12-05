@@ -314,7 +314,7 @@ const NaverMapView = memo(({
 
     // useRestaurants 옵션 메모이제이션
     const restaurantQueryOptions = useMemo(() => ({
-        category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
+        category: filters.categories.length > 0 ? filters.categories : undefined,
         region: selectedRegion || undefined,
         minReviews: filters.minReviews,
         enabled: isLoaded,
