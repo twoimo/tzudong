@@ -68,12 +68,15 @@ def create_evaluation_targets():
                 evaluation_target = {}
                 restaurants = data.get('restaurants', [])
                 has_null_address = False
+                has_no_restaurants = len(restaurants) == 0  # 음식점 0개 체크
+                has_valid_name = False  # 유효한 name이 있는지 체크
 
                 for restaurant in restaurants:
                     name = restaurant.get('name')
                     address = restaurant.get('address')
 
                     if name:
+                        has_valid_name = True
                         # address가 null이면 False, 아니면 True
                         is_valid = address is not None
                         evaluation_target[name] = is_valid
@@ -87,6 +90,15 @@ def create_evaluation_targets():
                     'restaurants': restaurants,
                     'youtube_meta': data.get('youtube_meta', {})
                 }
+
+                # 음식점 0개이거나 모든 name이 null인 경우 notSelection에 저장
+                if has_no_restaurants or not has_valid_name:
+                    new_data['is_notSelected'] = True
+                    new_data['notSelected_reason'] = 'no_restaurants' if has_no_restaurants else 'all_names_null'
+                    append_to_jsonl(str(address_null_file), new_data)
+                    address_null_count += 1
+                    all_processed.add(youtube_link)
+                    continue
 
                 # append 모드로 즉시 저장 (유틸리티 함수 사용)
                 append_to_jsonl(str(output_file), new_data)
