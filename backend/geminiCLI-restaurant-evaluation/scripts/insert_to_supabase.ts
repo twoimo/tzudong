@@ -401,11 +401,8 @@ async function insertRestaurants(): Promise<{
               logSuccess(`[${i + 1}/${lines.length}] ${data.name} - 복원 및 업데이트 성공`);
             }
           } else {
-            // 이미 active 레코드가 있으면 스킵
+            // 이미 active 레코드가 있으면 스킵 (로그 없이)
             stats.skippedCount++;
-            if (stats.skippedCount <= 10 || stats.skippedCount % 50 === 0) {
-              logDebug(`[${i + 1}/${lines.length}] ${data.name} - 이미 존재 (스킵)`);
-            }
           }
           continue;
         }
