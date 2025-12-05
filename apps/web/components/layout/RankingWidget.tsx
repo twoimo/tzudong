@@ -28,14 +28,10 @@ const RankingWidgetComponent = () => {
                 const state = channel.presenceState();
                 // 고유 user_id만 카운트 (동일 유저의 여러 탭/브라우저를 1명으로 계산)
                 const uniqueUserIds = new Set<string>();
-                Object.values(state).forEach((presences: any[]) => {
-                    presences.forEach((presence: any) => {
-                        if (presence.user_id) {
-                            uniqueUserIds.add(presence.user_id);
-                        } else {
-                            // 비로그인 사용자는 각각 카운트
-                            uniqueUserIds.add(`anon_${Math.random()}`);
-                        }
+                Object.entries(state).forEach(([presenceKey, presences]) => {
+                    (presences as any[]).forEach((presence: any) => {
+                        // 로그인 사용자는 user_id로, 비로그인은 presence_ref로 식별
+                        uniqueUserIds.add(presence.user_id || presence.presence_ref || presenceKey);
                     });
                 });
                 setOnlineUsers(uniqueUserIds.size);
