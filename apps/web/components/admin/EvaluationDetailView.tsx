@@ -1,22 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
-    AlertCircle,
-    ExternalLink,
-    PlayCircle,
-    Check,
-    X,
-} from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
@@ -44,55 +32,77 @@ interface EvaluationDetailViewProps {
 }
 
 export function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
-    const [videoError, setVideoError] = useState(false);
+    const [embedError, setEmbedError] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
-    const [playerType, setPlayerType] = useState<'youtube' | 'popup'>('youtube');
+    const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
-    // 리코드 변경 시 플레이어 타입 초기화
+    // 리코드 변경 시 상태 초기화
     useEffect(() => {
-        setPlayerType('youtube');
+        setEmbedError(false);
+        setVideoUrl(null);
     }, [record?.id]);
 
     // videoId 메모이제이션
     const videoId = useMemo(() => getYoutubeVideoId(record?.youtube_link), [record?.youtube_link]);
 
-    // 비디오 URL 생성 로직
+    // YouTube 임베드 가능 여부 확인 (noembed.com 프록시 사용 - CORS 지원)
     useEffect(() => {
-        if (record?.youtube_link) {
-            const vidId = getYoutubeVideoId(record.youtube_link);
-            if (vidId) {
-                let url = '';
-                if (playerType === 'youtube') {
-                    const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                    // autoplay=0, mute=1 (자동재생, 음소거)
-                    url = `https://www.youtube.com/embed/${vidId}?autoplay=0&mute=0&playsinline=1&rel=0&enablejsapi=1&origin=${origin}&controls=1`;
+        if (!videoId || embedError) return;
 
-                } else if (playerType === 'popup') {
-                    setVideoUrl(null); // 팝업 모드는 iframe URL 없음 (UI 렌더링용)
-                    setVideoError(false);
+        const checkEmbedAvailability = async () => {
+            try {
+                // noembed.com은 CORS를 지원하는 oEmbed 프록시
+                const response = await fetch(
+                    `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`
+                );
+
+                if (!response.ok) {
+                    console.log('YouTube 임베드 불가 감지 (noembed 실패):', response.status);
+                    setEmbedError(true);
                     return;
                 }
+
+                const data = await response.json();
+
+                // noembed에서 에러 응답 시 (비공개, 삭제, 임베드 제한 등)
+                if (data.error) {
+                    console.log('YouTube 임베드 불가 감지:', data.error);
+                    setEmbedError(true);
+                }
+            } catch (error) {
+                // 네트워크 에러 시에는 그냥 iframe 시도
+                console.log('YouTube 임베드 확인 실패, iframe 시도:', error);
+            }
+        };
+
+        checkEmbedAvailability();
+    }, [videoId, embedError, record?.id]);
+
+    // 비디오 URL 생성 로직
+    useEffect(() => {
+        if (record?.youtube_link && !embedError) {
+            const vidId = getYoutubeVideoId(record.youtube_link);
+            if (vidId) {
+                const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                const url = `https://www.youtube.com/embed/${vidId}?autoplay=0&mute=0&playsinline=1&rel=0&enablejsapi=1&origin=${origin}&controls=1`;
                 setVideoUrl(url);
-                setVideoError(false);
             } else {
                 setVideoUrl(null);
             }
+        } else {
+            setVideoUrl(null);
         }
-    }, [record?.youtube_link, record?.id, playerType]);
+    }, [record?.youtube_link, record?.id, embedError]);
 
-    // 에러 핸들링
-    const handleVideoError = () => {
-        if (playerType === 'youtube') {
-            setPlayerType('popup'); // 바로 팝업 모드로 전환 (가장 확실한 방법)
-            return;
-        }
-        setVideoError(true);
-    };
+    // iframe 에러 핸들링
+    const handleVideoError = useCallback(() => {
+        setEmbedError(true);
+    }, []);
 
     if (!record) {
         return (
             <div className="flex flex-col items-center justify-center p-8 text-muted-foreground">
-                <AlertCircle className="w-12 h-12 mb-4" />
+                <span className="text-4xl mb-4">⚠️</span>
                 <p className="text-lg">표시할 데이터가 없습니다.</p>
             </div>
         );
@@ -287,18 +297,11 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
             {/* Left: Video Player */}
             <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-r", autoHeight ? "w-[40%]" : "w-[50%] overflow-hidden")}>
                 <div className="p-4 pb-0 w-full shrink-0">
-                    <div className="bg-white rounded-lg border p-3 shadow-sm relative overflow-hidden">
-                        {/* Background Thumbnail for Popup Mode */}
-                        {playerType === 'popup' && videoId && (
-                            <div
-                                className="absolute inset-0 bg-cover bg-center opacity-50 blur-sm scale-110"
-                                style={{ backgroundImage: `url(https://img.youtube.com/vi/${videoId}/hqdefault.jpg)` }}
-                            />
-                        )}
-
-                        {videoUrl && !videoError && playerType !== 'popup' ? (
+                    <div className="bg-white rounded-lg border p-3 shadow-sm">
+                        {videoUrl && !embedError ? (
                             <div className="w-full aspect-video z-10 shadow-lg">
                                 <iframe
+                                    ref={iframeRef}
                                     width="100%"
                                     height="100%"
                                     src={videoUrl}
@@ -309,78 +312,41 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                                     onError={handleVideoError}
                                 />
                             </div>
+                        ) : embedError && videoId ? (
+                            /* 임베드 실패 시 썸네일만 표시 - 클릭하면 유튜브 새 창 */
+                            <a
+                                href={record.youtube_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full aspect-video cursor-pointer"
+                            >
+                                <img
+                                    src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                    alt="YouTube 썸네일"
+                                    className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 hover:opacity-90"
+                                    onError={(e) => {
+                                        // maxresdefault가 없으면 hqdefault로 폴백
+                                        const target = e.currentTarget;
+                                        if (target.src.includes('maxresdefault')) {
+                                            target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                        }
+                                    }}
+                                />
+                            </a>
                         ) : (
-                            <div className="flex flex-col items-center justify-center text-white p-6 text-center z-10 w-full h-full bg-black/40 backdrop-blur-sm">
-                                {playerType === 'popup' && videoId ? (
-                                    <div className="flex flex-col items-center">
-                                        <img
-                                            src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-                                            alt="Thumbnail"
-                                            className="w-full max-w-[320px] h-auto rounded shadow-lg mb-6 border border-white/20"
-                                        />
-                                        <Button
-                                            variant="default"
-                                            asChild
-                                            size="lg"
-                                            className="gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-base px-8 py-6 h-auto shadow-xl hover:scale-105 transition-transform"
-                                        >
-                                            <a href={record.youtube_link} target="_blank" rel="noopener noreferrer">
-                                                <ExternalLink className="w-6 h-6" /> 새 창에서 재생하기
-                                            </a>
+                            /* 로딩 중 또는 링크 없음 */
+                            <div className="flex flex-col items-center justify-center text-muted-foreground p-6 text-center z-10 w-full aspect-video bg-gray-100">
+                                {videoId ? (
+                                    <p className="text-sm">로딩 중...</p>
+                                ) : record.youtube_link ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <p className="text-sm text-gray-500">영상 ID를 추출할 수 없습니다</p>
+                                        <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => window.open(record.youtube_link, '_blank')}>
+                                            <ExternalLink className="w-3 h-3 mr-1" /> YouTube에서 보기
                                         </Button>
-                                        <div className="mt-6 space-y-1 text-center">
-                                            <p className="text-sm text-gray-200 font-medium">
-                                                임베드 제한된 영상입니다.
-                                            </p>
-                                            <p className="text-xs text-gray-400">
-                                                위 버튼을 눌러 유튜브 새 창에서 확인하세요.
-                                            </p>
-                                        </div>
                                     </div>
                                 ) : (
-                                    <>
-                                        {videoError ? (
-                                            <>
-                                                <AlertCircle className="w-10 h-10 mb-2 text-red-500" />
-                                                <p className="mb-2 text-sm">{playerType === 'youtube' ? '재생 불가' : '재생 실패'}</p>
-                                                <p className="text-xs text-gray-400 mb-4">플레이어 소스를 변경해보세요.</p>
-                                            </>
-                                        ) : videoId ? (
-                                            <p className="text-sm">로딩 중...</p>
-                                        ) : (
-                                            <p className="text-gray-400 text-sm">링크 없음</p>
-                                        )}
-                                    </>
-                                )}
-
-                                {record.youtube_link && !videoId && (
-                                    <div className="flex flex-col items-center gap-2 mt-6">
-                                        <Button variant="secondary" size="sm" className="h-7 text-xs bg-white/10 hover:bg-white/20 text-white border-0" onClick={() => window.open(record.youtube_link, '_blank')}>
-                                            <ExternalLink className="w-3 h-3 mr-1" /> YouTube에서 보기 (새 탭)
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {record.youtube_link && (
-                                    <div className="absolute bottom-4 right-4">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="outline" size="sm" className="h-7 text-xs border-gray-600 text-gray-300 hover:text-white hover:bg-gray-800 bg-black/50 backdrop-blur-md">
-                                                    <PlayCircle className="w-3 h-3 mr-1" />
-                                                    {playerType === 'youtube' ? 'YouTube' : 'Popup 모드'}
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => setPlayerType('youtube')}>
-                                                    YouTube (기본)
-                                                </DropdownMenuItem>
-
-                                                <DropdownMenuItem onClick={() => setPlayerType('popup')}>
-                                                    Popup (팝업/새창)
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
+                                    <p className="text-gray-400 text-sm">링크 없음</p>
                                 )}
                             </div>
                         )}
