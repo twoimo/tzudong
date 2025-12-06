@@ -1215,16 +1215,18 @@ export default function AdminEvaluationPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>승인 확인</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
-              {conflictingRestaurantInfo && (
-                <div className="mt-3 p-3 bg-muted rounded-md">
-                  <p className="font-medium">기존 레스토랑:</p>
-                  <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
-                  <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
-                </div>
-              )}
-              <p className="mt-3 font-medium">승인하시겠습니까?</p>
+            <AlertDialogDescription asChild>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
+                {conflictingRestaurantInfo && (
+                  <div className="mt-3 p-3 bg-muted rounded-md">
+                    <p className="font-medium">기존 레스토랑:</p>
+                    <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
+                    <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
+                  </div>
+                )}
+                <p className="mt-3 font-medium">승인하시겠습니까?</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

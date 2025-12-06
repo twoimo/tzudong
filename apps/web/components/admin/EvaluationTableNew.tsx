@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
   Table,
@@ -80,6 +80,114 @@ False = category가 목록에 없거나 null`,
   category_TF: `True = 영상에서 음식들, 메뉴판 등을 확인했을 때 기존 category값이 적절함
 False = 영상에서 음식들, 메뉴판 등을 확인했을 때 기존 category값을 수용할 수 없음`
 };
+
+// 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
+const getYoutubeVideoId = (url: string | undefined): string | null => {
+  if (!url) return null;
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
+    /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
+    /(?:m\.youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/,
+    /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+  ];
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match && match[1] && match[1].length === 11) {
+      return match[1];
+    }
+  }
+  return null;
+};
+
+// 유틸리티 함수: 상태 뱃지 반환 (컴포넌트 외부)
+const STATUS_VARIANTS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  pending: { label: '미처리', variant: 'secondary' },
+  approved: { label: '승인됨', variant: 'default' },
+  hold: { label: '보류', variant: 'outline' },
+  missing: { label: 'Missing', variant: 'destructive' },
+  geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
+  not_selected: { label: '평가 미대상', variant: 'outline' },
+  deleted: { label: '삭제됨', variant: 'destructive' },
+};
+
+const getStatusBadge = (status: string) => {
+  const config = STATUS_VARIANTS[status] || { label: status, variant: 'default' as const };
+  return <Badge variant={config.variant} className="whitespace-nowrap">{config.label}</Badge>;
+};
+
+// 승인 가능 여부 판단 함수 (컴포넌트 외부)
+const canApprove = (record: EvaluationRecord): boolean => {
+  return record.geocoding_success &&
+    record.status !== 'missing' &&
+    record.status !== 'approved';
+};
+
+// FilterDropdown Props 타입
+interface FilterDropdownProps {
+  filterKey: string;
+  label: string;
+  options: { value: string; label: string }[];
+  tooltip: string;
+  currentValue: string | undefined;
+  onFilterChange: (key: string, value: string) => void;
+}
+
+// 메모이제이션된 FilterDropdown 컴포넌트
+const FilterDropdown = memo(function FilterDropdown({
+  filterKey,
+  label,
+  options,
+  tooltip,
+  currentValue,
+  onFilterChange,
+}: FilterDropdownProps) {
+  const isActive = currentValue !== undefined && currentValue !== '';
+
+  return (
+    <div className="flex items-center gap-1">
+      <span className="text-xs font-medium truncate">{label}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <HelpCircle className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+        </TooltipTrigger>
+        <TooltipContent className="max-w-sm">
+          <p className="whitespace-pre-line text-xs">{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={cn(
+              "h-5 w-5 p-0",
+              isActive && "bg-green-100 hover:bg-green-200"
+            )}
+          >
+            <Menu className={cn("h-3 w-3", isActive && "text-green-700")} />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start">
+          {options.map(option => (
+            <DropdownMenuItem
+              key={option.value}
+              onClick={() => onFilterChange(filterKey, option.value === 'all' ? '' : option.value)}
+              className={cn(
+                currentValue === option.value || (!currentValue && option.value === 'all')
+                  ? 'bg-accent'
+                  : ''
+              )}
+            >
+              {option.label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+});
+
+
 
 export function EvaluationTable({
   records,
@@ -173,55 +281,38 @@ export function EvaluationTable({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [records, expandedId]);
 
+  // FilterDropdown 렌더링 헬퍼 (evalFilters, onFilterChange 자동 바인딩)
+  const renderFilterDropdown = useCallback((
+    filterKey: string,
+    label: string,
+    tooltip: string,
+    options: { value: string; label: string }[]
+  ) => (
+    <FilterDropdown
+      filterKey={filterKey}
+      label={label}
+      tooltip={tooltip}
+      options={options}
+      currentValue={evalFilters[filterKey as keyof typeof evalFilters]}
+      onFilterChange={onFilterChange}
+    />
+  ), [evalFilters, onFilterChange]);
+
   // 필터가 적용되어 있는지 확인
-  const hasActiveFilters = Object.values(evalFilters).some(value => value !== undefined && value !== '');
+  const hasActiveFilters = useMemo(() =>
+    Object.values(evalFilters).some(value => value !== undefined && value !== ''),
+    [evalFilters]
+  );
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      pending: { label: '미처리', variant: 'secondary' },
-      approved: { label: '승인됨', variant: 'default' },
-      hold: { label: '보류', variant: 'outline' },
-      missing: { label: 'Missing', variant: 'destructive' },
-      geocoding_failed: { label: '지오코딩 실패', variant: 'destructive' },
-      not_selected: { label: '평가 미대상', variant: 'outline' },
-      deleted: { label: '삭제됨', variant: 'destructive' },
-    };
-
-    const config = variants[status] || { label: status, variant: 'default' };
-    return <Badge variant={config.variant} className="whitespace-nowrap">{config.label}</Badge>;
-  };
-
-  const getYoutubeVideoId = (url: string | undefined) => {
-    if (!url) return null;
-
-    // 더 포괄적인 YouTube URL 정규식 패턴들
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,  // watch?v=VIDEO_ID, youtu.be/VIDEO_ID (파라미터 무시)
-      /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,  // embed/VIDEO_ID, v/VIDEO_ID
-      /(?:m\.youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/, // 모바일 및 복잡한 URL
-      /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/, // shorts/VIDEO_ID (YouTube Shorts)
-    ];
-
-    for (const pattern of patterns) {
-      const match = url.match(pattern);
-      if (match && match[1] && match[1].length === 11) {
-        return match[1];
-      }
-    }
-
-    return null;
-  };
-
-  // 썸네일 로딩 상태와 URL을 관리하는 훅
-  const [thumbnailStates, setThumbnailStates] = useState<Record<string, 'loading' | 'loaded' | 'error'>>({});
-  const [thumbnailUrls, setThumbnailUrls] = useState<Record<string, string>>({});
+  // 썸네일 로딩 상태와 URL을 통합 관리
+  const [thumbnailData, setThumbnailData] = useState<Record<string, { state: 'loading' | 'loaded' | 'error'; url?: string }>>({});
 
   const loadThumbnail = useCallback((videoId: string) => {
-    if (thumbnailStates[videoId] === 'loaded' || thumbnailStates[videoId] === 'error') {
+    if (thumbnailData[videoId]?.state === 'loaded' || thumbnailData[videoId]?.state === 'error') {
       return;
     }
 
-    setThumbnailStates(prev => ({ ...prev, [videoId]: 'loading' }));
+    setThumbnailData(prev => ({ ...prev, [videoId]: { state: 'loading' } }));
 
     // 가장 확실한 썸네일부터 시도: default -> hqdefault -> mqdefault -> maxresdefault
     const tryThumbnail = (quality: string) => {
@@ -229,8 +320,7 @@ export function EvaluationTable({
       const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
 
       img.onload = () => {
-        setThumbnailStates(prev => ({ ...prev, [videoId]: 'loaded' }));
-        setThumbnailUrls(prev => ({ ...prev, [videoId]: thumbnailUrl }));
+        setThumbnailData(prev => ({ ...prev, [videoId]: { state: 'loaded', url: thumbnailUrl } }));
       };
 
       img.onerror = () => {
@@ -243,7 +333,7 @@ export function EvaluationTable({
           tryThumbnail('maxresdefault');
         } else {
           // 모든 시도 실패
-          setThumbnailStates(prev => ({ ...prev, [videoId]: 'error' }));
+          setThumbnailData(prev => ({ ...prev, [videoId]: { state: 'error' } }));
         }
       };
 
@@ -252,9 +342,9 @@ export function EvaluationTable({
 
     // default부터 시작 (모든 영상에 존재)
     tryThumbnail('default');
-  }, [thumbnailStates]);
+  }, [thumbnailData]);
 
-  // 레코드가 변경될 때 썸네일 상태 초기화
+  // 레코드가 변경될 때 더 이상 표시되지 않는 썸네일 데이터 정리
   useEffect(() => {
     if (records && records.length > 0) {
       const currentVideoIds = new Set<string>();
@@ -265,95 +355,18 @@ export function EvaluationTable({
         }
       });
 
-      // 기존 상태에서 현재 표시되지 않는 썸네일 상태 제거
-      setThumbnailStates(prev => {
-        const newStates: Record<string, 'loading' | 'loaded' | 'error'> = {};
+      // 기존 상태에서 현재 표시되지 않는 썸네일 데이터 제거
+      setThumbnailData(prev => {
+        const newData: Record<string, { state: 'loading' | 'loaded' | 'error'; url?: string }> = {};
         Object.keys(prev).forEach(videoId => {
           if (currentVideoIds.has(videoId)) {
-            newStates[videoId] = prev[videoId];
+            newData[videoId] = prev[videoId];
           }
         });
-        return newStates;
-      });
-
-      // 기존 URL에서 현재 표시되지 않는 썸네일 URL 제거
-      setThumbnailUrls(prev => {
-        const newUrls: Record<string, string> = {};
-        Object.keys(prev).forEach(videoId => {
-          if (currentVideoIds.has(videoId)) {
-            newUrls[videoId] = prev[videoId];
-          }
-        });
-        return newUrls;
+        return newData;
       });
     }
   }, [records]);
-
-
-  const canApprove = (record: EvaluationRecord) => {
-    return record.geocoding_success &&
-      record.status !== 'missing' &&
-      record.status !== 'approved';
-  };
-
-  const FilterDropdown = ({
-    filterKey,
-    label,
-    options,
-    tooltip
-  }: {
-    filterKey: string;
-    label: string;
-    options: { value: string; label: string }[];
-    tooltip: string;
-  }) => {
-    const isActive = evalFilters[filterKey as keyof typeof evalFilters] !== undefined &&
-      evalFilters[filterKey as keyof typeof evalFilters] !== '';
-
-    return (
-      <div className="flex items-center gap-1">
-        <span className="text-xs font-medium truncate">{label}</span>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <HelpCircle className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-          </TooltipTrigger>
-          <TooltipContent className="max-w-sm">
-            <p className="whitespace-pre-line text-xs">{tooltip}</p>
-          </TooltipContent>
-        </Tooltip>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={cn(
-                "h-5 w-5 p-0",
-                isActive && "bg-green-100 hover:bg-green-200"
-              )}
-            >
-              <Menu className={cn("h-3 w-3", isActive && "text-green-700")} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            {options.map(option => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => onFilterChange(filterKey, option.value === 'all' ? '' : option.value)}
-                className={cn(
-                  evalFilters[filterKey as keyof typeof evalFilters] === option.value ||
-                    (!evalFilters[filterKey as keyof typeof evalFilters] && option.value === 'all')
-                    ? 'bg-accent'
-                    : ''
-                )}
-              >
-                {option.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    );
-  };
 
   if (records.length === 0) {
     return (
@@ -410,101 +423,101 @@ export function EvaluationTable({
 
                 {/* 평가 컬럼들 */}
                 <TableHead className="min-w-[120px]">
-                  <FilterDropdown
-                    filterKey="visit_authenticity"
-                    label="방문 여부 정확성"
-                    tooltip={FILTER_TOOLTIPS.visit_authenticity}
-                    options={[
+                  {renderFilterDropdown(
+                    "visit_authenticity",
+                    "방문 여부 정확성",
+                    FILTER_TOOLTIPS.visit_authenticity,
+                    [
                       { value: 'all', label: '모두' },
                       { value: '0', label: '0점' },
                       { value: '1', label: '1점' },
                       { value: '2', label: '2점' },
                       { value: '3', label: '3점' },
                       { value: '4', label: '4점' },
-                    ]}
-                  />
+                    ]
+                  )}
                 </TableHead>
 
                 <TableHead className="min-w-[100px]">
-                  <FilterDropdown
-                    filterKey="rb_inference_score"
-                    label="추론 합리성"
-                    tooltip={FILTER_TOOLTIPS.rb_inference_score}
-                    options={[
+                  {renderFilterDropdown(
+                    "rb_inference_score",
+                    "추론 합리성",
+                    FILTER_TOOLTIPS.rb_inference_score,
+                    [
                       { value: 'all', label: '모두' },
                       { value: '0', label: '0점' },
                       { value: '1', label: '1점' },
                       { value: '2', label: '2점' },
-                    ]}
-                  />
+                    ]
+                  )}
                 </TableHead>
 
                 <TableHead className="min-w-[120px]">
-                  <FilterDropdown
-                    filterKey="rb_grounding_TF"
-                    label="실제 근거 일치도"
-                    tooltip={FILTER_TOOLTIPS.rb_grounding_TF}
-                    options={[
+                  {renderFilterDropdown(
+                    "rb_grounding_TF",
+                    "실제 근거 일치도",
+                    FILTER_TOOLTIPS.rb_grounding_TF,
+                    [
                       { value: 'all', label: '모두' },
                       { value: 'True', label: 'True' },
                       { value: 'False', label: 'False' },
-                    ]}
-                  />
+                    ]
+                  )}
                 </TableHead>
 
                 <TableHead className="min-w-[100px]">
-                  <FilterDropdown
-                    filterKey="review_faithfulness_score"
-                    label="리뷰 충실도"
-                    tooltip={FILTER_TOOLTIPS.review_faithfulness_score}
-                    options={[
+                  {renderFilterDropdown(
+                    "review_faithfulness_score",
+                    "리뷰 충실도",
+                    FILTER_TOOLTIPS.review_faithfulness_score,
+                    [
                       { value: 'all', label: '모두' },
                       { value: '0', label: '0점' },
                       { value: '1', label: '1점' },
-                    ]}
-                  />
+                    ]
+                  )}
                 </TableHead>
 
                 <TableHead className="min-w-[100px]">
-                  <FilterDropdown
-                    filterKey="geocoding_success"
-                    label="주소 정합성"
-                    tooltip={`True = 지오코딩 성공 (geocoding_success = true)
+                  {renderFilterDropdown(
+                    "geocoding_success",
+                    "주소 정합성",
+                    `True = 지오코딩 성공 (geocoding_success = true)
 False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
-Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`}
-                    options={[
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
+                    [
                       { value: 'all', label: '모두' },
                       { value: 'true', label: 'True' },
                       { value: 'false_match', label: 'False' },
                       { value: 'false_geocode', label: 'Failed' },
-                    ]}
-                  />
+                    ]
+                  )}
                 </TableHead>
 
                 <TableHead className="min-w-[120px]">
-                  <FilterDropdown
-                    filterKey="category_validity_TF"
-                    label="카테고리 유효성"
-                    tooltip={FILTER_TOOLTIPS.category_validity_TF}
-                    options={[
+                  {renderFilterDropdown(
+                    "category_validity_TF",
+                    "카테고리 유효성",
+                    FILTER_TOOLTIPS.category_validity_TF,
+                    [
                       { value: 'all', label: '모두' },
                       { value: 'True', label: 'True' },
                       { value: 'False', label: 'False' },
-                    ]}
-                  />
+                    ]
+                  )}
                 </TableHead>
 
                 <TableHead className="min-w-[120px]">
-                  <FilterDropdown
-                    filterKey="category_TF"
-                    label="카테고리 정합성"
-                    tooltip={FILTER_TOOLTIPS.category_TF}
-                    options={[
+                  {renderFilterDropdown(
+                    "category_TF",
+                    "카테고리 정합성",
+                    FILTER_TOOLTIPS.category_TF,
+                    [
                       { value: 'all', label: '모두' },
                       { value: 'True', label: 'True' },
                       { value: 'False', label: 'False' },
-                    ]}
-                  />
+                    ]
+                  )}
                 </TableHead>
 
                 {/* 고정 컬럼 */}
@@ -513,11 +526,11 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   {isDeletedFilterActive ? (
                     <div className="text-sm font-medium">상태</div>
                   ) : (
-                    <FilterDropdown
-                      filterKey="status"
-                      label="상태"
-                      tooltip="레코드 상태별로 필터링"
-                      options={[
+                    renderFilterDropdown(
+                      "status",
+                      "상태",
+                      "레코드 상태별로 필터링",
+                      [
                         { value: 'all', label: '모두' },
                         { value: 'pending', label: '미처리' },
                         { value: 'approved', label: '승인됨' },
@@ -525,8 +538,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         { value: 'missing', label: 'Missing' },
                         { value: 'not_selected', label: '평가 미대상' },
                         { value: 'geocoding_failed', label: '지오코딩 실패' },
-                      ]}
-                    />
+                      ]
+                    )
                   )}
                 </TableHead>
                 <TableHead className="text-center min-w-[250px] sticky right-0 bg-background z-10">액션</TableHead>
@@ -600,101 +613,101 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
 
               {/* 평가 컬럼들 */}
               <TableHead className="min-w-[120px]">
-                <FilterDropdown
-                  filterKey="visit_authenticity"
-                  label="방문 여부 정확성"
-                  tooltip={FILTER_TOOLTIPS.visit_authenticity}
-                  options={[
+                {renderFilterDropdown(
+                  "visit_authenticity",
+                  "방문 여부 정확성",
+                  FILTER_TOOLTIPS.visit_authenticity,
+                  [
                     { value: 'all', label: '모두' },
                     { value: '0', label: '0점' },
                     { value: '1', label: '1점' },
                     { value: '2', label: '2점' },
                     { value: '3', label: '3점' },
                     { value: '4', label: '4점' },
-                  ]}
-                />
+                  ]
+                )}
               </TableHead>
 
               <TableHead className="min-w-[100px]">
-                <FilterDropdown
-                  filterKey="rb_inference_score"
-                  label="추론 합리성"
-                  tooltip={FILTER_TOOLTIPS.rb_inference_score}
-                  options={[
+                {renderFilterDropdown(
+                  "rb_inference_score",
+                  "추론 합리성",
+                  FILTER_TOOLTIPS.rb_inference_score,
+                  [
                     { value: 'all', label: '모두' },
                     { value: '0', label: '0점' },
                     { value: '1', label: '1점' },
                     { value: '2', label: '2점' },
-                  ]}
-                />
+                  ]
+                )}
               </TableHead>
 
               <TableHead className="min-w-[120px]">
-                <FilterDropdown
-                  filterKey="rb_grounding_TF"
-                  label="실제 근거 일치도"
-                  tooltip={FILTER_TOOLTIPS.rb_grounding_TF}
-                  options={[
+                {renderFilterDropdown(
+                  "rb_grounding_TF",
+                  "실제 근거 일치도",
+                  FILTER_TOOLTIPS.rb_grounding_TF,
+                  [
                     { value: 'all', label: '모두' },
                     { value: 'True', label: 'True' },
                     { value: 'False', label: 'False' },
-                  ]}
-                />
+                  ]
+                )}
               </TableHead>
 
               <TableHead className="min-w-[100px]">
-                <FilterDropdown
-                  filterKey="review_faithfulness_score"
-                  label="리뷰 충실도"
-                  tooltip={FILTER_TOOLTIPS.review_faithfulness_score}
-                  options={[
+                {renderFilterDropdown(
+                  "review_faithfulness_score",
+                  "리뷰 충실도",
+                  FILTER_TOOLTIPS.review_faithfulness_score,
+                  [
                     { value: 'all', label: '모두' },
                     { value: '0', label: '0점' },
                     { value: '1', label: '1점' },
-                  ]}
-                />
+                  ]
+                )}
               </TableHead>
 
               <TableHead className="min-w-[100px]">
-                <FilterDropdown
-                  filterKey="geocoding_success"
-                  label="주소 정합성"
-                  tooltip={`True = 지오코딩 성공 (geocoding_success = true)
+                {renderFilterDropdown(
+                  "geocoding_success",
+                  "주소 정합성",
+                  `True = 지오코딩 성공 (geocoding_success = true)
 False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
-Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`}
-                  options={[
+Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
+                  [
                     { value: 'all', label: '모두' },
                     { value: 'true', label: 'True' },
                     { value: 'false_match', label: 'False' },
                     { value: 'false_geocode', label: 'Failed' },
-                  ]}
-                />
+                  ]
+                )}
               </TableHead>
 
               <TableHead className="min-w-[120px]">
-                <FilterDropdown
-                  filterKey="category_validity_TF"
-                  label="카테고리 유효성"
-                  tooltip={FILTER_TOOLTIPS.category_validity_TF}
-                  options={[
+                {renderFilterDropdown(
+                  "category_validity_TF",
+                  "카테고리 유효성",
+                  FILTER_TOOLTIPS.category_validity_TF,
+                  [
                     { value: 'all', label: '모두' },
                     { value: 'True', label: 'True' },
                     { value: 'False', label: 'False' },
-                  ]}
-                />
+                  ]
+                )}
               </TableHead>
 
               <TableHead className="min-w-[120px]">
-                <FilterDropdown
-                  filterKey="category_TF"
-                  label="카테고리 정합성"
-                  tooltip={FILTER_TOOLTIPS.category_TF}
-                  options={[
+                {renderFilterDropdown(
+                  "category_TF",
+                  "카테고리 정합성",
+                  FILTER_TOOLTIPS.category_TF,
+                  [
                     { value: 'all', label: '모두' },
                     { value: 'True', label: 'True' },
                     { value: 'False', label: 'False' },
-                  ]}
-                />
+                  ]
+                )}
               </TableHead>
 
               {/* 고정 컬럼 */}
@@ -703,11 +716,11 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 {isDeletedFilterActive ? (
                   <div className="text-sm font-medium">상태</div>
                 ) : (
-                  <FilterDropdown
-                    filterKey="status"
-                    label="상태"
-                    tooltip="레코드 상태별로 필터링"
-                    options={[
+                  renderFilterDropdown(
+                    "status",
+                    "상태",
+                    "레코드 상태별로 필터링",
+                    [
                       { value: 'all', label: '모두' },
                       { value: 'pending', label: '미처리' },
                       { value: 'approved', label: '승인됨' },
@@ -715,8 +728,8 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                       { value: 'missing', label: 'Missing' },
                       { value: 'not_selected', label: '평가 미대상' },
                       { value: 'geocoding_failed', label: '지오코딩 실패' },
-                    ]}
-                  />
+                    ]
+                  )
                 )}
               </TableHead>
               <TableHead className="text-center min-w-[250px] sticky right-0 bg-background z-10">액션</TableHead>
@@ -727,8 +740,9 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
               const videoId = getYoutubeVideoId(record.youtube_link);
 
               // 썸네일 로딩 상태 확인 및 로드
-              const thumbnailState = videoId ? thumbnailStates[videoId] : null;
-              const thumbnailUrl = videoId ? thumbnailUrls[videoId] : null;
+              const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
+              const thumbnailState = thumbnailInfo?.state;
+              const thumbnailUrl = thumbnailInfo?.url;
               if (videoId && !thumbnailState) {
                 loadThumbnail(videoId);
               }
