@@ -354,14 +354,16 @@ const NaverMapView = memo(({
                 const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
                 existingRestaurant = displayRestaurants.find(r =>
                     mergedIds.includes(r.id) ||
+                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mergedIds.includes(mr.id))) ||
                     (r.name === selectedRestaurant.name &&
                         Math.abs((r.lat || 0) - (selectedRestaurant.lat || 0)) < 0.0001 &&
                         Math.abs((r.lng || 0) - (selectedRestaurant.lng || 0)) < 0.0001)
                 );
             } else {
-                // 일반 데이터의 경우
+                // 일반 데이터의 경우 - 지도의 병합된 데이터에서도 찾기
                 existingRestaurant = displayRestaurants.find(r =>
                     r.id === selectedRestaurant.id ||
+                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mr.id === selectedRestaurant.id)) ||
                     (r.name === selectedRestaurant.name &&
                         Math.abs((r.lat || 0) - (selectedRestaurant.lat || 0)) < 0.0001 &&
                         Math.abs((r.lng || 0) - (selectedRestaurant.lng || 0)) < 0.0001)
@@ -425,10 +427,29 @@ const NaverMapView = memo(({
 
         // 검색된 맛집이 병합된 데이터라면 기존 restaurants에서 같은 데이터를 찾아서 교체
         let actualSearchedRestaurant = searchedRestaurant;
+
+        // 1. 검색 결과가 병합된 데이터인 경우
         if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
             const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
             const existingRestaurant = restaurants.find(r =>
                 mergedIds.includes(r.id) ||
+                (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mergedIds.includes(mr.id))) ||
+                (r.name === searchedRestaurant.name &&
+                    Math.abs((r.lat || 0) - (searchedRestaurant.lat || 0)) < 0.0001 &&
+                    Math.abs((r.lng || 0) - (searchedRestaurant.lng || 0)) < 0.0001)
+            );
+            if (existingRestaurant) {
+                actualSearchedRestaurant = existingRestaurant;
+                // 부모 컴포넌트의 selectedRestaurant도 업데이트
+                if (onRestaurantSelect) {
+                    onRestaurantSelect(existingRestaurant);
+                }
+            }
+        } else {
+            // 2. 검색 결과가 개별 레코드인 경우 - 지도의 병합된 데이터에서 찾기
+            const existingRestaurant = restaurants.find(r =>
+                r.id === searchedRestaurant.id ||
+                (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mr.id === searchedRestaurant.id)) ||
                 (r.name === searchedRestaurant.name &&
                     Math.abs((r.lat || 0) - (searchedRestaurant.lat || 0)) < 0.0001 &&
                     Math.abs((r.lng || 0) - (searchedRestaurant.lng || 0)) < 0.0001)
@@ -483,9 +504,16 @@ const NaverMapView = memo(({
             let alreadyExists = false;
             if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
                 const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
-                alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
+                alreadyExists = displayRestaurants.some(r =>
+                    mergedIds.includes(r.id) ||
+                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mergedIds.includes(mr.id)))
+                );
             } else {
-                alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
+                // 개별 레코드인 경우 - 지도의 병합된 데이터에서도 찾기
+                alreadyExists = displayRestaurants.some(r =>
+                    r.id === searchedRestaurant.id ||
+                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mr.id === searchedRestaurant.id))
+                );
             }
 
             if (!alreadyExists) {

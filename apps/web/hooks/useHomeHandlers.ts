@@ -121,7 +121,9 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
     const handleRestaurantSearch = useCallback((restaurant: Restaurant) => {
         setSearchedRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
-    }, [setSearchedRestaurant, setSelectedRestaurant]);
+        setPanelRestaurant(restaurant);
+        setIsPanelOpen(true);
+    }, [setSearchedRestaurant, setSelectedRestaurant, setPanelRestaurant, setIsPanelOpen]);
 
     const handleGridRestaurantSelect = useCallback((region: Region, restaurant: Restaurant) => {
         setGridSelectedRestaurants(prev => ({

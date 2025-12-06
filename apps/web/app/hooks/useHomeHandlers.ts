@@ -132,6 +132,8 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
     const handleRestaurantSearch = (restaurant: Restaurant) => {
         setSearchedRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
+        setPanelRestaurant(restaurant);
+        setIsPanelOpen(true);
     };
 
 

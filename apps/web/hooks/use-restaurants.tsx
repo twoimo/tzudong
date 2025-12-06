@@ -108,11 +108,11 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
                     publishedAt: (r.youtube_meta as YoutubeMeta | null)?.publishedAt || ''
                 }));
 
-                // publishedAt 날짜 기준 오름차순 정렬 (오래된 영상이 먼저)
+                // publishedAt 날짜 기준 내림차순 정렬 (최신 영상이 먼저)
                 restaurantPairs.sort((a, b) => {
                     if (!a.publishedAt) return 1;
                     if (!b.publishedAt) return -1;
-                    return a.publishedAt.localeCompare(b.publishedAt);
+                    return b.publishedAt.localeCompare(a.publishedAt);
                 });
 
                 const sortedRestaurants = restaurantPairs.map(p => p.restaurant);
