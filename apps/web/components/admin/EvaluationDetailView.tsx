@@ -297,15 +297,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
             {/* Left: Video Player */}
             <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-r", autoHeight ? "w-[40%]" : "w-[50%] overflow-hidden")}>
                 <div className="p-4 pb-0 w-full shrink-0">
-                    <div className="bg-white rounded-lg border p-3 shadow-sm relative overflow-hidden">
-                        {/* 임베드 에러 시 배경 썸네일 */}
-                        {embedError && videoId && (
-                            <div
-                                className="absolute inset-0 bg-cover bg-center opacity-50 blur-sm scale-110"
-                                style={{ backgroundImage: `url(https://img.youtube.com/vi/${videoId}/hqdefault.jpg)` }}
-                            />
-                        )}
-
+                    <div className="bg-white rounded-lg border p-3 shadow-sm">
                         {videoUrl && !embedError ? (
                             <div className="w-full aspect-video z-10 shadow-lg">
                                 <iframe
@@ -321,37 +313,26 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                                 />
                             </div>
                         ) : embedError && videoId ? (
-                            /* 임베드 실패 시 썸네일 표시 - 클릭하면 유튜브 새 창 */
-                            <div className="flex flex-col items-center justify-center p-6 text-center z-10 w-full aspect-video bg-black/40 backdrop-blur-sm">
-                                <a
-                                    href={record.youtube_link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="relative group cursor-pointer"
-                                >
-                                    <img
-                                        src={`https://img.youtube.com/vi/${videoId}/hqdefault.jpg`}
-                                        alt="Thumbnail"
-                                        className="w-full max-w-[400px] h-auto rounded-lg shadow-lg border border-white/20 transition-all duration-200 group-hover:opacity-80 group-hover:scale-[1.02]"
-                                    />
-                                    {/* Play Button Overlay */}
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-xl transition-transform duration-200 group-hover:scale-110">
-                                            <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
-                                                <path d="M8 5v14l11-7z" />
-                                            </svg>
-                                        </div>
-                                    </div>
-                                </a>
-                                <div className="mt-4 space-y-1 text-center">
-                                    <p className="text-sm text-gray-200 font-medium">
-                                        임베드가 제한된 영상입니다
-                                    </p>
-                                    <p className="text-xs text-gray-400">
-                                        썸네일을 클릭하면 유튜브에서 재생됩니다
-                                    </p>
-                                </div>
-                            </div>
+                            /* 임베드 실패 시 썸네일만 표시 - 클릭하면 유튜브 새 창 */
+                            <a
+                                href={record.youtube_link}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block w-full aspect-video cursor-pointer"
+                            >
+                                <img
+                                    src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                    alt="YouTube 썸네일"
+                                    className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 hover:opacity-90"
+                                    onError={(e) => {
+                                        // maxresdefault가 없으면 hqdefault로 폴백
+                                        const target = e.currentTarget;
+                                        if (target.src.includes('maxresdefault')) {
+                                            target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                        }
+                                    }}
+                                />
+                            </a>
                         ) : (
                             /* 로딩 중 또는 링크 없음 */
                             <div className="flex flex-col items-center justify-center text-muted-foreground p-6 text-center z-10 w-full aspect-video bg-gray-100">
