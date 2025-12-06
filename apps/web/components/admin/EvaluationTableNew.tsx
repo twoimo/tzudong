@@ -134,7 +134,36 @@ export function EvaluationTable({
           // 스크롤 이동
           const rowElement = rowRefs.current[nextRecord.id];
           if (rowElement) {
-            rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            // scrollIntoView가 전체 페이지를 스크롤하여 헤더가 사라지는 문제를 방지하기 위해
+            // 가장 가까운 스크롤 컨테이너를 찾아 직접 스크롤합니다.
+            let parent = rowElement.parentElement;
+            let scrollableParent: HTMLElement | null = null;
+
+            while (parent) {
+              const style = window.getComputedStyle(parent);
+              if (style.overflowY === 'auto' || style.overflowY === 'scroll') {
+                scrollableParent = parent;
+                break;
+              }
+              parent = parent.parentElement;
+            }
+
+            if (scrollableParent) {
+              const parentRect = scrollableParent.getBoundingClientRect();
+              const rowRect = rowElement.getBoundingClientRect();
+
+              // 현재 스크롤 위치에서 행이 화면 중앙에 오도록 오프셋 계산
+              const relativeTop = rowRect.top - parentRect.top;
+              const targetTop = scrollableParent.scrollTop + relativeTop - (scrollableParent.clientHeight / 2) + (rowElement.clientHeight / 2);
+
+              scrollableParent.scrollTo({
+                top: targetTop,
+                behavior: 'smooth'
+              });
+            } else {
+              // fallback
+              rowElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
           }
         }
       }
