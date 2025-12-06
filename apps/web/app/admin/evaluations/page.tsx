@@ -441,15 +441,43 @@ export default function AdminEvaluationPage() {
       setLoading(true);
 
       // 모든 레코드 조회 (restaurants 테이블에서)
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Supabase API는 1000개 제한이 있으므로 페이지네이션으로 전체 로드
+      const PAGE_LIMIT = 1000;
+      let allData: Record<string, unknown>[] = [];
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: pageData, error: pageError } = await supabase
+          .from('restaurants')
+          .select('*')
+          .range(from, from + PAGE_LIMIT - 1)
+          .order('created_at', { ascending: false });
+
+        if (pageError) {
+          console.error('Supabase error:', pageError);
+          throw pageError;
+        }
+
+        if (pageData && pageData.length > 0) {
+          allData = [...allData, ...pageData];
+          from += PAGE_LIMIT;
+          hasMore = pageData.length === PAGE_LIMIT;  // 1000개 미만이면 마지막 페이지
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const data = allData;
+      const error = null;
 
       if (error) {
         console.error('Supabase error:', error);
         throw error;
       }
+
+      // 디버그: 실제 로드된 레코드 수 확인
+      console.log('📊 데이터 로드 완료:', data?.length, '개 로드됨');
 
       if (!data) {
         console.warn('No data returned from restaurants');
