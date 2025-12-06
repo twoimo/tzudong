@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,24 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
+const getYoutubeVideoId = (url: string | undefined): string | null => {
+    if (!url) return null;
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
+        /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
+        /(?:m\.youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/,
+        /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1] && match[1].length === 11) {
+            return match[1];
+        }
+    }
+    return null;
+};
+
 interface EvaluationDetailViewProps {
     record: EvaluationRecord;
     className?: string;
@@ -35,26 +53,8 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
         setPlayerType('youtube');
     }, [record?.id]);
 
-    // YouTube ID 추출
-    const getYoutubeVideoId = (url: string | undefined) => {
-        if (!url) return null;
-        const patterns = [
-            /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
-            /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
-            /(?:m\.youtube\.com\/watch\?v=|youtube\.com\/.*[?&]v=)([a-zA-Z0-9_-]{11})/,
-            /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
-        ];
-
-        for (const pattern of patterns) {
-            const match = url.match(pattern);
-            if (match && match[1] && match[1].length === 11) {
-                return match[1];
-            }
-        }
-        return null;
-    };
-
-    const videoId = getYoutubeVideoId(record?.youtube_link);
+    // videoId 메모이제이션
+    const videoId = useMemo(() => getYoutubeVideoId(record?.youtube_link), [record?.youtube_link]);
 
     // 비디오 URL 생성 로직
     useEffect(() => {

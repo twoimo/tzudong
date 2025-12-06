@@ -441,15 +441,43 @@ export default function AdminEvaluationPage() {
       setLoading(true);
 
       // 모든 레코드 조회 (restaurants 테이블에서)
-      const { data, error } = await supabase
-        .from('restaurants')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Supabase API는 1000개 제한이 있으므로 페이지네이션으로 전체 로드
+      const PAGE_LIMIT = 1000;
+      let allData: Record<string, unknown>[] = [];
+      let from = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: pageData, error: pageError } = await supabase
+          .from('restaurants')
+          .select('*')
+          .range(from, from + PAGE_LIMIT - 1)
+          .order('created_at', { ascending: false });
+
+        if (pageError) {
+          console.error('Supabase error:', pageError);
+          throw pageError;
+        }
+
+        if (pageData && pageData.length > 0) {
+          allData = [...allData, ...pageData];
+          from += PAGE_LIMIT;
+          hasMore = pageData.length === PAGE_LIMIT;  // 1000개 미만이면 마지막 페이지
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const data = allData;
+      const error = null;
 
       if (error) {
         console.error('Supabase error:', error);
         throw error;
       }
+
+      // 디버그: 실제 로드된 레코드 수 확인
+      console.log('📊 데이터 로드 완료:', data?.length, '개 로드됨');
 
       if (!data) {
         console.warn('No data returned from restaurants');
@@ -511,13 +539,12 @@ export default function AdminEvaluationPage() {
 
       setAllRecords(records as unknown as EvaluationRecord[]);
 
-      // 통계 계산 (deleted 제외, rejected 포함)
+      // 통계 계산 (전체 레코드 기준)
       const typedRecords = records as unknown as EvaluationRecord[];
       const deletedCount = typedRecords.filter(r => r.status === 'deleted').length;
-      const activeData = typedRecords.filter(r => r.status !== 'deleted');
 
       const newStats: CategoryStats = {
-        total: activeData.length, // deleted 제외한 전체
+        total: typedRecords.length, // 삭제 포함 전체
         pending: typedRecords.filter(r => r.status === 'pending').length,
         approved: typedRecords.filter(r => r.status === 'approved').length,
         hold: typedRecords.filter(r => r.status === 'hold').length,
@@ -598,10 +625,9 @@ export default function AdminEvaluationPage() {
   // 통계 재계산 (현재 allRecords 기준)
   const recalculateStats = () => {
     const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
-    const activeData = allRecords.filter(r => r.status !== 'deleted');
 
     const newStats: CategoryStats = {
-      total: activeData.length,
+      total: allRecords.length, // 삭제 포함 전체
       pending: allRecords.filter(r => r.status === 'pending').length,
       approved: allRecords.filter(r => r.status === 'approved').length,
       hold: allRecords.filter(r => r.status === 'hold').length,
@@ -1215,16 +1241,18 @@ export default function AdminEvaluationPage() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>승인 확인</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
-              {conflictingRestaurantInfo && (
-                <div className="mt-3 p-3 bg-muted rounded-md">
-                  <p className="font-medium">기존 레스토랑:</p>
-                  <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
-                  <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
-                </div>
-              )}
-              <p className="mt-3 font-medium">승인하시겠습니까?</p>
+            <AlertDialogDescription asChild>
+              <div className="text-sm text-muted-foreground space-y-2">
+                <p>이름이 유사한 레스토랑이 존재하지만 유튜브 링크가 다릅니다.</p>
+                {conflictingRestaurantInfo && (
+                  <div className="mt-3 p-3 bg-muted rounded-md">
+                    <p className="font-medium">기존 레스토랑:</p>
+                    <p className="text-sm mt-1">이름: {conflictingRestaurantInfo.name}</p>
+                    <p className="text-sm">주소: {conflictingRestaurantInfo.address}</p>
+                  </div>
+                )}
+                <p className="mt-3 font-medium">승인하시겠습니까?</p>
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
