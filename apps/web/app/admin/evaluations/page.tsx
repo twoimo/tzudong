@@ -539,13 +539,12 @@ export default function AdminEvaluationPage() {
 
       setAllRecords(records as unknown as EvaluationRecord[]);
 
-      // 통계 계산 (deleted 제외, rejected 포함)
+      // 통계 계산 (전체 레코드 기준)
       const typedRecords = records as unknown as EvaluationRecord[];
       const deletedCount = typedRecords.filter(r => r.status === 'deleted').length;
-      const activeData = typedRecords.filter(r => r.status !== 'deleted');
 
       const newStats: CategoryStats = {
-        total: activeData.length, // deleted 제외한 전체
+        total: typedRecords.length, // 삭제 포함 전체
         pending: typedRecords.filter(r => r.status === 'pending').length,
         approved: typedRecords.filter(r => r.status === 'approved').length,
         hold: typedRecords.filter(r => r.status === 'hold').length,
@@ -626,10 +625,9 @@ export default function AdminEvaluationPage() {
   // 통계 재계산 (현재 allRecords 기준)
   const recalculateStats = () => {
     const deletedCount = allRecords.filter(r => r.status === 'deleted').length;
-    const activeData = allRecords.filter(r => r.status !== 'deleted');
 
     const newStats: CategoryStats = {
-      total: activeData.length,
+      total: allRecords.length, // 삭제 포함 전체
       pending: allRecords.filter(r => r.status === 'pending').length,
       approved: allRecords.filter(r => r.status === 'approved').length,
       hold: allRecords.filter(r => r.status === 'hold').length,
