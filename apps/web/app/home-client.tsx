@@ -11,15 +11,21 @@ import { Restaurant } from "@/types/restaurant";
 import HomeModeToggle from "../components/home/home-mode-toggle";
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
-// 동적 임포트 - 큰 컴포넌트는 필요할 때만 로드
+// [OPTIMIZATION] 동적 임포트 - loading placeholder로 CLS 방지
 const HomeControlPanel = dynamic(
     () => import('../components/home/home-control-panel'),
-    { ssr: false }
+    {
+        ssr: false,
+        loading: () => <div className="h-12" aria-hidden="true" />
+    }
 );
 
 const HomeMapContainer = dynamic(
     () => import('../components/home/home-map-container'),
-    { ssr: false }
+    {
+        ssr: false,
+        loading: () => <div className="flex-1 bg-muted/50 animate-pulse" aria-hidden="true" />
+    }
 );
 import { useHomeState } from "./hooks/useHomeState";
 import { useHomeHandlers } from "./hooks/useHomeHandlers";
@@ -302,17 +308,20 @@ export default function HomeClient() {
                 isPanelCollapsed={isPanelCollapsed}
             />
 
-            <EditRestaurantModal
-                isOpen={state.isEditModalOpen}
-                onClose={() => {
-                    state.setIsEditModalOpen(false);
-                    state.setRestaurantToEdit(null);
-                }}
-                restaurant={state.restaurantToEdit}
-                initialFormData={state.editFormData}
-            />
+            {/* [OPTIMIZATION] 조건부 렌더링으로 불필요한 모달 마운트 방지 - TBT 개선 */}
+            {state.isEditModalOpen && (
+                <EditRestaurantModal
+                    isOpen={state.isEditModalOpen}
+                    onClose={() => {
+                        state.setIsEditModalOpen(false);
+                        state.setRestaurantToEdit(null);
+                    }}
+                    restaurant={state.restaurantToEdit}
+                    initialFormData={state.editFormData}
+                />
+            )}
 
-            {isAdmin && (
+            {isAdmin && state.isAdminEditModalOpen && (
                 <AdminRestaurantModal
                     isOpen={state.isAdminEditModalOpen}
                     onClose={() => {
