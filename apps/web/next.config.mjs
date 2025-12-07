@@ -29,6 +29,20 @@ const nextConfig = {
                 protocol: 'https',
                 hostname: 'lh3.googleusercontent.com',
             },
+            // [OPTIMIZATION] YouTube 썸네일 도메인 - Next/Image 최적화 지원
+            {
+                protocol: 'https',
+                hostname: 'img.youtube.com',
+            },
+            {
+                protocol: 'https',
+                hostname: 'i.ytimg.com',
+            },
+            // [OPTIMIZATION] Supabase 스토리지 도메인
+            {
+                protocol: 'https',
+                hostname: '*.supabase.co',
+            },
         ],
     },
     env: {

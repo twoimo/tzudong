@@ -74,6 +74,9 @@ export default function RootLayout({
                 <link rel="preconnect" href="https://oapi.map.naver.com" crossOrigin="anonymous" />
                 <link rel="dns-prefetch" href="https://nrbe.pstatic.net" />
                 <link rel="dns-prefetch" href="https://kr-col-ext.nelo.navercorp.com" />
+                {/* [OPTIMIZATION] YouTube 썸네일 도메인 - LCP 개선 */}
+                <link rel="preconnect" href="https://img.youtube.com" crossOrigin="anonymous" />
+                <link rel="dns-prefetch" href="https://i.ytimg.com" />
             </head>
             <body className={notoSerifKR.className}>
                 <QueryProvider>

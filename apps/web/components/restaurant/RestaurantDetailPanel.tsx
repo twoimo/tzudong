@@ -12,6 +12,7 @@ import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import Image from "next/image";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -636,10 +637,13 @@ export function RestaurantDetailPanel({
                                                     }}
                                                 >
                                                     {getYouTubeThumbnailUrl(restaurant.mergedYoutubeLinks[0]) && (
-                                                        <img
+                                                        <Image
                                                             src={getYouTubeThumbnailUrl(restaurant.mergedYoutubeLinks[0])!}
                                                             alt={`YouTube Thumbnail 1`}
-                                                            className="w-full h-full object-cover"
+                                                            fill
+                                                            className="object-cover"
+                                                            sizes="(max-width: 400px) 100vw, 400px"
+                                                            priority
                                                         />
                                                     )}
                                                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
@@ -656,10 +660,13 @@ export function RestaurantDetailPanel({
                                                     }}
                                                 >
                                                     {getYouTubeThumbnailUrl(restaurant.youtube_link) && (
-                                                        <img
+                                                        <Image
                                                             src={getYouTubeThumbnailUrl(restaurant.youtube_link)!}
+                                                            fill
                                                             alt="YouTube Thumbnail"
-                                                            className="w-full h-full object-cover"
+                                                            className="object-cover"
+                                                            sizes="(max-width: 400px) 100vw, 400px"
+                                                            priority
                                                         />
                                                     )}
                                                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
@@ -678,10 +685,12 @@ export function RestaurantDetailPanel({
                                                             onClick={() => window.open(link, '_blank')}
                                                         >
                                                             {getYouTubeThumbnailUrl(link) && (
-                                                                <img
+                                                                <Image
                                                                     src={getYouTubeThumbnailUrl(link)!}
                                                                     alt={`YouTube Thumbnail ${index + 2}`}
-                                                                    className="w-full h-full object-cover"
+                                                                    fill
+                                                                    className="object-cover"
+                                                                    sizes="(max-width: 400px) 100vw, 400px"
                                                                 />
                                                             )}
                                                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/50 transition-colors">
@@ -827,14 +836,16 @@ export function RestaurantDetailPanel({
                                                     {/* Photos */}
                                                     {review.photos.length > 0 && (
                                                         <div className="mt-2">
-                                                            <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                                                                <img
+                                                            <div className="relative w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                                <Image
                                                                     src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
                                                                     alt={`음식 사진`}
-                                                                    className="w-full h-full object-cover"
+                                                                    fill
+                                                                    className="object-cover"
+                                                                    sizes="(max-width: 400px) 100vw, 200px"
                                                                     onError={(e) => {
                                                                         console.error('이미지 로딩 실패:', review.photos[0].url);
-                                                                        e.currentTarget.style.display = 'none';
+                                                                        (e.target as HTMLImageElement).style.display = 'none';
                                                                     }}
                                                                 />
                                                             </div>
@@ -930,14 +941,16 @@ export function RestaurantDetailPanel({
                                                 {/* Photos */}
                                                 {review.photos.length > 0 && (
                                                     <div className="mb-3">
-                                                        <div className="w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
-                                                            <img
+                                                        <div className="relative w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                                                            <Image
                                                                 src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
                                                                 alt={`음식 사진`}
-                                                                className="w-full h-full object-cover"
+                                                                fill
+                                                                className="object-cover"
+                                                                sizes="(max-width: 400px) 100vw, 400px"
                                                                 onError={(e) => {
                                                                     console.error('이미지 로딩 실패:', review.photos[0].url);
-                                                                    e.currentTarget.style.display = 'none';
+                                                                    (e.target as HTMLImageElement).style.display = 'none';
                                                                 }}
                                                             />
                                                         </div>
