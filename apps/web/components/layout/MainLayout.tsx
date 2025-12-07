@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import AuthModal from '@/components/auth/AuthModal';
@@ -14,8 +15,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLayout } from '@/contexts/LayoutContext';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
-import { supabase } from '@/integrations/supabase/client';
 import { Announcement } from '@/types/announcement';
+
+// [OPTIMIZATION] Lazy load Supabase prefetcher to reduce initial bundle size
+const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPrefetcher'), {
+    ssr: false,
+});
 
 export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
@@ -39,40 +44,6 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             prevPathnameRef.current = pathname;
         }
     }, [pathname]);
-
-    // 사용자 데이터 prefetch
-    useEffect(() => {
-        if (user?.id) {
-            queryClient.prefetchQuery({
-                queryKey: ['user-reviews', user.id],
-                queryFn: async () => {
-                    const { data, error } = await supabase
-                        .from('reviews')
-                        .select('restaurant_id, is_verified')
-                        .eq('user_id', user.id)
-                        .eq('is_verified', true);
-                    if (error) throw error;
-                    return data;
-                },
-                staleTime: 5 * 60 * 1000,
-            });
-
-            queryClient.prefetchQuery({
-                queryKey: ['unvisited-restaurants-all'],
-                queryFn: async () => {
-                    const { data, error } = await supabase
-                        .from('restaurants')
-                        .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review, created_at')
-                        .eq('status', 'approved')
-                        .not('youtube_link', 'is', null)
-                        .order('created_at', { ascending: false });
-                    if (error) throw error;
-                    return data;
-                },
-                staleTime: 5 * 60 * 1000,
-            });
-        }
-    }, [user?.id, queryClient]);
 
     const shouldShowCenteredLayoutButton = pathname !== '/';
 
@@ -100,6 +71,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="h-screen flex overflow-hidden">
+            {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
+            {user && <UserDataPrefetcher />}
+
             <Sidebar isOpen={isSidebarOpen} />
 
             <div className={cn(
