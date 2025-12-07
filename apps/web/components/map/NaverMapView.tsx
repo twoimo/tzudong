@@ -134,8 +134,8 @@ const NaverMapView = memo(({
     // 사이드바 상태 가져오기
     const { isSidebarOpen } = useLayout();
 
-    // Naver Maps API 로드
-    const { isLoaded, loadError } = useNaverMaps({ autoLoad: true });
+    // Naver Maps API 로드 - LCP 최적화를 위해 lazyOnload 전략 사용
+    const { isLoaded, loadError } = useNaverMaps({ autoLoad: true, strategy: 'lazyOnload' });
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
