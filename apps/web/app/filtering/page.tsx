@@ -55,10 +55,6 @@ interface FilterState {
     fanVisitsMin: number;
 }
 
-interface FilteringPageProps {
-    onAdminEditRestaurant?: (restaurant: Restaurant) => void;
-}
-
 interface Review {
     id: string;
     restaurantName: string;
@@ -77,7 +73,7 @@ interface Review {
     isLikedByUser: boolean;
 }
 
-export default function FilteringPage({ onAdminEditRestaurant }: FilteringPageProps) {
+export default function FilteringPage() {
     const { isAdmin, user } = useAuth();
     const queryClient = useQueryClient();
 
