@@ -267,7 +267,7 @@ def get_transcript_for_video(video_id: str) -> Tuple[Optional[List[Dict]], Optio
     
     Returns:
         (transcript_data, error_message)
-        - 성공: ([{start, text}, ...], None)
+        - 성공: ([{start, duration, text}, ...], None)
         - 실패: (None, 에러 메시지)
     """
     ytt_api = YouTubeTranscriptApi()
@@ -277,11 +277,12 @@ def get_transcript_for_video(video_id: str) -> Tuple[Optional[List[Dict]], Optio
         try:
             transcript_data = ytt_api.fetch(video_id, languages=langs)
             
-            # {start: 초단위, text: 자막} 형식으로 변환
+            # {start: 초단위, duration: 초단위, text: 자막} 형식으로 변환
             result = []
             for entry in transcript_data:
                 result.append({
                     "start": round(entry.start, 2),  # 소수점 2자리
+                    "duration": round(entry.duration, 2) if hasattr(entry, 'duration') else None,
                     "text": entry.text
                 })
             
@@ -297,6 +298,7 @@ def get_transcript_for_video(video_id: str) -> Tuple[Optional[List[Dict]], Optio
         for entry in transcript_data:
             result.append({
                 "start": round(entry.start, 2),
+                "duration": round(entry.duration, 2) if hasattr(entry, 'duration') else None,
                 "text": entry.text
             })
         

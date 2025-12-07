@@ -37,6 +37,7 @@ const PAGE_TIMEOUT = 60000;  // 60초 (페이지 로드)
 
 interface TranscriptSegment {
   start: number;
+  duration: number | null;
   text: string;
 }
 
@@ -115,6 +116,35 @@ function log(message: string, type: 'info' | 'success' | 'error' | 'warning' = '
   const timestamp = new Date().toLocaleTimeString('ko-KR', { timeZone: 'Asia/Seoul' });
   const icons = { info: 'ℹ️', success: '✅', error: '❌', warning: '⚠️' };
   console.log(`[${timestamp}] ${icons[type]} ${message}`);
+}
+
+/**
+ * no_transcript_permanent.json에서 retry_num >= 3인 URL 목록 로드
+ * 이 URL들은 자막 수집을 시도하지 않음
+ */
+function loadPermanentSkipUrls(): Set<string> {
+  const skipUrls = new Set<string>();
+  
+  if (fs.existsSync(NO_TRANSCRIPT_PERMANENT)) {
+    try {
+      const content = fs.readFileSync(NO_TRANSCRIPT_PERMANENT, 'utf-8');
+      const entries: NoTranscriptEntry[] = JSON.parse(content);
+      
+      for (const entry of entries) {
+        if (entry.retry_num >= 3) {
+          skipUrls.add(entry.youtube_link);
+        }
+      }
+      
+      if (skipUrls.size > 0) {
+        log(`🚫 영구 스킵 URL: ${skipUrls.size}개 (retry_num >= 3)`, 'warning');
+      }
+    } catch (error) {
+      log(`no_transcript_permanent.json 로드 실패: ${error}`, 'error');
+    }
+  }
+  
+  return skipUrls;
 }
 
 /**
@@ -271,19 +301,49 @@ async function collectFromMaestra(page: Page, videoId: string): Promise<{ transc
     
     // 자막 파싱
     const transcript = await page.evaluate(() => {
-      const segments: { start: number; text: string }[] = [];
+      const segments: { start: number; duration: number | null; text: string }[] = [];
       const captionLines = document.querySelectorAll('.transcript-content samp.caption-line');
+      
+      // 시간 문자열을 초로 변환 (m:ss, mm:ss, h:mm:ss, hh:mm:ss 모두 지원)
+      // 예: "0:05", "5:30", "12:45", "1:23:45", "01:23:45"
+      const parseTimeToSeconds = (timeStr: string): number => {
+        const parts = timeStr.split(':').map(Number);
+        if (parts.length === 2) {
+          // m:ss 또는 mm:ss
+          return parts[0] * 60 + parts[1];
+        } else if (parts.length === 3) {
+          // h:mm:ss 또는 hh:mm:ss
+          return parts[0] * 3600 + parts[1] * 60 + parts[2];
+        }
+        return 0;
+      };
       
       captionLines.forEach(line => {
         const textEl = line.querySelector('.caption-text');
+        // .caption-time 또는 .timestamp span 모두 확인
+        const timeEl = line.querySelector('.caption-time') || line.querySelector('.timestamp');
         
         if (textEl) {
           // data-start 속성에서 시간 추출 (더 정확함)
           const dataStart = line.getAttribute('data-start');
           const startSeconds = dataStart ? parseFloat(dataStart) : 0;
           
+          // duration 계산: "0:05 - 0:44", "5:30 - 6:15", "1:23:45 - 1:24:30" 형태에서 파싱
+          // m:ss, mm:ss, h:mm:ss, hh:mm:ss 모두 매칭
+          let duration: number | null = null;
+          if (timeEl) {
+            const timeText = timeEl.textContent?.trim() || '';
+            const timeMatch = timeText.match(/(\d{1,2}:\d{2}(?::\d{2})?)\s*-\s*(\d{1,2}:\d{2}(?::\d{2})?)/);
+            if (timeMatch) {
+              const startFromRange = parseTimeToSeconds(timeMatch[1]);
+              const endFromRange = parseTimeToSeconds(timeMatch[2]);
+              duration = endFromRange - startFromRange;
+            }
+          }
+          
           segments.push({
             start: startSeconds,
+            duration: duration,
             text: textEl.textContent?.trim() || ''
           });
         }
@@ -342,7 +402,7 @@ async function collectFromTubeTranscript(page: Page, videoId: string): Promise<{
     
     // 자막 파싱
     const transcript = await page.evaluate(() => {
-      const segments: { start: number; text: string }[] = [];
+      const segments: { start: number; duration: number | null; text: string }[] = [];
       const groups = document.querySelectorAll('#main-transcript-content .transcript-group-box');
       
       groups.forEach(group => {
@@ -362,6 +422,7 @@ async function collectFromTubeTranscript(page: Page, videoId: string): Promise<{
           
           segments.push({
             start: startSeconds,
+            duration: null,  // TubeTranscript은 duration 정보 없음
             text: textEl.textContent?.trim() || ''
           });
         }
@@ -633,6 +694,9 @@ async function main() {
     gitPullLatest();
   }
   
+  // 영구 스킵 URL 로드 (retry_num >= 3)
+  const permanentSkipUrls = loadPermanentSkipUrls();
+  
   // URL 로드
   const allUrls = loadUrls(dateFolder);
   log(`📁 전체 URL: ${allUrls.length}개`);
@@ -641,8 +705,10 @@ async function main() {
   const existingTranscripts = loadExistingTranscripts(dateFolder);
   log(`📂 기존 transcript: ${existingTranscripts.size}개`);
   
-  // 대기 URL 필터링
-  const pendingUrls = allUrls.filter(url => !existingTranscripts.has(url));
+  // 대기 URL 필터링 (기존 transcript 있거나 영구 스킵 목록에 있으면 제외)
+  const pendingUrls = allUrls.filter(url => 
+    !existingTranscripts.has(url) && !permanentSkipUrls.has(url)
+  );
   log(`⏳ 대기 URL: ${pendingUrls.length}개`);
   
   if (pendingUrls.length === 0) {
