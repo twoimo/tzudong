@@ -78,6 +78,7 @@ export default function HomeMapContainer({
                     onMarkerClick={onMarkerClick}
                     externalPanelOpen={externalPanelOpen}
                     isPanelCollapsed={isPanelCollapsed}
+                    isPanelOpen={isPanelOpen}
                 />
             ) : (
                 <Suspense fallback={<MapSkeleton />}>
