@@ -34,12 +34,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: backend/geminiCLI-restaurant-crawling/package-lock.json
 
       - name: Install dependencies
         working-directory: backend/geminiCLI-restaurant-crawling
-        run: npm ci
+        run: |
+          npm install puppeteer typescript ts-node @types/node
+          echo "✅ 의존성 설치 완료"
 
       - name: Install Puppeteer browser
         working-directory: backend/geminiCLI-restaurant-crawling
