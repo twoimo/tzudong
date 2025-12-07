@@ -280,7 +280,6 @@ const NaverMapView = memo(({
         isGridMode,
         isSidebarOpen,
         isPanelOpen,
-        activePanel,
         externalPanelOpen,
         isPanelCollapsed
     ]);
