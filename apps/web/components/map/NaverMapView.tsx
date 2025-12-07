@@ -206,12 +206,10 @@ const NaverMapView = memo(({
 
         const rightPanelWidth = isRightPanelVisible ? PANEL_WIDTH : 0;
 
-        // 현재 사이드바 너비
-        const sidebarWidth = isSidebarOpen ? 256 : 64;
-
-        // 목표 오프셋 계산: (RightPanel - Sidebar) / 2
-        // 지도 중심을 이만큼 오른쪽으로 이동시켜야 마커가 시각적 중심(왼쪽)에 위치
-        const targetOffsetX = (rightPanelWidth - sidebarWidth) / 2;
+        // 목표 오프셋 계산: RightPanel / 2
+        // 지도 중심을 이만큼 오른쪽으로 이동시켜야 마커가 남은 영역의 중앙에 위치
+        // (사이드바는 이미 map container 크기에 반영되어 있음)
+        const targetOffsetX = rightPanelWidth / 2;
 
         // 3. 이동 방식 결정
         const currentZoom = map.getZoom();
@@ -278,13 +276,124 @@ const NaverMapView = memo(({
     }, [
         selectedRestaurant,
         selectedRegion,
-        isGridMode,
-        isSidebarOpen,
-        isPanelOpen,
         externalPanelOpen,
         isPanelCollapsed,
         isMapInitialized
     ]);
+
+    // 리사이즈 시 참조할 최신 상태 Ref 업데이트
+    const currentStateRef = useRef({
+        isSidebarOpen,
+        isPanelOpen,
+        externalPanelOpen,
+        isPanelCollapsed,
+        isGridMode
+    });
+
+    useEffect(() => {
+        currentStateRef.current = {
+            isSidebarOpen,
+            isPanelOpen,
+            externalPanelOpen,
+            isPanelCollapsed,
+            isGridMode
+        };
+    }, [isSidebarOpen, isPanelOpen, externalPanelOpen, isPanelCollapsed, isGridMode]);
+
+    // [개선] ResizeObserver를 사용하여 컨테이너 크기 변경 감지 및 부드러운 중심 유지
+    useEffect(() => {
+        if (!mapRef.current || !mapInstanceRef.current || !isMapInitialized) return;
+
+        const map = mapInstanceRef.current;
+        const { naver } = window;
+
+        const handleResize = () => {
+            if (currentStateRef.current.isGridMode) {
+                naver.maps.Event.trigger(map, 'resize');
+                return;
+            }
+
+            // 1. 지도 리사이즈 트리거
+            naver.maps.Event.trigger(map, 'resize');
+
+            // 2. 목표 좌표 결정
+            let targetLat: number;
+            let targetLng: number;
+
+            if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
+                targetLat = selectedRestaurant.lat;
+                targetLng = selectedRestaurant.lng;
+            } else {
+                const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
+                const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
+                targetLat = regionConfig.center[0];
+                targetLng = regionConfig.center[1];
+            }
+
+            // 3. 현재 상태 기반 오프셋 계산 (실시간)
+            // 주의: sidebarWidth는 CSS 애니메이션 중에는 정확하지 않을 수 있음 (컴포넌트 state 기준이므로)
+            // 하지만 우리가 원하는 것은 "최종 상태"가 아니라 "현재 보이는 컨테이너의 중심"에 맞추는 것.
+            // 네이버 지도의 'resize' 이벤트는 컨테이너 크기에 맞춰 지도 뷰포트를 업데이트함.
+            // 문제는, 단순히 resize만 하면 중심(LatLng)은 유지되지만, 
+            // 우리가 원하는 '오프셋이 적용된 중심'은 컨테이너 크기가 변함에 따라 계속 변해야 함.
+
+            // 패널 상태
+            const { isPanelOpen, externalPanelOpen, isPanelCollapsed } = currentStateRef.current;
+            const isDetailPanelOpen = isPanelOpen;
+            const isExternalPanelOpen = externalPanelOpen === false;
+            const isRightPanelVisible = (!isPanelCollapsed) && (isDetailPanelOpen || isExternalPanelOpen);
+            const rightPanelWidth = isRightPanelVisible ? PANEL_WIDTH : 0;
+
+            // 사이드바 너비 - 여기서는 논리적 너비(state)를 사용하지만, 
+            // 실제 중심점 계산은 "남은 공간"의 중앙이어야 함.
+            // map.getSize()를 사용하면 현재 지도 컨테이너의 픽셀 크기를 알 수 있음.
+            const mapSize = map.getSize();
+            const mapWidth = mapSize.width; // 현재 지도 너비 (사이드바 제외한 나머지)
+
+            // 우리가 원하는 마커의 위치:
+            // 지도 왼쪽 끝에서 (mapWidth - rightPanelWidth) / 2 지점
+            // 즉, "지도 전체 너비에서 우측 패널 뺀 나머지 영역"의 중앙.
+
+            // 네이버 지도 중심(Center)은 mapWidth / 2 지점임.
+            // 따라서 오프셋 = (mapWidth / 2) - ((mapWidth - rightPanelWidth) / 2)
+            //              = (mapWidth - (mapWidth - rightPanelWidth)) / 2
+            //              = rightPanelWidth / 2
+
+            // 결론: 사이드바 너비는 이미 지도 컨테이너 크기에 반영되어 있으므로 계산식에서 빠져야 함!
+            // 이전 로직의 targetOffsetX = (rightPanelWidth - sidebarWidth) / 2 는 
+            // 뷰포트 전체(window) 기준이 아니라면 틀렸을 수도 있음. 
+            // NaverMapView는 flex-1이므로, 부모(MainLayout)에서 마진(margin-left)으로 사이드바 공간을 뺌.
+            // 즉 mapRef.current의 width는 이미 (Window - Sidebar)임.
+            // 따라서 지도 컨테이너 내부에서의 중심 오프셋은 **rightPanelWidth / 2** 만 있으면 됨.
+
+            const targetOffsetX = rightPanelWidth / 2;
+
+            const projection = map.getProjection();
+            const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
+            const markerPoint = projection.fromCoordToOffset(centerLatLng);
+
+            // 목표 중심점 (픽셀)
+            const newCenterPoint = new naver.maps.Point(
+                markerPoint.x + targetOffsetX,
+                markerPoint.y
+            );
+
+            const newCenterLatLng = projection.fromOffsetToCoord(newCenterPoint);
+
+            // 애니메이션 없이 즉시 이동 (부드러움 유지)
+            map.setCenter(newCenterLatLng);
+        };
+
+        const resizeObserver = new ResizeObserver(() => {
+            requestAnimationFrame(handleResize);
+        });
+
+        resizeObserver.observe(mapRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [isMapInitialized, selectedRestaurant, selectedRegion]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동 (디바운스 적용)
