@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "analyze": "set ANALYZE=true&& npm run build"
+    "analyze": "set ANALYZE=true&& next build --webpack"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

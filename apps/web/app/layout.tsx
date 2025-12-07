@@ -11,6 +11,7 @@ import "./globals.css";
 const notoSerifKR = Noto_Serif_KR({
     weight: ['400', '700'],
     display: 'swap',
+    subsets: ['latin'],
     variable: '--font-noto-serif',
 });
 
