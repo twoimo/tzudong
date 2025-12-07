@@ -135,6 +135,7 @@ const NaverMapView = memo(({
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [isPanelOpen, setIsPanelOpen] = useState(false);
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
+    const [isMapInitialized, setIsMapInitialized] = useState(false);
 
     // selectedRestaurant가 설정되면 자동으로 패널 열기
     useEffect(() => {
@@ -281,7 +282,8 @@ const NaverMapView = memo(({
         isSidebarOpen,
         isPanelOpen,
         externalPanelOpen,
-        isPanelCollapsed
+        isPanelCollapsed,
+        isMapInitialized
     ]);
 
     // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
@@ -408,6 +410,7 @@ const NaverMapView = memo(({
             });
 
             mapInstanceRef.current = map;
+            setIsMapInitialized(true);
         } catch (error) {
             console.error("네이버 지도 초기화 오류:", error);
             toast.error("지도를 초기화하는 중 오류가 발생했습니다.");
