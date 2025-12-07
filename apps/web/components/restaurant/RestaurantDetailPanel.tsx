@@ -447,19 +447,27 @@ export function RestaurantDetailPanel({
                                             </Badge>
                                         ))}
 
-                                        {/* 광고 태그 */}
-                                        {restaurant.youtube_meta && (() => {
-                                            const meta = restaurant.youtube_meta as any;
-                                            const adsInfo = meta?.ads_info;
+                                        {/* 광고 태그 - 모든 병합된 영상에서 수집 */}
+                                        {(() => {
+                                            // mergedYoutubeMetas에서 모든 광고 태그 수집
+                                            const allAds: string[] = [];
 
-                                            if (!adsInfo || adsInfo.is_ads !== true) return null;
+                                            const metas = restaurant.mergedYoutubeMetas ||
+                                                (restaurant.youtube_meta ? [restaurant.youtube_meta] : []);
 
-                                            const ads = adsInfo.what_ads || [];
-                                            const uniqueAds = Array.from(new Set(ads));
+                                            metas.forEach((meta: any) => {
+                                                const adsInfo = meta?.ads_info;
+                                                if (adsInfo?.is_ads === true && Array.isArray(adsInfo.what_ads)) {
+                                                    allAds.push(...adsInfo.what_ads);
+                                                }
+                                            });
+
+                                            // 중복 제거
+                                            const uniqueAds = Array.from(new Set(allAds));
 
                                             return uniqueAds.length > 0 ? (
                                                 <>
-                                                    {uniqueAds.map((ad: any, index: number) => (
+                                                    {uniqueAds.map((ad: string, index: number) => (
                                                         <Badge
                                                             key={index}
                                                             variant="outline"
