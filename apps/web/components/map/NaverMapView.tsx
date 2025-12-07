@@ -278,7 +278,9 @@ const NaverMapView = memo(({
         selectedRegion,
         externalPanelOpen,
         isPanelCollapsed,
-        isMapInitialized
+        isMapInitialized,
+        isPanelOpen, // 패널 열림/닫힘 시 중심 재조정
+        isGridMode
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
