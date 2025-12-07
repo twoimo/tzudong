@@ -137,6 +137,19 @@ const NaverMapView = memo(({
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
 
+    // [커스텀 토스트] 지도 상단 중앙 알림 상태
+    const [mapToast, setMapToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null>(null);
+
+    // 커스텀 토스트 표시 함수
+    const showMapToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+        setMapToast({ message, type, isVisible: true });
+
+        // 3초 후 자동 숨김
+        setTimeout(() => {
+            setMapToast(prev => prev ? { ...prev, isVisible: false } : null);
+        }, 3000);
+    };
+
     // selectedRestaurant가 설정되면 자동으로 패널 열기
     useEffect(() => {
         if (selectedRestaurant && !isGridMode) {
@@ -524,7 +537,7 @@ const NaverMapView = memo(({
             setIsMapInitialized(true);
         } catch (error) {
             console.error("네이버 지도 초기화 오류:", error);
-            toast.error("지도를 초기화하는 중 오류가 발생했습니다.");
+            showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
     }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -586,7 +599,7 @@ const NaverMapView = memo(({
         // 마커 클릭은 이미 선택된 상태이므로 토스트 불필요
         const isFromMarkerClick = previousSearchedRestaurantRef.current === searchedRestaurant;
         if (!isFromMarkerClick) {
-            toast.success(`"${actualSearchedRestaurant.name}" 맛집을 찾았습니다!`);
+            showMapToast(`"${actualSearchedRestaurant.name}" 맛집을 찾았습니다!`, 'success');
         }
 
         // 현재 searchedRestaurant 저장
@@ -882,6 +895,15 @@ const NaverMapView = memo(({
                 {!isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
                     <EmptyStateIndicator />
                 )}
+
+                {/* [커스텀 토스트] 메시지 표시 */}
+                {mapToast && mapToast.isVisible && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-20 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+                        <span className="text-sm font-medium">
+                            {mapToast.message}
+                        </span>
+                    </div>
+                )}
             </div>
         );
     }
@@ -912,6 +934,15 @@ const NaverMapView = memo(({
                 {/* 빈 상태 UI - 맛집이 없을 때 표시 */}
                 {!isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
                     <EmptyStateIndicator />
+                )}
+
+                {/* [커스텀 토스트] 메시지 표시 */}
+                {mapToast && mapToast.isVisible && (
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-20 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+                        <span className="text-sm font-medium">
+                            {mapToast.message}
+                        </span>
+                    </div>
                 )}
             </div>
 
@@ -954,7 +985,7 @@ const NaverMapView = memo(({
                 restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
                 onSuccess={() => {
                     refetch();
-                    toast.success("리뷰가 성공적으로 등록되었습니다!");
+                    showMapToast("리뷰가 성공적으로 등록되었습니다!", 'success');
                 }}
             />
         </div>
