@@ -195,6 +195,42 @@ export function AdminRestaurantModal({
                     tzuyang_review: restaurant.tzuyang_review || "",
                 }] : []);
 
+            // 병합된 모든 레스토랑에서 카테고리 수집 (중복 제거)
+            // restaurant.categories에 이미 병합된 카테고리가 있지만, mergedRestaurants에서 누락된 것도 수집
+            const allCategories: string[] = [];
+
+            // 1. 먼저 restaurant.categories 추가 (이미 병합된 값)
+            if (Array.isArray(restaurant.categories)) {
+                restaurant.categories.forEach((cat: string) => {
+                    if (!allCategories.includes(cat)) {
+                        allCategories.push(cat);
+                    }
+                });
+            } else if (restaurant.categories) {
+                const cat = restaurant.categories as unknown as string;
+                if (!allCategories.includes(cat)) {
+                    allCategories.push(cat);
+                }
+            }
+
+            // 2. mergedRestaurants에서 추가 카테고리 수집
+            if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
+                restaurant.mergedRestaurants.forEach(r => {
+                    if (Array.isArray(r.categories)) {
+                        r.categories.forEach((cat: string) => {
+                            if (!allCategories.includes(cat)) {
+                                allCategories.push(cat);
+                            }
+                        });
+                    } else if (r.categories) {
+                        const cat = r.categories as unknown as string;
+                        if (!allCategories.includes(cat)) {
+                            allCategories.push(cat);
+                        }
+                    }
+                });
+            }
+
             setFormData({
                 name: restaurant.name || "",
                 searchAddress: restaurant.road_address || restaurant.jibun_address || "",
@@ -203,9 +239,7 @@ export function AdminRestaurantModal({
                 english_address: restaurant.english_address || "",
                 address_elements: restaurant.address_elements || null,
                 phone: restaurant.phone || "",
-                categories: Array.isArray(restaurant.categories)
-                    ? restaurant.categories
-                    : (restaurant.categories ? [restaurant.categories] : []),
+                categories: allCategories,
                 youtube_reviews: youtubeReviews,
                 lat: String(restaurant.lat || ""),
                 lng: String(restaurant.lng || ""),
