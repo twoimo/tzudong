@@ -34,12 +34,14 @@ interface EvaluationDetailViewProps {
 export function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
     const [embedError, setEmbedError] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
     const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
     // 리코드 변경 시 상태 초기화
     useEffect(() => {
         setEmbedError(false);
         setVideoUrl(null);
+        setIsPlaying(false);
     }, [record?.id]);
 
     // videoId 메모이제이션
@@ -298,58 +300,60 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
             <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-r", autoHeight ? "w-[40%]" : "w-[50%] overflow-hidden")}>
                 <div className="p-4 pb-0 w-full shrink-0">
                     <div className="bg-white rounded-lg border p-3 shadow-sm">
-                        {videoUrl && !embedError ? (
-                            <div className="w-full aspect-video z-10 shadow-lg">
-                                <iframe
-                                    ref={iframeRef}
-                                    width="100%"
-                                    height="100%"
-                                    src={videoUrl}
-                                    title="Video player"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
-                                    allowFullScreen
-                                    className="w-full h-full block"
-                                    onError={handleVideoError}
-                                />
-                            </div>
-                        ) : embedError && videoId ? (
-                            /* 임베드 실패 시 썸네일만 표시 - 클릭하면 유튜브 새 창 */
-                            <a
-                                href={record.youtube_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="block w-full aspect-video cursor-pointer"
-                            >
-                                <img
-                                    src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-                                    alt="YouTube 썸네일"
-                                    className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 hover:opacity-90"
-                                    onError={(e) => {
-                                        // maxresdefault가 없으면 hqdefault로 폴백
-                                        const target = e.currentTarget;
-                                        if (target.src.includes('maxresdefault')) {
-                                            target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                        <div className="bg-white rounded-lg border p-3 shadow-sm">
+                            {isPlaying && videoUrl && !embedError ? (
+                                <div className="w-full aspect-video z-10 shadow-lg">
+                                    <iframe
+                                        ref={iframeRef}
+                                        width="100%"
+                                        height="100%"
+                                        src={`${videoUrl}&autoplay=1`}
+                                        title="Video player"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
+                                        allowFullScreen
+                                        className="w-full h-full block"
+                                        onError={handleVideoError}
+                                    />
+                                </div>
+                            ) : (
+                                /* Facade Pattern: 썸네일 먼저 표시하고 클릭 시 iframe 로드 */
+                                <div
+                                    className="relative w-full aspect-video cursor-pointer group"
+                                    onClick={() => {
+                                        if (videoId) {
+                                            setIsPlaying(true);
+                                        } else if (record.youtube_link) {
+                                            window.open(record.youtube_link, '_blank');
                                         }
                                     }}
-                                />
-                            </a>
-                        ) : (
-                            /* 로딩 중 또는 링크 없음 */
-                            <div className="flex flex-col items-center justify-center text-muted-foreground p-6 text-center z-10 w-full aspect-video bg-gray-100">
-                                {videoId ? (
-                                    <p className="text-sm">로딩 중...</p>
-                                ) : record.youtube_link ? (
-                                    <div className="flex flex-col items-center gap-2">
-                                        <p className="text-sm text-gray-500">영상 ID를 추출할 수 없습니다</p>
-                                        <Button variant="secondary" size="sm" className="h-7 text-xs" onClick={() => window.open(record.youtube_link, '_blank')}>
-                                            <ExternalLink className="w-3 h-3 mr-1" /> YouTube에서 보기
-                                        </Button>
-                                    </div>
-                                ) : (
-                                    <p className="text-gray-400 text-sm">링크 없음</p>
-                                )}
-                            </div>
-                        )}
+                                >
+                                    {videoId ? (
+                                        <>
+                                            <img
+                                                src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                                alt="YouTube 썸네일"
+                                                className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 group-hover:opacity-90"
+                                                onError={(e) => {
+                                                    const target = e.currentTarget;
+                                                    if (target.src.includes('maxresdefault')) {
+                                                        target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                                    }
+                                                }}
+                                            />
+                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors rounded-lg">
+                                                <div className="w-16 h-12 bg-red-600 rounded-lg flex items-center justify-center shadow-lg transition-transform group-hover:scale-110">
+                                                    <div className="border-t-[6px] border-t-transparent border-l-[12px] border-l-white border-b-[6px] border-b-transparent ml-1"></div>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center text-muted-foreground p-6 text-center z-10 w-full h-full bg-gray-100 rounded-lg">
+                                            <p className="text-gray-400 text-sm">썸네일 없음</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

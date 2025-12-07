@@ -6,12 +6,12 @@ import { FilterState } from '@/components/filters/FilterPanel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Globe, Filter, Search } from "lucide-react";
-import CategoryFilter from "@/components/filters/CategoryFilter";
 import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
 
 // [CSR] 코드 스플리팅으로 성능 최적화
 const RegionSelector = lazy(() => import("@/components/region/RegionSelector"));
 const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
+const CategoryFilter = lazy(() => import("@/components/filters/CategoryFilter"));
 
 // 펼쳤을 때 패널의 최소 너비 (850px)
 const EXPANDED_PANEL_WIDTH = 850;
@@ -174,13 +174,15 @@ export default function HomeControlPanel({
                         )}
 
                         {/* [CSR] 카테고리 필터 - 선택 인터랙션 */}
-                        <CategoryFilter
-                            selectedCategories={selectedCategories}
-                            onCategoryChange={onCategoryChange}
-                            selectedRegion={mapMode === 'domestic' ? selectedRegion : null}
-                            selectedCountry={mapMode === 'overseas' ? selectedCountry : null}
-                            className="w-48"
-                        />
+                        <Suspense fallback={<div className="w-48 h-10 bg-muted/50 rounded-md animate-pulse" />}>
+                            <CategoryFilter
+                                selectedCategories={selectedCategories}
+                                onCategoryChange={onCategoryChange}
+                                selectedRegion={mapMode === 'domestic' ? selectedRegion : null}
+                                selectedCountry={mapMode === 'overseas' ? selectedCountry : null}
+                                className="w-48"
+                            />
+                        </Suspense>
 
                         {/* [CSR] 검색 - 텍스트 입력 및 자동완성 */}
                         <Suspense fallback={<SearchSkeleton />}>
