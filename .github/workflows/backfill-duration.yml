@@ -20,7 +20,7 @@ on:
 jobs:
   backfill:
     runs-on: ubuntu-latest
-    timeout-minutes: 2880  # 48시간 타임아웃 (GitHub 최대 지원)
+    timeout-minutes: 1200
 
     steps:
       - name: Checkout repository
