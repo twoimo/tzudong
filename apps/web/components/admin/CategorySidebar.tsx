@@ -21,8 +21,8 @@ export function CategorySidebar({
   const statCategoriesGroup2 = [
     { label: '승인 대기', count: stats.ready_for_approval },
     { label: 'Missing', count: stats.missing },
-    { label: '지오코딩 실패', count: stats.geocoding_failed },
     { label: '평가 미대상', count: stats.not_selected },
+    { label: '지오코딩 실패', count: stats.geocoding_failed },
   ];
 
   return (
