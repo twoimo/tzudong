@@ -266,48 +266,51 @@ export default function AdminEvaluationPage() {
     // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
     const baseRecords = searchResults || allRecords;
 
-    // selectedStatuses에 'deleted'가 포함되어 있으면 deleted만 보여줌
-    let filtered = selectedStatuses.includes('deleted' as EvaluationRecordStatus)
-      ? baseRecords.filter(r => r.status === 'deleted')
-      : baseRecords.filter(r => r.status !== 'deleted'); // deleted는 기본적으로 제외
+    // 기본: deleted 제외 (테이블 필터에서 deleted 선택 시 포함됨)
+    let filtered = baseRecords.filter(r => r.status !== 'deleted');
 
     // 상태 필터링 (evalFilters.status)
     if (evalFilters.status) {
-      filtered = filtered.filter(r => {
-        let match = false;
+      // 'deleted' 필터 선택 시 특별 처리: baseRecords에서 deleted만 추출
+      if (evalFilters.status === 'deleted') {
+        filtered = baseRecords.filter(r => r.status === 'deleted');
+      } else {
+        filtered = filtered.filter(r => {
+          let match = false;
 
-        switch (evalFilters.status) {
-          case 'geocoding_failed':
-            // 지오코딩 실패: geocoding_success가 false인 모든 레코드
-            match = !r.geocoding_success;
-            break;
-          case 'missing':
-            // Missing: is_missing이 true인 레코드
-            match = r.is_missing === true;
-            break;
-          case 'not_selected':
-            // 평가 미대상: is_not_selected가 true인 레코드
-            match = r.is_not_selected === true;
-            break;
-          case 'ready_for_approval':
-            // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드 + status가 pending이거나 hold인 경우만
-            match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
-              r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
-              r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
-              r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
-              r.geocoding_success === true &&
-              r.evaluation_results?.category_validity_TF?.eval_value === true &&
-              r.evaluation_results?.category_TF?.eval_value === true &&
-              (r.status === 'pending' || r.status === 'hold'); // 승인되지 않은 것만
-            break;
-          default:
-            // 일반 상태: status 필드와 일치하는 레코드
-            match = r.status === evalFilters.status;
-            break;
-        }
+          switch (evalFilters.status) {
+            case 'geocoding_failed':
+              // 지오코딩 실패: geocoding_success가 false인 모든 레코드
+              match = !r.geocoding_success;
+              break;
+            case 'missing':
+              // Missing: is_missing이 true인 레코드
+              match = r.is_missing === true;
+              break;
+            case 'not_selected':
+              // 평가 미대상: is_not_selected가 true인 레코드
+              match = r.is_not_selected === true;
+              break;
+            case 'ready_for_approval':
+              // 승인 대기: 모든 평가 항목이 최고 점수를 받은 레코드 + status가 pending이거나 hold인 경우만
+              match = r.evaluation_results?.visit_authenticity?.eval_value === 1 &&
+                r.evaluation_results?.rb_inference_score?.eval_value === 1 &&
+                r.evaluation_results?.rb_grounding_TF?.eval_value === true &&
+                r.evaluation_results?.review_faithfulness_score?.eval_value === 1 &&
+                r.geocoding_success === true &&
+                r.evaluation_results?.category_validity_TF?.eval_value === true &&
+                r.evaluation_results?.category_TF?.eval_value === true &&
+                (r.status === 'pending' || r.status === 'hold'); // 승인되지 않은 것만
+              break;
+            default:
+              // 일반 상태: status 필드와 일치하는 레코드
+              match = r.status === evalFilters.status;
+              break;
+          }
 
-        return match;
-      });
+          return match;
+        });
+      }
     }
 
     // 1. Visit Authenticity 필터 (0-3점)

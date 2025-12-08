@@ -428,7 +428,7 @@ export function EvaluationTable({
                     "방문 여부 정확성",
                     FILTER_TOOLTIPS.visit_authenticity,
                     [
-                      { value: 'all', label: '모두' },
+                      { value: 'all', label: '전체' },
                       { value: '0', label: '0점' },
                       { value: '1', label: '1점' },
                       { value: '2', label: '2점' },
@@ -444,7 +444,7 @@ export function EvaluationTable({
                     "추론 합리성",
                     FILTER_TOOLTIPS.rb_inference_score,
                     [
-                      { value: 'all', label: '모두' },
+                      { value: 'all', label: '전체' },
                       { value: '0', label: '0점' },
                       { value: '1', label: '1점' },
                       { value: '2', label: '2점' },
@@ -458,7 +458,7 @@ export function EvaluationTable({
                     "실제 근거 일치도",
                     FILTER_TOOLTIPS.rb_grounding_TF,
                     [
-                      { value: 'all', label: '모두' },
+                      { value: 'all', label: '전체' },
                       { value: 'True', label: 'True' },
                       { value: 'False', label: 'False' },
                     ]
@@ -471,7 +471,7 @@ export function EvaluationTable({
                     "리뷰 충실도",
                     FILTER_TOOLTIPS.review_faithfulness_score,
                     [
-                      { value: 'all', label: '모두' },
+                      { value: 'all', label: '전체' },
                       { value: '0', label: '0점' },
                       { value: '1', label: '1점' },
                     ]
@@ -486,7 +486,7 @@ export function EvaluationTable({
 False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
 Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
                     [
-                      { value: 'all', label: '모두' },
+                      { value: 'all', label: '전체' },
                       { value: 'true', label: 'True' },
                       { value: 'false_match', label: 'False' },
                       { value: 'false_geocode', label: 'Failed' },
@@ -500,7 +500,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     "카테고리 유효성",
                     FILTER_TOOLTIPS.category_validity_TF,
                     [
-                      { value: 'all', label: '모두' },
+                      { value: 'all', label: '전체' },
                       { value: 'True', label: 'True' },
                       { value: 'False', label: 'False' },
                     ]
@@ -513,7 +513,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     "카테고리 정합성",
                     FILTER_TOOLTIPS.category_TF,
                     [
-                      { value: 'all', label: '모두' },
+                      { value: 'all', label: '전체' },
                       { value: 'True', label: 'True' },
                       { value: 'False', label: 'False' },
                     ]
@@ -531,9 +531,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                       "상태",
                       "레코드 상태별로 필터링",
                       [
-                        { value: 'all', label: '모두' },
+                        { value: 'all', label: '전체' },
                         { value: 'pending', label: '미처리' },
                         { value: 'approved', label: '승인됨' },
+                        { value: 'deleted', label: '삭제' },
                         { value: 'ready_for_approval', label: '승인 대기' },
                         { value: 'missing', label: 'Missing' },
                         { value: 'not_selected', label: '평가 미대상' },
@@ -618,7 +619,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   "방문 여부 정확성",
                   FILTER_TOOLTIPS.visit_authenticity,
                   [
-                    { value: 'all', label: '모두' },
+                    { value: 'all', label: '전체' },
                     { value: '0', label: '0점' },
                     { value: '1', label: '1점' },
                     { value: '2', label: '2점' },
@@ -634,7 +635,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   "추론 합리성",
                   FILTER_TOOLTIPS.rb_inference_score,
                   [
-                    { value: 'all', label: '모두' },
+                    { value: 'all', label: '전체' },
                     { value: '0', label: '0점' },
                     { value: '1', label: '1점' },
                     { value: '2', label: '2점' },
@@ -648,7 +649,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   "실제 근거 일치도",
                   FILTER_TOOLTIPS.rb_grounding_TF,
                   [
-                    { value: 'all', label: '모두' },
+                    { value: 'all', label: '전체' },
                     { value: 'True', label: 'True' },
                     { value: 'False', label: 'False' },
                   ]
@@ -661,7 +662,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   "리뷰 충실도",
                   FILTER_TOOLTIPS.review_faithfulness_score,
                   [
-                    { value: 'all', label: '모두' },
+                    { value: 'all', label: '전체' },
                     { value: '0', label: '0점' },
                     { value: '1', label: '1점' },
                   ]
@@ -676,7 +677,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
 False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
 Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
                   [
-                    { value: 'all', label: '모두' },
+                    { value: 'all', label: '전체' },
                     { value: 'true', label: 'True' },
                     { value: 'false_match', label: 'False' },
                     { value: 'false_geocode', label: 'Failed' },
@@ -690,7 +691,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   "카테고리 유효성",
                   FILTER_TOOLTIPS.category_validity_TF,
                   [
-                    { value: 'all', label: '모두' },
+                    { value: 'all', label: '전체' },
                     { value: 'True', label: 'True' },
                     { value: 'False', label: 'False' },
                   ]
@@ -703,7 +704,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   "카테고리 정합성",
                   FILTER_TOOLTIPS.category_TF,
                   [
-                    { value: 'all', label: '모두' },
+                    { value: 'all', label: '전체' },
                     { value: 'True', label: 'True' },
                     { value: 'False', label: 'False' },
                   ]
@@ -721,9 +722,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     "상태",
                     "레코드 상태별로 필터링",
                     [
-                      { value: 'all', label: '모두' },
+                      { value: 'all', label: '전체' },
                       { value: 'pending', label: '미처리' },
                       { value: 'approved', label: '승인됨' },
+                      { value: 'deleted', label: '삭제' },
                       { value: 'ready_for_approval', label: '승인 대기' },
                       { value: 'missing', label: 'Missing' },
                       { value: 'not_selected', label: '평가 미대상' },
