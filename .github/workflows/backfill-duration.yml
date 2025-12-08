@@ -17,6 +17,9 @@ on:
         type: boolean
         default: false
 
+permissions:
+  contents: write  # push 권한 필요
+
 jobs:
   backfill:
     runs-on: ubuntu-latest
@@ -29,6 +32,11 @@ jobs:
       - name: Pull latest changes
         run: |
           git pull origin ${{ github.ref_name }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4

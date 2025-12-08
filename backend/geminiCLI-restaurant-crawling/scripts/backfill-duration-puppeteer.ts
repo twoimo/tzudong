@@ -327,7 +327,7 @@ async function collectFromTubeTranscript(page: Page, videoId: string): Promise<T
 async function main() {
   // 인자 파싱
   const args = process.argv.slice(2);
-  let targetDates: string[] = ['25-12-04', '25-12-05', '25-12-08'];  // 기본값
+  let targetDates: string[] = ['25-12-04', '25-12-05'];  // 기본값
   let maxItems = 9999;  // 사실상 무제한
   let dryRun = false;
   
