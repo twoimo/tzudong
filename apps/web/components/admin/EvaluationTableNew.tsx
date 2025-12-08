@@ -889,7 +889,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         <>
                           <Button
                             size="sm"
-                            onClick={() => onRestore?.(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRestore?.(record);
+                            }}
                             disabled={loading}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
@@ -902,7 +905,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         <>
                           <Button
                             size="sm"
-                            onClick={() => onEdit?.(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit?.(record);
+                            }}
                             disabled={loading}
                             variant="outline"
                           >
@@ -913,7 +919,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => onDelete(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(record);
+                            }}
                             disabled={loading}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -923,7 +932,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         <>
                           <Button
                             size="sm"
-                            onClick={() => onApprove(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onApprove(record);
+                            }}
                             disabled={loading || !canApprove(record)}
                           >
                             <Check className="w-4 h-4 mr-1" />
@@ -934,7 +946,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onEdit(record)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(record);
+                              }}
                               disabled={loading}
                             >
                               <Edit className="w-4 h-4 mr-1" />
@@ -945,7 +960,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => onDelete(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(record);
+                            }}
                             disabled={loading}
                           >
                             <Trash2 className="w-4 h-4" />
