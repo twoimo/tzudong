@@ -266,8 +266,8 @@ export default function AdminEvaluationPage() {
     // 검색 결과가 있으면 검색 결과를 기준으로, 없으면 전체 데이터 사용
     const baseRecords = searchResults || allRecords;
 
-    // 기본: deleted 제외 (테이블 필터에서 deleted 선택 시 포함됨)
-    let filtered = baseRecords.filter(r => r.status !== 'deleted');
+    // 기본: 모든 레코드 포함 (Deleted 포함)
+    let filtered = baseRecords;
 
     // 상태 필터링 (evalFilters.status)
     if (evalFilters.status) {
@@ -1082,7 +1082,21 @@ export default function AdminEvaluationPage() {
                 관리자 데이터 검수
               </h1>
 
-              <div className="flex items-center gap-1 border-l pl-3 ml-2">
+
+            </div>
+            <p className="text-muted-foreground text-sm mt-1">
+              필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
+            </p>
+          </div>
+
+          {/* 우측: 카테고리 필터 */}
+          <div className="flex-1 flex justify-end">
+            <CategorySidebar
+              stats={stats}
+              selectedStatuses={selectedStatuses}
+              onSelectStatuses={setSelectedStatuses}
+            >
+              <div className="flex items-center gap-1">
                 <Button
                   variant={!isAlternateView ? "secondary" : "ghost"}
                   size="icon"
@@ -1101,40 +1115,30 @@ export default function AdminEvaluationPage() {
                 >
                   <MonitorPlay className="h-4 w-4" />
                 </Button>
+                {/* 자막 수집 버튼 (아이콘 only) */}
+                <Button
+                  onClick={handleCollectTranscripts}
+                  disabled={transcriptStatus === 'loading'}
+                  variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
+                >
+                  {transcriptStatus === 'loading' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : transcriptStatus === 'success' ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : transcriptStatus === 'error' ? (
+                    <XCircle className="h-4 w-4" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                </Button>
               </div>
 
-              {/* 자막 수집 버튼 (아이콘 only) */}
-              <Button
-                onClick={handleCollectTranscripts}
-                disabled={transcriptStatus === 'loading'}
-                variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'outline'}
-                size="icon"
-                className="h-8 w-8 ml-2"
-                title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
-              >
-                {transcriptStatus === 'loading' ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : transcriptStatus === 'success' ? (
-                  <CheckCircle2 className="h-4 w-4" />
-                ) : transcriptStatus === 'error' ? (
-                  <XCircle className="h-4 w-4" />
-                ) : (
-                  <FileText className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <p className="text-muted-foreground text-sm mt-1">
-              필터링: {filteredRecords.length}개 | 현 {stats.total}개 레코드 | 삭제한 레코드 {stats.deleted}개
-            </p>
-          </div>
-
-          {/* 우측: 카테고리 필터 */}
-          <div className="flex-1 flex justify-end">
-            <CategorySidebar
-              stats={stats}
-              selectedStatuses={selectedStatuses}
-              onSelectStatuses={setSelectedStatuses}
-            />
+              {/* 구분선 */}
+              <div className="h-6 w-px bg-border" />
+            </CategorySidebar>
           </div>
         </div>
       </div>
