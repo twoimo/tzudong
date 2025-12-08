@@ -15,6 +15,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 
 // ============================================================
 // 설정
@@ -23,11 +24,12 @@ import * as path from 'path';
 const PROJECT_ROOT = path.resolve(__dirname, '..', '..', '..');
 const DATA_DIR = path.join(PROJECT_ROOT, 'backend', 'geminiCLI-restaurant-crawling', 'data');
 
-const DELAY_MIN = 2000;      // 2초
-const DELAY_MAX = 4000;      // 4초
+const DELAY_MIN = 1000;      // 1초 (수정됨)
+const DELAY_MAX = 3000;      // 3초 (수정됨)
 const PAGE_TIMEOUT = 60000;  // 60초
 const REST_INTERVAL = 200;   // 200개마다 휴식
 const REST_DURATION = 120000; // 2분
+const COMMIT_INTERVAL = 100; // 100개마다 중간 저장 + git commit
 
 // ============================================================
 // 타입 정의
@@ -325,7 +327,7 @@ async function collectFromTubeTranscript(page: Page, videoId: string): Promise<T
 async function main() {
   // 인자 파싱
   const args = process.argv.slice(2);
-  let targetDates: string[] = ['25-12-04', '25-12-05'];  // 기본값
+  let targetDates: string[] = ['25-12-04', '25-12-05', '25-12-08'];  // 기본값
   let maxItems = 9999;  // 사실상 무제한
   let dryRun = false;
   
@@ -347,6 +349,7 @@ async function main() {
   log(`🧪 DRY-RUN: ${dryRun ? 'ON' : 'OFF'}`);
   log(`⏱️ 딜레이: ${DELAY_MIN/1000}~${DELAY_MAX/1000}초`);
   log(`🛑 휴식: ${REST_INTERVAL}개마다 ${REST_DURATION/60000}분`);
+  log(`💾 중간 저장: ${COMMIT_INTERVAL}개마다 저장 + git commit`);
   log('============================================================');
   
   // 폴더 확인
@@ -448,7 +451,23 @@ async function main() {
           log(`  ❌ ${videoId} 모든 소스에서 수집 실패`, 'error');
         }
         
-        // 100개마다 3분 휴식
+        // 100개마다 중간 저장 + git commit
+        if (totalProcessed % COMMIT_INTERVAL === 0 && totalProcessed > 0 && !dryRun && folderUpdated > 0) {
+          log(`\n💾 중간 저장: ${totalProcessed}개 처리 완료`, 'success');
+          fs.writeFileSync(transcriptFile, JSON.stringify(transcripts, null, 2), 'utf-8');
+          
+          // git commit
+          try {
+            const relativeFile = path.relative(PROJECT_ROOT, transcriptFile);
+            execSync(`git add "${relativeFile}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+            execSync(`git commit -m "chore: backfill progress - ${totalProcessed} items processed"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+            log(`  📤 Git commit 완료`, 'success');
+          } catch (gitError) {
+            log(`  ⚠️ Git commit 실패 (변경사항 없음 또는 에러): ${gitError}`, 'warning');
+          }
+        }
+        
+        // 200개마다 2분 휴식
         if (totalProcessed % REST_INTERVAL === 0 && totalProcessed > 0) {
           log(`\n🛑 ${totalProcessed}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`, 'warning');
           await new Promise(resolve => setTimeout(resolve, REST_DURATION));
