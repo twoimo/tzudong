@@ -54,31 +54,31 @@ interface EvaluationTableProps {
 }
 
 const FILTER_TOOLTIPS = {
-  visit_authenticity: `0점 = 영상과 무관 (데이터가 허구)
-1점 = 음식점(매장)이 맞으며, 직접 방문했고 지점명까지 명확
-2점 = 음식점(매장)이 맞으며, 직접 방문은 맞지만 지점명 특정 불명확
-3점 = 음식점을 방문하지 않고, 해당 음식점의 음식 포장/배달
-4점 = 언급만 하거나(매장 안 감), 음식점(매장)이 아님`,
+  visit_authenticity: `0점: 영상과 무관함 (허구 데이터)
+1점: 매장 직접 방문 (지점 명확)
+2점: 매장 직접 방문 (지점 불명확)
+3점: 포장/배달 (매장 미방문)
+4점: 단순 언급 또는 음식점 아님`,
 
-  rb_inference_score: `0점 = 논리적 비약 있음 / 현장 증거 없이 단순 검색·추측으로 특정
-1점 = '방문 지역 언급 → 간판/편집자막 확인 → 음식점 특정' 순서로 자연스럽게 이어짐
-2점 = 영상 내 여러 시각정보와 음성정보, 검색정보를 조합하여 논리적으로 특정`,
+  rb_inference_score: `0점: 근거 부족 (단순 추측 및 비약)
+1점: 명확한 단서 (간판, 자막 등으로 자연스럽게 특정)
+2점: 복합적 단서 (여러 정보를 논리적으로 조합하여 특정)`,
 
-  rb_grounding_TF: `True = reasoning_basis에 나온 근거 요소가 실제 영상에서 확인 가능
-False = 핵심 근거(매장 위치나 간판 확인 등)가 영상에서 전혀 확인 안 됨`,
+  rb_grounding_TF: `True: 제시된 근거(Reasoning Basis)가 영상에서 실제로 확인됨
+False: 제시된 근거(Reasoning Basis)를 영상에서 찾을 수 없음`,
 
-  review_faithfulness_score: `0점 = 과장/없는 말 지어냄, 위험하게 틀림
-1점 = 실제 멘트 기반으로 충실하게 요약됨, 큰 누락 없음`,
+  review_faithfulness_score: `0점: 내용 왜곡, 과장, 또는 틀린 정보 포함
+1점: 실제 영상 내용을 충실하고 정확하게 요약함`,
 
-  geocoding_success: `True = 지오코딩 성공 (geocoding_success = true)
-False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
-Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
+  geocoding_success: `True: 지오코딩 성공
+False: 주소 매칭 실패 (검색은 수행됨)
+Failed: 지오코딩 오류 (시스템 에러 등)`,
 
-  category_validity_TF: `True = category가 유효 카테고리 목록에 포함되고 null이 아님
-False = category가 목록에 없거나 null`,
+  category_validity_TF: `True: 유효한 카테고리임
+False: 목록에 없는 유효하지 않은 카테고리`,
 
-  category_TF: `True = 영상에서 음식들, 메뉴판 등을 확인했을 때 기존 category값이 적절함
-False = 영상에서 음식들, 메뉴판 등을 확인했을 때 기존 category값을 수용할 수 없음`
+  category_TF: `True: 현재 카테고리가 영상 내용과 일치함
+False: 현재 카테고리가 영상 내용과 맞지 않음`
 };
 
 // 유틸리티 함수: YouTube 비디오 ID 추출 (컴포넌트 외부)
@@ -396,7 +396,7 @@ export function EvaluationTable({
                     </TooltipContent>
                   </Tooltip>
                 </TableHead>
-                <TableHead className="min-w-[350px] sticky left-12 bg-background z-10">
+                <TableHead className="min-w-[300px] sticky left-12 bg-background z-10">
                   <div className="flex items-center gap-2">
                     <div className="relative flex-1">
                       <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -422,10 +422,10 @@ export function EvaluationTable({
                 </TableHead>
 
                 {/* 평가 컬럼들 */}
-                <TableHead className="min-w-[120px]">
+                <TableHead className="min-w-[90px]">
                   {renderFilterDropdown(
                     "visit_authenticity",
-                    "방문 여부 정확성",
+                    "방문여부",
                     FILTER_TOOLTIPS.visit_authenticity,
                     [
                       { value: 'all', label: '전체' },
@@ -438,10 +438,10 @@ export function EvaluationTable({
                   )}
                 </TableHead>
 
-                <TableHead className="min-w-[100px]">
+                <TableHead className="min-w-[80px]">
                   {renderFilterDropdown(
                     "rb_inference_score",
-                    "추론 합리성",
+                    "추론합리",
                     FILTER_TOOLTIPS.rb_inference_score,
                     [
                       { value: 'all', label: '전체' },
@@ -452,10 +452,10 @@ export function EvaluationTable({
                   )}
                 </TableHead>
 
-                <TableHead className="min-w-[120px]">
+                <TableHead className="min-w-[90px]">
                   {renderFilterDropdown(
                     "rb_grounding_TF",
-                    "실제 근거 일치도",
+                    "근거일치",
                     FILTER_TOOLTIPS.rb_grounding_TF,
                     [
                       { value: 'all', label: '전체' },
@@ -465,10 +465,10 @@ export function EvaluationTable({
                   )}
                 </TableHead>
 
-                <TableHead className="min-w-[100px]">
+                <TableHead className="min-w-[80px]">
                   {renderFilterDropdown(
                     "review_faithfulness_score",
-                    "리뷰 충실도",
+                    "리뷰충실",
                     FILTER_TOOLTIPS.review_faithfulness_score,
                     [
                       { value: 'all', label: '전체' },
@@ -478,10 +478,10 @@ export function EvaluationTable({
                   )}
                 </TableHead>
 
-                <TableHead className="min-w-[100px]">
+                <TableHead className="min-w-[80px]">
                   {renderFilterDropdown(
                     "geocoding_success",
-                    "주소 정합성",
+                    "주소정합",
                     `True = 지오코딩 성공 (geocoding_success = true)
 False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
 Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
@@ -494,10 +494,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   )}
                 </TableHead>
 
-                <TableHead className="min-w-[120px]">
+                <TableHead className="min-w-[90px]">
                   {renderFilterDropdown(
                     "category_validity_TF",
-                    "카테고리 유효성",
+                    "카테고리 유효",
                     FILTER_TOOLTIPS.category_validity_TF,
                     [
                       { value: 'all', label: '전체' },
@@ -507,10 +507,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   )}
                 </TableHead>
 
-                <TableHead className="min-w-[120px]">
+                <TableHead className="min-w-[90px]">
                   {renderFilterDropdown(
                     "category_TF",
-                    "카테고리 정합성",
+                    "카테고리 정합",
                     FILTER_TOOLTIPS.category_TF,
                     [
                       { value: 'all', label: '전체' },
@@ -521,7 +521,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 </TableHead>
 
                 {/* 고정 컬럼 */}
-                <TableHead className="text-center min-w-[100px] sticky right-[250px] bg-background z-10">
+                <TableHead className="text-center min-w-[80px] sticky right-[180px] bg-background z-10">
                   {/* 삭제 필터 활성화 시 드롭다운 숨김 */}
                   {isDeletedFilterActive ? (
                     <div className="text-sm font-medium">상태</div>
@@ -543,7 +543,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     )
                   )}
                 </TableHead>
-                <TableHead className="text-center min-w-[250px] sticky right-0 bg-background z-10">액션</TableHead>
+                <TableHead className="text-center min-w-[180px] sticky right-0 bg-background z-10">액션</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -587,7 +587,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   </TooltipContent>
                 </Tooltip>
               </TableHead>
-              <TableHead className="min-w-[350px] sticky left-12 bg-background z-10">
+              <TableHead className="min-w-[300px] sticky left-12 bg-background z-10">
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1">
                     <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -613,10 +613,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
               </TableHead>
 
               {/* 평가 컬럼들 */}
-              <TableHead className="min-w-[120px]">
+              <TableHead className="min-w-[90px]">
                 {renderFilterDropdown(
                   "visit_authenticity",
-                  "방문 여부 정확성",
+                  "방문여부",
                   FILTER_TOOLTIPS.visit_authenticity,
                   [
                     { value: 'all', label: '전체' },
@@ -629,10 +629,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 )}
               </TableHead>
 
-              <TableHead className="min-w-[100px]">
+              <TableHead className="min-w-[80px]">
                 {renderFilterDropdown(
                   "rb_inference_score",
-                  "추론 합리성",
+                  "추론합리",
                   FILTER_TOOLTIPS.rb_inference_score,
                   [
                     { value: 'all', label: '전체' },
@@ -643,10 +643,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 )}
               </TableHead>
 
-              <TableHead className="min-w-[120px]">
+              <TableHead className="min-w-[90px]">
                 {renderFilterDropdown(
                   "rb_grounding_TF",
-                  "실제 근거 일치도",
+                  "근거일치",
                   FILTER_TOOLTIPS.rb_grounding_TF,
                   [
                     { value: 'all', label: '전체' },
@@ -656,10 +656,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 )}
               </TableHead>
 
-              <TableHead className="min-w-[100px]">
+              <TableHead className="min-w-[80px]">
                 {renderFilterDropdown(
                   "review_faithfulness_score",
-                  "리뷰 충실도",
+                  "리뷰충실",
                   FILTER_TOOLTIPS.review_faithfulness_score,
                   [
                     { value: 'all', label: '전체' },
@@ -669,10 +669,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 )}
               </TableHead>
 
-              <TableHead className="min-w-[100px]">
+              <TableHead className="min-w-[80px]">
                 {renderFilterDropdown(
                   "geocoding_success",
-                  "주소 정합성",
+                  "주소정합",
                   `True = 지오코딩 성공 (geocoding_success = true)
 False = 지오코딩 성공했으나 주소 매칭 실패 (geocoding_success = false, geocoding_false_stage 값 있음)
 Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_stage = null)`,
@@ -685,10 +685,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 )}
               </TableHead>
 
-              <TableHead className="min-w-[120px]">
+              <TableHead className="min-w-[90px]">
                 {renderFilterDropdown(
                   "category_validity_TF",
-                  "카테고리 유효성",
+                  "카테고리 유효",
                   FILTER_TOOLTIPS.category_validity_TF,
                   [
                     { value: 'all', label: '전체' },
@@ -698,10 +698,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                 )}
               </TableHead>
 
-              <TableHead className="min-w-[120px]">
+              <TableHead className="min-w-[90px]">
                 {renderFilterDropdown(
                   "category_TF",
-                  "카테고리 정합성",
+                  "카테고리 정합",
                   FILTER_TOOLTIPS.category_TF,
                   [
                     { value: 'all', label: '전체' },
@@ -712,7 +712,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
               </TableHead>
 
               {/* 고정 컬럼 */}
-              <TableHead className="text-center min-w-[100px] sticky right-[250px] bg-background z-10">
+              <TableHead className="text-center min-w-[80px] sticky right-[180px] bg-background z-10">
                 {/* 삭제 필터 활성화 시 드롭다운 숨김 */}
                 {isDeletedFilterActive ? (
                   <div className="text-sm font-medium">상태</div>
@@ -734,7 +734,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   )
                 )}
               </TableHead>
-              <TableHead className="text-center min-w-[250px] sticky right-0 bg-background z-10">액션</TableHead>
+              <TableHead className="text-center min-w-[180px] sticky right-0 bg-background z-10">액션</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -877,7 +877,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   </TableCell>
 
                   {/* 고정 컬럼: 상태 */}
-                  <TableCell className="text-center sticky right-[250px] bg-background">
+                  <TableCell className="text-center sticky right-[180px] bg-background">
                     {getStatusBadge(record.status)}
                   </TableCell>
 
@@ -889,7 +889,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         <>
                           <Button
                             size="sm"
-                            onClick={() => onRestore?.(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRestore?.(record);
+                            }}
                             disabled={loading}
                             className="bg-blue-600 hover:bg-blue-700"
                           >
@@ -902,7 +905,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         <>
                           <Button
                             size="sm"
-                            onClick={() => onEdit?.(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEdit?.(record);
+                            }}
                             disabled={loading}
                             variant="outline"
                           >
@@ -913,7 +919,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => onDelete(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(record);
+                            }}
                             disabled={loading}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -923,7 +932,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                         <>
                           <Button
                             size="sm"
-                            onClick={() => onApprove(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onApprove(record);
+                            }}
                             disabled={loading || !canApprove(record)}
                           >
                             <Check className="w-4 h-4 mr-1" />
@@ -934,7 +946,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => onEdit(record)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEdit(record);
+                              }}
                               disabled={loading}
                             >
                               <Edit className="w-4 h-4 mr-1" />
@@ -945,7 +960,10 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                           <Button
                             size="sm"
                             variant="destructive"
-                            onClick={() => onDelete(record)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onDelete(record);
+                            }}
                             disabled={loading}
                           >
                             <Trash2 className="w-4 h-4" />
