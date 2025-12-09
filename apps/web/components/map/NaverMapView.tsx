@@ -123,7 +123,7 @@ const NaverMapView = memo(({
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
-    const markersRef = useRef<any[]>([]);
+    const markersMapRef = useRef<Map<string, any>>(new Map()); // [New] 마커 Map (ID -> Marker)
     const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
@@ -141,6 +141,37 @@ const NaverMapView = memo(({
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
+
+    // ... (중략) ...
+
+    // [Helper] 마커 컨텐츠 생성 (HTML 문자열 반환)
+    const createMarkerContent = useMemo(() => (restaurant: Restaurant, isSelected: boolean) => {
+        // categories 필드 사용 (호환성 속성인 category도 사용 가능)
+        const icon = getCategoryIcon(restaurant.categories || restaurant.category);
+        const markerSize = isSelected ? 32 : 24;
+
+        // HTML 문자열 반환 (접근성 속성 포함)
+        return `
+            <div 
+                class="custom-marker ${isSelected ? 'selected-marker' : ''}" 
+                role="button" 
+                aria-label="${restaurant.name} 맛집 마커" 
+                tabindex="0" 
+                title="${restaurant.name}"
+            >
+                <div style="
+                    position: relative;
+                    font-size: ${markerSize}px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+                " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
+                    ${icon}
+                </div>
+            </div>
+        `;
+    }, []);
+
 
     // [커스텀 토스트] 지도 상단 중앙 알림 상태
     const [mapToast, setMapToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null>(null);
@@ -727,6 +758,126 @@ const NaverMapView = memo(({
         return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
     }, [isLoadingRestaurants, previousRestaurants, restaurants]);
 
+    // [최적화] 마커 데이터 동기화 (생성/삭제)
+    useEffect(() => {
+        if (!mapInstanceRef.current || !window.naver) return;
+        const { naver } = window;
+        const map = mapInstanceRef.current;
+
+        // 표시할 레스토랑 목록 준비 (검색어 포함)
+        const restaurantsToShow = [...displayRestaurants];
+
+        // 검색된 맛집 추가 로직 (기존과 동일)
+        if (searchedRestaurant) {
+            let alreadyExists = false;
+            // (중복 체크 로직 생략 - 기존과 동일하다고 가정하거나 간단히 ID 체크)
+            if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
+                const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
+                alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
+            } else {
+                alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
+            }
+
+            if (!alreadyExists) {
+                restaurantsToShow.push(searchedRestaurant);
+            }
+        }
+
+        // 1. 없어진 마커 삭제 (현재 Map에는 있지만 새 목록에는 없는 것)
+        const currentIds = new Set(restaurantsToShow.map(r => r.id));
+        markersMapRef.current.forEach((marker, id) => {
+            if (!currentIds.has(id)) {
+                marker.setMap(null);
+                markersMapRef.current.delete(id);
+            }
+        });
+
+        // 2. 새로운 마커 생성 및 Map 등록 (새 목록에 있지만 Map엔 없는 것)
+        restaurantsToShow.forEach(restaurant => {
+            if (!restaurant.lat || !restaurant.lng) return;
+
+            if (!markersMapRef.current.has(restaurant.id)) {
+                const isSelected = false; // 생성 시점엔 기본 상태
+                const contentHtml = createMarkerContent(restaurant, isSelected);
+
+                const marker = new naver.maps.Marker({
+                    position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                    map: map,
+                    icon: {
+                        content: contentHtml,
+                        anchor: new naver.maps.Point(12, 12), // 기본 Anchor (24px/2)
+                    },
+                    title: restaurant.name,
+                });
+
+                // 클릭 리스너 등록
+                naver.maps.Event.addListener(marker, "click", () => {
+                    if (onMarkerClick) {
+                        onMarkerClick(restaurant);
+                    } else {
+                        if (onRestaurantSelect) {
+                            onRestaurantSelect(restaurant);
+                        }
+                        setInternalPanelOpen(true);
+                    }
+                });
+
+                markersMapRef.current.set(restaurant.id, marker);
+            }
+        });
+
+        // restaurantsRef 업데이트
+        restaurantsRef.current = restaurantsToShow;
+
+    }, [displayRestaurants, searchedRestaurant, createMarkerContent, onMarkerClick, onRestaurantSelect]);
+
+    // [최적화] 선택 상태 변경에 따른 마커 스타일 업데이트 (DOM 조작 최소화)
+    useEffect(() => {
+        const currentSelected = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
+        const prevSelectedId = prevSelectedRestaurantIdRef.current;
+        const currentSelectedId = currentSelected?.id;
+
+        // 선택이 바뀌지 않았다면 패스 (단, gridMode 변경 등의 경우 체크 필요하지만 ID 기준이면 충분)
+        // 하지만 "이전 선택"을 Unselect 처리해야 하므로 상태 관리가 필요함.
+        // 여기서는 간단히: "모든 마커를 순회"하는 건 비효율적일 수 있지만 갯수가 적다면 OK.
+        // 하지만 효율을 위해: "이전 선택된 ID"를 알고 있으므로 그것만 업데이트.
+
+        // 1. 이전 선택된 마커 Unselect 처리
+        if (prevSelectedId && prevSelectedId !== currentSelectedId) {
+            const prevMarker = markersMapRef.current.get(prevSelectedId);
+            // 이전 마커가 여전히 존재하는지 확인 (필터링 등으로 사라졌을 수 있음)
+            if (prevMarker) {
+                // 해당 레스토랑 정보 찾기 (아이콘 재생성을 위해)
+                const prevRestaurant = restaurantsRef.current.find(r => r.id === prevSelectedId);
+                if (prevRestaurant) {
+                    const content = createMarkerContent(prevRestaurant, false);
+                    prevMarker.setIcon({
+                        content: content,
+                        anchor: new naver.maps.Point(12, 12)
+                    });
+                    prevMarker.setZIndex(0); // Z-Index 복구
+                }
+            }
+        }
+
+        // 2. 현재 선택된 마커 Select 처리
+        if (currentSelectedId) {
+            const currentMarker = markersMapRef.current.get(currentSelectedId);
+            if (currentMarker) {
+                const currentRestaurant = restaurantsRef.current.find(r => r.id === currentSelectedId);
+                if (currentRestaurant) {
+                    const content = createMarkerContent(currentRestaurant, true);
+                    currentMarker.setIcon({
+                        content: content,
+                        anchor: new naver.maps.Point(16, 16) // 선택된 경우(32px) Anchor 조정
+                    });
+                    currentMarker.setZIndex(100); // 선택된 마커 위로 올리기
+                }
+            }
+        }
+    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, createMarkerContent]);
+
+
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
     useEffect(() => {
         if (selectedRestaurant && displayRestaurants.length > 0) {
@@ -849,251 +1000,10 @@ const NaverMapView = memo(({
 
         // 패널 열기 (검색 시에만)
         setInternalPanelOpen(true);
-
         // 현재 searchedRestaurant 저장
         previousSearchedRestaurantRef.current = searchedRestaurant;
     }, [searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // 마커 업데이트 (최적화됨)
-    useEffect(() => {
-        if (!mapInstanceRef.current || !window.naver) {
-            return;
-        }
-
-        const { naver } = window;
-
-        // 기존 마커 제거 (배치로 처리)
-        const oldMarkers = markersRef.current;
-        oldMarkers.forEach(marker => marker.setMap(null));
-        markersRef.current = [];
-
-        // 마커를 표시할 맛집 목록 생성 (기존 displayRestaurants + 검색된 맛집)
-        const restaurantsToShow = [...displayRestaurants];
-
-        // 검색된 맛집이 기존 목록에 없는 경우 추가
-        // searchedRestaurant이 교체된 경우에도 기존 데이터와 일치하도록 보장
-        if (searchedRestaurant) {
-
-            // 병합된 데이터의 경우 mergedRestaurants로 확인
-            let alreadyExists = false;
-            if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
-                const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
-                alreadyExists = displayRestaurants.some(r =>
-                    mergedIds.includes(r.id) ||
-                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mergedIds.includes(mr.id)))
-                );
-            } else {
-                // 개별 레코드인 경우 - 지도의 병합된 데이터에서도 찾기
-                alreadyExists = displayRestaurants.some(r =>
-                    r.id === searchedRestaurant.id ||
-                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mr.id === searchedRestaurant.id))
-                );
-            }
-
-            if (!alreadyExists) {
-                restaurantsToShow.push(searchedRestaurant);
-            }
-        }
-
-        // restaurantsRef 업데이트 (마커 클릭 핸들러에서 사용)
-        restaurantsRef.current = restaurantsToShow;
-
-        // restaurants가 없으면 마커만 제거하고 종료
-        if (restaurantsToShow.length === 0) {
-            return;
-        }
-
-        // 마커 생성 대상 (좌표가 있는 것만)
-        const markersToCreate = restaurantsToShow.filter(r => r.lat !== null && r.lng !== null);
-
-        // 새 마커 배열 준비
-        const newMarkers: any[] = [];
-
-        // 모든 마커를 한 번에 생성 (DOM 조작 최소화)
-        markersToCreate.forEach((restaurant) => {
-            // 그리드 모드에서는 gridSelectedRestaurant, 단일 모드에서는 props의 selectedRestaurant 사용
-            const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
-            const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
-
-            // categories 필드 사용 (호환성 속성인 category도 사용 가능)
-            const icon = getCategoryIcon(restaurant.categories || restaurant.category);
-
-            // 선택된 맛집은 더 큰 크기와 강조 효과 (조금 더 작게)
-            const markerSize = isSelected ? 32 : 24;
-
-            // HTML 요소를 직접 생성해서 마커로 사용 (MapView 방식과 동일)
-            const markerElement = document.createElement("div");
-            markerElement.className = `custom-marker ${isSelected ? 'selected-marker' : ''}`;
-            // 접근성 속성 추가
-            markerElement.setAttribute('role', 'button');
-            markerElement.setAttribute('aria-label', `${restaurant.name} 맛집 마커`);
-            markerElement.setAttribute('tabindex', '0');
-            markerElement.setAttribute('title', restaurant.name);
-            markerElement.innerHTML = `
-                    <div style="
-                        position: relative;
-                        font-size: ${markerSize}px;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-                    " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
-                        ${icon}
-                    </div>
-                `;
-
-            const marker = new naver.maps.Marker({
-                position: new naver.maps.LatLng(restaurant.lat!, restaurant.lng!),
-                map: mapInstanceRef.current,
-                icon: {
-                    content: markerElement,
-                    anchor: new naver.maps.Point(markerSize / 2, markerSize / 2),
-                },
-                title: restaurant.name,
-            });
-
-            // 마커 클릭 이벤트
-            naver.maps.Event.addListener(marker, "click", () => {
-                // 기존의 명령형 지도 이동 로직(setZoom, setCenter 등)을 제거하고
-                // 상태 기반으로 동작하도록 변경.
-                // onRestaurantSelect가 호출되면 selectedRestaurant 상태가 업데이트되고, 
-                // 이에 따라 useEffect가 동작하여 지도를 이동시킴.
-
-                // 외부 onMarkerClick이 있으면 호출 (외부 패널 관리)
-                if (onMarkerClick) {
-                    onMarkerClick(restaurant);
-                } else {
-                    // 기존 동작: 내부 패널 열기
-                    if (onRestaurantSelect) {
-                        onRestaurantSelect(restaurant);
-                    }
-                    setInternalPanelOpen(true);
-                }
-            }); newMarkers.push(marker);
-        });
-
-        // 모든 마커를 한 번에 할당
-        markersRef.current = newMarkers;
-
-        // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
-        // 마커 표시 후 자동 이동하지 않음
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [displayRestaurants, refreshTrigger, selectedRegion, searchedRestaurant, isGridMode, gridSelectedRestaurant, onRestaurantSelect]);
-
-    // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
-    useEffect(() => {
-        if (!isLoaded || markersRef.current.length === 0 || !selectedRestaurant) return;
-
-        // 약간의 딜레이 후 스타일 업데이트 (마커 배열 생성 완료 대기)
-        const timeoutId = setTimeout(() => {
-            markersRef.current.forEach((marker, index) => {
-                const restaurant = restaurantsRef.current[index];
-                if (!restaurant) return;
-
-                // 선택된 맛집 비교 (ID, 이름+좌표, 병합된 데이터 모두 고려)
-                let isSelected = false;
-
-                if (selectedRestaurant) {
-                    isSelected = selectedRestaurant.id === restaurant.id;
-
-                    // 병합된 데이터의 경우 이름과 좌표로도 비교
-                    if (!isSelected) {
-                        isSelected = selectedRestaurant.name === restaurant.name &&
-                            Math.abs((selectedRestaurant.lat || 0) - (restaurant.lat || 0)) < 0.0001 &&
-                            Math.abs((selectedRestaurant.lng || 0) - (restaurant.lng || 0)) < 0.0001;
-                    }
-
-                    // 병합된 데이터의 경우 mergedRestaurants로 확인
-                    if (!isSelected && selectedRestaurant.mergedRestaurants) {
-                        const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
-                        isSelected = mergedIds.includes(restaurant.id);
-                    }
-                }
-
-                const markerElement = marker.getIcon().content as HTMLElement;
-                if (!markerElement) return;
-
-                const innerDiv = markerElement.querySelector('div');
-                if (!innerDiv) return;
-
-                // 크기 업데이트
-                const markerSize = isSelected ? 32 : 24;
-                innerDiv.style.fontSize = `${markerSize}px`;
-
-                // 애니메이션 클래스 업데이트
-                if (isSelected) {
-                    innerDiv.classList.add('animate-bounce');
-                } else {
-                    innerDiv.classList.remove('animate-bounce');
-                }
-            });
-        }, 150); // 마커 생성 후 약간의 딜레이
-
-        return () => clearTimeout(timeoutId);
-    }, [selectedRestaurant, displayRestaurants, isLoaded]);
-
-    // 줌 이벤트 시 마커 스타일 유지
-    useEffect(() => {
-        if (!mapInstanceRef.current || !isLoaded) return;
-
-        const handleZoomChange = () => {
-            // 줌 변경 후 약간의 지연을 주어 마커 스타일 재적용
-            setTimeout(() => {
-                if (!isLoaded || markersRef.current.length === 0) return;
-
-                markersRef.current.forEach((marker, index) => {
-                    const restaurant = restaurantsRef.current[index];
-                    if (!restaurant) return;
-
-                    // 선택된 맛집 비교 (ID, 이름+좌표, 병합된 데이터 모두 고려)
-                    let isSelected = false;
-
-                    if (selectedRestaurant) {
-                        isSelected = selectedRestaurant.id === restaurant.id;
-
-                        // 병합된 데이터의 경우 이름과 좌표로도 비교
-                        if (!isSelected) {
-                            isSelected = selectedRestaurant.name === restaurant.name &&
-                                Math.abs((selectedRestaurant.lat || 0) - (restaurant.lat || 0)) < 0.0001 &&
-                                Math.abs((selectedRestaurant.lng || 0) - (restaurant.lng || 0)) < 0.0001;
-                        }
-
-                        // 병합된 데이터의 경우 mergedRestaurants로 확인
-                        if (!isSelected && selectedRestaurant.mergedRestaurants) {
-                            const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
-                            isSelected = mergedIds.includes(restaurant.id);
-                        }
-                    }
-
-                    const markerElement = marker.getIcon().content as HTMLElement;
-                    if (!markerElement) return;
-
-                    const innerDiv = markerElement.querySelector('div');
-                    if (!innerDiv) return;
-
-                    // 크기 업데이트
-                    const markerSize = isSelected ? 32 : 24;
-                    innerDiv.style.fontSize = `${markerSize}px`;
-
-                    // 애니메이션 클래스 업데이트
-                    if (isSelected) {
-                        innerDiv.classList.add('animate-bounce');
-                    } else {
-                        innerDiv.classList.remove('animate-bounce');
-                    }
-                });
-            }, 100);
-        };
-
-        // 줌 변경 이벤트 리스너 추가
-        const zoomListener = naver.maps.Event.addListener(mapInstanceRef.current, 'zoom_changed', handleZoomChange);
-
-        return () => {
-            // 이벤트 리스너 명시적 제거 (메모리 누수 방지)
-            if (zoomListener) {
-                naver.maps.Event.removeListener(zoomListener);
-            }
-        };
-    }, [isLoaded, selectedRestaurant, displayRestaurants]);
 
     // 로딩 에러 처리
     if (loadError) {
