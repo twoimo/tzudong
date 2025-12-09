@@ -340,7 +340,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
 
                     <div className="flex-1 overflow-y-auto px-6 py-4">
                         <div className="space-y-6">
-                            {/* Important Notice */}
+                            {/* 중요 공지 */}
                             <Alert className="bg-amber-50 border-amber-200">
                                 <AlertCircle className="h-4 w-4 text-amber-600" />
                                 <AlertDescription className="text-amber-800 space-y-2">
@@ -359,7 +359,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 </AlertDescription>
                             </Alert>
 
-                            {/* Restaurant Selection */}
+                            {/* 맛집 선택 */}
                             <div className="space-y-2">
                                 <Label htmlFor="restaurant">
                                     방문한 쯔양 맛집 <span className="text-red-500">*</span>
@@ -371,7 +371,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                     <SelectContent>
                                         {(jjyangRestaurants as any[]).map((restaurant: any) => (
                                             <SelectItem key={restaurant.id} value={restaurant.id}>
-                                                {restaurant.name}
+                                                {restaurant.name} {/* 맛집 이름 표시 */}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
@@ -383,7 +383,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 )}
                             </div>
 
-                            {/* Visit Date & Time */}
+                            {/* 방문 날짜 및 시간 */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label htmlFor="visitDate" className="flex items-center gap-2">
@@ -417,7 +417,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 </div>
                             </div>
 
-                            {/* Category */}
+                            {/* 카테고리 */}
                             <div className="space-y-2">
                                 <Label>
                                     카테고리 <span className="text-red-500">*</span>
@@ -496,7 +496,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 )}
                             </div>
 
-                            {/* Verification Photo */}
+                            {/* 인증 사진 */}
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
                                     인증 사진 (본인 닉네임 포함) <span className="text-red-500">*</span>
@@ -586,7 +586,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         )}
                                     </div>
 
-                                    {/* Hidden file input */}
+                                    {/* 숨겨진 파일 입력 */}
                                     <input
                                         ref={verificationFileInputRef}
                                         type="file"
@@ -600,7 +600,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 </p>
                             </div>
 
-                            {/* Food Photos */}
+                            {/* 음식 사진 */}
                             <div className="space-y-2">
                                 <Label className="flex items-center gap-2">
                                     음식 사진 (다양한 각도) <span className="text-red-500">*</span>
@@ -691,7 +691,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         </div>
                                     </div>
 
-                                    {/* Hidden file input */}
+                                    {/* 숨겨진 파일 입력 */}
                                     <input
                                         ref={foodPhotosFileInputRef}
                                         type="file"
@@ -708,7 +708,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 </div>
                             </div>
 
-                            {/* Review Content */}
+                            {/* 리뷰 내용 */}
                             <div className="space-y-3">
                                 <Label htmlFor="content">
                                     리뷰 내용 <span className="text-red-500">*</span>
@@ -744,7 +744,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                         </div>
                     </div>
 
-                    {/* Footer */}
+                    {/* 푸터 */}
                     <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/50">
                         <div className="text-xs text-muted-foreground">
                             {isFormValid ? (

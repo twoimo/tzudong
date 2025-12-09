@@ -12,12 +12,11 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 
-const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 };
-const USA_CENTER = { lat: 39.8283, lng: -98.5795 }; // 미국 중심
-const INITIAL_ZOOM = 12;
-const USA_ZOOM = 4; // 미국 줌 레벨
-
 // 국가별 지도 중심 좌표
+const SEOUL_CENTER = { lat: 37.5665, lng: 126.9780 };
+const USA_CENTER = { lat: 39.8283, lng: -98.5795 };
+const INITIAL_ZOOM = 12;
+const USA_ZOOM = 4;
 const COUNTRY_CENTERS: Record<string, { lat: number; lng: number; zoom: number }> = {
   "미국": { lat: 39.8283, lng: -98.5795, zoom: 5 },
   "일본": { lat: 35.1815, lng: 136.9066, zoom: 10 }, // 나고야시 중심으로 변경
@@ -40,9 +39,9 @@ interface MapViewProps {
   onRestaurantSelect?: (restaurant: Restaurant | null) => void;
   onMapReady?: (moveToRestaurant: (restaurant: Restaurant) => void) => void;
   onRequestEditRestaurant?: (restaurant: Restaurant) => void;
-  // 패널 관리를 위한 콜백 추가
+  // [패널 관리] 마커 클릭, 패널 닫기 등 콜백
   onMarkerClick?: (restaurant: Restaurant) => void;
-  // 패널 너비 (동적 오프셋 계산용)
+  // [동적 레이아웃] 패널 너비에 따른 지도 중심 오프셋 계산용
   panelWidth?: number;
   activePanel?: 'map' | 'detail' | 'control';
   onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
@@ -286,7 +285,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }, [restaurants, searchedRestaurant]);
 
 
-  // Refetch when refreshTrigger changes
+  // [데이터 갱신] refreshTrigger 변경 시 재조회 (리뷰 작성 등)
   useEffect(() => {
     if (refreshTrigger) {
       refetch();
@@ -310,13 +309,13 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   }, [restaurants, refreshTrigger, selectedRestaurant, onRestaurantSelect]);
 
 
-  // Initialize map
+  // [지도 초기화] Google Maps 인스턴스 생성
   useEffect(() => {
     if (!isLoaded || !mapRef.current) {
       return;
     }
 
-    // Additional check for Google Maps API
+    // [유효성 검사] Google Maps API 로드 확인
     if (!window.google || !window.google.maps || !window.google.maps.Map) {
       return;
     }
@@ -340,7 +339,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       googleMapRef.current = map;
 
-      // Update bounds when map moves
+      // [이동 감지] 지도 이동 종료 시 경계값 업데이트
       map.addListener("idle", () => {
         const bounds = map.getBounds();
         if (bounds) {
@@ -355,7 +354,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
-  // Update map center and zoom when selectedCountry changes
+  // [국가 변경] 선택된 국가에 따라 지도 중심 및 줌 레벨 조정
   useEffect(() => {
     if (!googleMapRef.current || !selectedCountry) return;
 
@@ -371,27 +370,27 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [selectedCountry, searchedRestaurant]);
 
-  // Retry map initialization if Google Maps becomes available later
+  // [재시도 로직] 지도 로드 실패 시 재시도 (API 지연 로드 대응)
   useEffect(() => {
     if (!isLoaded && window.google && window.google.maps && window.google.maps.Map && mapRef.current && !googleMapRef.current) {
-      // Force re-run of map initialization
+      // 강제 재로드 실행
       setTimeout(() => {
         window.location.reload();
       }, 500);
     }
   }, [isLoaded]);
 
-  // Update markers when restaurants change
+  // [마커 관리] 맛집 데이터 변경 시 마커 업데이트
   useEffect(() => {
     if (!googleMapRef.current || !isLoaded) return;
 
-    // Clear existing markers
+    // 기존 마커 제거 (메모리 누수 방지)
     markersRef.current.forEach(marker => {
       marker.map = null;
     });
     markersRef.current = [];
 
-    // Create new markers
+    // 새 마커 생성
     restaurantsToShow.forEach((restaurant) => {
       // selectedRestaurant 또는 searchedRestaurant와 비교하여 선택 상태 판단
       const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;

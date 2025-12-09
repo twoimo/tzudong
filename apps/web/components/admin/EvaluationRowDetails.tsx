@@ -164,8 +164,8 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
   }
 
   // 정상 음식점인 경우 (또는 승인, 보류 등) - Unified Slide View Layout 사용
-  // Main Layout has standard rendering which works for everything else.
-  // We wrap it in a container with a fixed height to make sure it renders like a slide.
+  // [레이아웃] 통합 상세 뷰(Unified Detail View) 사용
+  // 일반적인 테이블 행 확장 UI와 달리, 여기서는 슬라이드 형태처럼 보이도록 고정 높이 컨테이너로 감쌉니다.
 
   return (
     <div className="flex flex-col border-t bg-gray-50/50">
