@@ -1233,6 +1233,11 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           <Button
             onClick={handleApprove}
             disabled={loading || geocodingResults.length === 0 || selectedGeocodingIndex === null}
+            title={
+              geocodingResults.length === 0 || selectedGeocodingIndex === null
+                ? '지오코딩을 먼저 진행하고 주소를 선택해주세요'
+                : '승인 및 저장'
+            }
           >
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             승인

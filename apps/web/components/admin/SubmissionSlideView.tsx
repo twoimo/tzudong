@@ -71,6 +71,9 @@ export function SubmissionSlideView({
     const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
     const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
 
+    // 메타데이터 여부 상태
+    const [hasYoutubeMeta, setHasYoutubeMeta] = useState(false);
+
     // 거부 모달 상태
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
@@ -88,6 +91,7 @@ export function SubmissionSlideView({
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
         setRejectionReason('');
+        setHasYoutubeMeta(false);
     }, [currentIndex]);
 
     // 외부에서 전달된 approvalData 동기화 (수정 모달에서 저장 시)
@@ -252,9 +256,16 @@ export function SubmissionSlideView({
                             </Button>
                             <Button
                                 onClick={handleApprove}
-                                disabled={loading || !approvalData.lat || !approvalData.lng}
+                                disabled={loading || !approvalData.lat || !approvalData.lng || !approvalData.road_address || !hasYoutubeMeta}
                                 className="bg-green-600 hover:bg-green-700 h-8"
                                 size="sm"
+                                title={
+                                    !hasYoutubeMeta
+                                        ? '메타데이터를 먼저 가져와주세요'
+                                        : !approvalData.road_address
+                                            ? '지오코딩을 먼저 진행해주세요'
+                                            : '제보 승인'
+                                }
                             >
                                 {loading ? (
                                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
@@ -288,6 +299,7 @@ export function SubmissionSlideView({
                     onGeocodingResultsChange={setGeocodingResults}
                     selectedGeocodingIndex={selectedGeocodingIndex}
                     onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
+                    onYoutubeMetaChange={(hasMeta) => setHasYoutubeMeta(hasMeta)}
                 />
             </div>
 

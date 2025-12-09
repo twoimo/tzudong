@@ -183,6 +183,7 @@ interface SubmissionDetailViewProps {
     onGeocodingResultsChange: (results: GeocodingResult[]) => void;
     selectedGeocodingIndex: number | null;
     onSelectedGeocodingIndexChange: (index: number | null) => void;
+    onYoutubeMetaChange?: (hasMeta: boolean) => void;
     className?: string;
 }
 
@@ -279,6 +280,7 @@ export function SubmissionDetailView({
     onGeocodingResultsChange,
     selectedGeocodingIndex,
     onSelectedGeocodingIndexChange,
+    onYoutubeMetaChange,
     className,
 }: SubmissionDetailViewProps) {
     const [geocoding, setGeocoding] = useState(false);
@@ -414,6 +416,7 @@ export function SubmissionDetailView({
             };
 
             setYoutubeMeta(meta);
+            onYoutubeMetaChange?.(true); // 메타데이터 있음을 부모에게 알림
             toast.success('YouTube 메타데이터를 가져왔습니다');
         } catch (error: any) {
             console.error('YouTube 메타데이터 가져오기 오류:', error);
@@ -421,7 +424,7 @@ export function SubmissionDetailView({
         } finally {
             setFetchingMeta(false);
         }
-    }, [videoId]);
+    }, [videoId, onYoutubeMetaChange]);
 
     // 재지오코딩 함수 (여러 개 결과 반환)
     const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3): Promise<GeocodingResult[]> => {
