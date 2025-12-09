@@ -1261,6 +1261,8 @@ export default function AdminEvaluationPage() {
         category: Array.isArray(submission.category)
           ? (submission.category[0] || '')
           : (submission.category || ''),
+        origin_address: submission.address, // 주소 초기값
+        tzuyang_review: submission.description || '', // 쯔양 리뷰 초기값
       },
       categories: Array.isArray(submission.category) ? submission.category : [submission.category],
       phone: submission.phone || '',

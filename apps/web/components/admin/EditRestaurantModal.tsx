@@ -1197,7 +1197,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
           {/* 쯔양 리뷰 */}
           <div className="space-y-2">
-            <Label htmlFor="edit-tzuyang-review">쯔양 리뷰</Label>
+            <Label htmlFor="edit-tzuyang-review">쯔양의 리뷰</Label>
             <Textarea
               id="edit-tzuyang-review"
               value={formData.tzuyang_review}

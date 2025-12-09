@@ -325,7 +325,7 @@ export function SubmissionDetailView({
                             {/* 설명 */}
                             {submission.description && (
                                 <div className="pt-2 border-t">
-                                    <Label className="text-muted-foreground text-xs">제보 설명</Label>
+                                    <Label className="text-muted-foreground text-xs">쯔양의 리뷰</Label>
                                     <p className="text-sm mt-1 whitespace-pre-wrap">{submission.description}</p>
                                 </div>
                             )}
