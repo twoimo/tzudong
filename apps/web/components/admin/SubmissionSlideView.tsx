@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -121,8 +121,9 @@ export function SubmissionSlideView({
         );
     }
 
-    // 상태 배지
-    const getStatusBadge = (status: string) => {
+    // 상태 배지 (useMemo로 최적화)
+    const statusBadge = useMemo(() => {
+        const status = currentSubmission.status;
         const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
             pending: { label: '검토 대기', variant: 'secondary', icon: <Clock className="w-3 h-3" /> },
             approved: { label: '승인됨', variant: 'default', icon: <CheckCircle2 className="w-3 h-3" /> },
@@ -135,19 +136,19 @@ export function SubmissionSlideView({
                 {config.label}
             </Badge>
         );
-    };
+    }, [currentSubmission.status]);
 
-    // 승인 핸들러
-    const handleApprove = () => {
+    // 승인 핸들러 (useCallback 최적화)
+    const handleApprove = useCallback(() => {
         if (!approvalData.lat || !approvalData.lng) {
             toast.error('먼저 주소를 검색하고 선택해주세요');
             return;
         }
         onApprove(currentSubmission, approvalData);
-    };
+    }, [approvalData, currentSubmission, onApprove]);
 
-    // 거부 핸들러
-    const handleReject = () => {
+    // 거부 핸들러 (useCallback 최적화)
+    const handleReject = useCallback(() => {
         if (!rejectionReason.trim()) {
             toast.error('거부 사유를 입력해주세요');
             return;
@@ -155,21 +156,21 @@ export function SubmissionSlideView({
         onReject(currentSubmission, rejectionReason.trim());
         setShowRejectModal(false);
         setRejectionReason('');
-    };
+    }, [currentSubmission, onReject, rejectionReason]);
 
-    // 삭제 핸들러
-    const handleDelete = () => {
+    // 삭제 핸들러 (useCallback 최적화)
+    const handleDelete = useCallback(() => {
         if (confirm('정말 이 제보를 삭제하시겠습니까?')) {
             onDelete(currentSubmission);
         }
-    };
+    }, [currentSubmission, onDelete]);
 
-    // 수정 핸들러
-    const handleEdit = () => {
+    // 수정 핸들러 (useCallback 최적화)
+    const handleEdit = useCallback(() => {
         if (onEdit) {
             onEdit(currentSubmission);
         }
-    };
+    }, [currentSubmission, onEdit]);
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -202,7 +203,7 @@ export function SubmissionSlideView({
                     </div>
 
                     {/* 상태 배지 */}
-                    {getStatusBadge(currentSubmission.status)}
+                    {statusBadge}
 
                     {/* 제보 유형 배지 */}
                     <Badge

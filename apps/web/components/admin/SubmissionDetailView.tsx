@@ -448,8 +448,8 @@ export function SubmissionDetailView({
         }
     };
 
-    // 재지오코딩 핸들러
-    const handleReGeocode = async () => {
+    // 재지오코딩 핸들러 (useCallback 최적화)
+    const handleReGeocode = useCallback(async () => {
         const trimmedName = submission.restaurant_name.trim();
         const trimmedAddress = submission.address.trim();
 
@@ -487,10 +487,10 @@ export function SubmissionDetailView({
         } finally {
             setGeocoding(false);
         }
-    };
+    }, [submission.restaurant_name, submission.address, onGeocodingResultsChange, onSelectedGeocodingIndexChange]);
 
-    // 지오코딩 결과 선택 핸들러
-    const handleSelectGeocodingResult = (index: number) => {
+    // 지오코딩 결과 선택 핸들러 (useCallback 최적화)
+    const handleSelectGeocodingResult = useCallback((index: number) => {
         onSelectedGeocodingIndexChange(index);
         const selected = geocodingResults[index];
         onApprovalDataChange({
@@ -501,7 +501,7 @@ export function SubmissionDetailView({
             english_address: selected.english_address,
             address_elements: selected.address_elements,
         });
-    };
+    }, [geocodingResults, onSelectedGeocodingIndexChange, onApprovalDataChange]);
 
     return (
         <div className={cn("flex h-full overflow-hidden", className)}>
@@ -678,8 +678,8 @@ export function SubmissionDetailView({
                                     <Badge
                                         variant="outline"
                                         className={`shrink-0 text-[10px] px-1 h-5 ${approvalData.road_address
-                                                ? 'bg-green-50 text-green-700 border-green-200'
-                                                : 'bg-gray-50 text-gray-500 border-gray-200'
+                                            ? 'bg-green-50 text-green-700 border-green-200'
+                                            : 'bg-gray-50 text-gray-500 border-gray-200'
                                             }`}
                                     >
                                         Naver 도로명
@@ -692,8 +692,8 @@ export function SubmissionDetailView({
                                     <Badge
                                         variant="outline"
                                         className={`shrink-0 text-[10px] px-1 h-5 ${approvalData.jibun_address
-                                                ? 'bg-green-50 text-green-700 border-green-200'
-                                                : 'bg-gray-50 text-gray-500 border-gray-200'
+                                            ? 'bg-green-50 text-green-700 border-green-200'
+                                            : 'bg-gray-50 text-gray-500 border-gray-200'
                                             }`}
                                     >
                                         Naver 지번

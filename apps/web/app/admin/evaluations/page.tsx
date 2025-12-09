@@ -1461,25 +1461,6 @@ export default function AdminEvaluationPage() {
                 >
                   <MonitorPlay className="h-4 w-4" />
                 </Button>
-                {/* 자막 수집 버튼 (아이콘 only) */}
-                <Button
-                  onClick={handleCollectTranscripts}
-                  disabled={transcriptStatus === 'loading'}
-                  variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'ghost'}
-                  size="icon"
-                  className="h-8 w-8"
-                  title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
-                >
-                  {transcriptStatus === 'loading' ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : transcriptStatus === 'success' ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : transcriptStatus === 'error' ? (
-                    <XCircle className="h-4 w-4" />
-                  ) : (
-                    <FileText className="h-4 w-4" />
-                  )}
-                </Button>
                 {/* 사용자 제보 검수 버튼 */}
                 <Button
                   onClick={() => {
@@ -1500,6 +1481,25 @@ export default function AdminEvaluationPage() {
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                       {submissionsData.length > 9 ? '9+' : submissionsData.length}
                     </span>
+                  )}
+                </Button>
+                {/* 자막 수집 버튼 (아이콘 only) */}
+                <Button
+                  onClick={handleCollectTranscripts}
+                  disabled={transcriptStatus === 'loading'}
+                  variant={transcriptStatus === 'success' ? 'default' : transcriptStatus === 'error' ? 'destructive' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  title={transcriptStatus === 'loading' ? '자막 수집 중...' : 'YouTube 자막 수집 실행'}
+                >
+                  {transcriptStatus === 'loading' ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : transcriptStatus === 'success' ? (
+                    <CheckCircle2 className="h-4 w-4" />
+                  ) : transcriptStatus === 'error' ? (
+                    <XCircle className="h-4 w-4" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
                   )}
                 </Button>
               </div>
