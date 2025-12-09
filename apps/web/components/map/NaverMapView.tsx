@@ -130,6 +130,7 @@ const NaverMapView = memo(({
     const prevPanelOpenRef = useRef<boolean>(false); // 이전 패널 열림 상태 추적 (오프셋 델타 계산용)
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
     const prevSidebarOpenRef = useRef<boolean>(true); // 이전 사이드바 열림 상태 추적
+    const hasUserMovedMapRef = useRef<boolean>(false); // [New] 사용자가 지도를 직접 움직였는지 추적
 
     // 사이드바 상태 가져오기
     const { isSidebarOpen } = useLayout();
@@ -291,6 +292,9 @@ const NaverMapView = memo(({
         // 리사이즈 먼저 트리거
         naver.maps.Event.trigger(map, 'resize');
 
+        // programmatic 이동이므로 사용자 이동 플래그 초기화
+        hasUserMovedMapRef.current = false;
+
         const moveMap = () => {
             // [Helper 사용] 조정된 중심 좌표 계산
             const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX);
@@ -321,7 +325,19 @@ const NaverMapView = memo(({
             moveMap();
         }, 320);
 
-        return () => clearTimeout(transitionTimer);
+        // 사용자 상호작용 감지 리스너 추가
+        const dragListener = naver.maps.Event.addListener(map, 'dragstart', () => {
+            hasUserMovedMapRef.current = true;
+        });
+        const pinchListener = naver.maps.Event.addListener(map, 'pinchstart', () => {
+            hasUserMovedMapRef.current = true;
+        });
+
+        return () => {
+            clearTimeout(transitionTimer);
+            naver.maps.Event.removeListener(dragListener);
+            naver.maps.Event.removeListener(pinchListener);
+        };
 
     }, [
         selectedRestaurant,
@@ -369,6 +385,11 @@ const NaverMapView = memo(({
 
             // 1. 지도 리사이즈 트리거
             naver.maps.Event.trigger(map, 'resize');
+
+            // [New] 사용자가 지도를 직접 움직였다면 중심 재조정 하지 않음
+            if (hasUserMovedMapRef.current) {
+                return;
+            }
 
             // 2. 목표 좌표 결정
             let targetLat: number;
