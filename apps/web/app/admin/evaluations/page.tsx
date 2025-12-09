@@ -1365,7 +1365,9 @@ export default function AdminEvaluationPage() {
     },
     onSuccess: () => {
       toast({ title: '제보 수정 완료', description: '제보 정보가 수정되었습니다' });
+      // 사용자 제보 목록 및 기존 맛집 정보 갱신
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurants'] });
       setEditingSubmission(null);
       setEditModalOpen(false);
     },
@@ -1590,6 +1592,25 @@ export default function AdminEvaluationPage() {
         onOpenChange={setEditModalOpen}
         onSuccess={(recordId, updates) => {
           updateRecordInState(recordId, updates);
+
+          // 사용자 제보 수정 시 restaurant_submissions 테이블도 업데이트
+          if (editingSubmission) {
+            updateSubmissionMutation.mutate({
+              submission: editingSubmission,
+              updatedData: {
+                restaurant_name: updates.name || editingSubmission.restaurant_name,
+                address: updates.road_address || updates.jibun_address || editingSubmission.address,
+                phone: updates.phone || '',
+                categories: updates.categories || (Array.isArray(editingSubmission.category) ? editingSubmission.category : [editingSubmission.category]),
+                youtube_link: editingSubmission.youtube_link,
+                description: updates.restaurant_info?.tzuyang_review || editingSubmission.description || '',
+              },
+            });
+          } else {
+            // 사용자 제보가 아닌 경우 쿼리만 무효화
+            queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+            queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+          }
         }}
       />
 
