@@ -227,8 +227,16 @@ export default function HomeClient() {
 
         const handleAnnouncementDetailOpen = (e: Event) => {
             const customEvent = e as CustomEvent<Announcement>;
-            setSelectedAnnouncement(customEvent.detail);
-            openPanel('announcement');
+            const announcement = customEvent.detail;
+
+            // 이미 공지사항 패널이 열려있고, 동일한 공지사항을 클릭한 경우 토글 (접기/펼치기)
+            if (activeRightPanel === 'announcement' && selectedAnnouncement?.id === announcement.id) {
+                togglePanelCollapse();
+            } else {
+                // 다른 공지사항이거나 패널이 닫혀있는 경우 펼쳐서 열기
+                setSelectedAnnouncement(announcement);
+                openPanel('announcement');
+            }
         };
 
         window.addEventListener('openMyPage', handleMyPageOpen);
@@ -244,7 +252,7 @@ export default function HomeClient() {
             window.removeEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
             window.removeEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
         };
-    }, [isAdmin]);
+    }, [isAdmin, activeRightPanel, selectedAnnouncement]);
 
     return (
         <>
