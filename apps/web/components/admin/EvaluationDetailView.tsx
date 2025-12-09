@@ -28,7 +28,7 @@ const getYoutubeVideoId = (url: string | undefined): string | null => {
 interface EvaluationDetailViewProps {
     record: EvaluationRecord;
     className?: string;
-    autoHeight?: boolean; // If true, expands to fit content (no internal scroll)
+    autoHeight?: boolean; // true일 경우 내부 스크롤 없이 콘텐츠 높이에 맞춰 늘어남
 }
 
 export function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
@@ -110,13 +110,13 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
 
     const RightContent = () => (
         <div className="p-4 space-y-4 text-sm">
-            {/* 1. Evaluation Details */}
+            {/* 1. 평가 상세 내역 */}
             <div className="bg-white rounded-lg border p-3 shadow-sm">
                 <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
                     📊 평가 상세
                 </h3>
                 <div className="space-y-4">
-                    {/* 1. Visit Authenticity */}
+                    {/* 1. 방문 여부 (Visit Authenticity) */}
                     <div className="pl-3 border-l-4 border-blue-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-blue-50 text-blue-700 border-blue-200 text-[10px] shrink-0">1</Badge>
@@ -130,7 +130,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </p>
                     </div>
 
-                    {/* 2. Reasoning Basis Inference */}
+                    {/* 2. 추론 합리성 (Reasoning Basis Inference) */}
                     <div className="pl-3 border-l-4 border-purple-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-purple-50 text-purple-700 border-purple-200 text-[10px] shrink-0">2</Badge>
@@ -144,7 +144,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </p>
                     </div>
 
-                    {/* 3. Reasoning Basis Grounding */}
+                    {/* 3. 실제 근거 일치 (Reasoning Basis Grounding) */}
                     <div className="pl-3 border-l-4 border-green-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-green-50 text-green-700 border-green-200 text-[10px] shrink-0">3</Badge>
@@ -158,7 +158,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </p>
                     </div>
 
-                    {/* 4. Review Faithfulness */}
+                    {/* 4. 리뷰 충실도 (Review Faithfulness) */}
                     <div className="pl-3 border-l-4 border-indigo-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] shrink-0">4</Badge>
@@ -172,7 +172,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </p>
                     </div>
 
-                    {/* 5. Geocoding */}
+                    {/* 5. 주소 정합성 (Geocoding) */}
                     <div className="pl-3 border-l-4 border-orange-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-orange-50 text-orange-700 border-orange-200 text-[10px] shrink-0">5</Badge>
@@ -187,7 +187,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </div>
                     </div>
 
-                    {/* 6. Category Validity */}
+                    {/* 6. 카테고리 유효성 (Category Validity) */}
                     <div className="pl-3 border-l-4 border-teal-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-teal-50 text-teal-700 border-teal-200 text-[10px] shrink-0">6</Badge>
@@ -198,7 +198,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </div>
                     </div>
 
-                    {/* 7. Category Match */}
+                    {/* 7. 카테고리 정합성 (Category Match) */}
                     <div className="pl-3 border-l-4 border-yellow-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] shrink-0">7</Badge>
@@ -216,7 +216,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                 </div>
             </div>
 
-            {/* 2. Restaurant Info */}
+            {/* 2. 음식점 기본 정보 */}
             <div className="bg-white rounded-lg border p-3 shadow-sm">
                 <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
                     🍽️ 음식점 상세 정보
@@ -298,7 +298,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
 
     return (
         <div className={cn("flex", autoHeight ? "h-auto" : "h-full overflow-hidden", className)}>
-            {/* Left: Video Player */}
+            {/* 좌측: 비디오 플레이어 */}
             <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-r", autoHeight ? "w-[40%]" : "w-[50%] overflow-hidden")}>
                 <div className="p-4 pb-0 w-full shrink-0">
                     <div className="bg-white rounded-lg border p-3 shadow-sm">
@@ -350,7 +350,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                     </div>
                 </div>
 
-                {/* Left Bottom: Video Info */}
+                {/* 좌측 하단: 비디오 메타 정보 */}
                 <div className={cn("w-full bg-accent/5 p-4 pt-4 flex-1 min-h-0", autoHeight ? "" : "overflow-y-auto")}>
                     <div className="bg-white rounded-lg border p-3 shadow-sm">
                         <h3 className="flex items-center gap-2 font-semibold text-base mb-2 text-gray-800">
@@ -386,7 +386,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                 </div>
             </div>
 
-            {/* Right: Info & Evaluation */}
+            {/* 우측: 평가 및 상세 정보 */}
             {autoHeight ? (
                 <div className="w-[60%] h-auto border-l bg-accent/5">
                     <RightContent />

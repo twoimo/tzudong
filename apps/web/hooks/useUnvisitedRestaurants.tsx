@@ -11,8 +11,8 @@ interface UserReview {
 }
 
 /**
- * 사용자가 방문하지 않은 음식점 목록을 가져오는 커스텀 훅
- * StampPage와 동일한 로직을 사용하여 미방문 음식점을 필터링합니다.
+ * 미방문 맛집 목록 조회 훅
+ * StampPage와 동일한 로직을 사용하여 아직 방문하지 않은 맛집을 필터링합니다.
  */
 export function useUnvisitedRestaurants() {
     const { user } = useAuth();

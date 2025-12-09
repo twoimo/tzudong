@@ -26,7 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [needsNicknameSetup, setNeedsNicknameSetup] = useState(false);
 
     useEffect(() => {
-        // Get initial session
+        // 초기 세션 가져오기
         supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsLoading(false);
         });
 
-        // Listen for auth changes
+        // 인증 상태 변경 감지
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((_event, session) => {

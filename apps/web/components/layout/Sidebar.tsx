@@ -21,7 +21,7 @@ const SidebarComponent = ({ isOpen }: SidebarProps) => {
   const { user, isAdmin } = useAuth();
   const isHydrated = useHydration();
 
-  // 레스토랑 데이터 프리페치 함수 (useCallback으로 메모이제이션)
+  // [최적화] 레스토랑 데이터 프리페치 함수 (useCallback으로 메모이제이션)
   const prefetchRestaurants = useCallback(async () => {
     await queryClient.prefetchQuery({
       queryKey: ["restaurants", undefined, undefined, undefined, undefined, undefined, undefined],
@@ -38,7 +38,7 @@ const SidebarComponent = ({ isOpen }: SidebarProps) => {
     });
   }, [queryClient]);
 
-  // 메뉴 아이템 메모이제이션
+  // [메뉴 설정] 메뉴 아이템 메모이제이션
   const menuItems = useMemo(() => {
     const baseMenuItems = [
       { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
@@ -47,7 +47,7 @@ const SidebarComponent = ({ isOpen }: SidebarProps) => {
       { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
     ];
 
-    // 관리자 메뉴 (hydration 완료 후에만 표시)
+    // [권한 관리] 관리자 메뉴 (hydration 완료 후에만 표시)
     const adminMenuItems = (isHydrated && user && isAdmin) ? [
       { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
     ] : [];
@@ -62,7 +62,7 @@ const SidebarComponent = ({ isOpen }: SidebarProps) => {
         isOpen ? "w-64" : "w-16"
       )}
     >
-      {/* 한지 질감 오버레이 - 더 선명하게 */}
+      {/* [배경 효과] 한지 질감 오버레이 - 더 선명하게 */}
       <div className="absolute inset-0 opacity-40 pointer-events-none z-0"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E")` }}
       />
@@ -111,7 +111,7 @@ const SidebarComponent = ({ isOpen }: SidebarProps) => {
               )}
               onClick={item.onClick}
               onMouseEnter={() => {
-                // 홈 페이지 호버 시 레스토랑 데이터 미리 로드
+                // [성능 최적화] 홈 페이지 호버 시 레스토랑 데이터 미리 로드
                 if (isHomePage && !isActive) {
                   prefetchRestaurants();
                 }
@@ -151,7 +151,7 @@ const SidebarComponent = ({ isOpen }: SidebarProps) => {
   );
 };
 
-// React.memo로 래핑하여 isOpen이 변경되지 않으면 리렌더링 방지
+// [최적화] React.memo로 래핑하여 isOpen이 변경되지 않으면 리렌더링 방지
 const Sidebar = memo(SidebarComponent);
 Sidebar.displayName = "Sidebar";
 

@@ -61,21 +61,21 @@ export function RestaurantDetailPanel({
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
 
-    // 카테고리 처리: categories 배열로 저장됨
+    // [카테고리 처리] categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
         ? (restaurant.categories as string[])
         : restaurant?.categories
             ? [restaurant.categories as unknown as string]
             : [];
 
-    // 최적 레코드 선택: 가장 긴 이름 -> 가장 긴 지번 주소 순으로 우선순위
+    // [최적 레코드 선택] 가장 긴 이름 -> 가장 긴 지번 주소 순으로 우선순위
     const uniqueData = useMemo(() => {
         if (!restaurant) return null;
 
         // 모든 레코드 수집 (현재 restaurant + mergedRestaurants)
         const allRecords = [restaurant, ...(restaurant.mergedRestaurants || [])];
 
-        // 우선순위: 1) 가장 긴 이름, 2) 가장 긴 지번 주소
+        // [우선순위 정렬] 1) 가장 긴 이름, 2) 가장 긴 지번 주소
         const sortedRecords = [...allRecords].sort((a, b) => {
             const nameA = a.name || '';
             const nameB = b.name || '';
@@ -108,7 +108,7 @@ export function RestaurantDetailPanel({
         };
     }, [restaurant]);
 
-    // 실제 리뷰 데이터 가져오기
+    // [데이터 조회] 실제 리뷰 데이터 가져오기
     const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
         queryKey: ['restaurant-reviews', restaurant?.id],
         queryFn: async () => {
@@ -195,7 +195,7 @@ export function RestaurantDetailPanel({
         enabled: !!restaurant?.id
     });
 
-    // 쯔양 구독자 리뷰 우선 표시 (닉네임에 '쯔양' 또는 'tzuyang'이 포함된 사용자)
+    // [리뷰 필터링] 쯔양 구독자 리뷰 우선 표시 (닉네임에 '쯔양' 또는 'tzuyang'이 포함된 사용자)
     const safeReviewsData = Array.isArray(reviewsData) ? reviewsData : [];
     const tzuyangReviews = safeReviewsData.filter(review =>
         review.isVerified &&
@@ -208,11 +208,11 @@ export function RestaurantDetailPanel({
             review.userName.toLowerCase().includes('tzuyang'))
     );
 
-    // 우선순위: 쯔양 구독자 리뷰 3개, 그 다음 일반 리뷰
+    // [리뷰 정렬] 우선순위: 쯔양 구독자 리뷰 3개, 그 다음 일반 리뷰
     const priorityReviews = [...tzuyangReviews, ...otherReviews];
     const recentReviews = priorityReviews.slice(0, 3);
 
-    // 초기 로드 시 likedReviews 상태 초기화
+    // [초기화] 초기 로드 시 likedReviews 상태 초기화
     useEffect(() => {
         const safeData = Array.isArray(reviewsData) ? reviewsData : [];
         if (safeData.length > 0) {
@@ -223,7 +223,7 @@ export function RestaurantDetailPanel({
         }
     }, [reviewsData]);
 
-    // 실시간 좋아요 수 계산 (서버 데이터 + 로컬 변경사항)
+    // [상태 계산] 실시간 좋아요 수 계산 (서버 데이터 + 로컬 변경사항)
     const getRealtimeLikeCount = (review: Review) => {
         const serverLikeCount = review.likeCount;
         const isLikedOnServer = review.isLikedByUser;
@@ -277,7 +277,7 @@ export function RestaurantDetailPanel({
         return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
     };
 
-    // restaurant가 없으면 null 반환 (모든 Hook 호출 후)
+    // [예외 처리] restaurant가 없으면 null 반환 (모든 Hook 호출 후)
     if (!restaurant) return null;
 
     const handleGetDirections = () => {

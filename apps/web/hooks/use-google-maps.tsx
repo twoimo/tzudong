@@ -62,7 +62,7 @@ export function useGoogleMaps({ apiKey, libraries = ["places", "marker"] }: UseG
             return;
         }
 
-        // Load Google Maps script - 더 빠른 로딩을 위해 최적화된 URL 사용
+        // [스크립트 로드] 더 빠른 로딩을 위해 최적화된 URL 사용
         const script = document.createElement("script");
         script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=${libraries.join(",")}&loading=async&v=weekly&callback=googleMapsCallback`;
         script.async = true;

@@ -35,10 +35,13 @@ interface NaverMapViewProps {
     onMarkerClick?: (restaurant: Restaurant) => void; // 외부 패널 열기
     externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
     isPanelCollapsed?: boolean; // 패널 접기 상태 (접혀있으면 오프셋 없음)
-    isPanelOpen?: boolean; // [New] 외부에서 전달받는 패널 열림 상태 (Centering 용)
+    isPanelOpen?: boolean; // 외부에서 전달받는 패널 열림 상태 (Centering 용)
 }
 
-// 카테고리 아이콘 맵 (컴포넌트 외부에서 한 번만 생성)
+/**
+ * 카테고리별 아이콘 매핑
+ * 컴포넌트 외부에서 정의하여 불필요한 재생성을 방지합니다.
+ */
 const CATEGORY_ICON_MAP: Record<string, string> = {
     '고기': '🥩',
     '치킨': '🍗',
@@ -58,14 +61,21 @@ const CATEGORY_ICON_MAP: Record<string, string> = {
     '도시락': '🍱'
 };
 
-// 카테고리 아이콘 반환 함수 (외부에서 정의하여 재생성 방지)
+/**
+ * 카테고리 아이콘 반환 함수
+ * 
+ * @param category 카테고리 문자열 또는 배열
+ * @returns 매핑된 이모지 아이콘
+ */
 const getCategoryIcon = (category: string | string[] | null | undefined): string => {
     if (!category) return '⭐';
     const categoryStr = Array.isArray(category) ? category[0] : category;
     return CATEGORY_ICON_MAP[categoryStr] || '⭐';
 };
 
-// 로딩 상태 표시 컴포넌트 (코드 중복 제거)
+/**
+ * 지도 로딩 상태 표시 컴포넌트
+ */
 const MapLoadingIndicator = memo(({ isLoaded, style, className }: { isLoaded: boolean, style?: React.CSSProperties, className?: string }) => (
     <div
         style={style}
@@ -123,14 +133,14 @@ const NaverMapView = memo(({
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
-    const markersMapRef = useRef<Map<string, any>>(new Map()); // [New] 마커 Map (ID -> Marker)
+    const markersMapRef = useRef<Map<string, any>>(new Map()); // 마커 Map (ID -> Marker)
     const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
     const prevPanelOpenRef = useRef<boolean>(false); // 이전 패널 열림 상태 추적 (오프셋 델타 계산용)
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
     const prevSidebarOpenRef = useRef<boolean>(true); // 이전 사이드바 열림 상태 추적
-    const hasUserMovedMapRef = useRef<boolean>(false); // [New] 사용자가 지도를 직접 움직였는지 추적
+    const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
 
     // 사이드바 상태 가져오기
     const { isSidebarOpen } = useLayout();
@@ -295,27 +305,16 @@ const NaverMapView = memo(({
         // 하지만 useEffect는 dependency가 바뀌면 무조건 실행됨.
         // 따라서 "무엇이 바뀌었는지"를 추적해야 함.
 
-        // [Refactor] dependency check approach instead of explicit dirty check
-        // We need to know IF selectedRestaurant OR selectedRegion actually changed in this render.
-        // Using refs to track previous props is a standard pattern.
+        // [Refactor] 명시적인 Dirty Check 대신 의존성 변경 확인
+        // selectedRestaurant 또는 selectedRegion이 실제로 변경되었는지 확인합니다.
 
         // 여기서는 로직 단순화를 위해:
         // 만약 사용자가 이동했다면(hasUserMovedMapRef.current), 
         // 1. "새로운 맛집 선택"이 일어났다면 -> 강제 이동 (사용자 이동 무시)
         // 2. "단순 패널/사이드바 토글"이라면 -> 현재 위치 유지하되 오프셋만 적용
 
-        // "새로운 맛집 선택"을 어떻게 감지하나? 
-        // -> selectedRestaurant 객체가 바뀌었음. (Re-fetch 등으로 인한 객체 재생성 주의, ID 비교가 확실)
-
-        // Ref에 저장된 값(이전 렌더링 값)과 현재 Props 값을 비교
-
-        // 별도의 Ref 없이 로직을 구현하기 위해:
+        // Ref에 저장된 값(이전 렌더링 값)과 현재 Props 값을 비교하여 변경 여부 판단
         // 만약 (selectedRestaurant?.id !== prevSelectedRestaurantIdRef.current) -> 선택 변경임.
-        // 만약 (selectedRegion !== prevSelectedRegionRef.current) -> 지역 변경임. (Ref 추가 필요)
-
-        // prevSelectedRegionRef가 없으므로... 
-        // 사실 selectedRestaurant가 null일 때 selectedRegion을 보는데, 
-        // selectedRegion이 바뀔 때도 이동해야 함.
 
         // 결론: "선택 변경"일 때만 hasUserMovedMapRef.current = false 처리.
 
@@ -362,43 +361,11 @@ const NaverMapView = memo(({
             effectiveOffset = PANEL_WIDTH;
         }
 
-        // 목표 오프셋 (스크린 좌표계)
-        // "패널이 열리면, 지도의 시각적 중심은 왼쪽으로 이동해야 함" -> 즉 x 좌표에 +offset/2 를 더해서 "중심인 척" 해야 함?
-        // getAdjustedCenter 함수: "targetOffset 만큼 떨어진 곳이 중심이 되도록"
-        // right panel width = effectiveOffset.
-        // Center should be shifted to LEFT by effectiveOffset / 2.
-        // targetOffsetX = effectiveOffset / 2 (positive means shift visual center to right? Wait.)
-
-        // getAdjustedCenter 로직:
-        // projection.fromCoordToOffset(center) => centerPoint (Screen Pixel)
-        // centerPoint.x + offsetX => offsetPoint
-        // projection.fromOffsetToCoord(offsetPoint) => offsetCenterLatLng
-        // 즉, "원래 중심"에서 "offsetX" 만큼 떨어진 픽셀 좌표를 "새로운 지도 중심(LatLng)"으로 설정함.
-        // 만약 offsetX가 양수면 -> 화면상 오른쪽 점이 새로운 중심이 됨 -> 지도는 왼쪽으로 이동함.
-
-        // 우측 패널이 열리면, "보이는 영역"은 왼쪽 부분임.
-        // 따라서 "보이는 영역의 중심"을 지도의 실제 중심(Container Center)에 맞추고 싶은 게 아니라,
-        // "지도의 실제 중심"을 "보이는 영역의 중심"으로 옮기고 싶은 것.
-        // 즉, 맛집 좌표(targetLat, Lng)가 "보이는 영역의 중심"에 와야 함.
-
-        // 보이는 영역의 중심 = (WindowWidth - PanelWidth) / 2
-        // 실제 지도 중심 = WindowWidth / 2
-        // 차이 = PanelWidth / 2
-        // 보이는 영역 중심은 실제 중심보다 "왼쪽"에 있음.
-        // 따라서 맛집 좌표가 화면의 "왼쪽"에 위치해야 함.
-        // 그러려면 지도의 Center(가운데)는 맛집 좌표보다 "오른쪽"에 있어야 함.
-        // 즉 지도를 오른쪽으로 이동시켜야 함. 
-        // 지도를 오른쪽으로 이동 = Center LatLng를 왼쪽으로 이동? (X)
-        // 지도를 오른쪽으로 'Pan' = 지도의 Center 좌표는 '왼쪽(서쪽)' 지점으로 변경됨?
-        // 헷갈리므로 getAdjustedCenter 로직을 그대로 믿고 값만 조정.
-
-        // 기존 로직: targetOffsetX = effectiveOffset / 2.
-        // effectiveOffset(패널너비)가 양수 -> offsetX 양수 -> 오른쪽 점을 중심으로 설정 -> 지도 뷰는 왼쪽으로 이동 -> 컨텐츠는 오른쪽으로 이동?
-        // 아니, map.setCenter(newCenter) -> newCenter가 화면 정중앙에 옴.
-        // newCenter는 "원래 타겟(맛집)"보다 "오른쪽"에 있는 점임 (offsetX가 양수니까).
-        // 그 점이 화면 정중앙에 오면, "원래 타겟(맛집)"은 화면의 "왼쪽"에 오게 됨.
-        // 우측 패널이 열리면 왼쪽 영역이 "보이는 영역"이므로, 타겟이 왼쪽에 오는 게 맞음.
-        // 결론: targetOffsetX = effectiveOffset / 2 는 맞음.
+        // [Note] 패널 상태에 따른 지도 중심 오프셋 계산
+        // 우측 패널이 열리면 지도의 "시각적 중심"이 왼쪽으로 이동해야 합니다.
+        // 즉, 지도 중심(Center) 좌표를 패널 너비의 절반만큼 오른쪽으로 이동시켜야
+        // 타겟(맛집)이 왼쪽 "보이는 영역"의 중앙에 위치하게 됩니다.
+        // targetOffsetX = effectiveOffset / 2 (양수 = 오른쪽 이동)
 
         const targetOffsetX = effectiveOffset / 2;
 
@@ -558,7 +525,7 @@ const NaverMapView = memo(({
         internalPanelOpen, // 패널 열림/닫힘 시 중심 재조정
         isGridMode,
         onMarkerClick,
-        isSidebarOpen // [New] 사이드바 토글 시에도 중심 재조정 로직 실행
+        isSidebarOpen // 사이드바 토글 시에도 중심 재조정 로직 실행
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
@@ -576,7 +543,7 @@ const NaverMapView = memo(({
             externalPanelOpen,
             isPanelCollapsed,
             isGridMode,
-            effectivePanelOffset // [New] 계산된 오프셋 저장
+            effectivePanelOffset // 계산된 오프셋 저장
         };
     }, [isSidebarOpen, externalPanelOpen, isPanelCollapsed, isGridMode, effectivePanelOffset]);
 
@@ -596,7 +563,7 @@ const NaverMapView = memo(({
             // 1. 지도 리사이즈 트리거
             naver.maps.Event.trigger(map, 'resize');
 
-            // [New] 사용자가 지도를 직접 움직였다면 중심 재조정 하지 않음
+            // 사용자가 지도를 직접 움직였다면 중심 재조정 하지 않음
             if (hasUserMovedMapRef.current) {
                 return;
             }
@@ -625,32 +592,6 @@ const NaverMapView = memo(({
             // 패널 상태
             const { externalPanelOpen, isPanelCollapsed } = currentStateRef.current;
             const isExternalPanelOpen = externalPanelOpen === false;
-
-            // ResizeObserver 내에서의 오프셋 계산
-            // currentStateRef에는 isInternalMode 정보가 없으므로 (props인 onMarkerClick 필요)
-            // 하지만 activePanel 등의 정보나 propIsPanelOpen 여부로 추론 가능? 
-            // 아니면 Ref에 onMarkerClick 유무를 저장해야 함.
-            // 여기서는 단순화를 위해 'isDetailPanelOpen'이 'internalPanelOpen'을 의미한다고 가정 (병합 전)
-            // 하지만 Ref 저장 시 병합 저장했음.
-
-            // Ref에 저장된 isDetailPanelOpen은 (propIsPanelOpen ?? internalPanelOpen) 임.
-            // onMarkerClick Prop은 Ref에 없음 -> 추가 필요.
-            // 일단 기존 로직 수정: '줄어든 컨테이너'인지 확인하려면 지도 div width 체크가 가장 확실.
-            // 하지만 지도 div width는 브라우저 리사이즈에도 변함.
-
-            // 해결책: 부모(useEffect)에서 계산 로직을 수행하고 'targetOffsetX'를 Ref로 관리하는 게 나을 수도 있음.
-            // 하지만 일단 여기서는 "내부 패널이 열려있으면(isDetailPanelOpen) 오프셋 0"으로 가정할 수 있나?
-            // 아니다. 외부에서 prop으로 열렸을 수도 있다.
-
-            // 따라서 'isShrinking' 여부를 판단하기 위해 'mapWidth'와 'windowWidth'를 비교? 불확실함.
-            // 가장 확실한 방법: currentStareRef에 'isInternalMode' 추가.
-
-            // [임시] 일단 기존 로직 유지하되, 만약 (isDetailPanelOpen)이고 GridMode가 아니면 
-            // "내부 패널 로직"일 가능성이 높으므로 0으로 처리?
-            // 아니, 외부 제어(onMarkerClick)일 때는 Map이 Full Width임.
-
-            // 이 hooks 안에서는 props 접근이 안되므로 (staleness), Ref 업데이트가 필요함.
-            // 다음 청크에서 Ref 업데이트 로직 수정 예정.
 
             // 여기서는 Ref에 'effectivePanelOffset'을 저장해서 가져오는 방식으로 변경.
             const { effectivePanelOffset } = currentStateRef.current;
