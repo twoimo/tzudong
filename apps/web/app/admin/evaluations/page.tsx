@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,7 +13,10 @@ import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm'
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { EvaluationSlideView } from '@/components/admin/EvaluationSlideView';
-import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle, LayoutList, MonitorPlay } from 'lucide-react';
+import { SubmissionSlideView } from '@/components/admin/SubmissionSlideView';
+import { SubmissionRecord, ApprovalData } from '@/components/admin/SubmissionDetailView';
+import { createNewRestaurantNotification } from '@/contexts/NotificationContext';
+import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle, LayoutList, MonitorPlay, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { Input } from '@/components/ui/input';
@@ -91,6 +95,12 @@ export default function AdminEvaluationPage() {
   // 자막 수집 상태
   const [transcriptStatus, setTranscriptStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [transcriptMessage, setTranscriptMessage] = useState<string>('');
+
+  // 사용자 제보 검수 상태
+  const [showSubmissionView, setShowSubmissionView] = useState(false);
+  const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
+  const [editingSubmission, setEditingSubmission] = useState<SubmissionRecord | null>(null);
+  const queryClient = useQueryClient();
 
   // localStorage에서 상태 복원
   useEffect(() => {
@@ -1055,7 +1065,270 @@ export default function AdminEvaluationPage() {
     }
   };
 
+  // 사용자 제보 데이터 쿼리
+  const { data: submissionsData = [], isLoading: submissionsLoading } = useQuery({
+    queryKey: ['admin-submissions-inline', user?.id, isAdmin],
+    queryFn: async () => {
+      if (!user || !isAdmin) return [];
+
+      const { data: submissionsData, error: submissionsError } = await supabase
+        .from('restaurant_submissions')
+        .select('*')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false });
+
+      console.log('[Submissions Query] user:', user?.id, 'isAdmin:', isAdmin);
+      console.log('[Submissions Query] data:', submissionsData, 'error:', submissionsError);
+
+      if (submissionsError) throw submissionsError;
+      if (!submissionsData?.length) return [];
+
+      const userIds = [...new Set(submissionsData.map((s: any) => s.user_id))];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, nickname')
+        .in('user_id', userIds);
+
+      const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.nickname]));
+
+      // JSONB 배열에서 첫 번째 맛집 정보를 추출하여 기존 필드로 매핑
+      return submissionsData.map((s: any) => {
+        const restaurants = s.user_restaurants_submission || [];
+        const firstRestaurant = restaurants[0] || {};
+        return {
+          id: s.id,
+          user_id: s.user_id,
+          restaurant_name: firstRestaurant.name || '',
+          address: firstRestaurant.address || '',
+          phone: firstRestaurant.phone || null,
+          category: firstRestaurant.categories || [],
+          youtube_link: firstRestaurant.youtube_link || '',
+          description: firstRestaurant.tzuyang_review || null,
+          status: s.status === 'all_approved' ? 'approved' : s.status === 'all_deleted' ? 'rejected' : 'pending',
+          rejection_reason: s.rejection_reason,
+          created_at: s.created_at,
+          reviewed_at: s.reviewed_at,
+          reviewed_by_admin_id: s.resolved_by_admin_id,
+          approved_restaurant_id: null,
+          submission_type: s.submission_type,
+          profiles: { nickname: profilesMap.get(s.user_id) || '알 수 없음' }
+        };
+      }) as SubmissionRecord[];
+    },
+    enabled: !!user && isAdmin,
+    refetchInterval: 30000, // 30초마다 자동 새로고침
+    refetchOnWindowFocus: true, // 윈도우 포커스 시 자동 새로고침
+  });
+
+  // 제보 승인 mutation
+  const approveSubmissionMutation = useMutation({
+    mutationFn: async ({ submission, approvalData }: { submission: SubmissionRecord; approvalData: ApprovalData }) => {
+      if (!user) throw new Error('로그인이 필요합니다');
+      const lat = parseFloat(approvalData.lat);
+      const lng = parseFloat(approvalData.lng);
+      if (isNaN(lat) || isNaN(lng)) throw new Error('올바른 좌표가 필요합니다');
+
+      const { data: restaurant, error: restaurantError } = await (supabase
+        .from('restaurants') as any)
+        .insert({
+          name: submission.restaurant_name,
+          road_address: approvalData.road_address,
+          jibun_address: approvalData.jibun_address,
+          english_address: approvalData.english_address,
+          address_elements: approvalData.address_elements,
+          phone: submission.phone,
+          categories: Array.isArray(submission.category) ? submission.category : [submission.category],
+          youtube_link: submission.youtube_link,
+          description: submission.description,
+          lat, lng,
+          geocoding_success: true,
+          status: 'approved',
+        })
+        .select()
+        .single();
+
+      if (restaurantError) throw restaurantError;
+
+      const { error: updateError } = await (supabase
+        .from('restaurant_submissions') as any)
+        .update({
+          status: 'all_approved',
+          resolved_by_admin_id: user.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', submission.id);
+
+      if (updateError) throw updateError;
+      return { submission, restaurant };
+    },
+    onSuccess: ({ submission }) => {
+      toast({ title: '제보 승인 완료', description: `"${submission.restaurant_name}" 맛집이 등록되었습니다` });
+      createNewRestaurantNotification(submission.restaurant_name, submission.address, {
+        category: submission.category,
+        submissionId: submission.id
+      });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurants'] });
+      if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
+        setCurrentSubmissionIndex(currentSubmissionIndex - 1);
+      }
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: '승인 실패', description: error.message });
+    },
+  });
+
+  // 제보 거부 mutation
+  const rejectSubmissionMutation = useMutation({
+    mutationFn: async ({ submission, reason }: { submission: SubmissionRecord; reason: string }) => {
+      if (!user) throw new Error('로그인이 필요합니다');
+      const { error } = await (supabase
+        .from('restaurant_submissions') as any)
+        .update({
+          status: 'all_deleted',
+          rejection_reason: reason,
+          resolved_by_admin_id: user.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', submission.id);
+      if (error) throw error;
+      return submission;
+    },
+    onSuccess: ({ restaurant_name }) => {
+      toast({ title: '제보 거부됨', description: `"${restaurant_name}" 제보가 거부되었습니다` });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
+        setCurrentSubmissionIndex(currentSubmissionIndex - 1);
+      }
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: '거부 실패', description: error.message });
+    },
+  });
+
+  // 제보 삭제 mutation (소프트 삭제 - status를 all_deleted로 변경)
+  const deleteSubmissionMutation = useMutation({
+    mutationFn: async (submission: SubmissionRecord) => {
+      if (!user) throw new Error('로그인이 필요합니다');
+      const { error } = await (supabase
+        .from('restaurant_submissions') as any)
+        .update({
+          status: 'all_deleted',
+          rejection_reason: '관리자에 의해 삭제됨',
+          resolved_by_admin_id: user.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', submission.id);
+      if (error) throw error;
+      return submission;
+    },
+    onSuccess: ({ restaurant_name }) => {
+      toast({ title: '제보 삭제됨', description: `"${restaurant_name}" 제보가 삭제되었습니다` });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
+        setCurrentSubmissionIndex(currentSubmissionIndex - 1);
+      }
+    },
+    onError: (error: any) => {
+      console.error('[Delete Submission Error]', error);
+      toast({ variant: 'destructive', title: '삭제 실패', description: error.message });
+    },
+  });
+
+  const handleApproveSubmission = (submission: SubmissionRecord, approvalData: ApprovalData) => {
+    approveSubmissionMutation.mutate({ submission, approvalData });
+  };
+
+  const handleRejectSubmission = (submission: SubmissionRecord, reason: string) => {
+    rejectSubmissionMutation.mutate({ submission, reason });
+  };
+
+  const handleDeleteSubmission = (submission: SubmissionRecord) => {
+    deleteSubmissionMutation.mutate(submission);
+  };
+
+  // 제보 수정 핸들러 - 제보를 EvaluationRecord 형태로 변환하여 EditRestaurantModal에서 사용
+  const handleEditSubmission = (submission: SubmissionRecord) => {
+    setEditingSubmission(submission);
+    // 제보를 EvaluationRecord 형태로 변환 (타입 호환성을 위해 as any 사용)
+    const evaluationRecord = {
+      id: submission.id,
+      unique_id: `submission_${submission.id}`,
+      name: submission.restaurant_name,
+      restaurant_info: {
+        name: submission.restaurant_name,
+        phone: submission.phone || '',
+        category: Array.isArray(submission.category)
+          ? (submission.category[0] || '')
+          : (submission.category || ''),
+      },
+      categories: Array.isArray(submission.category) ? submission.category : [submission.category],
+      phone: submission.phone || '',
+      road_address: submission.address,
+      jibun_address: '',
+      lat: 0,
+      lng: 0,
+      youtube_link: submission.youtube_link,
+      youtube_meta: null,
+      tzuyang_reviews: submission.description || '',
+      status: 'pending',
+      source_type: 'user_submission_new',
+      geocoding_success: false,
+      created_at: submission.created_at,
+      updated_at: submission.created_at,
+    } as EvaluationRecord;
+    setSelectedEditRecord(evaluationRecord);
+    setEditModalOpen(true);
+  };
+
+  // 제보 수정 저장 mutation
+  const updateSubmissionMutation = useMutation({
+    mutationFn: async (data: {
+      submission: SubmissionRecord;
+      updatedData: {
+        restaurant_name: string;
+        address: string;
+        phone: string;
+        categories: string[];
+        youtube_link: string;
+        description: string;
+      };
+    }) => {
+      const { submission, updatedData } = data;
+
+      // user_restaurants_submission JSONB 업데이트
+      const restaurantInfo = {
+        name: updatedData.restaurant_name,
+        categories: updatedData.categories,
+        phone: updatedData.phone || null,
+        address: updatedData.address,
+        youtube_link: updatedData.youtube_link || null,
+        tzuyang_review: updatedData.description || null,
+      };
+
+      const { error } = await (supabase
+        .from('restaurant_submissions') as any)
+        .update({
+          user_restaurants_submission: [restaurantInfo],
+        })
+        .eq('id', submission.id);
+
+      if (error) throw error;
+      return submission;
+    },
+    onSuccess: () => {
+      toast({ title: '제보 수정 완료', description: '제보 정보가 수정되었습니다' });
+      queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      setEditingSubmission(null);
+      setEditModalOpen(false);
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: '수정 실패', description: error.message });
+    },
+  });
+
   // 인증 로딩 중이거나 권한 확인 중일 때
+
   if (authLoading || (loading && allRecords.length === 0)) {
     return (
       <GlobalLoader
@@ -1134,6 +1407,24 @@ export default function AdminEvaluationPage() {
                     <FileText className="h-4 w-4" />
                   )}
                 </Button>
+                {/* 사용자 제보 검수 버튼 */}
+                <Button
+                  onClick={() => {
+                    setShowSubmissionView(!showSubmissionView);
+                    if (!showSubmissionView) setCurrentSubmissionIndex(0);
+                  }}
+                  variant={showSubmissionView ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8 relative"
+                  title={`사용자 제보 검수 (${submissionsData.length}건)`}
+                >
+                  <Send className="h-4 w-4" />
+                  {submissionsData.length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {submissionsData.length > 9 ? '9+' : submissionsData.length}
+                    </span>
+                  )}
+                </Button>
               </div>
 
               {/* 구분선 */}
@@ -1144,9 +1435,21 @@ export default function AdminEvaluationPage() {
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        {isAlternateView ? (
+        {showSubmissionView ? (
+          /* 사용자 제보 슬라이드 검수 뷰 */
+          <SubmissionSlideView
+            submissions={submissionsData}
+            currentIndex={currentSubmissionIndex}
+            onNavigate={setCurrentSubmissionIndex}
+            onApprove={handleApproveSubmission}
+            onReject={handleRejectSubmission}
+            onDelete={handleDeleteSubmission}
+            onEdit={handleEditSubmission}
+            loading={approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
+          />
+        ) : isAlternateView ? (
           <EvaluationSlideView
-            records={displayedRecords} // 필터링된 결과 그대로 사용
+            records={displayedRecords}
             currentIndex={currentSlideIndex}
             onNavigate={setCurrentSlideIndex}
             onApprove={handleApprove}
