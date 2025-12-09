@@ -456,14 +456,15 @@ async function main() {
           log(`\n💾 중간 저장: ${totalProcessed}개 처리 완료`, 'success');
           fs.writeFileSync(transcriptFile, JSON.stringify(transcripts, null, 2), 'utf-8');
           
-          // git commit
+          // git commit + push
           try {
             const relativeFile = path.relative(PROJECT_ROOT, transcriptFile);
             execSync(`git add "${relativeFile}"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
             execSync(`git commit -m "chore: backfill progress - ${totalProcessed} items processed"`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
-            log(`  📤 Git commit 완료`, 'success');
+            execSync(`git push`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+            log(`  📤 Git commit & push 완료`, 'success');
           } catch (gitError) {
-            log(`  ⚠️ Git commit 실패 (변경사항 없음 또는 에러): ${gitError}`, 'warning');
+            log(`  ⚠️ Git commit/push 실패 (변경사항 없음 또는 에러): ${gitError}`, 'warning');
           }
         }
         
@@ -493,6 +494,18 @@ async function main() {
     
   } finally {
     await browser.close();
+  }
+  
+  // 최종 git push (남은 변경사항이 있을 경우)
+  if (!dryRun && totalUpdated > 0) {
+    try {
+      execSync(`git add -A`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      execSync(`git diff --staged --quiet || git commit -m "chore: backfill final - ${totalProcessed} items processed"`, { cwd: PROJECT_ROOT, stdio: 'pipe', shell: '/bin/bash' });
+      execSync(`git push`, { cwd: PROJECT_ROOT, stdio: 'pipe' });
+      log('\n📤 최종 Git push 완료', 'success');
+    } catch (gitError) {
+      log(`\n⚠️ 최종 Git push 실패: ${gitError}`, 'warning');
+    }
   }
   
   log('\n============================================================');
