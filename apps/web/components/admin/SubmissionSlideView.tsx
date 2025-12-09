@@ -40,6 +40,8 @@ interface SubmissionSlideViewProps {
     onReject: (submission: SubmissionRecord, reason: string) => void;
     onDelete: (submission: SubmissionRecord) => void;
     onEdit?: (submission: SubmissionRecord) => void;
+    onApprovalDataUpdate?: (data: ApprovalData) => void;
+    externalApprovalData?: ApprovalData | null;
     loading?: boolean;
 }
 
@@ -51,6 +53,8 @@ export function SubmissionSlideView({
     onReject,
     onDelete,
     onEdit,
+    onApprovalDataUpdate,
+    externalApprovalData,
     loading = false,
 }: SubmissionSlideViewProps) {
     const currentSubmission = submissions[currentIndex];
@@ -85,6 +89,13 @@ export function SubmissionSlideView({
         setSelectedGeocodingIndex(null);
         setRejectionReason('');
     }, [currentIndex]);
+
+    // 외부에서 전달된 approvalData 동기화 (수정 모달에서 저장 시)
+    useEffect(() => {
+        if (externalApprovalData) {
+            setApprovalData(externalApprovalData);
+        }
+    }, [externalApprovalData]);
 
     // 키보드 네비게이션
     useEffect(() => {

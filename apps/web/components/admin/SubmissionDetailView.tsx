@@ -615,53 +615,102 @@ export function SubmissionDetailView({
 
             {/* 우측: 상세 정보 + 지오코딩 */}
             <ScrollArea className="w-[60%] h-full flex-shrink-0">
-                <div className="p-6 space-y-6">
-                    {/* 기본 정보 */}
-                    <Card>
-                        <CardHeader className="pb-3">
-                            <CardTitle className="text-lg flex items-center gap-2">
-                                <FileText className="w-5 h-5" />
-                                제보 정보
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            {/* 맛집명 */}
-                            <div>
-                                <Label className="text-muted-foreground text-xs">맛집명</Label>
-                                <p className="font-semibold text-lg">{submission.restaurant_name}</p>
+                <div className="p-4 space-y-4 text-sm">
+                    {/* 제보 정보 - EvaluationDetailView 스타일 */}
+                    <div className="bg-white rounded-lg border p-3 shadow-sm">
+                        <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
+                            🍽️ 제보 상세 정보
+                        </h3>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                            {/* 음식점명 */}
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="text-gray-500 text-xs font-medium">음식점명</span>
+                                <span className="font-semibold text-gray-900 text-sm break-all">
+                                    {submission.restaurant_name || '-'}
+                                </span>
                             </div>
-
-                            {/* 주소 */}
-                            <div className="flex items-start gap-2">
-                                <MapPin className="w-4 h-4 mt-1 text-muted-foreground" />
-                                <div>
-                                    <Label className="text-muted-foreground text-xs">주소</Label>
-                                    <p>{submission.address}</p>
-                                </div>
-                            </div>
-
-                            {/* 연락처 */}
-                            {submission.phone && (
-                                <div className="flex items-center gap-2">
-                                    <Phone className="w-4 h-4 text-muted-foreground" />
-                                    <p>{submission.phone}</p>
-                                </div>
-                            )}
 
                             {/* 카테고리 */}
-                            <div className="flex items-start gap-2">
-                                <Tag className="w-4 h-4 mt-1 text-muted-foreground" />
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="text-gray-500 text-xs font-medium">카테고리</span>
                                 <div className="flex flex-wrap gap-1">
-                                    {categories.map((cat, idx) => (
-                                        <Badge key={idx} variant="secondary">{cat}</Badge>
-                                    ))}
+                                    {categories.length > 0 ? (
+                                        categories.map((cat, idx) => (
+                                            <Badge key={idx} variant="secondary" className="text-xs">
+                                                {cat}
+                                            </Badge>
+                                        ))
+                                    ) : (
+                                        <span className="text-gray-900 text-sm">-</span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* 전화번호 */}
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="text-gray-500 text-xs font-medium">전화번호</span>
+                                <span className="text-gray-900 text-sm">{submission.phone || '-'}</span>
+                            </div>
+
+                            {/* 좌표 */}
+                            <div className="flex flex-col gap-0.5 min-w-0">
+                                <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
+                                    좌표 (lat, lng)
+                                </span>
+                                <span className="font-mono text-xs text-gray-600">
+                                    {approvalData.lat && approvalData.lng
+                                        ? `${approvalData.lat}, ${approvalData.lng}`
+                                        : '-, -'}
+                                </span>
+                            </div>
+
+                            {/* 원본 주소 */}
+                            <div className="col-span-2 flex flex-col gap-0.5 min-w-0">
+                                <span className="text-gray-500 text-xs font-medium">원본 주소</span>
+                                <span className="text-gray-900 text-sm break-all">
+                                    {submission.address || '-'}
+                                </span>
+                            </div>
+
+                            {/* Naver 주소 (지오코딩 결과) */}
+                            <div className="col-span-2 grid grid-cols-1 gap-1 min-w-0">
+                                <div className="flex items-start gap-1.5 min-w-0">
+                                    <Badge
+                                        variant="outline"
+                                        className={`shrink-0 text-[10px] px-1 h-5 ${approvalData.road_address
+                                                ? 'bg-green-50 text-green-700 border-green-200'
+                                                : 'bg-gray-50 text-gray-500 border-gray-200'
+                                            }`}
+                                    >
+                                        Naver 도로명
+                                    </Badge>
+                                    <span className="text-sm text-gray-700 break-all flex-1 min-w-0">
+                                        {approvalData.road_address || '-'}
+                                    </span>
+                                </div>
+                                <div className="flex items-start gap-1.5 min-w-0">
+                                    <Badge
+                                        variant="outline"
+                                        className={`shrink-0 text-[10px] px-1 h-5 ${approvalData.jibun_address
+                                                ? 'bg-green-50 text-green-700 border-green-200'
+                                                : 'bg-gray-50 text-gray-500 border-gray-200'
+                                            }`}
+                                    >
+                                        Naver 지번
+                                    </Badge>
+                                    <span className="text-sm text-gray-700 break-all flex-1 min-w-0">
+                                        {approvalData.jibun_address || '-'}
+                                    </span>
                                 </div>
                             </div>
 
                             {/* YouTube 링크 */}
                             {submission.youtube_link && (
-                                <div className="flex items-start gap-2">
-                                    <Youtube className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+                                <div className="col-span-2 flex flex-col gap-0.5 min-w-0">
+                                    <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
+                                        <Youtube className="w-3 h-3 text-red-500" />
+                                        YouTube 링크
+                                    </span>
                                     <a
                                         href={submission.youtube_link}
                                         target="_blank"
@@ -672,30 +721,44 @@ export function SubmissionDetailView({
                                     </a>
                                 </div>
                             )}
+                        </div>
 
-                            {/* 제보자 */}
-                            <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm">{submission.profiles?.nickname || '알 수 없음'}</span>
+                        {/* 구분선 */}
+                        <div className="shrink-0 bg-border h-[1px] w-full my-3" />
+
+                        {/* 제보자 정보 및 쯔양 리뷰 */}
+                        <div className="space-y-3">
+                            {/* 제보자 정보 */}
+                            <div className="flex items-center gap-4 text-sm">
+                                <div className="flex items-center gap-1.5">
+                                    <User className="w-3.5 h-3.5 text-gray-400" />
+                                    <span className="text-gray-600">
+                                        {submission.profiles?.nickname || '알 수 없음'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                    <span className="text-gray-600">
+                                        {new Date(submission.created_at).toLocaleDateString('ko-KR')}
+                                    </span>
+                                </div>
                             </div>
 
-                            {/* 제보일 */}
-                            <div className="flex items-center gap-2">
-                                <Calendar className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm">
-                                    {new Date(submission.created_at).toLocaleDateString('ko-KR')}
-                                </span>
-                            </div>
-
-                            {/* 설명 */}
+                            {/* 쯔양 리뷰 */}
                             {submission.description && (
-                                <div className="pt-2 border-t">
-                                    <Label className="text-muted-foreground text-xs">쯔양의 리뷰</Label>
-                                    <p className="text-sm mt-1 whitespace-pre-wrap">{submission.description}</p>
+                                <div>
+                                    <h4 className="font-bold text-xs text-gray-500 mb-1.5 uppercase">
+                                        Tzuyang Review
+                                    </h4>
+                                    <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
+                                        <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap break-all">
+                                            {submission.description}
+                                        </p>
+                                    </div>
                                 </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
 
                     {/* 수정 요청 비교 뷰 (submission_type이 'edit'일 때만 표시) */}
                     {submission.submission_type === 'edit' && submission.original_restaurant_data && (

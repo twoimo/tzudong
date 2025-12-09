@@ -100,6 +100,14 @@ export default function AdminEvaluationPage() {
   const [showSubmissionView, setShowSubmissionView] = useState(false);
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
   const [editingSubmission, setEditingSubmission] = useState<SubmissionRecord | null>(null);
+  const [submissionApprovalData, setSubmissionApprovalData] = useState<{
+    lat: string;
+    lng: string;
+    road_address: string;
+    jibun_address: string;
+    english_address: string;
+    address_elements: Record<string, unknown> | null;
+  } | null>(null);
   const queryClient = useQueryClient();
 
   // localStorage에서 상태 복원
@@ -1509,11 +1517,15 @@ export default function AdminEvaluationPage() {
           <SubmissionSlideView
             submissions={submissionsData}
             currentIndex={currentSubmissionIndex}
-            onNavigate={setCurrentSubmissionIndex}
+            onNavigate={(index) => {
+              setCurrentSubmissionIndex(index);
+              setSubmissionApprovalData(null); // 슬라이드 변경 시 approvalData 초기화
+            }}
             onApprove={handleApproveSubmission}
             onReject={handleRejectSubmission}
             onDelete={handleDeleteSubmission}
             onEdit={handleEditSubmission}
+            externalApprovalData={submissionApprovalData}
             loading={approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
           />
         ) : isAlternateView ? (
@@ -1615,6 +1627,18 @@ export default function AdminEvaluationPage() {
 
           // 사용자 제보 수정 시 restaurant_submissions 테이블도 업데이트
           if (editingSubmission) {
+            // 지오코딩 결과가 있으면 submissionApprovalData에 저장 (실시간 UI 반영)
+            if (updates.lat && updates.lng && updates.road_address) {
+              setSubmissionApprovalData({
+                lat: String(updates.lat),
+                lng: String(updates.lng),
+                road_address: updates.road_address || '',
+                jibun_address: updates.jibun_address || '',
+                english_address: updates.english_address || '',
+                address_elements: updates.address_elements || null,
+              });
+            }
+
             updateSubmissionMutation.mutate({
               submission: editingSubmission,
               updatedData: {
