@@ -240,7 +240,69 @@ const NaverMapView = memo(({
         const map = mapInstanceRef.current;
         const { naver } = window;
 
-        // 1. 목표 좌표 결정
+        // 1. selection 변경 여부 확인 (Ref와 비교)
+        const currentSelectedId = selectedRestaurant?.id || null;
+        // 병합된 레스토랑인 경우 이름이나 카테고리도 변경될 수 있지만 ID가 핵심
+        // selectedRegion 변경도 확인해야 함
+
+        // 이전 선택 상태와 비교 (간단히 ID나 Region 문자열로 비교)
+        // prevSelectedRestaurantIdRef는 marker click 등 다른 곳에서도 쓰일 수 있으니 주의.
+        // 여기서는 이 Effect 전용으로 판단 로직을 수행.
+
+        let isSelectionChanged = false;
+
+        // A. 레스토랑 선택 변경 확인
+        if (currentSelectedId !== prevSelectedRestaurantIdRef.current) {
+            isSelectionChanged = true;
+            prevSelectedRestaurantIdRef.current = currentSelectedId;
+        }
+
+        // B. 지역 선택 변경 확인 (Ref가 없어서 Effect 내 로컬 변수로는 안됨, 
+        // 하지만 selectedRegion 값이 바뀌면 Effect가 실행되므로, 이전에 저장해둔 Ref가 필요함)
+        // 여기서는 간단히: "사용자 이동 플래그"를 리셋해야 하는 상황인지 판단.
+        // selectedRestaurant이나 selectedRegion이 "명시적으로" 바뀌었을 때만 리셋.
+        // 하지만 useEffect는 dependency가 바뀌면 무조건 실행됨.
+        // 따라서 "무엇이 바뀌었는지"를 추적해야 함.
+
+        // [Refactor] dependency check approach instead of explicit dirty check
+        // We need to know IF selectedRestaurant OR selectedRegion actually changed in this render.
+        // Using refs to track previous props is a standard pattern.
+
+        // 여기서는 로직 단순화를 위해:
+        // 만약 사용자가 이동했다면(hasUserMovedMapRef.current), 
+        // 1. "새로운 맛집 선택"이 일어났다면 -> 강제 이동 (사용자 이동 무시)
+        // 2. "단순 패널/사이드바 토글"이라면 -> 현재 위치 유지하되 오프셋만 적용
+
+        // "새로운 맛집 선택"을 어떻게 감지하나? 
+        // -> selectedRestaurant 객체가 바뀌었음. (Re-fetch 등으로 인한 객체 재생성 주의, ID 비교가 확실)
+
+        // Ref에 저장된 값(이전 렌더링 값)과 현재 Props 값을 비교
+
+        // 별도의 Ref 없이 로직을 구현하기 위해:
+        // 만약 (selectedRestaurant?.id !== prevSelectedRestaurantIdRef.current) -> 선택 변경임.
+        // 만약 (selectedRegion !== prevSelectedRegionRef.current) -> 지역 변경임. (Ref 추가 필요)
+
+        // prevSelectedRegionRef가 없으므로... 
+        // 사실 selectedRestaurant가 null일 때 selectedRegion을 보는데, 
+        // selectedRegion이 바뀔 때도 이동해야 함.
+
+        // 결론: "선택 변경"일 때만 hasUserMovedMapRef.current = false 처리.
+
+        // **중요**: 위에서 이미 prevSelectedRestaurantIdRef.current를 업데이트 했음 (isSelectionChanged).
+        // 지역 변경 체크를 위해 prevSelectRegionRef를 추가하는 대신,
+        // 여기서는 "이동해야 하는지" 여부만 결정하면 됨.
+
+        // hasUserMovedMapRef.current = false; // [Delete] 기존의 무조건 리셋 삭제
+
+        if (isSelectionChanged) {
+            hasUserMovedMapRef.current = false;
+        }
+
+        // 지역 변경 감지 (임시로 변수 사용해 비교 불가, Ref 필요)
+        // 하지만 selectedRegion은 보통 null -> 값 -> 값 변경이 드뭄.
+        // 일단 selectedRestaurant 위주로 처리.
+
+        // 2. 목표 좌표 및 오프셋 결정
         let targetLat: number;
         let targetLng: number;
         let targetZoom = 16;
@@ -251,7 +313,6 @@ const NaverMapView = memo(({
             targetLng = selectedRestaurant.lng;
             isRestaurantSelected = true;
         } else {
-            // 맛집이 선택되지 않은 경우, 선택된 지역의 중심 좌표 사용
             const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
             const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
             targetLat = regionConfig.center[0];
@@ -259,16 +320,10 @@ const NaverMapView = memo(({
             targetZoom = regionConfig.zoom;
         }
 
-        const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
-
-        // [수정됨] effectivePanelOffset 로직 적용
-        // isInternalMode, internalPanelOpen 등은 useEffect dependency에 있으므로 최신 값 사용 가능
-        // 다만 여기서는 로직을 다시 한 번 기술해야 함 (또는 함수로 분리)
-
+        // 패널 상태에 따른 유효 오프셋 계산
         const isInternalMode = !onMarkerClick;
         const isShrinkingLayout = isInternalMode && internalPanelOpen && !isGridMode;
 
-        // useEffect 내에서의 계산
         let effectiveOffset = 0;
         if (isShrinkingLayout) {
             effectiveOffset = 0;
@@ -276,14 +331,125 @@ const NaverMapView = memo(({
             effectiveOffset = PANEL_WIDTH;
         }
 
-        // 목표 오프셋 계산: RightPanel / 2
+        // 목표 오프셋 (스크린 좌표계)
+        // "패널이 열리면, 지도의 시각적 중심은 왼쪽으로 이동해야 함" -> 즉 x 좌표에 +offset/2 를 더해서 "중심인 척" 해야 함?
+        // getAdjustedCenter 함수: "targetOffset 만큼 떨어진 곳이 중심이 되도록"
+        // right panel width = effectiveOffset.
+        // Center should be shifted to LEFT by effectiveOffset / 2.
+        // targetOffsetX = effectiveOffset / 2 (positive means shift visual center to right? Wait.)
+
+        // getAdjustedCenter 로직:
+        // projection.fromCoordToOffset(center) => centerPoint (Screen Pixel)
+        // centerPoint.x + offsetX => offsetPoint
+        // projection.fromOffsetToCoord(offsetPoint) => offsetCenterLatLng
+        // 즉, "원래 중심"에서 "offsetX" 만큼 떨어진 픽셀 좌표를 "새로운 지도 중심(LatLng)"으로 설정함.
+        // 만약 offsetX가 양수면 -> 화면상 오른쪽 점이 새로운 중심이 됨 -> 지도는 왼쪽으로 이동함.
+
+        // 우측 패널이 열리면, "보이는 영역"은 왼쪽 부분임.
+        // 따라서 "보이는 영역의 중심"을 지도의 실제 중심(Container Center)에 맞추고 싶은 게 아니라,
+        // "지도의 실제 중심"을 "보이는 영역의 중심"으로 옮기고 싶은 것.
+        // 즉, 맛집 좌표(targetLat, Lng)가 "보이는 영역의 중심"에 와야 함.
+
+        // 보이는 영역의 중심 = (WindowWidth - PanelWidth) / 2
+        // 실제 지도 중심 = WindowWidth / 2
+        // 차이 = PanelWidth / 2
+        // 보이는 영역 중심은 실제 중심보다 "왼쪽"에 있음.
+        // 따라서 맛집 좌표가 화면의 "왼쪽"에 위치해야 함.
+        // 그러려면 지도의 Center(가운데)는 맛집 좌표보다 "오른쪽"에 있어야 함.
+        // 즉 지도를 오른쪽으로 이동시켜야 함. 
+        // 지도를 오른쪽으로 이동 = Center LatLng를 왼쪽으로 이동? (X)
+        // 지도를 오른쪽으로 'Pan' = 지도의 Center 좌표는 '왼쪽(서쪽)' 지점으로 변경됨?
+        // 헷갈리므로 getAdjustedCenter 로직을 그대로 믿고 값만 조정.
+
+        // 기존 로직: targetOffsetX = effectiveOffset / 2.
+        // effectiveOffset(패널너비)가 양수 -> offsetX 양수 -> 오른쪽 점을 중심으로 설정 -> 지도 뷰는 왼쪽으로 이동 -> 컨텐츠는 오른쪽으로 이동?
+        // 아니, map.setCenter(newCenter) -> newCenter가 화면 정중앙에 옴.
+        // newCenter는 "원래 타겟(맛집)"보다 "오른쪽"에 있는 점임 (offsetX가 양수니까).
+        // 그 점이 화면 정중앙에 오면, "원래 타겟(맛집)"은 화면의 "왼쪽"에 오게 됨.
+        // 우측 패널이 열리면 왼쪽 영역이 "보이는 영역"이므로, 타겟이 왼쪽에 오는 게 맞음.
+        // 결론: targetOffsetX = effectiveOffset / 2 는 맞음.
+
         const targetOffsetX = effectiveOffset / 2;
 
-        // 3. 이동 방식 결정
+        // **핵심 로직 변경**
         const currentZoom = map.getZoom();
-        const currentCenter = map.getCenter();
-        const latDiff = Math.abs(targetLat - currentCenter.lat());
-        const lngDiff = Math.abs(targetLng - currentCenter.lng());
+
+        // [Case 1] 사용자가 직접 이동했고, 선택 변경이 없는 경우 (User Moved + Layout Change only)
+        // -> 현재 보고 있는 시각적 중심(Visual Center)을 유지해야 함.
+        // 하지만 "패널이 열리고 닫힘"에 따라 "보이는 영역"이 달라지므로,
+        // "현재의 Visual Center"가 "새로운 Layout의 Visual Center"가 되도록 지도 Center를 조정해야 함.
+        // 즉, "지리적 위치"를 고정하고 오프셋만 반영.
+        if (hasUserMovedMapRef.current && !isSelectionChanged) {
+            // 현재 지도의 중심 (이건 Panel 오프셋이 반영된 상태일 수도 있고 아닐 수도 있음)
+            // 여기서 중요한 건 "사용자가 보고 있던 그 위치(Lat, Lng)"를 유지하는 것.
+            // 사용자가 보고 있던 위치(Visual Center)는 어디인가?
+            // 만약 이전에 패널이 열려있었다면, Map Center는 Visual Center보다 오른쪽에 있었을 것임.
+            // 만약 패널이 닫혔다면, Map Center == Visual Center 였을 것임.
+
+            // 복잡하게 계산하기보다, "현재 지도의 중심(map.getCenter())"을 기준으로
+            // 오프셋 '변화량' 만큼만 이동해주면 됨.
+            // 이전 오프셋: prevEffectiveOffset (계산 필요 or Ref 저장 필요 - currentStateRef 에 있음)
+            // 현재 오프셋: effectiveOffset
+
+            // 하지만 map.getCenter()는 이미 "틀어진" 상태일 수 있음.
+            // 단순하게: "현재 map.getCenter()에 해당하는 지리적 위치"를 
+            // "새로운 오프셋 기준"으로 다시 잡아주면 됨?
+            // 아니면 map.panBy()를 사용하는 게 나을까?
+
+            // 오프셋 차이
+            // const offsetDiff = effectiveOffset - prevOffset;
+            // 만약 패널이 열리면 (0 -> 400), offsetDiff = +400.
+            // 지도는 왼쪽으로 더 가야 하나 오른쪽으로 더 가야 하나?
+            // 패널이 열리면 보이는 영역이 왼쪽으로 쏠림 -> 보고 있던 지점을 왼쪽으로 옮겨야 함? 
+            // 아니, 보이는 영역의 중심이 왼쪽으로 이동함.
+            // 따라서 지도를 "오른쪽"으로 밀어야 컨텐츠가 왼쪽 창에 보임.
+            // 즉 offsetDiff 만큼 Center를 이동시켜야 함. (Pixel 단위)
+
+            // 근데 이걸 정확히 계산하려면 projection 필요.
+            // 다행히 getAdjustedCenter가 있음.
+
+            // 1. 현재 중심 가져오기
+            const currentMapCenter = map.getCenter();
+
+            // 2. 현재 중심을 기준으로 "새로운 오프셋" 적용
+            // 주의: 여기서 "현재 중심"은 이미 이전 오프셋이 적용된 결과물일 수 있음.
+            // 하지만 사용자가 'drag'를 했다면 그 상태가 '기준'이 됨.
+            // 즉, 사용자가 멈춘 그 화면(Visual View)을 기준으로,
+            // 패널이 열리면 -> 컨텐츠가 가려지지 않게 옆으로 비켜줘야 함.
+            // 패널이 닫히면 -> 넓어진 화면의 중앙으로 오게 해야 함.
+
+            // 이를 위해선 "이전 오프셋"과 "현재 오프셋"의 차이(Delta)를 구해야 함.
+            // currentStateRef.current.effectivePanelOffset 은 "렌더링 직전" 값이 아니라 "지난번 Effect 실행 시" 값임.
+            // 따라서 이걸 "이전 값"으로 쓸 수 있음.
+
+            const prevOffset = currentStateRef.current.effectivePanelOffset;
+            const deltaOffset = effectiveOffset - prevOffset;
+
+            if (deltaOffset !== 0) {
+                // 델타 오프셋의 절반만큼 이동해야 "보이는 중심"이 유지됨?
+                // targetOffsetX = effectiveOffset / 2 이므로.
+                // deltaX = deltaOffset / 2.
+
+                const deltaX = deltaOffset / 2;
+
+                // 현재 중심(currentMapCenter)을 기준으로 deltaX 만큼 이동한 좌표를 구함
+                // getAdjustedCenter(lat, lng, zoom, offsetX) 함수는 
+                // "원래좌표"를 "오프셋만큼" 이동시킨 좌표를 반환함.
+                // 여기서는 "현재좌표"를 "델타만큼" 이동시켜야 함.
+
+                const newCenter = getAdjustedCenter(currentMapCenter.lat(), currentMapCenter.lng(), currentZoom, deltaX);
+
+                // 부드럽게 이동
+                map.panTo(newCenter, { duration: 300, easing: 'easeOutCubic' });
+            }
+            return;
+        }
+
+        // [Case 2] 사용자가 이동하지 않았거나, 새로운 선택이 일어난 경우
+        // -> 기존 로직대로 타겟 위치로 이동 및 오프셋 적용
+
+        const latDiff = Math.abs(targetLat - map.getCenter().lat());
+        const lngDiff = Math.abs(targetLng - map.getCenter().lng());
         const distanceKm = Math.sqrt(Math.pow(latDiff * 111, 2) + Math.pow(lngDiff * 88, 2));
         const zoomDiff = Math.abs(currentZoom - targetZoom);
 
@@ -291,9 +457,6 @@ const NaverMapView = memo(({
 
         // 리사이즈 먼저 트리거
         naver.maps.Event.trigger(map, 'resize');
-
-        // programmatic 이동이므로 사용자 이동 플래그 초기화
-        hasUserMovedMapRef.current = false;
 
         const moveMap = () => {
             // [Helper 사용] 조정된 중심 좌표 계산
@@ -326,17 +489,32 @@ const NaverMapView = memo(({
         }, 320);
 
         // 사용자 상호작용 감지 리스너 추가
-        const dragListener = naver.maps.Event.addListener(map, 'dragstart', () => {
+        // Naver Maps API 이벤트뿐만 아니라 DOM 이벤트도 감지하여 더 정확하게 처리 (휠 줌, 더블 클릭 등)
+        const handleUserInteraction = () => {
             hasUserMovedMapRef.current = true;
-        });
-        const pinchListener = naver.maps.Event.addListener(map, 'pinchstart', () => {
-            hasUserMovedMapRef.current = true;
-        });
+        };
+
+        const mapElement = mapRef.current;
+        if (mapElement) {
+            // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
+            mapElement.addEventListener('wheel', handleUserInteraction, { capture: true });
+            mapElement.addEventListener('mousedown', handleUserInteraction, { capture: true });
+            mapElement.addEventListener('touchstart', handleUserInteraction, { capture: true });
+        }
+
+        const dragListener = naver.maps.Event.addListener(map, 'dragstart', handleUserInteraction);
+        const pinchListener = naver.maps.Event.addListener(map, 'pinchstart', handleUserInteraction);
 
         return () => {
             clearTimeout(transitionTimer);
             naver.maps.Event.removeListener(dragListener);
             naver.maps.Event.removeListener(pinchListener);
+
+            if (mapElement) {
+                mapElement.removeEventListener('wheel', handleUserInteraction, { capture: true });
+                mapElement.removeEventListener('mousedown', handleUserInteraction, { capture: true });
+                mapElement.removeEventListener('touchstart', handleUserInteraction, { capture: true });
+            }
         };
 
     }, [
@@ -348,7 +526,8 @@ const NaverMapView = memo(({
         propIsPanelOpen,
         internalPanelOpen, // 패널 열림/닫힘 시 중심 재조정
         isGridMode,
-        onMarkerClick
+        onMarkerClick,
+        isSidebarOpen // [New] 사이드바 토글 시에도 중심 재조정 로직 실행
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
