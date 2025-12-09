@@ -1423,19 +1423,19 @@ export default function AdminEvaluationPage() {
             >
               <div className="flex items-center gap-1">
                 <Button
-                  variant={!isAlternateView ? "secondary" : "ghost"}
+                  variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setIsAlternateView(false)}
+                  onClick={() => { setIsAlternateView(false); setShowSubmissionView(false); }}
                   title="리스트 뷰"
                 >
                   <LayoutList className="h-4 w-4" />
                 </Button>
                 <Button
-                  variant={isAlternateView ? "secondary" : "ghost"}
+                  variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setIsAlternateView(true)}
+                  onClick={() => { setIsAlternateView(true); setShowSubmissionView(false); }}
                   title="슬라이드 뷰"
                 >
                   <MonitorPlay className="h-4 w-4" />
@@ -1462,8 +1462,12 @@ export default function AdminEvaluationPage() {
                 {/* 사용자 제보 검수 버튼 */}
                 <Button
                   onClick={() => {
-                    setShowSubmissionView(!showSubmissionView);
-                    if (!showSubmissionView) setCurrentSubmissionIndex(0);
+                    const newShowSubmission = !showSubmissionView;
+                    setShowSubmissionView(newShowSubmission);
+                    if (newShowSubmission) {
+                      setCurrentSubmissionIndex(0);
+                      setIsAlternateView(false); // 슬라이드 뷰 비활성화
+                    }
                   }}
                   variant={showSubmissionView ? 'secondary' : 'ghost'}
                   size="icon"
