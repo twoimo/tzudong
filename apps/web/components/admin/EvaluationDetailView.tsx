@@ -229,7 +229,11 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                     </div>
                     <div className="flex flex-col gap-0.5 min-w-0">
                         <span className="text-gray-500 text-xs font-medium">카테고리</span>
-                        <span className="text-gray-900 text-sm break-all">{record.restaurant_info?.category || '-'}</span>
+                        <span className="text-gray-900 text-sm break-all">
+                            {record.categories && record.categories.length > 0
+                                ? record.categories.join(', ')
+                                : record.restaurant_info?.category || '-'}
+                        </span>
                     </div>
 
                     {/* Row 2 */}

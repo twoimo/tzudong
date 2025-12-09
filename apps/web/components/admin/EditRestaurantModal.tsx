@@ -852,13 +852,18 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       // 카테고리 초기값 설정
       let initialCategories: string[] = [];
 
-      // 1. 기존 categories 배열 사용 또는 단일 category를 배열로 변환
-      if (record.restaurant_info.category) {
+      // 1. record.categories가 존재하면 우선 사용 (배열)
+      if (record.categories && record.categories.length > 0) {
+        initialCategories = record.categories;
+      }
+      // 2. 아니면 기존 restaurant_info.category 사용 (단일)
+      else if (record.restaurant_info.category) {
         initialCategories = [record.restaurant_info.category];
       }
 
-      // 2. evaluation_results.category_TF가 false이고 category_revision이 있으면 제안된 카테고리 사용
-      if (record.evaluation_results?.category_TF?.eval_value === false) {
+      // 3. AI 제안 적용 (단, 관리자가 수정한 적이 없는 경우에만!)
+      // updated_by_admin_id가 없으면 아직 관리자 손을 타지 않은 것으로 간주
+      if (!record.updated_by_admin_id && record.evaluation_results?.category_TF?.eval_value === false) {
         const categoryRevision = record.evaluation_results.category_TF.category_revision;
 
         if (categoryRevision) {
