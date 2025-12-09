@@ -233,7 +233,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                                     </div>
 
                                     <div className="space-y-2">
-                                        <Label>쯔양 리뷰</Label>
+                                        <Label>쯔양의 리뷰</Label>
                                         <Textarea
                                             value={review.tzuyang_review}
                                             onChange={(e) => handleYoutubeReviewChange(index, 'tzuyang_review', e.target.value)}

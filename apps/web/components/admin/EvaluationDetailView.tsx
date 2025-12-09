@@ -292,7 +292,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
             </div>
 
             {/* Bottom Padding */}
-            <div className="h-8" />
+            <div className="h-16" />
         </div>
     );
 
