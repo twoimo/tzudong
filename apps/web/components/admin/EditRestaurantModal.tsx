@@ -652,6 +652,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       status: 'approved',
       name: trimmedName,
       restaurant_name: trimmedName, // 별칭도 업데이트
+      categories: selectedCategories, // 카테고리 업데이트 추가
       road_address: selectedResult.road_address,
       jibun_address: selectedResult.jibun_address,
       english_address: selectedResult.english_address,
@@ -714,10 +715,8 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updated_at: new Date().toISOString(),
       };
 
-      // 카테고리 업데이트
-      if (selectedCategories.length > 0) {
-        updateData.categories = selectedCategories;
-      }
+      // 카테고리 업데이트 (비어있어도 업데이트하여 삭제 가능하도록 함)
+      updateData.categories = selectedCategories;
 
       // 지오코딩 결과가 있고 선택된 경우에만 주소 정보 업데이트
       if (geocodingResults.length > 0 && selectedGeocodingIndex !== null) {
@@ -761,6 +760,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         phone: trimmedPhone || null,
         updated_at: new Date().toISOString(),
         restaurant_name: trimmedName, // 별칭도 업데이트
+        categories: selectedCategories, // 카테고리 업데이트 추가
       };
 
       // restaurant_info 객체도 업데이트
