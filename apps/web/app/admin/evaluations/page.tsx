@@ -1628,7 +1628,7 @@ export default function AdminEvaluationPage() {
           // 사용자 제보 수정 시 restaurant_submissions 테이블도 업데이트
           if (editingSubmission) {
             // 지오코딩 결과가 있으면 submissionApprovalData에 저장 (실시간 UI 반영)
-            if (updates.lat && updates.lng && updates.road_address) {
+            if (updates.lat !== undefined && updates.lng !== undefined && updates.road_address) {
               setSubmissionApprovalData({
                 lat: String(updates.lat),
                 lng: String(updates.lng),
