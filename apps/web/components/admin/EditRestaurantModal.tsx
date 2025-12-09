@@ -56,6 +56,7 @@ interface FormData {
   phone: string;
   tzuyang_review: string;
   categories: string[]; // 카테고리 배열로 변경
+  youtube_link: string; // 유튜브 링크 추가
 }
 
 interface NaverGeocodingResponse {
@@ -89,6 +90,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     phone: '',
     tzuyang_review: '',
     categories: [], // 카테고리 배열 초기값
+    youtube_link: '', // 유튜브 링크 초기값
   });
   const [initialAddress, setInitialAddress] = useState<string>(''); // 원본 주소 저장
   const [addressChanged, setAddressChanged] = useState<boolean>(false); // 주소 변경 여부
@@ -764,6 +766,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         // 🔥 주소 필드 항상 포함 (제보 수정 시 필요)
         road_address: trimmedAddress,
         tzuyang_review: trimmedTzuyangReview || null,
+        youtube_link: formData.youtube_link.trim() || undefined, // 유튜브 링크 추가
       };
 
       // restaurant_info 객체도 업데이트
@@ -828,6 +831,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       phone: '',
       tzuyang_review: '',
       categories: [], // 카테고리 배열 초기화
+      youtube_link: '', // 유튜브 링크 초기화
     });
     setGeocodingResults([]);
     setSelectedGeocodingIndex(null);
@@ -905,6 +909,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         phone: record.restaurant_info.phone || '',
         tzuyang_review: record.restaurant_info.tzuyang_review || '',
         categories: initialCategories, // 카테고리 배열 설정
+        youtube_link: record.youtube_link || '', // 유튜브 링크 설정
       });
 
       // 기존 지오코딩 결과가 있다면 표시
@@ -937,23 +942,19 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         </DialogHeader>
 
         <div className="space-y-4 py-4 overflow-y-auto flex-1">
-          {/* 유튜브 링크 표시 */}
-          {record && (
-            <div className="rounded-lg bg-muted p-3">
-              <Label className="text-sm text-muted-foreground">YouTube 링크</Label>
-              <a
-                href={record.youtube_link}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-blue-600 hover:underline block mt-1"
-              >
-                {record.youtube_link}
-              </a>
-              {record.youtube_meta && (
-                <p className="text-sm mt-1">{record.youtube_meta.title}</p>
-              )}
-            </div>
-          )}
+          {/* 유튜브 링크 편집 */}
+          <div className="space-y-2">
+            <Label htmlFor="edit-youtube-link">YouTube 링크</Label>
+            <Input
+              id="edit-youtube-link"
+              value={formData.youtube_link}
+              onChange={(e) => setFormData(prev => ({ ...prev, youtube_link: e.target.value }))}
+              placeholder="예: https://www.youtube.com/watch?v=..."
+            />
+            {record?.youtube_meta && (
+              <p className="text-sm text-muted-foreground">영상 제목: {record.youtube_meta.title}</p>
+            )}
+          </div>
 
           {/* 레스토랑 이름 */}
           <div className="space-y-2">

@@ -1614,8 +1614,8 @@ export default function AdminEvaluationPage() {
                 address: updates.road_address || updates.jibun_address || editingSubmission.address,
                 phone: updates.phone || '',
                 categories: updates.categories || (Array.isArray(editingSubmission.category) ? editingSubmission.category : [editingSubmission.category]),
-                youtube_link: editingSubmission.youtube_link,
-                description: updates.restaurant_info?.tzuyang_review || editingSubmission.description || '',
+                youtube_link: updates.youtube_link || editingSubmission.youtube_link, // 수정된 유튜브 링크 우선 사용
+                description: updates.tzuyang_review || updates.restaurant_info?.tzuyang_review || editingSubmission.description || '',
               },
             });
           } else {
