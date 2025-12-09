@@ -192,8 +192,47 @@ const NaverMapView = memo(({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [internalPanelOpen, isGridMode]);
 
+    // [Helper] 지도 중심 좌표 계산 (오프셋 및 줌 스케일링 적용)
+    const getAdjustedCenter = (
+        lat: number,
+        lng: number,
+        targetZoom: number,
+        offsetX: number
+    ) => {
+        const map = mapInstanceRef.current;
+        if (!map || !window.naver) return new window.naver.maps.LatLng(lat, lng);
+
+        try {
+            const currentZoom = map.getZoom();
+            const projection = map.getProjection();
+            const centerLatLng = new window.naver.maps.LatLng(lat, lng);
+
+            // 1. 현재 줌 레벨에서의 오프셋에 해당하는 좌표 Delta 계산
+            const centerPoint = projection.fromCoordToOffset(centerLatLng);
+            const offsetPoint = new window.naver.maps.Point(
+                centerPoint.x + offsetX,
+                centerPoint.y
+            );
+            const offsetCenterLatLng = projection.fromOffsetToCoord(offsetPoint);
+
+            const dLat = offsetCenterLatLng.lat() - centerLatLng.lat();
+            const dLng = offsetCenterLatLng.lng() - centerLatLng.lng();
+
+            // 2. 줌 레벨 차이에 따른 스케일 팩터 적용
+            // 줌이 커지면(확대), 동일한 픽셀 오프셋은 더 작은 좌표 차이를 의미함
+            const scale = Math.pow(2, currentZoom - targetZoom);
+
+            const finalLat = centerLatLng.lat() + dLat * scale;
+            const finalLng = centerLatLng.lng() + dLng * scale;
+
+            return new window.naver.maps.LatLng(finalLat, finalLng);
+        } catch (e) {
+            console.error("Coordinate calculation failed:", e);
+            return new window.naver.maps.LatLng(lat, lng);
+        }
+    };
+
     // [통합] 지도 중심 및 줌 조정 로직
-    // 사이드바, 패널, 선택된 맛집 등의 상태가 변경될 때마다 지도의 중심을 조정합니다.
     useEffect(() => {
         if (!mapInstanceRef.current || isGridMode) return;
 
@@ -253,40 +292,23 @@ const NaverMapView = memo(({
         naver.maps.Event.trigger(map, 'resize');
 
         const moveMap = () => {
-            try {
-                const projection = map.getProjection();
-                const markerPoint = projection.fromCoordToOffset(centerLatLng);
+            // [Helper 사용] 조정된 중심 좌표 계산
+            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX);
 
-                // 지도 중심이 되어야 할 포인트 (마커 포인트 + 오프셋)
-                const newCenterPoint = new naver.maps.Point(
-                    markerPoint.x + targetOffsetX,
-                    markerPoint.y
-                );
-
-                const newCenterLatLng = projection.fromOffsetToCoord(newCenterPoint);
-
-                if (shouldInstantLoad) {
-                    map.setZoom(targetZoom);
-                    map.setCenter(newCenterLatLng);
+            if (shouldInstantLoad) {
+                map.setZoom(targetZoom);
+                map.setCenter(newCenterLatLng);
+            } else {
+                if (currentZoom !== targetZoom) {
+                    map.morph(newCenterLatLng, targetZoom, {
+                        duration: 400,
+                        easing: 'easeOutCubic'
+                    });
                 } else {
-                    if (currentZoom !== targetZoom) {
-                        map.morph(newCenterLatLng, targetZoom, {
-                            duration: 400,
-                            easing: 'easeOutCubic'
-                        });
-                    } else {
-                        map.panTo(newCenterLatLng, {
-                            duration: 300,
-                            easing: 'easeOutCubic'
-                        });
-                    }
-                }
-            } catch (e) {
-                if (shouldInstantLoad) {
-                    map.setZoom(targetZoom);
-                    map.setCenter(centerLatLng);
-                } else {
-                    map.panTo(centerLatLng);
+                    map.panTo(newCenterLatLng, {
+                        duration: 300,
+                        easing: 'easeOutCubic'
+                    });
                 }
             }
         };
@@ -427,17 +449,9 @@ const NaverMapView = memo(({
 
             const targetOffsetX = rightPanelWidth / 2;
 
-            const projection = map.getProjection();
-            const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
-            const markerPoint = projection.fromCoordToOffset(centerLatLng);
-
-            // 목표 중심점 (픽셀)
-            const newCenterPoint = new naver.maps.Point(
-                markerPoint.x + targetOffsetX,
-                markerPoint.y
-            );
-
-            const newCenterLatLng = projection.fromOffsetToCoord(newCenterPoint);
+            // [Helper 사용] 현재 줌 레벨 유지
+            const currentZoom = map.getZoom();
+            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, currentZoom, targetOffsetX);
 
             // 애니메이션 없이 즉시 이동 (부드러움 유지)
             map.setCenter(newCenterLatLng);
