@@ -765,7 +765,6 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         categories: selectedCategories, // 카테고리 업데이트 추가
         // 🔥 주소 필드 항상 포함 (제보 수정 시 필요)
         road_address: trimmedAddress,
-        tzuyang_review: trimmedTzuyangReview || null,
         youtube_link: formData.youtube_link.trim() || undefined, // 유튜브 링크 추가
       };
 

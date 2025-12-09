@@ -1297,35 +1297,43 @@ export default function AdminEvaluationPage() {
   // 제보 수정 핸들러 - 제보를 EvaluationRecord 형태로 변환하여 EditRestaurantModal에서 사용
   const handleEditSubmission = (submission: SubmissionRecord) => {
     setEditingSubmission(submission);
-    // 제보를 EvaluationRecord 형태로 변환 (타입 호환성을 위해 as any 사용)
+    // 제보를 EvaluationRecord 형태로 변환 (타입 호환성을 위해 as unknown as EvaluationRecord 사용)
     const evaluationRecord = {
       id: submission.id,
       unique_id: `submission_${submission.id}`,
       name: submission.restaurant_name,
+      restaurant_name: submission.restaurant_name,
       restaurant_info: {
         name: submission.restaurant_name,
         phone: submission.phone || '',
         category: Array.isArray(submission.category)
           ? (submission.category[0] || '')
           : (submission.category || ''),
-        origin_address: submission.address, // 주소 초기값
-        tzuyang_review: submission.description || '', // 쯔양 리뷰 초기값
+        origin_address: submission.address,
+        tzuyang_review: submission.description || '',
+        naver_address_info: null,
       },
       categories: Array.isArray(submission.category) ? submission.category : [submission.category],
       phone: submission.phone || '',
       road_address: submission.address,
       jibun_address: '',
+      english_address: '',
+      address_elements: null,
+      origin_address: submission.address,
       lat: 0,
       lng: 0,
       youtube_link: submission.youtube_link,
+      youtube_links: submission.youtube_link ? [submission.youtube_link] : [],
       youtube_meta: null,
       tzuyang_reviews: submission.description || '',
+      reasoning_basis: null,
+      evaluation_results: null,
       status: 'pending',
       source_type: 'user_submission_new',
       geocoding_success: false,
       created_at: submission.created_at,
       updated_at: submission.created_at,
-    } as EvaluationRecord;
+    } as unknown as EvaluationRecord;
     setSelectedEditRecord(evaluationRecord);
     setEditModalOpen(true);
   };
@@ -1615,7 +1623,7 @@ export default function AdminEvaluationPage() {
                 phone: updates.phone || '',
                 categories: updates.categories || (Array.isArray(editingSubmission.category) ? editingSubmission.category : [editingSubmission.category]),
                 youtube_link: updates.youtube_link || editingSubmission.youtube_link, // 수정된 유튜브 링크 우선 사용
-                description: updates.tzuyang_review || updates.restaurant_info?.tzuyang_review || editingSubmission.description || '',
+                description: (typeof updates.tzuyang_reviews === 'string' ? updates.tzuyang_reviews : null) || updates.restaurant_info?.tzuyang_review || editingSubmission.description || '',
               },
             });
           } else {

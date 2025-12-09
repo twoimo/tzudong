@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,8 +22,99 @@ import {
     Loader2,
     Calendar,
     FileText,
+    Download,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+// YouTube 메타데이터 인터페이스
+interface YouTubeMeta {
+    title: string | null;
+    publishedAt: string | null;
+    duration: number | null;
+    is_shorts: boolean | null;
+    ads_info: {
+        is_ads: boolean | null;
+        what_ads: string[] | null;
+    } | null;
+}
+
+// YouTube API 응답 인터페이스
+interface YouTubeApiVideoItem {
+    snippet: {
+        title: string;
+        publishedAt: string;
+        description: string;
+    };
+    contentDetails: {
+        duration: string;
+    };
+}
+
+// ISO 8601 duration 파싱 함수
+function parseDuration(duration: string): number {
+    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+    if (!match) return 0;
+    const [, hours, minutes, seconds] = match;
+    let total = 0;
+    if (hours) total += parseInt(hours) * 3600;
+    if (minutes) total += parseInt(minutes) * 60;
+    if (seconds) total += parseInt(seconds);
+    return total;
+}
+
+// 광고 키워드 분석 함수 (클라이언트 사이드)
+async function analyzeAdContent(text: string): Promise<string[] | null> {
+    const apiKey = process.env.NEXT_OPENAI_API_KEY_BYEON;
+    if (!apiKey) return null;
+
+    const textPreview = text.slice(0, 500); // 설명의 앞 500자만 사용
+
+    try {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini',
+                temperature: 0.3,
+                messages: [
+                    {
+                        role: 'system',
+                        content: `광고/협찬/지원을 한 **정확한 주체들의 전체 이름(기업명 + 브랜드명 조합 또는 기관명 형태)**을 **리스트** 형식으로 모아 답변하세요.
+예시: ['하이트진로', '영양군청'], ['하림 멜팅피스']
+반드시 추측하지 않고 **본문 내용에 쓰여 있는 주체들을 모두 작성**해야 합니다.
+주체를 찾을 수 없거나 애매하면, 'None'을 출력합니다.`
+                    },
+                    {
+                        role: 'user',
+                        content: textPreview
+                    }
+                ]
+            })
+        });
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content?.trim();
+
+        if (!content || content.toLowerCase() === 'none') return null;
+
+        try {
+            const parsed = JSON.parse(content);
+            if (Array.isArray(parsed)) return parsed.map(x => String(x).trim()).filter(Boolean);
+            return [String(parsed).trim()];
+        } catch {
+            // JSON 파싱 실패 시 문자열 그대로 반환
+            return [content];
+        }
+    } catch (error) {
+        console.error('광고 분석 오류:', error);
+        return null;
+    }
+}
 
 // 기존 맛집 정보 인터페이스 (수정 요청 비교용)
 export interface OriginalRestaurantData {
@@ -191,9 +282,70 @@ export function SubmissionDetailView({
     className,
 }: SubmissionDetailViewProps) {
     const [geocoding, setGeocoding] = useState(false);
-    const [isEmbeddable] = useState(true);
+    const [embedError, setEmbedError] = useState(false);
+    const [videoUrl, setVideoUrl] = useState<string | null>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    // YouTube 메타데이터 상태
+    const [youtubeMeta, setYoutubeMeta] = useState<YouTubeMeta | null>(null);
+    const [fetchingMeta, setFetchingMeta] = useState(false);
 
     const videoId = useMemo(() => getYoutubeVideoId(submission.youtube_link), [submission.youtube_link]);
+
+    // 리코드 변경 시 상태 초기화
+    useEffect(() => {
+        setEmbedError(false);
+        setVideoUrl(null);
+        setYoutubeMeta(null);
+    }, [submission?.id]);
+
+    // YouTube 임베드 가능 여부 확인
+    useEffect(() => {
+        if (!videoId || embedError) return;
+
+        const checkEmbedAvailability = async () => {
+            try {
+                const response = await fetch(
+                    `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`
+                );
+
+                if (!response.ok) {
+                    setEmbedError(true);
+                    return;
+                }
+
+                const data = await response.json();
+                if (data.error) {
+                    setEmbedError(true);
+                }
+            } catch (error) {
+                console.log('YouTube 임베드 확인 실패:', error);
+            }
+        };
+
+        checkEmbedAvailability();
+    }, [videoId, embedError, submission?.id]);
+
+    // 비디오 URL 생성 로직
+    useEffect(() => {
+        if (submission?.youtube_link && !embedError) {
+            const vidId = getYoutubeVideoId(submission.youtube_link);
+            if (vidId) {
+                const origin = typeof window !== 'undefined' ? window.location.origin : '';
+                const url = `https://www.youtube.com/embed/${vidId}?autoplay=0&mute=0&playsinline=1&rel=0&enablejsapi=1&origin=${origin}&controls=1`;
+                setVideoUrl(url);
+            } else {
+                setVideoUrl(null);
+            }
+        } else {
+            setVideoUrl(null);
+        }
+    }, [submission?.youtube_link, submission?.id, embedError]);
+
+    // iframe 에러 핸들링
+    const handleVideoError = useCallback(() => {
+        setEmbedError(true);
+    }, []);
 
     // 카테고리 배열 정규화
     const categories = useMemo(() => {
@@ -202,6 +354,74 @@ export function SubmissionDetailView({
         }
         return submission.category ? [submission.category] : [];
     }, [submission.category]);
+
+    // YouTube 메타데이터 가져오기 함수
+    const fetchYoutubeMeta = useCallback(async () => {
+        if (!videoId) {
+            toast.error('유효한 YouTube 링크가 없습니다');
+            return;
+        }
+
+        const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+        if (!apiKey) {
+            toast.error('YouTube API 키가 설정되지 않았습니다');
+            return;
+        }
+
+        setFetchingMeta(true);
+
+        try {
+            // YouTube Data API v3 호출
+            const response = await fetch(
+                `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`
+            );
+
+            if (!response.ok) {
+                throw new Error('YouTube API 호출 실패');
+            }
+
+            const data = await response.json();
+
+            if (!data.items || data.items.length === 0) {
+                throw new Error('영상을 찾을 수 없습니다');
+            }
+
+            const item = data.items[0] as YouTubeApiVideoItem;
+            const snippet = item.snippet;
+            const duration = parseDuration(item.contentDetails.duration);
+
+            // 광고 키워드 확인
+            const description = snippet.description || '';
+            const descriptionLower = description.toLowerCase();
+            const adKeywords = ['유료', '광고', '지원', '협찬'];
+            const isAds = adKeywords.some(keyword => descriptionLower.includes(keyword));
+
+            // 광고 주체 분석 (OpenAI 사용)
+            let whatAds: string[] | null = null;
+            if (isAds) {
+                whatAds = await analyzeAdContent(description);
+            }
+
+            const meta: YouTubeMeta = {
+                title: snippet.title,
+                publishedAt: snippet.publishedAt,
+                duration: duration,
+                is_shorts: duration <= 180,
+                ads_info: {
+                    is_ads: isAds,
+                    what_ads: whatAds,
+                },
+            };
+
+            setYoutubeMeta(meta);
+            toast.success('YouTube 메타데이터를 가져왔습니다');
+        } catch (error: any) {
+            console.error('YouTube 메타데이터 가져오기 오류:', error);
+            toast.error(error.message || '메타데이터 가져오기 실패');
+        } finally {
+            setFetchingMeta(false);
+        }
+    }, [videoId]);
 
     // 재지오코딩 함수 (여러 개 결과 반환)
     const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3): Promise<GeocodingResult[]> => {
@@ -285,45 +505,116 @@ export function SubmissionDetailView({
 
     return (
         <div className={cn("flex h-full overflow-hidden", className)}>
-            {/* 좌측: YouTube 영상 */}
-            <div className="w-1/2 h-full bg-black flex items-center justify-center flex-shrink-0">
-                {videoId ? (
-                    isEmbeddable ? (
-                        <iframe
-                            src={`https://www.youtube.com/embed/${videoId}?autoplay=0`}
-                            title="YouTube video"
-                            className="w-full h-full"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                        />
-                    ) : (
-                        <a
-                            href={submission.youtube_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex flex-col items-center gap-4 text-white"
-                        >
-                            <img
-                                src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
-                                alt="YouTube thumbnail"
-                                className="rounded-lg max-w-md"
-                            />
-                            <span className="flex items-center gap-2">
-                                <ExternalLink className="w-4 h-4" />
-                                YouTube에서 보기
-                            </span>
-                        </a>
-                    )
-                ) : (
-                    <div className="text-muted-foreground flex flex-col items-center gap-2">
-                        <Youtube className="w-16 h-16 opacity-50" />
-                        <p>YouTube 링크 없음</p>
+            {/* 좌측: 비디오 플레이어 + 영상 정보 */}
+            <div className="w-[40%] bg-accent/5 flex flex-col justify-start relative group border-r overflow-hidden">
+                {/* YouTube 영상 */}
+                <div className="p-4 pb-0 w-full shrink-0">
+                    <div className="bg-white rounded-lg border p-3 shadow-sm">
+                        {videoUrl && !embedError ? (
+                            <div className="w-full aspect-video shadow-lg rounded-lg overflow-hidden">
+                                <iframe
+                                    ref={iframeRef}
+                                    width="100%"
+                                    height="100%"
+                                    src={`${videoUrl}&autoplay=0`}
+                                    title="Video player"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
+                                    allowFullScreen
+                                    className="w-full h-full block"
+                                    onError={handleVideoError}
+                                />
+                            </div>
+                        ) : (
+                            /* Facade Pattern: 썸네일 표시 (클릭 시 새 탭) */
+                            <div
+                                className="relative w-full aspect-video cursor-pointer group rounded-lg overflow-hidden"
+                                onClick={() => {
+                                    if (submission.youtube_link) {
+                                        window.open(submission.youtube_link, '_blank');
+                                    }
+                                }}
+                            >
+                                {videoId ? (
+                                    <img
+                                        src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                        alt="YouTube 썸네일"
+                                        className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 group-hover:opacity-90"
+                                        onError={(e) => {
+                                            const target = e.currentTarget;
+                                            if (target.src.includes('maxresdefault')) {
+                                                target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                            }
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center text-muted-foreground p-6 text-center w-full h-full bg-gray-100 rounded-lg">
+                                        <Youtube className="w-16 h-16 opacity-50 mb-2" />
+                                        <p className="text-gray-400 text-sm">YouTube 링크 없음</p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
+
+                {/* 좌측 하단: 비디오 메타 정보 */}
+                <div className="w-full bg-accent/5 p-4 pt-4 flex-1 min-h-0 overflow-y-auto">
+                    <div className="bg-white rounded-lg border p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="flex items-center gap-2 font-semibold text-base text-gray-800">
+                                📹 영상 정보
+                            </h3>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={fetchYoutubeMeta}
+                                disabled={fetchingMeta || !videoId}
+                                className="h-7 text-xs"
+                            >
+                                {fetchingMeta ? (
+                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                ) : (
+                                    <Download className="w-3 h-3 mr-1" />
+                                )}
+                                메타데이터
+                            </Button>
+                        </div>
+                        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-sm">
+                            <span className="text-gray-500 font-medium">제목:</span>
+                            <span className="break-words font-medium text-gray-900 line-clamp-2" title={youtubeMeta?.title || undefined}>
+                                {youtubeMeta?.title || '-'}
+                            </span>
+
+                            <span className="text-gray-500 font-medium">게시일:</span>
+                            <span className="text-gray-700">
+                                {youtubeMeta?.publishedAt ? new Date(youtubeMeta.publishedAt).toLocaleDateString() : '-'}
+                            </span>
+
+                            <span className="text-gray-500 font-medium">광고:</span>
+                            <span className="text-gray-700">
+                                {youtubeMeta?.ads_info?.is_ads
+                                    ? `있음 (${youtubeMeta.ads_info.what_ads?.join(', ') || '분석 중...'})`
+                                    : youtubeMeta ? '없음' : '-'}
+                            </span>
+
+                            <span className="text-gray-500 font-medium">링크:</span>
+                            <div className="flex items-center gap-2 overflow-hidden">
+                                <a
+                                    href={submission.youtube_link}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="text-blue-600 hover:underline break-all"
+                                >
+                                    {submission.youtube_link}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* 우측: 상세 정보 + 지오코딩 */}
-            <ScrollArea className="w-1/2 h-full flex-shrink-0">
+            <ScrollArea className="w-[60%] h-full flex-shrink-0">
                 <div className="p-6 space-y-6">
                     {/* 기본 정보 */}
                     <Card>
@@ -369,13 +660,13 @@ export function SubmissionDetailView({
 
                             {/* YouTube 링크 */}
                             {submission.youtube_link && (
-                                <div className="flex items-center gap-2">
-                                    <Youtube className="w-4 h-4 text-red-500" />
+                                <div className="flex items-start gap-2">
+                                    <Youtube className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
                                     <a
                                         href={submission.youtube_link}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="text-sm text-blue-500 hover:underline truncate max-w-xs"
+                                        className="text-sm text-blue-500 hover:underline break-all"
                                     >
                                         {submission.youtube_link}
                                     </a>
