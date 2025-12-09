@@ -892,7 +892,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       setAddressChanged(false); // 주소 변경 여부 초기화
 
       setFormData({
-        name: record.restaurant_info.name,
+        name: record.restaurant_info.name || '',
         address: address,
         phone: record.restaurant_info.phone || '',
         tzuyang_review: record.restaurant_info.tzuyang_review || '',
