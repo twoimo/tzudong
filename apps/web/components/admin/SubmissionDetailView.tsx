@@ -55,6 +55,8 @@ export interface SubmissionRecord {
     approved_restaurant_id: string | null;
     submission_type?: 'new' | 'edit';
     original_restaurant_id?: string;
+    // 수정 요청 시 기존 맛집의 unique_id (비교 뷰 및 업데이트 시 보존용)
+    unique_id?: string | null;
     // 수정 요청 시 기존 맛집 정보 (비교용)
     original_restaurant_data?: OriginalRestaurantData | null;
     profiles?: {

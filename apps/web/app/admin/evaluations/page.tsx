@@ -1154,6 +1154,8 @@ export default function AdminEvaluationPage() {
           reviewed_by_admin_id: s.resolved_by_admin_id,
           approved_restaurant_id: null,
           submission_type: s.submission_type,
+          // 수정 요청 시 unique_id 보존 (비교 뷰 및 업데이트 시 필요)
+          unique_id: firstRestaurant.unique_id || null,
           original_restaurant_data: originalRestaurantData,
           profiles: { nickname: profilesMap.get(s.user_id) || '알 수 없음' }
         };
@@ -1343,8 +1345,9 @@ export default function AdminEvaluationPage() {
     }) => {
       const { submission, updatedData } = data;
 
-      // user_restaurants_submission JSONB 업데이트
+      // user_restaurants_submission JSONB 업데이트 (unique_id 보존)
       const restaurantInfo = {
+        unique_id: submission.unique_id || null, // 수정 요청 시 기존 맛집 연결 유지
         name: updatedData.restaurant_name,
         categories: updatedData.categories,
         phone: updatedData.phone || null,
