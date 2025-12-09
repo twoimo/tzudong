@@ -761,6 +761,9 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updated_at: new Date().toISOString(),
         restaurant_name: trimmedName, // 별칭도 업데이트
         categories: selectedCategories, // 카테고리 업데이트 추가
+        // 🔥 주소 필드 항상 포함 (제보 수정 시 필요)
+        road_address: trimmedAddress,
+        tzuyang_review: trimmedTzuyangReview || null,
       };
 
       // restaurant_info 객체도 업데이트

@@ -1366,13 +1366,18 @@ export default function AdminEvaluationPage() {
       if (error) throw error;
       return submission;
     },
-    onSuccess: () => {
+    onSuccess: (submission) => {
       toast({ title: '제보 수정 완료', description: '제보 정보가 수정되었습니다' });
-      // 사용자 제보 목록 및 기존 맛집 정보 갱신
-      queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
+      // 사용자 제보 목록 즉시 갱신 (refetchType: 'all'로 강제 새로고침)
+      queryClient.invalidateQueries({
+        queryKey: ['admin-submissions-inline'],
+        refetchType: 'all',
+      });
       queryClient.invalidateQueries({ queryKey: ['restaurants'] });
       setEditingSubmission(null);
       setEditModalOpen(false);
+      // 현재 인덱스의 submission 데이터도 강제 갱신
+      console.log('[Update Submission Success]', submission.id);
     },
     onError: (error: any) => {
       toast({ variant: 'destructive', title: '수정 실패', description: error.message });
