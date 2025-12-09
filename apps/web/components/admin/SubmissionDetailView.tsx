@@ -25,6 +25,18 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// 기존 맛집 정보 인터페이스 (수정 요청 비교용)
+export interface OriginalRestaurantData {
+    id: string;
+    unique_id: string;
+    name: string;
+    address: string;
+    phone: string | null;
+    categories: string[];
+    youtube_link: string | null;
+    tzuyang_review: string | null;
+}
+
 // 제보 데이터 인터페이스
 export interface SubmissionRecord {
     id: string;
@@ -41,8 +53,10 @@ export interface SubmissionRecord {
     reviewed_at: string | null;
     reviewed_by_admin_id: string | null;
     approved_restaurant_id: string | null;
-    submission_type?: 'new' | 'update';
+    submission_type?: 'new' | 'edit';
     original_restaurant_id?: string;
+    // 수정 요청 시 기존 맛집 정보 (비교용)
+    original_restaurant_data?: OriginalRestaurantData | null;
     profiles?: {
         nickname: string;
     } | null;
@@ -104,6 +118,64 @@ function removeDuplicateAddresses(addresses: GeocodingResult[]): GeocodingResult
         seen.add(addr.jibun_address);
         return true;
     });
+}
+
+// 기존/수정 값 비교 컴포넌트
+interface CompareFieldProps {
+    label: string;
+    original: string;
+    modified: string;
+    isMultiline?: boolean;
+}
+
+function CompareField({ label, original, modified, isMultiline }: CompareFieldProps) {
+    const isChanged = original !== modified;
+
+    return (
+        <div className={cn(
+            "rounded-md p-3",
+            isChanged ? "bg-amber-100/50 border border-amber-300" : "bg-muted/30"
+        )}>
+            <div className="flex items-center gap-2 mb-2">
+                <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
+                {isChanged && (
+                    <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
+                        변경됨
+                    </Badge>
+                )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+                <div>
+                    <span className="text-xs text-muted-foreground block mb-1">기존</span>
+                    {isMultiline ? (
+                        <p className={cn(
+                            "text-sm whitespace-pre-wrap",
+                            isChanged && "line-through text-muted-foreground"
+                        )}>{original}</p>
+                    ) : (
+                        <p className={cn(
+                            "text-sm",
+                            isChanged && "line-through text-muted-foreground"
+                        )}>{original}</p>
+                    )}
+                </div>
+                <div>
+                    <span className="text-xs text-muted-foreground block mb-1">수정 요청</span>
+                    {isMultiline ? (
+                        <p className={cn(
+                            "text-sm whitespace-pre-wrap",
+                            isChanged && "font-medium text-amber-800"
+                        )}>{modified}</p>
+                    ) : (
+                        <p className={cn(
+                            "text-sm",
+                            isChanged && "font-medium text-amber-800"
+                        )}>{modified}</p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export function SubmissionDetailView({
@@ -332,7 +404,54 @@ export function SubmissionDetailView({
                         </CardContent>
                     </Card>
 
+                    {/* 수정 요청 비교 뷰 (submission_type이 'edit'일 때만 표시) */}
+                    {submission.submission_type === 'edit' && submission.original_restaurant_data && (
+                        <Card className="border-amber-200 bg-amber-50/30">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-lg flex items-center gap-2 text-amber-700">
+                                    <RefreshCw className="w-5 h-5" />
+                                    수정 요청 비교
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {/* 맛집명 비교 */}
+                                <CompareField
+                                    label="맛집명"
+                                    original={submission.original_restaurant_data.name}
+                                    modified={submission.restaurant_name}
+                                />
 
+                                {/* 주소 비교 */}
+                                <CompareField
+                                    label="주소"
+                                    original={submission.original_restaurant_data.address}
+                                    modified={submission.address}
+                                />
+
+                                {/* 전화번호 비교 */}
+                                <CompareField
+                                    label="전화번호"
+                                    original={submission.original_restaurant_data.phone || '-'}
+                                    modified={submission.phone || '-'}
+                                />
+
+                                {/* 카테고리 비교 */}
+                                <CompareField
+                                    label="카테고리"
+                                    original={submission.original_restaurant_data.categories.join(', ') || '-'}
+                                    modified={categories.join(', ') || '-'}
+                                />
+
+                                {/* 쯔양 리뷰 비교 */}
+                                <CompareField
+                                    label="쯔양 리뷰"
+                                    original={submission.original_restaurant_data.tzuyang_review || '-'}
+                                    modified={submission.description || '-'}
+                                    isMultiline
+                                />
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* 거부된 경우 사유 표시 */}
                     {submission.status === 'rejected' && submission.rejection_reason && (

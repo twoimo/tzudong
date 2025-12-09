@@ -193,6 +193,18 @@ export function SubmissionSlideView({
                     {/* 상태 배지 */}
                     {getStatusBadge(currentSubmission.status)}
 
+                    {/* 제보 유형 배지 */}
+                    <Badge
+                        variant="outline"
+                        className={
+                            currentSubmission.submission_type === 'edit'
+                                ? 'bg-amber-100 text-amber-700 border-amber-300'
+                                : 'bg-blue-100 text-blue-700 border-blue-300'
+                        }
+                    >
+                        {currentSubmission.submission_type === 'edit' ? '수정 요청' : '신규 제보'}
+                    </Badge>
+
                     {/* 맛집명 */}
                     <h2 className="text-sm font-semibold truncate max-w-[400px]">
                         {currentSubmission.restaurant_name}

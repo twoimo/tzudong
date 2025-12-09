@@ -1091,10 +1091,53 @@ export default function AdminEvaluationPage() {
 
       const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.nickname]));
 
+      // 수정 요청(edit)인 제보들의 unique_id 수집
+      const editSubmissions = submissionsData.filter((s: any) => s.submission_type === 'edit');
+      const uniqueIds: string[] = [];
+      editSubmissions.forEach((s: any) => {
+        const restaurants = s.user_restaurants_submission || [];
+        restaurants.forEach((r: any) => {
+          if (r.unique_id) {
+            uniqueIds.push(r.unique_id);
+          }
+        });
+      });
+
+      // unique_id로 기존 맛집 정보 조회
+      let originalRestaurantsMap = new Map<string, any>();
+      if (uniqueIds.length > 0) {
+        const { data: originalData } = await supabase
+          .from('restaurants')
+          .select('id, unique_id, name, road_address, jibun_address, phone, categories, youtube_link, tzuyang_review')
+          .in('unique_id', uniqueIds);
+
+        if (originalData) {
+          originalData.forEach((r: any) => {
+            originalRestaurantsMap.set(r.unique_id, {
+              id: r.id,
+              unique_id: r.unique_id,
+              name: r.name,
+              address: r.road_address || r.jibun_address || '',
+              phone: r.phone,
+              categories: r.categories || [],
+              youtube_link: r.youtube_link,
+              tzuyang_review: r.tzuyang_review,
+            });
+          });
+        }
+      }
+
       // JSONB 배열에서 첫 번째 맛집 정보를 추출하여 기존 필드로 매핑
       return submissionsData.map((s: any) => {
         const restaurants = s.user_restaurants_submission || [];
         const firstRestaurant = restaurants[0] || {};
+
+        // 수정 요청인 경우 기존 맛집 정보 추가
+        let originalRestaurantData = null;
+        if (s.submission_type === 'edit' && firstRestaurant.unique_id) {
+          originalRestaurantData = originalRestaurantsMap.get(firstRestaurant.unique_id) || null;
+        }
+
         return {
           id: s.id,
           user_id: s.user_id,
@@ -1111,9 +1154,11 @@ export default function AdminEvaluationPage() {
           reviewed_by_admin_id: s.resolved_by_admin_id,
           approved_restaurant_id: null,
           submission_type: s.submission_type,
+          original_restaurant_data: originalRestaurantData,
           profiles: { nickname: profilesMap.get(s.user_id) || '알 수 없음' }
         };
       }) as SubmissionRecord[];
+
     },
     enabled: !!user && isAdmin,
     refetchInterval: 30000, // 30초마다 자동 새로고침
