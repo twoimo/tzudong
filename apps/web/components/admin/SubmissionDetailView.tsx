@@ -755,6 +755,9 @@ export function SubmissionDetailView({
                             </CardContent>
                         </Card>
                     )}
+
+                    {/* 하단 여백 (스크롤 시 마지막 요소가 잘리지 않도록) */}
+                    <div className="h-8" />
                 </div>
             </ScrollArea>
         </div>
