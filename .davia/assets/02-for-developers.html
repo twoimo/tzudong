@@ -215,69 +215,55 @@ NAVER_CLIENT_SECRET=your_client_secret</code></pre>
 
 <p></p>
 
-<h3>각 단계 자세히 설명:</h3>
+<h3>파이프라인 5단계 요약</h3>
 
-<h4>1단계: 크롤링 (정보 수집)</h4>
-<ol>
-    <li>유튜브 영상 URL 목록을 준비해요</li>
-    <li>각 영상의 자막(대화 내용)을 가져와요</li>
-    <li>AI(Gemini)가 자막을 읽고 맛집 정보를 추출해요</li>
-    <li>추출된 주소로 지도 좌표(위도/경도)를 찾아요</li>
-</ol>
+<table>
+    <thead>
+        <tr>
+            <th>단계</th>
+            <th>내용</th>
+            <th>기술</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>1. 크롤링</strong></td>
+            <td>유튜브 자막에서 맛집 정보 추출</td>
+            <td>Gemini CLI</td>
+        </tr>
+        <tr>
+            <td><strong>2. 평가</strong></td>
+            <td>RULE + LAAJ 검증</td>
+            <td>Naver Geocoding, AI</td>
+        </tr>
+        <tr>
+            <td><strong>3. 에러 처리</strong></td>
+            <td>실패 항목 최대 5회 재시도</td>
+            <td>Python</td>
+        </tr>
+        <tr>
+            <td><strong>4. 변환</strong></td>
+            <td>DB 형식으로 데이터 정리</td>
+            <td>TypeScript</td>
+        </tr>
+        <tr>
+            <td><strong>5. 저장</strong></td>
+            <td>중복 확인 후 DB 저장</td>
+            <td>Supabase</td>
+        </tr>
+    </tbody>
+</table>
 
-<h4>2단계: 평가 (검증)</h4>
-<ol>
-    <li><strong>RULE 평가</strong> - 규칙으로 빠르게 검증 (주소가 실제로 있는지 등)</li>
-    <li><strong>LAAJ 평가</strong> - AI가 다시 한번 꼼꼼히 검토</li>
-</ol>
-
-<h4>3단계: 에러 처리</h4>
-<p>실패한 항목은 최대 5번까지 자동으로 재시도해요</p>
-
-<h4>4단계: 데이터 변환</h4>
-<p>DB에 넣기 좋은 형태로 데이터를 정리해요</p>
-
-<h4>5단계: DB 저장</h4>
-<p>중복 확인 후 Supabase 데이터베이스에 저장해요</p>
+<p>상세한 내용은 <a href="04-data-pipeline.html"><strong>데이터 파이프라인 문서</strong></a>를 참조하세요.</p>
 
 <h3>파이프라인 실행 명령어:</h3>
 
 <pre><code># 전체 파이프라인 한 번에 실행
-cd backend/geminiCLI-restaurant-crawling
-./scripts/crawling.sh tzuyang
+cd backend
+python3 geminiCLI-restaurant-pipeline.py
 
-# 평가만 따로 실행
-cd backend/geminiCLI-restaurant-evaluation  
-python scripts/evaluation-pipeline.py
-
-# DB에 데이터 넣기
-npx tsx scripts/insert_to_supabase.ts</code></pre>
-
-<hr />
-
-<h2>RULE vs LAAJ 평가 시스템</h2>
-
-<p>AI가 수집한 정보가 맞는지 두 가지 방법으로 검증합니다:</p>
-
-<h3>RULE 평가 (빠른 1차 검증)</h3>
-
-<p>정해진 규칙으로 빠르게 걸러내요:</p>
-<ul>
-    <li><strong>주소 검증</strong> - 네이버 Geocoding으로 실제 주소인지 확인</li>
-    <li><strong>영상 출현 여부</strong> - 자막에 맛집 이름이 언급되었는지</li>
-    <li><strong>카테고리 매칭</strong> - 음식점 카테고리가 올바른지</li>
-</ul>
-
-<h3>LAAJ 평가 (정밀한 2차 검증)</h3>
-
-<p><strong>LAAJ = LLM As A Judge</strong> (AI를 심판으로 사용)</p>
-
-<p>AI가 다시 한번 꼼꼼히 검토해서 점수를 매겨요:</p>
-<ul>
-    <li><strong>actual_visit_confirmed</strong> - 실제 방문했는지 true/false</li>
-    <li><strong>is_in_video</strong> - 영상에 실제로 나오는지 true/false</li>
-    <li><strong>review_faithfulness</strong> - 리뷰 내용 정확도 검증</li>
-</ul>
+# 특정 단계부터 실행 (2 = 평가부터)
+python3 geminiCLI-restaurant-pipeline.py --start-from 2</code></pre>
 
 <hr />
 
@@ -285,23 +271,21 @@ npx tsx scripts/insert_to_supabase.ts</code></pre>
 
 <p>Supabase를 통해 데이터를 조회하고 수정할 수 있어요:</p>
 
-<h3>맛집 목록 가져오기</h3>
+<h3>기본 사용 예시</h3>
 
 <pre><code>// React 컴포넌트에서 사용 예시
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
 function RestaurantList() {
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['restaurants'],
     queryFn: async () => {
-      // Supabase에서 승인된 맛집만 가져오기
       const { data, error } = await supabase
         .from('restaurants')
         .select('*')
-        .eq('status', 'approved')  // 승인된 것만
-        .order('created_at', { ascending: false })  // 최신순
-        .limit(20)  // 20개만
+        .eq('status', 'approved')
+        .limit(20)
       
       if (error) throw error
       return data
@@ -309,7 +293,6 @@ function RestaurantList() {
   })
 
   if (isLoading) return &lt;div&gt;로딩 중...&lt;/div&gt;
-  if (error) return &lt;div&gt;에러 발생!&lt;/div&gt;
 
   return (
     &lt;ul&gt;
@@ -320,89 +303,80 @@ function RestaurantList() {
   )
 }</code></pre>
 
-<h3>주요 API 엔드포인트</h3>
-
-<ul>
-    <li><code>GET /rest/v1/restaurants</code> - 맛집 목록</li>
-    <li><code>GET /rest/v1/restaurants?id=eq.{id}</code> - 특정 맛집 상세</li>
-    <li><code>GET /rest/v1/youtube_videos</code> - 유튜브 영상 목록</li>
-    <li><code>GET /rest/v1/reviews</code> - 리뷰 목록</li>
-    <li><code>POST /rest/v1/reviews</code> - 리뷰 작성 (로그인 필요)</li>
-</ul>
+<p>전체 API 엔드포인트와 상세 예시는 <a href="08-api-reference.html"><strong>API 레퍼런스</strong></a>를 참조하세요.</p>
 
 <hr />
 
-<h2>데이터베이스 주요 테이블</h2>
+<h2>자주 발생하는 문제</h2>
 
-<pre><code>-- restaurants: 맛집 정보
-id              UUID        -- 고유 ID
-name            TEXT        -- 맛집 이름
-address         TEXT        -- 주소
-lat, lng        FLOAT       -- 위도, 경도
-categories      TEXT[]      -- 카테고리 배열 (예: ['한식', '고기'])
-status          TEXT        -- 상태 (pending/approved/rejected)
-youtube_link    TEXT        -- 관련 유튜브 영상 링크
-tzuyang_review  TEXT        -- 쿠양님 리뷰 내용
-created_at      TIMESTAMP   -- 생성 시간
+<table>
+    <thead>
+        <tr>
+            <th>문제</th>
+            <th>증상</th>
+            <th>해결</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>API 한도 초과</td>
+            <td><code>429 Too Many Requests</code></td>
+            <td>요청 간격 늘리기</td>
+        </tr>
+        <tr>
+            <td>좌표 변환 실패</td>
+            <td>lat/lng가 null</td>
+            <td>주소 정규화 또는 수동 입력</td>
+        </tr>
+        <tr>
+            <td>RLS 오류</td>
+            <td>policy violation</td>
+            <td>service_role 키 사용</td>
+        </tr>
+    </tbody>
+</table>
 
--- reviews: 사용자 리뷰
-id              UUID        -- 고유 ID
-user_id         UUID        -- 작성자 ID
-restaurant_id   UUID        -- 맛집 ID
-content         TEXT        -- 리뷰 내용
-rating          INT         -- 별점 (1-5)
-images          TEXT[]      -- 사진 URL 배열
-created_at      TIMESTAMP   -- 작성 시간
-
--- profiles: 사용자 프로필
-id              UUID        -- 사용자 ID (auth.users와 연결)
-username        TEXT        -- 닉네임
-avatar_url      TEXT        -- 프로필 사진
-role            TEXT        -- 역할 (user/admin)</code></pre>
-
-<hr />
-
-<h2>성능 최적화 팁</h2>
-
-<h3>프론트엔드 최적화</h3>
-<ul>
-    <li><strong>코드 스플리팅</strong> - 지도 컴포넌트는 dynamic import로 필요할 때만 로드</li>
-    <li><strong>이미지 최적화</strong> - next/image 사용, AVIF/WebP 포맷</li>
-    <li><strong>React Query 캐싱</strong> - staleTime 설정으로 불필요한 요청 방지</li>
-</ul>
-
-<h3>적용 결과</h3>
-<ul>
-    <li>Lighthouse 점수: 24점 85점 이상</li>
-    <li>페이지 로딩 시간: 3.5초 2초</li>
-</ul>
-
-<hr />
-
-<h2>자주 발생하는 문제와 해결법</h2>
-
-<h3>문제: Gemini API 요청 한도 초과</h3>
-<p><strong>증상:</strong> <code>429 Too Many Requests</code> 에러</p>
-<p><strong>해결:</strong> 요청 간격을 늘리거나, 배치 크기를 줄이세요</p>
-
-<h3>문제: 좌표 변환 실패</h3>
-<p><strong>증상:</strong> latitude/longitude가 null</p>
-<p><strong>해결:</strong> 주소 형식이 네이버 Geocoding에서 인식 안 될 수 있어요. 주소를 정규화하거나 수동으로 좌표를 입력하세요</p>
-
-<h3>문제: Supabase RLS 오류</h3>
-<p><strong>증상:</strong> <code>row-level security policy violation</code></p>
-<p><strong>해결:</strong> 백엔드에서는 service_role 키를 사용해야 해요. anon 키로는 제한된 작업만 가능합니다</p>
-
-<p>더 많은 문제 해결 방법은 <a href="07-troubleshooting.html">트러블슈팅 가이드</a>를 참조하세요.</p>
+<p>더 많은 문제 해결 방법은 <a href="07-troubleshooting.html"><strong>트러블슈팅 가이드</strong></a>를 참조하세요.</p>
 
 <hr />
 
 <h2>관련 문서</h2>
 
-<ul>
-    <li><a href="00-quick-start.html"><strong>Quick Start</strong></a> - 빠른 시작 가이드</li>
-    <li><a href="09-environment-variables.html"><strong>환경변수 가이드</strong></a> - 모든 환경변수 상세</li>
-    <li><a href="03-architecture.html"><strong>아키텍처</strong></a> - 시스템 전체 구조</li>
-    <li><a href="04-data-pipeline.html"><strong>파이프라인</strong></a> - 데이터 수집 과정</li>
-    <li><a href="08-api-reference.html"><strong>API 레퍼런스</strong></a> - Supabase API 명세</li>
-</ul>
+<table>
+    <thead>
+        <tr>
+            <th>문서</th>
+            <th>내용</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><a href="00-quick-start.html">Quick Start</a></td>
+            <td>5분 빠른 시작 가이드</td>
+        </tr>
+        <tr>
+            <td><a href="03-architecture.html">아키텍처</a></td>
+            <td>시스템 전체 구조</td>
+        </tr>
+        <tr>
+            <td><a href="04-data-pipeline.html">파이프라인</a></td>
+            <td>데이터 수집 과정 상세</td>
+        </tr>
+        <tr>
+            <td><a href="06-database.html">데이터베이스</a></td>
+            <td>테이블 구조 및 RLS</td>
+        </tr>
+        <tr>
+            <td><a href="08-api-reference.html">API 레퍼런스</a></td>
+            <td>Supabase API 명세</td>
+        </tr>
+        <tr>
+            <td><a href="09-environment-variables.html">환경변수</a></td>
+            <td>모든 환경변수 상세</td>
+        </tr>
+        <tr>
+            <td><a href="13-performance.html">성능 최적화</a></td>
+            <td>Lighthouse 24점→85점 개선</td>
+        </tr>
+    </tbody>
+</table>
