@@ -1,91 +1,32 @@
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'primaryBorderColor': '#5a67d8', 'lineColor': '#718096', 'secondaryColor': '#f687b3', 'tertiaryColor': '#faf5ff', 'noteBkgColor': '#fed7e2', 'noteTextColor': '#702459', 'actorBkg': '#667eea', 'actorTextColor': '#fff', 'actorLineColor': '#5a67d8', 'signalColor': '#4a5568', 'signalTextColor': '#2d3748'}}}%%
+%%{init: {'theme': 'default'}}%%
 
 sequenceDiagram
     autonumber
-    
-    box rgb(237, 242, 255) 클라이언트 영역
-        participant U as 👤 User<br/>(웹 브라우저)
-        participant AM as 🔐 AuthModal<br/>(components/auth)
-        participant AC as ⚡ AuthContext<br/>(contexts/)
-    end
-    
-    box rgb(254, 243, 199) Supabase 서비스
-        participant SA as 🔑 Supabase Auth<br/>(GoTrue)
-        participant DB as 🗄️ PostgreSQL<br/>(profiles, user_roles)
-    end
+    participant U as User
+    participant F as Frontend
+    participant A as AuthContext
+    participant S as Supabase Auth
+    participant DB as Database
 
     rect rgb(230, 255, 237)
-        Note over U,DB: 🔓 LOGIN FLOW - 이메일/비밀번호 로그인
-        
-        U->>+AM: 1. 로그인 버튼 클릭
-        AM->>AM: 2. AuthModal 오픈<br/>📋 이메일/비밀번호 폼 표시
-        U->>AM: 3. 이메일: user@example.com<br/>비밀번호: ********
-        AM->>AM: 4. 유효성 검사<br/>✓ 이메일 형식 체크<br/>✓ 빈값 체크
-        
-        AM->>+AC: 5. signIn(email, password)
-        AC->>+SA: 6. signInWithPassword({<br/>  email: "user@example.com",<br/>  password: "********"<br/>})
-        
-        SA->>SA: 7. 자격 증명 검증<br/>🔐 bcrypt 해시 비교
-        
-        alt ✅ 인증 성공
-            SA-->>AC: 8. Return Session {<br/>  access_token,<br/>  refresh_token,<br/>  user: {...}<br/>}
-            
-            Note over AC: 9. onAuthStateChange 트리거<br/>이벤트: SIGNED_IN
-            
-            AC->>+DB: 10. checkAdminRole(userId)<br/>SELECT role FROM user_roles<br/>WHERE user_id = ? AND role = 'admin'
-            DB-->>-AC: 11. { role: "admin" | null }
-            
-            AC->>+DB: 12. checkProfileStatus(userId)<br/>SELECT nickname FROM profiles<br/>WHERE user_id = ?
-            DB-->>-AC: 13. { nickname: "쯔동이" }
-            
-            AC->>AC: 14. State 업데이트<br/>├─ user: {...}<br/>├─ isAdmin: true/false<br/>└─ needsNicknameSetup: false
-            
-            AC-->>-AM: 15. Auth State 변경 알림
-            AM-->>-U: 16. ✅ 로그인 성공!<br/>Toast: "환영합니다!"
-            
-        else ❌ 인증 실패
-            SA-->>AC: 8. Error: Invalid credentials
-            AC-->>AM: 9. 에러 전달
-            AM-->>U: 10. ❌ 로그인 실패<br/>Toast: "이메일 또는 비밀번호가 올바르지 않습니다"
-        end
+        Note over U,DB: LOGIN FLOW
+        U->>F: Open Login Modal
+        U->>F: Enter Email/Password
+        F->>A: signIn(email, password)
+        A->>S: signInWithPassword()
+        S-->>A: Return Session + JWT
+        A->>DB: checkAdminRole()
+        A->>DB: checkProfileStatus()
+        A-->>F: Update Auth State
+        F-->>U: Login Success
     end
 
-    rect rgb(255, 237, 230)
-        Note over U,DB: 📝 SIGNUP FLOW - 회원가입
-        
-        U->>+AM: 1. 회원가입 탭 클릭
-        AM->>AM: 2. 회원가입 폼 표시<br/>├─ 닉네임 입력<br/>├─ 이메일 입력<br/>├─ 비밀번호 입력<br/>└─ 비밀번호 확인
-        
-        U->>AM: 3. 폼 입력<br/>닉네임: "쯔동이"<br/>이메일: "new@example.com"<br/>비밀번호: "SecureP@ss123"
-        
-        AM->>AM: 4. 유효성 검사<br/>✓ 비밀번호 8자 이상<br/>✓ 비밀번호 일치 확인<br/>✓ 필수 필드 체크
-        
-        AM->>+AC: 5. signUp(email, password, username)
-        AC->>+SA: 6. auth.signUp({<br/>  email,<br/>  password,<br/>  options: {<br/>    data: { nickname }<br/>  }<br/>})
-        
-        SA->>+DB: 7. INSERT INTO auth.users<br/>+ Trigger: create_profile()
-        DB->>DB: 8. INSERT INTO profiles<br/>(user_id, nickname, created_at)
-        DB-->>-SA: 9. User + Profile 생성 완료
-        
-        SA-->>-AC: 10. Return Success<br/>{ user: {...} }
-        AC-->>-AM: 11. 회원가입 성공
-        AM-->>-U: 12. ✅ 회원가입 완료!<br/>Toast: "로그인해주세요"
-    end
-
-    rect rgb(237, 233, 254)
-        Note over U,DB: 🔄 SESSION RESTORE - 세션 복원 (페이지 새로고침)
-        
-        U->>+AC: 1. App 초기화 (useEffect)
-        AC->>+SA: 2. supabase.auth.getSession()
-        SA->>SA: 3. localStorage에서<br/>refresh_token 확인
-        
-        alt 유효한 세션 존재
-            SA-->>AC: 4. Return existing session
-            AC->>DB: 5. checkAdminRole + checkProfileStatus
-            DB-->>AC: 6. 역할 & 프로필 정보
-            AC-->>-U: 7. 로그인 상태 유지 ✅
-        else 세션 만료/없음
-            SA-->>AC: 4. Return null
-            AC-->>-U: 5. 로그아웃 상태 🔓
-        end
+    rect rgb(255, 243, 224)
+        Note over U,DB: SIGNUP FLOW
+        U->>F: Enter Email/Password/Nickname
+        F->>A: signUp(email, password, nickname)
+        A->>S: auth.signUp()
+        S->>DB: Create User + Profile
+        S-->>A: Return Success
+        F-->>U: Signup Complete
     end

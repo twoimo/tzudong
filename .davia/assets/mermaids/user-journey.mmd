@@ -1,150 +1,43 @@
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568', 'secondaryColor': '#48bb78', 'tertiaryColor': '#f687b3'}}}%%
+%%{init: {'theme': 'default'}}%%
 
-flowchart TB
-    %% ===== 타이틀 =====
-    TITLE["👤 사용자 여정 (User Journey)<br/>━━━━━━━━━━━━━━━━━━━━━━━<br/>쯔동여지도 사용자 경험 흐름"]
-
-    %% ===== 1. 첫 방문 =====
-    subgraph LANDING["🏠 1. 첫 방문"]
-        direction TB
-        
-        L1["🌐 웹사이트 접속<br/>tzudong.vercel.app"]
-        L2["🗺️ 메인 지도 화면<br/>───────────────<br/>• 네이버 지도 표시<br/>• 맛집 마커 로드<br/>• 카테고리 필터"]
-        L3["👀 비로그인 상태<br/>───────────────<br/>✓ 맛집 검색 가능<br/>✓ 지도 탐색 가능<br/>✗ 리뷰 작성 불가<br/>✗ 제보 불가"]
+flowchart LR
+    subgraph VISIT["1. Visit"]
+        V1[Open Website]
+        V2[View Map]
     end
 
-    %% ===== 2. 맛집 탐색 =====
-    subgraph EXPLORE["🔍 2. 맛집 탐색"]
-        direction TB
-        
-        subgraph SEARCH["검색 기능"]
-            E1["🔎 맛집 검색<br/>───────────────<br/>• 이름으로 검색<br/>• 주소로 검색<br/>• 실시간 자동완성"]
-        end
-        
-        subgraph FILTER["필터 기능"]
-            E2["📂 카테고리 필터<br/>───────────────<br/>• 한식/중식/일식<br/>• 양식/분식/카페<br/>• 기타"]
-            E3["📍 지역 필터<br/>───────────────<br/>• 시/도 선택<br/>• 구/군 선택"]
-        end
-        
-        subgraph MAP_INTERACT["지도 인터랙션"]
-            E4["🗺️ 지도 탐색<br/>───────────────<br/>• 줌 인/아웃<br/>• 드래그 이동<br/>• 현재 위치"]
-            E5["📍 마커 클릭<br/>───────────────<br/>• 맛집 프리뷰<br/>• 빠른 정보 확인"]
-        end
+    subgraph EXPLORE["2. Explore"]
+        E1[Search]
+        E2[Filter]
+        E3[Click Marker]
     end
 
-    %% ===== 3. 맛집 상세 =====
-    subgraph DETAIL["📋 3. 맛집 상세 보기"]
-        direction TB
-        
-        subgraph INFO["기본 정보"]
-            D1["🍽️ 맛집 정보<br/>───────────────<br/>• 식당명<br/>• 주소 (복사 가능)<br/>• 전화번호<br/>• 카테고리"]
-        end
-        
-        subgraph MEDIA["미디어"]
-            D2["🎬 유튜브 영상<br/>───────────────<br/>• 임베드 플레이어<br/>• 쯔양 방문 영상"]
-            D3["💬 쯔양 코멘트<br/>───────────────<br/>• AI 추출 코멘트<br/>• 영상 내 언급 내용"]
-        end
-        
-        subgraph REVIEW_LIST["리뷰 목록"]
-            D4["✍️ 사용자 리뷰<br/>───────────────<br/>• 리뷰 목록<br/>• 좋아요 수<br/>• 사진 갤러리"]
-        end
+    subgraph DETAIL["3. Detail"]
+        D1[Restaurant Info]
+        D2[YouTube Video]
+        D3[Reviews]
     end
 
-    %% ===== 4. 회원가입/로그인 =====
-    subgraph AUTH["🔐 4. 회원가입 / 로그인"]
-        direction TB
-        
-        A1["📝 회원가입<br/>───────────────<br/>• 이메일 입력<br/>• 비밀번호 (8자↑)<br/>• 닉네임 설정"]
-        A2["🔑 로그인<br/>───────────────<br/>• 이메일/비밀번호<br/>• 세션 자동 유지"]
-        A3["👤 로그인 완료<br/>───────────────<br/>✓ 리뷰 작성 가능<br/>✓ 제보 가능<br/>✓ 스탬프 수집"]
+    subgraph AUTH["4. Auth"]
+        A1[Login]
+        A2[Signup]
     end
 
-    %% ===== 5. 리뷰 작성 =====
-    subgraph REVIEW["✏️ 5. 리뷰 작성"]
-        direction TB
-        
-        R1["📝 리뷰 폼<br/>───────────────<br/>• 방문일 선택<br/>• 리뷰 내용 입력<br/>• 사진 업로드 (5장)"]
-        R2["✅ 리뷰 등록<br/>───────────────<br/>• 즉시 반영<br/>• 마이페이지 기록"]
-        R3["❤️ 리뷰 좋아요<br/>───────────────<br/>• 다른 리뷰 좋아요<br/>• 좋아요 취소"]
+    subgraph ACTION["5. Action"]
+        AC1[Write Review]
+        AC2[Submit Restaurant]
+        AC3[Collect Stamp]
     end
 
-    %% ===== 6. 맛집 제보 =====
-    subgraph SUBMIT["📥 6. 맛집 제보"]
-        direction TB
-        
-        S1["📋 제보 폼<br/>───────────────<br/>• 식당명 (필수)<br/>• 주소 (필수)<br/>• 유튜브 링크 (필수)<br/>• 카테고리<br/>• 설명"]
-        S2["⏳ 심사 대기<br/>───────────────<br/>• status = pending<br/>• 관리자 심사 대기"]
-        S3["📊 결과 확인<br/>───────────────<br/>• 승인됨 ✅<br/>• 거절됨 ❌ + 사유"]
+    subgraph MYPAGE["6. MyPage"]
+        M1[My Reviews]
+        M2[My Submissions]
+        M3[My Stamps]
     end
 
-    %% ===== 7. 마이페이지 =====
-    subgraph MYPAGE["👤 7. 마이페이지"]
-        direction TB
-        
-        M1["📊 활동 통계<br/>───────────────<br/>• 리뷰 수<br/>• 스탬프 수<br/>• 신뢰도 점수"]
-        M2["✍️ 내 리뷰<br/>───────────────<br/>• 작성한 리뷰 목록<br/>• 수정/삭제 가능"]
-        M3["📥 내 제보<br/>───────────────<br/>• 제보 목록<br/>• 심사 상태 확인"]
-        M4["🏆 스탬프북<br/>───────────────<br/>• 방문한 맛집<br/>• 스탬프 컬렉션"]
-    end
-
-    %% ===== 8. 스탬프 =====
-    subgraph STAMP["🏆 8. 스탬프 수집"]
-        direction TB
-        
-        ST1["📍 맛집 방문<br/>───────────────<br/>• 실제 방문<br/>• 리뷰 작성"]
-        ST2["🎫 스탬프 획득<br/>───────────────<br/>• 방문 인증<br/>• 스탬프 추가"]
-        ST3["🏅 랭킹 반영<br/>───────────────<br/>• 리더보드 순위<br/>• 신뢰도 상승"]
-    end
-
-    %% ===== 연결 =====
-    TITLE --> LANDING
-    L1 --> L2 --> L3
+    V1 --> V2 --> EXPLORE
+    E1 & E2 --> E3 --> DETAIL
+    D1 & D2 --> D3
     
-    L3 --> EXPLORE
-    E1 --> E5
-    E2 --> E5
-    E3 --> E5
-    E4 --> E5
-    
-    E5 --> DETAIL
-    D1 --> D2 --> D3 --> D4
-    
-    L3 -->|"로그인 필요"| AUTH
-    A1 --> A3
-    A2 --> A3
-    
-    A3 --> REVIEW
-    R1 --> R2
-    D4 --> R3
-    
-    A3 --> SUBMIT
-    S1 --> S2 --> S3
-    
-    A3 --> MYPAGE
-    M1 --> M2
-    M2 --> M3
-    M3 --> M4
-    
-    R2 --> STAMP
-    ST1 --> ST2 --> ST3
-
-    %% ===== 스타일 =====
-    classDef title fill:#1a202c,stroke:#2d3748,color:#fff,stroke-width:3px
-    classDef landing fill:#667eea,stroke:#5a67d8,color:#fff
-    classDef explore fill:#4299e1,stroke:#3182ce,color:#fff
-    classDef detail fill:#38b2ac,stroke:#319795,color:#fff
-    classDef auth fill:#ed8936,stroke:#dd6b20,color:#fff
-    classDef review fill:#48bb78,stroke:#38a169,color:#fff
-    classDef submit fill:#9f7aea,stroke:#805ad5,color:#fff
-    classDef mypage fill:#f687b3,stroke:#d53f8c,color:#fff
-    classDef stamp fill:#ecc94b,stroke:#d69e2e,color:#744210
-
-    class TITLE title
-    class L1,L2,L3 landing
-    class E1,E2,E3,E4,E5 explore
-    class D1,D2,D3,D4 detail
-    class A1,A2,A3 auth
-    class R1,R2,R3 review
-    class S1,S2,S3 submit
-    class M1,M2,M3,M4 mypage
-    class ST1,ST2,ST3 stamp
+    AUTH --> ACTION
+    AC1 & AC2 & AC3 --> MYPAGE

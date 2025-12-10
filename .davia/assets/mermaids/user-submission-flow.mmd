@@ -1,133 +1,39 @@
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'primaryBorderColor': '#5a67d8', 'lineColor': '#718096', 'secondaryColor': '#48bb78', 'tertiaryColor': '#f687b3', 'noteBkgColor': '#e9d8fd', 'noteTextColor': '#553c9a', 'actorBkg': '#667eea', 'actorTextColor': '#fff', 'signalColor': '#4a5568'}}}%%
+%%{init: {'theme': 'default'}}%%
 
 sequenceDiagram
     autonumber
-    
-    box rgb(237, 242, 255) 사용자 영역
-        participant U as 👤 User<br/>(일반 사용자)
-        participant F as 🖥️ Frontend<br/>(Next.js App)
-        participant SM as 📝 SubmissionModal<br/>(제보 양식)
-        participant MP as 👤 MyPagePanel<br/>(마이페이지)
-    end
-    
-    box rgb(254, 243, 199) 백엔드 서비스
-        participant S as 🗄️ Supabase<br/>(PostgreSQL)
-        participant N as 🔔 Notification<br/>(알림 서비스)
-    end
-    
-    box rgb(254, 226, 226) 관리자 영역
-        participant A as 👨‍💼 Admin<br/>(관리자)
-        participant AP as 🎛️ AdminPanel<br/>(관리자 패널)
-    end
+    participant U as User
+    participant F as Frontend
+    participant S as Supabase
+    participant A as Admin
+    participant N as Notification
 
     rect rgb(230, 255, 237)
-        Note over U,AP: 📝 STEP 1: 사용자 맛집 제보
-        
-        U->>+F: 1. "맛집 제보" 버튼 클릭
-        F->>F: 2. 로그인 상태 확인
-        
-        alt ❌ 비로그인 상태
-            F->>U: 3a. AuthModal 표시
-            U->>F: 3b. 로그인 수행
-            F->>F: 3c. 로그인 완료
-        end
-        
-        F->>+SM: 4. RestaurantSubmissionModal 오픈
-        SM->>U: 5. 제보 양식 표시
-        
-        Note over SM: 📋 입력 필드<br/>━━━━━━━━━━━━<br/>• 식당명 (필수)<br/>• 주소 (필수)<br/>• 유튜브 링크 (필수)<br/>• 카테고리 (선택)<br/>• 설명 (선택)
-        
-        U->>SM: 6. 폼 입력 완료
-        
-        SM->>SM: 7. 유효성 검사<br/>✓ 필수 필드 확인<br/>✓ URL 형식 확인<br/>✓ 주소 형식 확인
-        
-        SM->>+S: 8. INSERT INTO restaurant_submissions
-        Note over S: 🗄️ 저장 데이터<br/>━━━━━━━━━━━━<br/>• user_id<br/>• restaurant_name<br/>• address<br/>• youtube_link<br/>• category<br/>• description<br/>• status = 'pending'<br/>• created_at = NOW()
-        
-        S-->>-SM: 9. 저장 성공 응답
-        SM-->>U: 10. ✅ 제보 완료!<br/>Toast: "심사 후 등록됩니다"
-        deactivate SM
-        deactivate F
+        Note over U,N: SUBMIT RESTAURANT
+        U->>F: Click Submit Button
+        F->>F: Check Login Status
+        U->>F: Fill Form
+        F->>S: INSERT submission
+        S-->>U: Success Toast
     end
 
     rect rgb(255, 243, 224)
-        Note over U,AP: ⏳ STEP 2: 관리자 심사 대기
-        
-        A->>+AP: 11. 관리자 패널 접속
-        AP->>+S: 12. 대기중 제보 조회<br/>SELECT * FROM restaurant_submissions<br/>WHERE status = 'pending'<br/>ORDER BY created_at ASC
-        S-->>-AP: 13. 제보 목록 반환
-        
-        Note over AP: 📋 제보 목록 표시<br/>━━━━━━━━━━━━<br/>• 제보자 닉네임<br/>• 식당명<br/>• 제보 일시<br/>• 상태 배지
-        
-        AP->>AP: 14. 제보 상세 확인
-        
-        Note over AP: 🔍 심사 항목<br/>━━━━━━━━━━━━<br/>• 유튜브 영상 확인<br/>• 실제 맛집 여부<br/>• 주소 정확성<br/>• 중복 여부
-        
-        AP->>+S: 15. Naver Geocoding API<br/>주소 → 좌표 변환
-        S-->>-AP: 16. 좌표 결과 반환<br/>{ lat, lng, road_address, jibun_address }
-        
-        AP->>AP: 17. 지도에서 위치 확인
-    end
-
-    rect rgb(220, 252, 231)
-        Note over U,AP: ✅ STEP 3-A: 승인 처리
-        
-        alt ✅ 승인 결정
-            A->>AP: 18. "승인" 버튼 클릭
-            
-            AP->>+S: 19. 중복 검사<br/>SELECT FROM restaurants<br/>WHERE name = ? AND jibun_address = ?
-            S-->>-AP: 20. 중복 없음 확인
-            
-            AP->>+S: 21. INSERT INTO restaurants<br/>status = 'approved'
-            S-->>-AP: 22. 맛집 등록 완료
-            
-            AP->>+S: 23. UPDATE restaurant_submissions<br/>SET status = 'approved'<br/>reviewed_by_admin_id = ?<br/>reviewed_at = NOW()
-            S-->>-AP: 24. 제보 상태 업데이트 완료
-            
-            AP->>+N: 25. 알림 생성 요청
-            N->>+S: 26. INSERT INTO notifications<br/>type = 'submission_approved'
-            S-->>-N: 27. 알림 저장 완료
-            N-->>-AP: 28. 알림 발송 완료
-            
-            Note over U: 🔔 푸시 알림<br/>"제보하신 맛집이<br/>등록되었습니다!"
-        end
-        deactivate AP
-    end
-
-    rect rgb(254, 226, 226)
-        Note over U,AP: ❌ STEP 3-B: 거절 처리
-        
-        alt ❌ 거절 결정
-            A->>+AP: 18. "거절" 버튼 클릭
-            AP->>A: 19. 거절 사유 입력 요청
-            
-            Note over AP: 📝 거절 사유 예시<br/>━━━━━━━━━━━━<br/>• 중복된 맛집입니다<br/>• 영상에서 확인 불가<br/>• 주소가 정확하지 않음<br/>• 폐업한 가게입니다
-            
-            A->>AP: 20. 거절 사유 입력
-            
-            AP->>+S: 21. UPDATE restaurant_submissions<br/>SET status = 'rejected'<br/>rejection_reason = '...'<br/>reviewed_by_admin_id = ?
-            S-->>-AP: 22. 제보 상태 업데이트 완료
-            deactivate AP
+        Note over U,N: ADMIN REVIEW
+        A->>S: Query Pending
+        A->>A: Review & Geocode
+        alt Approve
+            A->>S: INSERT restaurant
+            A->>S: UPDATE status=approved
+            S->>N: Create Notification
+            N-->>U: Push Alert
+        else Reject
+            A->>S: UPDATE status=rejected
         end
     end
 
     rect rgb(237, 233, 254)
-        Note over U,AP: 👀 STEP 4: 사용자 제보 현황 확인
-        
-        U->>+F: 29. 마이페이지 접속
-        F->>+MP: 30. MyPagePanel 오픈
-        MP->>+S: 31. 내 제보 조회<br/>SELECT * FROM restaurant_submissions<br/>WHERE user_id = ?<br/>ORDER BY created_at DESC
-        S-->>-MP: 32. 제보 목록 반환
-        
-        MP->>U: 33. 제보 현황 표시
-        
-        Note over U: 📊 제보 상태 표시<br/>━━━━━━━━━━━━<br/>⏳ pending: 심사중<br/>✅ approved: 승인됨<br/>❌ rejected: 거절됨<br/>   + 거절 사유 표시
-        
-        alt 거절된 제보
-            MP->>U: 34. 거절 사유 표시<br/>"거절 사유: {reason}"
-            U->>U: 35. 정보 수정 후 재제보 가능
-        end
-        
-        deactivate MP
-        deactivate F
+        Note over U,N: CHECK STATUS
+        U->>F: Open MyPage
+        F->>S: Query submissions
+        S-->>U: Show Status
     end

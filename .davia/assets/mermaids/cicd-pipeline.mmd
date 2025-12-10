@@ -1,118 +1,40 @@
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568'}}}%%
+%%{init: {'theme': 'default'}}%%
 
-flowchart TB
-    %% ===== CI/CD 전체 흐름 =====
-    TITLE["🚀 CI/CD 파이프라인<br/>━━━━━━━━━━━━━━━━━━━━<br/>GitHub Actions + Vercel"]
-
-    %% ===== 트리거 =====
-    subgraph TRIGGERS["⚡ 트리거"]
-        direction LR
-        TR1["🔀 Push to main<br/>프로덕션 배포"]
-        TR2["🔀 Push to develop<br/>미리보기 배포"]
-        TR3["📋 Pull Request<br/>CI 검사"]
-        TR4["⏰ Schedule<br/>파이프라인 실행"]
+flowchart LR
+    subgraph TRIGGER["Triggers"]
+        T1[Push to main]
+        T2[Push to develop]
+        T3[Pull Request]
+        T4[Schedule]
     end
 
-    %% ===== CI 워크플로우 =====
-    subgraph CI["🔍 CI (Continuous Integration)"]
-        direction TB
-        
-        subgraph LINT["코드 품질 검사"]
-            CI1["📦 Install Dependencies<br/>pnpm install"]
-            CI2["🔍 ESLint<br/>코드 스타일 검사"]
-            CI3["📘 TypeScript<br/>타입 체크"]
-        end
-        
-        subgraph BUILD["빌드 검사"]
-            CI4["🏗️ Next.js Build<br/>next build"]
-            CI5["📊 Bundle Analysis<br/>번들 크기 확인"]
-        end
-        
-        subgraph TEST["테스트"]
-            CI6["🧪 Unit Tests<br/>Jest"]
-            CI7["🎭 E2E Tests<br/>Playwright"]
-        end
+    subgraph CI["CI"]
+        C1[Install deps]
+        C2[ESLint]
+        C3[TypeScript]
+        C4[Build]
     end
 
-    %% ===== CD 워크플로우 =====
-    subgraph CD["🚀 CD (Continuous Deployment)"]
-        direction TB
-        
-        subgraph VERCEL["Vercel 배포"]
-            CD1["📤 Push to Vercel<br/>자동 감지"]
-            CD2["🔧 Build on Vercel<br/>빌드 실행"]
-            CD3["🌐 Deploy<br/>배포 완료"]
-        end
-        
-        subgraph ENVS["배포 환경"]
-            ENV1["🟢 Production<br/>main 브랜치<br/>tzudong.vercel.app"]
-            ENV2["🟡 Preview<br/>develop 브랜치<br/>tzudong-*.vercel.app"]
-            ENV3["🔵 PR Preview<br/>PR별 미리보기"]
-        end
+    subgraph CD["CD"]
+        D1[Vercel Build]
+        D2[Deploy]
     end
 
-    %% ===== 파이프라인 워크플로우 =====
-    subgraph PIPELINE["🤖 Data Pipeline Workflow"]
-        direction TB
-        
-        subgraph SCHEDULE["스케줄 실행"]
-            PL1["⏰ Cron Trigger<br/>0 0 */2 * *<br/>2일마다"]
-        end
-        
-        subgraph JOBS["파이프라인 작업"]
-            PL2["📥 Crawling Job<br/>맛집 크롤링"]
-            PL3["⭐ Evaluation Job<br/>AI 평가"]
-            PL4["💾 Insert Job<br/>DB 저장"]
-        end
-        
-        subgraph NOTIFY["완료 알림"]
-            PL5["📧 Slack/Email<br/>실행 결과 통보"]
-        end
+    subgraph ENV["Environments"]
+        E1[Production]
+        E2[Preview]
     end
 
-    %% ===== 환경 변수 =====
-    subgraph SECRETS["🔐 Secrets & Env Vars"]
-        direction LR
-        S1["SUPABASE_URL<br/>SUPABASE_ANON_KEY"]
-        S2["NAVER_CLIENT_ID<br/>NAVER_CLIENT_SECRET"]
-        S3["GOOGLE_MAPS_API_KEY"]
-        S4["GEMINI_API_KEY"]
+    subgraph PIPE["Pipeline"]
+        P1[Crawling]
+        P2[Evaluation]
+        P3[Insert DB]
     end
 
-    %% ===== 연결 =====
-    TITLE --> TRIGGERS
+    T1 & T2 & T3 --> CI
+    C1 --> C2 --> C3 --> C4
+    C4 --> CD
+    D1 --> D2 --> ENV
     
-    TR1 --> CI
-    TR2 --> CI
-    TR3 --> CI
-    TR4 --> PIPELINE
-    
-    CI1 --> CI2 --> CI3
-    CI3 --> CI4 --> CI5
-    CI4 --> CI6 --> CI7
-    
-    CI --> CD
-    CD1 --> CD2 --> CD3
-    CD3 --> ENVS
-    
-    PL1 --> PL2 --> PL3 --> PL4 --> PL5
-    
-    SECRETS -.-> CI
-    SECRETS -.-> CD
-    SECRETS -.-> PIPELINE
-
-    %% ===== 스타일 =====
-    classDef title fill:#1a202c,stroke:#2d3748,color:#fff,stroke-width:3px
-    classDef trigger fill:#4299e1,stroke:#3182ce,color:#fff
-    classDef ci fill:#48bb78,stroke:#38a169,color:#fff
-    classDef cd fill:#667eea,stroke:#5a67d8,color:#fff
-    classDef pipeline fill:#ed8936,stroke:#dd6b20,color:#fff
-    classDef env fill:#38b2ac,stroke:#319795,color:#fff
-    classDef secrets fill:#e53e3e,stroke:#c53030,color:#fff
-
-    class TITLE title
-    class TR1,TR2,TR3,TR4 trigger
-    class CI1,CI2,CI3,CI4,CI5,CI6,CI7 ci
-    class CD1,CD2,CD3,ENV1,ENV2,ENV3 cd
-    class PL1,PL2,PL3,PL4,PL5 pipeline
-    class S1,S2,S3,S4 secrets
+    T4 --> PIPE
+    P1 --> P2 --> P3

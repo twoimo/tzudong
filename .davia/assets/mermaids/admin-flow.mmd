@@ -1,143 +1,33 @@
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568', 'secondaryColor': '#48bb78', 'tertiaryColor': '#f687b3', 'background': '#f7fafc', 'mainBkg': '#edf2f7', 'nodeBorder': '#4a5568', 'clusterBkg': '#e2e8f0', 'clusterBorder': '#a0aec0', 'titleColor': '#1a202c', 'edgeLabelBackground': '#fff'}}}%%
+%%{init: {'theme': 'default'}}%%
 
 flowchart TB
-    %% ===== 메인 대시보드 =====
-    subgraph DASHBOARD["🏠 Admin Dashboard"]
-        direction TB
-        HOME["🎛️ Dashboard Home<br/>───────────<br/>📊 통계 요약<br/>📋 빠른 접근 메뉴"]
-        
-        subgraph MENU["📌 주요 메뉴"]
-            direction LR
-            M1["📥 제보 심사<br/>Pending: {count}"]
-            M2["🍽️ 맛집 관리<br/>Total: {count}"]
-            M3["📊 평가 현황<br/>Evaluation"]
-            M4["📢 공지사항<br/>Announcements"]
-        end
+    subgraph DASH["Admin Dashboard"]
+        D1[Submissions]
+        D2[Restaurants]
+        D3[Evaluations]
     end
 
-    %% ===== 제보 심사 섹션 =====
-    subgraph SUBMISSION["📥 제보 심사 (AdminSubmissionPanel)"]
-        direction TB
-        
-        subgraph LIST["📋 제보 목록"]
-            S_PENDING["⏳ 대기중<br/>status = 'pending'"]
-            S_APPROVED["✅ 승인됨<br/>status = 'approved'"]
-            S_REJECTED["❌ 거절됨<br/>status = 'rejected'"]
-        end
-        
-        subgraph REVIEW["🔍 상세 심사"]
-            R_VIEW["📄 제보 상세<br/>───────────<br/>• 식당명<br/>• 주소<br/>• 유튜브 링크<br/>• 카테고리<br/>• 제보자 정보"]
-            
-            R_GEO["🗺️ 지오코딩<br/>───────────<br/>Naver Geocoding API<br/>주소 → 좌표 변환<br/>복수 결과 선택 가능"]
-            
-            R_PREVIEW["👀 미리보기<br/>───────────<br/>지도에서 위치 확인<br/>주변 중복 맛집 표시"]
-        end
-        
-        subgraph ACTION["⚡ 심사 액션"]
-            A_APPROVE["✅ 승인<br/>approveMutation"]
-            A_REJECT["❌ 거절<br/>rejectMutation"]
-        end
+    subgraph REVIEW["Review Process"]
+        R1[View Details]
+        R2[Geocode Address]
+        R3{Decision}
     end
 
-    %% ===== 승인 프로세스 =====
-    subgraph APPROVE_FLOW["✅ 승인 처리 프로세스"]
-        direction TB
-        
-        AP1["1️⃣ 중복 검사<br/>───────────<br/>SELECT FROM restaurants<br/>WHERE name = ?<br/>AND jibun_address = ?"]
-        
-        AP2{"🔄 중복 여부"}
-        
-        AP3["2️⃣ 삭제된 레코드?<br/>status = 'deleted'"]
-        
-        AP4["3️⃣ 레코드 복원<br/>───────────<br/>UPDATE restaurants<br/>SET status = 'approved'"]
-        
-        AP5["4️⃣ 신규 등록<br/>───────────<br/>INSERT INTO restaurants<br/>• name, address<br/>• lat, lng<br/>• categories<br/>• youtube_link<br/>• status = 'approved'"]
-        
-        AP6["5️⃣ 제보 상태 업데이트<br/>───────────<br/>UPDATE restaurant_submissions<br/>SET status = 'approved'<br/>reviewed_by_admin_id = ?<br/>reviewed_at = NOW()"]
-        
-        AP7["6️⃣ 알림 발송<br/>───────────<br/>createNewRestaurantNotification()<br/>제보자에게 승인 알림"]
+    subgraph APPROVE["Approve Flow"]
+        A1[Check Duplicate]
+        A2[Insert Restaurant]
+        A3[Update Status]
+        A4[Send Notification]
     end
 
-    %% ===== 거절 프로세스 =====
-    subgraph REJECT_FLOW["❌ 거절 처리 프로세스"]
-        direction TB
-        
-        RJ1["1️⃣ 거절 사유 입력<br/>───────────<br/>필수 입력 항목<br/>• 중복 등록<br/>• 정보 부정확<br/>• 영상 확인 불가"]
-        
-        RJ2["2️⃣ 제보 상태 업데이트<br/>───────────<br/>UPDATE restaurant_submissions<br/>SET status = 'rejected'<br/>rejection_reason = ?<br/>reviewed_by_admin_id = ?"]
+    subgraph REJECT["Reject Flow"]
+        J1[Enter Reason]
+        J2[Update Status]
     end
 
-    %% ===== 맛집 관리 섹션 =====
-    subgraph RESTAURANT["🍽️ 맛집 관리 (AdminRestaurantModal)"]
-        direction TB
-        
-        subgraph R_LIST["📋 맛집 목록"]
-            RL1["🔍 검색 & 필터<br/>───────────<br/>• 이름 검색<br/>• 카테고리 필터<br/>• 지역 필터<br/>• 상태 필터"]
-            RL2["📊 목록 표시<br/>───────────<br/>무한 스크롤<br/>IntersectionObserver"]
-        end
-        
-        subgraph R_ACTION["⚡ 관리 액션"]
-            RA1["✏️ 정보 수정<br/>───────────<br/>• 이름 변경<br/>• 주소 수정<br/>• 카테고리 변경<br/>• 영상 링크 수정"]
-            
-            RA2["🗑️ 삭제 (Soft)<br/>───────────<br/>UPDATE restaurants<br/>SET status = 'deleted'<br/>deleted_at = NOW()"]
-            
-            RA3["♻️ 복원<br/>───────────<br/>UPDATE restaurants<br/>SET status = 'approved'<br/>deleted_at = NULL"]
-        end
-    end
-
-    %% ===== 평가 관리 섹션 =====
-    subgraph EVALUATION["📊 평가 관리 (EvaluationTable)"]
-        direction TB
-        
-        EV1["📋 평가 목록<br/>───────────<br/>restaurant_evaluations<br/>파이프라인 실행 결과"]
-        
-        EV2["🔍 상세 보기<br/>───────────<br/>• 원본 크롤링 데이터<br/>• AI 평가 결과<br/>• RULE/LAAJ 점수"]
-        
-        EV3["🔗 맛집 연결<br/>───────────<br/>evaluation_id로<br/>restaurants와 연결"]
-    end
-
-    %% ===== 연결 관계 =====
-    HOME --> MENU
-    M1 --> SUBMISSION
-    M2 --> RESTAURANT
-    M3 --> EVALUATION
+    D1 --> R1 --> R2 --> R3
+    R3 -->|Approve| A1 --> A2 --> A3 --> A4
+    R3 -->|Reject| J1 --> J2
     
-    S_PENDING --> R_VIEW
-    R_VIEW --> R_GEO
-    R_GEO --> R_PREVIEW
-    R_PREVIEW --> ACTION
-    
-    A_APPROVE --> APPROVE_FLOW
-    A_REJECT --> REJECT_FLOW
-    
-    AP1 --> AP2
-    AP2 -->|"중복 없음"| AP5
-    AP2 -->|"중복 발견"| AP3
-    AP3 -->|"삭제된 레코드"| AP4
-    AP3 -->|"활성 레코드"| RJ1
-    AP4 --> AP6
-    AP5 --> AP6
-    AP6 --> AP7
-    
-    RJ1 --> RJ2
-    
-    RL1 --> RL2
-    RL2 --> R_ACTION
-
-    %% ===== 스타일 정의 =====
-    classDef dashboard fill:#667eea,stroke:#5a67d8,color:#fff,stroke-width:2px
-    classDef menu fill:#4299e1,stroke:#3182ce,color:#fff
-    classDef pending fill:#ecc94b,stroke:#d69e2e,color:#744210
-    classDef approved fill:#48bb78,stroke:#38a169,color:#fff
-    classDef rejected fill:#fc8181,stroke:#f56565,color:#fff
-    classDef action fill:#9f7aea,stroke:#805ad5,color:#fff
-    classDef process fill:#fff,stroke:#4a5568,color:#2d3748
-    classDef database fill:#faf5ff,stroke:#9f7aea,color:#553c9a
-
-    class HOME dashboard
-    class M1,M2,M3,M4 menu
-    class S_PENDING pending
-    class S_APPROVED,AP5,AP6,AP7 approved
-    class S_REJECTED,RJ1,RJ2 rejected
-    class A_APPROVE,A_REJECT,RA1,RA2,RA3 action
-    class R_VIEW,R_GEO,R_PREVIEW,AP1,AP2,AP3,AP4 process
+    D2 --> EDIT[Edit/Delete]
+    D3 --> VIEW[View Results]
