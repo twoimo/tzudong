@@ -38,7 +38,7 @@ export function useHomeState(mapMode: 'domestic' | 'overseas') {
         address: '',
         phone: '',
         category: [] as string[],
-        youtube_reviews: [] as { youtube_link: string; tzuyang_review: string; unique_id?: string }[]
+        youtube_reviews: [] as { youtube_link: string; tzuyang_review: string; restaurant_id: string }[]
     });
 
     // 필터 및 카테고리

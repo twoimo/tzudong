@@ -55,15 +55,21 @@ function calculateSimilarity(str1: string, str2: string): number {
 
 /**
  * 주소 정규화 함수
- * 공백과 특수문자를 제거하고 소문자로 변환하여 비교 용이성을 높입니다.
+ * 층/호수 정보를 제거하고, 공백과 특수문자를 제거하여 비교 용이성을 높입니다.
  * 
  * @param address 원본 주소 문자열
  * @returns 정규화된 주소 문자열
  */
 function normalizeAddress(address: string): string {
     return address
-        .replace(/\s+/g, '') // 공백 제거
-        .replace(/[^\w가-힣]/g, '') // 특수문자 제거
+        // 층/호수 정보 제거 (같은 건물 다른 층은 같은 주소로 취급)
+        .replace(/지하\s*\d+\s*층/g, '')
+        .replace(/지상\s*\d+\s*층/g, '')
+        .replace(/\d+\s*층/g, '')
+        .replace(/\d+\s*호/g, '')
+        // 공백 및 특수문자 제거
+        .replace(/\s+/g, '')
+        .replace(/[^\w가-힣]/g, '')
         .toLowerCase();
 }
 

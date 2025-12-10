@@ -108,7 +108,7 @@ Table restaurants {
   
   // 유튜브 관련 정보
   youtube_link text [note: '유튜브 영상 링크 (단일)']
-  youtube_meta jsonb [note: '개별 유튜브 메타데이터 (AI 크롤링용)']
+  youtube_meta jsonb [note: '유튜브 메타데이터 (title, published_at, duration, is_shorts, is_ads, what_ads)']
   unique_id text [unique, note: 'AI 크롤링 고유 식별자 (youtube_link 기반)']
   
   // 쯔양 리뷰 정보

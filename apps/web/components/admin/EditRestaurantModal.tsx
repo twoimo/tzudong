@@ -1113,34 +1113,70 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
             />
           </div>
 
-          {/* 카테고리 */}
+          {/* 카테고리 비교 및 수정 */}
           <div className="space-y-3">
             <Label>카테고리</Label>
 
-            {/* 기존 카테고리 (위) */}
-            <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">기존 카테고리</Label>
-              <div className="p-3 rounded-lg border bg-muted">
-                <p className="text-sm font-medium">
-                  {record?.restaurant_info?.category || '없음'}
-                </p>
-                {record?.evaluation_results?.category_TF?.eval_value === false && (
-                  <Badge variant="destructive" className="mt-2">
-                    카테고리 정합성 False
-                  </Badge>
-                )}
+            {/* 카테고리 비교 영역 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* 기존 카테고리 */}
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">기존 카테고리</Label>
+                <div className="p-3 rounded-lg border bg-muted min-h-[60px]">
+                  <div className="flex flex-wrap gap-1">
+                    {record?.categories && record.categories.length > 0 ? (
+                      record.categories.map((cat, idx) => (
+                        <Badge key={idx} variant="outline">{cat}</Badge>
+                      ))
+                    ) : record?.restaurant_info?.category ? (
+                      <Badge variant="outline">{record.restaurant_info.category}</Badge>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">없음</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* AI 제안 카테고리 */}
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">
+                  AI 제안 카테고리
+                  {record?.evaluation_results?.category_TF?.eval_value === false && (
+                    <Badge variant="destructive" className="ml-2 text-xs">불일치</Badge>
+                  )}
+                  {record?.evaluation_results?.category_TF?.eval_value === true && (
+                    <Badge className="ml-2 text-xs bg-green-500">일치</Badge>
+                  )}
+                </Label>
+                <div className="p-3 rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 min-h-[60px]">
+                  {record?.evaluation_results?.category_TF?.category_revision ? (
+                    <div className="flex flex-wrap gap-1">
+                      {Array.isArray(record.evaluation_results.category_TF.category_revision) ? (
+                        record.evaluation_results.category_TF.category_revision.map((cat: string, idx: number) => (
+                          <Badge key={idx} variant="secondary" className="bg-blue-100 dark:bg-blue-900">{cat}</Badge>
+                        ))
+                      ) : (
+                        <Badge variant="secondary" className="bg-blue-100 dark:bg-blue-900">
+                          {record.evaluation_results.category_TF.category_revision}
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">제안 없음</span>
+                  )}
+                  {record?.evaluation_results?.category_TF?.eval_basis && (
+                    <p className="text-xs text-muted-foreground mt-2 italic">
+                      💡 {record.evaluation_results.category_TF.eval_basis}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* 수정할 카테고리 (아래) */}
-            <div className="space-y-2">
-              <Label className="text-sm text-muted-foreground">
-                수정할 카테고리 (여러 개 선택 가능)
-                {record?.evaluation_results?.category_TF?.eval_value === false && (
-                  <span className="text-xs text-muted-foreground ml-2">
-                    (제안된 카테고리가 선택됨)
-                  </span>
-                )}
+            <div className="space-y-2 pt-2">
+              <Label className="text-sm font-medium">
+                최종 카테고리 (여러 개 선택 가능)
               </Label>
 
               {/* 선택된 카테고리 배지 */}

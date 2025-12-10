@@ -1,161 +1,103 @@
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
-import { supabase } from '@/integrations/supabase/client';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
-    MapPin,
-    Phone,
-    Tag,
     Youtube,
     User,
-    ExternalLink,
     RefreshCw,
-    Check,
     Loader2,
     Calendar,
-    FileText,
-    Download,
+    AlertTriangle,
+    X,
+    Sparkles,
+    Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { RESTAURANT_CATEGORIES } from '@/constants/categories';
+import { supabase } from '@/integrations/supabase/client';
 
-// YouTube 메타데이터 인터페이스
-interface YouTubeMeta {
-    title: string | null;
-    publishedAt: string | null;
-    duration: number | null;
-    is_shorts: boolean | null;
-    ads_info: {
-        is_ads: boolean | null;
-        what_ads: string[] | null;
+// ==================== 타입 정의 ====================
+
+export interface SubmissionItem {
+    id: string;
+    submission_id: string;
+    youtube_link: string;
+    tzuyang_review: string | null;
+    target_restaurant_id: string | null; // EDIT 시 수정 대상 식당 ID
+    item_status: 'pending' | 'approved' | 'rejected';
+    rejection_reason: string | null;
+    approved_restaurant_id: string | null;
+    duplicate_check_result?: {
+        isDuplicate: boolean;
+        existingRestaurantId?: string;
+        existingRestaurantName?: string;
+        matchedYoutubeUrl?: string;
+    } | null;
+    created_at: string;
+    // 아이템별 기존 레스토랑 데이터 (target_restaurant_id로 매칭)
+    original_restaurant?: {
+        id: string;
+        name: string;
+        youtube_link: string | null;
+        tzuyang_review: string | null;
+        youtube_meta?: {
+            title?: string;
+            published_at?: string;
+            duration?: number;
+            is_shorts?: boolean;
+            is_ads?: boolean;
+            what_ads?: string[] | null;
+        } | null;
     } | null;
 }
 
-// YouTube API 응답 인터페이스
-interface YouTubeApiVideoItem {
-    snippet: {
-        title: string;
-        publishedAt: string;
-        description: string;
-    };
-    contentDetails: {
-        duration: string;
-    };
-}
-
-// ISO 8601 duration 파싱 함수
-function parseDuration(duration: string): number {
-    const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-    if (!match) return 0;
-    const [, hours, minutes, seconds] = match;
-    let total = 0;
-    if (hours) total += parseInt(hours) * 3600;
-    if (minutes) total += parseInt(minutes) * 60;
-    if (seconds) total += parseInt(seconds);
-    return total;
-}
-
-// 광고 키워드 분석 함수 (클라이언트 사이드)
-async function analyzeAdContent(text: string): Promise<string[] | null> {
-    const apiKey = process.env.NEXT_OPENAI_API_KEY_BYEON;
-    if (!apiKey) return null;
-
-    const textPreview = text.slice(0, 500); // 설명의 앞 500자만 사용
-
-    try {
-        const response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-                model: 'gpt-4o-mini',
-                temperature: 0.3,
-                messages: [
-                    {
-                        role: 'system',
-                        content: `광고/협찬/지원을 한 **정확한 주체들의 전체 이름(기업명 + 브랜드명 조합 또는 기관명 형태)**을 **리스트** 형식으로 모아 답변하세요.
-예시: ['하이트진로', '영양군청'], ['하림 멜팅피스']
-반드시 추측하지 않고 **본문 내용에 쓰여 있는 주체들을 모두 작성**해야 합니다.
-주체를 찾을 수 없거나 애매하면, 'None'을 출력합니다.`
-                    },
-                    {
-                        role: 'user',
-                        content: textPreview
-                    }
-                ]
-            })
-        });
-
-        if (!response.ok) return null;
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content?.trim();
-
-        if (!content || content.toLowerCase() === 'none') return null;
-
-        try {
-            const parsed = JSON.parse(content);
-            if (Array.isArray(parsed)) return parsed.map(x => String(x).trim()).filter(Boolean);
-            return [String(parsed).trim()];
-        } catch {
-            // JSON 파싱 실패 시 문자열 그대로 반환
-            return [content];
-        }
-    } catch (error) {
-        console.error('광고 분석 오류:', error);
-        return null;
-    }
-}
-
-// 기존 맛집 정보 인터페이스 (수정 요청 비교용)
-export interface OriginalRestaurantData {
-    id: string;
-    unique_id: string;
-    name: string;
-    address: string;
-    phone: string | null;
-    categories: string[];
-    youtube_link: string | null;
-    tzuyang_review: string | null;
-}
-
-// 제보 데이터 인터페이스
 export interface SubmissionRecord {
     id: string;
     user_id: string;
+    submission_type: 'new' | 'edit';
+    status: 'pending' | 'approved' | 'partially_approved' | 'rejected';
     restaurant_name: string;
-    address: string;
-    phone: string | null;
-    category: string[] | string;
-    youtube_link: string;
-    description: string | null;
-    status: 'pending' | 'approved' | 'rejected';
+    restaurant_address: string | null;
+    restaurant_phone: string | null;
+    restaurant_categories: string[] | null;
+    // target_restaurant_id는 submission 레벨이 아닌 items 레벨에서 관리
+    admin_notes: string | null;
     rejection_reason: string | null;
-    created_at: string;
+    resolved_by_admin_id: string | null;
     reviewed_at: string | null;
-    reviewed_by_admin_id: string | null;
-    approved_restaurant_id: string | null;
-    submission_type?: 'new' | 'edit';
-    original_restaurant_id?: string;
-    // 수정 요청 시 기존 맛집의 unique_id (비교 뷰 및 업데이트 시 보존용)
-    unique_id?: string | null;
-    // 수정 요청 시 기존 맛집 정보 (비교용)
-    original_restaurant_data?: OriginalRestaurantData | null;
-    profiles?: {
-        nickname: string;
+    created_at: string;
+    updated_at: string;
+    items: SubmissionItem[];
+    profiles?: { nickname: string } | null;
+    original_restaurant_data?: {
+        id: string;
+        unique_id: string;
+        name: string;
+        road_address: string | null;
+        jibun_address: string | null;
+        phone: string | null;
+        categories: string[] | null;
+        youtube_link: string | null;
+        tzuyang_review: string | null;
+        youtube_meta?: {
+            title?: string;
+            published_at?: string;
+            duration?: number;
+            is_shorts?: boolean;
+            is_ads?: boolean;
+            what_ads?: string[] | null;
+        } | null;
     } | null;
 }
 
-// 지오코딩 결과 인터페이스
 export interface GeocodingResult {
     road_address: string;
     jibun_address: string;
@@ -165,7 +107,6 @@ export interface GeocodingResult {
     y: string;
 }
 
-// 승인 데이터 인터페이스
 export interface ApprovalData {
     lat: string;
     lng: string;
@@ -173,6 +114,21 @@ export interface ApprovalData {
     jibun_address: string;
     english_address: string;
     address_elements: any;
+}
+
+export interface ItemDecision {
+    approved: boolean;
+    rejectionReason: string;
+    youtube_link: string;
+    tzuyang_review: string;
+    metaFetched?: boolean;
+    metaData?: {
+        title: string;
+        publishedAt: string;
+        duration: number;
+        is_shorts: boolean;
+        ads_info: { is_ads: boolean; what_ads: string[] | null };
+    } | null;
 }
 
 interface SubmissionDetailViewProps {
@@ -183,94 +139,123 @@ interface SubmissionDetailViewProps {
     onGeocodingResultsChange: (results: GeocodingResult[]) => void;
     selectedGeocodingIndex: number | null;
     onSelectedGeocodingIndexChange: (index: number | null) => void;
-    onYoutubeMetaChange?: (hasMeta: boolean) => void;
+    itemDecisions: Record<string, ItemDecision>;
+    onItemDecisionsChange: (decisions: Record<string, ItemDecision>) => void;
+    forceApprove: boolean;
+    onForceApproveChange: (force: boolean) => void;
+    editableData: {
+        name: string;
+        address: string;
+        phone: string;
+        categories: string[];
+    };
+    onEditableDataChange: (data: { name: string; address: string; phone: string; categories: string[] }) => void;
     className?: string;
 }
 
-// 유틸리티 함수: YouTube 비디오 ID 추출
+// ==================== 유틸리티 함수 ====================
+
 function getYoutubeVideoId(url: string | undefined): string | null {
     if (!url) return null;
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
+    const patterns = [
+        /(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[?&].*)?/,
+        /(?:youtube\.com\/(?:embed|v)\/)([a-zA-Z0-9_-]{11})/,
+        /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) return match[1];
+    }
+    return null;
 }
 
-// 시/군/구까지만 추출하는 함수
 function extractCityDistrictGu(address: string): string | null {
     const regex = /(.*?[시도]\s+.*?[시군구])/;
     const match = address.match(regex);
     return match ? match[1] : null;
 }
 
-// 중복 제거 함수 (지번 주소 기준)
 function removeDuplicateAddresses(addresses: GeocodingResult[]): GeocodingResult[] {
     const seen = new Set<string>();
     return addresses.filter(addr => {
-        if (seen.has(addr.jibun_address)) {
-            return false;
-        }
+        if (seen.has(addr.jibun_address)) return false;
         seen.add(addr.jibun_address);
         return true;
     });
 }
 
-// 기존/수정 값 비교 컴포넌트
-interface CompareFieldProps {
-    label: string;
-    original: string;
-    modified: string;
-    isMultiline?: boolean;
+async function geocodeAddressMultiple(name: string, address: string, maxResults: number = 3): Promise<GeocodingResult[]> {
+    // Supabase Edge Function을 통해 지오코딩 (EditRestaurantModal과 동일한 방식)
+    console.log('🗺️ 지오코딩 쿼리:', { name, address });
+    
+    const { data, error } = await supabase.functions.invoke('naver-geocode', {
+        body: { query: address, count: maxResults }
+    });
+    
+    console.log('📡 Edge Function 응답:', { data, error });
+    
+    if (error) {
+        console.error('❌ Edge Function 에러:', error);
+        throw new Error(error.message || JSON.stringify(error));
+    }
+    
+    if (!data) {
+        console.error('❌ 응답 데이터 없음');
+        return [];
+    }
+    
+    if (data.error) {
+        console.error('❌ API 에러:', data.error);
+        throw new Error(data.error);
+    }
+    
+    if (!data.addresses || data.addresses.length === 0) {
+        console.warn('⚠️ 주소 결과 없음');
+        return [];
+    }
+    
+    console.log('✅ 지오코딩 성공:', data.addresses.length, '개 결과');
+    
+    return data.addresses.slice(0, maxResults).map((addr: any) => ({
+        road_address: addr.roadAddress || '',
+        jibun_address: addr.jibunAddress || '',
+        english_address: addr.englishAddress || '',
+        address_elements: addr.addressElements || null,
+        x: addr.x,
+        y: addr.y,
+    }));
 }
 
-function CompareField({ label, original, modified, isMultiline }: CompareFieldProps) {
-    const isChanged = original !== modified;
-
-    return (
-        <div className={cn(
-            "rounded-md p-3",
-            isChanged ? "bg-amber-100/50 border border-amber-300" : "bg-muted/30"
-        )}>
-            <div className="flex items-center gap-2 mb-2">
-                <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
-                {isChanged && (
-                    <Badge variant="outline" className="text-xs bg-amber-100 text-amber-700 border-amber-300">
-                        변경됨
-                    </Badge>
-                )}
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-                <div>
-                    <span className="text-xs text-muted-foreground block mb-1">기존</span>
-                    {isMultiline ? (
-                        <p className={cn(
-                            "text-sm whitespace-pre-wrap",
-                            isChanged && "line-through text-muted-foreground"
-                        )}>{original}</p>
-                    ) : (
-                        <p className={cn(
-                            "text-sm",
-                            isChanged && "line-through text-muted-foreground"
-                        )}>{original}</p>
-                    )}
-                </div>
-                <div>
-                    <span className="text-xs text-muted-foreground block mb-1">수정 요청</span>
-                    {isMultiline ? (
-                        <p className={cn(
-                            "text-sm whitespace-pre-wrap",
-                            isChanged && "font-medium text-amber-800"
-                        )}>{modified}</p>
-                    ) : (
-                        <p className={cn(
-                            "text-sm",
-                            isChanged && "font-medium text-amber-800"
-                        )}>{modified}</p>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
+async function fetchYoutubeMetadata(youtubeLink: string): Promise<{
+    title: string;
+    publishedAt: string;
+    duration: number;
+    is_shorts: boolean;
+    ads_info: { is_ads: boolean; what_ads: string[] | null };
+} | null> {
+    try {
+        const response = await fetch('/api/youtube-meta', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ youtube_link: youtubeLink }),
+        });
+        if (!response.ok) throw new Error('Failed to fetch metadata');
+        return await response.json();
+    } catch (error) {
+        console.error('YouTube metadata fetch error:', error);
+        return null;
+    }
 }
+
+function formatDuration(seconds: number): string {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// ==================== 메인 컴포넌트 ====================
 
 export function SubmissionDetailView({
     submission,
@@ -280,552 +265,659 @@ export function SubmissionDetailView({
     onGeocodingResultsChange,
     selectedGeocodingIndex,
     onSelectedGeocodingIndexChange,
-    onYoutubeMetaChange,
+    itemDecisions,
+    onItemDecisionsChange,
+    forceApprove,
+    onForceApproveChange,
+    editableData,
+    onEditableDataChange,
     className,
 }: SubmissionDetailViewProps) {
-    const [geocoding, setGeocoding] = useState(false);
-    const [embedError, setEmbedError] = useState(false);
-    const [videoUrl, setVideoUrl] = useState<string | null>(null);
-    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const [geocodingNaver, setGeocodingNaver] = useState(false);
+    const [geocodingGoogle, setGeocodingGoogle] = useState(false);
+    const [fetchingMeta, setFetchingMeta] = useState<string | null>(null);
+    const [initialAddress, setInitialAddress] = useState<string>('');
+    const [addressChanged, setAddressChanged] = useState(false);
+    
+    const isEditSubmission = submission.submission_type === 'edit';
+    const pendingItems = submission.items.filter(item => item.item_status === 'pending');
+    const hasDuplicateItems = pendingItems.some(item => item.duplicate_check_result?.isDuplicate);
 
-    // YouTube 메타데이터 상태
-    const [youtubeMeta, setYoutubeMeta] = useState<YouTubeMeta | null>(null);
-    const [fetchingMeta, setFetchingMeta] = useState(false);
-
-    const videoId = useMemo(() => getYoutubeVideoId(submission.youtube_link), [submission.youtube_link]);
-
-    // 리코드 변경 시 상태 초기화
     useEffect(() => {
-        setEmbedError(false);
-        setVideoUrl(null);
-        setYoutubeMeta(null);
-    }, [submission?.id]);
+        setInitialAddress(editableData.address);
+    }, [submission.id]);
 
-    // YouTube 임베드 가능 여부 확인
-    useEffect(() => {
-        if (!videoId || embedError) return;
-
-        const checkEmbedAvailability = async () => {
-            try {
-                const response = await fetch(
-                    `https://noembed.com/embed?url=https://www.youtube.com/watch?v=${videoId}`
-                );
-
-                if (!response.ok) {
-                    setEmbedError(true);
-                    return;
-                }
-
-                const data = await response.json();
-                if (data.error) {
-                    setEmbedError(true);
-                }
-            } catch (error) {
-                console.log('YouTube 임베드 확인 실패:', error);
-            }
-        };
-
-        checkEmbedAvailability();
-    }, [videoId, embedError, submission?.id]);
-
-    // 비디오 URL 생성 로직
-    useEffect(() => {
-        if (submission?.youtube_link && !embedError) {
-            const vidId = getYoutubeVideoId(submission.youtube_link);
-            if (vidId) {
-                const origin = typeof window !== 'undefined' ? window.location.origin : '';
-                const url = `https://www.youtube.com/embed/${vidId}?autoplay=0&mute=0&playsinline=1&rel=0&enablejsapi=1&origin=${origin}&controls=1`;
-                setVideoUrl(url);
+    const handleFieldChange = (field: keyof typeof editableData, value: string | string[]) => {
+        if (field === 'address') {
+            const newAddress = value as string;
+            if (newAddress.trim() !== initialAddress.trim()) {
+                setAddressChanged(true);
+                onGeocodingResultsChange([]);
+                onSelectedGeocodingIndexChange(null);
             } else {
-                setVideoUrl(null);
+                setAddressChanged(false);
             }
-        } else {
-            setVideoUrl(null);
         }
-    }, [submission?.youtube_link, submission?.id, embedError]);
-
-    // iframe 에러 핸들링
-    const handleVideoError = useCallback(() => {
-        setEmbedError(true);
-    }, []);
-
-    // 카테고리 배열 정규화
-    const categories = useMemo(() => {
-        if (Array.isArray(submission.category)) {
-            return submission.category;
-        }
-        return submission.category ? [submission.category] : [];
-    }, [submission.category]);
-
-    // YouTube 메타데이터 가져오기 함수
-    const fetchYoutubeMeta = useCallback(async () => {
-        if (!videoId) {
-            toast.error('유효한 YouTube 링크가 없습니다');
-            return;
-        }
-
-        const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
-        if (!apiKey) {
-            toast.error('YouTube API 키가 설정되지 않았습니다');
-            return;
-        }
-
-        setFetchingMeta(true);
-
-        try {
-            // YouTube Data API v3 호출
-            const response = await fetch(
-                `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${videoId}&key=${apiKey}`
-            );
-
-            if (!response.ok) {
-                throw new Error('YouTube API 호출 실패');
-            }
-
-            const data = await response.json();
-
-            if (!data.items || data.items.length === 0) {
-                throw new Error('영상을 찾을 수 없습니다');
-            }
-
-            const item = data.items[0] as YouTubeApiVideoItem;
-            const snippet = item.snippet;
-            const duration = parseDuration(item.contentDetails.duration);
-
-            // 광고 키워드 확인
-            const description = snippet.description || '';
-            const descriptionLower = description.toLowerCase();
-            const adKeywords = ['유료', '광고', '지원', '협찬'];
-            const isAds = adKeywords.some(keyword => descriptionLower.includes(keyword));
-
-            // 광고 주체 분석 (OpenAI 사용)
-            let whatAds: string[] | null = null;
-            if (isAds) {
-                whatAds = await analyzeAdContent(description);
-            }
-
-            const meta: YouTubeMeta = {
-                title: snippet.title,
-                publishedAt: snippet.publishedAt,
-                duration: duration,
-                is_shorts: duration <= 180,
-                ads_info: {
-                    is_ads: isAds,
-                    what_ads: whatAds,
-                },
-            };
-
-            setYoutubeMeta(meta);
-            onYoutubeMetaChange?.(true); // 메타데이터 있음을 부모에게 알림
-            toast.success('YouTube 메타데이터를 가져왔습니다');
-        } catch (error: any) {
-            console.error('YouTube 메타데이터 가져오기 오류:', error);
-            toast.error(error.message || '메타데이터 가져오기 실패');
-        } finally {
-            setFetchingMeta(false);
-        }
-    }, [videoId, onYoutubeMetaChange]);
-
-    // 재지오코딩 함수 (여러 개 결과 반환)
-    const geocodeAddressMultiple = async (name: string, address: string, limit: number = 3): Promise<GeocodingResult[]> => {
-        try {
-            const combinedQuery = `${name} ${address}`;
-            const { data, error } = await supabase.functions.invoke('naver-geocode', {
-                body: { query: combinedQuery, count: limit }
-            });
-
-            if (error) throw new Error(error.message);
-            if (!data?.addresses?.length) return [];
-
-            return data.addresses.slice(0, limit).map((addr: any) => ({
-                road_address: addr.roadAddress,
-                jibun_address: addr.jibunAddress,
-                english_address: addr.englishAddress,
-                address_elements: addr.addressElements,
-                x: addr.x,
-                y: addr.y,
-            }));
-        } catch (error: any) {
-            console.error('지오코딩 에러:', error);
-            return [];
-        }
+        onEditableDataChange({ ...editableData, [field]: value });
     };
 
-    // 재지오코딩 핸들러 (useCallback 최적화)
-    const handleReGeocode = useCallback(async () => {
-        const trimmedName = submission.restaurant_name.trim();
-        const trimmedAddress = submission.address.trim();
+    const handleItemDecisionChange = (itemId: string, field: keyof ItemDecision, value: any) => {
+        onItemDecisionsChange({
+            ...itemDecisions,
+            [itemId]: { ...itemDecisions[itemId], [field]: value },
+        });
+    };
 
-        if (!trimmedName || !trimmedAddress) {
-            toast.error('맛집명과 주소가 필요합니다');
+    const handleReGeocodeNaver = async () => {
+        const address = editableData.address.trim();
+        const name = editableData.name.trim();
+        if (!address || !name) {
+            toast.error('맛집명과 주소를 입력해주세요');
             return;
         }
 
+        setGeocodingNaver(true);
         try {
-            setGeocoding(true);
-            onGeocodingResultsChange([]);
-            onSelectedGeocodingIndexChange(null);
-
-            // 1. name + 전체 주소로 지오코딩 (최대 3개)
-            const fullAddressResults = await geocodeAddressMultiple(trimmedName, trimmedAddress, 3);
-
-            // 2. name + 주소의 시/군/구까지만 잘라서 지오코딩 (최대 3개)
-            const shortAddress = extractCityDistrictGu(trimmedAddress);
-            const shortAddressResults = shortAddress
-                ? await geocodeAddressMultiple(trimmedName, shortAddress, 3)
-                : [];
-
-            // 3. 두 결과를 합치고 중복 제거
-            const allResults = [...fullAddressResults, ...shortAddressResults];
-            const uniqueResults = removeDuplicateAddresses(allResults);
+            const fullResults = await geocodeAddressMultiple(name, address, 3);
+            const shortAddress = extractCityDistrictGu(address);
+            const shortResults = shortAddress ? await geocodeAddressMultiple(name, shortAddress, 3) : [];
+            const uniqueResults = removeDuplicateAddresses([...fullResults, ...shortResults]);
 
             if (uniqueResults.length > 0) {
                 onGeocodingResultsChange(uniqueResults);
+                setAddressChanged(false);
+                setInitialAddress(address);
                 toast.success(`${uniqueResults.length}개의 주소 후보를 찾았습니다`);
             } else {
                 toast.error('주소를 찾을 수 없습니다');
             }
-        } catch (error: any) {
-            toast.error(error.message || '지오코딩에 실패했습니다');
+        } catch (error) {
+            toast.error('네이버 지오코딩에 실패했습니다');
         } finally {
-            setGeocoding(false);
+            setGeocodingNaver(false);
         }
-    }, [submission.restaurant_name, submission.address, onGeocodingResultsChange, onSelectedGeocodingIndexChange]);
+    };
 
-    // 지오코딩 결과 선택 핸들러 (useCallback 최적화)
-    const handleSelectGeocodingResult = useCallback((index: number) => {
+    const handleReGeocodeGoogle = async () => {
+        const address = editableData.address.trim();
+        const name = editableData.name.trim();
+        if (!address || !name) {
+            toast.error('맛집명과 주소를 입력해주세요');
+            return;
+        }
+
+        setGeocodingGoogle(true);
+        try {
+            const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+            if (!apiKey) throw new Error('Google Maps API key not found');
+
+            const searchQuery = `${name} ${address}`;
+            const response = await fetch(
+                `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&key=${apiKey}`
+            );
+            const data = await response.json();
+
+            if (data.status === 'OK' && data.results.length > 0) {
+                const results: GeocodingResult[] = data.results.slice(0, 3).map((result: any) => ({
+                    road_address: result.formatted_address,
+                    jibun_address: result.formatted_address,
+                    english_address: result.formatted_address,
+                    address_elements: result.address_components,
+                    x: String(result.geometry.location.lng),
+                    y: String(result.geometry.location.lat),
+                }));
+                onGeocodingResultsChange(results);
+                setAddressChanged(false);
+                setInitialAddress(address);
+                toast.success(`${results.length}개의 주소 후보를 찾았습니다`);
+            } else {
+                toast.error('주소를 찾을 수 없습니다');
+            }
+        } catch (error) {
+            toast.error('Google 지오코딩에 실패했습니다');
+        } finally {
+            setGeocodingGoogle(false);
+        }
+    };
+
+    const handleSelectGeocodingResult = (index: number) => {
+        const result = geocodingResults[index];
+        // 먼저 initialAddress 업데이트 (handleFieldChange 트리거 방지)
+        setInitialAddress(result.jibun_address);
+        setAddressChanged(false);
+        // 그 다음 선택 인덱스 업데이트
         onSelectedGeocodingIndexChange(index);
-        const selected = geocodingResults[index];
         onApprovalDataChange({
-            lat: selected.y,
-            lng: selected.x,
-            road_address: selected.road_address,
-            jibun_address: selected.jibun_address,
-            english_address: selected.english_address,
-            address_elements: selected.address_elements,
+            lat: result.y,
+            lng: result.x,
+            road_address: result.road_address,
+            jibun_address: result.jibun_address,
+            english_address: result.english_address,
+            address_elements: result.address_elements,
         });
-    }, [geocodingResults, onSelectedGeocodingIndexChange, onApprovalDataChange]);
+        // 마지막으로 주소 필드 업데이트 (지오코딩 결과는 유지)
+        onEditableDataChange({ ...editableData, address: result.jibun_address });
+    };
+
+    const handleFetchMetadata = async (itemId: string, youtubeLink: string) => {
+        setFetchingMeta(itemId);
+        try {
+            const meta = await fetchYoutubeMetadata(youtubeLink);
+            if (meta) {
+                handleItemDecisionChange(itemId, 'metaFetched', true);
+                handleItemDecisionChange(itemId, 'metaData', meta);
+                toast.success(`메타데이터 가져오기 완료`);
+            } else {
+                toast.error('메타데이터를 가져오지 못했습니다');
+            }
+        } catch (error) {
+            toast.error('메타데이터 가져오기 실패');
+        } finally {
+            setFetchingMeta(null);
+        }
+    };
 
     return (
-        <div className={cn("flex h-full overflow-hidden", className)}>
-            {/* 좌측: 비디오 플레이어 + 영상 정보 */}
-            <div className="w-[40%] bg-accent/5 flex flex-col justify-start relative group border-r overflow-hidden">
-                {/* YouTube 영상 */}
-                <div className="p-4 pb-0 w-full shrink-0">
-                    <div className="bg-white rounded-lg border p-3 shadow-sm">
-                        {videoUrl && !embedError ? (
-                            <div className="w-full aspect-video shadow-lg rounded-lg overflow-hidden">
-                                <iframe
-                                    ref={iframeRef}
-                                    width="100%"
-                                    height="100%"
-                                    src={`${videoUrl}&autoplay=0`}
-                                    title="Video player"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
-                                    allowFullScreen
-                                    className="w-full h-full block"
-                                    onError={handleVideoError}
-                                />
-                            </div>
-                        ) : (
-                            /* Facade Pattern: 썸네일 표시 (클릭 시 새 탭) */
-                            <div
-                                className="relative w-full aspect-video cursor-pointer group rounded-lg overflow-hidden"
-                                onClick={() => {
-                                    if (submission.youtube_link) {
-                                        window.open(submission.youtube_link, '_blank');
-                                    }
-                                }}
-                            >
-                                {videoId ? (
-                                    <img
-                                        src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-                                        alt="YouTube 썸네일"
-                                        className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 group-hover:opacity-90"
-                                        onError={(e) => {
-                                            const target = e.currentTarget;
-                                            if (target.src.includes('maxresdefault')) {
-                                                target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                                            }
-                                        }}
-                                    />
-                                ) : (
-                                    <div className="flex flex-col items-center justify-center text-muted-foreground p-6 text-center w-full h-full bg-gray-100 rounded-lg">
-                                        <Youtube className="w-16 h-16 opacity-50 mb-2" />
-                                        <p className="text-gray-400 text-sm">YouTube 링크 없음</p>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+        <div className={cn("overflow-y-auto", className)}>
+            <div className="space-y-4 p-4">
+                {/* 제보자 정보 */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground pb-2 border-b">
+                    <User className="h-4 w-4" />
+                    <span>{submission.profiles?.nickname || '탈퇴한 사용자'}</span>
+                    <span className="mx-1">•</span>
+                    <Calendar className="h-4 w-4" />
+                    <span>{new Date(submission.created_at).toLocaleDateString('ko-KR')}</span>
+                    <span className="mx-1">•</span>
+                    <Badge variant={isEditSubmission ? "secondary" : "default"} className="text-xs">
+                        {isEditSubmission ? '수정 요청' : '신규 제보'}
+                    </Badge>
                 </div>
 
-                {/* 좌측 하단: 비디오 메타 정보 */}
-                <div className="w-full bg-accent/5 p-4 pt-4 flex-1 min-h-0 overflow-y-auto">
-                    <div className="bg-white rounded-lg border p-3 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
-                            <h3 className="flex items-center gap-2 font-semibold text-base text-gray-800">
-                                📹 영상 정보
-                            </h3>
+                {/* 수정 요청: 기존 정보 vs 사용자 제출 정보 비교 (이름, 전화, 주소, 카테고리만) */}
+                {isEditSubmission && submission.original_restaurant_data && (
+                    <div className="rounded-lg border overflow-hidden">
+                        <div className="grid grid-cols-2 divide-x">
+                            {/* 기존 정보 */}
+                            <div className="p-3 bg-gray-50/50 dark:bg-gray-900/20">
+                                <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
+                                    📋 기존 등록 정보
+                                </p>
+                                <div className="space-y-1.5 text-xs">
+                                    <p><span className="text-muted-foreground">이름:</span> <span className="font-medium">{submission.original_restaurant_data.name || '-'}</span></p>
+                                    <p><span className="text-muted-foreground">전화:</span> {submission.original_restaurant_data.phone || '-'}</p>
+                                    <p><span className="text-muted-foreground">주소:</span> {submission.original_restaurant_data.road_address || submission.original_restaurant_data.jibun_address || '-'}</p>
+                                    <p><span className="text-muted-foreground">카테고리:</span> {submission.original_restaurant_data.categories?.join(', ') || '-'}</p>
+                                </div>
+                            </div>
+                            {/* 사용자 제출 정보 */}
+                            <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20">
+                                <p className="text-xs font-semibold text-blue-600 mb-2 flex items-center gap-1">
+                                    ✏️ 사용자 제출 정보
+                                </p>
+                                <div className="space-y-1.5 text-xs">
+                                    <p><span className="text-muted-foreground">이름:</span> <span className="font-medium">{submission.restaurant_name || '-'}</span></p>
+                                    <p><span className="text-muted-foreground">전화:</span> {submission.restaurant_phone || '-'}</p>
+                                    <p><span className="text-muted-foreground">주소:</span> {submission.restaurant_address || '-'}</p>
+                                    <p><span className="text-muted-foreground">카테고리:</span> {submission.restaurant_categories?.join(', ') || '-'}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 레스토랑 이름 */}
+                <div className="space-y-1">
+                    <Label htmlFor="edit-name" className="text-sm">레스토랑 이름</Label>
+                    <Input
+                        id="edit-name"
+                        value={editableData.name}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        placeholder="예: 홍대 떡볶이"
+                    />
+                </div>
+
+                {/* 주소 + 지오코딩 버튼 */}
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="edit-address" className="text-sm">주소</Label>
+                        <div className="flex gap-1">
                             <Button
-                                variant="outline"
+                                type="button"
                                 size="sm"
-                                onClick={fetchYoutubeMeta}
-                                disabled={fetchingMeta || !videoId}
+                                variant="outline"
+                                onClick={handleReGeocodeNaver}
+                                disabled={geocodingNaver || geocodingGoogle || !editableData.address.trim()}
                                 className="h-7 text-xs"
                             >
-                                {fetchingMeta ? (
-                                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                                ) : (
-                                    <Download className="w-3 h-3 mr-1" />
-                                )}
-                                메타데이터
+                                {geocodingNaver ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
+                                네이버 지오코딩
+                            </Button>
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={handleReGeocodeGoogle}
+                                disabled={geocodingNaver || geocodingGoogle || !editableData.address.trim()}
+                                className="h-7 text-xs"
+                            >
+                                {geocodingGoogle ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <RefreshCw className="mr-1 h-3 w-3" />}
+                                Google 지오코딩
                             </Button>
                         </div>
-                        <div className="grid grid-cols-[60px_1fr] gap-x-2 gap-y-1 text-sm">
-                            <span className="text-gray-500 font-medium">제목:</span>
-                            <span className="break-words font-medium text-gray-900 line-clamp-2" title={youtubeMeta?.title || undefined}>
-                                {youtubeMeta?.title || '-'}
-                            </span>
+                    </div>
+                    <Textarea
+                        id="edit-address"
+                        value={editableData.address}
+                        onChange={(e) => handleFieldChange('address', e.target.value)}
+                        placeholder="예: 서울특별시 마포구 양화로 160"
+                        rows={2}
+                        className="resize-none"
+                    />
+                    {addressChanged && (
+                        <p className="text-xs text-amber-600">⚠️ 주소가 변경되었습니다. 재지오코딩을 해주세요.</p>
+                    )}
+                </div>
 
-                            <span className="text-gray-500 font-medium">게시일:</span>
-                            <span className="text-gray-700">
-                                {youtubeMeta?.publishedAt ? new Date(youtubeMeta.publishedAt).toLocaleDateString() : '-'}
-                            </span>
-
-                            <span className="text-gray-500 font-medium">광고:</span>
-                            <span className="text-gray-700">
-                                {youtubeMeta?.ads_info?.is_ads
-                                    ? `있음 (${youtubeMeta.ads_info.what_ads?.join(', ') || '분석 중...'})`
-                                    : youtubeMeta ? '없음' : '-'}
-                            </span>
-
-                            <span className="text-gray-500 font-medium">링크:</span>
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                <a
-                                    href={submission.youtube_link}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-blue-600 hover:underline break-all"
+                {/* 지오코딩 결과 목록 */}
+                {geocodingResults.length > 0 && (
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                            <Label className="text-sm">지오코딩 결과 ({geocodingResults.length}개)</Label>
+                            <Badge variant="default" className="bg-green-600 text-xs">성공</Badge>
+                        </div>
+                        <div className="space-y-1">
+                            {geocodingResults.map((result, index) => (
+                                <div
+                                    key={index}
+                                    onClick={() => handleSelectGeocodingResult(index)}
+                                    className={cn(
+                                        "p-2 rounded-lg border-2 cursor-pointer transition-all text-sm",
+                                        selectedGeocodingIndex === index
+                                            ? 'border-primary bg-primary/5'
+                                            : 'border-gray-200 hover:border-gray-300'
+                                    )}
                                 >
-                                    {submission.youtube_link}
-                                </a>
-                            </div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant={selectedGeocodingIndex === index ? 'default' : 'outline'} className="text-xs">
+                                            옵션 {index + 1}
+                                        </Badge>
+                                        {selectedGeocodingIndex === index && (
+                                            <Badge variant="default" className="bg-green-600 text-xs">선택됨</Badge>
+                                        )}
+                                    </div>
+                                    <p className="text-xs"><span className="text-muted-foreground">도로명:</span> {result.road_address}</p>
+                                    <p className="text-xs"><span className="text-muted-foreground">지번:</span> {result.jibun_address}</p>
+                                    <p className="text-xs"><span className="text-muted-foreground">좌표:</span> {result.y}, {result.x}</p>
+                                </div>
+                            ))}
+                        </div>
+                        {selectedGeocodingIndex === null && (
+                            <p className="text-xs text-muted-foreground text-center">⬆️ 위 옵션 중 하나를 클릭해서 선택해주세요</p>
+                        )}
+                    </div>
+                )}
+
+                {/* 전화번호 */}
+                <div className="space-y-1">
+                    <Label htmlFor="edit-phone" className="text-sm">전화번호</Label>
+                    <Input
+                        id="edit-phone"
+                        value={editableData.phone}
+                        onChange={(e) => handleFieldChange('phone', e.target.value)}
+                        placeholder="예: 02-1234-5678"
+                    />
+                </div>
+
+                {/* 카테고리 */}
+                <div className="space-y-2">
+                    <Label className="text-sm">카테고리 (여러 개 선택 가능)</Label>
+                    {editableData.categories.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                            {editableData.categories.map((cat) => (
+                                <Badge key={cat} variant="secondary" className="gap-1 px-2 py-1">
+                                    {cat}
+                                    <X
+                                        className="h-3.5 w-3.5 cursor-pointer hover:text-destructive"
+                                        onClick={() => handleFieldChange('categories', editableData.categories.filter(c => c !== cat))}
+                                    />
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
+                    <div className="border rounded-lg p-3 max-h-40 overflow-y-auto">
+                        <div className="grid grid-cols-2 gap-2">
+                            {RESTAURANT_CATEGORIES.map((category) => (
+                                <div key={category} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`cat-${category}`}
+                                        checked={editableData.categories.includes(category)}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) {
+                                                handleFieldChange('categories', [...editableData.categories, category]);
+                                            } else {
+                                                handleFieldChange('categories', editableData.categories.filter(c => c !== category));
+                                            }
+                                        }}
+                                        className="h-4 w-4"
+                                    />
+                                    <label htmlFor={`cat-${category}`} className="text-sm cursor-pointer">{category}</label>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* 우측: 상세 정보 + 지오코딩 */}
-            <ScrollArea className="w-[60%] h-full flex-shrink-0">
-                <div className="p-4 space-y-4 text-sm">
-                    {/* 제보 정보 - EvaluationDetailView 스타일 */}
-                    <div className="bg-white rounded-lg border p-3 shadow-sm">
-                        <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
-                            🍽️ 제보 상세 정보
-                        </h3>
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                            {/* 음식점명 */}
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                                <span className="text-gray-500 text-xs font-medium">음식점명</span>
-                                <span className="font-semibold text-gray-900 text-sm break-all">
-                                    {submission.restaurant_name || '-'}
-                                </span>
-                            </div>
-
-                            {/* 카테고리 */}
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                                <span className="text-gray-500 text-xs font-medium">카테고리</span>
-                                <div className="flex flex-wrap gap-1">
-                                    {categories.length > 0 ? (
-                                        categories.map((cat, idx) => (
-                                            <Badge key={idx} variant="secondary" className="text-xs">
-                                                {cat}
+                {/* 제보 항목 */}
+                <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                        <Youtube className="h-4 w-4 text-red-500" />
+                        <Label className="text-sm">제보 항목</Label>
+                        <Badge variant="outline" className="text-xs">
+                            {submission.items.length}개 중{' '}
+                            <span className="font-bold text-primary ml-1">
+                                {Object.values(itemDecisions).filter(d => d.approved).length}개
+                            </span>{' '}
+                            선택
+                        </Badge>
+                    </div>
+                    
+                    {submission.items.map((item) => {
+                        const videoId = getYoutubeVideoId(itemDecisions[item.id]?.youtube_link || item.youtube_link);
+                        const decision = itemDecisions[item.id];
+                        const isPending = item.item_status === 'pending';
+                        const metaData = decision?.metaData;
+                        const isSelected = decision?.approved;
+                        
+                        return (
+                            <div
+                                key={item.id}
+                                className={cn(
+                                    "border rounded-lg p-3",
+                                    isSelected && "border-green-500 bg-green-50/50",
+                                    item.item_status === 'approved' && "border-green-300 bg-green-50/50",
+                                    item.item_status === 'rejected' && "border-red-300 bg-red-50/50"
+                                )}
+                            >
+                                {/* 헤더: 선택박스 + 메타데이터 버튼 + 상태 뱃지 */}
+                                <div className="flex items-center justify-between mb-2">
+                                    {/* 왼쪽: 선택 박스 + 메타데이터 버튼 */}
+                                    <div className="flex items-center gap-2">
+                                        {/* 선택 박스 (체크박스 + 텍스트 함께) - 대기 중 항목만 */}
+                                        {isPending && decision && (
+                                            <div
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleItemDecisionChange(item.id, 'approved', !decision.approved);
+                                                }}
+                                                className={cn(
+                                                    "flex items-center gap-1.5 px-2 py-1 rounded border-2 cursor-pointer transition-colors",
+                                                    decision.approved
+                                                        ? "border-green-500 bg-green-50"
+                                                        : "border-gray-300 bg-white hover:border-gray-400"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "w-4 h-4 rounded border flex items-center justify-center flex-shrink-0",
+                                                    decision.approved
+                                                        ? "border-green-500 bg-green-500"
+                                                        : "border-gray-400 bg-white"
+                                                )}>
+                                                    {decision.approved && <Check className="h-3 w-3 text-white" />}
+                                                </div>
+                                                <span className={cn(
+                                                    "text-xs font-medium",
+                                                    decision.approved ? "text-green-700" : "text-gray-600"
+                                                )}>
+                                                    선택
+                                                </span>
+                                            </div>
+                                        )}
+                                        
+                                        {/* 메타데이터 가져오기 버튼 - 빨간색 */}
+                                        <Button
+                                            variant={decision?.metaFetched ? "default" : "destructive"}
+                                            size="sm"
+                                            className={cn(
+                                                "h-7 px-3 text-xs",
+                                                decision?.metaFetched && "bg-green-600 hover:bg-green-700"
+                                            )}
+                                            onClick={() => handleFetchMetadata(item.id, decision?.youtube_link || item.youtube_link)}
+                                            disabled={fetchingMeta === item.id}
+                                        >
+                                            {fetchingMeta === item.id ? (
+                                                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                            ) : decision?.metaFetched ? (
+                                                <Check className="h-3 w-3 mr-1" />
+                                            ) : (
+                                                <Sparkles className="h-3 w-3 mr-1" />
+                                            )}
+                                            {decision?.metaFetched ? '메타 완료' : '메타데이터 가져오기'}
+                                        </Button>
+                                    </div>
+                                    
+                                    {/* 오른쪽: 상태 뱃지 + 기타 뱃지들 */}
+                                    <div className="flex items-center gap-2">
+                                        {item.duplicate_check_result?.isDuplicate && (
+                                            <Badge variant="destructive" className="text-xs">
+                                                <AlertTriangle className="h-3 w-3 mr-1" />중복
                                             </Badge>
-                                        ))
-                                    ) : (
-                                        <span className="text-gray-900 text-sm">-</span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* 전화번호 */}
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                                <span className="text-gray-500 text-xs font-medium">전화번호</span>
-                                <span className="text-gray-900 text-sm">{submission.phone || '-'}</span>
-                            </div>
-
-                            {/* 좌표 */}
-                            <div className="flex flex-col gap-0.5 min-w-0">
-                                <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
-                                    좌표 (lat, lng)
-                                </span>
-                                <span className="font-mono text-xs text-gray-600">
-                                    {approvalData.lat && approvalData.lng
-                                        ? `${approvalData.lat}, ${approvalData.lng}`
-                                        : '-, -'}
-                                </span>
-                            </div>
-
-                            {/* 원본 주소 */}
-                            <div className="col-span-2 flex flex-col gap-0.5 min-w-0">
-                                <span className="text-gray-500 text-xs font-medium">원본 주소</span>
-                                <span className="text-gray-900 text-sm break-all">
-                                    {submission.address || '-'}
-                                </span>
-                            </div>
-
-                            {/* Naver 주소 (지오코딩 결과) */}
-                            <div className="col-span-2 grid grid-cols-1 gap-1 min-w-0">
-                                <div className="flex items-start gap-1.5 min-w-0">
-                                    <Badge
-                                        variant="outline"
-                                        className={`shrink-0 text-[10px] px-1 h-5 ${approvalData.road_address
-                                            ? 'bg-green-50 text-green-700 border-green-200'
-                                            : 'bg-gray-50 text-gray-500 border-gray-200'
-                                            }`}
-                                    >
-                                        Naver 도로명
-                                    </Badge>
-                                    <span className="text-sm text-gray-700 break-all flex-1 min-w-0">
-                                        {approvalData.road_address || '-'}
-                                    </span>
-                                </div>
-                                <div className="flex items-start gap-1.5 min-w-0">
-                                    <Badge
-                                        variant="outline"
-                                        className={`shrink-0 text-[10px] px-1 h-5 ${approvalData.jibun_address
-                                            ? 'bg-green-50 text-green-700 border-green-200'
-                                            : 'bg-gray-50 text-gray-500 border-gray-200'
-                                            }`}
-                                    >
-                                        Naver 지번
-                                    </Badge>
-                                    <span className="text-sm text-gray-700 break-all flex-1 min-w-0">
-                                        {approvalData.jibun_address || '-'}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* YouTube 링크 */}
-                            {submission.youtube_link && (
-                                <div className="col-span-2 flex flex-col gap-0.5 min-w-0">
-                                    <span className="text-gray-500 text-xs font-medium flex items-center gap-1">
-                                        <Youtube className="w-3 h-3 text-red-500" />
-                                        YouTube 링크
-                                    </span>
-                                    <a
-                                        href={submission.youtube_link}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="text-sm text-blue-500 hover:underline break-all"
-                                    >
-                                        {submission.youtube_link}
-                                    </a>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 구분선 */}
-                        <div className="shrink-0 bg-border h-[1px] w-full my-3" />
-
-                        {/* 제보자 정보 및 쯔양 리뷰 */}
-                        <div className="space-y-3">
-                            {/* 제보자 정보 */}
-                            <div className="flex items-center gap-4 text-sm">
-                                <div className="flex items-center gap-1.5">
-                                    <User className="w-3.5 h-3.5 text-gray-400" />
-                                    <span className="text-gray-600">
-                                        {submission.profiles?.nickname || '알 수 없음'}
-                                    </span>
-                                </div>
-                                <div className="flex items-center gap-1.5">
-                                    <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                                    <span className="text-gray-600">
-                                        {new Date(submission.created_at).toLocaleDateString('ko-KR')}
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* 쯔양 리뷰 */}
-                            {submission.description && (
-                                <div>
-                                    <h4 className="font-bold text-xs text-gray-500 mb-1.5 uppercase">
-                                        Tzuyang Review
-                                    </h4>
-                                    <div className="bg-gray-50 rounded-md p-2.5 border border-gray-100">
-                                        <p className="text-gray-700 text-xs leading-relaxed whitespace-pre-wrap break-all">
-                                            {submission.description}
-                                        </p>
+                                        )}
+                                        <Badge variant={
+                                            item.item_status === 'pending' ? 'secondary' :
+                                            item.item_status === 'approved' ? 'default' : 'destructive'
+                                        } className="text-xs">
+                                            {item.item_status === 'pending' ? '대기' :
+                                             item.item_status === 'approved' ? '승인' : '반려'}
+                                        </Badge>
                                     </div>
                                 </div>
-                            )}
+
+                                {/* 사용자 제출 섹션 (썸네일 + 메타데이터 + 입력 필드) */}
+                                <div className="border rounded-lg p-3 bg-white">
+                                    {/* 사용자 제출 헤더 */}
+                                    <p className="text-sm font-semibold text-gray-800 mb-2 border-b pb-1">사용자 제출</p>
+                                    
+                                    {/* YouTube 썸네일 + 메타데이터 */}
+                                    <div className="flex gap-3 mb-3">
+                                        {videoId && (
+                                            <a
+                                                href={decision?.youtube_link || item.youtube_link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex-shrink-0"
+                                            >
+                                                <img
+                                                    src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`}
+                                                    alt="YouTube thumbnail"
+                                                    className="w-32 h-20 object-cover rounded hover:opacity-80 transition-opacity"
+                                                />
+                                            </a>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            {metaData ? (
+                                                <div className="text-xs space-y-1">
+                                                    <p className="font-medium line-clamp-2">{metaData.title}</p>
+                                                    <p className="text-muted-foreground">
+                                                        {new Date(metaData.publishedAt).toLocaleDateString('ko-KR')} · {formatDuration(metaData.duration)}
+                                                        {metaData.is_shorts && <Badge variant="outline" className="ml-1 text-[10px]">Shorts</Badge>}
+                                                    </p>
+                                                    <div className="flex items-center gap-1">
+                                                        {metaData.ads_info.is_ads ? (
+                                                            <>
+                                                                <Badge variant="destructive" className="text-[10px]">광고</Badge>
+                                                                {metaData.ads_info.what_ads && metaData.ads_info.what_ads.length > 0 && (
+                                                                    <span className="text-muted-foreground">({metaData.ads_info.what_ads.join(', ')})</span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <Badge variant="secondary" className="text-[10px]">광고 아님</Badge>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-muted-foreground">메타데이터를 가져와주세요</p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* YouTube 링크 (관리자 수정) */}
+                                    <div className="space-y-1">
+                                        <Label className="text-xs">YouTube 링크 (관리자 수정 가능)</Label>
+                                        <Input
+                                            value={decision?.youtube_link || item.youtube_link}
+                                            onChange={(e) => handleItemDecisionChange(item.id, 'youtube_link', e.target.value)}
+                                            placeholder="YouTube URL"
+                                            className="text-xs h-8"
+                                        />
+                                    </div>
+
+                                    {/* 쯔양 리뷰 (관리자 수정) */}
+                                    <div className="space-y-1 mt-2">
+                                        <Label className="text-xs">쯔양 리뷰 (관리자 수정 가능)</Label>
+                                        <Textarea
+                                            value={decision?.tzuyang_review ?? item.tzuyang_review ?? ''}
+                                            onChange={(e) => handleItemDecisionChange(item.id, 'tzuyang_review', e.target.value)}
+                                            placeholder="리뷰 내용을 입력하세요"
+                                            rows={3}
+                                            className="text-xs resize-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* EDIT 타입: 기존 데이터 섹션 (아이템별 target_restaurant_id로 매칭) */}
+                                {isEditSubmission && item.original_restaurant && (
+                                    <div className="border rounded-lg p-3 bg-gray-50 mt-2">
+                                        {/* 기존 데이터 헤더 */}
+                                        <p className="text-sm font-semibold text-gray-800 mb-2 border-b pb-1">기존 데이터</p>
+                                        
+                                        {/* 기존 YouTube 썸네일 + 메타데이터 */}
+                                        {(() => {
+                                            const originalVideoId = getYoutubeVideoId(item.original_restaurant?.youtube_link || undefined);
+                                            const originalMeta = item.original_restaurant?.youtube_meta;
+                                            return (
+                                                <div className="flex gap-3 mb-3">
+                                                    {originalVideoId && (
+                                                        <a
+                                                            href={item.original_restaurant?.youtube_link || ''}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-shrink-0"
+                                                        >
+                                                            <img
+                                                                src={`https://img.youtube.com/vi/${originalVideoId}/mqdefault.jpg`}
+                                                                alt="기존 YouTube thumbnail"
+                                                                className="w-32 h-20 object-cover rounded hover:opacity-80 transition-opacity border"
+                                                            />
+                                                        </a>
+                                                    )}
+                                                    <div className="flex-1 min-w-0">
+                                                        {originalMeta ? (
+                                                            <div className="text-xs space-y-1">
+                                                                <p className="font-medium line-clamp-2">{originalMeta.title || '제목 없음'}</p>
+                                                                <p className="text-muted-foreground">
+                                                                    {originalMeta.published_at ? new Date(originalMeta.published_at).toLocaleDateString('ko-KR') : '-'}
+                                                                    {originalMeta.duration && ` · ${formatDuration(originalMeta.duration)}`}
+                                                                    {originalMeta.is_shorts && <Badge variant="outline" className="ml-1 text-[10px]">Shorts</Badge>}
+                                                                </p>
+                                                                <div className="flex items-center gap-1">
+                                                                    {originalMeta.is_ads ? (
+                                                                        <>
+                                                                            <Badge variant="destructive" className="text-[10px]">광고</Badge>
+                                                                            {originalMeta.what_ads && originalMeta.what_ads.length > 0 && (
+                                                                                <span className="text-muted-foreground">({originalMeta.what_ads.join(', ')})</span>
+                                                                            )}
+                                                                        </>
+                                                                    ) : (
+                                                                        <Badge variant="secondary" className="text-[10px]">광고 아님</Badge>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div>
+                                                                <p className="text-xs text-gray-500 mb-1">기존 등록된 영상</p>
+                                                                {item.original_restaurant?.youtube_link ? (
+                                                                    <a 
+                                                                        href={item.original_restaurant.youtube_link} 
+                                                                        target="_blank" 
+                                                                        rel="noopener noreferrer"
+                                                                        className="text-blue-500 hover:underline text-xs break-all"
+                                                                    >
+                                                                        {item.original_restaurant.youtube_link}
+                                                                    </a>
+                                                                ) : <span className="text-gray-400 text-xs">기존 YouTube 링크 없음</span>}
+                                                                <p className="text-[10px] text-gray-400 mt-1">메타데이터 없음</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                        
+                                        {/* 기존 쯔양 리뷰 */}
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-gray-600">기존 쯔양 리뷰</Label>
+                                            <div className="bg-white rounded p-2 text-xs whitespace-pre-wrap min-h-[40px] border">
+                                                {item.original_restaurant?.tzuyang_review || '-'}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* 반려 사유 입력 (선택 안 됨 + 대기 중) - 빨간 박스 */}
+                                {isPending && decision && !decision.approved && (
+                                    <div className="border-2 border-red-300 rounded-lg p-2 bg-red-50/50 mt-2">
+                                        <Label className="text-xs text-red-600 font-medium mb-1 block">
+                                            ⚠️ 반려 사유 (필수 입력)
+                                        </Label>
+                                        <Input
+                                            placeholder="반려 사유를 입력해주세요"
+                                            value={decision.rejectionReason}
+                                            onChange={(e) =>
+                                                handleItemDecisionChange(item.id, 'rejectionReason', e.target.value)
+                                            }
+                                            className="text-xs h-8 border-red-300 focus:border-red-500"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* 중복 경고 */}
+                                {item.duplicate_check_result?.isDuplicate && (
+                                    <div className="bg-red-50 border border-red-200 rounded p-2 mt-2 text-xs text-red-600">
+                                        <strong>중복 감지:</strong> {item.duplicate_check_result.existingRestaurantName}
+                                        {item.duplicate_check_result.matchedYoutubeUrl && (
+                                            <p className="mt-1 truncate">기존 URL: {item.duplicate_check_result.matchedYoutubeUrl}</p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* 반려된 항목 사유 표시 */}
+                                {item.item_status === 'rejected' && item.rejection_reason && (
+                                    <div className="text-xs text-red-500 mt-2">반려 사유: {item.rejection_reason}</div>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+
+                {/* 중복 강제 승인 옵션 */}
+                {hasDuplicateItems && (
+                    <div className="rounded-lg p-2 bg-amber-50/50 border border-amber-200">
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="force-approve"
+                                checked={forceApprove}
+                                onCheckedChange={(checked) => onForceApproveChange(checked as boolean)}
+                                className="h-4 w-4"
+                            />
+                            <Label htmlFor="force-approve" className="text-sm text-amber-700">
+                                중복 항목 강제 승인 (주의: 중복 데이터가 생성됩니다)
+                            </Label>
                         </div>
                     </div>
-
-                    {/* 수정 요청 비교 뷰 (submission_type이 'edit'일 때만 표시) */}
-                    {submission.submission_type === 'edit' && submission.original_restaurant_data && (
-                        <Card className="border-amber-200 bg-amber-50/30">
-                            <CardHeader className="pb-3">
-                                <CardTitle className="text-lg flex items-center gap-2 text-amber-700">
-                                    <RefreshCw className="w-5 h-5" />
-                                    수정 요청 비교
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                {/* 맛집명 비교 */}
-                                <CompareField
-                                    label="맛집명"
-                                    original={submission.original_restaurant_data.name}
-                                    modified={submission.restaurant_name}
-                                />
-
-                                {/* 주소 비교 */}
-                                <CompareField
-                                    label="주소"
-                                    original={submission.original_restaurant_data.address}
-                                    modified={submission.address}
-                                />
-
-                                {/* 전화번호 비교 */}
-                                <CompareField
-                                    label="전화번호"
-                                    original={submission.original_restaurant_data.phone || '-'}
-                                    modified={submission.phone || '-'}
-                                />
-
-                                {/* 카테고리 비교 */}
-                                <CompareField
-                                    label="카테고리"
-                                    original={submission.original_restaurant_data.categories.join(', ') || '-'}
-                                    modified={categories.join(', ') || '-'}
-                                />
-
-                                {/* 쯔양 리뷰 비교 */}
-                                <CompareField
-                                    label="쯔양 리뷰"
-                                    original={submission.original_restaurant_data.tzuyang_review || '-'}
-                                    modified={submission.description || '-'}
-                                    isMultiline
-                                />
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* 거부된 경우 사유 표시 */}
-                    {submission.status === 'rejected' && submission.rejection_reason && (
-                        <Card className="border-red-200 bg-red-50/50">
-                            <CardContent className="pt-4">
-                                <Label className="text-red-600 text-sm font-medium">거부 사유</Label>
-                                <p className="text-sm mt-1">{submission.rejection_reason}</p>
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* 하단 여백 (스크롤 시 마지막 요소가 잘리지 않도록) */}
-                    <div className="h-8" />
-                </div>
-            </ScrollArea>
+                )}
+            </div>
         </div>
     );
 }
+
+export default SubmissionDetailView;
