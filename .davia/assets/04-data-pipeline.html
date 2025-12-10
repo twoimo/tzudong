@@ -23,7 +23,14 @@
 
 <excalidraw data-path="data/data-pipeline-flow.json"></excalidraw>
 
-<p></p>
+<h3>📊 다이어그램 설명</h3>
+<ul>
+    <li><strong>1.Input</strong> - 입력 단계: YouTube URLs → Transcript API로 자막(Subs) 추출</li>
+    <li><strong>2.Crawl</strong> - 크롤링 단계: Prompt + Gemini AI로 맛집 정보 JSONL 추출</li>
+    <li><strong>3.Eval</strong> - 평가 단계: RULE 기반 검증 + LaaJ(LLM as a Judge)로 품질 평가 → valid/skip 분류</li>
+    <li><strong>4.Transform</strong> - 변환 단계: Geocode(좌표 변환) + Dedup(중복 제거) + ID 발급</li>
+    <li><strong>5.DB</strong> - 저장 단계: restaurants 테이블에 최종 데이터 저장</li>
+</ul>
 
 <h3>간단 요약</h3>
 <pre><code>
