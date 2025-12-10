@@ -1,0 +1,251 @@
+<h1>명령어 치트시트</h1>
+
+<p>자주 사용하는 명령어를 한눈에 볼 수 있는 <strong>치트시트</strong>입니다.</p>
+
+<hr />
+
+<h2>프론트엔드 (apps/web)</h2>
+
+<h3>개발</h3>
+<pre><code># 개발 서버 시작
+pnpm dev
+
+# 프로덕션 빌드
+pnpm build
+
+# 빌드된 서버 실행
+pnpm start
+
+# 린트 검사
+pnpm lint
+
+# 타입 체크
+pnpm type-check</code></pre>
+
+<h3>패키지 관리</h3>
+<pre><code># 의존성 설치
+pnpm install
+
+# 패키지 추가
+pnpm add package-name
+
+# 개발 의존성 추가
+pnpm add -D package-name
+
+# 패키지 제거
+pnpm remove package-name
+
+# 패키지 업데이트
+pnpm update</code></pre>
+
+<hr />
+
+<h2>백엔드 파이프라인</h2>
+
+<h3>전체 파이프라인 실행</h3>
+<pre><code># 백엔드 폴더로 이동
+cd backend
+
+# 가상환경 활성화 (선택)
+source ../.venv/bin/activate  # Mac/Linux
+# 또는 Windows
+.\.venv\Scripts\activate
+
+# 전체 파이프라인 실행 (처음부터)
+python3 geminiCLI-restaurant-pipeline.py
+
+# 특정 단계부터 실행
+python3 geminiCLI-restaurant-pipeline.py --start-from 2   # 평가부터
+python3 geminiCLI-restaurant-pipeline.py --start-from 4   # Transform부터
+python3 geminiCLI-restaurant-pipeline.py --start-from 5   # DB 삽입만</code></pre>
+
+<h3>개별 단계 실행</h3>
+<pre><code># 크롤링만 실행
+cd backend/geminiCLI-restaurant-crawling
+./scripts/crawling.sh
+
+# 평가만 실행
+cd backend/geminiCLI-restaurant-evaluation
+npm run evaluate
+
+# 자막 추출 테스트
+cd backend/transcript-api
+python3 main.py "https://youtu.be/VIDEO_ID"</code></pre>
+
+<h3>Gemini CLI</h3>
+<pre><code># 설치
+npm install -g @google/gemini-cli
+
+# 로그인 (처음 실행 시)
+gemini
+
+# 로그아웃
+gemini logout
+
+# 버전 확인
+gemini --version</code></pre>
+
+<hr />
+
+<h2>데이터베이스 (Supabase)</h2>
+
+<h3>Supabase CLI</h3>
+<pre><code># 설치
+npm install -g supabase
+
+# 로그인
+supabase login
+
+# 프로젝트 연결
+supabase link --project-ref your-project-ref
+
+# 마이그레이션 적용
+supabase db push
+
+# 마이그레이션 상태 확인
+supabase migration list
+
+# 새 마이그레이션 생성
+supabase migration new migration_name
+
+# 로컬 DB 시작
+supabase start
+
+# 로컬 DB 중지
+supabase stop</code></pre>
+
+<h3>SQL 명령어</h3>
+<pre><code>-- 승인된 맛집 개수
+SELECT COUNT(*) FROM restaurants WHERE status = 'approved';
+
+-- 대기 중인 맛집
+SELECT * FROM restaurants WHERE status = 'pending';
+
+-- Materialized View 갱신
+SELECT refresh_materialized_views();
+
+-- 통계 조회
+SELECT * FROM get_restaurant_stats();
+SELECT * FROM get_user_stats();
+
+-- 관리자 권한 부여
+INSERT INTO user_roles (user_id, role)
+VALUES ('user-uuid', 'admin')
+ON CONFLICT (user_id) DO UPDATE SET role = 'admin';</code></pre>
+
+<h3>백업/복원</h3>
+<pre><code># 백업
+pg_dump -h db.xxx.supabase.co -p 5432 -U postgres -d postgres > backup.sql
+
+# 복원
+psql -h db.xxx.supabase.co -p 5432 -U postgres -d postgres < backup.sql</code></pre>
+
+<hr />
+
+<h2>Git</h2>
+
+<h3>기본 명령어</h3>
+<pre><code># 상태 확인
+git status
+
+# 변경사항 스테이징
+git add .
+
+# 커밋
+git commit -m "feat: 새 기능 추가"
+
+# 푸시
+git push origin develop
+
+# 풀
+git pull origin develop
+
+# 브랜치 생성 및 이동
+git checkout -b feature/new-feature
+
+# 브랜치 병합 (develop에서)
+git merge feature/new-feature</code></pre>
+
+<h3>커밋 메시지 컨벤션</h3>
+<pre><code># 타입: 설명
+feat: 새 기능 추가
+fix: 버그 수정
+docs: 문서 변경
+style: 코드 포맷팅
+refactor: 리팩토링
+test: 테스트 추가
+chore: 기타 작업</code></pre>
+
+<hr />
+
+<h2>Docker (선택)</h2>
+
+<pre><code># 이미지 빌드
+docker build -t tzudong-web .
+
+# 컨테이너 실행
+docker run -p 3000:3000 tzudong-web
+
+# 실행 중인 컨테이너 확인
+docker ps
+
+# 컨테이너 중지
+docker stop container_id
+
+# 로그 확인
+docker logs container_id</code></pre>
+
+<hr />
+
+<h2>유용한 단축키</h2>
+
+<h3>터미널</h3>
+<ul>
+    <li><code>Ctrl+C</code> - 실행 중인 프로세스 중지</li>
+    <li><code>Ctrl+L</code> - 터미널 화면 지우기</li>
+    <li><code>Tab</code> - 자동 완성</li>
+    <li><code>↑/↓</code> - 이전/다음 명령어</li>
+</ul>
+
+<h3>VS Code</h3>
+<ul>
+    <li><code>Ctrl+`</code> - 터미널 열기/닫기</li>
+    <li><code>Ctrl+Shift+P</code> - 명령 팔레트</li>
+    <li><code>Ctrl+P</code> - 빠른 파일 열기</li>
+    <li><code>Ctrl+Shift+F</code> - 전체 검색</li>
+</ul>
+
+<hr />
+
+<h2>자주 발생하는 에러</h2>
+
+<h3>포트 충돌</h3>
+<pre><code># 3000 포트 사용 중인 프로세스 찾기
+# Windows
+netstat -ano | findstr :3000
+
+# Mac/Linux
+lsof -i :3000
+
+# 프로세스 종료
+# Windows
+taskkill /PID {PID} /F
+
+# Mac/Linux
+kill -9 {PID}</code></pre>
+
+<h3>node_modules 문제</h3>
+<pre><code># node_modules 삭제 후 재설치
+rm -rf node_modules pnpm-lock.yaml
+pnpm install</code></pre>
+
+<h3>캐시 문제</h3>
+<pre><code># Next.js 캐시 삭제
+rm -rf .next
+
+# pnpm 캐시 삭제
+pnpm store prune</code></pre>
+
+<hr />
+
+<p>더 자세한 문제 해결은 <a href="07-troubleshooting.html">트러블슈팅 가이드</a>를 참조하세요.</p>
