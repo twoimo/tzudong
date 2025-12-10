@@ -134,11 +134,43 @@ VALUES ('user-uuid', 'admin')
 ON CONFLICT (user_id) DO UPDATE SET role = 'admin';</code></pre>
 
 <h3>백업/복원</h3>
-<pre><code># 백업
-pg_dump -h db.xxx.supabase.co -p 5432 -U postgres -d postgres > backup.sql
+
+<p><strong>연결 정보:</strong></p>
+<ul>
+    <li>Host: <code>aws-1-ap-southeast-1.pooler.supabase.com</code></li>
+    <li>Port: <code>5432</code></li>
+    <li>User: <code>postgres.aqlcofblfxdrjhhdmarw</code></li>
+    <li>Database: <code>postgres</code></li>
+    <li>Password: Supabase Dashboard → Project Settings → Database에서 확인</li>
+</ul>
+
+<p><strong>Windows (PowerShell):</strong></p>
+<pre><code># PostgreSQL 클라이언트 설치 (처음 한 번만)
+scoop install postgresql
+
+# 백업
+$timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
+$env:PGPASSWORD = '[YOUR_PASSWORD]'
+pg_dump -h aws-1-ap-southeast-1.pooler.supabase.com -p 5432 -U postgres.aqlcofblfxdrjhhdmarw -d postgres -f "supabase\backup-db\backup_$timestamp.sql"
 
 # 복원
-psql -h db.xxx.supabase.co -p 5432 -U postgres -d postgres < backup.sql</code></pre>
+$env:PGPASSWORD = '[YOUR_PASSWORD]'
+psql -h aws-1-ap-southeast-1.pooler.supabase.com -p 5432 -U postgres.aqlcofblfxdrjhhdmarw -d postgres -f "supabase\backup-db\backup_YYYY-MM-DD_HHMMSS.sql"
+
+# 전체 초기화 후 복원 (주의: 모든 데이터 삭제!)
+psql -h aws-1-ap-southeast-1.pooler.supabase.com -p 5432 -U postgres.aqlcofblfxdrjhhdmarw -d postgres -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+psql -h aws-1-ap-southeast-1.pooler.supabase.com -p 5432 -U postgres.aqlcofblfxdrjhhdmarw -d postgres -f "supabase\backup-db\backup_YYYY-MM-DD_HHMMSS.sql"</code></pre>
+
+<p><strong>macOS / Linux:</strong></p>
+<pre><code># PostgreSQL 설치
+brew install postgresql
+
+# 백업
+timestamp=$(date +"%Y-%m-%d_%H%M%S")
+PGPASSWORD='[YOUR_PASSWORD]' pg_dump -h aws-1-ap-southeast-1.pooler.supabase.com -p 5432 -U postgres.aqlcofblfxdrjhhdmarw -d postgres -f "supabase/backup-db/backup_$timestamp.sql"
+
+# 복원
+PGPASSWORD='[YOUR_PASSWORD]' psql -h aws-1-ap-southeast-1.pooler.supabase.com -p 5432 -U postgres.aqlcofblfxdrjhhdmarw -d postgres -f "supabase/backup-db/backup_YYYY-MM-DD_HHMMSS.sql"</code></pre>
 
 <hr />
 
