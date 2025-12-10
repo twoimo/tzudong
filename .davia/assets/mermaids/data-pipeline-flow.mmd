@@ -1,0 +1,26 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart LR
+    subgraph P1["1.Input"]
+        I1[URLs] --> I2[API] --> I3[Subs]
+    end
+
+    subgraph P2["2.Crawl"]
+        C1[Prompt] --> C2[Gemini] --> C3[JSONL]
+    end
+
+    subgraph P3["3.Eval"]
+        E1[RULE] --> E2[LAAJ]
+    end
+
+    subgraph P4["4.Transform"]
+        T1[Geocode] --> T2[Dedup] --> T3[ID]
+    end
+
+    subgraph P5["5.DB"]
+        D1[(restaurants)]
+    end
+
+    P1 --> P2 --> P3
+    P3 -->|valid| P4 --> P5
+    P3 -->|skip| P5

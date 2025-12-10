@@ -1,0 +1,37 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart LR
+    subgraph EXT["External"]
+        YT[YouTube]
+        GEM[Gemini]
+        NAV[Naver]
+        GOO[Google]
+    end
+
+    subgraph PIPE["Pipeline"]
+        P1[Transcript] --> P2[Crawl] --> P3[Eval] --> P4[Transform]
+    end
+
+    subgraph WEB["Frontend"]
+        W1[Map]
+        W2[Search]
+        W3[Detail]
+    end
+
+    subgraph DATA["Supabase"]
+        DB[(restaurants)]
+        RV[(reviews)]
+    end
+
+    YT --> P1
+    GEM --> P2
+    GEM --> P3
+    NAV --> P4
+    P4 --> DB
+
+    NAV --> W1
+    GOO --> W1
+    DB --> W1
+    DB --> W2
+    DB --> W3
+    RV --> W3

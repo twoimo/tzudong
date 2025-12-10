@@ -1,0 +1,40 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart LR
+    subgraph ACTIONS["User Actions"]
+        A1[Visit]
+        A2[Browse]
+        A3[Filter]
+        A4[Login]
+        A5[Review]
+    end
+
+    subgraph COMPONENTS["Components"]
+        C1[Map]
+        C2[Sidebar]
+        C3[Detail]
+        C4[MyPage]
+    end
+
+    subgraph SERVICES["Supabase"]
+        S1[Auth]
+        S2[Storage]
+    end
+
+    subgraph DATABASE["PostgreSQL"]
+        D1[(restaurants)]
+        D2[(reviews)]
+        D3[(profiles)]
+    end
+
+    A1 --> C1
+    A2 --> C1
+    A3 --> C2
+    A4 --> S1 --> C4
+    A5 --> S2
+    A5 --> D2
+
+    C1 --> D1
+    C2 --> D1
+    C3 --> D1
+    C4 --> D3
