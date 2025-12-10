@@ -1,54 +1,146 @@
-flowchart TD
-    subgraph Input["데이터 수집 단계"]
-        YT[YouTube Video URLs<br/>tzuyang_youtubeVideo_urls.txt]
-        TRANS[YouTube Transcript API<br/>transcript-api/main.py]
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568', 'secondaryColor': '#48bb78', 'tertiaryColor': '#f687b3', 'background': '#ffffff'}}}%%
+
+flowchart TB
+    %% ===== 타이틀 =====
+    TITLE["🚀 쯔동여지도 데이터 파이프라인<br/>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br/>YouTube → AI 분석 → 맛집 데이터베이스"]
+    
+    %% ===== PHASE 1: 입력 데이터 =====
+    subgraph PHASE1["📥 PHASE 1: 입력 데이터 준비"]
+        direction LR
+        
+        subgraph YT_INPUT["🎬 YouTube 영상"]
+            YT1["📋 영상 URL 목록<br/>───────────────<br/>tzuyang_youtubeVideo_urls.txt<br/>└─ 약 500+ 영상"]
+            YT2["🔍 영상 선별<br/>───────────────<br/>• 맛집 방문 영상<br/>• 먹방 영상<br/>• 리뷰 영상"]
+        end
+        
+        subgraph TRANSCRIPT["📝 자막 추출"]
+            TR1["🐍 YouTube Transcript API<br/>───────────────<br/>transcript-api/main.py<br/>Flask 서버"]
+            TR2["📄 자막 데이터<br/>───────────────<br/>• 한국어 자막 우선<br/>• 자동 생성 자막 포함<br/>• 타임스탬프 포함"]
+        end
     end
 
-    subgraph Crawling["크롤링 단계 - Gemini CLI"]
-        GC_PROMPT[크롤링 프롬프트<br/>prompts/01-extract-restaurants.md]
-        GC_RUN[Gemini CLI 실행<br/>scripts/crawl-restaurants.ts]
-        GC_OUT[크롤링 결과<br/>data/crawling-results.jsonl]
+    %% ===== PHASE 2: AI 크롤링 =====
+    subgraph PHASE2["🤖 PHASE 2: AI 크롤링 (Gemini CLI)"]
+        direction TB
+        
+        subgraph CRAWL_SETUP["⚙️ 크롤링 설정"]
+            CS1["📁 입력 파일<br/>───────────────<br/>data/input/*.jsonl<br/>영상별 자막 데이터"]
+            CS2["📜 프롬프트<br/>───────────────<br/>prompts/01-extract-restaurants.md<br/>맛집 추출 지시문"]
+        end
+        
+        subgraph CRAWL_EXEC["🔄 크롤링 실행"]
+            CE1["🚀 Gemini CLI<br/>───────────────<br/>gemini --model gemini-2.5-pro<br/>--prompt {prompt}<br/>--sandbox"]
+            CE2["🧠 AI 분석 내용<br/>───────────────<br/>• 식당명 추출<br/>• 주소 추출<br/>• 카테고리 분류<br/>• 쯔양 코멘트 추출"]
+        end
+        
+        subgraph CRAWL_OUTPUT["📤 크롤링 결과"]
+            CO1["📊 결과 파일<br/>───────────────<br/>data/crawling-results.jsonl"]
+            CO2["📋 추출 필드<br/>───────────────<br/>• restaurant_name<br/>• address<br/>• category<br/>• tzuyang_comment<br/>• youtube_url<br/>• confidence_score"]
+        end
     end
 
-    subgraph Evaluation["평가 단계 - Gemini CLI"]
-        GE_INPUT[크롤링 결과 로드]
-        GE_PROMPT[평가 프롬프트<br/>prompts/01-evaluate-restaurant.md]
-        GE_RUN[Gemini CLI 실행<br/>scripts/evaluate-restaurants.ts]
-        GE_OUT[평가 결과<br/>data/evaluation-results.jsonl]
+    %% ===== PHASE 3: AI 평가 =====
+    subgraph PHASE3["⭐ PHASE 3: AI 평가 (RULE + LAAJ)"]
+        direction TB
+        
+        subgraph EVAL_SETUP["⚙️ 평가 설정"]
+            ES1["📁 입력 데이터<br/>───────────────<br/>크롤링 결과 로드<br/>data/crawling-results.jsonl"]
+            ES2["📜 평가 프롬프트<br/>───────────────<br/>prompts/01-evaluate-restaurant.md<br/>선정 기준 정의"]
+        end
+        
+        subgraph EVAL_PROCESS["🔍 평가 프로세스"]
+            EP1["📏 RULE 평가<br/>───────────────<br/>규칙 기반 점수<br/>• 주소 완전성<br/>• 영상 존재 여부<br/>• 필수 필드 검증"]
+            EP2["🤖 LAAJ 평가<br/>───────────────<br/>AI 판단 점수<br/>• 실제 맛집 여부<br/>• 쯔양 방문 확실성<br/>• 정보 신뢰도"]
+            EP3["📊 종합 점수<br/>───────────────<br/>RULE + LAAJ 합산<br/>임계값 비교"]
+        end
+        
+        subgraph EVAL_RESULT["📤 평가 결과"]
+            ER1{"🔀 선정 여부<br/>is_selected"}
+            ER2["✅ 선정됨<br/>───────────────<br/>• is_selected = true<br/>• 높은 신뢰도<br/>• DB 등록 대상"]
+            ER3["❌ 미선정<br/>───────────────<br/>• is_selected = false<br/>• 낮은 신뢰도<br/>• 평가 기록만 저장"]
+        end
     end
 
-    subgraph Transform["변환 단계"]
-        FILTER[선정/비선정 필터링<br/>is_selected = true/false]
-        GEO[Naver Geocoding API<br/>주소 → 좌표 변환]
-        CLEAN[데이터 정제<br/>중복 제거, 형식 표준화]
+    %% ===== PHASE 4: 데이터 변환 =====
+    subgraph PHASE4["🔄 PHASE 4: 데이터 변환"]
+        direction TB
+        
+        subgraph TRANSFORM["⚡ 변환 처리"]
+            TF1["🗺️ 지오코딩<br/>───────────────<br/>Naver Geocoding API<br/>주소 → 좌표 변환<br/>• 도로명 주소<br/>• 지번 주소<br/>• 영문 주소"]
+            TF2["🔍 중복 검사<br/>───────────────<br/>Levenshtein Distance<br/>• 이름 유사도 85%<br/>• 동일 지번주소"]
+            TF3["🧹 데이터 정제<br/>───────────────<br/>• 카테고리 표준화<br/>• 전화번호 형식화<br/>• NULL 처리"]
+        end
+        
+        subgraph UNIQUE_ID["🔑 고유 ID 생성"]
+            UI1["📝 unique_id 생성<br/>───────────────<br/>format:<br/>{name}_{jibun_address}<br/>해시 기반 중복 방지"]
+        end
     end
 
-    subgraph Database["데이터베이스 저장"]
-        EVAL_TABLE[restaurant_evaluations<br/>평가 결과 저장]
-        REST_TABLE[restaurants<br/>맛집 정보 저장]
-        LINK[evaluation_id 연결]
+    %% ===== PHASE 5: 데이터베이스 저장 =====
+    subgraph PHASE5["💾 PHASE 5: 데이터베이스 저장"]
+        direction TB
+        
+        subgraph DB_EVAL["📊 평가 테이블"]
+            DE1["🗄️ restaurant_evaluations<br/>───────────────<br/>• evaluation_id (PK)<br/>• crawling_data (JSONB)<br/>• rule_score<br/>• laaj_score<br/>• is_selected<br/>• processed_at"]
+        end
+        
+        subgraph DB_REST["🍽️ 맛집 테이블"]
+            DR1["🗄️ restaurants<br/>───────────────<br/>• id (PK)<br/>• name, address<br/>• lat, lng<br/>• categories[]<br/>• youtube_link<br/>• evaluation_id (FK)<br/>• status = 'approved'"]
+        end
+        
+        subgraph DB_LINK["🔗 연결 관계"]
+            DL1["📎 FK 연결<br/>───────────────<br/>restaurants.evaluation_id<br/>→ restaurant_evaluations.id"]
+        end
     end
 
-    YT --> TRANS
-    TRANS --> GC_PROMPT
-    GC_PROMPT --> GC_RUN
-    GC_RUN --> GC_OUT
+    %% ===== 연결 =====
+    TITLE ~~~ PHASE1
+    YT1 --> YT2
+    YT2 --> TR1
+    TR1 --> TR2
+    
+    TR2 --> CS1
+    CS1 --> CS2
+    CS2 --> CE1
+    CE1 --> CE2
+    CE2 --> CO1
+    CO1 --> CO2
+    
+    CO2 --> ES1
+    ES1 --> ES2
+    ES2 --> EP1
+    EP1 --> EP2
+    EP2 --> EP3
+    EP3 --> ER1
+    ER1 -->|"✅ 선정"| ER2
+    ER1 -->|"❌ 미선정"| ER3
+    
+    ER2 --> TF1
+    ER3 --> DE1
+    TF1 --> TF2
+    TF2 --> TF3
+    TF3 --> UI1
+    
+    UI1 --> DR1
+    DR1 --> DL1
+    DL1 --> DE1
 
-    GC_OUT --> GE_INPUT
-    GE_INPUT --> GE_PROMPT
-    GE_PROMPT --> GE_RUN
-    GE_RUN --> GE_OUT
+    %% ===== 스타일 =====
+    classDef phase fill:#667eea,stroke:#5a67d8,color:#fff,stroke-width:2px
+    classDef input fill:#e3f2fd,stroke:#1976d2,color:#0d47a1
+    classDef crawl fill:#fff3e0,stroke:#f57c00,color:#e65100
+    classDef eval fill:#f3e5f5,stroke:#7b1fa2,color:#4a148c
+    classDef transform fill:#e8f5e9,stroke:#388e3c,color:#1b5e20
+    classDef database fill:#fce4ec,stroke:#c2185b,color:#880e4f
+    classDef selected fill:#c8e6c9,stroke:#2e7d32,color:#1b5e20
+    classDef rejected fill:#ffcdd2,stroke:#c62828,color:#b71c1c
+    classDef title fill:#1a202c,stroke:#2d3748,color:#fff,stroke-width:3px
 
-    GE_OUT --> FILTER
-    FILTER -->|is_selected = true| GEO
-    FILTER -->|is_selected = false| EVAL_TABLE
-    GEO --> CLEAN
-    CLEAN --> REST_TABLE
-    REST_TABLE --> LINK
-    LINK --> EVAL_TABLE
-
-    style Input fill:#e3f2fd
-    style Crawling fill:#fff3e0
-    style Evaluation fill:#f3e5f5
-    style Transform fill:#e8f5e9
-    style Database fill:#fce4ec
+    class TITLE title
+    class YT1,YT2,TR1,TR2 input
+    class CS1,CS2,CE1,CE2,CO1,CO2 crawl
+    class ES1,ES2,EP1,EP2,EP3,ER1 eval
+    class ER2 selected
+    class ER3 rejected
+    class TF1,TF2,TF3,UI1 transform
+    class DE1,DR1,DL1 database

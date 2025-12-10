@@ -1,0 +1,161 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568', 'secondaryColor': '#48bb78', 'tertiaryColor': '#f687b3'}}}%%
+
+erDiagram
+    %% ===== 사용자 관련 테이블 =====
+    profiles {
+        uuid user_id PK "auth.users FK"
+        string nickname UK "닉네임 (고유)"
+        string email "이메일"
+        string profile_picture "프로필 이미지 URL"
+        timestamp created_at "생성일"
+        timestamp updated_at "수정일"
+    }
+    
+    user_roles {
+        uuid id PK
+        uuid user_id FK "profiles.user_id"
+        string role "admin | user"
+        timestamp created_at
+    }
+    
+    user_stats {
+        uuid id PK
+        uuid user_id FK "profiles.user_id"
+        int review_count "리뷰 수"
+        int verified_review_count "인증 리뷰 수"
+        int stamp_count "스탬프 수"
+        float trust_score "신뢰도 점수"
+        timestamp updated_at
+    }
+
+    %% ===== 맛집 관련 테이블 =====
+    restaurants {
+        uuid id PK
+        string name "식당명"
+        float lat "위도"
+        float lng "경도"
+        string road_address "도로명 주소"
+        string jibun_address "지번 주소"
+        string english_address "영문 주소"
+        jsonb address_elements "주소 상세"
+        string phone "전화번호"
+        string_array categories "카테고리[]"
+        string youtube_link "유튜브 링크"
+        text description "설명"
+        string unique_id UK "고유 식별자"
+        uuid evaluation_id FK "restaurant_evaluations.id"
+        string status "approved|pending|deleted"
+        boolean geocoding_success "지오코딩 성공"
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at
+    }
+    
+    restaurant_evaluations {
+        uuid id PK
+        jsonb crawling_data "크롤링 원본 데이터"
+        int rule_score "RULE 평가 점수"
+        int laaj_score "LAAJ 평가 점수"
+        boolean is_selected "선정 여부"
+        string video_id "YouTube 영상 ID"
+        string video_title "영상 제목"
+        timestamp processed_at "처리 일시"
+        timestamp created_at
+    }
+    
+    restaurant_submissions {
+        uuid id PK
+        uuid user_id FK "profiles.user_id"
+        string restaurant_name "식당명"
+        string address "주소"
+        string phone "전화번호"
+        string_array category "카테고리[]"
+        string youtube_link "유튜브 링크"
+        text description "설명"
+        string status "pending|approved|rejected"
+        text rejection_reason "거절 사유"
+        uuid reviewed_by_admin_id FK "관리자 ID"
+        timestamp reviewed_at "심사 일시"
+        uuid approved_restaurant_id FK "restaurants.id"
+        string submission_type "new|update"
+        uuid original_restaurant_id FK "수정 요청 시"
+        timestamp created_at
+    }
+
+    %% ===== 리뷰 관련 테이블 =====
+    reviews {
+        uuid id PK
+        uuid user_id FK "profiles.user_id"
+        uuid restaurant_id FK "restaurants.id"
+        text content "리뷰 내용"
+        string_array photos "사진 URL[]"
+        date visited_at "방문일"
+        boolean is_verified "인증 여부"
+        int like_count "좋아요 수"
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    review_likes {
+        uuid id PK
+        uuid review_id FK "reviews.id"
+        uuid user_id FK "profiles.user_id"
+        timestamp created_at
+    }
+    
+    user_stamps {
+        uuid id PK
+        uuid user_id FK "profiles.user_id"
+        uuid restaurant_id FK "restaurants.id"
+        timestamp stamped_at "스탬프 일시"
+        boolean is_verified "인증 여부"
+    }
+
+    %% ===== 알림 & 공지 테이블 =====
+    notifications {
+        uuid id PK
+        uuid user_id FK "profiles.user_id"
+        string type "알림 타입"
+        string title "제목"
+        text message "내용"
+        jsonb metadata "추가 데이터"
+        boolean is_read "읽음 여부"
+        timestamp created_at
+    }
+    
+    announcements {
+        uuid id PK
+        uuid admin_id FK "관리자 ID"
+        string title "공지 제목"
+        text message "공지 내용"
+        boolean is_active "활성 여부"
+        timestamp start_at "시작일"
+        timestamp end_at "종료일"
+        timestamp created_at
+    }
+
+    %% ===== 시스템 테이블 =====
+    server_costs {
+        uuid id PK
+        string item_name "항목명"
+        decimal monthly_cost "월 비용"
+        text description "설명"
+        timestamp updated_at
+    }
+
+    %% ===== 관계 정의 =====
+    profiles ||--o{ user_roles : "has"
+    profiles ||--o| user_stats : "has"
+    profiles ||--o{ reviews : "writes"
+    profiles ||--o{ review_likes : "likes"
+    profiles ||--o{ user_stamps : "collects"
+    profiles ||--o{ restaurant_submissions : "submits"
+    profiles ||--o{ notifications : "receives"
+    
+    restaurants ||--o{ reviews : "has"
+    restaurants ||--o{ user_stamps : "stamped_at"
+    restaurants ||--o| restaurant_evaluations : "evaluated_by"
+    
+    reviews ||--o{ review_likes : "has"
+    
+    restaurant_submissions ||--o| restaurants : "creates"

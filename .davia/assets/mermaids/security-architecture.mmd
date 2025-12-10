@@ -1,0 +1,118 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568', 'secondaryColor': '#48bb78'}}}%%
+
+flowchart TB
+    %% ===== 타이틀 =====
+    TITLE["🔒 보안 아키텍처<br/>━━━━━━━━━━━━━━━━━━━━━━<br/>인증, 권한, 데이터 보호"]
+
+    %% ===== 인증 계층 =====
+    subgraph AUTH["🔐 Authentication Layer"]
+        direction TB
+        
+        subgraph AUTH_FLOW["인증 흐름"]
+            A1["👤 User<br/>이메일/비밀번호 입력"]
+            A2["🔑 Supabase Auth<br/>signInWithPassword"]
+            A3["🎫 JWT Token<br/>access_token 발급"]
+            A4["📦 Session Storage<br/>localStorage 저장"]
+        end
+        
+        subgraph AUTH_VERIFY["토큰 검증"]
+            AV1["📡 API Request<br/>Authorization Header"]
+            AV2["✅ Token Validation<br/>JWT 서명 검증"]
+            AV3["⏰ Token Refresh<br/>자동 갱신"]
+        end
+    end
+
+    %% ===== 권한 계층 =====
+    subgraph AUTHZ["👮 Authorization Layer"]
+        direction TB
+        
+        subgraph ROLES["역할 정의"]
+            R1["👤 User (일반 사용자)<br/>───────────────<br/>✓ 승인된 맛집 조회<br/>✓ 리뷰 작성/수정/삭제<br/>✓ 맛집 제보<br/>✓ 스탬프 수집"]
+            
+            R2["👨‍💼 Admin (관리자)<br/>───────────────<br/>✓ 모든 맛집 조회<br/>✓ 제보 승인/거절<br/>✓ 맛집 수정/삭제<br/>✓ 공지사항 관리<br/>✓ 사용자 관리"]
+        end
+        
+        subgraph ROLE_CHECK["역할 확인"]
+            RC1["📋 user_roles 테이블<br/>user_id + role 조회"]
+            RC2["⚡ AuthContext<br/>isAdmin state"]
+            RC3["🛡️ Component Guard<br/>조건부 렌더링"]
+        end
+    end
+
+    %% ===== RLS 정책 =====
+    subgraph RLS["🛡️ Row Level Security (RLS)"]
+        direction TB
+        
+        subgraph RLS_REST["restaurants 테이블"]
+            RR1["SELECT 정책<br/>───────────────<br/>일반: status = 'approved'<br/>관리자: 모든 레코드"]
+            RR2["INSERT 정책<br/>───────────────<br/>관리자만 가능"]
+            RR3["UPDATE/DELETE 정책<br/>───────────────<br/>관리자만 가능"]
+        end
+        
+        subgraph RLS_REVIEW["reviews 테이블"]
+            REV1["SELECT 정책<br/>───────────────<br/>모든 사용자 가능"]
+            REV2["INSERT 정책<br/>───────────────<br/>로그인 사용자"]
+            REV3["UPDATE/DELETE 정책<br/>───────────────<br/>본인 리뷰만 가능<br/>user_id = auth.uid()"]
+        end
+        
+        subgraph RLS_SUB["submissions 테이블"]
+            RS1["SELECT 정책<br/>───────────────<br/>본인 제보 or 관리자"]
+            RS2["INSERT 정책<br/>───────────────<br/>로그인 사용자"]
+            RS3["UPDATE 정책<br/>───────────────<br/>관리자만 (심사)"]
+        end
+    end
+
+    %% ===== API 보안 =====
+    subgraph API["🔒 API Security"]
+        direction TB
+        
+        subgraph API_KEYS["API 키 관리"]
+            AK1["🔓 anon key<br/>───────────────<br/>• 클라이언트용<br/>• 제한된 권한<br/>• 공개 가능"]
+            AK2["🔐 service_role key<br/>───────────────<br/>• 서버용<br/>• 전체 권한<br/>• 절대 비공개"]
+        end
+        
+        subgraph API_ENV["환경 변수"]
+            AE1["📦 .env.local<br/>───────────────<br/>NEXT_PUBLIC_* (공개)<br/>SUPABASE_* (비공개)"]
+            AE2["🔒 Vercel Secrets<br/>───────────────<br/>프로덕션 환경 변수<br/>암호화 저장"]
+        end
+    end
+
+    %% ===== 데이터 보호 =====
+    subgraph DATA["📊 Data Protection"]
+        direction TB
+        
+        DP1["🔐 비밀번호 해싱<br/>bcrypt 알고리즘"]
+        DP2["🛡️ HTTPS 전송<br/>TLS 암호화"]
+        DP3["📝 감사 로그<br/>접근 기록 저장"]
+        DP4["🗑️ 소프트 삭제<br/>deleted_at 플래그"]
+    end
+
+    %% ===== 연결 =====
+    TITLE --> AUTH
+    A1 --> A2 --> A3 --> A4
+    A4 --> AV1 --> AV2 --> AV3
+    
+    AUTH --> AUTHZ
+    R1 --> RC1
+    R2 --> RC1
+    RC1 --> RC2 --> RC3
+    
+    AUTHZ --> RLS
+    
+    RLS --> API
+    API --> DATA
+
+    %% ===== 스타일 =====
+    classDef title fill:#1a202c,stroke:#2d3748,color:#fff,stroke-width:3px
+    classDef auth fill:#667eea,stroke:#5a67d8,color:#fff
+    classDef authz fill:#48bb78,stroke:#38a169,color:#fff
+    classDef rls fill:#ed8936,stroke:#dd6b20,color:#fff
+    classDef api fill:#9f7aea,stroke:#805ad5,color:#fff
+    classDef data fill:#e53e3e,stroke:#c53030,color:#fff
+
+    class TITLE title
+    class A1,A2,A3,A4,AV1,AV2,AV3 auth
+    class R1,R2,RC1,RC2,RC3 authz
+    class RR1,RR2,RR3,REV1,REV2,REV3,RS1,RS2,RS3 rls
+    class AK1,AK2,AE1,AE2 api
+    class DP1,DP2,DP3,DP4 data

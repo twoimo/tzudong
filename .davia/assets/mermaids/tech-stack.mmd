@@ -1,0 +1,114 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568'}}}%%
+
+flowchart LR
+    %% ===== 타이틀 =====
+    subgraph TITLE_AREA[" "]
+        TITLE["🛠️ 기술 스택 (Tech Stack)<br/>━━━━━━━━━━━━━━━━━━━━━━━"]
+    end
+
+    %% ===== 프론트엔드 =====
+    subgraph FRONTEND["🖥️ Frontend"]
+        direction TB
+        
+        subgraph FE_CORE["Core Framework"]
+            F1["⚛️ Next.js 16<br/>App Router"]
+            F2["🚀 Turbopack<br/>빠른 HMR"]
+            F3["📘 TypeScript<br/>타입 안전성"]
+        end
+        
+        subgraph FE_STYLE["Styling"]
+            F4["🎨 Tailwind CSS<br/>유틸리티 CSS"]
+            F5["🧩 Radix UI<br/>Headless 컴포넌트"]
+            F6["✨ shadcn/ui<br/>UI 라이브러리"]
+        end
+        
+        subgraph FE_STATE["State Management"]
+            F7["🔄 React Query v5<br/>서버 상태"]
+            F8["📦 Zustand<br/>클라이언트 상태"]
+        end
+        
+        subgraph FE_MAP["Maps"]
+            F9["🗺️ Naver Maps<br/>국내 지도"]
+            F10["🌍 Google Maps<br/>해외 지도"]
+        end
+    end
+
+    %% ===== 백엔드 =====
+    subgraph BACKEND["⚙️ Backend"]
+        direction TB
+        
+        subgraph BE_DB["Database"]
+            B1["🐘 PostgreSQL<br/>메인 DB"]
+            B2["🔐 Supabase<br/>BaaS 플랫폼"]
+            B3["🛡️ RLS<br/>Row Level Security"]
+        end
+        
+        subgraph BE_AUTH["Authentication"]
+            B4["🔑 Supabase Auth<br/>이메일/비밀번호"]
+            B5["👤 Profiles<br/>사용자 관리"]
+        end
+        
+        subgraph BE_API["APIs"]
+            B6["📡 PostgREST<br/>Auto-generated API"]
+            B7["⚡ Edge Functions<br/>서버리스"]
+        end
+    end
+
+    %% ===== AI 파이프라인 =====
+    subgraph PIPELINE["🤖 AI Pipeline"]
+        direction TB
+        
+        subgraph PIPE_AI["AI Tools"]
+            P1["🧠 Gemini CLI<br/>gemini-2.5-pro"]
+            P2["📝 YouTube API<br/>자막 추출"]
+        end
+        
+        subgraph PIPE_PROCESS["Processing"]
+            P3["🕷️ Crawling<br/>맛집 추출"]
+            P4["⭐ Evaluation<br/>RULE + LAAJ"]
+        end
+        
+        subgraph PIPE_GEO["Geocoding"]
+            P5["🗺️ Naver Geocoding<br/>주소 → 좌표"]
+        end
+    end
+
+    %% ===== DevOps =====
+    subgraph DEVOPS["🚀 DevOps"]
+        direction TB
+        
+        subgraph DEV_CI["CI/CD"]
+            D1["🔄 GitHub Actions<br/>자동화 파이프라인"]
+            D2["▲ Vercel<br/>프론트엔드 배포"]
+        end
+        
+        subgraph DEV_TOOLS["Development"]
+            D3["📦 pnpm<br/>패키지 매니저"]
+            D4["🔍 ESLint<br/>코드 품질"]
+            D5["💅 Prettier<br/>코드 포맷"]
+        end
+        
+        subgraph DEV_MONITOR["Monitoring"]
+            D6["📊 Vercel Analytics<br/>성능 모니터링"]
+            D7["🐛 Error Tracking<br/>에러 추적"]
+        end
+    end
+
+    %% ===== 연결 =====
+    TITLE_AREA ~~~ FRONTEND
+    FRONTEND --> BACKEND
+    BACKEND --> PIPELINE
+    PIPELINE --> DEVOPS
+
+    %% ===== 스타일 =====
+    classDef title fill:#1a202c,stroke:#2d3748,color:#fff,stroke-width:3px
+    classDef frontend fill:#667eea,stroke:#5a67d8,color:#fff
+    classDef backend fill:#48bb78,stroke:#38a169,color:#fff
+    classDef pipeline fill:#ed8936,stroke:#dd6b20,color:#fff
+    classDef devops fill:#9f7aea,stroke:#805ad5,color:#fff
+
+    class TITLE title
+    class F1,F2,F3,F4,F5,F6,F7,F8,F9,F10 frontend
+    class B1,B2,B3,B4,B5,B6,B7 backend
+    class P1,P2,P3,P4,P5 pipeline
+    class D1,D2,D3,D4,D5,D6,D7 devops

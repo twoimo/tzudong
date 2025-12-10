@@ -1,0 +1,142 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568', 'secondaryColor': '#48bb78', 'tertiaryColor': '#f687b3'}}}%%
+
+flowchart TB
+    %% ===== 타이틀 =====
+    subgraph TITLE_BOX[" "]
+        TITLE["🗺️ 쯔동여지도 시스템 아키텍처<br/>━━━━━━━━━━━━━━━━━━━━━━━━━━━<br/>YouTube 맛집 데이터를 AI로 분석하여<br/>지도 기반 서비스로 제공"]
+    end
+
+    %% ===== 외부 서비스 =====
+    subgraph EXTERNAL["☁️ External Services"]
+        direction LR
+        
+        EXT_YT["🎬 YouTube<br/>───────────<br/>쯔양 채널 영상<br/>자막 데이터"]
+        
+        EXT_NAVER["🗺️ Naver<br/>───────────<br/>Maps API<br/>Geocoding API"]
+        
+        EXT_GOOGLE["🌍 Google<br/>───────────<br/>Maps API<br/>(해외 맛집)"]
+        
+        EXT_GEMINI["🤖 Gemini<br/>───────────<br/>gemini-2.5-pro<br/>AI 분석"]
+    end
+
+    %% ===== 프론트엔드 =====
+    subgraph FRONTEND["🖥️ Frontend (Next.js 16 + Turbopack)"]
+        direction TB
+        
+        subgraph FE_CORE["⚡ Core"]
+            FE1["📱 App Router<br/>app/ 디렉토리"]
+            FE2["🎨 UI Components<br/>Radix UI + Tailwind"]
+            FE3["🗺️ Map View<br/>Naver/Google Maps"]
+        end
+        
+        subgraph FE_STATE["📊 State Management"]
+            ST1["🔄 React Query<br/>서버 상태 관리<br/>캐싱 & 동기화"]
+            ST2["📦 Zustand<br/>클라이언트 상태<br/>필터, UI 상태"]
+        end
+        
+        subgraph FE_FEATURES["✨ 주요 기능"]
+            FF1["🔍 검색 & 필터<br/>카테고리, 지역"]
+            FF2["📍 맛집 상세<br/>정보, 리뷰"]
+            FF3["✏️ 리뷰 작성<br/>사진 업로드"]
+            FF4["📥 맛집 제보<br/>사용자 기여"]
+            FF5["🏆 스탬프<br/>방문 인증"]
+        end
+    end
+
+    %% ===== 백엔드 파이프라인 =====
+    subgraph PIPELINE["🔧 Backend Pipeline (Gemini CLI)"]
+        direction TB
+        
+        subgraph PIPE_CRAWL["🕷️ Crawling"]
+            PC1["📝 자막 추출<br/>YouTube API"]
+            PC2["🤖 맛집 추출<br/>Gemini AI"]
+        end
+        
+        subgraph PIPE_EVAL["⭐ Evaluation"]
+            PE1["📏 RULE 평가<br/>규칙 기반"]
+            PE2["🧠 LAAJ 평가<br/>AI 판단"]
+        end
+        
+        subgraph PIPE_TRANSFORM["🔄 Transform"]
+            PT1["🗺️ Geocoding<br/>주소→좌표"]
+            PT2["🧹 정제<br/>중복 제거"]
+        end
+    end
+
+    %% ===== 데이터베이스 =====
+    subgraph DATABASE["🗄️ Database (Supabase PostgreSQL)"]
+        direction TB
+        
+        subgraph DB_CORE["📊 Core Tables"]
+            DC1["🍽️ restaurants<br/>맛집 정보"]
+            DC2["👤 profiles<br/>사용자 프로필"]
+            DC3["✍️ reviews<br/>사용자 리뷰"]
+        end
+        
+        subgraph DB_ADMIN["🔐 Admin Tables"]
+            DA1["📥 submissions<br/>맛집 제보"]
+            DA2["📊 evaluations<br/>AI 평가 결과"]
+            DA3["👥 user_roles<br/>권한 관리"]
+        end
+        
+        subgraph DB_SECURITY["🛡️ Security"]
+            DS1["🔒 RLS Policies<br/>Row Level Security"]
+            DS2["🔑 Auth<br/>Supabase Auth"]
+        end
+    end
+
+    %% ===== CI/CD =====
+    subgraph CICD["🚀 CI/CD (GitHub Actions + Vercel)"]
+        direction LR
+        
+        CI1["🔍 Lint & Test<br/>ESLint, TypeScript"]
+        CI2["🏗️ Build<br/>Next.js Build"]
+        CI3["📦 Deploy<br/>Vercel"]
+        CI4["⏰ Pipeline<br/>Scheduled Job"]
+    end
+
+    %% ===== 연결 =====
+    EXT_YT --> PC1
+    EXT_GEMINI --> PC2
+    EXT_GEMINI --> PE2
+    EXT_NAVER --> PT1
+    EXT_NAVER --> FE3
+    EXT_GOOGLE --> FE3
+
+    FE_CORE --> FE_STATE
+    FE_STATE --> FE_FEATURES
+    
+    PC1 --> PC2
+    PC2 --> PE1
+    PE1 --> PE2
+    PE2 --> PT1
+    PT1 --> PT2
+    PT2 --> DC1
+    PT2 --> DA2
+
+    FF1 --> DC1
+    FF2 --> DC1
+    FF2 --> DC3
+    FF3 --> DC3
+    FF4 --> DA1
+    FF5 --> DC1
+
+    FE1 --> DS2
+    DA1 --> DC1
+    
+    CI4 --> PIPELINE
+
+    %% ===== 스타일 =====
+    classDef external fill:#e2e8f0,stroke:#718096,color:#2d3748,stroke-width:2px
+    classDef frontend fill:#667eea,stroke:#5a67d8,color:#fff,stroke-width:2px
+    classDef pipeline fill:#ed8936,stroke:#dd6b20,color:#fff,stroke-width:2px
+    classDef database fill:#48bb78,stroke:#38a169,color:#fff,stroke-width:2px
+    classDef cicd fill:#9f7aea,stroke:#805ad5,color:#fff,stroke-width:2px
+    classDef title fill:#1a202c,stroke:#2d3748,color:#fff,stroke-width:3px
+
+    class EXT_YT,EXT_NAVER,EXT_GOOGLE,EXT_GEMINI external
+    class FE1,FE2,FE3,ST1,ST2,FF1,FF2,FF3,FF4,FF5 frontend
+    class PC1,PC2,PE1,PE2,PT1,PT2 pipeline
+    class DC1,DC2,DC3,DA1,DA2,DA3,DS1,DS2 database
+    class CI1,CI2,CI3,CI4 cicd
+    class TITLE title

@@ -1,0 +1,166 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#667eea', 'primaryTextColor': '#fff', 'lineColor': '#4a5568', 'secondaryColor': '#48bb78', 'tertiaryColor': '#f687b3'}}}%%
+
+flowchart TB
+    %% ===== 타이틀 =====
+    TITLE["🤖 Gemini CLI 파이프라인 상세 흐름<br/>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━<br/>backend/geminiCLI-restaurant-* 디렉토리"]
+
+    %% ===== GitHub Actions 트리거 =====
+    subgraph TRIGGER["⏰ 트리거 (GitHub Actions)"]
+        direction LR
+        T1["📅 스케줄<br/>───────────<br/>cron: '0 0 */2 * *'<br/>2일마다 자동 실행"]
+        T2["🖱️ 수동 실행<br/>───────────<br/>workflow_dispatch<br/>Actions 탭에서 실행"]
+        T3["🔄 Push 트리거<br/>───────────<br/>backend/** 변경 시"]
+    end
+
+    %% ===== Phase 1: 입력 준비 =====
+    subgraph PHASE1["📥 Phase 1: 입력 데이터 준비"]
+        direction TB
+        
+        subgraph INPUT_FILES["📁 입력 파일"]
+            IF1["📋 영상 URL 목록<br/>───────────────────<br/>tzuyang_youtubeVideo_urls.txt<br/>├─ 라인당 1개 URL<br/>├─ 약 500+ 영상<br/>└─ 주기적 업데이트"]
+        end
+        
+        subgraph TRANSCRIPT["📝 자막 추출"]
+            TR1["🐍 Flask 서버<br/>───────────────────<br/>transcript-api/main.py<br/>POST /transcript"]
+            TR2["📄 추출 결과<br/>───────────────────<br/>{<br/>  video_id,<br/>  title,<br/>  transcript: [...],<br/>  duration<br/>}"]
+        end
+    end
+
+    %% ===== Phase 2: AI 크롤링 =====
+    subgraph PHASE2["🕷️ Phase 2: AI 크롤링 (geminiCLI-restaurant-crawling)"]
+        direction TB
+        
+        subgraph CRAWL_CONFIG["⚙️ 크롤링 설정"]
+            CC1["📜 프롬프트 파일<br/>───────────────────<br/>prompts/01-extract-restaurants.md<br/>├─ 시스템 역할 정의<br/>├─ 추출 필드 지정<br/>├─ 출력 형식 지정<br/>└─ 예시 포함"]
+            CC2["⚡ 실행 스크립트<br/>───────────────────<br/>scripts/crawl-restaurants.ts<br/>├─ 배치 처리 (10개씩)<br/>├─ 재시도 로직 (3회)<br/>├─ 진행률 로깅<br/>└─ 결과 저장"]
+        end
+        
+        subgraph CRAWL_EXEC["🚀 Gemini CLI 실행"]
+            CE1["🤖 명령어<br/>───────────────────<br/>gemini \\ <br/>  --model gemini-2.5-pro \\<br/>  --prompt {prompt_file} \\<br/>  --input {transcript} \\<br/>  --sandbox"]
+            CE2["🧠 AI 분석 작업<br/>───────────────────<br/>1. 자막 텍스트 분석<br/>2. 맛집 언급 감지<br/>3. 정보 추출<br/>   • 식당명<br/>   • 주소<br/>   • 카테고리<br/>   • 쯔양 코멘트"]
+        end
+        
+        subgraph CRAWL_OUTPUT["📤 크롤링 결과"]
+            CO1["📊 결과 파일<br/>───────────────────<br/>data/crawling-results.jsonl<br/>├─ JSON Lines 형식<br/>└─ 영상당 1+ 레코드"]
+            CO2["📋 결과 스키마<br/>───────────────────<br/>{<br/>  video_id,<br/>  video_title,<br/>  restaurant_name,<br/>  address,<br/>  category,<br/>  tzuyang_comment,<br/>  confidence_score,<br/>  extracted_at<br/>}"]
+        end
+    end
+
+    %% ===== Phase 3: AI 평가 =====
+    subgraph PHASE3["⭐ Phase 3: AI 평가 (geminiCLI-restaurant-evaluation)"]
+        direction TB
+        
+        subgraph EVAL_CONFIG["⚙️ 평가 설정"]
+            EC1["📜 평가 프롬프트<br/>───────────────────<br/>prompts/01-evaluate-restaurant.md<br/>├─ 선정 기준 정의<br/>├─ 점수 체계 설명<br/>└─ 판단 가이드라인"]
+            EC2["⚡ 평가 스크립트<br/>───────────────────<br/>scripts/evaluate-restaurants.ts<br/>├─ 순차 처리<br/>├─ 점수 계산<br/>└─ 결과 저장"]
+        end
+        
+        subgraph EVAL_RULES["📏 RULE 평가 (규칙 기반)"]
+            ER1["✓ 필수 필드 검사<br/>───────────────────<br/>• restaurant_name 존재<br/>• address 존재<br/>• video_id 유효"]
+            ER2["✓ 형식 검사<br/>───────────────────<br/>• 주소 형식 유효성<br/>• 카테고리 유효성<br/>• 텍스트 길이 검사"]
+            ER3["📊 RULE 점수<br/>───────────────────<br/>rule_score: 0-100<br/>각 항목 가중치 합산"]
+        end
+        
+        subgraph EVAL_LAAJ["🤖 LAAJ 평가 (AI 판단)"]
+            EL1["🧠 AI 판단 기준<br/>───────────────────<br/>• 실제 맛집인가?<br/>• 쯔양이 방문했나?<br/>• 정보가 정확한가?<br/>• 영업 중인가?"]
+            EL2["📊 LAAJ 점수<br/>───────────────────<br/>laaj_score: 0-100<br/>AI confidence 기반"]
+        end
+        
+        subgraph EVAL_FINAL["📊 최종 평가"]
+            EF1["🔢 종합 점수<br/>───────────────────<br/>total = rule_score * 0.4<br/>      + laaj_score * 0.6"]
+            EF2{"🔀 임계값 비교<br/>threshold = 70"}
+            EF3["✅ 선정<br/>is_selected = true"]
+            EF4["❌ 미선정<br/>is_selected = false"]
+        end
+    end
+
+    %% ===== Phase 4: 변환 & 저장 =====
+    subgraph PHASE4["💾 Phase 4: 변환 & 데이터베이스 저장"]
+        direction TB
+        
+        subgraph TRANSFORM["🔄 데이터 변환"]
+            TF1["🗺️ Naver Geocoding<br/>───────────────────<br/>POST /map-geocode/v2/geocode<br/>├─ 도로명 주소 변환<br/>├─ 지번 주소 변환<br/>├─ 영문 주소 생성<br/>└─ 좌표 (lat, lng)"]
+            TF2["🔍 중복 검사<br/>───────────────────<br/>Levenshtein Distance<br/>├─ 이름 유사도 85%↑<br/>├─ 같은 지번주소<br/>└─ 기존 데이터 병합"]
+            TF3["🔑 unique_id 생성<br/>───────────────────<br/>format: {name}_{address}<br/>해시 기반 고유 식별자"]
+        end
+        
+        subgraph DB_INSERT["🗄️ 데이터베이스 저장"]
+            DI1["📊 restaurant_evaluations<br/>───────────────────<br/>INSERT INTO<br/>├─ crawling_data (JSONB)<br/>├─ rule_score<br/>├─ laaj_score<br/>├─ is_selected<br/>└─ processed_at"]
+            DI2["🍽️ restaurants<br/>───────────────────<br/>INSERT INTO (선정된 것만)<br/>├─ name, address<br/>├─ lat, lng<br/>├─ categories[]<br/>├─ youtube_link<br/>├─ evaluation_id (FK)<br/>└─ status = 'approved'"]
+        end
+    end
+
+    %% ===== Phase 5: 후처리 =====
+    subgraph PHASE5["🔧 Phase 5: 후처리"]
+        direction LR
+        
+        PP1["📊 통계 생성<br/>───────────────────<br/>• 총 처리 건수<br/>• 선정 비율<br/>• 에러 건수"]
+        PP2["📝 로그 저장<br/>───────────────────<br/>log/geminiCLI-restaurant/<br/>YYYY-MM-DD.log"]
+        PP3["📧 알림 발송<br/>───────────────────<br/>Slack/Email<br/>처리 완료 통보"]
+    end
+
+    %% ===== 연결 =====
+    TITLE --> TRIGGER
+    T1 --> PHASE1
+    T2 --> PHASE1
+    T3 --> PHASE1
+    
+    IF1 --> TR1
+    TR1 --> TR2
+    TR2 --> CC1
+    
+    CC1 --> CE1
+    CC2 --> CE1
+    CE1 --> CE2
+    CE2 --> CO1
+    CO1 --> CO2
+    
+    CO2 --> EC1
+    EC1 --> EC2
+    EC2 --> ER1
+    ER1 --> ER2
+    ER2 --> ER3
+    ER3 --> EL1
+    EL1 --> EL2
+    EL2 --> EF1
+    EF1 --> EF2
+    EF2 -->|"≥70"| EF3
+    EF2 -->|"<70"| EF4
+    
+    EF3 --> TF1
+    EF4 --> DI1
+    TF1 --> TF2
+    TF2 --> TF3
+    TF3 --> DI2
+    DI2 --> DI1
+    
+    DI1 --> PP1
+    PP1 --> PP2
+    PP2 --> PP3
+
+    %% ===== 스타일 =====
+    classDef trigger fill:#9f7aea,stroke:#805ad5,color:#fff,stroke-width:2px
+    classDef input fill:#4299e1,stroke:#3182ce,color:#fff,stroke-width:2px
+    classDef crawl fill:#ed8936,stroke:#dd6b20,color:#fff,stroke-width:2px
+    classDef eval fill:#667eea,stroke:#5a67d8,color:#fff,stroke-width:2px
+    classDef rule fill:#38b2ac,stroke:#319795,color:#fff
+    classDef laaj fill:#e53e3e,stroke:#c53030,color:#fff
+    classDef transform fill:#48bb78,stroke:#38a169,color:#fff,stroke-width:2px
+    classDef database fill:#f687b3,stroke:#d53f8c,color:#fff,stroke-width:2px
+    classDef selected fill:#c6f6d5,stroke:#38a169,color:#22543d
+    classDef rejected fill:#fed7d7,stroke:#fc8181,color:#742a2a
+    classDef title fill:#1a202c,stroke:#2d3748,color:#fff,stroke-width:3px
+
+    class TITLE title
+    class T1,T2,T3 trigger
+    class IF1,TR1,TR2 input
+    class CC1,CC2,CE1,CE2,CO1,CO2 crawl
+    class EC1,EC2 eval
+    class ER1,ER2,ER3 rule
+    class EL1,EL2 laaj
+    class EF1,EF2 eval
+    class EF3 selected
+    class EF4 rejected
+    class TF1,TF2,TF3 transform
+    class DI1,DI2 database
+    class PP1,PP2,PP3 trigger
