@@ -60,7 +60,6 @@
     <li><strong>네이버 지도</strong> - 국내 맛집을 보여줘요 (한국에서 더 정확)</li>
     <li><strong>구글 지도</strong> - 해외 맛집을 보여줘요</li>
     <li><strong>마커</strong> - 각 맛집의 위치에 핀이 찍혀있어요</li>
-    <li><strong>클러스터링</strong> - 가까운 맛집들은 숫자로 묶어서 표시 (예: "15"라고 되어있으면 그 근처에 15개 맛집)</li>
 </ul>
 
 <h3>사이드바</h3>
@@ -76,8 +75,7 @@
 <p>맛집을 클릭하면 아래에서 올라오는 패널이에요:</p>
 <ul>
     <li><strong>맛집 기본 정보</strong> - 이름, 주소, 전화번호</li>
-    <li><strong>AI 평가</strong> - 맛 점수, 양 점수 (1-10점)</li>
-    <li><strong>쯔양 리뷰</strong> - 영상에서 쯔양님이 한 말</li>
+    <li><strong>쿠양 리뷰</strong> - 영상에서 쿠양님이 한 말</li>
     <li><strong>유튜브 영상</strong> - 관련 영상 썸네일과 링크</li>
     <li><strong>사용자 리뷰</strong> - 다른 사람들이 남긴 후기</li>
     <li><strong>길찾기</strong> - 네이버/카카오맵으로 바로 길찾기</li>
@@ -198,18 +196,10 @@ function FilterPanel() {
     <li>수동으로 전환도 가능</li>
 </ul>
 
-<p><strong>클러스터링:</strong></p>
-<p>맛집이 많으면 마커가 겹쳐서 보기 어렵죠? 그래서:</p>
-<ul>
-    <li>줌 레벨이 낮으면 (멀리서 볼 때) 근처 맛집들을 숫자로 묶어서 표시</li>
-    <li>줌 레벨이 높으면 (가까이 볼 때) 개별 마커로 표시</li>
-</ul>
-
 <p><strong>필터링:</strong></p>
 <ul>
     <li><strong>카테고리</strong> - 한식, 중식, 양식, 일식, 카페, 디저트 등</li>
-    <li><strong>별점</strong> - "7점 이상만 보기" 같은 필터</li>
-    <li><strong>방문 여부</strong> - 쯔양님이 실제 방문 확인된 곳만</li>
+    <li><strong>방문 여부</strong> - 쿠양님이 실제 방문 확인된 곳만</li>
 </ul>
 
 <h3>사이드바 기능</h3>
@@ -224,7 +214,6 @@ function FilterPanel() {
 <p><strong>정렬:</strong></p>
 <ul>
     <li>최신순 - 최근에 추가된 맛집</li>
-    <li>별점순 - AI 평가 점수가 높은 순</li>
     <li>리뷰순 - 사용자 리뷰가 많은 순</li>
 </ul>
 
