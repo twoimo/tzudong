@@ -3,12 +3,8 @@
 erDiagram
     profiles ||--o{ reviews : writes
     profiles ||--o{ user_roles : has
-    profiles ||--o{ restaurant_submissions : submits
     
     restaurants ||--o{ reviews : has
-    restaurants ||--o| restaurant_evaluations : evaluated_by
-    
-    restaurant_submissions ||--o| restaurants : creates
 
     profiles {
         uuid user_id PK
@@ -18,10 +14,14 @@ erDiagram
     
     restaurants {
         uuid id PK
+        string unique_id UK
         string name
+        string address
         float lat
         float lng
         string status
+        boolean is_not_selection
+        jsonb evaluation_result
     }
     
     reviews {
@@ -29,19 +29,7 @@ erDiagram
         uuid user_id FK
         uuid restaurant_id FK
         text content
-    }
-    
-    restaurant_evaluations {
-        uuid id PK
-        int rule_score
-        int laaj_score
-        bool is_selected
-    }
-    
-    restaurant_submissions {
-        uuid id PK
-        uuid user_id FK
-        string status
+        int rating
     }
     
     user_roles {
