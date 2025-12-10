@@ -1,0 +1,18 @@
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant S as Supabase Auth
+    participant G as Google OAuth
+    participant DB as Database
+
+    U->>F: Click Login Button
+    F->>S: signInWithOAuth(google)
+    S->>G: Redirect to Google
+    G->>U: Show Google Login
+    U->>G: Enter Credentials
+    G->>S: Return OAuth Token
+    S->>S: Create/Update User
+    S->>F: Return Session
+    F->>DB: Fetch User Profile
+    DB->>F: Return Profile Data
+    F->>U: Show Logged In State

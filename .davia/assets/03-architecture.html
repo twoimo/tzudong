@@ -1,0 +1,265 @@
+﻿<h1>시스템 아키텍처</h1>
+<p>쯔동여지도가 <strong>어떻게 구성되어 있는지</strong> 전체적인 그림을 설명합니다.</p>
+<hr>
+<h2>아키텍처란?</h2>
+<p><strong>아키텍처</strong>는 건물의 설계도처럼, 소프트웨어가 어떤 부품들로 이루어져 있고, 그 부품들이 서로 어떻게 연결되어 있는지를 보여주는 것입니다.</p>
+<p>쯔동여지도는 크게 <strong>3개의 부품</strong>으로 이루어져 있어요:</p>
+<hr>
+<h2>전체 시스템 아키텍처</h2>
+
+<p>아래 다이어그램에서 각 컴포넌트가 어떻게 연결되어 있는지 확인하세요:</p>
+
+<excalidraw data-path="data/system-architecture.json"></excalidraw>
+
+<p></p>
+
+<hr>
+<h2>1. 프론트엔드 (사용자가 보는 화면)</h2>
+<p><strong>역할:</strong> 사용자가 웹 브라우저에서 보는 모든 화면을 담당해요.</p>
+<h3>사용 기술</h3>
+<ul>
+        <li>
+                <p><strong>Next.js 16</strong> - 웹사이트를 만드는 프레임워크 (React 기반)</p>
+        </li>
+        <li>
+                <p><strong>Turbopack</strong> - 개발할 때 빠르게 변경사항을 반영해주는 도구</p>
+        </li>
+        <li>
+                <p><strong>TypeScript</strong> - 자바스크립트에 타입을 추가해서 버그를 줄여줌</p>
+        </li>
+        <li>
+                <p><strong>Tailwind CSS</strong> - 스타일링을 빠르게 할 수 있는 CSS 도구</p>
+        </li>
+        <li>
+                <p><strong>Radix UI</strong> - 버튼, 모달 같은 UI 컴포넌트 라이브러리</p>
+        </li>
+</ul>
+<h3>상태 관리 (데이터를 어떻게 관리하나요?)</h3>
+<ul>
+        <li>
+                <p><strong>React Query</strong> - 서버에서 가져온 데이터 관리 (맛집 목록, 리뷰 등)</p>
+        </li>
+        <li>
+                <p><strong>Zustand</strong> - 화면에서만 쓰는 임시 데이터 관리 (필터 상태, 모달 열림/닫힘 등)</p>
+        </li>
+</ul>
+<h3>지도 기능</h3>
+<ul>
+        <li>
+                <p><strong>네이버 지도</strong> - 국내 맛집 표시용 (한국에서 더 정확함)</p>
+        </li>
+        <li>
+                <p><strong>구글 지도</strong> - 해외 맛집 표시용</p>
+        </li>
+</ul>
+<h3>프론트엔드가 하는 일</h3>
+<ol>
+        <li>
+                <p>사용자에게 <strong>지도 화면</strong>을 보여줌</p>
+        </li>
+        <li>
+                <p>맛집을 <strong>클릭하면 상세 정보</strong>를 표시</p>
+        </li>
+        <li>
+                <p><strong>검색과 필터</strong> 기능 제공</p>
+        </li>
+        <li>
+                <p>사용자의 <strong>리뷰 작성</strong>을 처리</p>
+        </li>
+        <li>
+                <p><strong>로그인/로그아웃</strong> 처리</p>
+        </li>
+</ol>
+<hr>
+<h2>2. 데이터베이스 (데이터 저장소)</h2>
+<p><strong>역할:</strong> 모든 데이터를 안전하게 저장하고, 필요할 때 꺼내주는 역할이에요.</p>
+<h3>사용 기술</h3>
+<ul>
+        <li>
+                <p><strong>Supabase</strong> - 데이터베이스 서비스 (PostgreSQL 기반)</p>
+        </li>
+        <li>
+                <p><strong>PostgreSQL</strong> - 실제 데이터가 저장되는 데이터베이스 엔진</p>
+        </li>
+</ul>
+<h3>왜 Supabase를 선택했나요?</h3>
+<ul>
+        <li>
+                <p><strong>무료 시작</strong> - 작은 프로젝트는 무료로 사용 가능</p>
+        </li>
+        <li>
+                <p><strong>인증 내장</strong> - 로그인 기능이 이미 만들어져 있음 (Google OAuth 등)</p>
+        </li>
+        <li>
+                <p><strong>실시간 기능</strong> - 데이터가 바뀌면 자동으로 화면에 반영 가능</p>
+        </li>
+        <li>
+                <p><strong>API 자동 생성</strong> - 테이블 만들면 API가 자동으로 생성됨</p>
+        </li>
+</ul>
+<h3>주요 기능</h3>
+<ul>
+        <li>
+                <p><strong>RLS (Row Level Security)</strong> - 데이터 접근 권한 관리. 예를 들어, 일반 사용자는 승인된 맛집만 볼 수 있고, 관리자는 모든 맛집을
+                        볼 수 있음</p>
+        </li>
+        <li>
+                <p><strong>Auth</strong> - Google 계정으로 로그인 기능</p>
+        </li>
+        <li>
+                <p><strong>Realtime</strong> - 새 리뷰가 달리면 실시간으로 화면에 표시</p>
+        </li>
+</ul>
+<h3>데이터베이스에 저장되는 것들</h3>
+<ul>
+        <li>
+                <p><strong>맛집 정보</strong> - 이름, 주소, 좌표, AI 평가 점수 등</p>
+        </li>
+        <li>
+                <p><strong>유튜브 영상 정보</strong> - 영상 제목, 링크, 썸네일 등</p>
+        </li>
+        <li>
+                <p><strong>사용자 정보</strong> - 프로필, 역할(일반/관리자) 등</p>
+        </li>
+        <li>
+                <p><strong>리뷰 정보</strong> - 리뷰 내용, 사진, 별점 등</p>
+        </li>
+</ul>
+<hr>
+<h2>3. AI 파이프라인 (데이터 수집 시스템)</h2>
+<p><strong>역할:</strong> 유튜브 영상을 분석해서 맛집 정보를 자동으로 수집하고 검증하는 역할이에요.</p>
+<h3>사용 기술</h3>
+<ul>
+        <li>
+                <p><strong>Gemini CLI</strong> - Google의 AI(Gemini)를 명령줄에서 사용하는 도구</p>
+        </li>
+        <li>
+                <p><strong>Python</strong> - 파이프라인 스크립트 작성 언어</p>
+        </li>
+        <li>
+                <p><strong>YouTube Transcript API</strong> - 유튜브 영상의 자막을 가져오는 도구</p>
+        </li>
+        <li>
+                <p><strong>Naver Geocoding API</strong> - 주소를 지도 좌표로 변환하는 도구</p>
+        </li>
+</ul>
+<h3>파이프라인이 하는 일</h3>
+<ol>
+        <li>
+                <p><strong>영상 수집</strong> - 쯔양 채널의 영상 목록을 가져옴</p>
+        </li>
+        <li>
+                <p><strong>자막 추출</strong> - 각 영상의 자막(말하는 내용)을 추출</p>
+        </li>
+        <li>
+                <p><strong>AI 분석</strong> - Gemini AI가 자막을 읽고 맛집 정보를 찾아냄</p>
+        </li>
+        <li>
+                <p><strong>좌표 변환</strong> - 주소를 위도/경도로 변환</p>
+        </li>
+        <li>
+                <p><strong>검증</strong> - RULE과 LAAJ 평가로 정보 검증</p>
+        </li>
+        <li>
+                <p><strong>저장</strong> - 검증된 정보를 데이터베이스에 저장</p>
+        </li>
+</ol>
+<h3>두 가지 파이프라인</h3>
+<p>원래는 Perplexity AI를 썼지만, 더 안정적인 Gemini CLI로 바꿨어요:</p>
+<ul>
+        <li>
+                <p><strong>GeminiCLI (현재 사용)</strong> - Google 공식 도구라서 안정적이고 합법적</p>
+        </li>
+        <li>
+                <p><strong>Perplexity (대체용)</strong> - 웹 검색 기능이 있지만 브라우저 자동화라 불안정</p>
+        </li>
+</ul>
+<hr>
+<h2>데이터가 흘러가는 과정</h2>
+<p>전체 흐름을 순서대로 설명하면:</p>
+<h3>1단계: 데이터 수집 (AI 파이프라인 데이터베이스)</h3>
+<pre><code>유튜브 영상  자막 추출  AI 분석  좌표 변환  검증  DB 저장</code></pre>
+<h3>2단계: 데이터 조회 (프론트엔드 데이터베이스)</h3>
+<pre><code>사용자가 지도를 봄  프론트엔드가 DB에 요청  DB가 맛집 목록 반환  지도에 표시</code></pre>
+<h3>3단계: 사용자 활동 (프론트엔드 데이터베이스)</h3>
+<pre><code>사용자가 리뷰 작성  프론트엔드가 DB에 저장  다른 사용자도 리뷰를 볼 수 있음</code></pre>
+<hr>
+<h2>보안은 어떻게 관리하나요?</h2>
+<h3>인증 (Authentication)</h3>
+<p>사용자가 누구인지 확인하는 과정:</p>
+<ul>
+        <li>
+                <p><strong>Google OAuth</strong> - Google 계정으로 간편 로그인</p>
+        </li>
+        <li>
+                <p><strong>Supabase Auth</strong> - 로그인 세션 관리</p>
+        </li>
+</ul>
+<h3>권한 (Authorization)</h3>
+<p>누가 무엇을 할 수 있는지 정하는 것:</p>
+<ul>
+        <li>
+                <p><strong>일반 사용자 (user)</strong> - 승인된 맛집 보기, 리뷰 작성, 제보하기</p>
+        </li>
+        <li>
+                <p><strong>관리자 (admin)</strong> - 모든 맛집 보기, 제보 승인/거부, 데이터 수정</p>
+        </li>
+</ul>
+<h3>RLS (Row Level Security)</h3>
+<p>데이터베이스 수준에서 접근 제어:</p>
+<ul>
+        <li>
+                <p>일반 사용자는 <code>status = 'approved'</code>인 맛집만 조회 가능</p>
+        </li>
+        <li>
+                <p>리뷰는 본인 것만 수정/삭제 가능</p>
+        </li>
+        <li>
+                <p>관리자는 모든 데이터에 접근 가능</p>
+        </li>
+</ul>
+<h3>API 키 관리</h3>
+<ul>
+        <li>
+                <p>모든 API 키는 <strong>환경 변수</strong>로 관리 (코드에 직접 넣지 않음)</p>
+        </li>
+        <li>
+                <p><strong>anon key</strong> - 일반 사용자용 (제한된 권한)</p>
+        </li>
+        <li>
+                <p><strong>service_role key</strong> - 백엔드용 (관리자 권한, 절대 공개하면 안 됨)</p>
+        </li>
+</ul>
+<hr>
+<h2>배포는 어떻게 하나요?</h2>
+<h3>프론트엔드 배포</h3>
+<ul>
+        <li>
+                <p><strong>Vercel</strong> 사용 - Next.js를 만든 회사의 호스팅 서비스</p>
+        </li>
+        <li>
+                <p>GitHub에 코드를 올리면 자동으로 배포됨</p>
+        </li>
+        <li>
+                <p>URL: https://tzudong.vercel.app</p>
+        </li>
+</ul>
+<h3>데이터베이스</h3>
+<ul>
+        <li>
+                <p><strong>Supabase Cloud</strong> - 클라우드에서 관리됨</p>
+        </li>
+        <li>
+                <p>별도 배포 필요 없음</p>
+        </li>
+</ul>
+<h3>AI 파이프라인</h3>
+<ul>
+        <li>
+                <p><strong>GitHub Actions</strong> - 정기적으로 자동 실행</p>
+        </li>
+        <li>
+                <p>매주 월요일에 새 영상을 체크하고 데이터 수집</p>
+        </li>
+</ul>
+<p></p>

@@ -1,0 +1,35 @@
+flowchart TD
+    subgraph Admin["Admin Dashboard"]
+        DASH[Dashboard Home]
+        PENDING[Pending Submissions]
+        MANAGE[Restaurant Management]
+    end
+
+    subgraph Actions["Admin Actions"]
+        VIEW[View Details]
+        APPROVE[Approve]
+        REJECT[Reject]
+        EDIT[Edit Info]
+        DELETE[Delete]
+    end
+
+    subgraph Database["Database Updates"]
+        STATUS[Update Status]
+        NOTIFY[Send Notification]
+    end
+
+    DASH --> PENDING
+    DASH --> MANAGE
+
+    PENDING --> VIEW
+    VIEW --> APPROVE
+    VIEW --> REJECT
+
+    APPROVE -->|status = approved| STATUS
+    REJECT -->|status = rejected| STATUS
+    STATUS --> NOTIFY
+
+    MANAGE --> EDIT
+    MANAGE --> DELETE
+    EDIT -->|Update Record| STATUS
+    DELETE -->|Remove Record| STATUS

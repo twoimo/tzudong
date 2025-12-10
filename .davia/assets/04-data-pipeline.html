@@ -1,0 +1,341 @@
+﻿<h1>데이터 파이프라인</h1>
+
+<p>유튜브 영상에서 <strong>맛집 정보를 자동으로 수집</strong>하고 <strong>AI로 검증</strong>하는 시스템입니다. 마치 공장의 컨베이어 벨트처럼 데이터가 단계별로 처리됩니다.</p>
+
+<hr />
+
+<h2>파이프라인이란?</h2>
+
+<p><strong>파이프라인(Pipeline)</strong>은 물이 파이프를 통해 흐르듯이, 데이터가 여러 단계를 거쳐 처리되는 시스템을 말해요.</p>
+
+<p>쯔동여지도에서는:</p>
+<ol>
+    <li>유튜브 영상을 넣으면</li>
+    <li>여러 단계를 거쳐 자동으로 처리되고</li>
+    <li>마지막에 깨끗한 맛집 데이터가 나옵니다</li>
+</ol>
+
+<hr />
+
+<h2>전체 흐름 한눈에 보기</h2>
+
+<p>데이터가 처리되는 전체 파이프라인을 다이어그램으로 확인하세요:</p>
+
+<excalidraw data-path="data/data-pipeline-flow.json"></excalidraw>
+
+<p></p>
+
+<h3>간단 요약</h3>
+<pre><code>
+ 유튜브 영상
+      
+ 자막 추출  "여기 진짜 맛있어요, 서울 강남구..."
+      
+ AI 분석  "맛집 이름: OO식당, 주소: 서울 강남구..."
+      
+ 좌표 변환  "위도: 37.XXX, 경도: 127.XXX"
+      
+ 품질 평가  "맛 점수: 8/10, 실제 방문: 확인됨"
+      
+ DB 저장  데이터베이스에 안전하게 저장
+</code></pre>
+
+<hr />
+
+<h2>단계별 상세 설명</h2>
+
+<database-view data-path="data/pipeline-phases.json"></database-view>
+
+<p></p>
+
+<hr />
+
+<h2>1단계: 크롤링 (정보 수집)</h2>
+
+<p><strong>목표:</strong> 유튜브 영상에서 맛집 정보를 추출하기</p>
+
+<h3>1-1. 영상 URL 수집</h3>
+<p>먼저 분석할 영상 목록이 필요해요:</p>
+<ul>
+    <li>쯔양 채널의 영상 URL들을 텍스트 파일에 저장해요</li>
+    <li>예: <code>tzuyang_youtubeVideo_urls.txt</code></li>
+</ul>
+
+<h3>1-2. 자막 추출</h3>
+<p>영상에서 자막(말하는 내용)을 가져와요:</p>
+<ul>
+    <li><strong>youtube-transcript-api</strong> 라이브러리 사용</li>
+    <li>영상의 자동 생성 자막이나 수동 자막을 텍스트로 변환</li>
+    <li>예: "여기 진짜 맛있어요~ 서울 강남구에 있는 OO식당인데요..."</li>
+</ul>
+
+<h3>1-3. AI 분석</h3>
+<p>Google Gemini AI가 자막을 읽고 맛집 정보를 찾아내요:</p>
+<ul>
+    <li><strong>맛집 이름</strong> - "OO식당"</li>
+    <li><strong>주소</strong> - "서울 강남구 역삼동 123-45"</li>
+    <li><strong>음식 종류</strong> - "한식", "고기"</li>
+    <li><strong>메뉴</strong> - "삼겹살, 된장찌개"</li>
+    <li><strong>쯔양 리뷰</strong> - "여기 진짜 맛있어요~"</li>
+</ul>
+
+<h3>1-4. 좌표 변환 (Geocoding)</h3>
+<p>주소를 지도 좌표로 변환해요:</p>
+<ul>
+    <li><strong>네이버 Geocoding API</strong> 사용</li>
+    <li>"서울 강남구 역삼동 123-45" "위도: 37.5012, 경도: 127.0396"</li>
+    <li>이 좌표가 있어야 지도에 마커를 찍을 수 있어요</li>
+</ul>
+
+<h3>1-5. 메타데이터 추가</h3>
+<p>영상의 추가 정보도 수집해요:</p>
+<ul>
+    <li><strong>조회수</strong> - 얼마나 많이 봤는지</li>
+    <li><strong>좋아요 수</strong> - 반응이 좋은지</li>
+    <li><strong>영상 제목</strong> - 검색에 사용</li>
+    <li><strong>썸네일</strong> - 목록에서 보여줄 이미지</li>
+</ul>
+
+<hr />
+
+<h2>2단계: 평가 (품질 검증)</h2>
+
+<p><strong>목표:</strong> AI가 추출한 정보가 정확한지 확인하기</p>
+
+<p>AI도 실수를 할 수 있어요. 그래서 두 단계로 검증합니다:</p>
+
+<h3>2-1. RULE 평가 (규칙 기반, 빠름)</h3>
+<p>정해진 규칙으로 빠르게 1차 검증해요:</p>
+
+<ul>
+    <li><strong>주소 검증</strong> - 네이버 Geocoding으로 실제 존재하는 주소인지 확인
+        <ul>
+            <li> "서울 강남구 역삼동 123" 좌표 반환됨 통과</li>
+            <li> "서울 강남구 없는동 999" 좌표 없음 실패</li>
+        </ul>
+    </li>
+    <li><strong>영상 출현 확인</strong> - 자막에서 맛집 이름이 언급되었는지
+        <ul>
+            <li> 자막에 "OO식당" 언급됨 통과</li>
+            <li> 자막에 언급 없음 의심</li>
+        </ul>
+    </li>
+    <li><strong>카테고리 매칭</strong> - 음식점 종류가 올바른지
+        <ul>
+            <li> "한식" 카테고리 정상</li>
+            <li> "자동차" 카테고리 비정상</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>2-2. LAAJ 평가 (AI 기반, 정밀)</h3>
+<p><strong>LAAJ = LLM As A Judge</strong> (AI를 심판으로 사용)</p>
+
+<p>RULE 평가를 통과한 맛집들을 AI가 다시 한번 꼼꼼히 검토해요:</p>
+
+<ul>
+    <li><strong>flavor_rating (맛 점수)</strong> - 쯔양님의 반응을 분석해서 1-10점
+        <ul>
+            <li>"진짜 맛있어요!" 8-10점</li>
+            <li>"그냥 그래요" 4-6점</li>
+            <li>"별로예요" 1-3점</li>
+        </ul>
+    </li>
+    <li><strong>quantity_rating (양 점수)</strong> - 음식 양에 대한 평가 1-10점</li>
+    <li><strong>actual_visit_confirmed</strong> - 쯔양님이 실제로 방문했는지 true/false
+        <ul>
+            <li>광고 영상인데 실제 방문 안 한 경우도 있거든요</li>
+        </ul>
+    </li>
+    <li><strong>is_in_video</strong> - 영상에 실제로 그 맛집이 나오는지 true/false</li>
+</ul>
+
+<hr />
+
+<h2>3단계: 에러 재처리</h2>
+
+<p><strong>목표:</strong> 실패한 항목들을 다시 시도하기</p>
+
+<p>AI 분석이 실패하는 경우가 있어요:</p>
+<ul>
+    <li>네트워크 에러</li>
+    <li>API 요청 한도 초과</li>
+    <li>자막이 없는 영상</li>
+</ul>
+
+<p>이런 경우 자동으로 재시도해요:</p>
+<ul>
+    <li><strong>최대 5번</strong>까지 재시도</li>
+    <li>실패 기록은 <code>errors.jsonl</code>에 저장</li>
+    <li>성공하면 에러 목록에서 삭제</li>
+</ul>
+
+<hr />
+
+<h2>4단계: Transform (데이터 변환)</h2>
+
+<p><strong>목표:</strong> 데이터를 DB에 넣기 좋은 형태로 정리하기</p>
+
+<ul>
+    <li><strong>unique_id 생성</strong> - 각 맛집을 고유하게 식별할 수 있는 ID 생성
+        <ul>
+            <li>영상 URL + 맛집 이름을 조합해서 해시값 생성</li>
+            <li>같은 맛집이 중복 저장되는 것을 방지</li>
+        </ul>
+    </li>
+    <li><strong>데이터 정규화</strong> - 형식 통일
+        <ul>
+            <li>전화번호: "02-123-4567" 형식으로 통일</li>
+            <li>주소: 도로명 주소와 지번 주소 분리</li>
+        </ul>
+    </li>
+    <li><strong>결과 병합</strong> - 평가 결과와 기본 정보 합치기</li>
+</ul>
+
+<hr />
+
+<h2>5단계: DB 저장</h2>
+
+<p><strong>목표:</strong> 최종 데이터를 데이터베이스에 안전하게 저장하기</p>
+
+<ul>
+    <li><strong>중복 검사</strong> - unique_id로 이미 있는 맛집인지 확인
+        <ul>
+            <li>이미 있으면 업데이트 (UPSERT)</li>
+            <li>없으면 새로 추가</li>
+        </ul>
+    </li>
+    <li><strong>테이블 분리 저장</strong>
+        <ul>
+            <li><strong>restaurants</strong> 테이블 - 맛집 기본 정보</li>
+            <li><strong>youtube_videos</strong> 테이블 - 영상 정보</li>
+            <li><strong>creators</strong> 테이블 - 크리에이터 정보</li>
+        </ul>
+    </li>
+</ul>
+
+<hr />
+
+<h2>두 가지 파이프라인 시스템</h2>
+
+<p>현재 두 가지 방법으로 데이터를 수집할 수 있어요:</p>
+
+<h3>GeminiCLI (권장, 현재 사용 중)</h3>
+
+<p><strong>장점:</strong></p>
+<ul>
+    <li>Google 공식 도구라서 안정적</li>
+    <li>합법적인 API 사용</li>
+    <li>설정이 간단함</li>
+</ul>
+
+<p><strong>제한:</strong></p>
+<ul>
+    <li>분당 60회, 하루 1000회 요청 제한</li>
+</ul>
+
+<p><strong>실행 방법:</strong></p>
+<pre><code># 전체 파이프라인 실행
+cd backend
+python3 geminiCLI-restaurant-pipeline.py
+
+# 특정 단계부터 실행 (2단계 = 평가부터)
+python3 geminiCLI-restaurant-pipeline.py --start-from 2</code></pre>
+
+<h3>Perplexity (대체 방법)</h3>
+
+<p><strong>장점:</strong></p>
+<ul>
+    <li>웹 검색 기능 통합 (최신 정보 확인 가능)</li>
+    <li>실시간 정보 접근</li>
+</ul>
+
+<p><strong>단점:</strong></p>
+<ul>
+    <li>브라우저 자동화(Puppeteer)를 사용해서 불안정</li>
+    <li>세션 관리가 필요함</li>
+    <li>웹사이트 변경에 민감함</li>
+</ul>
+
+<p><strong>실행 방법:</strong></p>
+<pre><code># 전체 파이프라인 실행
+cd backend
+python restaurant-pipeline.py</code></pre>
+
+<hr />
+
+<h2>데이터 파일 구조</h2>
+
+<p>수집된 데이터는 날짜별 폴더에 저장돼요:</p>
+
+<pre><code>data/
+ 25-12-03/                                    # 2025년 12월 3일
+    tzuyang_youtubeVideo_urls.txt            # 입력: 영상 URL 목록
+    tzuyang_restaurant_transcripts.json      # 중간: 자막 데이터
+    tzuyang_restaurant_results.jsonl         # 중간: AI 분석 결과
+    tzuyang_restaurant_results_with_meta.jsonl # 출력: 최종 결과
+
+ 25-12-04/                                    # 2025년 12월 4일
+    ...
+
+ 25-12-05/                                    # 2025년 12월 5일
+     ...</code></pre>
+
+<p><strong>.jsonl 파일이란?</strong></p>
+<p>JSON Lines 형식으로, 한 줄에 하나의 JSON 객체가 들어있어요. 대용량 데이터 처리에 좋습니다.</p>
+
+<hr />
+
+<h2>중복 처리는 어떻게 하나요?</h2>
+
+<p>같은 맛집이 여러 번 저장되면 안 되겠죠?</p>
+
+<ul>
+    <li><strong>모든 단계에서</strong> - youtube_link를 기준으로 중복 체크</li>
+    <li><strong>자료구조</strong> - Set을 사용해서 O(1) 빠른 조회</li>
+    <li><strong>저장 방식</strong> - Append 모드로 저장해서 기존 데이터 보존</li>
+</ul>
+
+<pre><code># Python 예시
+processed_links = set()  # 이미 처리한 영상들
+
+for video_url in video_urls:
+    if video_url in processed_links:
+        continue  # 이미 처리했으면 건너뛰기
+    
+    # 처리 로직...
+    
+    processed_links.add(video_url)  # 처리 완료 표시</code></pre>
+
+<hr />
+
+<h2>자주 발생하는 문제와 해결법</h2>
+
+<h3>문제 1: API 요청 한도 초과</h3>
+<p><strong>증상:</strong> <code>429 Too Many Requests</code> 에러</p>
+<p><strong>원인:</strong> Gemini API는 분당 60회 제한이 있어요</p>
+<p><strong>해결:</strong></p>
+<ul>
+    <li>요청 사이에 딜레이 추가 (예: 1초 대기)</li>
+    <li>배치 크기 줄이기</li>
+    <li>여러 API 키 번갈아 사용</li>
+</ul>
+
+<h3>문제 2: 좌표 변환 실패</h3>
+<p><strong>증상:</strong> latitude/longitude가 null</p>
+<p><strong>원인:</strong> 네이버 Geocoding이 주소를 인식 못함</p>
+<p><strong>해결:</strong></p>
+<ul>
+    <li>주소 정규화 (예: "서울시" "서울특별시")</li>
+    <li>지번 주소 대신 도로명 주소 사용</li>
+    <li>최후의 방법: 수동으로 좌표 입력</li>
+</ul>
+
+<h3>문제 3: 자막이 없는 영상</h3>
+<p><strong>증상:</strong> 자막 추출 실패</p>
+<p><strong>원인:</strong> 일부 영상은 자막이 없어요</p>
+<p><strong>해결:</strong></p>
+<ul>
+    <li>해당 영상은 건너뛰기</li>
+    <li>수동으로 정보 입력</li>
+</ul>

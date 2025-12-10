@@ -1,0 +1,141 @@
+﻿<h1>쯔동여지도 프로젝트</h1>
+
+<p><strong>쯔양이 다녀간 맛집을 한눈에!</strong> - 먹방 유튜버 쯔양이 방문한 맛집들을 지도에서 찾아볼 수 있는 서비스입니다.</p>
+
+<hr />
+
+<h2>이 프로젝트는 무엇인가요?</h2>
+
+<p><strong>쯔동여지도</strong>는 유튜버 쯔양의 먹방 영상에 나온 맛집 정보를 자동으로 수집하고, 지도에 표시해주는 웹 서비스입니다.</p>
+
+<p>쉽게 말해서:</p>
+<ol>
+    <li>쯔양의 유튜브 영상을 <strong>AI가 분석</strong>해서 어떤 맛집을 방문했는지 자동으로 알아냅니다</li>
+    <li>그 맛집의 <strong>위치(주소, 좌표)</strong>를 찾아서 데이터베이스에 저장합니다</li>
+    <li>사용자는 <strong>지도에서 맛집을 검색</strong>하고, 쯔양의 리뷰를 볼 수 있습니다</li>
+    <li>직접 방문 후 <strong>리뷰를 남길 수도</strong> 있습니다</li>
+</ol>
+
+<hr />
+
+<h2>주요 기능 설명</h2>
+
+<h3>AI 자동 크롤링이란?</h3>
+<p>사람이 일일이 영상을 보고 정보를 입력하는 대신, <strong>인공지능(AI)</strong>이 자동으로 영상의 자막을 분석해서 맛집 정보(이름, 주소, 메뉴 등)를 추출합니다. Google의 Gemini
+    AI를 사용합니다.</p>
+
+<h3>하이브리드 평가란?</h3>
+<p>AI가 추출한 정보가 정확한지 <strong>두 단계로 검증</strong>합니다:</p>
+<ul>
+    <li><strong>RULE 평가</strong> - 규칙 기반으로 빠르게 1차 검증 (예: 주소가 실제로 존재하는지)</li>
+    <li><strong>LAAJ 평가</strong> - AI가 다시 한번 정밀하게 검토 (예: 실제 방문했는지, 정보가 맞는지)</li>
+</ul>
+
+<h3>듀얼 지도란?</h3>
+<p>국내 맛집은 <strong>네이버 지도</strong>로, 해외 맛집은 <strong>구글 지도</strong>로 보여줍니다. 한국에서는 네이버 지도가 더 정확하고 편리하기 때문입니다.</p>
+
+<h3>커뮤니티 기능</h3>
+<p>단순히 맛집 정보만 보는 게 아니라:</p>
+<ul>
+    <li><strong>리뷰 작성</strong> - 직접 방문 후 사진과 함께 후기를 남길 수 있습니다</li>
+    <li><strong>스탬프 투어</strong> - 여러 맛집을 방문하면 스탬프를 모을 수 있습니다</li>
+    <li><strong>랭킹 시스템</strong> - 활발하게 활동하는 사용자에게 뱃지가 부여됩니다</li>
+</ul>
+
+<hr />
+
+<h2>전체 시스템 구조</h2>
+
+<p>쯔동여지도는 아래와 같이 <strong>프론트엔드, 백엔드 파이프라인, 데이터베이스</strong>가 서로 연결되어 동작합니다:</p>
+
+<excalidraw data-path="data/system-architecture.json"></excalidraw>
+
+<p></p>
+
+<hr />
+
+<h2>어떤 기술로 만들어졌나요?</h2>
+
+<database-view data-path="data/project-overview.json"></database-view>
+
+<p></p>
+
+<p><strong>용어 설명:</strong></p>
+<ul>
+    <li><strong>Next.js</strong> - 웹사이트를 만드는 도구 (React 기반)</li>
+    <li><strong>TypeScript</strong> - 자바스크립트를 더 안전하게 쓸 수 있게 해주는 언어</li>
+    <li><strong>Supabase</strong> - 데이터를 저장하는 데이터베이스 서비스</li>
+    <li><strong>Gemini CLI</strong> - Google AI를 사용하기 위한 도구</li>
+    <li><strong>Vercel</strong> - 웹사이트를 인터넷에 올려주는 서비스</li>
+</ul>
+
+<hr />
+
+<h2>프로젝트 폴더 구조</h2>
+
+<p>프로젝트는 크게 3가지 부분으로 나뉩니다:</p>
+
+<pre><code>tzudong/
+ apps/web/           #  웹사이트 (사용자가 보는 화면)
+                       #    - Next.js로 만든 웹 애플리케이션
+                       #    - 지도, 검색, 리뷰 등의 기능
+
+ backend/            #  백엔드 (AI가 일하는 곳)
+    geminiCLI-*/    #    - Gemini AI로 맛집 정보 수집
+    perplexity-*/   #    - Perplexity AI로 맛집 정보 수집 (대체 방법)
+    transcript-api/ #    - 유튜브 자막 가져오는 API
+
+ supabase/           #  데이터베이스 설정
+                       #    - 테이블 구조 정의
+                       #    - 보안 정책 설정
+
+ docs/               #  문서
+                        #    - 프로젝트 설명 문서
+</code></pre>
+
+<hr />
+
+<h2>핵심 기능 상세</h2>
+
+<h3>지도 기반 맛집 검색</h3>
+<p>지도에서 맛집을 찾을 수 있습니다:</p>
+<ul>
+    <li><strong>클러스터링</strong> - 가까운 맛집들은 숫자로 묶어서 표시 (지도가 깔끔해집니다)</li>
+    <li><strong>필터링</strong> - 한식, 중식, 양식 등 카테고리별로 필터 가능</li>
+    <li><strong>검색</strong> - 맛집 이름이나 지역으로 검색 가능</li>
+</ul>
+
+<h3>AI 별점 시스템</h3>
+<p>AI가 1점부터 10점까지 점수를 매깁니다:</p>
+<ul>
+    <li><strong>맛 평가</strong> - 쯔양의 반응을 분석해서 점수화</li>
+    <li><strong>양 평가</strong> - 음식 양에 대한 평가</li>
+    <li><strong>실제 방문 확인</strong> - 쯔양이 실제로 방문했는지 검증</li>
+</ul>
+
+<h3>리뷰 시스템</h3>
+<p>사용자도 직접 리뷰를 남길 수 있습니다:</p>
+<ul>
+    <li><strong>방문 인증</strong> - 실제 방문 사진 업로드 필수</li>
+    <li><strong>사진 리뷰</strong> - 음식 사진과 함께 후기 작성</li>
+</ul>
+
+<h3>제보 시스템</h3>
+<p>쯔양의 새 영상이 올라오면:</p>
+<ul>
+    <li>사용자가 <strong>유튜브 링크를 제보</strong>할 수 있습니다</li>
+    <li>AI가 <strong>자동으로 맛집 정보를 추출</strong>합니다</li>
+    <li>관리자가 <strong>검토 후 승인</strong>하면 지도에 표시됩니다</li>
+</ul>
+
+<hr />
+
+<h2>상세 문서 목록</h2>
+
+<ul>
+    <li><a href="02-for-developers.html"><strong>개발자 가이드</strong></a> - 개발 환경 설정 및 실행 방법</li>
+    <li><a href="03-architecture.html"><strong>아키텍처</strong></a> - 전체 시스템이 어떻게 연결되어 있는지</li>
+    <li><a href="04-data-pipeline.html"><strong>데이터 파이프라인</strong></a> - AI가 데이터를 수집하고 처리하는 과정</li>
+    <li><a href="05-frontend.html"><strong>프론트엔드</strong></a> - 웹사이트 화면이 어떻게 구성되어 있는지</li>
+    <li><a href="06-database.html"><strong>데이터베이스</strong></a> - 데이터가 어떻게 저장되는지</li>
+</ul>
