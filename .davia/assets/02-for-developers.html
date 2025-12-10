@@ -274,10 +274,9 @@ npx tsx scripts/insert_to_supabase.ts</code></pre>
 
 <p>AI가 다시 한번 꼼꼼히 검토해서 점수를 매겨요:</p>
 <ul>
-    <li><strong>flavor_rating (맛 점수)</strong> - 쯔양님 반응 기반 1-10점</li>
-    <li><strong>quantity_rating (양 점수)</strong> - 음식 양 기반 1-10점</li>
     <li><strong>actual_visit_confirmed</strong> - 실제 방문했는지 true/false</li>
     <li><strong>is_in_video</strong> - 영상에 실제로 나오는지 true/false</li>
+    <li><strong>review_faithfulness</strong> - 리뷰 내용 정확도 검증</li>
 </ul>
 
 <hr />
@@ -341,10 +340,9 @@ name            TEXT        -- 맛집 이름
 address         TEXT        -- 주소
 lat, lng        FLOAT       -- 위도, 경도
 categories      TEXT[]      -- 카테고리 배열 (예: ['한식', '고기'])
-rating_flavor   INT         -- 맛 점수 (1-10)
-rating_quantity INT         -- 양 점수 (1-10)
 status          TEXT        -- 상태 (pending/approved/rejected)
 youtube_link    TEXT        -- 관련 유튜브 영상 링크
+tzuyang_review  TEXT        -- 쿠양님 리뷰 내용
 created_at      TIMESTAMP   -- 생성 시간
 
 -- reviews: 사용자 리뷰

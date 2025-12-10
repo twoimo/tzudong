@@ -38,10 +38,8 @@ const { data, error } = await supabase
       "road_address": "서울특별시 중구 세종대로 110",
       "youtube_link": "https://youtu.be/xxx",
       "status": "approved",
-      "evaluation_results": {
-        "taste_score": 9.5,
-        "quantity_score": 8.0
-      }
+      "tzuyang_review": "고기가 정말 두껍고 육즙이 살아있어요!",
+      "jjyang_visit_count": 2
     }
   ],
   "error": null
@@ -306,8 +304,7 @@ const user = session?.user</code></pre>
   "total_count": 500,
   "approved_count": 450,
   "pending_count": 30,
-  "rejected_count": 20,
-  "avg_taste_score": 8.2
+  "rejected_count": 20
 }</code></pre>
 
 <h3>사용자 통계</h3>
@@ -392,9 +389,9 @@ export interface Restaurant {
     view_count: number
   } | null
   evaluation_results: {
-    taste_score: number
-    quantity_score: number
     actual_visit_confirmed: boolean
+    is_in_video: boolean
+    review_faithfulness_score: number
   } | null
   tzuyang_review: string | null
   status: 'pending' | 'approved' | 'rejected'

@@ -60,7 +60,7 @@
 
    restaurants (맛집)                                      
      쯔양님 영상에 나온 모든 맛집 정보 저장                     
-     - 이름, 주소, 전화번호, AI 평가 점수, 유튜브 링크 등       
+     - 이름, 주소, 전화번호, 쯔양 리뷰, 유튜브 링크 등       
 
           
            맛집에 리뷰를 달 수 있음
@@ -155,24 +155,20 @@
 
 </code></pre>
 
-<h3>AI 평가</h3>
-<p>AI가 분석한 맛집 평가 정보예요:</p>
+<h3>쿠양 리뷰</h3>
+<p>쿠양님의 리뷰 정보예요:</p>
 <pre><code>
 
- 컬럼 이름             설명                              
+ 컨럼 이름             설명                              
 
- evaluation_results   AI 평가 결과 (JSON 형태)           
-                      {                                 
-                        "taste_score": 9.5,             
-                        "quantity_score": 8.0,          
-                        "trust_score": 95               
-                      }                                 
+ tzuyang_review       쿠양님의 리뷰 내용                  
+                      (예: "여기 삼겨살 진짜 맛있어요!") 
                                                         
- tzuyang_review       쯔양님의 리뷰 내용                  
-                      (예: "여기 삼겹살 진짜 맛있어요!") 
+ jjyang_visit_count   쿠양님 방문 횟수                    
+                      (예: 2 = 두 번 방문)              
                                                         
- reasoning_basis      AI가 이 점수를 준 이유              
-                      (예: "긍정 표현 3회, 재방문 언급") 
+ reasoning_basis      AI가 이 맛집을 추출한 근거          
+                      (예: "자막에서 식당명 확인")
 
 </code></pre>
 
@@ -426,7 +422,7 @@ psql -h aws-1-ap-southeast-1.pooler.supabase.com `
                     (여러 리뷰가                 
   별점              하나의 맛집에)  이름           
   리뷰 내용                      주소           
-  사진                           AI 평가        
+  사진                           쿠양 리뷰        
               
          
          
