@@ -24,13 +24,14 @@ interface EditRestaurantModalProps {
         address: string;
         phone: string;
         category: string[];
-        youtube_reviews: { youtube_link: string; tzuyang_review: string; unique_id?: string }[];
+        youtube_reviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[];
     };
 }
 
 export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, onClose, restaurant, initialFormData }: EditRestaurantModalProps) {
     const [editFormData, setEditFormData] = useState(initialFormData);
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const handleEditFormChange = (field: string, value: string | string[]) => {
         setEditFormData(prev => ({
@@ -50,38 +51,79 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsSubmitting(true);
+
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
                 throw new Error('로그인이 필요합니다.');
             }
 
-            const submissionData = editFormData.youtube_reviews.map(review => ({
-                unique_id: review.unique_id || null,
-                name: editFormData.name,
-                categories: editFormData.category,
-                address: editFormData.address,
-                phone: editFormData.phone,
-                youtube_link: review.youtube_link,
-                tzuyang_review: review.tzuyang_review
-            }));
+            if (!restaurant?.id) {
+                throw new Error('수정할 맛집 정보가 없습니다.');
+            }
 
-            const { error } = await supabase
+            // 유효성 검사
+            if (!editFormData.name.trim()) {
+                throw new Error('맛집 이름을 입력해주세요.');
+            }
+            if (editFormData.category.length === 0) {
+                throw new Error('카테고리를 선택해주세요.');
+            }
+            if (editFormData.youtube_reviews.length === 0) {
+                throw new Error('최소 1개의 영상 정보가 필요합니다.');
+            }
+            for (const review of editFormData.youtube_reviews) {
+                if (!review.youtube_link.trim()) {
+                    throw new Error('모든 영상의 유튜브 링크를 입력해주세요.');
+                }
+            }
+
+            // 1. restaurant_submissions 테이블에 INSERT (target_restaurant_id는 items 레벨에서 관리)
+            const { data: submission, error: submissionError } = await supabase
                 .from('restaurant_submissions')
                 .insert({
                     user_id: user.id,
                     submission_type: 'edit',
                     status: 'pending',
-                    user_restaurants_submission: submissionData
-                } as any);
+                    restaurant_name: editFormData.name.trim(),
+                    restaurant_address: editFormData.address.trim() || null,
+                    restaurant_phone: editFormData.phone.trim() || null,
+                    restaurant_categories: editFormData.category,
+                    // target_restaurant_id는 submission 레벨이 아닌 items 레벨에서 저장
+                } as any)
+                .select('id')
+                .single();
 
-            if (error) throw error;
+            if (submissionError) throw submissionError;
+            
+            const submissionId = (submission as { id: string }).id;
+
+            // 2. restaurant_submission_items 테이블에 각 영상별 INSERT (각 아이템에 해당 레코드의 target_restaurant_id 저장)
+            const itemsToInsert = editFormData.youtube_reviews.map(review => ({
+                submission_id: submissionId,
+                youtube_link: review.youtube_link.trim(),
+                tzuyang_review: review.tzuyang_review?.trim() || null,
+                target_restaurant_id: review.restaurant_id, // 각 아이템별로 해당 레코드의 restaurants.id 저장
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('restaurant_submission_items')
+                .insert(itemsToInsert as any);
+
+            if (itemsError) {
+                // 롤백: submission 삭제 (CASCADE로 items도 삭제됨)
+                await supabase.from('restaurant_submissions').delete().eq('id', submissionId);
+                throw itemsError;
+            }
 
             toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
             onClose();
-        } catch (error) {
+        } catch (error: any) {
             console.error('제출 실패:', error);
-            toast.error('제출에 실패했습니다. 다시 시도해주세요.');
+            toast.error(error.message || '제출에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -246,11 +288,11 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                         </div>
 
                         <div className="flex gap-2 pt-4">
-                            <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+                            <Button type="button" variant="outline" onClick={onClose} className="flex-1" disabled={isSubmitting}>
                                 취소
                             </Button>
-                            <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90">
-                                수정 요청 제출
+                            <Button type="submit" className="flex-1 bg-gradient-primary hover:opacity-90" disabled={isSubmitting}>
+                                {isSubmitting ? '제출 중...' : '수정 요청 제출'}
                             </Button>
                         </div>
                     </form>
