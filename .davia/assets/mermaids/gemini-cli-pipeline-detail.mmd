@@ -1,44 +1,66 @@
-%%{init: {'theme': 'default'}}%%
+%%{init: {'theme': 'base', 'themeVariables': {'primaryColor': '#4f46e5', 'primaryTextColor': '#fff', 'primaryBorderColor': '#3730a3', 'lineColor': '#6366f1', 'secondaryColor': '#f0fdf4', 'tertiaryColor': '#fef3c7'}}}%%
 
 flowchart TB
-    subgraph INPUT["Phase 1: Input"]
-        I1[YouTube URLs]
-        I2[Transcript API]
-        I3[Subtitle Data]
+    subgraph INPUT["1. INPUT"]
+        direction TB
+        I1[/"YouTube Video URLs"/]
+        I2["Transcript API<br/>(FastAPI Server)"]
+        I3[("Subtitle Text<br/>+ Timestamps")]
     end
 
-    subgraph CRAWL["Phase 2: Crawling"]
-        C1[Load Prompt]
-        C2[Gemini CLI]
-        C3[Extract Restaurants]
-        C4[crawling-results.jsonl]
+    subgraph CRAWL["2. CRAWLING"]
+        direction TB
+        C1["Load Gemini Prompt"]
+        C2["Gemini CLI<br/>AI Processing"]
+        C3["Extract Restaurant Info<br/>(name, reason, menu)"]
+        C4[("crawling-results.jsonl")]
     end
 
-    subgraph EVAL["Phase 3: Evaluation"]
-        E1[RULE Score]
-        E2[LAAJ Score]
-        E3{Total >= 70?}
-        E4[Selected]
-        E5[Not Selected]
+    subgraph EVAL["3. EVALUATION"]
+        direction TB
+        E1["RULE Score<br/>(address, timestamp)"]
+        E2["LAAJ Score<br/>(AI verification)"]
+        E3{"Total Score<br/>>= 70?"}
+        E4(["SELECTED<br/>for DB"])
+        E5(["NOT SELECTED<br/>evaluation only"])
     end
 
-    subgraph TRANSFORM["Phase 4: Transform"]
-        T1[Naver Geocoding]
-        T2[Duplicate Check]
-        T3[Generate unique_id]
+    subgraph TRANSFORM["4. TRANSFORM"]
+        direction TB
+        T1["Naver Geocoding API<br/>(get coordinates)"]
+        T2["Duplicate Check<br/>(similar name/address)"]
+        T3["Generate unique_id<br/>(hash based)"]
     end
 
-    subgraph DB["Phase 5: Database"]
-        D1[(restaurant_evaluations)]
-        D2[(restaurants)]
+    subgraph DB["5. DATABASE"]
+        direction TB
+        D1[("restaurant_evaluations<br/>all evaluation results")]
+        D2[("restaurants<br/>verified data only")]
     end
 
-    I1 --> I2 --> I3
-    I3 --> C1 --> C2 --> C3 --> C4
-    C4 --> E1 --> E2 --> E3
-    E3 -->|Yes| E4
-    E3 -->|No| E5
-    E4 --> T1 --> T2 --> T3
+    I1 --> I2
+    I2 --> I3
+    I3 --> C1
+    C1 --> C2
+    C2 --> C3
+    C3 --> C4
+
+    C4 --> E1
+    E1 --> E2
+    E2 --> E3
+    E3 -->|"Pass"| E4
+    E3 -->|"Fail"| E5
+
+    E4 --> T1
+    T1 --> T2
+    T2 --> T3
+
     E5 --> D1
     T3 --> D2
-    D2 --> D1
+    D2 -.->|"link"| D1
+
+    style INPUT fill:#dbeafe,stroke:#3b82f6,stroke-width:2px
+    style CRAWL fill:#dcfce7,stroke:#22c55e,stroke-width:2px
+    style EVAL fill:#fef9c3,stroke:#eab308,stroke-width:2px
+    style TRANSFORM fill:#fce7f3,stroke:#ec4899,stroke-width:2px
+    style DB fill:#e0e7ff,stroke:#6366f1,stroke-width:2px
