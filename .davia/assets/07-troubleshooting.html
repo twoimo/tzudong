@@ -34,18 +34,16 @@ NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key</code></pre>
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co  # /로 끝나면 안됨
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...</code></pre>
 
-<p><strong>원인 2: Google OAuth 미설정</strong></p>
-<ol>
-    <li>Supabase Dashboard → Authentication → Providers</li>
-    <li>Google 활성화</li>
-    <li>Client ID, Client Secret 입력</li>
-    <li>Redirect URL 설정: <code>https://xxx.supabase.co/auth/v1/callback</code></li>
-</ol>
-
-<p><strong>원인 3: 리다이렉트 URL 불일치</strong></p>
+<p><strong>원인 2: 이메일 형식 오류</strong></p>
 <ul>
-    <li>Google Cloud Console → OAuth 2.0 클라이언트 ID</li>
-    <li>승인된 리다이렉션 URI에 Supabase 콜백 URL 추가</li>
+    <li>올바른 이메일 형식으로 입력했는지 확인</li>
+    <li>비밀번호는 6자 이상이어야 함</li>
+</ul>
+
+<p><strong>원인 3: 이미 가입된 이메일</strong></p>
+<ul>
+    <li>회원가입 대신 로그인을 시도해보세요</li>
+    <li>비밀번호를 잊었다면 비밀번호 재설정 기능 이용</li>
 </ul>
 
 <hr />
@@ -102,7 +100,7 @@ SELECT COUNT(*) FROM restaurants WHERE status = 'approved';
 gemini logout
 gemini
 
-# 브라우저에서 Google 계정 인증</code></pre>
+# 브라우저에서 Gemini 인증</code></pre>
 
 <hr />
 

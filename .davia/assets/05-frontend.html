@@ -220,7 +220,7 @@ function FilterPanel() {
 <h3>리뷰 작성</h3>
 
 <ol>
-    <li><strong>로그인</strong> - Google 계정으로 로그인</li>
+    <li><strong>로그인</strong> - 이메일/비밀번호로 로그인</li>
     <li><strong>맛집 선택</strong> - 리뷰 쓸 맛집 클릭</li>
     <li><strong>사진 업로드</strong> - 방문 인증 사진 필수</li>
     <li><strong>별점 선택</strong> - 1-5점 별점</li>
@@ -275,13 +275,12 @@ function FilterPanel() {
 
 <h2>인증 시스템</h2>
 
-<p><strong>Google OAuth 로그인:</strong></p>
+<p><strong>이메일/비밀번호 로그인:</strong></p>
 <ol>
-    <li>사용자가 "Google로 로그인" 버튼 클릭</li>
-    <li>Google 로그인 화면으로 이동</li>
-    <li>Google에서 인증 후 우리 사이트로 돌아옴</li>
-    <li>Supabase가 사용자 정보를 저장</li>
-    <li>로그인 완료!</li>
+    <li>사용자가 이메일과 비밀번호 입력</li>
+    <li>회원가입 시 닉네임 설정 필수</li>
+    <li>Supabase Auth가 인증 처리</li>
+    <li>세션 생성 후 로그인 완료!</li>
 </ol>
 
 <p><strong>역할 구분:</strong></p>
