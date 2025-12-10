@@ -326,39 +326,120 @@ USING (
 
 <p>데이터가 날아가면 안 되겠죠? 정기적으로 백업해야 해요!</p>
 
-<h3>데이터베이스 백업하기</h3>
-<pre><code># Windows PowerShell에서 실행
+<h3>연결 정보</h3>
+<table>
+  <tbody>
+    <tr>
+      <td><strong>Host</strong></td>
+      <td><code>aws-1-ap-southeast-1.pooler.supabase.com</code></td>
+    </tr>
+    <tr>
+      <td><strong>Port</strong></td>
+      <td><code>5432</code></td>
+    </tr>
+    <tr>
+      <td><strong>User</strong></td>
+      <td><code>postgres.aqlcofblfxdrjhhdmarw</code></td>
+    </tr>
+    <tr>
+      <td><strong>Database</strong></td>
+      <td><code>postgres</code></td>
+    </tr>
+    <tr>
+      <td><strong>Password</strong></td>
+      <td>Supabase Dashboard → Project Settings → Database에서 확인</td>
+    </tr>
+  </tbody>
+</table>
 
-# 1. 현재 날짜로 파일명 만들기
+<h3>데이터베이스 백업하기</h3>
+
+<h4>Windows PowerShell</h4>
+<pre><code># 1. 현재 날짜로 파일명 만들기
 $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
 
 # 2. 비밀번호 설정 (환경변수로)
-$env:PGPASSWORD = '여기에_비밀번호_입력'
+$env:PGPASSWORD = '[YOUR_PASSWORD]'
 
 # 3. 백업 실행
 pg_dump -h aws-1-ap-southeast-1.pooler.supabase.com `
   -p 5432 `
-  -U postgres.프로젝트ID `
+  -U postgres.aqlcofblfxdrjhhdmarw `
   -d postgres `
-  -f "backup_$timestamp.sql"
+  -f "supabase\backup-db\backup_$timestamp.sql"
 
-# 결과: backup_2024-01-15_143022.sql 파일 생성됨</code></pre>
+# 결과: supabase\backup-db\backup_2025-01-15_143022.sql 파일 생성됨</code></pre>
+
+<h4>macOS / Linux</h4>
+<pre><code># 백업
+timestamp=$(date +"%Y-%m-%d_%H%M%S")
+PGPASSWORD='[YOUR_PASSWORD]' pg_dump \
+  -h aws-1-ap-southeast-1.pooler.supabase.com \
+  -p 5432 \
+  -U postgres.aqlcofblfxdrjhhdmarw \
+  -d postgres \
+  -f "supabase/backup-db/backup_$timestamp.sql"</code></pre>
 
 <h3>백업에서 복구하기</h3>
-<pre><code># 백업 파일로 데이터 복원
 
+<h4>Windows PowerShell</h4>
+<pre><code>$env:PGPASSWORD = '[YOUR_PASSWORD]'
 psql -h aws-1-ap-southeast-1.pooler.supabase.com `
   -p 5432 `
-  -U postgres.프로젝트ID `
+  -U postgres.aqlcofblfxdrjhhdmarw `
   -d postgres `
-  -f "backup_2024-01-15_143022.sql"</code></pre>
+  -f "supabase\backup-db\backup_2025-01-15_143022.sql"</code></pre>
 
-<h3> 주의사항</h3>
+<h4>macOS / Linux</h4>
+<pre><code>PGPASSWORD='[YOUR_PASSWORD]' psql \
+  -h aws-1-ap-southeast-1.pooler.supabase.com \
+  -p 5432 \
+  -U postgres.aqlcofblfxdrjhhdmarw \
+  -d postgres \
+  -f "supabase/backup-db/backup_2025-01-15_143022.sql"</code></pre>
+
+<h3>주의사항</h3>
 <ul>
   <li><strong>정기 백업</strong>: 매일 또는 매주 백업 권장</li>
   <li><strong>백업 파일 보관</strong>: 다른 곳에도 저장 (클라우드, 외장하드)</li>
   <li><strong>복구 테스트</strong>: 가끔 복구가 잘 되는지 확인</li>
+  <li><strong>비밀번호</strong>: <code>[YOUR_PASSWORD]</code>를 실제 비밀번호로 교체</li>
 </ul>
+
+<hr />
+
+<h2>중복 검사 시스템</h2>
+
+<p>맛집 승인 시 <strong>기존 데이터와의 중복을 자동으로 감지</strong>하는 시스템이 적용되어 있습니다.</p>
+
+<h3>동작 원리</h3>
+<ul>
+  <li>Levenshtein Distance 알고리즘 사용</li>
+  <li>이름 유사도 <strong>85% 이상</strong>이면 중복으로 판정</li>
+  <li>같은 지역(지번주소 앞 20자) 내에서만 비교 (성능 최적화)</li>
+</ul>
+
+<h3>관련 DB 컬럼</h3>
+<table>
+  <thead>
+    <tr>
+      <th>컬럼</th>
+      <th>설명</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>db_error_message</code></td>
+      <td>중복 에러 메시지 (사용자 표시용)</td>
+    </tr>
+    <tr>
+      <td><code>db_error_details</code></td>
+      <td>중복된 맛집 정보 (JSONB)</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>자세한 내용은 <a href="14-duplicate-check.html"><strong>중복 검사 시스템 문서</strong></a>를 참조하세요.</p>
 
 <hr />
 

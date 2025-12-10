@@ -236,31 +236,40 @@ function FilterPanel() {
 
 <h3>개선 결과</h3>
 <ul>
-    <li><strong>Lighthouse 점수</strong>: 24점 85점 이상 (+61점 향상!)</li>
-    <li><strong>첫 화면 로딩</strong>: 3.5초 2초 이하</li>
+    <li><strong>Lighthouse 점수</strong>: 24점 → 85점 이상 (+61점 향상!)</li>
+    <li><strong>첫 화면 로딩</strong>: 3.5초 → 2초 이하</li>
 </ul>
 
-<h3>적용한 기법들</h3>
+<h3>적용한 주요 기법</h3>
 
-<p><strong>1. 코드 스플리팅 (Code Splitting)</strong></p>
-<p>필요한 코드만 먼저 로드하고, 나머지는 나중에:</p>
-<pre><code>// 지도 컴포넌트는 필요할 때만 로드
-const Map = dynamic(() =&gt; import('./Map'), {
-  loading: () =&gt; &lt;MapSkeleton /&gt;  // 로딩 중엔 스켈레톤 표시
-});</code></pre>
+<table>
+    <thead>
+        <tr>
+            <th>기법</th>
+            <th>효과</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>코드 스플리팅</strong></td>
+            <td>초기 번들 200KB 감소, TBT 200ms 개선</td>
+        </tr>
+        <tr>
+            <td><strong>이미지 최적화</strong></td>
+            <td>AVIF/WebP로 전송량 60% 감소</td>
+        </tr>
+        <tr>
+            <td><strong>React Query 캐싱</strong></td>
+            <td>네트워크 요청 70% 감소</td>
+        </tr>
+        <tr>
+            <td><strong>컴포넌트 메모이제이션</strong></td>
+            <td>불필요한 리렌더링 방지</td>
+        </tr>
+    </tbody>
+</table>
 
-<p><strong>2. 이미지 최적화</strong></p>
-<ul>
-    <li><strong>AVIF/WebP 포맷</strong> - 기존 JPEG보다 50-80% 작은 용량</li>
-    <li><strong>반응형 이미지</strong> - 화면 크기에 맞는 이미지 제공</li>
-    <li><strong>Lazy Loading</strong> - 화면에 보일 때만 이미지 로드</li>
-</ul>
-
-<p><strong>3. 캐싱</strong></p>
-<ul>
-    <li><strong>React Query 캐싱</strong> - 한번 가져온 데이터는 1분간 재사용</li>
-    <li><strong>브라우저 캐싱</strong> - 정적 파일은 브라우저에 저장</li>
-</ul>
+<p>상세한 최적화 과정과 코드 예시는 <a href="13-performance.html"><strong>성능 최적화 가이드</strong></a>를 참조하세요.</p>
 
 <hr />
 

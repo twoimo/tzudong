@@ -427,4 +427,140 @@ export interface Profile {
 
 <hr />
 
+<h2>네이버 Geocoding API</h2>
+
+<p>주소를 좌표(위도/경도)로 변환하는 API입니다. 제보 관리 페이지의 <strong>"주소로 좌표 자동 입력"</strong> 기능에서 사용됩니다.</p>
+
+<h3>현재 구성: 외부 프록시 서버</h3>
+
+<div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 16px; margin: 20px 0;">
+    <strong>장점</strong>
+    <ul style="margin-bottom: 0;">
+        <li>API 키 설정 불필요 - 즉시 사용 가능</li>
+        <li>CORS 문제 없음 - 서버사이드에서 처리</li>
+        <li>보안 강화 - 클라이언트에 API 키 노출 없음</li>
+    </ul>
+</div>
+
+<h4>요청</h4>
+<pre><code>const response = await fetch(
+  `http://www.moamodu.com/develop/naver_map_new_proxy.php?query=${encodeURIComponent(address)}`
+);</code></pre>
+
+<h4>응답</h4>
+<pre><code>{
+  "status": "OK",
+  "meta": {
+    "totalCount": 1,
+    "page": 1,
+    "count": 1
+  },
+  "addresses": [
+    {
+      "roadAddress": "경기도 포천시 선마로 7",
+      "jibunAddress": "경기도 포천시 선단동 56-7",
+      "englishAddress": "7, Seonma-ro, Pocheon-si, Gyeonggi-do, Republic of Korea",
+      "x": "127.1673391",  // 경도 (longitude)
+      "y": "37.8538400",   // 위도 (latitude)
+      "distance": 0.0
+    }
+  ],
+  "errorMessage": ""
+}</code></pre>
+
+<h4>사용 예시</h4>
+<pre><code>const geocodeAddress = async (address: string) => {
+  try {
+    const response = await fetch(
+      `http://www.moamodu.com/develop/naver_map_new_proxy.php?query=${encodeURIComponent(address)}`
+    );
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.status === 'OK' && data.addresses?.length > 0) {
+      const item = data.addresses[0];
+      return {
+        lat: parseFloat(item.y),  // 위도
+        lng: parseFloat(item.x),  // 경도
+        roadAddress: item.roadAddress,
+        jibunAddress: item.jibunAddress
+      };
+    }
+    
+    throw new Error('주소를 찾을 수 없습니다');
+  } catch (error) {
+    console.error('Geocoding error:', error);
+    throw error;
+  }
+};</code></pre>
+
+<h3>대안: 직접 네이버 클라우드 API 사용</h3>
+
+<p>외부 프록시 대신 직접 API를 사용하려면:</p>
+
+<ol>
+    <li><a href="https://www.ncloud.com/" target="_blank">네이버 클라우드 플랫폼</a> 가입</li>
+    <li>Maps API 신청 (Geocoding 선택)</li>
+    <li>Application 등록 후 API 키 발급</li>
+    <li>환경 변수 설정:
+        <pre><code># .env.local
+VITE_NAVER_CLIENT_ID=your_client_id
+VITE_NAVER_CLIENT_SECRET=your_client_secret</code></pre>
+    </li>
+    <li>Vite 프록시 설정 (CORS 해결)</li>
+</ol>
+
+<h4>비용</h4>
+<ul>
+    <li><strong>무료:</strong> 월 300,000건</li>
+    <li><strong>초과 시:</strong> 건당 0.5원 (VAT 별도)</li>
+</ul>
+
+<hr />
+
+<h2>에러 처리 가이드</h2>
+
+<h3>Geocoding 실패</h3>
+<table>
+    <thead>
+        <tr>
+            <th>상황</th>
+            <th>원인</th>
+            <th>해결 방법</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>주소를 찾을 수 없음</td>
+            <td>주소 형식이 부정확</td>
+            <td>도로명 주소 사용, "서울시" → "서울특별시"</td>
+        </tr>
+        <tr>
+            <td>Failed to fetch</td>
+            <td>프록시 서버 문제</td>
+            <td>잠시 후 재시도</td>
+        </tr>
+        <tr>
+            <td>CORS 에러</td>
+            <td>직접 API 호출 시</td>
+            <td>프록시 서버 사용 또는 Vite 프록시 설정</td>
+        </tr>
+    </tbody>
+</table>
+
+<h3>수동 좌표 입력</h3>
+<p>API로 좌표를 찾지 못할 경우:</p>
+<ol>
+    <li>Google Maps에서 해당 위치 검색</li>
+    <li>지도에서 정확한 위치 우클릭</li>
+    <li>좌표 복사 (예: 37.5665, 126.9780)</li>
+    <li>관리자 페이지에서 수동 입력</li>
+</ol>
+
+<hr />
+
 <p>더 자세한 API 사용법은 <a href="https://supabase.com/docs">Supabase 공식 문서</a>를 참조하세요.</p>

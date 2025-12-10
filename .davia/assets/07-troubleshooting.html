@@ -160,6 +160,56 @@ gemini
 
 <hr />
 
+<h2>관리자 기능 문제</h2>
+
+<h3>Q: 맛집 승인 시 "중복 맛집 발견" 에러가 나요</h3>
+
+<p><strong>원인:</strong> 이름 유사도 85% 이상인 맛집이 이미 존재</p>
+
+<p><strong>해결 방법:</strong></p>
+<ol>
+    <li>에러 메시지에서 기존 맛집 정보 확인</li>
+    <li>실제 중복인 경우 → 해당 레코드 거부</li>
+    <li>다른 맛집인 경우 → 이름 수정 후 재승인
+        <ul>
+            <li>예: "프랭크버거 신림" → "프랭크버거 신림역점"</li>
+        </ul>
+    </li>
+</ol>
+
+<p><strong>중복 검사 임계값 조정:</strong></p>
+<pre><code>// src/lib/db-conflict-checker.ts
+const SIMILARITY_THRESHOLD = 0.85;  // 85% → 90%로 변경 시 더 엄격해짐</code></pre>
+
+<p>자세한 내용은 <a href="14-duplicate-check.html">중복 검사 시스템 문서</a>를 참조하세요.</p>
+
+<hr />
+
+<h3>Q: 주소로 좌표 자동 입력이 안 돼요</h3>
+
+<p><strong>원인 1: 프록시 서버 일시 장애</strong></p>
+<ul>
+    <li>잠시 후 다시 시도</li>
+    <li>개발자 도구(F12) → Network 탭에서 응답 확인</li>
+</ul>
+
+<p><strong>원인 2: 주소 형식 문제</strong></p>
+<ul>
+    <li>도로명 주소 사용 권장</li>
+    <li>"서울시" → "서울특별시"</li>
+    <li>"경기" → "경기도"</li>
+</ul>
+
+<p><strong>수동 좌표 입력 방법:</strong></p>
+<ol>
+    <li>Google Maps에서 해당 위치 검색</li>
+    <li>정확한 위치에서 우클릭</li>
+    <li>좌표 복사 (예: 37.5665, 126.9780)</li>
+    <li>관리자 페이지에서 수동 입력</li>
+</ol>
+
+<hr />
+
 <h2>데이터베이스 문제</h2>
 
 <h3>Q: 데이터가 저장되지 않아요</h3>
