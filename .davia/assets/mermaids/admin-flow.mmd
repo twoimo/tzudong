@@ -1,35 +1,57 @@
 flowchart TD
     subgraph Admin["Admin Dashboard"]
         DASH[Dashboard Home]
-        PENDING[Pending Submissions]
-        MANAGE[Restaurant Management]
+        PENDING[Pending Submissions<br/>restaurant_submissions]
+        MANAGE[Restaurant Management<br/>restaurants table]
+        EVAL[Evaluation Panel<br/>restaurant_evaluations]
     end
 
-    subgraph Actions["Admin Actions"]
-        VIEW[View Details]
-        APPROVE[Approve]
-        REJECT[Reject]
-        EDIT[Edit Info]
-        DELETE[Delete]
+    subgraph ReviewFlow["제보 심사 흐름"]
+        VIEW[View Submission Details]
+        GEO[Geocoding via Naver API<br/>주소 → 좌표 변환]
+        SELECT_ADDR[Select Address Result]
+        APPROVE[Approve Submission]
+        REJECT[Reject with Reason]
     end
 
-    subgraph Database["Database Updates"]
-        STATUS[Update Status]
-        NOTIFY[Send Notification]
+    subgraph ApproveActions["승인 처리"]
+        CHECK_DUP[Check Duplicate<br/>name + jibun_address]
+        INSERT_REST[Insert to restaurants<br/>status = approved]
+        UPDATE_SUB[Update submission<br/>status = approved]
+        NOTIFY[Send Notification<br/>createNewRestaurantNotification]
+    end
+
+    subgraph RejectActions["거절 처리"]
+        SET_REASON[Set rejection_reason]
+        UPDATE_REJ[Update submission<br/>status = rejected]
+    end
+
+    subgraph ManageFlow["맛집 관리"]
+        EDIT[Edit Restaurant Info]
+        DELETE[Soft Delete<br/>status = deleted]
+        UPDATE_REC[Update Record]
     end
 
     DASH --> PENDING
     DASH --> MANAGE
+    DASH --> EVAL
 
     PENDING --> VIEW
-    VIEW --> APPROVE
-    VIEW --> REJECT
+    VIEW --> GEO
+    GEO --> SELECT_ADDR
+    SELECT_ADDR --> APPROVE
+    SELECT_ADDR --> REJECT
 
-    APPROVE -->|status = approved| STATUS
-    REJECT -->|status = rejected| STATUS
-    STATUS --> NOTIFY
+    APPROVE --> CHECK_DUP
+    CHECK_DUP -->|No Duplicate| INSERT_REST
+    CHECK_DUP -->|Duplicate Found| REJECT
+    INSERT_REST --> UPDATE_SUB
+    UPDATE_SUB --> NOTIFY
+
+    REJECT --> SET_REASON
+    SET_REASON --> UPDATE_REJ
 
     MANAGE --> EDIT
     MANAGE --> DELETE
-    EDIT -->|Update Record| STATUS
-    DELETE -->|Remove Record| STATUS
+    EDIT --> UPDATE_REC
+    DELETE --> UPDATE_REC

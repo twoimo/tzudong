@@ -1,0 +1,52 @@
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant SM as SubmissionModal
+    participant S as Supabase
+    participant A as Admin
+    participant N as Notification
+
+    Note over U,N: === 사용자 맛집 제보 흐름 ===
+    
+    U->>F: Click "맛집 제보" Button
+    F->>F: Check Auth Status
+    alt Not Logged In
+        F->>U: Show AuthModal
+        U->>F: Login
+    end
+    
+    F->>SM: Open RestaurantSubmissionModal
+    U->>SM: Fill Form
+    Note right of SM: restaurant_name<br/>address<br/>youtube_link<br/>category<br/>description
+    
+    SM->>SM: Validate Form
+    SM->>S: Insert to restaurant_submissions
+    Note right of S: status = 'pending'
+    S->>SM: Return Success
+    SM->>U: Show Success Toast
+
+    Note over U,N: === 관리자 심사 흐름 ===
+    
+    A->>S: Query pending submissions
+    S->>A: Return submissions list
+    A->>A: Review submission
+    A->>S: Geocode address (Naver API)
+    S->>A: Return coordinates
+    
+    alt Approve
+        A->>S: Insert to restaurants
+        A->>S: Update submission status = 'approved'
+        S->>N: Trigger notification
+        N->>U: New restaurant notification
+    else Reject
+        A->>S: Update submission
+        Note right of S: status = 'rejected'<br/>rejection_reason = '...'
+    end
+
+    Note over U,N: === 사용자 제보 현황 확인 ===
+    
+    U->>F: Open MyPagePanel
+    F->>S: Query user's submissions
+    S->>F: Return submissions
+    F->>U: Show submission status
+    Note right of U: pending: 심사중<br/>approved: 승인됨<br/>rejected: 거절됨 + 사유

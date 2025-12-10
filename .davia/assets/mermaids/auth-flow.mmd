@@ -1,18 +1,32 @@
 sequenceDiagram
     participant U as User
-    participant F as Frontend
+    participant F as Frontend (AuthModal)
+    participant A as AuthContext
     participant S as Supabase Auth
-    participant G as Google OAuth
-    participant DB as Database
+    participant DB as Database (profiles)
 
-    U->>F: Click Login Button
-    F->>S: signInWithOAuth(google)
-    S->>G: Redirect to Google
-    G->>U: Show Google Login
-    U->>G: Enter Credentials
-    G->>S: Return OAuth Token
-    S->>S: Create/Update User
-    S->>F: Return Session
-    F->>DB: Fetch User Profile
-    DB->>F: Return Profile Data
+    Note over U,DB: === 로그인 흐름 ===
+    U->>F: Open AuthModal
+    F->>U: Show Email/Password Form
+    U->>F: Enter Credentials
+    F->>A: signIn(email, password)
+    A->>S: signInWithPassword({email, password})
+    S->>S: Validate Credentials
+    S->>A: Return Session
+    A->>A: onAuthStateChange Triggered
+    A->>DB: checkAdminRole(userId)
+    DB->>A: Return admin status
+    A->>DB: checkProfileStatus(userId)
+    DB->>A: Return profile (nickname)
+    A->>F: Update Auth State
     F->>U: Show Logged In State
+
+    Note over U,DB: === 회원가입 흐름 ===
+    U->>F: Switch to Signup Tab
+    U->>F: Enter Email, Password, Nickname
+    F->>A: signUp(email, password, username)
+    A->>S: auth.signUp({email, password, data: {nickname}})
+    S->>DB: Create user + profile
+    S->>A: Return Success
+    A->>F: Update State
+    F->>U: Show Success Message

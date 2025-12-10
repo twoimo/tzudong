@@ -1,0 +1,54 @@
+flowchart TD
+    subgraph Input["데이터 수집 단계"]
+        YT[YouTube Video URLs<br/>tzuyang_youtubeVideo_urls.txt]
+        TRANS[YouTube Transcript API<br/>transcript-api/main.py]
+    end
+
+    subgraph Crawling["크롤링 단계 - Gemini CLI"]
+        GC_PROMPT[크롤링 프롬프트<br/>prompts/01-extract-restaurants.md]
+        GC_RUN[Gemini CLI 실행<br/>scripts/crawl-restaurants.ts]
+        GC_OUT[크롤링 결과<br/>data/crawling-results.jsonl]
+    end
+
+    subgraph Evaluation["평가 단계 - Gemini CLI"]
+        GE_INPUT[크롤링 결과 로드]
+        GE_PROMPT[평가 프롬프트<br/>prompts/01-evaluate-restaurant.md]
+        GE_RUN[Gemini CLI 실행<br/>scripts/evaluate-restaurants.ts]
+        GE_OUT[평가 결과<br/>data/evaluation-results.jsonl]
+    end
+
+    subgraph Transform["변환 단계"]
+        FILTER[선정/비선정 필터링<br/>is_selected = true/false]
+        GEO[Naver Geocoding API<br/>주소 → 좌표 변환]
+        CLEAN[데이터 정제<br/>중복 제거, 형식 표준화]
+    end
+
+    subgraph Database["데이터베이스 저장"]
+        EVAL_TABLE[restaurant_evaluations<br/>평가 결과 저장]
+        REST_TABLE[restaurants<br/>맛집 정보 저장]
+        LINK[evaluation_id 연결]
+    end
+
+    YT --> TRANS
+    TRANS --> GC_PROMPT
+    GC_PROMPT --> GC_RUN
+    GC_RUN --> GC_OUT
+
+    GC_OUT --> GE_INPUT
+    GE_INPUT --> GE_PROMPT
+    GE_PROMPT --> GE_RUN
+    GE_RUN --> GE_OUT
+
+    GE_OUT --> FILTER
+    FILTER -->|is_selected = true| GEO
+    FILTER -->|is_selected = false| EVAL_TABLE
+    GEO --> CLEAN
+    CLEAN --> REST_TABLE
+    REST_TABLE --> LINK
+    LINK --> EVAL_TABLE
+
+    style Input fill:#e3f2fd
+    style Crawling fill:#fff3e0
+    style Evaluation fill:#f3e5f5
+    style Transform fill:#e8f5e9
+    style Database fill:#fce4ec
