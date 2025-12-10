@@ -1,11 +1,12 @@
 %%{init: {'theme': 'default'}}%%
 
-flowchart LR
+flowchart TB
     subgraph EXT["External Services"]
+        direction LR
         YT[YouTube]
-        GEMINI[Gemini AI]
-        NAVER[Naver Maps]
-        GOOGLE[Google Maps]
+        GEM[Gemini AI]
+        NAV[Naver Maps]
+        GOO[Google Maps]
     end
 
     subgraph PIPE["Backend Pipeline"]
@@ -14,41 +15,45 @@ flowchart LR
         P2[Crawling]
         P3[Evaluation]
         P4[Transform]
+        P1 --> P2 --> P3 --> P4
     end
 
     subgraph FE["Frontend - Next.js"]
         direction TB
-        FE1[Map View]
-        FE2[Search]
-        FE3[Detail]
-        FE4[Review]
+        F1[Map View]
+        F2[Search]
+        F3[Detail]
+        F4[Review]
     end
 
     subgraph DB["Supabase DB"]
         direction TB
-        DB1[(restaurants)]
-        DB2[(reviews)]
-        DB3[(profiles)]
-        DB4[(evaluations)]
+        D1[(restaurants)]
+        D2[(evaluations)]
+        D3[(reviews)]
+        D4[(profiles)]
     end
 
-    subgraph CICD["CI/CD"]
-        CI1[GitHub Actions]
-        CI2[Vercel]
+    subgraph CI["CI/CD"]
+        direction LR
+        C1[GitHub Actions] --> C2[Vercel]
     end
 
     YT --> P1
-    GEMINI --> P2
-    GEMINI --> P3
-    P1 --> P2 --> P3 --> P4
-    P4 --> DB1
-    P4 --> DB4
-
-    NAVER --> FE1
-    GOOGLE --> FE1
+    GEM --> P2
+    GEM --> P3
+    NAV --> F1
+    GOO --> F1
     
-    FE1 & FE2 & FE3 --> DB1
-    FE3 & FE4 --> DB2
-
-    CI1 --> CI2
-    CI2 --> FE
+    P4 --> D1
+    P4 --> D2
+    
+    F1 --> D1
+    F2 --> D1
+    F3 --> D1
+    F3 --> D3
+    F4 --> D3
+    F4 --> D4
+    
+    CI --> FE
+    CI --> PIPE

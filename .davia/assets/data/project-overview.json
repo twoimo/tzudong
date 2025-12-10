@@ -37,7 +37,7 @@
     },
     {
         "카테고리": "🔐 인증",
-        "기술스택": "Supabase Auth + Google OAuth",
+        "기술스택": "Supabase Auth (Email/Password)",
         "설명": "소셜 로그인, 관리자/사용자 역할 구분",
         "상태": "✅ 운영중"
     },

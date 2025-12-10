@@ -1,32 +1,28 @@
 %%{init: {'theme': 'default'}}%%
 
 flowchart TB
-    subgraph INPUT["Phase 1: Input"]
-        direction LR
+    subgraph P1["Phase 1: Input"]
         I1[YouTube URLs] --> I2[Transcript API] --> I3[Subtitles]
     end
 
-    subgraph CRAWL["Phase 2: AI Crawling"]
-        direction LR
-        C1[Prompt] --> C2[Gemini CLI] --> C3[Results JSONL]
+    subgraph P2["Phase 2: Crawling"]
+        C1[Load Prompt] --> C2[Gemini CLI] --> C3[Results JSONL]
     end
 
-    subgraph EVAL["Phase 3: Evaluation"]
-        direction LR
-        E1[RULE Check] --> E2[LAAJ Score] --> E3{Pass?}
+    subgraph P3["Phase 3: Evaluation"]
+        E1[RULE Check] --> E2[LAAJ Score] --> E3{Pass >= 70?}
     end
 
-    subgraph TRANS["Phase 4: Transform"]
-        direction LR
-        T1[Geocoding] --> T2[Dedup] --> T3[unique_id]
+    subgraph P4["Phase 4: Transform"]
+        T1[Geocoding] --> T2[Duplicate Check] --> T3[Generate ID]
     end
 
-    subgraph SAVE["Phase 5: Save"]
-        direction LR
-        S1[(evaluations)] 
-        S2[(restaurants)]
+    subgraph P5["Phase 5: Database"]
+        D1[(restaurants)]
+        D2[(evaluations)]
     end
 
-    INPUT --> CRAWL --> EVAL
-    E3 -->|Yes| TRANS --> S2 --> S1
-    E3 -->|No| S1
+    P1 --> P2 --> P3
+    E3 -->|Yes| P4 --> D1
+    E3 -->|No| D2
+    D1 --> D2
