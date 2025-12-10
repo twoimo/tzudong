@@ -28,20 +28,18 @@ const getYoutubeVideoId = (url: string | undefined): string | null => {
 interface EvaluationDetailViewProps {
     record: EvaluationRecord;
     className?: string;
-    autoHeight?: boolean; // If true, expands to fit content (no internal scroll)
+    autoHeight?: boolean; // true일 경우 내부 스크롤 없이 콘텐츠 높이에 맞춰 늘어남
 }
 
 export function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
     const [embedError, setEmbedError] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
-    const [isPlaying, setIsPlaying] = useState(false);
     const iframeRef = React.useRef<HTMLIFrameElement>(null);
 
     // 리코드 변경 시 상태 초기화
     useEffect(() => {
         setEmbedError(false);
         setVideoUrl(null);
-        setIsPlaying(false);
     }, [record?.id]);
 
     // videoId 메모이제이션
@@ -112,13 +110,13 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
 
     const RightContent = () => (
         <div className="p-4 space-y-4 text-sm">
-            {/* 1. Evaluation Details */}
+            {/* 1. 평가 상세 내역 */}
             <div className="bg-white rounded-lg border p-3 shadow-sm">
                 <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
                     📊 평가 상세
                 </h3>
                 <div className="space-y-4">
-                    {/* 1. Visit Authenticity */}
+                    {/* 1. 방문 여부 (Visit Authenticity) */}
                     <div className="pl-3 border-l-4 border-blue-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-blue-50 text-blue-700 border-blue-200 text-[10px] shrink-0">1</Badge>
@@ -132,7 +130,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </p>
                     </div>
 
-                    {/* 2. Reasoning Basis Inference */}
+                    {/* 2. 추론 합리성 (Reasoning Basis Inference) */}
                     <div className="pl-3 border-l-4 border-purple-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-purple-50 text-purple-700 border-purple-200 text-[10px] shrink-0">2</Badge>
@@ -146,7 +144,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </p>
                     </div>
 
-                    {/* 3. Reasoning Basis Grounding */}
+                    {/* 3. 실제 근거 일치 (Reasoning Basis Grounding) */}
                     <div className="pl-3 border-l-4 border-green-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-green-50 text-green-700 border-green-200 text-[10px] shrink-0">3</Badge>
@@ -160,7 +158,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </p>
                     </div>
 
-                    {/* 4. Review Faithfulness */}
+                    {/* 4. 리뷰 충실도 (Review Faithfulness) */}
                     <div className="pl-3 border-l-4 border-indigo-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] shrink-0">4</Badge>
@@ -174,7 +172,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </p>
                     </div>
 
-                    {/* 5. Geocoding */}
+                    {/* 5. 주소 정합성 (Geocoding) */}
                     <div className="pl-3 border-l-4 border-orange-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-orange-50 text-orange-700 border-orange-200 text-[10px] shrink-0">5</Badge>
@@ -189,7 +187,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </div>
                     </div>
 
-                    {/* 6. Category Validity */}
+                    {/* 6. 카테고리 유효성 (Category Validity) */}
                     <div className="pl-3 border-l-4 border-teal-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-teal-50 text-teal-700 border-teal-200 text-[10px] shrink-0">6</Badge>
@@ -200,7 +198,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                         </div>
                     </div>
 
-                    {/* 7. Category Match */}
+                    {/* 7. 카테고리 정합성 (Category Match) */}
                     <div className="pl-3 border-l-4 border-yellow-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-yellow-50 text-yellow-700 border-yellow-200 text-[10px] shrink-0">7</Badge>
@@ -218,7 +216,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                 </div>
             </div>
 
-            {/* 2. Restaurant Info */}
+            {/* 2. 음식점 기본 정보 */}
             <div className="bg-white rounded-lg border p-3 shadow-sm">
                 <h3 className="flex items-center gap-2 font-semibold text-base mb-3 text-gray-800">
                     🍽️ 음식점 상세 정보
@@ -231,7 +229,11 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                     </div>
                     <div className="flex flex-col gap-0.5 min-w-0">
                         <span className="text-gray-500 text-xs font-medium">카테고리</span>
-                        <span className="text-gray-900 text-sm break-all">{record.restaurant_info?.category || '-'}</span>
+                        <span className="text-gray-900 text-sm break-all">
+                            {record.categories && record.categories.length > 0
+                                ? record.categories.join(', ')
+                                : record.restaurant_info?.category || '-'}
+                        </span>
                     </div>
 
                     {/* Row 2 */}
@@ -290,24 +292,24 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
             </div>
 
             {/* Bottom Padding */}
-            <div className="h-8" />
+            <div className="h-16" />
         </div>
     );
 
     return (
         <div className={cn("flex", autoHeight ? "h-auto" : "h-full overflow-hidden", className)}>
-            {/* Left: Video Player */}
+            {/* 좌측: 비디오 플레이어 */}
             <div className={cn("bg-accent/5 flex flex-col justify-start relative group border-r", autoHeight ? "w-[40%]" : "w-[50%] overflow-hidden")}>
                 <div className="p-4 pb-0 w-full shrink-0">
                     <div className="bg-white rounded-lg border p-3 shadow-sm">
                         <div className="bg-white rounded-lg border p-3 shadow-sm">
-                            {isPlaying && videoUrl && !embedError ? (
+                            {videoUrl && !embedError ? (
                                 <div className="w-full aspect-video z-10 shadow-lg">
                                     <iframe
                                         ref={iframeRef}
                                         width="100%"
                                         height="100%"
-                                        src={`${videoUrl}&autoplay=1`}
+                                        src={`${videoUrl}&autoplay=0`}
                                         title="Video player"
                                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; compute-pressure"
                                         allowFullScreen
@@ -316,36 +318,27 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                                     />
                                 </div>
                             ) : (
-                                /* Facade Pattern: 썸네일 먼저 표시하고 클릭 시 iframe 로드 */
+                                /* Facade Pattern: 썸네일 표시 (클릭 시 새 탭) */
                                 <div
                                     className="relative w-full aspect-video cursor-pointer group"
                                     onClick={() => {
-                                        if (videoId) {
-                                            setIsPlaying(true);
-                                        } else if (record.youtube_link) {
+                                        if (record.youtube_link) {
                                             window.open(record.youtube_link, '_blank');
                                         }
                                     }}
                                 >
                                     {videoId ? (
-                                        <>
-                                            <img
-                                                src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-                                                alt="YouTube 썸네일"
-                                                className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 group-hover:opacity-90"
-                                                onError={(e) => {
-                                                    const target = e.currentTarget;
-                                                    if (target.src.includes('maxresdefault')) {
-                                                        target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-                                                    }
-                                                }}
-                                            />
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors rounded-lg">
-                                                <div className="w-16 h-12 bg-red-600 rounded-lg flex items-center justify-center shadow-lg transition-transform group-hover:scale-110">
-                                                    <div className="border-t-[6px] border-t-transparent border-l-[12px] border-l-white border-b-[6px] border-b-transparent ml-1"></div>
-                                                </div>
-                                            </div>
-                                        </>
+                                        <img
+                                            src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
+                                            alt="YouTube 썸네일"
+                                            className="w-full h-full object-cover rounded-lg shadow-lg transition-opacity duration-200 group-hover:opacity-90"
+                                            onError={(e) => {
+                                                const target = e.currentTarget;
+                                                if (target.src.includes('maxresdefault')) {
+                                                    target.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+                                                }
+                                            }}
+                                        />
                                     ) : (
                                         <div className="flex flex-col items-center justify-center text-muted-foreground p-6 text-center z-10 w-full h-full bg-gray-100 rounded-lg">
                                             <p className="text-gray-400 text-sm">썸네일 없음</p>
@@ -357,7 +350,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                     </div>
                 </div>
 
-                {/* Left Bottom: Video Info */}
+                {/* 좌측 하단: 비디오 메타 정보 */}
                 <div className={cn("w-full bg-accent/5 p-4 pt-4 flex-1 min-h-0", autoHeight ? "" : "overflow-y-auto")}>
                     <div className="bg-white rounded-lg border p-3 shadow-sm">
                         <h3 className="flex items-center gap-2 font-semibold text-base mb-2 text-gray-800">
@@ -393,7 +386,7 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
                 </div>
             </div>
 
-            {/* Right: Info & Evaluation */}
+            {/* 우측: 평가 및 상세 정보 */}
             {autoHeight ? (
                 <div className="w-[60%] h-auto border-l bg-accent/5">
                     <RightContent />

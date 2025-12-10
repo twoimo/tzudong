@@ -49,26 +49,32 @@ export default function RestaurantSubmissionModal({
         mutationFn: async (data: typeof formData) => {
             if (!user) throw new Error('로그인이 필요합니다');
 
-            const submissionData: any = {
-                user_id: user.id,
-                user_submitted_name: data.restaurant_name.trim(),
-                user_submitted_categories: data.categories,
-                user_submitted_phone: data.phone.trim() || null,
-                user_raw_address: data.address.trim(),
+            // 새 스키마: user_restaurants_submission은 JSONB 배열
+            const restaurantInfo = {
+                name: data.restaurant_name.trim(),
+                categories: data.categories,
+                phone: data.phone.trim() || null,
+                address: data.address.trim(),
                 youtube_link: data.youtube_link.trim() || null,
-                description: submissionMode === 'request'
+                tzuyang_review: submissionMode === 'request'
                     ? `[쯔양 방문 요청] ${data.description.trim() || '이 맛집에 쯔양님이 방문해주셨으면 좋겠습니다!'}`
                     : data.description.trim() || null,
-                status: 'pending',
-                submission_type: 'new',
             };
 
-            const { error } = await supabase
-                .from('restaurant_submissions')
+            const submissionData = {
+                user_id: user.id,
+                submission_type: 'new' as const,
+                status: 'pending' as const,
+                user_restaurants_submission: [restaurantInfo], // JSONB 배열로 전달
+            };
+
+            const { error } = await (supabase
+                .from('restaurant_submissions') as any)
                 .insert(submissionData);
 
             if (error) throw error;
         },
+
         onSuccess: () => {
             const modeText = submissionMode === 'new' ? '맛집 제보' : '방문 요청';
             toast.success(`${modeText}가 성공적으로 제출되었습니다!`);
