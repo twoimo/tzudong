@@ -10,12 +10,41 @@
 
 <excalidraw data-path="data/frontend-user-flow.json"></excalidraw>
 
-<h3>👤 다이어그램 설명</h3>
+<h3>👤 다이어그램 상세 설명</h3>
+
+<h4>👉 User Actions (사용자 행동 흐름)</h4>
+<p>사용자가 웹사이트에서 수행할 수 있는 주요 행동들입니다.</p>
 <ul>
-    <li><strong>User Actions</strong> - 사용자 행동: Visit(방문) → Browse(탐색) → Filter(필터링) → Login(로그인) → Review(리뷰 작성)</li>
-    <li><strong>Components</strong> - 화면 컴포넌트: Map(지도), Sidebar(사이드바), Detail(상세), MyPage(마이페이지)</li>
-    <li><strong>Supabase</strong> - 데이터 서비스: Auth(인증), Storage(저장소), PostgreSQL(데이터베이스)</li>
-    <li><strong>DB Tables</strong> - restaurants(맛집), reviews(리뷰), profiles(사용자 프로필)</li>
+    <li><strong>Visit</strong> - 사이트 접속: 맞춤형 지도 화면으로 시작</li>
+    <li><strong>Browse</strong> - 맛집 탐색: 지도 이동/줌, 마커 클릭으로 맛집 확인</li>
+    <li><strong>Filter</strong> - 필터 적용: 지역, 카테고리, 영상 방송일 기준 필터링</li>
+    <li><strong>Login</strong> - 로그인: Google/Kakao OAuth로 간편 인증</li>
+    <li><strong>Review</strong> - 리뷰 작성: 별점 + 코멘트로 맛집 평가 (로그인 필수)</li>
+</ul>
+
+<h4>🧱 Components (화면 컴포넌트)</h4>
+<p>웹사이트를 구성하는 주요 React 컴포넌트들입니다.</p>
+<ul>
+    <li><strong>Map</strong> - 네이버 지도 컴포넌트. 맛집 위치 마커, 클러스터링, 지도 이동 이벤트 처리</li>
+    <li><strong>Sidebar</strong> - 맛집 목록 사이드바. 검색 결과, 필터, 정렬 옵션 표시</li>
+    <li><strong>Detail</strong> - 맛집 상세 모달. 유튜브 임베드, 메뉴, 주소, 리뷰 표시</li>
+    <li><strong>MyPage</strong> - 마이페이지. 내 리뷰, 즐겨찾기, 프로필 관리</li>
+</ul>
+
+<h4>🛠️ Supabase (백엔드 서비스)</h4>
+<p>프론트엔드와 연동되는 Supabase 기능들입니다.</p>
+<ul>
+    <li><strong>Auth</strong> - 인증 서비스: OAuth 로그인, 세션 관리, 토큰 갱신</li>
+    <li><strong>Storage</strong> - 파일 저장소: 사용자 프로필 이미지, 리뷰 첨부 이미지</li>
+    <li><strong>PostgreSQL</strong> - 데이터베이스 직접 연결 (Supabase Client 사용)</li>
+</ul>
+
+<h4>🗃️ DB Tables (데이터베이스 테이블)</h4>
+<p>프론트엔드에서 조회/수정하는 주요 테이블들입니다.</p>
+<ul>
+    <li><strong>restaurants</strong> - 맛집 정보 (name, address, lat, lng, category, youtube_url, menu 등)</li>
+    <li><strong>reviews</strong> - 사용자 리뷰 (rating, comment, user_id, restaurant_id, created_at)</li>
+    <li><strong>profiles</strong> - 사용자 프로필 (display_name, avatar_url, favorite_restaurants)</li>
 </ul>
 
 <hr />

@@ -23,13 +23,47 @@
 
 <excalidraw data-path="data/data-pipeline-flow.json"></excalidraw>
 
-<h3>📊 다이어그램 설명</h3>
+<h3>📊 다이어그램 상세 설명</h3>
+
+<h4>📥 1.Input (입력 단계)</h4>
+<p>유튜브 영상에서 분석에 필요한 원본 데이터를 수집합니다.</p>
 <ul>
-    <li><strong>1.Input</strong> - 입력 단계: YouTube URLs → Transcript API로 자막(Subs) 추출</li>
-    <li><strong>2.Crawl</strong> - 크롤링 단계: Prompt + Gemini AI로 맛집 정보 JSONL 추출</li>
-    <li><strong>3.Eval</strong> - 평가 단계: RULE 기반 검증 + LaaJ(LLM as a Judge)로 품질 평가 → valid/skip 분류</li>
-    <li><strong>4.Transform</strong> - 변환 단계: Geocode(좌표 변환) + Dedup(중복 제거) + ID 발급</li>
-    <li><strong>5.DB</strong> - 저장 단계: restaurants 테이블에 최종 데이터 저장</li>
+    <li><strong>URLs</strong> - 쯔양 채널의 유튜브 영상 URL 목록 (<code>tzuyang_youtubeVideo_urls.txt</code>)</li>
+    <li><strong>API</strong> - <code>transcript-api/main.py</code> FastAPI 서버로 YouTube 자막 요청</li>
+    <li><strong>Subs</strong> - 추출된 자막 텍스트 (시간 정보 포함). "여기 진짜 맛있어요, 서울 강남구..."</li>
+</ul>
+
+<h4>🔍 2.Crawl (크롤링 단계)</h4>
+<p>AI를 활용해 자막에서 맛집 정보를 구조화된 형식으로 추출합니다.</p>
+<ul>
+    <li><strong>Prompt</strong> - 맛집 정보 추출용 프롬프트 (<code>prompts/crawl-prompt.md</code>)</li>
+    <li><strong>Gemini</strong> - Google Gemini CLI로 프롬프트 + 자막을 처리하여 JSON 추출</li>
+    <li><strong>JSONL</strong> - 추출된 맛집 정보 (<code>name</code>, <code>address</code>, <code>menu</code>,
+        <code>youtube_url</code> 등)</li>
+</ul>
+
+<h4>✅ 3.Eval (평가 단계)</h4>
+<p>추출된 데이터의 품질을 검증하고 유효한 데이터만 필터링합니다.</p>
+<ul>
+    <li><strong>RULE</strong> - 규칙 기반 검증: 필수 필드 존재 여부, 주소 형식 확인, 중복 URL 체크</li>
+    <li><strong>LaaJ</strong> - LLM as a Judge: Gemini로 "실제 맛집인가?", "정보가 정확한가?" 평가</li>
+    <li><strong>valid/skip</strong> - 평가 결과에 따라 유효(valid) 또는 제외(skip)로 분류</li>
+</ul>
+
+<h4>🔄 4.Transform (변환 단계)</h4>
+<p>유효한 데이터를 DB 저장에 적합한 형식으로 변환합니다.</p>
+<ul>
+    <li><strong>Geocode</strong> - Naver Geocoding API로 주소 → 좌표(latitude, longitude) 변환</li>
+    <li><strong>Dedup</strong> - 중복 맛집 제거: 이름+주소 조합으로 유사도 계산</li>
+    <li><strong>ID</strong> - 고유 식별자 발급 + 데이터 정규화 (null 처리, 타입 변환)</li>
+</ul>
+
+<h4>🗄️ 5.DB (저장 단계)</h4>
+<p>최종 가공된 데이터를 Supabase PostgreSQL에 저장합니다.</p>
+<ul>
+    <li><strong>restaurants</strong> - 맛집 정보 테이블에 UPSERT (insert or update)</li>
+    <li>RLS(Row Level Security) 정책에 따른 접근 제어 적용</li>
+    <li>실패 로그 및 통계 저장 (<code>log/geminiCLI-restaurant/</code>)</li>
 </ul>
 
 <h3>간단 요약</h3>

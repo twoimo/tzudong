@@ -11,12 +11,40 @@
 
 <excalidraw data-path="data/system-architecture.json"></excalidraw>
 
-<h3>🗺️ 다이어그램 설명</h3>
+<h3>🗺️ 다이어그램 상세 설명</h3>
+
+<h4>🖥️ Frontend (웹 프론트엔드)</h4>
+<p>사용자가 직접 보고 상호작용하는 웹 애플리케이션 계층입니다.</p>
 <ul>
-        <li><strong>Frontend</strong> - 사용자가 보는 웹 화면 (Map, Search, Detail 컴포넌트)</li>
-        <li><strong>Pipeline</strong> - AI 데이터 수집 시스템 (Transcript → Crawl → Eval → Transform)</li>
-        <li><strong>Supabase</strong> - 데이터베이스 (restaurants, reviews 테이블)</li>
-        <li><strong>External</strong> - 외부 서비스 (YouTube API, Gemini AI, Naver/Google 지도)</li>
+        <li><strong>Map</strong> - Naver/Google Maps API를 활용한 맛집 위치 시각화. 클러스터링/마커 클릭 이벤트 처리</li>
+        <li><strong>Search</strong> - 맛집명, 주소, 지역 기반 검색. Supabase Full-Text Search 활용</li>
+        <li><strong>Detail</strong> - 맛집 상세 정보 표시. 유튜브 영상 링크, 리뷰, 좌표 정보 포함</li>
+</ul>
+
+<h4>⚙️ Pipeline (데이터 수집 시스템)</h4>
+<p>AI를 활용해 유튜브 영상에서 맛집 정보를 자동으로 추출하는 백엔드 시스템입니다.</p>
+<ul>
+        <li><strong>Transcript</strong> - YouTube Data API로 영상 자막 추출. FastAPI 서버로 구현</li>
+        <li><strong>Crawl</strong> - Gemini CLI로 자막에서 맛집 정보(name, address, menu) 추출</li>
+        <li><strong>Eval</strong> - 규칙 기반 검증 + LLM as a Judge로 데이터 품질 평가</li>
+        <li><strong>Transform</strong> - Naver Geocoding API로 주소→좌표 변환, 중복 제거 처리</li>
+</ul>
+
+<h4>🗄️ Supabase (데이터베이스 & 백엔드)</h4>
+<p>PostgreSQL 기반의 BaaS(Backend as a Service)로, 데이터 저장과 인증을 담당합니다.</p>
+<ul>
+        <li><strong>restaurants</strong> - 맛집 정보 테이블 (이름, 주소, 좌표, 메뉴, 유튜브 링크 등)</li>
+        <li><strong>reviews</strong> - 사용자 리뷰 테이블 (rating, comment, user_id, restaurant_id)</li>
+        <li><strong>Auth</strong> - 사용자 인증 시스템 (Google/Kakao OAuth 지원)</li>
+</ul>
+
+<h4>🌐 External (외부 서비스 연동)</h4>
+<p>프로젝트에서 사용하는 외부 API 및 서비스들입니다.</p>
+<ul>
+        <li><strong>YouTube API</strong> - 영상 메타데이터 및 자막 추출용</li>
+        <li><strong>Gemini AI</strong> - Google의 LLM으로 맛집 정보 추출 및 평가 수행</li>
+        <li><strong>Naver Maps</strong> - 지도 표시 및 Geocoding (address → lat/lng)</li>
+        <li><strong>Google Maps</strong> - 대체 지도 옵션 및 Place ID 조회</li>
 </ul>
 
 <hr>
