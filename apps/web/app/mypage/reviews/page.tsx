@@ -227,7 +227,7 @@ export default function ReviewsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <MessageSquare className="h-6 w-6" />
-            내 리뷰
+            리뷰 내역
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             내가 작성한 리뷰 목록입니다
@@ -247,7 +247,7 @@ export default function ReviewsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <MessageSquare className="h-6 w-6" />
-            내 리뷰
+            리뷰 내역
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             총 {filteredReviews.length}개의 리뷰

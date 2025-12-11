@@ -356,7 +356,7 @@ export default function MyPagePanel({ isOpen, onClose, onToggleCollapse, isColla
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="submissions" className="text-xs gap-1">
                                     <Edit className="h-3 w-3" />
-                                    나의 제보 ({submissions.length})
+                                    제보 내역 ({submissions.length})
                                 </TabsTrigger>
                                 <TabsTrigger value="requests" className="text-xs gap-1">
                                     <MessageSquare className="h-3 w-3" />
