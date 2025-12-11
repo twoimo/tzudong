@@ -789,8 +789,10 @@ export function SubmissionListView({
                                                                 <>
                                                                     <Button
                                                                         size="sm"
-                                                                        className="bg-green-500 hover:bg-green-600 text-xs h-7 px-2"
+                                                                        className="bg-green-500 hover:bg-green-600 text-xs h-7 px-2 disabled:opacity-50"
                                                                         onClick={() => handleReviewAction('approve', review)}
+                                                                        disabled={review.is_duplicate}
+                                                                        title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
                                                                     >
                                                                         승인
                                                                     </Button>
@@ -817,8 +819,10 @@ export function SubmissionListView({
                                                             {isRejected && (
                                                                 <Button
                                                                     size="sm"
-                                                                    className="bg-green-500 hover:bg-green-600 text-xs h-7"
+                                                                    className="bg-green-500 hover:bg-green-600 text-xs h-7 disabled:opacity-50"
                                                                     onClick={() => handleReviewAction('approve', review)}
+                                                                    disabled={review.is_duplicate}
+                                                                    title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
                                                                 >
                                                                     재승인
                                                                 </Button>
@@ -1313,16 +1317,33 @@ export function SubmissionListView({
                                     />
                                 </div>
 
-                                <DialogFooter>
+                                <DialogFooter className="gap-2 sm:gap-0">
                                     <Button variant="outline" onClick={() => setShowReviewModal(false)}>
                                         취소
                                     </Button>
                                     <Button
-                                        onClick={handleConfirmReviewAction}
-                                        disabled={reviewAction === 'reject' && !reviewAdminNote.trim()}
-                                        className={reviewAction === 'approve' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
+                                        variant="destructive"
+                                        onClick={() => {
+                                            setReviewAction('reject');
+                                            if (reviewAdminNote.trim()) {
+                                                handleConfirmReviewAction();
+                                            } else {
+                                                toast.error('거부 시 관리자 메모를 입력해주세요');
+                                            }
+                                        }}
+                                        disabled={!reviewAdminNote.trim()}
                                     >
-                                        {reviewAction === 'approve' ? '승인' : '거부'}
+                                        거부
+                                    </Button>
+                                    <Button
+                                        onClick={() => {
+                                            setReviewAction('approve');
+                                            setTimeout(() => handleConfirmReviewAction(), 0);
+                                        }}
+                                        disabled={selectedReview?.is_duplicate}
+                                        className="bg-green-500 hover:bg-green-600 disabled:opacity-50"
+                                    >
+                                        {selectedReview?.is_duplicate ? '중복 - 승인불가' : '승인'}
                                     </Button>
                                 </DialogFooter>
                             </div>
