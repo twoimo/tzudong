@@ -37,6 +37,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
     const prevPathnameRef = useRef(pathname);
 
+    // 마이페이지 여부 확인
+    const isMyPage = pathname?.startsWith('/mypage');
+
     // 페이지 이동 감지
     useEffect(() => {
         if (prevPathnameRef.current !== pathname) {
@@ -45,7 +48,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
         }
     }, [pathname]);
 
-    const shouldShowCenteredLayoutButton = pathname !== '/';
+    const shouldShowCenteredLayoutButton = pathname !== '/' && !isMyPage;
 
     const handleLogout = async () => {
         try {
@@ -74,7 +77,8 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
             {user && <UserDataPrefetcher />}
 
-            <Sidebar isOpen={isSidebarOpen} />
+            {/* 사이드바 - 마이페이지일 때는 마이페이지 모드로 표시 */}
+            <Sidebar isOpen={isSidebarOpen} isMyPageMode={isMyPage} />
 
             <div className={cn(
                 "flex-1 flex flex-col overflow-hidden transition-all duration-300",
@@ -98,6 +102,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                             router.push(`/?panel=announcement&announcementId=${announcement.id}`);
                         }
                     }}
+                    hideToggleSidebar={false}
                 />
 
                 <main className={cn(

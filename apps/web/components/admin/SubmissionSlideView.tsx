@@ -30,13 +30,14 @@ import {
     SubmissionRecord,
     ApprovalData,
     GeocodingResult,
+    ItemDecision,
 } from './SubmissionDetailView';
 
 interface SubmissionSlideViewProps {
     submissions: SubmissionRecord[];
     currentIndex: number;
     onNavigate: (index: number) => void;
-    onApprove: (submission: SubmissionRecord, approvalData: ApprovalData) => void;
+    onApprove: (submission: SubmissionRecord, approvalData: ApprovalData, itemDecisions: Record<string, ItemDecision>, forceApprove: boolean) => void;
     onReject: (submission: SubmissionRecord, reason: string) => void;
     onDelete: (submission: SubmissionRecord) => void;
     onEdit?: (submission: SubmissionRecord) => void;
@@ -71,8 +72,17 @@ export function SubmissionSlideView({
     const [geocodingResults, setGeocodingResults] = useState<GeocodingResult[]>([]);
     const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
 
-    // 메타데이터 여부 상태
-    const [hasYoutubeMeta, setHasYoutubeMeta] = useState(false);
+    // 아이템별 결정 상태 (새 테이블 구조)
+    const [itemDecisions, setItemDecisions] = useState<Record<string, ItemDecision>>({});
+    const [forceApprove, setForceApprove] = useState(false);
+
+    // 관리자 수정 가능 데이터
+    const [editableData, setEditableData] = useState({
+        name: '',
+        address: '',
+        phone: '',
+        categories: [] as string[],
+    });
 
     // 거부 모달 상태
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -91,8 +101,32 @@ export function SubmissionSlideView({
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
         setRejectionReason('');
-        setHasYoutubeMeta(false);
-    }, [currentIndex]);
+        setForceApprove(false);
+
+        // 대기 중인 아이템에 대한 초기 결정 상태 설정
+        if (currentSubmission) {
+            const initialDecisions: Record<string, ItemDecision> = {};
+            currentSubmission.items
+                .filter(item => item.item_status === 'pending')
+                .forEach(item => {
+                    initialDecisions[item.id] = {
+                        approved: true,
+                        rejectionReason: '',
+                        youtube_link: item.youtube_link,
+                        tzuyang_review: item.tzuyang_review || '',
+                    };
+                });
+            setItemDecisions(initialDecisions);
+
+            // 관리자 수정 가능 데이터 초기화
+            setEditableData({
+                name: currentSubmission.restaurant_name,
+                address: currentSubmission.restaurant_address || '',
+                phone: currentSubmission.restaurant_phone || '',
+                categories: currentSubmission.restaurant_categories || [],
+            });
+        }
+    }, [currentIndex, currentSubmission?.id]);
 
     // 외부에서 전달된 approvalData 동기화 (수정 모달에서 저장 시)
     useEffect(() => {
@@ -115,22 +149,18 @@ export function SubmissionSlideView({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [currentIndex, submissions.length, onNavigate]);
 
-    // 빈 데이터 처리
-    if (!currentSubmission) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
-                <AlertCircle className="w-12 h-12 mb-4" />
-                <p className="text-lg">검토할 제보가 없습니다.</p>
-            </div>
-        );
-    }
+    // 대기 중인 아이템 수 (currentSubmission이 없으면 0)
+    const pendingItemsCount = currentSubmission?.items.filter(item => item.item_status === 'pending').length ?? 0;
+    const approvedDecisionsCount = Object.values(itemDecisions).filter(d => d.approved).length;
 
-    // 상태 배지 (useMemo로 최적화)
+    // 상태 배지 (useMemo로 최적화 - hooks는 조건부 return 전에 호출되어야 함)
     const statusBadge = useMemo(() => {
+        if (!currentSubmission) return null;
         const status = currentSubmission.status;
         const variants: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ReactNode }> = {
             pending: { label: '검토 대기', variant: 'secondary', icon: <Clock className="w-3 h-3" /> },
             approved: { label: '승인됨', variant: 'default', icon: <CheckCircle2 className="w-3 h-3" /> },
+            partially_approved: { label: '부분 승인', variant: 'outline', icon: <AlertCircle className="w-3 h-3" /> },
             rejected: { label: '거부됨', variant: 'destructive', icon: <XCircle className="w-3 h-3" /> },
         };
         const config = variants[status] || { label: status, variant: 'default', icon: null };
@@ -140,19 +170,31 @@ export function SubmissionSlideView({
                 {config.label}
             </Badge>
         );
-    }, [currentSubmission.status]);
+    }, [currentSubmission?.status]);
 
-    // 승인 핸들러 (useCallback 최적화)
+    // 승인 가능 여부 체크
+    const canApprove = useMemo(() => {
+        if (!currentSubmission) return false;
+        // 최소 하나의 아이템이 승인으로 선택되어야 함
+        const hasApprovedItem = Object.values(itemDecisions).some(d => d.approved);
+        // 지오코딩 완료 필요
+        const hasLocation = approvalData.lat && approvalData.lng && approvalData.road_address;
+        return hasApprovedItem && hasLocation;
+    }, [currentSubmission, itemDecisions, approvalData]);
+
+    // 승인 핸들러
     const handleApprove = useCallback(() => {
-        if (!approvalData.lat || !approvalData.lng) {
-            toast.error('먼저 주소를 검색하고 선택해주세요');
+        if (!currentSubmission) return;
+        if (!canApprove) {
+            toast.error('지오코딩을 완료하고 최소 하나의 항목을 승인으로 선택해주세요');
             return;
         }
-        onApprove(currentSubmission, approvalData);
-    }, [approvalData, currentSubmission, onApprove]);
+        onApprove(currentSubmission, approvalData, itemDecisions, forceApprove);
+    }, [canApprove, approvalData, currentSubmission, itemDecisions, forceApprove, onApprove]);
 
-    // 거부 핸들러 (useCallback 최적화)
+    // 거부 핸들러
     const handleReject = useCallback(() => {
+        if (!currentSubmission) return;
         if (!rejectionReason.trim()) {
             toast.error('거부 사유를 입력해주세요');
             return;
@@ -162,19 +204,30 @@ export function SubmissionSlideView({
         setRejectionReason('');
     }, [currentSubmission, onReject, rejectionReason]);
 
-    // 삭제 핸들러 (useCallback 최적화)
+    // 삭제 핸들러
     const handleDelete = useCallback(() => {
+        if (!currentSubmission) return;
         if (confirm('정말 이 제보를 삭제하시겠습니까?')) {
             onDelete(currentSubmission);
         }
     }, [currentSubmission, onDelete]);
 
-    // 수정 핸들러 (useCallback 최적화)
+    // 수정 핸들러
     const handleEdit = useCallback(() => {
-        if (onEdit) {
+        if (onEdit && currentSubmission) {
             onEdit(currentSubmission);
         }
     }, [currentSubmission, onEdit]);
+
+    // 빈 데이터 처리 (모든 hooks 호출 후에 return)
+    if (!currentSubmission) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8">
+                <AlertCircle className="w-12 h-12 mb-4" />
+                <p className="text-lg">검토할 제보가 없습니다.</p>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background overflow-hidden">
@@ -221,15 +274,20 @@ export function SubmissionSlideView({
                         {currentSubmission.submission_type === 'edit' ? '수정 요청' : '신규 제보'}
                     </Badge>
 
+                    {/* 아이템 카운트 */}
+                    <Badge variant="outline" className="text-xs">
+                        {approvedDecisionsCount}/{pendingItemsCount} 승인 선택
+                    </Badge>
+
                     {/* 맛집명 */}
-                    <h2 className="text-sm font-semibold truncate max-w-[400px]">
+                    <h2 className="text-sm font-semibold truncate max-w-[300px]">
                         {currentSubmission.restaurant_name}
                     </h2>
                 </div>
 
                 {/* 액션 버튼 */}
                 <div className="flex items-center gap-2 shrink-0">
-                    {currentSubmission.status === 'pending' && (
+                    {(currentSubmission.status === 'pending' || currentSubmission.status === 'partially_approved') && (
                         <>
                             {/* 수정 버튼 */}
                             {onEdit && (
@@ -252,27 +310,21 @@ export function SubmissionSlideView({
                                 className="h-8 text-red-600 border-red-200 hover:bg-red-50"
                             >
                                 <XCircle className="w-3.5 h-3.5 mr-1.5" />
-                                거부
+                                전체 거부
                             </Button>
                             <Button
                                 onClick={handleApprove}
-                                disabled={loading || !approvalData.lat || !approvalData.lng || !approvalData.road_address || !hasYoutubeMeta}
+                                disabled={loading || !canApprove}
                                 className="bg-green-600 hover:bg-green-700 h-8"
                                 size="sm"
-                                title={
-                                    !hasYoutubeMeta
-                                        ? '메타데이터를 먼저 가져와주세요'
-                                        : !approvalData.road_address
-                                            ? '지오코딩을 먼저 진행해주세요'
-                                            : '제보 승인'
-                                }
+                                title={!canApprove ? '지오코딩 완료 및 항목 선택이 필요합니다' : '선택 항목 처리'}
                             >
                                 {loading ? (
                                     <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
                                 ) : (
                                     <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                                 )}
-                                승인
+                                처리
                             </Button>
                         </>
                     )}
@@ -299,7 +351,12 @@ export function SubmissionSlideView({
                     onGeocodingResultsChange={setGeocodingResults}
                     selectedGeocodingIndex={selectedGeocodingIndex}
                     onSelectedGeocodingIndexChange={setSelectedGeocodingIndex}
-                    onYoutubeMetaChange={(hasMeta) => setHasYoutubeMeta(hasMeta)}
+                    itemDecisions={itemDecisions}
+                    onItemDecisionsChange={setItemDecisions}
+                    forceApprove={forceApprove}
+                    onForceApproveChange={setForceApprove}
+                    editableData={editableData}
+                    onEditableDataChange={setEditableData}
                 />
             </div>
 
@@ -307,9 +364,9 @@ export function SubmissionSlideView({
             <Dialog open={showRejectModal} onOpenChange={setShowRejectModal}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>제보 거부</DialogTitle>
+                        <DialogTitle>제보 전체 거부</DialogTitle>
                         <DialogDescription>
-                            거부 사유를 입력해주세요. 제보자에게 전달됩니다.
+                            거부 사유를 입력해주세요. 모든 항목이 거부됩니다.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
@@ -334,7 +391,7 @@ export function SubmissionSlideView({
                             disabled={!rejectionReason.trim() || loading}
                         >
                             {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                            거부
+                            전체 거부
                         </Button>
                     </DialogFooter>
                 </DialogContent>

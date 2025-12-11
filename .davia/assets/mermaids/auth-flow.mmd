@@ -1,0 +1,32 @@
+%%{init: {'theme': 'default'}}%%
+
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant F as Frontend
+    participant A as AuthContext
+    participant S as Supabase Auth
+    participant DB as Database
+
+    rect rgb(230, 255, 237)
+        Note over U,DB: LOGIN FLOW
+        U->>F: Open Login Modal
+        U->>F: Enter Email/Password
+        F->>A: signIn(email, password)
+        A->>S: signInWithPassword()
+        S-->>A: Return Session + JWT
+        A->>DB: checkAdminRole()
+        A->>DB: checkProfileStatus()
+        A-->>F: Update Auth State
+        F-->>U: Login Success
+    end
+
+    rect rgb(255, 243, 224)
+        Note over U,DB: SIGNUP FLOW
+        U->>F: Enter Email/Password/Nickname
+        F->>A: signUp(email, password, nickname)
+        A->>S: auth.signUp()
+        S->>DB: Create User + Profile
+        S-->>A: Return Success
+        F-->>U: Signup Complete
+    end

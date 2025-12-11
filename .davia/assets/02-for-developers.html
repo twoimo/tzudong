@@ -1,0 +1,372 @@
+﻿<h1>개발자 문서</h1>
+
+<p><strong>쯔동여지도</strong> 프로젝트의 기술 문서입니다. 이 문서는 프로젝트에 참여하거나 코드를 이해하고 싶은 개발자를 위해 작성되었습니다.</p>
+
+<hr />
+
+<h2>이 프로젝트 이해하기</h2>
+
+<p><strong>쯔동여지도</strong>는 크게 3가지 부분으로 구성됩니다:</p>
+
+<ol>
+    <li><strong>프론트엔드 (웹사이트)</strong> - 사용자가 보는 화면. Next.js로 만들었어요</li>
+    <li><strong>백엔드 파이프라인</strong> - AI가 맛집 정보를 수집하는 시스템. Python과 Gemini CLI 사용</li>
+    <li><strong>데이터베이스</strong> - 수집된 데이터를 저장하는 곳. Supabase(PostgreSQL) 사용</li>
+</ol>
+
+<hr />
+
+<h2>기술 스택 상세</h2>
+
+<database-view data-path="data/tech-stack.json"></database-view>
+
+<p></p>
+
+<h3>각 기술이 하는 역할:</h3>
+
+<ul>
+    <li><strong>Next.js 16</strong> - React 기반 웹 프레임워크. 서버 사이드 렌더링(SSR)과 정적 생성(SSG) 지원</li>
+    <li><strong>TypeScript</strong> - 자바스크립트에 타입을 추가해서 버그를 미리 잡아줌</li>
+    <li><strong>Tailwind CSS</strong> - 클래스 기반으로 빠르게 스타일링 가능</li>
+    <li><strong>Radix UI</strong> - 접근성이 좋은 UI 컴포넌트 라이브러리</li>
+    <li><strong>React Query</strong> - 서버 데이터 fetching과 캐싱을 쉽게 해줌</li>
+    <li><strong>Zustand</strong> - 가벼운 상태 관리 라이브러리</li>
+    <li><strong>Supabase</strong> - PostgreSQL 데이터베이스 + 인증 + 실시간 기능 제공</li>
+    <li><strong>Gemini CLI</strong> - Google의 AI 모델을 명령줄에서 사용할 수 있게 해주는 도구</li>
+</ul>
+
+<hr />
+
+<h2>개발 환경 설정하기 (처음 시작할 때)</h2>
+
+<h3>1단계: 필요한 프로그램 설치</h3>
+
+<p>먼저 아래 프로그램들이 설치되어 있어야 합니다:</p>
+
+<ul>
+    <li><strong>Node.js 18+</strong> - https://nodejs.org 에서 다운로드</li>
+    <li><strong>pnpm</strong> - 패키지 매니저 (npm보다 빠름)</li>
+    <li><strong>Python 3.10+</strong> - 백엔드 파이프라인용</li>
+    <li><strong>Git</strong> - 코드 버전 관리</li>
+</ul>
+
+<pre><code># pnpm 설치 (Node.js 설치 후)
+npm install -g pnpm
+
+# 버전 확인
+node --version    # v18.0.0 이상
+pnpm --version    # 8.0.0 이상
+python --version  # 3.10 이상</code></pre>
+
+<h3>2단계: 프로젝트 다운로드</h3>
+
+<pre><code># 저장소 클론 (다운로드)
+git clone https://github.com/twoimo/tzudong.git
+
+# 프로젝트 폴더로 이동
+cd tzudong</code></pre>
+
+<h3>3단계: 프론트엔드 설정</h3>
+
+<pre><code># 웹 프로젝트 폴더로 이동
+cd apps/web
+
+# 필요한 패키지들 설치 (시간이 좀 걸려요)
+pnpm install
+
+# 환경변수 파일 만들기
+cp .env.example .env.local
+
+# .env.local 파일을 열어서 필요한 값 채우기 (아래 환경변수 섹션 참고)</code></pre>
+
+<h3>4단계: 개발 서버 실행</h3>
+
+<pre><code># 개발 서버 시작 (Turbopack 모드로 빠르게 실행)
+pnpm dev
+
+# 브라우저에서 http://localhost:3000 접속</code></pre>
+
+<p> 이제 로컬에서 웹사이트가 실행됩니다!</p>
+
+<hr />
+
+<h2>환경변수 설정 (중요!)</h2>
+
+<p>환경변수는 비밀번호나 API 키처럼 코드에 직접 넣으면 안 되는 값들입니다.</p>
+
+<h3>프론트엔드 환경변수 (.env.local)</h3>
+
+<p><code>apps/web/.env.local</code> 파일에 아래 내용을 넣어주세요:</p>
+
+<pre><code># Supabase 연결 정보 (Supabase 대시보드에서 확인)
+NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIs...
+
+# 네이버 지도 API (네이버 클라우드 플랫폼에서 발급)
+NEXT_PUBLIC_NAVER_MAP_CLIENT_ID=your_client_id
+
+# 구글 지도 API (Google Cloud Console에서 발급)
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_api_key</code></pre>
+
+<p><strong>어디서 발급받나요?</strong></p>
+<ul>
+    <li><strong>Supabase</strong> - https://supabase.com 에서 프로젝트 생성 후 Settings API에서 확인</li>
+    <li><strong>네이버 지도</strong> - https://console.ncloud.com 에서 Maps API 신청</li>
+    <li><strong>구글 지도</strong> - https://console.cloud.google.com 에서 Maps JavaScript API 활성화</li>
+</ul>
+
+<h3>백엔드 환경변수</h3>
+
+<p>백엔드 파이프라인을 실행하려면 추가 환경변수가 필요합니다:</p>
+
+<pre><code># Google Gemini API (AI 분석용)
+GEMINI_API_KEY=your_gemini_api_key
+
+# Supabase 관리자 키 (데이터 삽입용)
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_SERVICE_KEY=your_service_role_key
+
+# 네이버 Geocoding API (주소  좌표 변환용)
+NAVER_CLIENT_ID=your_client_id
+NAVER_CLIENT_SECRET=your_client_secret</code></pre>
+
+<hr />
+
+<h2>프로젝트 폴더 구조 자세히 보기</h2>
+
+<h3>프론트엔드 구조 (apps/web)</h3>
+
+<pre><code>apps/web/
+
+ app/                     #  페이지들 (Next.js App Router)
+    page.tsx             #     메인 페이지 (지도 화면)
+    layout.tsx           #     모든 페이지의 공통 레이아웃
+    (auth)/              #     로그인/회원가입 페이지들
+    admin/               #     관리자 전용 페이지들
+    mypage/              #     마이페이지
+    restaurants/[id]/    #     맛집 상세 페이지 (동적 라우트)
+    api/                 #     API 라우트 (서버 기능)
+
+ components/              #  재사용 가능한 컴포넌트들
+    home/                #     홈페이지용 컴포넌트 (지도, 사이드바 등)
+    ui/                  #     공통 UI (버튼, 모달, 입력창 등)
+    features/            #     기능별 컴포넌트 (리뷰, 필터 등)
+    skeletons/           #     로딩 중 표시되는 스켈레톤
+
+ hooks/                   #  커스텀 훅들
+    useRestaurants.ts    #     맛집 데이터 가져오기
+    useAuth.ts           #     인증 관련
+    useMap.ts            #     지도 관련
+
+ lib/                     #  유틸리티 함수들
+    supabase.ts          #     Supabase 클라이언트 설정
+    utils.ts             #     공용 유틸리티 함수
+
+ contexts/                #  전역 상태 관리
+    AuthContext.tsx      #     로그인 상태 관리
+    NotificationContext  #     알림 관리
+
+ types/                   #  TypeScript 타입 정의
+    index.ts             #     프로젝트 전체에서 쓰는 타입들
+
+ integrations/            #  외부 서비스 연동
+     supabase/            #     Supabase 설정 및 타입</code></pre>
+
+<h3>백엔드 구조 (backend)</h3>
+
+<pre><code>backend/
+
+ geminiCLI-restaurant-crawling/    #  맛집 정보 수집 (1단계)
+    scripts/                      #     실행 스크립트들
+       crawling.sh               #     크롤링 시작 명령어
+    prompts/                      #     AI에게 주는 지시문
+    data/                         #     수집된 데이터 저장
+    temp/                         #     임시 파일
+
+ geminiCLI-restaurant-evaluation/  #  수집된 정보 검증 (2단계)
+    scripts/                      #     평가 스크립트들
+    prompts/                      #     평가용 AI 지시문
+    data/                         #     평가 결과 저장
+
+ transcript-api/                   #  유튜브 자막 추출 API
+    main.py                       #     FastAPI 서버
+
+ utils/                            #  공용 유틸리티
+
+ environment.yml                   #  Python 환경 설정 (Conda용)</code></pre>
+
+<hr />
+
+<h2>데이터 파이프라인 이해하기</h2>
+
+<p>AI가 맛집 정보를 수집하고 DB에 저장하는 과정입니다:</p>
+
+<database-view data-path="data/pipeline-phases.json"></database-view>
+
+<p></p>
+
+<h3>파이프라인 5단계 요약</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>단계</th>
+            <th>내용</th>
+            <th>기술</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>1. 크롤링</strong></td>
+            <td>유튜브 자막에서 맛집 정보 추출</td>
+            <td>Gemini CLI</td>
+        </tr>
+        <tr>
+            <td><strong>2. 평가</strong></td>
+            <td>RULE + LAAJ 검증</td>
+            <td>Naver Geocoding, AI</td>
+        </tr>
+        <tr>
+            <td><strong>3. 에러 처리</strong></td>
+            <td>실패 항목 최대 5회 재시도</td>
+            <td>Python</td>
+        </tr>
+        <tr>
+            <td><strong>4. 변환</strong></td>
+            <td>DB 형식으로 데이터 정리</td>
+            <td>TypeScript</td>
+        </tr>
+        <tr>
+            <td><strong>5. 저장</strong></td>
+            <td>중복 확인 후 DB 저장</td>
+            <td>Supabase</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>상세한 내용은 <a href="04-data-pipeline.html"><strong>데이터 파이프라인 문서</strong></a>를 참조하세요.</p>
+
+<h3>파이프라인 실행 명령어:</h3>
+
+<pre><code># 전체 파이프라인 한 번에 실행
+cd backend
+python3 geminiCLI-restaurant-pipeline.py
+
+# 특정 단계부터 실행 (2 = 평가부터)
+python3 geminiCLI-restaurant-pipeline.py --start-from 2</code></pre>
+
+<hr />
+
+<h2>API 사용하기</h2>
+
+<p>Supabase를 통해 데이터를 조회하고 수정할 수 있어요:</p>
+
+<h3>기본 사용 예시</h3>
+
+<pre><code>// React 컴포넌트에서 사용 예시
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+
+function RestaurantList() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['restaurants'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('*')
+        .eq('status', 'approved')
+        .limit(20)
+      
+      if (error) throw error
+      return data
+    }
+  })
+
+  if (isLoading) return &lt;div&gt;로딩 중...&lt;/div&gt;
+
+  return (
+    &lt;ul&gt;
+      {data.map(restaurant =&gt; (
+        &lt;li key={restaurant.id}&gt;{restaurant.name}&lt;/li&gt;
+      ))}
+    &lt;/ul&gt;
+  )
+}</code></pre>
+
+<p>전체 API 엔드포인트와 상세 예시는 <a href="08-api-reference.html"><strong>API 레퍼런스</strong></a>를 참조하세요.</p>
+
+<hr />
+
+<h2>자주 발생하는 문제</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>문제</th>
+            <th>증상</th>
+            <th>해결</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>API 한도 초과</td>
+            <td><code>429 Too Many Requests</code></td>
+            <td>요청 간격 늘리기</td>
+        </tr>
+        <tr>
+            <td>좌표 변환 실패</td>
+            <td>lat/lng가 null</td>
+            <td>주소 정규화 또는 수동 입력</td>
+        </tr>
+        <tr>
+            <td>RLS 오류</td>
+            <td>policy violation</td>
+            <td>service_role 키 사용</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>더 많은 문제 해결 방법은 <a href="07-troubleshooting.html"><strong>트러블슈팅 가이드</strong></a>를 참조하세요.</p>
+
+<hr />
+
+<h2>관련 문서</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>문서</th>
+            <th>내용</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><a href="00-quick-start.html">Quick Start</a></td>
+            <td>5분 빠른 시작 가이드</td>
+        </tr>
+        <tr>
+            <td><a href="03-architecture.html">아키텍처</a></td>
+            <td>시스템 전체 구조</td>
+        </tr>
+        <tr>
+            <td><a href="04-data-pipeline.html">파이프라인</a></td>
+            <td>데이터 수집 과정 상세</td>
+        </tr>
+        <tr>
+            <td><a href="06-database.html">데이터베이스</a></td>
+            <td>테이블 구조 및 RLS</td>
+        </tr>
+        <tr>
+            <td><a href="08-api-reference.html">API 레퍼런스</a></td>
+            <td>Supabase API 명세</td>
+        </tr>
+        <tr>
+            <td><a href="09-environment-variables.html">환경변수</a></td>
+            <td>모든 환경변수 상세</td>
+        </tr>
+        <tr>
+            <td><a href="13-performance.html">성능 최적화</a></td>
+            <td>Lighthouse 24점→85점 개선</td>
+        </tr>
+    </tbody>
+</table>

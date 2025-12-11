@@ -1,0 +1,44 @@
+[
+    {
+        "레이어": "Frontend",
+        "기술": "Next.js 16 + TypeScript",
+        "역할": "웹 UI, SSR, API Routes",
+        "폴더": "apps/web/"
+    },
+    {
+        "레이어": "State Management",
+        "기술": "React Query + Zustand",
+        "역할": "서버 상태 캐싱, 클라이언트 상태",
+        "폴더": "apps/web/hooks/"
+    },
+    {
+        "레이어": "Styling",
+        "기술": "Tailwind CSS + Radix UI",
+        "역할": "반응형 디자인, 접근성",
+        "폴더": "apps/web/components/ui/"
+    },
+    {
+        "레이어": "Maps",
+        "기술": "Naver Maps + Google Maps",
+        "역할": "국내/해외 지도 렌더링",
+        "폴더": "apps/web/components/home/"
+    },
+    {
+        "레이어": "AI Pipeline",
+        "기술": "Gemini CLI + Perplexity",
+        "역할": "맛집 정보 추출 및 평가",
+        "폴더": "backend/geminiCLI-*/"
+    },
+    {
+        "레이어": "Database",
+        "기술": "Supabase (PostgreSQL)",
+        "역할": "데이터 저장, 인증, RLS",
+        "폴더": "supabase/"
+    },
+    {
+        "레이어": "CI/CD",
+        "기술": "GitHub Actions",
+        "역할": "자동 배포, 파이프라인 실행",
+        "폴더": ".github/workflows/"
+    }
+]

@@ -52,11 +52,6 @@ const MyPagePanel = dynamic(
     { ssr: false }
 );
 
-const AdminSubmissionPanel = dynamic(
-    () => import('@/components/admin/AdminSubmissionPanel'),
-    { ssr: false }
-);
-
 const AdminReviewPanel = dynamic(
     () => import('@/components/admin/AdminReviewPanel'),
     { ssr: false }
@@ -64,6 +59,11 @@ const AdminReviewPanel = dynamic(
 
 const AnnouncementPanel = dynamic(
     () => import('@/components/announcement/AnnouncementPanel'),
+    { ssr: false }
+);
+
+const ReviewModal = dynamic(
+    () => import('@/components/reviews/ReviewModal').then(mod => ({ default: mod.ReviewModal })),
     { ssr: false }
 );
 
@@ -80,7 +80,7 @@ export default function HomeClient() {
 
     // 통합 패널 상태 관리
     // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
-    type PanelType = 'mypage' | 'adminSubmissions' | 'adminReviews' | 'announcement' | null;
+    type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
@@ -208,7 +208,8 @@ export default function HomeClient() {
 
         const handleAdminSubmissionsOpen = () => {
             if (isAdmin) {
-                openPanel('adminSubmissions');
+                // 제보관리 패널 대신 관리자 데이터 검수 페이지로 이동
+                router.push('/admin/evaluations?view=submissions');
             }
         };
 
@@ -355,6 +356,18 @@ export default function HomeClient() {
                 onClose={() => setIsSubmissionModalOpen(false)}
             />
 
+            {/* 리뷰 작성 모달 */}
+            {state.isReviewModalOpen && (
+                <ReviewModal
+                    isOpen={state.isReviewModalOpen}
+                    onClose={() => state.setIsReviewModalOpen(false)}
+                    restaurant={state.panelRestaurant ? { id: state.panelRestaurant.id, name: state.panelRestaurant.name } : null}
+                    onSuccess={() => {
+                        state.setRefreshTrigger(prev => prev + 1);
+                    }}
+                />
+            )}
+
             {/* 마이페이지 패널 */}
             <RightPanelWrapper
                 isOpen={activeRightPanel === 'mypage'}
@@ -367,21 +380,6 @@ export default function HomeClient() {
                     isCollapsed={isPanelCollapsed}
                 />
             </RightPanelWrapper>
-
-            {/* 관리자 제보관리 패널 */}
-            {isAdmin && (
-                <RightPanelWrapper
-                    isOpen={activeRightPanel === 'adminSubmissions'}
-                    isCollapsed={isPanelCollapsed}
-                >
-                    <AdminSubmissionPanel
-                        isOpen={!isPanelCollapsed}
-                        onClose={closeAllPanels}
-                        onToggleCollapse={togglePanelCollapse}
-                        isCollapsed={isPanelCollapsed}
-                    />
-                </RightPanelWrapper>
-            )}
 
             {/* 관리자 리뷰관리 패널 */}
             {isAdmin && (

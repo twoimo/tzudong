@@ -1,0 +1,40 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart LR
+    subgraph TRIGGER["Triggers"]
+        T1[Push to main]
+        T2[Push to develop]
+        T3[Pull Request]
+        T4[Schedule]
+    end
+
+    subgraph CI["CI"]
+        C1[Install deps]
+        C2[ESLint]
+        C3[TypeScript]
+        C4[Build]
+    end
+
+    subgraph CD["CD"]
+        D1[Vercel Build]
+        D2[Deploy]
+    end
+
+    subgraph ENV["Environments"]
+        E1[Production]
+        E2[Preview]
+    end
+
+    subgraph PIPE["Pipeline"]
+        P1[Crawling]
+        P2[Evaluation]
+        P3[Insert DB]
+    end
+
+    T1 & T2 & T3 --> CI
+    C1 --> C2 --> C3 --> C4
+    C4 --> CD
+    D1 --> D2 --> ENV
+    
+    T4 --> PIPE
+    P1 --> P2 --> P3

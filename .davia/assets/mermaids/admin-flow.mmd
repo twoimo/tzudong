@@ -1,0 +1,33 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart TB
+    subgraph DASH["Admin Dashboard"]
+        D1[Submissions]
+        D2[Restaurants]
+        D3[Evaluations]
+    end
+
+    subgraph REVIEW["Review Process"]
+        R1[View Details]
+        R2[Geocode Address]
+        R3{Decision}
+    end
+
+    subgraph APPROVE["Approve Flow"]
+        A1[Check Duplicate]
+        A2[Insert Restaurant]
+        A3[Update Status]
+        A4[Send Notification]
+    end
+
+    subgraph REJECT["Reject Flow"]
+        J1[Enter Reason]
+        J2[Update Status]
+    end
+
+    D1 --> R1 --> R2 --> R3
+    R3 -->|Approve| A1 --> A2 --> A3 --> A4
+    R3 -->|Reject| J1 --> J2
+    
+    D2 --> EDIT[Edit/Delete]
+    D3 --> VIEW[View Results]

@@ -1,0 +1,39 @@
+%%{init: {'theme': 'default'}}%%
+
+sequenceDiagram
+    autonumber
+    participant U as User
+    participant F as Frontend
+    participant S as Supabase
+    participant A as Admin
+    participant N as Notification
+
+    rect rgb(230, 255, 237)
+        Note over U,N: SUBMIT RESTAURANT
+        U->>F: Click Submit Button
+        F->>F: Check Login Status
+        U->>F: Fill Form
+        F->>S: INSERT submission
+        S-->>U: Success Toast
+    end
+
+    rect rgb(255, 243, 224)
+        Note over U,N: ADMIN REVIEW
+        A->>S: Query Pending
+        A->>A: Review & Geocode
+        alt Approve
+            A->>S: INSERT restaurant
+            A->>S: UPDATE status=approved
+            S->>N: Create Notification
+            N-->>U: Push Alert
+        else Reject
+            A->>S: UPDATE status=rejected
+        end
+    end
+
+    rect rgb(237, 233, 254)
+        Note over U,N: CHECK STATUS
+        U->>F: Open MyPage
+        F->>S: Query submissions
+        S-->>U: Show Status
+    end

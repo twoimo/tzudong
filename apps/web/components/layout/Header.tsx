@@ -17,9 +17,10 @@ import { useNotifications } from "@/contexts/NotificationContext";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { getBannerAnnouncements, Announcement } from "@/types/announcement";
 import { useHydration } from "@/hooks/useHydration";
+import { supabase } from "@/integrations/supabase/client";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -32,21 +33,26 @@ interface HeaderProps {
   onToggleCenteredLayout?: () => void;
   isAdmin?: boolean;
   onAnnouncementClick?: (announcement: Announcement) => void;
+  hideToggleSidebar?: boolean;
 }
 
 const BANNER_ROTATION_INTERVAL = 5000;
 
-const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick }: HeaderProps) => {
+const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
   const isHydrated = useHydration();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
+  const router = useRouter();
 
   // 공지 배너 상태
   const [bannerAnnouncements, setBannerAnnouncements] = useState<Announcement[]>([]);
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
+
+  // 미처리 제보 건수 상태
+  const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
@@ -55,6 +61,31 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     }
     setBannerAnnouncements(getBannerAnnouncements());
   }, []);
+
+  // 미처리 제보 건수 조회
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const fetchPendingCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('restaurant_submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'pending');
+
+        if (!error && count !== null) {
+          setPendingSubmissionCount(count);
+        }
+      } catch (err) {
+        console.error('Failed to fetch pending submission count:', err);
+      }
+    };
+
+    fetchPendingCount();
+    // 1분마다 갱신
+    const interval = setInterval(fetchPendingCount, 60000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
 
   // 배너 자동 순환
   useEffect(() => {
@@ -89,23 +120,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   };
 
   const handleMyPageClick = () => {
-    // 홈 페이지에서는 CustomEvent로 패널 열기
-    if (pathname === '/') {
-      window.dispatchEvent(new CustomEvent('openMyPage'));
-    } else if (onMyPageClick) {
-      onMyPageClick();
-    } else {
-      window.location.href = '/mypage';
-    }
+    // 마이페이지는 별도 페이지로 이동
+    router.push('/mypage');
   };
 
   const handleAdminSubmissionsClick = () => {
-    if (pathname === '/') {
-      window.dispatchEvent(new CustomEvent('openAdminSubmissions'));
-    } else {
-      // 홈으로 이동 후 패널 열기
-      window.location.href = '/';
-    }
+    // /admin/evaluations 페이지로 이동하며 제보 관리 탭 활성화
+    router.push('/admin/evaluations?view=submissions');
   };
 
   const handleAdminReviewsClick = () => {
@@ -202,16 +223,18 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-stone-800/20 to-transparent" />
 
       {/* 좌측: 사이드바 토글 */}
-      <div className="flex items-center relative z-10 flex-shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onToggleSidebar}
-          className="hover:bg-stone-200/50 text-stone-700 font-serif transition-colors"
-        >
-          <PanelLeft className="h-5 w-5" />
-        </Button>
-      </div>
+      {!hideToggleSidebar && (
+        <div className="flex items-center relative z-10 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleSidebar}
+            className="hover:bg-stone-200/50 text-stone-700 font-serif transition-colors"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </Button>
+        </div>
+      )}
 
       {/* 중앙: 공지 배너 (최대 너비) */}
       {currentBanner && (
@@ -407,6 +430,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                   <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
+                    {pendingSubmissionCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
+                      >
+                        {pendingSubmissionCount > 99 ? '99+' : pendingSubmissionCount}
+                      </Badge>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <MessageSquare className="mr-2 h-4 w-4" />

@@ -6,6 +6,7 @@ import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-q
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { createNewRestaurantNotification } from "@/contexts/NotificationContext";
+import { checkRestaurantDuplicate, DuplicateCheckResult as DbDuplicateCheckResult } from "@/lib/db-conflict-checker";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,9 @@ import {
     X,
     ChevronRight,
     ChevronLeft,
+    Edit,
+    Plus,
+    AlertTriangle,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -39,24 +43,36 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+// 새 테이블 구조에 맞는 인터페이스
+interface SubmissionItem {
+    id: string;
+    submission_id: string;
+    youtube_link: string;
+    tzuyang_review: string | null;
+    target_unique_id: string | null;
+    item_status: 'pending' | 'approved' | 'rejected';
+    rejection_reason: string | null;
+    approved_restaurant_id: string | null;
+    created_at: string;
+}
+
 interface RestaurantSubmission {
     id: string;
     user_id: string;
+    submission_type: 'new' | 'edit';
+    status: 'pending' | 'approved' | 'partially_approved' | 'rejected';
     restaurant_name: string;
-    address: string;
-    phone: string | null;
-    category: string[] | string;
-    youtube_link: string;
-    description: string | null;
-    status: 'pending' | 'approved' | 'rejected';
+    restaurant_address: string | null;
+    restaurant_phone: string | null;
+    restaurant_categories: string[] | null;
+    target_restaurant_id: string | null;
+    admin_notes: string | null;
     rejection_reason: string | null;
-    created_at: string;
+    resolved_by_admin_id: string | null;
     reviewed_at: string | null;
-    reviewed_by_admin_id: string | null;
-    approved_restaurant_id: string | null;
-    submission_type?: 'new' | 'update';
-    original_restaurant_id?: string;
-    changes_requested?: any;
+    created_at: string;
+    updated_at: string;
+    items: SubmissionItem[];
 }
 
 interface SubmissionWithUser extends RestaurantSubmission {
@@ -72,10 +88,21 @@ interface AdminSubmissionPanelProps {
     isCollapsed?: boolean;
 }
 
+// 중복 검사 결과 인터페이스 (UI 표시용)
+interface DuplicateDisplayResult {
+    is_duplicate: boolean;
+    existing_restaurant_id: string;
+    existing_name: string;
+    existing_address: string;
+    similarity_score: number;
+}
+
 export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse, isCollapsed }: AdminSubmissionPanelProps) {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
     const [selectedSubmission, setSelectedSubmission] = useState<SubmissionWithUser | null>(null);
+    const [selectedItem, setSelectedItem] = useState<SubmissionItem | null>(null);
+    const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
     const [rejectionReason, setRejectionReason] = useState("");
@@ -99,6 +126,11 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
     }>>([]);
     const [selectedGeocodingIndex, setSelectedGeocodingIndex] = useState<number | null>(null);
 
+    // 중복 검사 상태
+    const [duplicateCheckResults, setDuplicateCheckResults] = useState<DuplicateDisplayResult[]>([]);
+    const [isCheckingDuplicate, setIsCheckingDuplicate] = useState(false);
+    const [forceApprove, setForceApprove] = useState(false);
+
     const [showRestoreDialog, setShowRestoreDialog] = useState(false);
     const [deletedRecordInfo, setDeletedRecordInfo] = useState<{
         id: string;
@@ -108,6 +140,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
     const [pendingSubmissionData, setPendingSubmissionData] = useState<{
         submissionId: string;
         submission: SubmissionWithUser;
+        item: SubmissionItem;
     } | null>(null);
 
     const {
@@ -121,6 +154,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
         queryFn: async ({ pageParam = 0 }) => {
             if (!user || !isAdmin) return { submissions: [], nextCursor: null };
 
+            // 1. submissions 조회
             const { data: submissionsData, error: submissionsError } = await supabase
                 .from('restaurant_submissions')
                 .select('*')
@@ -134,6 +168,19 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
             }
 
             const typedSubmissionsData = submissionsData as any[];
+            const submissionIds = typedSubmissionsData.map(s => s.id);
+
+            // 2. items 조회 (각 submission의 items 가져오기)
+            const { data: itemsData, error: itemsError } = await supabase
+                .from('restaurant_submission_items')
+                .select('*')
+                .in('submission_id', submissionIds);
+
+            if (itemsError) throw itemsError;
+
+            const typedItemsData = (itemsData || []) as any[];
+
+            // 3. 사용자 정보 조회
             const userIds = [...new Set(typedSubmissionsData.map(s => s.user_id))];
 
             const { data: profilesData } = await supabase
@@ -146,12 +193,17 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                 typedProfilesData.map(p => [p.user_id, p.nickname])
             );
 
-            const submissions = typedSubmissionsData.map(submission => ({
-                ...submission,
-                profiles: {
-                    nickname: profilesMap.get(submission.user_id) || '탈퇴한 사용자'
-                }
-            })) as SubmissionWithUser[];
+            // 4. submissions와 items 매핑
+            const submissions = typedSubmissionsData.map(submission => {
+                const items = typedItemsData.filter(item => item.submission_id === submission.id);
+                return {
+                    ...submission,
+                    items,
+                    profiles: {
+                        nickname: profilesMap.get(submission.user_id) || '탈퇴한 사용자'
+                    }
+                };
+            }) as SubmissionWithUser[];
 
             const nextCursor = submissionsData.length === 20 ? pageParam + 20 : null;
 
@@ -190,114 +242,189 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
     }, [loadMoreSubmissions]);
 
     const approveMutation = useMutation({
-        mutationFn: async ({ submissionId, submission }: { submissionId: string; submission: SubmissionWithUser }) => {
+        mutationFn: async ({ 
+            submissionId, 
+            submission, 
+            item,
+            forceApprove: shouldForceApprove 
+        }: { 
+            submissionId: string; 
+            submission: SubmissionWithUser;
+            item: SubmissionItem;
+            forceApprove?: boolean;
+        }) => {
             if (!user) throw new Error('로그인이 필요합니다');
 
-            let restaurantId: string;
-            const isUpdateRequest = submission.submission_type === 'update' && submission.original_restaurant_id;
+            const lat = parseFloat(approvalData.lat);
+            const lng = parseFloat(approvalData.lng);
 
-            if (isUpdateRequest) {
-                const lat = parseFloat(approvalData.lat);
-                const lng = parseFloat(approvalData.lng);
+            if (isNaN(lat) || isNaN(lng)) {
+                throw new Error('올바른 좌표를 입력해주세요');
+            }
 
-                if (isNaN(lat) || isNaN(lng)) {
-                    throw new Error('올바른 좌표를 입력해주세요');
+            const isEditRequest = submission.submission_type === 'edit' && submission.target_restaurant_id;
+
+            if (isEditRequest && item.target_unique_id) {
+                // EDIT 요청: 기존 레코드 수정
+                const { data: existingRecord, error: fetchError } = await supabase
+                    .from('restaurants')
+                    .select('id, jibun_address')
+                    .eq('unique_id', item.target_unique_id)
+                    .single();
+
+                if (fetchError || !existingRecord) {
+                    throw new Error('수정 대상 레코드를 찾을 수 없습니다');
                 }
 
+                const recordId = (existingRecord as { id: string; jibun_address: string | null }).id;
+                const existingJibunAddress = (existingRecord as { id: string; jibun_address: string | null }).jibun_address;
+
+                // EDIT 시 주소가 변경되었다면 중복 검사 필요 (자기 자신 제외)
+                const addressChanged = existingJibunAddress !== approvalData.jibun_address;
+                if (addressChanged && !shouldForceApprove) {
+                    const duplicateResult = await checkRestaurantDuplicate(
+                        submission.restaurant_name,
+                        approvalData.jibun_address,
+                        recordId // 자기 자신 제외
+                    );
+                    
+                    if (duplicateResult.isDuplicate && duplicateResult.matchedRestaurant) {
+                        throw new Error(`DUPLICATE_FOUND:${duplicateResult.matchedRestaurant.name}:${duplicateResult.matchedRestaurant.jibun_address}:${Math.round(duplicateResult.similarityScore * 100)}`);
+                    }
+                }
+
+                // 기존 레코드 업데이트
                 const { error: updateError } = await (supabase
                     .from('restaurants') as any)
                     .update({
-                        name: submission.restaurant_name,
-                        road_address: submission.address,
-                        phone: submission.phone,
-                        category: Array.isArray(submission.category) ? submission.category : [submission.category],
-                        youtube_link: submission.youtube_link,
-                        description: submission.description,
+                        youtube_link: item.youtube_link,
+                        tzuyang_review: item.tzuyang_review,
                         lat,
                         lng,
+                        road_address: approvalData.road_address,
+                        jibun_address: approvalData.jibun_address,
+                        english_address: approvalData.english_address,
+                        address_elements: approvalData.address_elements,
+                        source_type: 'user_submission_edit',
                         updated_at: new Date().toISOString(),
+                        updated_by_admin_id: user.id,
                     })
-                    .eq('id', submission.original_restaurant_id);
+                    .eq('id', recordId);
 
                 if (updateError) throw updateError;
-                restaurantId = submission.original_restaurant_id!;
+
+                // item 상태 업데이트
+                const { error: itemError } = await (supabase
+                    .from('restaurant_submission_items') as any)
+                    .update({
+                        item_status: 'approved',
+                        approved_restaurant_id: recordId,
+                    })
+                    .eq('id', item.id);
+
+                if (itemError) throw itemError;
+
+                return { restaurantId: recordId };
             } else {
-                const { data: existingRestaurants, error: checkError } = await supabase
-                    .from('restaurants')
-                    .select('id, name, jibun_address, status')
-                    .eq('name', submission.restaurant_name)
-                    .eq('jibun_address', approvalData.jibun_address);
+                // NEW 요청: 새 레코드 생성
+                
+                // 중복 검사 (forceApprove가 아닐 때)
+                if (!shouldForceApprove) {
+                    const { data: existingRestaurants, error: checkError } = await supabase
+                        .from('restaurants')
+                        .select('id, name, jibun_address, status')
+                        .eq('name', submission.restaurant_name)
+                        .eq('jibun_address', approvalData.jibun_address);
 
-                if (checkError) throw checkError;
+                    if (checkError) throw checkError;
 
-                const typedExistingRestaurants = (existingRestaurants || []) as any[];
+                    const typedExistingRestaurants = (existingRestaurants || []) as any[];
 
-                if (typedExistingRestaurants.length > 0) {
-                    const deletedRecord = typedExistingRestaurants.find(r => r.status === 'deleted');
-                    const activeRecord = typedExistingRestaurants.find(r => r.status !== 'deleted');
+                    if (typedExistingRestaurants.length > 0) {
+                        const deletedRecord = typedExistingRestaurants.find(r => r.status === 'deleted');
+                        const activeRecord = typedExistingRestaurants.find(r => r.status !== 'deleted');
 
-                    if (activeRecord) {
-                        throw new Error(`이미 등록된 맛집입니다: "${submission.restaurant_name}" (${submission.address})`);
-                    }
+                        if (activeRecord) {
+                            throw new Error(`이미 등록된 맛집입니다: "${submission.restaurant_name}" (${approvalData.jibun_address})`);
+                        }
 
-                    if (deletedRecord) {
-                        throw new Error(`DELETED_RECORD_FOUND:${deletedRecord.id}`);
+                        if (deletedRecord) {
+                            throw new Error(`DELETED_RECORD_FOUND:${deletedRecord.id}`);
+                        }
                     }
                 }
 
-                const lat = parseFloat(approvalData.lat);
-                const lng = parseFloat(approvalData.lng);
-
-                if (isNaN(lat) || isNaN(lng)) {
-                    throw new Error('올바른 좌표를 입력해주세요');
+                // unique_id 생성 (name + jibun_address + tzuyang_review)
+                const uniqueIdString = `${submission.restaurant_name}|${approvalData.jibun_address}|${item.tzuyang_review || ''}`;
+                const encoder = new TextEncoder();
+                const data = encoder.encode(uniqueIdString);
+                const hashBuffer = await crypto.subtle.digest('MD5', data).catch(() => null);
+                let generatedUniqueId: string;
+                
+                if (hashBuffer) {
+                    const hashArray = Array.from(new Uint8Array(hashBuffer));
+                    generatedUniqueId = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+                } else {
+                    // MD5 fallback - simple hash
+                    let hash = 0;
+                    for (let i = 0; i < uniqueIdString.length; i++) {
+                        const char = uniqueIdString.charCodeAt(i);
+                        hash = ((hash << 5) - hash) + char;
+                        hash = hash & hash;
+                    }
+                    generatedUniqueId = Math.abs(hash).toString(16).padStart(32, '0');
                 }
 
+                // 새 레스토랑 생성
                 const { data: restaurant, error: restaurantError } = await (supabase
                     .from('restaurants') as any)
                     .insert({
+                        unique_id: generatedUniqueId,
                         name: submission.restaurant_name,
                         road_address: approvalData.road_address,
                         jibun_address: approvalData.jibun_address,
                         english_address: approvalData.english_address,
                         address_elements: approvalData.address_elements,
-                        phone: submission.phone,
-                        categories: Array.isArray(submission.category) ? submission.category : [submission.category],
-                        youtube_link: submission.youtube_link,
-                        description: submission.description,
+                        phone: submission.restaurant_phone,
+                        categories: submission.restaurant_categories || [],
+                        youtube_link: item.youtube_link,
+                        tzuyang_review: item.tzuyang_review,
                         lat,
                         lng,
                         geocoding_success: true,
                         status: 'approved',
+                        source_type: 'user_submission_new',
                     })
                     .select()
                     .single();
 
                 if (restaurantError) throw restaurantError;
-                restaurantId = restaurant.id;
+
+                // item 상태 업데이트
+                const { error: itemError } = await (supabase
+                    .from('restaurant_submission_items') as any)
+                    .update({
+                        item_status: 'approved',
+                        approved_restaurant_id: restaurant.id,
+                    })
+                    .eq('id', item.id);
+
+                if (itemError) throw itemError;
+
+                return { restaurantId: restaurant.id };
             }
-
-            const { error: updateError } = await (supabase
-                .from('restaurant_submissions') as any)
-                .update({
-                    status: 'approved',
-                    reviewed_by_admin_id: user.id,
-                    reviewed_at: new Date().toISOString(),
-                    approved_restaurant_id: restaurantId,
-                })
-                .eq('id', submissionId);
-
-            if (updateError) throw updateError;
         },
-        onSuccess: (_, { submission }) => {
-            toast.success('제보가 승인되었습니다!');
-            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
-                category: submission.category,
+        onSuccess: (result, { submission }) => {
+            toast.success('항목이 승인되었습니다!');
+            createNewRestaurantNotification(submission.restaurant_name, submission.restaurant_address || '', {
+                category: submission.restaurant_categories || [],
                 submissionId: submission.id
             });
             queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
             queryClient.invalidateQueries({ queryKey: ['restaurants'] });
             setIsReviewModalOpen(false);
             resetApprovalData();
+            setForceApprove(false);
         },
         onError: (error: any, variables) => {
             if (error.message && error.message.startsWith('DELETED_RECORD_FOUND:')) {
@@ -305,14 +432,27 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                 setDeletedRecordInfo({
                     id: deletedId,
                     name: variables.submission.restaurant_name,
-                    road_address: variables.submission.address,
+                    road_address: variables.submission.restaurant_address || '',
                 });
                 setPendingSubmissionData({
                     submissionId: variables.submissionId,
                     submission: variables.submission,
+                    item: variables.item,
                 });
                 setShowRestoreDialog(true);
                 setIsReviewModalOpen(false);
+            } else if (error.message && error.message.startsWith('DUPLICATE_FOUND:')) {
+                // EDIT 시 중복 발견: 이름:주소:유사도
+                const [, dupName, dupAddress, similarity] = error.message.split(':');
+                const displayResult: DuplicateDisplayResult = {
+                    is_duplicate: true,
+                    existing_restaurant_id: '', // EDIT 중복에서는 사용 안함
+                    existing_name: dupName,
+                    existing_address: dupAddress,
+                    similarity_score: parseInt(similarity, 10),
+                };
+                setDuplicateCheckResults([displayResult]);
+                toast.error('새 주소에 유사한 맛집이 이미 존재합니다. 강제 승인을 체크하고 다시 시도하세요.');
             } else {
                 toast.error(error.message || '승인에 실패했습니다');
             }
@@ -320,24 +460,64 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
     });
 
     const rejectMutation = useMutation({
-        mutationFn: async (submissionId: string) => {
+        mutationFn: async ({ itemId, reason }: { itemId: string; reason: string }) => {
             if (!user) throw new Error('로그인이 필요합니다');
-            if (!rejectionReason.trim()) throw new Error('거부 사유를 입력해주세요');
+            if (!reason.trim()) throw new Error('거부 사유를 입력해주세요');
 
+            // item 상태 업데이트
             const { error } = await (supabase
-                .from('restaurant_submissions') as any)
+                .from('restaurant_submission_items') as any)
                 .update({
-                    status: 'rejected',
-                    rejection_reason: rejectionReason.trim(),
-                    reviewed_by_admin_id: user.id,
-                    reviewed_at: new Date().toISOString(),
+                    item_status: 'rejected',
+                    rejection_reason: reason.trim(),
                 })
-                .eq('id', submissionId);
+                .eq('id', itemId);
 
             if (error) throw error;
         },
         onSuccess: () => {
-            toast.success('제보가 거부되었습니다');
+            toast.success('항목이 거부되었습니다');
+            queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
+            setIsReviewModalOpen(false);
+            setRejectionReason("");
+        },
+        onError: (error: any) => {
+            toast.error(error.message || '거부에 실패했습니다');
+        },
+    });
+
+    // 전체 submission 거부 (모든 pending items 일괄 거부)
+    const rejectAllMutation = useMutation({
+        mutationFn: async ({ submissionId, reason }: { submissionId: string; reason: string }) => {
+            if (!user) throw new Error('로그인이 필요합니다');
+            if (!reason.trim()) throw new Error('거부 사유를 입력해주세요');
+
+            // 모든 pending items 거부
+            const { error: itemsError } = await (supabase
+                .from('restaurant_submission_items') as any)
+                .update({
+                    item_status: 'rejected',
+                    rejection_reason: reason.trim(),
+                })
+                .eq('submission_id', submissionId)
+                .eq('item_status', 'pending');
+
+            if (itemsError) throw itemsError;
+
+            // submission 전체 거부 사유 기록
+            const { error: submissionError } = await (supabase
+                .from('restaurant_submissions') as any)
+                .update({
+                    rejection_reason: reason.trim(),
+                    resolved_by_admin_id: user.id,
+                    reviewed_at: new Date().toISOString(),
+                })
+                .eq('id', submissionId);
+
+            if (submissionError) throw submissionError;
+        },
+        onSuccess: () => {
+            toast.success('제보가 전체 거부되었습니다');
             queryClient.invalidateQueries({ queryKey: ['admin-submissions'] });
             setIsReviewModalOpen(false);
             setRejectionReason("");
@@ -376,6 +556,8 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
         });
         setGeocodingResults([]);
         setSelectedGeocodingIndex(null);
+        setDuplicateCheckResults([]);
+        setForceApprove(false);
     };
 
     const extractCityDistrictGu = (address: string): string | null => {
@@ -430,7 +612,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
         if (!selectedSubmission) return;
 
         const trimmedName = selectedSubmission.restaurant_name.trim();
-        const trimmedAddress = selectedSubmission.address.trim();
+        const trimmedAddress = (selectedSubmission.restaurant_address || '').trim();
 
         if (!trimmedName || !trimmedAddress) {
             toast.error('맛집명과 주소가 필요합니다');
@@ -475,13 +657,46 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
             english_address: selected.english_address,
             address_elements: selected.address_elements,
         });
+        setDuplicateCheckResults([]);
+        setForceApprove(false);
+        
+        // 주소 선택 시 자동으로 중복 검사 실행
+        if (selectedSubmission) {
+            checkDuplicate(selectedSubmission.restaurant_name, selected.jibun_address);
+        }
+    };
+
+    // 중복 검사 함수 (Levenshtein Distance 기반)
+    const checkDuplicate = async (name: string, jibunAddress: string) => {
+        setIsCheckingDuplicate(true);
+        try {
+            const result = await checkRestaurantDuplicate(name, jibunAddress);
+            
+            if (result.isDuplicate && result.matchedRestaurant) {
+                const displayResult: DuplicateDisplayResult = {
+                    is_duplicate: true,
+                    existing_restaurant_id: result.matchedRestaurant.id,
+                    existing_name: result.matchedRestaurant.name,
+                    existing_address: result.matchedRestaurant.jibun_address,
+                    similarity_score: result.similarityScore * 100, // 0-1 → 0-100 변환
+                };
+                setDuplicateCheckResults([displayResult]);
+            } else {
+                setDuplicateCheckResults([]);
+            }
+        } catch (error) {
+            console.error('중복 검사 실패:', error);
+            setDuplicateCheckResults([]);
+        } finally {
+            setIsCheckingDuplicate(false);
+        }
     };
 
     const handleRestoreAndUpdate = async () => {
         if (!deletedRecordInfo || !pendingSubmissionData || !user) return;
 
         try {
-            const { submission, submissionId } = pendingSubmissionData;
+            const { submission, item } = pendingSubmissionData;
             const lat = parseFloat(approvalData.lat);
             const lng = parseFloat(approvalData.lng);
 
@@ -498,14 +713,15 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                     jibun_address: approvalData.jibun_address,
                     english_address: approvalData.english_address,
                     address_elements: approvalData.address_elements,
-                    phone: submission.phone,
-                    categories: Array.isArray(submission.category) ? submission.category : [submission.category],
-                    youtube_link: submission.youtube_link,
-                    description: submission.description,
+                    phone: submission.restaurant_phone,
+                    categories: submission.restaurant_categories || [],
+                    youtube_link: item.youtube_link,
+                    tzuyang_review: item.tzuyang_review,
                     lat,
                     lng,
                     geocoding_success: true,
                     status: 'approved',
+                    source_type: 'user_submission_new',
                     updated_at: new Date().toISOString(),
                     updated_by_admin_id: user.id,
                 })
@@ -513,21 +729,20 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
 
             if (updateError) throw updateError;
 
-            const { error: submissionError } = await (supabase
-                .from('restaurant_submissions') as any)
+            // item 상태 업데이트
+            const { error: itemError } = await (supabase
+                .from('restaurant_submission_items') as any)
                 .update({
-                    status: 'approved',
-                    reviewed_by_admin_id: user.id,
-                    reviewed_at: new Date().toISOString(),
+                    item_status: 'approved',
                     approved_restaurant_id: deletedRecordInfo.id,
                 })
-                .eq('id', submissionId);
+                .eq('id', item.id);
 
-            if (submissionError) throw submissionError;
+            if (itemError) throw itemError;
 
             toast.success('삭제된 레코드가 복원되었습니다!');
-            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
-                category: submission.category,
+            createNewRestaurantNotification(submission.restaurant_name, submission.restaurant_address || '', {
+                category: submission.restaurant_categories || [],
                 submissionId: submission.id
             });
 
@@ -547,7 +762,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
         if (!pendingSubmissionData || !user) return;
 
         try {
-            const { submission, submissionId } = pendingSubmissionData;
+            const { submission, item } = pendingSubmissionData;
             const lat = parseFloat(approvalData.lat);
             const lng = parseFloat(approvalData.lng);
 
@@ -556,43 +771,55 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                 return;
             }
 
+            // unique_id 생성
+            const uniqueIdString = `${submission.restaurant_name}|${approvalData.jibun_address}|${item.tzuyang_review || ''}`;
+            let generatedUniqueId = '';
+            let hash = 0;
+            for (let i = 0; i < uniqueIdString.length; i++) {
+                const char = uniqueIdString.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            generatedUniqueId = Math.abs(hash).toString(16).padStart(32, '0');
+
             const { data: restaurant, error: restaurantError } = await (supabase
                 .from('restaurants') as any)
                 .insert({
+                    unique_id: generatedUniqueId,
                     name: submission.restaurant_name,
                     road_address: approvalData.road_address,
                     jibun_address: approvalData.jibun_address,
                     english_address: approvalData.english_address,
                     address_elements: approvalData.address_elements,
-                    phone: submission.phone,
-                    categories: Array.isArray(submission.category) ? submission.category : [submission.category],
-                    youtube_link: submission.youtube_link,
-                    description: submission.description,
+                    phone: submission.restaurant_phone,
+                    categories: submission.restaurant_categories || [],
+                    youtube_link: item.youtube_link,
+                    tzuyang_review: item.tzuyang_review,
                     lat,
                     lng,
                     geocoding_success: true,
                     status: 'approved',
+                    source_type: 'user_submission_new',
                 })
                 .select()
                 .single();
 
             if (restaurantError) throw restaurantError;
 
-            const { error: submissionError } = await (supabase
-                .from('restaurant_submissions') as any)
+            // item 상태 업데이트
+            const { error: itemError } = await (supabase
+                .from('restaurant_submission_items') as any)
                 .update({
-                    status: 'approved',
-                    reviewed_by_admin_id: user.id,
-                    reviewed_at: new Date().toISOString(),
+                    item_status: 'approved',
                     approved_restaurant_id: restaurant.id,
                 })
-                .eq('id', submissionId);
+                .eq('id', item.id);
 
-            if (submissionError) throw submissionError;
+            if (itemError) throw itemError;
 
             toast.success('새로운 맛집이 생성되었습니다!');
-            createNewRestaurantNotification(submission.restaurant_name, submission.address, {
-                category: submission.category,
+            createNewRestaurantNotification(submission.restaurant_name, submission.restaurant_address || '', {
+                category: submission.restaurant_categories || [],
                 submissionId: submission.id
             });
 
@@ -608,20 +835,40 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
         }
     };
 
-    const openReviewModal = (submission: SubmissionWithUser, action: 'approve' | 'reject') => {
+    // 상세 모달 열기 (목록 클릭 시)
+    const openDetailModal = (submission: SubmissionWithUser) => {
         setSelectedSubmission(submission);
+        setSelectedItem(null);
+        setIsDetailModalOpen(true);
+    };
+
+    // 항목 승인/거부 모달 열기
+    const openReviewModal = (submission: SubmissionWithUser, item: SubmissionItem, action: 'approve' | 'reject') => {
+        setSelectedSubmission(submission);
+        setSelectedItem(item);
         setReviewAction(action);
+        setIsDetailModalOpen(false);
         setIsReviewModalOpen(true);
     };
 
     const handleReview = () => {
-        if (!selectedSubmission) return;
+        if (!selectedSubmission || !selectedItem) return;
 
         if (reviewAction === 'approve') {
-            approveMutation.mutate({ submissionId: selectedSubmission.id, submission: selectedSubmission });
+            approveMutation.mutate({ 
+                submissionId: selectedSubmission.id, 
+                submission: selectedSubmission,
+                item: selectedItem,
+                forceApprove
+            });
         } else if (reviewAction === 'reject') {
-            rejectMutation.mutate(selectedSubmission.id);
+            rejectMutation.mutate({ itemId: selectedItem.id, reason: rejectionReason });
         }
+    };
+
+    const handleRejectAll = () => {
+        if (!selectedSubmission) return;
+        rejectAllMutation.mutate({ submissionId: selectedSubmission.id, reason: rejectionReason });
     };
 
     const handleDelete = (submissionId: string) => {
@@ -631,7 +878,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
     };
 
     const pendingSubmissions = submissions.filter(s => s.status === 'pending');
-    const approvedSubmissions = submissions.filter(s => s.status === 'approved');
+    const approvedSubmissions = submissions.filter(s => s.status === 'approved' || s.status === 'partially_approved');
     const rejectedSubmissions = submissions.filter(s => s.status === 'rejected');
 
     if (!user || !isAdmin) {
@@ -736,8 +983,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                                         key={`${submission.id}-${index}`}
                                         ref={index === pendingSubmissions.length - 1 ? loadMoreRef : null}
                                         submission={submission}
-                                        onApprove={() => openReviewModal(submission, 'approve')}
-                                        onReject={() => openReviewModal(submission, 'reject')}
+                                        onSelect={() => openDetailModal(submission)}
                                         onDelete={() => handleDelete(submission.id)}
                                     />
                                 ))}
@@ -761,6 +1007,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                                 <SubmissionCard
                                     key={submission.id}
                                     submission={submission}
+                                    onSelect={() => openDetailModal(submission)}
                                     onDelete={() => handleDelete(submission.id)}
                                 />
                             ))
@@ -778,6 +1025,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                                 <SubmissionCard
                                     key={submission.id}
                                     submission={submission}
+                                    onSelect={() => openDetailModal(submission)}
                                     onDelete={() => handleDelete(submission.id)}
                                 />
                             ))
@@ -786,28 +1034,201 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                 </Tabs>
             </div>
 
-            {/* 검토 모달 */}
-            <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+            {/* 상세 모달 - 제보 항목 목록 */}
+            <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
                 <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle>
-                            {reviewAction === 'approve' ? '✅ 제보 승인' : '❌ 제보 거부'}
-                        </DialogTitle>
+                        <DialogTitle>📋 제보 상세</DialogTitle>
                         <DialogDescription>
-                            {reviewAction === 'approve'
-                                ? '레스토랑 정보를 확인하고 등록합니다'
-                                : '거부 사유를 입력해주세요'}
+                            제보 항목을 확인하고 개별 승인/거부 처리하세요
                         </DialogDescription>
                     </DialogHeader>
 
                     {selectedSubmission && (
                         <div className="space-y-4 mt-4">
+                            {/* 제보 기본 정보 */}
+                            <Card className="p-3 bg-muted/50">
+                                <div className="space-y-1 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold">맛집:</span>
+                                        <span>{selectedSubmission.restaurant_name}</span>
+                                        <Badge variant="outline" className="text-xs">
+                                            {selectedSubmission.submission_type === 'new' ? '신규' : '수정'}
+                                        </Badge>
+                                    </div>
+                                    <p><strong>주소:</strong> {selectedSubmission.restaurant_address || '-'}</p>
+                                    <p><strong>제보자:</strong> {selectedSubmission.profiles?.nickname || '알 수 없음'}</p>
+                                    <p><strong>제보일:</strong> {new Date(selectedSubmission.created_at).toLocaleDateString('ko-KR')}</p>
+                                </div>
+                            </Card>
+
+                            {/* 항목 목록 */}
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">항목 ({selectedSubmission.items?.length || 0}개)</p>
+                                {selectedSubmission.items?.map((item, idx) => (
+                                    <Card key={item.id} className="p-3">
+                                        <div className="flex items-start justify-between gap-2">
+                                            <div className="flex-1 min-w-0 space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs text-muted-foreground">{idx + 1}.</span>
+                                                    <a
+                                                        href={item.youtube_link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-primary hover:underline flex items-center gap-1 text-sm truncate"
+                                                    >
+                                                        <Youtube className="h-3 w-3 flex-shrink-0" />
+                                                        <span className="truncate">{item.youtube_link}</span>
+                                                    </a>
+                                                </div>
+                                                {item.tzuyang_review && (
+                                                    <p className="text-xs text-muted-foreground pl-4">
+                                                        리뷰: {item.tzuyang_review}
+                                                    </p>
+                                                )}
+                                                {item.item_status === 'rejected' && item.rejection_reason && (
+                                                    <p className="text-xs text-destructive pl-4">
+                                                        거부 사유: {item.rejection_reason}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-1.5 shrink-0">
+                                                {item.item_status === 'pending' ? (
+                                                    <>
+                                                        <Button 
+                                                            onClick={() => openReviewModal(selectedSubmission, item, 'approve')} 
+                                                            size="sm" 
+                                                            className="h-7 px-2 text-xs bg-green-500 hover:bg-green-600"
+                                                        >
+                                                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                                                            승인
+                                                        </Button>
+                                                        <Button 
+                                                            onClick={() => openReviewModal(selectedSubmission, item, 'reject')} 
+                                                            size="sm" 
+                                                            variant="destructive"
+                                                            className="h-7 px-2 text-xs"
+                                                        >
+                                                            <XCircle className="h-3 w-3 mr-1" />
+                                                            거부
+                                                        </Button>
+                                                    </>
+                                                ) : item.item_status === 'approved' ? (
+                                                    <Badge className="bg-green-500 text-xs">
+                                                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                                                        승인됨
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="destructive" className="text-xs">
+                                                        <XCircle className="h-3 w-3 mr-1" />
+                                                        거부됨
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+
+                            {/* 전체 거부 버튼 */}
+                            {selectedSubmission.status === 'pending' && (
+                                <div className="pt-2 border-t">
+                                    <Button
+                                        variant="outline"
+                                        className="w-full text-destructive hover:text-destructive"
+                                        onClick={() => {
+                                            setReviewAction('reject');
+                                            setSelectedItem(null);
+                                            setIsDetailModalOpen(false);
+                                            setIsReviewModalOpen(true);
+                                        }}
+                                    >
+                                        <XCircle className="h-4 w-4 mr-2" />
+                                        전체 거부
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* 검토 모달 */}
+            <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>
+                <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>
+                            {reviewAction === 'approve' ? '✅ 항목 승인' : selectedItem ? '❌ 항목 거부' : '❌ 전체 거부'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            {reviewAction === 'approve'
+                                ? '지오코딩 → 중복 검사 → 승인 순서로 진행합니다'
+                                : selectedItem ? '해당 항목의 거부 사유를 입력해주세요' : '모든 대기 항목을 거부합니다'}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {/* 전체 거부 (selectedItem이 없을 때) */}
+                    {selectedSubmission && !selectedItem && reviewAction === 'reject' && (
+                        <div className="space-y-4 mt-4">
                             <Card className="p-3 bg-muted/50">
                                 <div className="space-y-1 text-sm">
                                     <p><strong>맛집:</strong> {selectedSubmission.restaurant_name}</p>
-                                    <p><strong>주소:</strong> {selectedSubmission.address}</p>
+                                    <p><strong>대기 항목:</strong> {selectedSubmission.items?.filter(i => i.item_status === 'pending').length || 0}개</p>
+                                </div>
+                            </Card>
+                            <div className="space-y-2">
+                                <Label>거부 사유 *</Label>
+                                <Textarea
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                    placeholder="전체 거부 사유를 입력해주세요..."
+                                    rows={3}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                        setIsReviewModalOpen(false);
+                                        setRejectionReason("");
+                                    }}
+                                    disabled={rejectAllMutation.isPending}
+                                >
+                                    취소
+                                </Button>
+                                <Button
+                                    onClick={handleRejectAll}
+                                    disabled={rejectAllMutation.isPending || !rejectionReason.trim()}
+                                    className="bg-red-500 hover:bg-red-600"
+                                >
+                                    {rejectAllMutation.isPending ? (
+                                        <><Loader2 className="mr-1 h-4 w-4 animate-spin" />처리 중</>
+                                    ) : '전체 거부'}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 개별 항목 승인/거부 */}
+                    {selectedSubmission && selectedItem && (
+                        <div className="space-y-4 mt-4">
+                            {/* 제보 기본 정보 */}
+                            <Card className="p-3 bg-muted/50">
+                                <div className="space-y-1 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold">맛집:</span>
+                                        <span>{selectedSubmission.restaurant_name}</span>
+                                        <Badge variant="outline" className="text-xs">
+                                            {selectedSubmission.submission_type === 'new' ? (
+                                                <><Plus className="h-3 w-3 mr-1" />신규</>
+                                            ) : (
+                                                <><Edit className="h-3 w-3 mr-1" />수정</>
+                                            )}
+                                        </Badge>
+                                    </div>
+                                    <p><strong>주소:</strong> {selectedSubmission.restaurant_address}</p>
                                     <a
-                                        href={selectedSubmission.youtube_link}
+                                        href={selectedItem.youtube_link}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="text-primary hover:underline flex items-center gap-1"
@@ -815,6 +1236,9 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                                         <Youtube className="h-4 w-4" />
                                         유튜브 영상
                                     </a>
+                                    {selectedItem.tzuyang_review && (
+                                        <p className="text-muted-foreground"><strong>쯔양 리뷰:</strong> {selectedItem.tzuyang_review}</p>
+                                    )}
                                 </div>
                             </Card>
 
@@ -860,6 +1284,39 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                                         </div>
                                     )}
 
+                                    {/* 중복 검사 결과 */}
+                                    {isCheckingDuplicate && (
+                                        <div className="p-2 bg-gray-50 dark:bg-gray-900 rounded text-xs flex items-center gap-2">
+                                            <Loader2 className="h-3 w-3 animate-spin" />
+                                            중복 검사 중...
+                                        </div>
+                                    )}
+
+                                    {duplicateCheckResults.length > 0 && (
+                                        <div className="p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-300 rounded text-xs space-y-2">
+                                            <div className="flex items-center gap-2 text-yellow-800 dark:text-yellow-200 font-semibold">
+                                                <AlertTriangle className="h-4 w-4" />
+                                                유사한 맛집 발견!
+                                            </div>
+                                            {duplicateCheckResults.map((dup, index) => (
+                                                <div key={index} className="p-2 bg-white dark:bg-gray-800 rounded border">
+                                                    <p><strong>{dup.existing_name}</strong></p>
+                                                    <p className="text-muted-foreground">{dup.existing_address}</p>
+                                                    <p className="text-yellow-600">유사도: {dup.similarity_score.toFixed(1)}%</p>
+                                                </div>
+                                            ))}
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={forceApprove}
+                                                    onChange={(e) => setForceApprove(e.target.checked)}
+                                                    className="rounded"
+                                                />
+                                                <span className="text-yellow-800 dark:text-yellow-200">그래도 승인 (강제 승인)</span>
+                                            </label>
+                                        </div>
+                                    )}
+
                                     <div className="grid grid-cols-2 gap-2">
                                         <div>
                                             <Label className="text-xs">위도</Label>
@@ -902,6 +1359,7 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                                         setIsReviewModalOpen(false);
                                         setRejectionReason("");
                                         resetApprovalData();
+                                        setSelectedItem(null);
                                     }}
                                     disabled={approveMutation.isPending || rejectMutation.isPending}
                                 >
@@ -912,7 +1370,8 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
                                     disabled={
                                         approveMutation.isPending ||
                                         rejectMutation.isPending ||
-                                        (reviewAction === 'approve' && selectedGeocodingIndex === null)
+                                        (reviewAction === 'approve' && selectedGeocodingIndex === null) ||
+                                        (reviewAction === 'approve' && duplicateCheckResults.length > 0 && !forceApprove)
                                     }
                                     className={reviewAction === 'approve' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
                                 >
@@ -959,83 +1418,68 @@ export default function AdminSubmissionPanel({ isOpen, onClose, onToggleCollapse
     );
 }
 
-// 제보 카드 컴포넌트
+// 제보 카드 컴포넌트 - 깔끔한 목록 형태
 const SubmissionCard = forwardRef<HTMLDivElement, {
     submission: SubmissionWithUser;
-    onApprove?: () => void;
-    onReject?: () => void;
+    onSelect: () => void;
     onDelete: () => void;
-}>(({ submission, onApprove, onReject, onDelete }, ref) => {
+}>(({ submission, onSelect, onDelete }, ref) => {
+    
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'pending':
-                return <Badge variant="secondary" className="gap-1 text-xs"><Clock className="h-3 w-3" />대기</Badge>;
+                return <Badge variant="secondary" className="text-[10px]"><Clock className="h-2.5 w-2.5 mr-0.5" />대기</Badge>;
             case 'approved':
-                return <Badge className="bg-green-500 gap-1 text-xs"><CheckCircle2 className="h-3 w-3" />승인</Badge>;
+                return <Badge className="bg-green-500 text-[10px]"><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />승인</Badge>;
+            case 'partially_approved':
+                return <Badge className="bg-blue-500 text-[10px]"><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />부분</Badge>;
             case 'rejected':
-                return <Badge variant="destructive" className="gap-1 text-xs"><XCircle className="h-3 w-3" />거부</Badge>;
+                return <Badge variant="destructive" className="text-[10px]"><XCircle className="h-2.5 w-2.5 mr-0.5" />거부</Badge>;
             default:
                 return null;
         }
     };
 
+    const pendingCount = submission.items?.filter(item => item.item_status === 'pending').length || 0;
+
     return (
-        <Card ref={ref} className="p-3">
-            <div className="space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1 flex-wrap mb-1">
-                            <h3 className="text-sm font-semibold truncate">{submission.restaurant_name}</h3>
-                            {getStatusBadge(submission.status)}
-                        </div>
-                        <p className="text-xs text-muted-foreground truncate">📍 {submission.address}</p>
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <Card 
+            ref={ref} 
+            className="p-3 cursor-pointer hover:bg-muted/50 transition-colors"
+            onClick={onSelect}
+        >
+            <div className="flex items-center justify-between gap-2">
+                {/* 왼쪽: 맛집명, 타입, 상태 */}
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                        <span className="text-sm font-medium truncate">{submission.restaurant_name}</span>
+                        <Badge variant="outline" className="text-[10px] shrink-0">
+                            {submission.submission_type === 'new' ? '신규' : '수정'}
+                        </Badge>
+                        {getStatusBadge(submission.status)}
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-0.5">
                             <User className="h-3 w-3" />
-                            <span>{submission.profiles?.nickname || '알 수 없음'}</span>
-                        </div>
+                            {submission.profiles?.nickname || '알 수 없음'}
+                        </span>
+                        <span>•</span>
+                        <span>항목 {submission.items?.length || 0}개</span>
+                        {pendingCount > 0 && (
+                            <span className="text-yellow-600">({pendingCount}개 대기)</span>
+                        )}
                     </div>
                 </div>
-
-                {submission.youtube_link && (
-                    <a
-                        href={submission.youtube_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline flex items-center gap-1"
-                    >
-                        <Youtube className="h-3 w-3" />
-                        유튜브
-                    </a>
-                )}
-
-                {submission.status === 'rejected' && submission.rejection_reason && (
-                    <div className="p-2 bg-red-50 dark:bg-red-950/20 border border-red-200 rounded text-xs">
-                        <strong>거부 사유:</strong> {submission.rejection_reason}
-                    </div>
-                )}
-
-                {submission.status === 'pending' && (
-                    <div className="flex gap-1">
-                        <Button onClick={onApprove} size="sm" className="flex-1 bg-green-500 hover:bg-green-600 text-xs h-7">
-                            승인
-                        </Button>
-                        <Button onClick={onReject} size="sm" variant="destructive" className="flex-1 text-xs h-7">
-                            거부
-                        </Button>
-                        <Button onClick={onDelete} size="sm" variant="outline" className="h-7 w-7 p-0">
-                            <Trash2 className="h-3 w-3" />
-                        </Button>
-                    </div>
-                )}
-
-                {submission.status !== 'pending' && (
-                    <div className="flex justify-end">
-                        <Button onClick={onDelete} size="sm" variant="ghost" className="text-destructive text-xs h-7">
-                            <Trash2 className="h-3 w-3 mr-1" />
-                            삭제
-                        </Button>
-                    </div>
-                )}
+                
+                {/* 오른쪽: 삭제 버튼 */}
+                <Button 
+                    onClick={(e) => { e.stopPropagation(); onDelete(); }} 
+                    size="sm" 
+                    variant="ghost" 
+                    className="h-6 w-6 p-0 text-muted-foreground hover:text-destructive shrink-0"
+                >
+                    <Trash2 className="h-3 w-3" />
+                </Button>
             </div>
         </Card>
     );

@@ -1,0 +1,30 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart TB
+    subgraph AUTH["Authentication"]
+        A1[Email/Password Login]
+        A2[Supabase Auth]
+        A3[JWT Token]
+        A4[Session Storage]
+    end
+
+    subgraph ROLES["Authorization"]
+        R1[User Role]
+        R2[Admin Role]
+    end
+
+    subgraph RLS["Row Level Security"]
+        L1[restaurants: approved only]
+        L2[reviews: own records]
+        L3[submissions: own or admin]
+    end
+
+    subgraph KEYS["API Keys"]
+        K1[anon key - public]
+        K2[service_role - secret]
+    end
+
+    A1 --> A2 --> A3 --> A4
+    A4 --> ROLES
+    ROLES --> RLS
+    KEYS --> RLS

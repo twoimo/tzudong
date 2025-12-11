@@ -1,0 +1,39 @@
+%%{init: {'theme': 'default'}}%%
+
+erDiagram
+    profiles ||--o{ reviews : writes
+    profiles ||--o{ user_roles : has
+    
+    restaurants ||--o{ reviews : has
+
+    profiles {
+        uuid user_id PK
+        string nickname UK
+        string email
+    }
+    
+    restaurants {
+        uuid id PK
+        string unique_id UK
+        string name
+        string address
+        float lat
+        float lng
+        string status
+        boolean is_not_selection
+        jsonb evaluation_result
+    }
+    
+    reviews {
+        uuid id PK
+        uuid user_id FK
+        uuid restaurant_id FK
+        text content
+        int rating
+    }
+    
+    user_roles {
+        uuid id PK
+        uuid user_id FK
+        string role
+    }
