@@ -13,7 +13,7 @@ import { MissingRestaurantForm } from '@/components/admin/MissingRestaurantForm'
 import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResolutionPanel';
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { EvaluationSlideView } from '@/components/admin/EvaluationSlideView';
-import { SubmissionListView } from '@/components/admin/SubmissionListView';
+import { SubmissionListView, Review } from '@/components/admin/SubmissionListView';
 import { SubmissionRecord, ApprovalData, SubmissionItem } from '@/components/admin/SubmissionDetailView';
 import { createNewRestaurantNotification } from '@/contexts/NotificationContext';
 import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle, LayoutList, MonitorPlay, Send } from 'lucide-react';
@@ -1142,9 +1142,9 @@ function AdminEvaluationPage() {
           .filter((item: any) => item.target_restaurant_id)
           .map((item: any) => item.target_restaurant_id)
       )];
-      
+
       console.log('[EDIT 제보 디버깅] item target_restaurant_ids:', itemTargetRestaurantIds);
-      
+
       let originalRestaurantsMap = new Map<string, any>();
       if (itemTargetRestaurantIds.length > 0) {
         const { data: originalData, error: originalError } = await supabase
@@ -1175,23 +1175,23 @@ function AdminEvaluationPage() {
       // 새 테이블 구조에 맞게 변환
       return typedSubmissions.map((s: any) => {
         const rawItems = itemsMap.get(s.id) || [];
-        
+
         // 아이템별로 original_restaurant 추가 (target_restaurant_id로 매칭)
         const items = rawItems.map((item: any) => {
-          const originalRestaurant = item.target_restaurant_id 
-            ? originalRestaurantsMap.get(item.target_restaurant_id) || null 
+          const originalRestaurant = item.target_restaurant_id
+            ? originalRestaurantsMap.get(item.target_restaurant_id) || null
             : null;
-          
+
           if (originalRestaurant) {
             console.log('[EDIT 제보 디버깅] item:', item.id, 'target_restaurant_id:', item.target_restaurant_id, 'matched:', originalRestaurant.name);
           }
-          
+
           return {
             ...item,
             original_restaurant: originalRestaurant,
           };
         });
-        
+
         // submission 수준의 original_restaurant_data는 첫 번째 아이템 기준으로 설정 (상단 비교용)
         // submissions.target_restaurant_id는 더 이상 사용 안함 (items 레벨에서 관리)
         let originalRestaurantData = null;
@@ -1227,16 +1227,172 @@ function AdminEvaluationPage() {
     refetchOnWindowFocus: true,
   });
 
+  // 리뷰 데이터 쿼리
+  const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
+    queryKey: ['admin-reviews-inline', user?.id, isAdmin],
+    queryFn: async () => {
+      if (!user || !isAdmin) return [];
+
+      const { data: reviewsData, error: reviewsError } = await supabase
+        .from('reviews')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (reviewsError) throw reviewsError;
+      if (!reviewsData?.length) return [];
+
+      const typedReviewsData = reviewsData as any[];
+      const userIds = [...new Set(typedReviewsData.map(r => r.user_id))];
+      const restaurantIds = [...new Set(typedReviewsData.map(r => r.restaurant_id))];
+
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, nickname')
+        .in('user_id', userIds);
+
+      const { data: restaurantsData } = await supabase
+        .from('restaurants')
+        .select('id, name, address')
+        .in('id', restaurantIds);
+
+      const typedProfilesData = (profilesData || []) as any[];
+      const typedRestaurantsData = (restaurantsData || []) as any[];
+
+      const profilesMap = new Map(typedProfilesData.map(p => [p.user_id, p.nickname]));
+      const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.name, address: r.address }]));
+
+      return typedReviewsData.map(review => ({
+        ...review,
+        profiles: { nickname: profilesMap.get(review.user_id) || '탈퇴한 사용자' },
+        restaurants: restaurantsMap.get(review.restaurant_id) || { name: '알 수 없음', address: '' }
+      }));
+    },
+    enabled: !!user && isAdmin,
+    refetchInterval: 30000,
+  });
+
+  // 리뷰 승인 mutation
+  const approveReviewMutation = useMutation({
+    mutationFn: async ({ reviewId, adminNote }: { reviewId: string; adminNote: string }) => {
+      const { data: review, error: reviewError } = await supabase
+        .from('reviews')
+        .select('restaurant_id, is_verified')
+        .eq('id', reviewId)
+        .single();
+
+      if (reviewError) throw reviewError;
+      const typedReview = review as any;
+      const wasAlreadyVerified = typedReview.is_verified;
+
+      const { error: approveError } = await (supabase.from('reviews') as any)
+        .update({
+          is_verified: true,
+          admin_note: adminNote || null,
+          edited_by_admin: !!adminNote,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', reviewId);
+
+      if (approveError) throw approveError;
+
+      if (!wasAlreadyVerified) {
+        const { data: restaurant } = await supabase
+          .from('restaurants')
+          .select('review_count')
+          .eq('id', typedReview.restaurant_id)
+          .single();
+
+        const typedRestaurant = restaurant as any;
+        await (supabase.from('restaurants') as any)
+          .update({
+            review_count: (typedRestaurant?.review_count ?? 0) + 1,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', typedReview.restaurant_id);
+      }
+    },
+    onSuccess: () => {
+      toast({ title: '리뷰 승인됨', description: '리뷰가 승인되었습니다.' });
+      queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: '승인 실패', description: error.message });
+    },
+  });
+
+  // 리뷰 거부 mutation
+  const rejectReviewMutation = useMutation({
+    mutationFn: async ({ reviewId, adminNote }: { reviewId: string; adminNote: string }) => {
+      const { data: review, error: reviewError } = await supabase
+        .from('reviews')
+        .select('restaurant_id, is_verified')
+        .eq('id', reviewId)
+        .single();
+
+      if (reviewError) throw reviewError;
+      const typedReview = review as any;
+
+      const { error: rejectError } = await (supabase.from('reviews') as any)
+        .update({
+          is_verified: false,
+          admin_note: adminNote ? `거부: ${adminNote}` : '거부: 관리자에 의해 거부됨',
+          edited_by_admin: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', reviewId);
+
+      if (rejectError) throw rejectError;
+
+      if (typedReview.is_verified) {
+        const { data: restaurant } = await supabase
+          .from('restaurants')
+          .select('review_count')
+          .eq('id', typedReview.restaurant_id)
+          .single();
+
+        const typedRestaurant = restaurant as any;
+        await (supabase.from('restaurants') as any)
+          .update({
+            review_count: Math.max((typedRestaurant?.review_count ?? 0) - 1, 0),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', typedReview.restaurant_id);
+      }
+    },
+    onSuccess: () => {
+      toast({ title: '리뷰 거부됨', description: '리뷰가 거부되었습니다.' });
+      queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: '거부 실패', description: error.message });
+    },
+  });
+
+  // 리뷰 삭제 mutation
+  const deleteReviewMutation = useMutation({
+    mutationFn: async (reviewId: string) => {
+      const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: '리뷰 삭제됨', description: '리뷰가 삭제되었습니다.' });
+      queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
+    },
+    onError: (error: any) => {
+      toast({ variant: 'destructive', title: '삭제 실패', description: error.message });
+    },
+  });
+
   // 제보 승인 mutation (새 테이블 구조 - 아이템별 처리)
   const approveSubmissionMutation = useMutation({
-    mutationFn: async ({ 
-      submission, 
-      approvalData, 
-      itemDecisions, 
+    mutationFn: async ({
+      submission,
+      approvalData,
+      itemDecisions,
       forceApprove,
       editableData
-    }: { 
-      submission: SubmissionRecord; 
+    }: {
+      submission: SubmissionRecord;
       approvalData: ApprovalData;
       itemDecisions: Record<string, { approved: boolean; rejectionReason: string }>;
       forceApprove: boolean;
@@ -1248,7 +1404,7 @@ function AdminEvaluationPage() {
       if (isNaN(lat) || isNaN(lng)) throw new Error('올바른 좌표가 필요합니다');
 
       // 승인할 아이템들의 youtube_link와 tzuyang_review 수집
-      const approvedItems = submission.items.filter((item: SubmissionItem) => 
+      const approvedItems = submission.items.filter((item: SubmissionItem) =>
         item.item_status === 'pending' && itemDecisions[item.id]?.approved
       );
 
@@ -1301,7 +1457,7 @@ function AdminEvaluationPage() {
       // 각 아이템 상태 업데이트
       for (const item of submission.items) {
         if (item.item_status !== 'pending') continue;
-        
+
         const decision = itemDecisions[item.id];
         if (decision?.approved) {
           // 승인
@@ -1434,7 +1590,7 @@ function AdminEvaluationPage() {
 
   // 핸들러 함수 (새 테이블 구조에 맞게 수정)
   const handleApproveSubmission = (
-    submission: SubmissionRecord, 
+    submission: SubmissionRecord,
     approvalData: ApprovalData,
     itemDecisions: Record<string, { approved: boolean; rejectionReason: string }>,
     forceApprove: boolean,
@@ -1451,12 +1607,25 @@ function AdminEvaluationPage() {
     deleteSubmissionMutation.mutate(submission);
   };
 
+  // 리뷰 핸들러
+  const handleApproveReview = (review: Review, adminNote: string) => {
+    approveReviewMutation.mutate({ reviewId: review.id, adminNote });
+  };
+
+  const handleRejectReview = (review: Review, adminNote: string) => {
+    rejectReviewMutation.mutate({ reviewId: review.id, adminNote });
+  };
+
+  const handleDeleteReview = (review: Review) => {
+    deleteReviewMutation.mutate(review.id);
+  };
+
   // 제보 수정 핸들러 (새 테이블 구조에 맞게 수정)
   const handleEditSubmission = (submission: SubmissionRecord) => {
     setEditingSubmission(submission);
     // 첫 번째 아이템 정보 가져오기
     const firstItem = submission.items[0];
-    
+
     // 제보를 EvaluationRecord 형태로 변환 (타입 호환성을 위해 as unknown as EvaluationRecord 사용)
     const evaluationRecord = {
       id: submission.id,
@@ -1600,8 +1769,8 @@ function AdminEvaluationPage() {
                   variant={!isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => { 
-                    setIsAlternateView(false); 
+                  onClick={() => {
+                    setIsAlternateView(false);
                     setShowSubmissionView(false);
                     // URL에서 view 파라미터 제거
                     router.replace('/admin/evaluations', { scroll: false });
@@ -1614,8 +1783,8 @@ function AdminEvaluationPage() {
                   variant={isAlternateView && !showSubmissionView ? "secondary" : "ghost"}
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => { 
-                    setIsAlternateView(true); 
+                  onClick={() => {
+                    setIsAlternateView(true);
                     setShowSubmissionView(false);
                     // URL에서 view 파라미터 제거
                     router.replace('/admin/evaluations', { scroll: false });
@@ -1684,6 +1853,11 @@ function AdminEvaluationPage() {
             onDelete={handleDeleteSubmission}
             onRefresh={() => queryClient.invalidateQueries({ queryKey: ['admin-submissions'] })}
             loading={approveSubmissionMutation.isPending || rejectSubmissionMutation.isPending || deleteSubmissionMutation.isPending}
+            reviews={reviewsData as Review[]}
+            onApproveReview={handleApproveReview}
+            onRejectReview={handleRejectReview}
+            onDeleteReview={handleDeleteReview}
+            reviewsLoading={reviewsLoading}
           />
         ) : isAlternateView ? (
           <EvaluationSlideView
