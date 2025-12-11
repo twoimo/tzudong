@@ -97,6 +97,7 @@ export interface Review {
         items?: string[];
         confidence?: number;
         error?: string;
+        duplicate_of?: string; // 중복 원본 리뷰 ID
     } | null;
     ocr_processed_at?: string | null;
     profiles: {
@@ -204,11 +205,12 @@ export function SubmissionListView({
         try {
             const response = await fetch('/api/admin/ocr-receipts', { method: 'POST' });
             const data = await response.json();
-            if (response.ok) {
-                toast.success(`OCR 처리 완료: 성공 ${data.stats.success}, 중복 ${data.stats.duplicate}`);
-                fetchOcrStatus();
+            if (response.ok && data.success) {
+                toast.success(data.message || 'OCR 처리가 시작되었습니다.');
+                // GitHub Actions가 완료되면 상태가 갱신되므로 잠시 후 다시 조회
+                setTimeout(() => fetchOcrStatus(), 3000);
             } else {
-                toast.error(`OCR 처리 실패: ${data.error}`);
+                toast.error(`OCR 처리 실패: ${data.error || '알 수 없는 오류'}`);
             }
         } catch (error) {
             toast.error('OCR 처리 중 오류가 발생했습니다.');
@@ -1150,6 +1152,18 @@ export function SubmissionListView({
                                                                 >
                                                                     {(selectedReview.receipt_data.confidence * 100).toFixed(0)}%
                                                                 </Badge>
+                                                            </div>
+                                                        )}
+                                                        {/* 중복 영수증 경고 */}
+                                                        {selectedReview.is_duplicate && selectedReview.receipt_data.duplicate_of && (
+                                                            <div className="pt-2 border-t">
+                                                                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                                                                    <AlertTriangle className="h-4 w-4" />
+                                                                    <span className="text-sm font-medium">중복 영수증 감지!</span>
+                                                                </div>
+                                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                                    원본 리뷰 ID: <code className="bg-muted px-1 rounded">{selectedReview.receipt_data.duplicate_of.slice(0, 8)}...</code>
+                                                                </p>
                                                             </div>
                                                         )}
                                                     </div>
