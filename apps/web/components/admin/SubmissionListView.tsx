@@ -197,6 +197,9 @@ export function SubmissionListView({
     const [ocrStatus, setOcrStatus] = useState<{ pending: number; duplicate: number; processed: number } | null>(null);
     const [isOcrRunning, setIsOcrRunning] = useState(false);
 
+    // 이미지 확대 모달 상태
+    const [previewImage, setPreviewImage] = useState<{ url: string; alt: string } | null>(null);
+
     // OCR 상태 조회
     const fetchOcrStatus = useCallback(async () => {
         try {
@@ -287,7 +290,27 @@ export function SubmissionListView({
         filteredReviews.filter(r => !r.is_verified && r.admin_note?.includes('거부'))
         , [filteredReviews]);
 
-    // 통계
+    // 제보 상태별 분류
+    const newSubmissions = useMemo(() =>
+        submissions.filter(s => s.submission_type === 'new'), [submissions]);
+    const editSubmissions = useMemo(() =>
+        submissions.filter(s => s.submission_type === 'edit'), [submissions]);
+
+    const newPendingCount = useMemo(() =>
+        newSubmissions.filter(s => s.status === 'pending' || s.status === 'partially_approved').length, [newSubmissions]);
+    const newApprovedCount = useMemo(() =>
+        newSubmissions.filter(s => s.status === 'approved').length, [newSubmissions]);
+    const newRejectedCount = useMemo(() =>
+        newSubmissions.filter(s => s.status === 'rejected').length, [newSubmissions]);
+
+    const editPendingCount = useMemo(() =>
+        editSubmissions.filter(s => s.status === 'pending' || s.status === 'partially_approved').length, [editSubmissions]);
+    const editApprovedCount = useMemo(() =>
+        editSubmissions.filter(s => s.status === 'approved').length, [editSubmissions]);
+    const editRejectedCount = useMemo(() =>
+        editSubmissions.filter(s => s.status === 'rejected').length, [editSubmissions]);
+
+    // 통계 (탭 버튼 배지용)
     const newCount = useMemo(() =>
         submissions.filter(s => s.submission_type === 'new' && (s.status === 'pending' || s.status === 'partially_approved')).length
         , [submissions]);
@@ -453,11 +476,58 @@ export function SubmissionListView({
                 {/* 탭 헤더 */}
                 <div className="shrink-0 border-b pb-3 mb-3 mx-4">
                     <div className="flex items-center justify-between gap-2 mt-2">
-                        {/* 왼쪽: OCR 상태 (리뷰 탭일 때만 표시) */}
-                        <div className="flex items-center gap-2 text-sm">
+                        {/* 왼쪽: 현재 탭 상태 카운트 */}
+                        <div className="flex items-center gap-2 text-sm flex-wrap">
+                            {activeTab === 'new' && (
+                                <>
+                                    <span className="text-muted-foreground text-xs">신규:</span>
+                                    <Badge variant="secondary" className="text-xs gap-1">
+                                        <Clock className="h-3 w-3" /> 대기 {newPendingCount}
+                                    </Badge>
+                                    <Badge className="bg-green-500 text-xs gap-1">
+                                        <CheckCircle2 className="h-3 w-3" /> 승인 {newApprovedCount}
+                                    </Badge>
+                                    <Badge variant="destructive" className="text-xs gap-1">
+                                        <XCircle className="h-3 w-3" /> 거부 {newRejectedCount}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                        전체 {newSubmissions.length}
+                                    </Badge>
+                                </>
+                            )}
+                            {activeTab === 'edit' && (
+                                <>
+                                    <span className="text-muted-foreground text-xs">수정:</span>
+                                    <Badge variant="secondary" className="text-xs gap-1">
+                                        <Clock className="h-3 w-3" /> 대기 {editPendingCount}
+                                    </Badge>
+                                    <Badge className="bg-green-500 text-xs gap-1">
+                                        <CheckCircle2 className="h-3 w-3" /> 승인 {editApprovedCount}
+                                    </Badge>
+                                    <Badge variant="destructive" className="text-xs gap-1">
+                                        <XCircle className="h-3 w-3" /> 거부 {editRejectedCount}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                        전체 {editSubmissions.length}
+                                    </Badge>
+                                </>
+                            )}
                             {activeTab === 'reviews' && (
                                 <>
-                                    <span className="text-muted-foreground text-xs">OCR:</span>
+                                    <span className="text-muted-foreground text-xs">리뷰:</span>
+                                    <Badge variant="secondary" className="text-xs gap-1">
+                                        <Clock className="h-3 w-3" /> 대기 {pendingReviews.length}
+                                    </Badge>
+                                    <Badge className="bg-green-500 text-xs gap-1">
+                                        <CheckCircle2 className="h-3 w-3" /> 승인 {approvedReviews.length}
+                                    </Badge>
+                                    <Badge variant="destructive" className="text-xs gap-1">
+                                        <XCircle className="h-3 w-3" /> 거부 {rejectedReviews.length}
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                        전체 {reviews.length}
+                                    </Badge>
+                                    <span className="text-muted-foreground text-xs ml-2">OCR:</span>
                                     {ocrStatus && (
                                         <>
                                             <Badge variant="outline" className="text-xs">대기 {ocrStatus.pending}</Badge>
@@ -465,7 +535,6 @@ export function SubmissionListView({
                                                 <AlertTriangle className="h-3 w-3" />
                                                 중복 {ocrStatus.duplicate}
                                             </Badge>
-                                            <Badge variant="secondary" className="text-xs">완료 {ocrStatus.processed}</Badge>
                                         </>
                                     )}
                                     <Button
@@ -550,12 +619,12 @@ export function SubmissionListView({
                             <Table>
                                 <TableHeader className="sticky top-0 bg-background z-20">
                                     <TableRow className="hover:bg-transparent">
-                                        <TableHead className="w-[200px] sticky left-0 bg-background z-10">
+                                        <TableHead className="w-[140px]">
                                             <div className="relative">
                                                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                                 <Input
                                                     type="text"
-                                                    placeholder="제목, 맛집명, 작성자..."
+                                                    placeholder="맛집명..."
                                                     value={reviewSearchQuery}
                                                     onChange={(e) => setReviewSearchQuery(e.target.value)}
                                                     className="pl-8 pr-8 h-8 text-sm"
@@ -572,9 +641,9 @@ export function SubmissionListView({
                                                 )}
                                             </div>
                                         </TableHead>
-                                        <TableHead className="w-[150px]">맛집</TableHead>
+                                        <TableHead className="w-[200px]">리뷰 내용</TableHead>
+                                        <TableHead className="w-[80px]">방문일</TableHead>
                                         <TableHead className="w-[80px]">작성자</TableHead>
-                                        <TableHead className="w-[90px]">방문일</TableHead>
                                         <TableHead className="w-[50px] text-center sticky right-[100px] bg-background z-10">상태</TableHead>
                                         <TableHead className="w-[100px] text-center sticky right-0 bg-background z-10">액션</TableHead>
                                     </TableRow>
@@ -602,29 +671,33 @@ export function SubmissionListView({
                                                     )}
                                                     onClick={() => handleReviewAction('approve', review)}
                                                 >
-                                                    {/* 제목 + 내용 미리보기 */}
+                                                    {/* 맛집 */}
+                                                    <TableCell className="text-xs">
+                                                        <div className="flex items-center gap-1">
+                                                            <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                                                            <span className="truncate max-w-[100px]">{review.restaurants?.name || '알 수 없음'}</span>
+                                                        </div>
+                                                    </TableCell>
+
+                                                    {/* 리뷰 내용 미리보기 */}
                                                     <TableCell className="sticky left-0 bg-background">
                                                         <div className="min-w-0">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <p className="font-medium text-sm truncate">{review.title}</p>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-sm text-muted-foreground truncate max-w-[180px]">
+                                                                    {review.content?.slice(0, 50) || '내용 없음'}{(review.content?.length || 0) > 50 && '...'}
+                                                                </p>
                                                                 {review.is_duplicate && (
                                                                     <Badge variant="destructive" className="text-[10px] px-1 gap-0.5">
                                                                         <AlertTriangle className="h-2 w-2" /> 중복
                                                                     </Badge>
                                                                 )}
                                                             </div>
-                                                            <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                                                                {review.content?.slice(0, 40)}{(review.content?.length || 0) > 40 && '...'}
-                                                            </p>
                                                         </div>
                                                     </TableCell>
 
-                                                    {/* 맛집 */}
-                                                    <TableCell className="text-xs">
-                                                        <div className="flex items-center gap-1">
-                                                            <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-                                                            <span className="truncate max-w-[120px]">{review.restaurants?.name || '알 수 없음'}</span>
-                                                        </div>
+                                                    {/* 방문일 */}
+                                                    <TableCell className="text-xs text-muted-foreground">
+                                                        {new Date(review.visited_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                                                     </TableCell>
 
                                                     {/* 작성자 */}
@@ -639,11 +712,6 @@ export function SubmissionListView({
                                                                 {review.profiles?.nickname || '익명'}
                                                             </span>
                                                         </div>
-                                                    </TableCell>
-
-                                                    {/* 방문일 */}
-                                                    <TableCell className="text-xs text-muted-foreground">
-                                                        {new Date(review.visited_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })}
                                                     </TableCell>
 
                                                     {/* 상태 */}
@@ -1073,7 +1141,10 @@ export function SubmissionListView({
                                         <div className="flex gap-2 overflow-x-auto pb-2">
                                             {/* 영수증 사진 */}
                                             {selectedReview.verification_photo && (
-                                                <div className="flex-shrink-0 border rounded-lg overflow-hidden relative">
+                                                <div
+                                                    className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                                    onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo), alt: '영수증' })}
+                                                >
                                                     <img
                                                         src={getReviewPhotoUrl(selectedReview.verification_photo)}
                                                         alt="영수증"
@@ -1086,7 +1157,11 @@ export function SubmissionListView({
                                             )}
                                             {/* 음식 사진들 */}
                                             {selectedReview.food_photos?.map((photo, idx) => (
-                                                <div key={idx} className="flex-shrink-0 border rounded-lg overflow-hidden relative">
+                                                <div
+                                                    key={idx}
+                                                    className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                                    onClick={() => setPreviewImage({ url: getReviewPhotoUrl(photo), alt: `음식 ${idx + 1}` })}
+                                                >
                                                     <img
                                                         src={getReviewPhotoUrl(photo)}
                                                         alt={`음식 ${idx + 1}`}
@@ -1215,6 +1290,37 @@ export function SubmissionListView({
                                 </DialogFooter>
                             </div>
                         )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* 이미지 확대 모달 */}
+                <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
+                    <DialogContent className="max-w-4xl max-h-[90vh] p-2 bg-black/95">
+                        <DialogHeader className="sr-only">
+                            <DialogTitle>{previewImage?.alt}</DialogTitle>
+                        </DialogHeader>
+                        {previewImage && (
+                            <div className="flex items-center justify-center h-full">
+                                <img
+                                    src={previewImage.url}
+                                    alt={previewImage.alt}
+                                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                                />
+                            </div>
+                        )}
+                        <div className="absolute top-2 right-2">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-white hover:bg-white/20"
+                                onClick={() => setPreviewImage(null)}
+                            >
+                                <X className="h-5 w-5" />
+                            </Button>
+                        </div>
+                        <p className="text-center text-white/70 text-sm mt-2">
+                            {previewImage?.alt}
+                        </p>
                     </DialogContent>
                 </Dialog>
             </div>
