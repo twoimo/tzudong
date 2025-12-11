@@ -62,6 +62,11 @@ const AnnouncementPanel = dynamic(
     { ssr: false }
 );
 
+const ReviewModal = dynamic(
+    () => import('@/components/reviews/ReviewModal').then(mod => ({ default: mod.ReviewModal })),
+    { ssr: false }
+);
+
 import { Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
@@ -350,6 +355,18 @@ export default function HomeClient() {
                 isOpen={isSubmissionModalOpen}
                 onClose={() => setIsSubmissionModalOpen(false)}
             />
+
+            {/* 리뷰 작성 모달 */}
+            {state.isReviewModalOpen && (
+                <ReviewModal
+                    isOpen={state.isReviewModalOpen}
+                    onClose={() => state.setIsReviewModalOpen(false)}
+                    restaurant={state.panelRestaurant ? { id: state.panelRestaurant.id, name: state.panelRestaurant.name } : null}
+                    onSuccess={() => {
+                        state.setRefreshTrigger(prev => prev + 1);
+                    }}
+                />
+            )}
 
             {/* 마이페이지 패널 */}
             <RightPanelWrapper
