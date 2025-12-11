@@ -293,90 +293,92 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
           {isHanjiMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
-        {/* 알림 */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <Badge
-                  variant="destructive"
-                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-800"
-                >
-                  {unreadCount > 99 ? '99+' : unreadCount}
-                </Badge>
-              )}
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            className="w-80 bg-[#fdfbf7] border-stone-800/10 font-serif"
-          >
-            <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
-              <span>알림</span>
-              {unreadCount > 0 && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={markAllAsRead}
-                  className="h-6 px-2 text-xs hover:bg-stone-200/50 text-stone-600"
-                >
-                  <CheckCheck className="h-3 w-3 mr-1" />
-                  모두 읽음
-                </Button>
-              )}
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator className="bg-stone-800/10" />
-            <ScrollArea className="h-96">
-              {notifications.length === 0 ? (
-                <div className="p-4 text-center text-sm text-stone-500">
-                  새로운 알림이 없습니다
-                </div>
-              ) : (
-                <DropdownMenuGroup>
-                  {notifications.map((notification) => (
-                    <DropdownMenuItem
-                      key={notification.id}
-                      className={`flex-col items-start p-4 cursor-pointer ${!notification.isRead ? 'bg-stone-100/50' : ''
-                        }`}
-                      onClick={() => markAsRead(notification.id)}
-                    >
-                      <div className="flex items-start justify-between w-full mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{getNotificationIcon(notification.type)}</span>
-                          <span className="font-medium text-sm text-stone-900">{notification.title}</span>
+        {/* 알림 - hydration 완료 후 렌더링 */}
+        {isHydrated && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-800"
+                  >
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Badge>
+                )}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-80 bg-[#fdfbf7] border-stone-800/10 font-serif"
+            >
+              <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
+                <span>알림</span>
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={markAllAsRead}
+                    className="h-6 px-2 text-xs hover:bg-stone-200/50 text-stone-600"
+                  >
+                    <CheckCheck className="h-3 w-3 mr-1" />
+                    모두 읽음
+                  </Button>
+                )}
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-stone-800/10" />
+              <ScrollArea className="h-96">
+                {notifications.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-stone-500">
+                    새로운 알림이 없습니다
+                  </div>
+                ) : (
+                  <DropdownMenuGroup>
+                    {notifications.map((notification) => (
+                      <DropdownMenuItem
+                        key={notification.id}
+                        className={`flex-col items-start p-4 cursor-pointer ${!notification.isRead ? 'bg-stone-100/50' : ''
+                          }`}
+                        onClick={() => markAsRead(notification.id)}
+                      >
+                        <div className="flex items-start justify-between w-full mb-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{getNotificationIcon(notification.type)}</span>
+                            <span className="font-medium text-sm text-stone-900">{notification.title}</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeNotification(notification.id);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeNotification(notification.id);
-                          }}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <p className="text-sm text-stone-600 mb-2">{notification.message}</p>
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs text-stone-500">
-                          {formatDistanceToNow(notification.createdAt, {
-                            addSuffix: true,
-                            locale: ko
-                          })}
-                        </span>
-                        {!notification.isRead && (
-                          <div className={`w-2 h-2 rounded-full ${getNotificationColor(notification.type)}`} />
-                        )}
-                      </div>
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuGroup>
-              )}
-            </ScrollArea>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                        <p className="text-sm text-stone-600 mb-2">{notification.message}</p>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs text-stone-500">
+                            {formatDistanceToNow(notification.createdAt, {
+                              addSuffix: true,
+                              locale: ko
+                            })}
+                          </span>
+                          {!notification.isRead && (
+                            <div className={`w-2 h-2 rounded-full ${getNotificationColor(notification.type)}`} />
+                          )}
+                        </div>
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
+                )}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         {/* Centered Layout 버튼 */}
         {onToggleCenteredLayout && (
@@ -431,8 +433,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
                     {pendingSubmissionCount > 0 && (
-                      <Badge 
-                        variant="destructive" 
+                      <Badge
+                        variant="destructive"
                         className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
                       >
                         {pendingSubmissionCount > 99 ? '99+' : pendingSubmissionCount}

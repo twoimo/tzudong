@@ -1007,14 +1007,22 @@ export function SubmissionListView({
                         </DialogHeader>
 
                         {selectedReview && (
-                            <div className="space-y-4 mt-4">
+                            <div className="space-y-4 mt-4 max-h-[60vh] overflow-y-auto">
+                                {/* 리뷰 기본 정보 */}
                                 <Card className="p-3 bg-muted/50">
                                     <div className="space-y-2 text-sm">
                                         <div className="flex items-center justify-between">
                                             <h3 className="font-semibold">{selectedReview.title}</h3>
-                                            <Badge variant={selectedReview.is_verified ? 'default' : 'secondary'} className="text-xs">
-                                                {selectedReview.is_verified ? '승인' : '대기'}
-                                            </Badge>
+                                            <div className="flex items-center gap-1">
+                                                {selectedReview.is_duplicate && (
+                                                    <Badge variant="destructive" className="text-xs gap-0.5">
+                                                        <AlertTriangle className="h-3 w-3" /> 중복
+                                                    </Badge>
+                                                )}
+                                                <Badge variant={selectedReview.is_verified ? 'default' : 'secondary'} className="text-xs">
+                                                    {selectedReview.is_verified ? '승인' : '대기'}
+                                                </Badge>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                             <span className="flex items-center gap-1">
@@ -1029,10 +1037,131 @@ export function SubmissionListView({
                                                 <MapPin className="h-3 w-3" />
                                                 {selectedReview.restaurants?.name || '알 수 없음'}
                                             </span>
+                                            <span className="flex items-center gap-1">
+                                                <Calendar className="h-3 w-3" />
+                                                {new Date(selectedReview.visited_at).toLocaleDateString('ko-KR')}
+                                            </span>
                                         </div>
-                                        <p className="text-muted-foreground line-clamp-3">{selectedReview.content}</p>
+                                        <p className="text-muted-foreground">{selectedReview.content}</p>
                                     </div>
                                 </Card>
+
+                                {/* 사진 (영수증 + 음식 사진 통합) */}
+                                <div className="space-y-2">
+                                    <Label className="text-sm font-medium">📷 제출된 사진</Label>
+                                    {(!selectedReview.verification_photo && (!selectedReview.food_photos || selectedReview.food_photos.length === 0)) ? (
+                                        <div className="text-sm text-muted-foreground p-3 bg-muted/50 rounded-lg">
+                                            제출된 사진이 없습니다
+                                        </div>
+                                    ) : (
+                                        <div className="flex gap-2 overflow-x-auto pb-2">
+                                            {/* 영수증 사진 */}
+                                            {selectedReview.verification_photo && (
+                                                <div className="flex-shrink-0 border rounded-lg overflow-hidden relative">
+                                                    <img
+                                                        src={selectedReview.verification_photo}
+                                                        alt="영수증"
+                                                        className="h-32 w-auto max-w-48 object-cover"
+                                                    />
+                                                    <Badge className="absolute top-1 left-1 text-[10px] px-1 bg-yellow-600">
+                                                        🧾 영수증
+                                                    </Badge>
+                                                </div>
+                                            )}
+                                            {/* 음식 사진들 */}
+                                            {selectedReview.food_photos?.map((photo, idx) => (
+                                                <div key={idx} className="flex-shrink-0 border rounded-lg overflow-hidden relative">
+                                                    <img
+                                                        src={photo}
+                                                        alt={`음식 ${idx + 1}`}
+                                                        className="h-32 w-auto max-w-48 object-cover"
+                                                    />
+                                                    <Badge variant="secondary" className="absolute top-1 left-1 text-[10px] px-1">
+                                                        음식 {idx + 1}
+                                                    </Badge>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* OCR 결과 */}
+                                {selectedReview.ocr_processed_at && (
+                                    <div className="space-y-2">
+                                        <Label className="text-sm font-medium flex items-center gap-1">
+                                            <ScanSearch className="h-4 w-4" /> OCR 분석 결과
+                                            <span className="text-xs text-muted-foreground font-normal ml-auto">
+                                                {new Date(selectedReview.ocr_processed_at).toLocaleDateString('ko-KR')}
+                                            </span>
+                                        </Label>
+                                        {selectedReview.receipt_data ? (
+                                            selectedReview.receipt_data.error ? (
+                                                <Card className="p-3 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
+                                                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                                                        <AlertCircle className="h-4 w-4" />
+                                                        <span>OCR 오류: {selectedReview.receipt_data.error}</span>
+                                                    </div>
+                                                </Card>
+                                            ) : (
+                                                <Card className="p-3 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                                                    <div className="space-y-2 text-sm">
+                                                        {selectedReview.receipt_data.store_name && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-muted-foreground">가게명</span>
+                                                                <span className="font-medium">{selectedReview.receipt_data.store_name}</span>
+                                                            </div>
+                                                        )}
+                                                        {selectedReview.receipt_data.date && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-muted-foreground">날짜</span>
+                                                                <span>{selectedReview.receipt_data.date}</span>
+                                                            </div>
+                                                        )}
+                                                        {selectedReview.receipt_data.time && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-muted-foreground">시간</span>
+                                                                <span>{selectedReview.receipt_data.time}</span>
+                                                            </div>
+                                                        )}
+                                                        {selectedReview.receipt_data.total_amount && (
+                                                            <div className="flex items-center justify-between">
+                                                                <span className="text-muted-foreground">결제 금액</span>
+                                                                <span className="font-medium text-green-600">
+                                                                    {selectedReview.receipt_data.total_amount.toLocaleString()}원
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {selectedReview.receipt_data.items && selectedReview.receipt_data.items.length > 0 && (
+                                                            <div className="pt-2 border-t">
+                                                                <span className="text-muted-foreground text-xs">주문 항목</span>
+                                                                <ul className="mt-1 text-xs space-y-0.5">
+                                                                    {selectedReview.receipt_data.items.map((item, idx) => (
+                                                                        <li key={idx} className="text-muted-foreground">• {item}</li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                        {selectedReview.receipt_data.confidence !== undefined && (
+                                                            <div className="flex items-center justify-between pt-2 border-t">
+                                                                <span className="text-muted-foreground text-xs">OCR 신뢰도</span>
+                                                                <Badge
+                                                                    variant={selectedReview.receipt_data.confidence >= 0.8 ? 'default' : 'secondary'}
+                                                                    className="text-xs"
+                                                                >
+                                                                    {(selectedReview.receipt_data.confidence * 100).toFixed(0)}%
+                                                                </Badge>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </Card>
+                                            )
+                                        ) : (
+                                            <Card className="p-3 bg-muted/50">
+                                                <span className="text-sm text-muted-foreground">OCR 데이터 없음</span>
+                                            </Card>
+                                        )}
+                                    </div>
+                                )}
 
                                 <div className="space-y-2">
                                     <Label>관리자 메모{reviewAction === 'reject' && ' (필수)'}</Label>
