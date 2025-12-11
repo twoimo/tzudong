@@ -181,6 +181,8 @@ interface SubmissionListViewProps {
     onRejectReview?: (review: Review, adminNote: string) => void;
     onDeleteReview?: (review: Review) => void;
     reviewsLoading?: boolean;
+    // 초기 탭 설정
+    initialTab?: 'new' | 'edit' | 'reviews';
 }
 
 export function SubmissionListView({
@@ -195,9 +197,10 @@ export function SubmissionListView({
     onRejectReview,
     onDeleteReview,
     reviewsLoading = false,
+    initialTab = 'new',
 }: SubmissionListViewProps) {
-    // 탭 상태
-    const [activeTab, setActiveTab] = useState<'new' | 'edit' | 'reviews'>('new');
+    // 탭 상태 (초기 탭 지정 가능)
+    const [activeTab, setActiveTab] = useState<'new' | 'edit' | 'reviews'>(initialTab);
 
     // 검색어
     const [searchQuery, setSearchQuery] = useState('');
@@ -736,8 +739,8 @@ export function SubmissionListView({
                                                                     {review.content?.slice(0, 50) || '내용 없음'}{(review.content?.length || 0) > 50 && '...'}
                                                                 </p>
                                                                 {review.is_duplicate && (
-                                                                    <Badge variant="destructive" className="text-[10px] px-1 gap-0.5">
-                                                                        <AlertTriangle className="h-2 w-2" /> 중복
+                                                                    <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
+                                                                        중복
                                                                     </Badge>
                                                                 )}
                                                             </div>

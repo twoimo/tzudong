@@ -53,6 +53,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
   // 미처리 제보 건수 상태
   const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
+  // 미처리 리뷰 건수 상태
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
@@ -84,6 +86,31 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     fetchPendingCount();
     // 1분마다 갱신
     const interval = setInterval(fetchPendingCount, 60000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
+
+  // 미처리 리뷰 건수 조회
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const fetchPendingReviewCount = async () => {
+      try {
+        const { count, error } = await supabase
+          .from('reviews')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_verified', false);
+
+        if (!error && count !== null) {
+          setPendingReviewCount(count);
+        }
+      } catch (err) {
+        console.error('Failed to fetch pending review count:', err);
+      }
+    };
+
+    fetchPendingReviewCount();
+    // 1분마다 갱신
+    const interval = setInterval(fetchPendingReviewCount, 60000);
     return () => clearInterval(interval);
   }, [isAdmin]);
 
@@ -130,12 +157,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   };
 
   const handleAdminReviewsClick = () => {
-    if (pathname === '/') {
-      window.dispatchEvent(new CustomEvent('openAdminReviews'));
-    } else {
-      // 홈으로 이동 후 패널 열기
-      window.location.href = '/';
-    }
+    // /admin/evaluations 페이지로 이동하며 리뷰 검수 탭 활성화
+    router.push('/admin/evaluations?view=submissions&tab=reviews');
   };
 
   const handleAdminAnnouncementsClick = () => {
@@ -444,6 +467,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                   <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     리뷰관리
+                    {pendingReviewCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
+                      >
+                        {pendingReviewCount > 99 ? '99+' : pendingReviewCount}
+                      </Badge>
+                    )}
                   </DropdownMenuItem>
                 </>
               )}

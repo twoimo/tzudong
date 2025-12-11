@@ -7,9 +7,9 @@
 | 기능 | 설명 |
 |------|------|
 | **이미지 압축** | 업로드 전 WebP 변환, 최대 300KB |
-| **영수증 OCR** | Gemini Vision API로 가게명/날짜/시간/금액 추출 |
+| **영수증 OCR** | Gemini 2.5 Flash Vision API로 가게명/날짜/시간/금액 추출 |
 | **중복 검사** | SHA-256 해시로 동일 영수증 탐지 |
-| **관리자 UI** | 수동 OCR 실행 버튼 + 중복 경고 배지 |
+| **관리자 UI** | OCR 실행 버튼 + 중복 경고 + 승인 차단 |
 
 ---
 
@@ -30,19 +30,25 @@
 ```
 apps/web/
 ├── components/reviews/
-│   └── ReviewModal.tsx          # 이미지 압축 (compressImage)
+│   └── ReviewModal.tsx              # 이미지 압축 (compressImage)
 ├── components/admin/
-│   └── SubmissionListView.tsx   # OCR 버튼 + 중복 배지
+│   └── SubmissionListView.tsx       # 리뷰 검수 UI
+│       ├── OCR 상태 표시 (대기/중복 카운트)
+│       ├── OCR 실행 버튼
+│       ├── 중복 영수증 행 빨간색 하이라이트
+│       ├── 중복 시 승인 버튼 비활성화
+│       ├── 이미지 확대 모달 (클릭 시)
+│       └── ReviewPhotoItem (로딩 스피너)
 └── app/api/admin/
-    └── ocr-receipts/route.ts    # OCR API Route
+    └── ocr-receipts/route.ts        # OCR API Route (GET/POST)
 
 backend/
 └── geminiCLI-ocr-receipts/
     ├── package.json
-    └── ocr-receipts.js          # OCR 처리 스크립트
+    └── ocr-receipts.js              # OCR 처리 스크립트
 
 .github/workflows/
-└── ocr-review-receipts.yml      # 스케줄 + 수동 트리거
+└── ocr-review-receipts.yml          # 스케줄 + 수동 트리거
 
 supabase/migrations/
 └── 20251211_add_receipt_ocr_columns.sql
@@ -59,7 +65,7 @@ ALTER TABLE public.reviews
   ADD COLUMN is_duplicate BOOLEAN,        -- 중복 여부
   ADD COLUMN ocr_processed_at TIMESTAMPTZ; -- 처리 시각
 
--- 유니크 인덱스 (중복 방지)
+-- 유니크 인덱스 (중복 시 NULL로 저장하여 회피)
 CREATE UNIQUE INDEX idx_reviews_receipt_hash 
   ON public.reviews(receipt_hash) 
   WHERE receipt_hash IS NOT NULL;
@@ -74,7 +80,16 @@ CREATE UNIQUE INDEX idx_reviews_receipt_hash
   "time": "HH:MM",
   "total_amount": 15000,
   "items": ["메뉴1", "메뉴2"],
-  "confidence": 0.95
+  "confidence": 0.95,
+  "duplicate_of": "원본_리뷰_ID"  // 중복 시에만 존재
+}
+```
+
+**오류 시:**
+```json
+{
+  "error": "not_receipt | unreadable | low_quality | parse_failed",
+  "confidence": 0.0
 }
 ```
 
@@ -96,7 +111,7 @@ GITHUB_REPO=tzudong
 | 변수 | 설명 |
 |------|------|
 | `SUPABASE_SERVICE_ROLE_KEY` | DB 서비스 역할 키 |
-| `GITHUB_TOKEN` | 워크플로우 트리거용 |
+| `GITHUB_TOKEN` | 워크플로우 트리거용 PAT |
 | `GITHUB_OWNER` | GitHub 사용자명 |
 | `GITHUB_REPO` | 레포지토리 이름 |
 
@@ -106,40 +121,64 @@ GITHUB_REPO=tzudong
 |------|------|
 | `SUPABASE_URL` | Supabase 프로젝트 URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | 서비스 역할 키 |
-| `GEMINI_API_KEY` | Google AI Studio API 키 |
+| `GOOGLE_API_KEY_BYEON` | Gemini API 키 |
 
 ---
 
 ## 사용 방법
 
-### 1. 패키지 설치
-
-```bash
-cd apps/web && npm install browser-image-compression
-```
-
-### 2. DB 마이그레이션
-
-```bash
-supabase db push
-```
-
-### 3. 관리자 페이지
+### 관리자 페이지
 
 1. **리뷰 검수 탭** 접속
-2. **OCR 검사 실행** 버튼 클릭
-3. 중복 영수증 발견 시 빨간색 **"중복 영수증"** 배지 표시
+2. 헤더에서 **OCR 상태** 확인 (대기/중복 카운트)
+3. **OCR 실행** 버튼 클릭 → GitHub Actions 트리거
+4. 중복 영수증 리뷰는 **빨간색 행**으로 표시
+5. 중복 리뷰 클릭 시 모달에서:
+   - **중복 영수증 감지** 경고 및 원본 리뷰 ID 표시
+   - **승인 버튼 비활성화** (거부만 가능)
+6. 이미지 클릭 시 **확대 모달** 표시
+
+---
+
+## API Endpoints
+
+### `GET /api/admin/ocr-receipts`
+
+OCR 처리 상태 조회
+
+```json
+{
+  "pending": 5,      // 미처리 리뷰 수
+  "duplicate": 2,    // 중복 감지된 리뷰 수
+  "processed": 100   // 처리 완료된 리뷰 수
+}
+```
+
+### `POST /api/admin/ocr-receipts`
+
+GitHub Actions 워크플로우 수동 트리거
+
+```json
+{
+  "success": true,
+  "message": "OCR 처리가 시작되었습니다."
+}
+```
 
 ---
 
 ## GitHub Actions 스케줄
 
-- **자동 실행**: 매일 새벽 4시 (KST)
-- **수동 실행**: Actions 탭 → Run workflow
+- **자동 실행**: 매일 새벽 4시 (KST) - cron: `0 19 * * *` (UTC)
+- **수동 실행**: 
+  - 관리자 페이지 OCR 실행 버튼
+  - GitHub Actions 탭 → Run workflow
 
 ---
 
-## OCR 프롬프트
+## OCR 처리 로직
+
+### 1. OCR 프롬프트
 
 ```
 당신은 한국어 영수증 OCR 전문가입니다.
@@ -153,11 +192,15 @@ supabase db push
   "items": ["메뉴1", "메뉴2"],
   "confidence": 0.0~1.0
 }
+
+영수증이 아니거나 읽을 수 없으면:
+{
+  "error": "사유",
+  "confidence": 0.0
+}
 ```
 
----
-
-## 해시 생성 규칙
+### 2. 해시 생성 규칙
 
 ```javascript
 const hashInput = `${store_name}|${date}|${time}|${total_amount}`;
@@ -165,3 +208,22 @@ const receiptHash = crypto.createHash('sha256').update(hashInput).digest('hex');
 ```
 
 동일 가게 + 날짜 + 시간 + 금액 → 동일 해시 → 중복 판정
+
+### 3. 중복 처리
+
+- 중복 발견 시 `receipt_hash`는 `NULL`로 저장 (UNIQUE INDEX 회피)
+- `receipt_data.duplicate_of`에 원본 리뷰 ID 저장
+- `is_duplicate = true`
+
+---
+
+## 관리자 UI 기능
+
+| 기능 | 설명 |
+|------|------|
+| **OCR 상태 배지** | 대기/중복 카운트 실시간 표시 |
+| **OCR 실행 버튼** | 대기 리뷰 없으면 비활성화 |
+| **중복 행 강조** | 빨간색 배경으로 하이라이트 |
+| **승인 차단** | 중복 리뷰 승인 버튼 비활성화 |
+| **이미지 미리보기** | 로딩 스피너 + 클릭 시 확대 |
+| **승인/거부 버튼** | 모달에서 둘 다 표시 |
