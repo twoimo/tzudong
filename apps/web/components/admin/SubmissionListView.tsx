@@ -219,10 +219,13 @@ export function SubmissionListView({
         }
     }, [fetchOcrStatus]);
 
-    // 리뷰 탭 활성화 시 OCR 상태 조회
+    // 리뷰 탭 활성화 시 OCR 상태 조회 + 주기적 갱신
     useEffect(() => {
         if (activeTab === 'reviews') {
             fetchOcrStatus();
+            // 30초마다 자동 갱신
+            const interval = setInterval(fetchOcrStatus, 30000);
+            return () => clearInterval(interval);
         }
     }, [activeTab, fetchOcrStatus]);
 
