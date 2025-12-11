@@ -108,11 +108,21 @@ function AdminEvaluationPage() {
 
   // 사용자 제보 검수 상태 (URL 쿼리 파라미터로 초기화)
   const [showSubmissionView, setShowSubmissionView] = useState(false);
+  const [submissionInitialTab, setSubmissionInitialTab] = useState<'new' | 'edit' | 'reviews'>('new');
 
   // URL 파라미터에 따라 초기 뷰 설정
   useEffect(() => {
     if (searchParams.get('view') === 'submissions') {
       setShowSubmissionView(true);
+      // tab 파라미터가 reviews면 리뷰 탭으로 초기화
+      const tab = searchParams.get('tab');
+      if (tab === 'reviews') {
+        setSubmissionInitialTab('reviews');
+      } else if (tab === 'edit') {
+        setSubmissionInitialTab('edit');
+      } else {
+        setSubmissionInitialTab('new');
+      }
     }
   }, [searchParams]);
   const [currentSubmissionIndex, setCurrentSubmissionIndex] = useState(0);
@@ -1868,6 +1878,7 @@ function AdminEvaluationPage() {
             onRejectReview={handleRejectReview}
             onDeleteReview={handleDeleteReview}
             reviewsLoading={reviewsLoading}
+            initialTab={submissionInitialTab}
           />
         ) : isAlternateView ? (
           <EvaluationSlideView

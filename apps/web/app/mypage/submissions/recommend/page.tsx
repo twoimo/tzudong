@@ -187,7 +187,7 @@ export default function RecommendSubmissionsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Heart className="h-6 w-6 text-pink-500" />
-            쯔양에게 추천
+            쯔양 맛집 제보
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
             쯔양에게 추천한 맛집 목록입니다

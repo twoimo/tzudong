@@ -60,30 +60,23 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
 
   // 마이페이지 메뉴 아이템
   const myPageMenuItems = useMemo(() => [
-    { icon: User, label: "프로필", path: "/mypage/profile", onClick: () => router.push("/mypage/profile") },
-    { 
-      icon: FileText, 
-      label: "내 제보", 
+    { icon: User, label: "마이페이지", path: "/mypage/profile", onClick: () => router.push("/mypage/profile") },
+    {
+      icon: FileText,
+      label: "나의 제보 내역",
       isParent: true,
       children: [
         { icon: PlusCircle, label: "신규 맛집 제보", path: "/mypage/submissions/new", onClick: () => router.push("/mypage/submissions/new") },
         { icon: Edit3, label: "맛집 수정 요청", path: "/mypage/submissions/edit", onClick: () => router.push("/mypage/submissions/edit") },
-        { icon: Heart, label: "쯔양에게 추천", path: "/mypage/submissions/recommend", onClick: () => router.push("/mypage/submissions/recommend") },
+        { icon: Heart, label: "쯔양 맛집 제보", path: "/mypage/submissions/recommend", onClick: () => router.push("/mypage/submissions/recommend") },
       ]
     },
-    { icon: MessageSquare, label: "내 리뷰", path: "/mypage/reviews", onClick: () => router.push("/mypage/reviews") },
+    { icon: MessageSquare, label: "나의 리뷰 내역", path: "/mypage/reviews", onClick: () => router.push("/mypage/reviews") },
   ], [router]);
 
   // 마이페이지 메뉴 렌더링
   const renderMyPageMenu = () => (
     <>
-      {/* 마이페이지 헤더 */}
-      {isOpen && (
-        <div className="px-4 py-3 border-b border-stone-800/10">
-          <h2 className="text-lg font-bold text-stone-800 font-serif">마이페이지</h2>
-        </div>
-      )}
-      
       <nav className={cn("flex-1 space-y-1 overflow-y-auto relative z-10", isOpen ? "p-4" : "p-2")}>
         {myPageMenuItems.map((item, index) => {
           if (item.isParent && item.children) {

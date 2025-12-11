@@ -356,11 +356,11 @@ export default function MyPagePanel({ isOpen, onClose, onToggleCollapse, isColla
                             <TabsList className="grid w-full grid-cols-2">
                                 <TabsTrigger value="submissions" className="text-xs gap-1">
                                     <Edit className="h-3 w-3" />
-                                    내 제보 ({submissions.length})
+                                    제보 내역 ({submissions.length})
                                 </TabsTrigger>
                                 <TabsTrigger value="requests" className="text-xs gap-1">
                                     <MessageSquare className="h-3 w-3" />
-                                    내 요청 ({requests.length})
+                                    나의 요청 ({requests.length})
                                 </TabsTrigger>
                             </TabsList>
                         </div>
@@ -443,8 +443,8 @@ export default function MyPagePanel({ isOpen, onClose, onToggleCollapse, isColla
                                                             항목 ({submission.items.length}개)
                                                         </p>
                                                         {submission.items.map((item, idx) => (
-                                                            <div 
-                                                                key={item.id} 
+                                                            <div
+                                                                key={item.id}
                                                                 className="flex items-center gap-2 p-1.5 bg-muted/30 rounded text-xs"
                                                             >
                                                                 <span className="text-muted-foreground">{idx + 1}.</span>
@@ -458,7 +458,7 @@ export default function MyPagePanel({ isOpen, onClose, onToggleCollapse, isColla
                                                                     <span className="truncate">{item.youtube_link}</span>
                                                                 </a>
                                                                 {getItemStatusBadge(item.item_status)}
-                                                                
+
                                                                 {/* 거부 사유 */}
                                                                 {item.item_status === 'rejected' && item.rejection_reason && (
                                                                     <span className="text-destructive text-[10px] truncate max-w-[80px]" title={item.rejection_reason}>

@@ -120,6 +120,54 @@ export interface Review {
     } | null;
 }
 
+// 리뷰 사진 아이템 컴포넌트 (로딩 스피너 포함)
+function ReviewPhotoItem({
+    src,
+    alt,
+    label,
+    labelVariant,
+    onClick,
+}: {
+    src: string;
+    alt: string;
+    label: string;
+    labelVariant: 'receipt' | 'food';
+    onClick: () => void;
+}) {
+    const [isLoading, setIsLoading] = useState(true);
+
+    return (
+        <div
+            className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all h-32 min-w-24"
+            onClick={onClick}
+        >
+            {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+            )}
+            <img
+                src={src}
+                alt={alt}
+                className={cn(
+                    "h-32 w-auto max-w-48 object-cover transition-opacity",
+                    isLoading ? "opacity-0" : "opacity-100"
+                )}
+                onLoad={() => setIsLoading(false)}
+            />
+            <Badge
+                variant={labelVariant === 'receipt' ? 'default' : 'secondary'}
+                className={cn(
+                    "absolute top-1 left-1 text-[10px] px-1",
+                    labelVariant === 'receipt' && "bg-yellow-600"
+                )}
+            >
+                {label}
+            </Badge>
+        </div>
+    );
+}
+
 interface SubmissionListViewProps {
     submissions: SubmissionRecord[];
     onApprove: (submission: SubmissionRecord, approvalData: ApprovalData, itemDecisions: Record<string, ItemDecision>, forceApprove: boolean, editableData: { name: string; address: string; phone: string; categories: string[] }) => void;
@@ -133,6 +181,8 @@ interface SubmissionListViewProps {
     onRejectReview?: (review: Review, adminNote: string) => void;
     onDeleteReview?: (review: Review) => void;
     reviewsLoading?: boolean;
+    // 초기 탭 설정
+    initialTab?: 'new' | 'edit' | 'reviews';
 }
 
 export function SubmissionListView({
@@ -147,9 +197,10 @@ export function SubmissionListView({
     onRejectReview,
     onDeleteReview,
     reviewsLoading = false,
+    initialTab = 'new',
 }: SubmissionListViewProps) {
-    // 탭 상태
-    const [activeTab, setActiveTab] = useState<'new' | 'edit' | 'reviews'>('new');
+    // 탭 상태 (초기 탭 지정 가능)
+    const [activeTab, setActiveTab] = useState<'new' | 'edit' | 'reviews'>(initialTab);
 
     // 검색어
     const [searchQuery, setSearchQuery] = useState('');
@@ -688,8 +739,8 @@ export function SubmissionListView({
                                                                     {review.content?.slice(0, 50) || '내용 없음'}{(review.content?.length || 0) > 50 && '...'}
                                                                 </p>
                                                                 {review.is_duplicate && (
-                                                                    <Badge variant="destructive" className="text-[10px] px-1 gap-0.5">
-                                                                        <AlertTriangle className="h-2 w-2" /> 중복
+                                                                    <Badge variant="destructive" className="text-[10px] px-1 py-0 h-4">
+                                                                        중복
                                                                     </Badge>
                                                                 )}
                                                             </div>
@@ -741,8 +792,10 @@ export function SubmissionListView({
                                                                 <>
                                                                     <Button
                                                                         size="sm"
-                                                                        className="bg-green-500 hover:bg-green-600 text-xs h-7 px-2"
+                                                                        className="bg-green-500 hover:bg-green-600 text-xs h-7 px-2 disabled:opacity-50"
                                                                         onClick={() => handleReviewAction('approve', review)}
+                                                                        disabled={review.is_duplicate}
+                                                                        title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
                                                                     >
                                                                         승인
                                                                     </Button>
@@ -769,8 +822,10 @@ export function SubmissionListView({
                                                             {isRejected && (
                                                                 <Button
                                                                     size="sm"
-                                                                    className="bg-green-500 hover:bg-green-600 text-xs h-7"
+                                                                    className="bg-green-500 hover:bg-green-600 text-xs h-7 disabled:opacity-50"
                                                                     onClick={() => handleReviewAction('approve', review)}
+                                                                    disabled={review.is_duplicate}
+                                                                    title={review.is_duplicate ? '중복 영수증은 승인할 수 없습니다' : ''}
                                                                 >
                                                                     재승인
                                                                 </Button>
@@ -1142,36 +1197,24 @@ export function SubmissionListView({
                                         <div className="flex gap-2 overflow-x-auto pb-2">
                                             {/* 영수증 사진 */}
                                             {selectedReview.verification_photo && (
-                                                <div
-                                                    className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                                <ReviewPhotoItem
+                                                    src={getReviewPhotoUrl(selectedReview.verification_photo)}
+                                                    alt="영수증"
+                                                    label="🧾 영수증"
+                                                    labelVariant="receipt"
                                                     onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo), alt: '영수증' })}
-                                                >
-                                                    <img
-                                                        src={getReviewPhotoUrl(selectedReview.verification_photo)}
-                                                        alt="영수증"
-                                                        className="h-32 w-auto max-w-48 object-cover"
-                                                    />
-                                                    <Badge className="absolute top-1 left-1 text-[10px] px-1 bg-yellow-600">
-                                                        🧾 영수증
-                                                    </Badge>
-                                                </div>
+                                                />
                                             )}
                                             {/* 음식 사진들 */}
                                             {selectedReview.food_photos?.map((photo, idx) => (
-                                                <div
+                                                <ReviewPhotoItem
                                                     key={idx}
-                                                    className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                                    src={getReviewPhotoUrl(photo)}
+                                                    alt={`음식 ${idx + 1}`}
+                                                    label={`음식 ${idx + 1}`}
+                                                    labelVariant="food"
                                                     onClick={() => setPreviewImage({ url: getReviewPhotoUrl(photo), alt: `음식 ${idx + 1}` })}
-                                                >
-                                                    <img
-                                                        src={getReviewPhotoUrl(photo)}
-                                                        alt={`음식 ${idx + 1}`}
-                                                        className="h-32 w-auto max-w-48 object-cover"
-                                                    />
-                                                    <Badge variant="secondary" className="absolute top-1 left-1 text-[10px] px-1">
-                                                        음식 {idx + 1}
-                                                    </Badge>
-                                                </div>
+                                                />
                                             ))}
                                         </div>
                                     )}
@@ -1277,16 +1320,33 @@ export function SubmissionListView({
                                     />
                                 </div>
 
-                                <DialogFooter>
+                                <DialogFooter className="gap-2 sm:gap-0">
                                     <Button variant="outline" onClick={() => setShowReviewModal(false)}>
                                         취소
                                     </Button>
                                     <Button
-                                        onClick={handleConfirmReviewAction}
-                                        disabled={reviewAction === 'reject' && !reviewAdminNote.trim()}
-                                        className={reviewAction === 'approve' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}
+                                        variant="destructive"
+                                        onClick={() => {
+                                            setReviewAction('reject');
+                                            if (reviewAdminNote.trim()) {
+                                                handleConfirmReviewAction();
+                                            } else {
+                                                toast.error('거부 시 관리자 메모를 입력해주세요');
+                                            }
+                                        }}
+                                        disabled={!reviewAdminNote.trim()}
                                     >
-                                        {reviewAction === 'approve' ? '승인' : '거부'}
+                                        거부
+                                    </Button>
+                                    <Button
+                                        onClick={() => {
+                                            setReviewAction('approve');
+                                            setTimeout(() => handleConfirmReviewAction(), 0);
+                                        }}
+                                        disabled={selectedReview?.is_duplicate}
+                                        className="bg-green-500 hover:bg-green-600 disabled:opacity-50"
+                                    >
+                                        {selectedReview?.is_duplicate ? '중복 - 승인불가' : '승인'}
                                     </Button>
                                 </DialogFooter>
                             </div>
@@ -1296,32 +1356,27 @@ export function SubmissionListView({
 
                 {/* 이미지 확대 모달 */}
                 <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-                    <DialogContent className="max-w-4xl max-h-[90vh] p-2 bg-black/95">
+                    <DialogContent className="max-w-fit max-h-[90vh] p-0 border-none bg-transparent shadow-none [&>button]:hidden">
                         <DialogHeader className="sr-only">
                             <DialogTitle>{previewImage?.alt}</DialogTitle>
                         </DialogHeader>
                         {previewImage && (
-                            <div className="flex items-center justify-center h-full">
+                            <div className="relative">
                                 <img
                                     src={previewImage.url}
                                     alt={previewImage.alt}
-                                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                                    className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
                                 />
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white shadow-md"
+                                    onClick={() => setPreviewImage(null)}
+                                >
+                                    <X className="h-4 w-4 text-gray-700" />
+                                </Button>
                             </div>
                         )}
-                        <div className="absolute top-2 right-2">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-white hover:bg-white/20"
-                                onClick={() => setPreviewImage(null)}
-                            >
-                                <X className="h-5 w-5" />
-                            </Button>
-                        </div>
-                        <p className="text-center text-white/70 text-sm mt-2">
-                            {previewImage?.alt}
-                        </p>
                     </DialogContent>
                 </Dialog>
             </div>
