@@ -63,7 +63,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
     { icon: User, label: "마이페이지", path: "/mypage/profile", onClick: () => router.push("/mypage/profile") },
     {
       icon: FileText,
-      label: "제보 내역",
+      label: "나의 제보 내역",
       isParent: true,
       children: [
         { icon: PlusCircle, label: "신규 맛집 제보", path: "/mypage/submissions/new", onClick: () => router.push("/mypage/submissions/new") },
@@ -71,7 +71,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
         { icon: Heart, label: "쯔양 맛집 제보", path: "/mypage/submissions/recommend", onClick: () => router.push("/mypage/submissions/recommend") },
       ]
     },
-    { icon: MessageSquare, label: "리뷰 내역", path: "/mypage/reviews", onClick: () => router.push("/mypage/reviews") },
+    { icon: MessageSquare, label: "나의 리뷰 내역", path: "/mypage/reviews", onClick: () => router.push("/mypage/reviews") },
   ], [router]);
 
   // 마이페이지 메뉴 렌더링

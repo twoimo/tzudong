@@ -437,10 +437,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-[#fdfbf7] border-stone-800/10 font-serif">
-              <DropdownMenuItem onClick={onProfileClick} className="text-stone-900 hover:bg-stone-200/50">
-                <User className="mr-2 h-4 w-4" />
-                프로필
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleMyPageClick} className="text-stone-900 hover:bg-stone-200/50">
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
