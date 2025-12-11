@@ -1,0 +1,36 @@
+name: OCR Review Receipts
+
+on:
+  schedule:
+    # UTC 19시 = KST 04시 (매일 새벽 4시 실행)
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+    # 수동 트리거 허용 (관리자 페이지 버튼 또는 GitHub Actions 탭에서)
+
+jobs:
+  ocr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/geminiCLI-ocr-receipts/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci || npm install
+        working-directory: ./backend/geminiCLI-ocr-receipts
+
+      - name: Run OCR Receipt Processing
+        run: node ocr-receipts.js
+        working-directory: ./backend/geminiCLI-ocr-receipts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

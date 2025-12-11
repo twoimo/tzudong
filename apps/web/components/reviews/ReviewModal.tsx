@@ -7,6 +7,27 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
+import imageCompression from "browser-image-compression";
+
+// 이미지 압축 유틸리티 함수 (WebP 변환, 최대 300KB)
+const compressImage = async (file: File): Promise<File> => {
+    const options = {
+        maxSizeMB: 0.3,           // 최대 300KB
+        maxWidthOrHeight: 1200,   // 최대 1200px
+        fileType: "image/webp" as const,
+        useWebWorker: true,
+    };
+
+    try {
+        const compressedBlob = await imageCompression(file, options);
+        // Blob을 File로 변환 (원본 파일명에서 확장자를 .webp로 변경)
+        const newFileName = file.name.replace(/\.[^.]+$/, ".webp");
+        return new File([compressedBlob], newFileName, { type: "image/webp" });
+    } catch (error) {
+        console.warn("이미지 압축 실패, 원본 사용:", error);
+        return file;
+    }
+};
 import {
     Dialog,
     DialogContent,
@@ -213,11 +234,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         setIsSubmitting(true);
 
         try {
-            // 1. Upload verification photo
-            const verificationPhotoPath = `${user.id}/${Date.now()}_verification_${verificationPhoto.name}`;
+            // 1. 인증 사진 압축 및 업로드
+            const compressedVerificationPhoto = await compressImage(verificationPhoto);
+            const verificationPhotoPath = `${user.id}/${Date.now()}_verification_${compressedVerificationPhoto.name}`;
             const { error: verificationUploadError } = await supabase.storage
                 .from('review-photos')
-                .upload(verificationPhotoPath, verificationPhoto, {
+                .upload(verificationPhotoPath, compressedVerificationPhoto, {
                     cacheControl: '3600',
                     upsert: false
                 });
@@ -226,14 +248,14 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 throw new Error(`인증 사진 업로드 실패: ${verificationUploadError.message}`);
             }
 
-            // 2. Upload food photos
+            // 2. 음식 사진 압축 및 업로드
             const foodPhotoUrls: string[] = [];
             for (let i = 0; i < foodPhotos.length; i++) {
-                const photo = foodPhotos[i];
-                const photoPath = `${user.id}/${Date.now()}_food_${i}_${photo.name}`;
+                const compressedPhoto = await compressImage(foodPhotos[i]);
+                const photoPath = `${user.id}/${Date.now()}_food_${i}_${compressedPhoto.name}`;
                 const { error: foodUploadError } = await supabase.storage
                     .from('review-photos')
-                    .upload(photoPath, photo, {
+                    .upload(photoPath, compressedPhoto, {
                         cacheControl: '3600',
                         upsert: false
                     });
