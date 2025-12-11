@@ -120,6 +120,54 @@ export interface Review {
     } | null;
 }
 
+// 리뷰 사진 아이템 컴포넌트 (로딩 스피너 포함)
+function ReviewPhotoItem({
+    src,
+    alt,
+    label,
+    labelVariant,
+    onClick,
+}: {
+    src: string;
+    alt: string;
+    label: string;
+    labelVariant: 'receipt' | 'food';
+    onClick: () => void;
+}) {
+    const [isLoading, setIsLoading] = useState(true);
+
+    return (
+        <div
+            className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all h-32 min-w-24"
+            onClick={onClick}
+        >
+            {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+            )}
+            <img
+                src={src}
+                alt={alt}
+                className={cn(
+                    "h-32 w-auto max-w-48 object-cover transition-opacity",
+                    isLoading ? "opacity-0" : "opacity-100"
+                )}
+                onLoad={() => setIsLoading(false)}
+            />
+            <Badge
+                variant={labelVariant === 'receipt' ? 'default' : 'secondary'}
+                className={cn(
+                    "absolute top-1 left-1 text-[10px] px-1",
+                    labelVariant === 'receipt' && "bg-yellow-600"
+                )}
+            >
+                {label}
+            </Badge>
+        </div>
+    );
+}
+
 interface SubmissionListViewProps {
     submissions: SubmissionRecord[];
     onApprove: (submission: SubmissionRecord, approvalData: ApprovalData, itemDecisions: Record<string, ItemDecision>, forceApprove: boolean, editableData: { name: string; address: string; phone: string; categories: string[] }) => void;
@@ -1142,36 +1190,24 @@ export function SubmissionListView({
                                         <div className="flex gap-2 overflow-x-auto pb-2">
                                             {/* 영수증 사진 */}
                                             {selectedReview.verification_photo && (
-                                                <div
-                                                    className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                                <ReviewPhotoItem
+                                                    src={getReviewPhotoUrl(selectedReview.verification_photo)}
+                                                    alt="영수증"
+                                                    label="🧾 영수증"
+                                                    labelVariant="receipt"
                                                     onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo), alt: '영수증' })}
-                                                >
-                                                    <img
-                                                        src={getReviewPhotoUrl(selectedReview.verification_photo)}
-                                                        alt="영수증"
-                                                        className="h-32 w-auto max-w-48 object-cover"
-                                                    />
-                                                    <Badge className="absolute top-1 left-1 text-[10px] px-1 bg-yellow-600">
-                                                        🧾 영수증
-                                                    </Badge>
-                                                </div>
+                                                />
                                             )}
                                             {/* 음식 사진들 */}
                                             {selectedReview.food_photos?.map((photo, idx) => (
-                                                <div
+                                                <ReviewPhotoItem
                                                     key={idx}
-                                                    className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                                                    src={getReviewPhotoUrl(photo)}
+                                                    alt={`음식 ${idx + 1}`}
+                                                    label={`음식 ${idx + 1}`}
+                                                    labelVariant="food"
                                                     onClick={() => setPreviewImage({ url: getReviewPhotoUrl(photo), alt: `음식 ${idx + 1}` })}
-                                                >
-                                                    <img
-                                                        src={getReviewPhotoUrl(photo)}
-                                                        alt={`음식 ${idx + 1}`}
-                                                        className="h-32 w-auto max-w-48 object-cover"
-                                                    />
-                                                    <Badge variant="secondary" className="absolute top-1 left-1 text-[10px] px-1">
-                                                        음식 {idx + 1}
-                                                    </Badge>
-                                                </div>
+                                                />
                                             ))}
                                         </div>
                                     )}
@@ -1296,12 +1332,12 @@ export function SubmissionListView({
 
                 {/* 이미지 확대 모달 */}
                 <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-                    <DialogContent className="max-w-4xl max-h-[90vh] p-2 bg-black/95">
+                    <DialogContent className="max-w-4xl max-h-[90vh] p-4">
                         <DialogHeader className="sr-only">
                             <DialogTitle>{previewImage?.alt}</DialogTitle>
                         </DialogHeader>
                         {previewImage && (
-                            <div className="flex items-center justify-center h-full">
+                            <div className="flex items-center justify-center">
                                 <img
                                     src={previewImage.url}
                                     alt={previewImage.alt}
@@ -1309,17 +1345,7 @@ export function SubmissionListView({
                                 />
                             </div>
                         )}
-                        <div className="absolute top-2 right-2">
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-white hover:bg-white/20"
-                                onClick={() => setPreviewImage(null)}
-                            >
-                                <X className="h-5 w-5" />
-                            </Button>
-                        </div>
-                        <p className="text-center text-white/70 text-sm mt-2">
+                        <p className="text-center text-muted-foreground text-sm mt-2">
                             {previewImage?.alt}
                         </p>
                     </DialogContent>
