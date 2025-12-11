@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,17 +9,18 @@ import { toast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import imageCompression from "browser-image-compression";
 
+// 이미지 압축 옵션 (컴포넌트 외부에서 상수로 정의)
+const COMPRESSION_OPTIONS = {
+    maxSizeMB: 0.3,           // 최대 300KB
+    maxWidthOrHeight: 1200,   // 최대 1200px
+    fileType: "image/webp" as const,
+    useWebWorker: true,
+};
+
 // 이미지 압축 유틸리티 함수 (WebP 변환, 최대 300KB)
 const compressImage = async (file: File): Promise<File> => {
-    const options = {
-        maxSizeMB: 0.3,           // 최대 300KB
-        maxWidthOrHeight: 1200,   // 최대 1200px
-        fileType: "image/webp" as const,
-        useWebWorker: true,
-    };
-
     try {
-        const compressedBlob = await imageCompression(file, options);
+        const compressedBlob = await imageCompression(file, COMPRESSION_OPTIONS);
         // Blob을 File로 변환 (원본 파일명에서 확장자를 .webp로 변경)
         const newFileName = file.name.replace(/\.[^.]+$/, ".webp");
         return new File([compressedBlob], newFileName, { type: "image/webp" });
@@ -98,8 +99,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const [isVerificationDragging, setIsVerificationDragging] = useState(false);
     const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
 
-    // 쯔양이 방문한 맛집 목록 조회
-    const { data: jjyangRestaurants = [] } = useQuery({
+    // 쯔양이 방문한 맛집 목록 조회 (캐싱 최적화)
+    const { data: jjyangRestaurants = [], isLoading: isLoadingRestaurants, isError: isRestaurantsError } = useQuery({
         queryKey: ['jjyang-restaurants'],
         queryFn: async () => {
             const { data, error } = await (supabase
@@ -111,6 +112,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             return data || [];
         },
         enabled: isOpen,
+        staleTime: 1000 * 60 * 5, // 5분간 캐시 유지 (재요청 방지)
+        gcTime: 1000 * 60 * 10,   // 10분간 가비지 컬렉션 방지
     });
 
     // restaurant prop이 전달되면 해당 맛집을 기본 선택
@@ -120,41 +123,69 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         }
     }, [restaurant]);
 
-    const handleVerificationPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 이미지 미리보기 URL 메모리 관리 (URL.createObjectURL 정리)
+    const verificationPhotoUrl = useMemo(() => {
+        if (verificationPhoto) {
+            return URL.createObjectURL(verificationPhoto);
+        }
+        return null;
+    }, [verificationPhoto]);
+
+    const foodPhotoUrls = useMemo(() => {
+        return foodPhotos.map(photo => URL.createObjectURL(photo));
+    }, [foodPhotos]);
+
+    // URL 정리 (메모리 누수 방지)
+    useEffect(() => {
+        return () => {
+            if (verificationPhotoUrl) {
+                URL.revokeObjectURL(verificationPhotoUrl);
+            }
+        };
+    }, [verificationPhotoUrl]);
+
+    useEffect(() => {
+        return () => {
+            foodPhotoUrls.forEach(url => URL.revokeObjectURL(url));
+        };
+    }, [foodPhotoUrls]);
+
+    // 메모이제이션된 이벤트 핸들러들
+    const handleVerificationPhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             setVerificationPhoto(file);
         }
-    };
+    }, []);
 
-    const handleFoodPhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFoodPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        setFoodPhotos([...foodPhotos, ...files]);
-    };
+        setFoodPhotos(prev => [...prev, ...files]);
+    }, []);
 
-    const removeFoodPhoto = (index: number) => {
-        setFoodPhotos(foodPhotos.filter((_, i) => i !== index));
-    };
+    const removeFoodPhoto = useCallback((index: number) => {
+        setFoodPhotos(prev => prev.filter((_, i) => i !== index));
+    }, []);
 
-    // 드래그 앤 드롭 핸들러들
-    const handleDragOver = (e: React.DragEvent) => {
+    // 드래그 앤 드롭 핸들러들 (useCallback으로 메모이제이션)
+    const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
-    };
+    }, []);
 
-    const handleVerificationDragEnter = (e: React.DragEvent) => {
+    const handleVerificationDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsVerificationDragging(true);
-    };
+    }, []);
 
-    const handleVerificationDragLeave = (e: React.DragEvent) => {
+    const handleVerificationDragLeave = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsVerificationDragging(false);
-    };
+    }, []);
 
-    const handleVerificationDrop = (e: React.DragEvent) => {
+    const handleVerificationDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsVerificationDragging(false);
@@ -165,21 +196,21 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         if (imageFiles.length > 0) {
             setVerificationPhoto(imageFiles[0]);
         }
-    };
+    }, []);
 
-    const handleFoodPhotosDragEnter = (e: React.DragEvent) => {
+    const handleFoodPhotosDragEnter = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsFoodPhotosDragging(true);
-    };
+    }, []);
 
-    const handleFoodPhotosDragLeave = (e: React.DragEvent) => {
+    const handleFoodPhotosDragLeave = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsFoodPhotosDragging(false);
-    };
+    }, []);
 
-    const handleFoodPhotosDrop = (e: React.DragEvent) => {
+    const handleFoodPhotosDrop = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsFoodPhotosDragging(false);
@@ -188,18 +219,18 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         const imageFiles = files.filter(file => file.type.startsWith('image/'));
 
         if (imageFiles.length > 0) {
-            setFoodPhotos([...foodPhotos, ...imageFiles]);
+            setFoodPhotos(prev => [...prev, ...imageFiles]);
         }
-    };
+    }, []);
 
-    // 파일 선택기 열기 함수들
-    const openVerificationFileDialog = () => {
+    // 파일 선택기 열기 함수들 (useCallback으로 메모이제이션)
+    const openVerificationFileDialog = useCallback(() => {
         verificationFileInputRef.current?.click();
-    };
+    }, []);
 
-    const openFoodPhotosFileDialog = () => {
+    const openFoodPhotosFileDialog = useCallback(() => {
         foodPhotosFileInputRef.current?.click();
-    };
+    }, []);
 
     const handleSubmit = async () => {
         if (!visitedDate || !visitedTime || !selectedRestaurantId || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
@@ -220,8 +251,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             return;
         }
 
-        // 선택된 맛집 정보 가져오기
-        const selectedRestaurant = (jjyangRestaurants as any[]).find((r: any) => r.id === selectedRestaurantId);
         if (!selectedRestaurant) {
             toast({
                 title: "맛집 선택 오류",
@@ -234,8 +263,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         setIsSubmitting(true);
 
         try {
-            // 1. 인증 사진 압축 및 업로드
-            const compressedVerificationPhoto = await compressImage(verificationPhoto);
+            // 1. 모든 이미지를 병렬로 압축 (성능 최적화)
+            const [compressedVerificationPhoto, ...compressedFoodPhotos] = await Promise.all([
+                compressImage(verificationPhoto),
+                ...foodPhotos.map(photo => compressImage(photo))
+            ]);
+
+            // 2. 인증 사진 업로드
             const verificationPhotoPath = `${user.id}/${Date.now()}_verification_${compressedVerificationPhoto.name}`;
             const { error: verificationUploadError } = await supabase.storage
                 .from('review-photos')
@@ -248,11 +282,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 throw new Error(`인증 사진 업로드 실패: ${verificationUploadError.message}`);
             }
 
-            // 2. 음식 사진 압축 및 업로드
-            const foodPhotoUrls: string[] = [];
-            for (let i = 0; i < foodPhotos.length; i++) {
-                const compressedPhoto = await compressImage(foodPhotos[i]);
-                const photoPath = `${user.id}/${Date.now()}_food_${i}_${compressedPhoto.name}`;
+            // 3. 음식 사진 병렬 업로드 (성능 최적화)
+            const uploadTimestamp = Date.now();
+            const foodPhotoUploadPromises = compressedFoodPhotos.map(async (compressedPhoto, i) => {
+                const photoPath = `${user.id}/${uploadTimestamp}_food_${i}_${compressedPhoto.name}`;
                 const { error: foodUploadError } = await supabase.storage
                     .from('review-photos')
                     .upload(photoPath, compressedPhoto, {
@@ -264,10 +297,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                     throw new Error(`음식 사진 업로드 실패: ${foodUploadError.message}`);
                 }
 
-                foodPhotoUrls.push(photoPath);
-            }
+                return photoPath;
+            });
 
-            // 3. Create review record
+            const uploadedFoodPhotoPaths = await Promise.all(foodPhotoUploadPromises);
+
+            // 4. Create review record
             // 시간 형식 처리 및 검증
             let visitedAtDateTime: string;
             try {
@@ -303,7 +338,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                     content: content.trim(),
                     visited_at: visitedAtDateTime,
                     verification_photo: verificationPhotoPath,
-                    food_photos: foodPhotoUrls,
+                    food_photos: uploadedFoodPhotoPaths,
                     categories: categories,
                     is_verified: false, // 관리자 검토 대기
                 });
@@ -334,7 +369,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         }
     };
 
-    const handleClose = () => {
+    const handleClose = useCallback(() => {
         setVisitedDate("");
         setVisitedTime("");
         setSelectedRestaurantId("");
@@ -343,9 +378,17 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         setVerificationPhoto(null);
         setFoodPhotos([]);
         onClose();
-    };
+    }, [onClose]);
 
-    const isFormValid = visitedDate && visitedTime && selectedRestaurantId && categories.length > 0 && content && verificationPhoto && foodPhotos.length > 0;
+    // 선택된 맛집 정보 메모이제이션 (배열 탐색 최적화)
+    const selectedRestaurant = useMemo(() => {
+        return (jjyangRestaurants as any[]).find((r: any) => r.id === selectedRestaurantId);
+    }, [jjyangRestaurants, selectedRestaurantId]);
+
+    // 폼 유효성 검사 메모이제이션
+    const isFormValid = useMemo(() => {
+        return visitedDate && visitedTime && selectedRestaurantId && categories.length > 0 && content && verificationPhoto && foodPhotos.length > 0;
+    }, [visitedDate, visitedTime, selectedRestaurantId, categories.length, content, verificationPhoto, foodPhotos.length]);
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -367,16 +410,18 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 <AlertCircle className="h-4 w-4 text-amber-600" />
                                 <AlertDescription className="text-amber-800 space-y-2">
                                     <div>
-                                        <strong>📸 인증 사진 필수 가이드라인:</strong>
+                                        <strong>📸 영수증 인증 사진 가이드라인 (OCR 자동 인식):</strong>
                                     </div>
                                     <ul className="text-sm space-y-1 ml-4 list-disc">
-                                        <li>본인의 닉네임이 잘 보이게 영수증에 적어주세요</li>
-                                        <li>상호명, 날짜/시간, 주문 메뉴 등 중요 정보는 가리지 말고 그대로 촬영해주세요</li>
+                                        <li><strong>영수증 전체가 보이게</strong> 촬영해주세요 (접히거나 잘리면 인식 불가)</li>
+                                        <li><strong>밝은 곳에서 촬영</strong>하고, 그림자가 지지 않도록 해주세요</li>
+                                        <li><strong>상호명, 날짜/시간, 금액</strong>이 선명하게 보여야 합니다</li>
+                                        <li>닉네임은 영수증 <strong>하단 여백</strong>이나 <strong>옆에 메모지</strong>로 적어주세요</li>
                                         <li>방문 날짜는 <strong className="text-red-600">3개월 이내</strong>여야 합니다</li>
-                                        <li>음식 사진도 함께 업로드하면 더 신뢰할 수 있습니다</li>
                                     </ul>
-                                    <div className="text-xs text-amber-700 mt-2">
-                                        💡 팁: 영수증 위에 메모지로 닉네임을 적거나, 영수증에 직접 닉네임을 써서 촬영해주세요!
+                                    <div className="text-xs text-amber-700 mt-2 space-y-1">
+                                        <div>⚠️ <strong>주의:</strong> 영수증 위에 닉네임을 직접 써서 중요 정보를 가리면 인식이 안 됩니다!</div>
+                                        <div>💡 <strong>팁:</strong> 영수증을 평평한 곳에 놓고 바로 위에서 촬영하면 인식률이 높아집니다</div>
                                     </div>
                                 </AlertDescription>
                             </Alert>
@@ -386,21 +431,32 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 <Label htmlFor="restaurant">
                                     방문한 쯔양 맛집 <span className="text-red-500">*</span>
                                 </Label>
-                                <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId}>
+                                <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId} disabled={isLoadingRestaurants}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder="쯔양이 방문한 맛집을 선택해주세요" />
+                                        <SelectValue placeholder={
+                                            isLoadingRestaurants
+                                                ? "맛집 목록 불러오는 중..."
+                                                : isRestaurantsError
+                                                    ? "맛집 목록 로드 실패"
+                                                    : "쯔양이 방문한 맛집을 선택해주세요"
+                                        } />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {(jjyangRestaurants as any[]).map((restaurant: any) => (
                                             <SelectItem key={restaurant.id} value={restaurant.id}>
-                                                {restaurant.name} {/* 맛집 이름 표시 */}
+                                                {restaurant.name}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
-                                {selectedRestaurantId && (
+                                {isRestaurantsError && (
+                                    <p className="text-xs text-red-500">
+                                        맛집 목록을 불러오지 못했습니다. 페이지를 새로고침해주세요.
+                                    </p>
+                                )}
+                                {selectedRestaurant && (
                                     <p className="text-xs text-muted-foreground">
-                                        선택된 맛집: {(jjyangRestaurants as any[]).find((r: any) => r.id === selectedRestaurantId)?.name}
+                                        선택된 맛집: {selectedRestaurant.name}
                                     </p>
                                 )}
                             </div>
@@ -544,7 +600,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                                     <div className="relative">
                                                         <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
                                                             <img
-                                                                src={URL.createObjectURL(verificationPhoto)}
+                                                                src={verificationPhotoUrl || ''}
                                                                 alt="인증 사진 미리보기"
                                                                 className="w-full h-full object-cover"
                                                             />
@@ -636,7 +692,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                                 <Card className="p-2 hover:shadow-md transition-shadow">
                                                     <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
                                                         <img
-                                                            src={URL.createObjectURL(photo)}
+                                                            src={foodPhotoUrls[index] || ''}
                                                             alt={`음식 사진 ${index + 1}`}
                                                             className="w-full h-full object-cover"
                                                         />
