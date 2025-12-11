@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { useQuery } from "@tanstack/react-query";
 import imageCompression from "browser-image-compression";
 
 // 이미지 압축 옵션 (컴포넌트 외부에서 상수로 정의)
@@ -36,13 +35,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown } from "lucide-react";
@@ -82,7 +74,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const { user } = useAuth();
     const [visitedDate, setVisitedDate] = useState("");
     const [visitedTime, setVisitedTime] = useState("");
-    const [selectedRestaurantId, setSelectedRestaurantId] = useState<string>("");
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
@@ -98,30 +89,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     // 드래그 상태
     const [isVerificationDragging, setIsVerificationDragging] = useState(false);
     const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
-
-    // 쯔양이 방문한 맛집 목록 조회 (캐싱 최적화)
-    const { data: jjyangRestaurants = [], isLoading: isLoadingRestaurants, isError: isRestaurantsError } = useQuery({
-        queryKey: ['jjyang-restaurants'],
-        queryFn: async () => {
-            const { data, error } = await (supabase
-                .from('restaurants') as any)
-                .select('id, name')
-                .order('name');
-
-            if (error) throw error;
-            return data || [];
-        },
-        enabled: isOpen,
-        staleTime: 1000 * 60 * 5, // 5분간 캐시 유지 (재요청 방지)
-        gcTime: 1000 * 60 * 10,   // 10분간 가비지 컬렉션 방지
-    });
-
-    // restaurant prop이 전달되면 해당 맛집을 기본 선택
-    useEffect(() => {
-        if (restaurant?.id) {
-            setSelectedRestaurantId(restaurant.id);
-        }
-    }, [restaurant]);
 
     // 이미지 미리보기 URL 메모리 관리 (URL.createObjectURL 정리)
     const verificationPhotoUrl = useMemo(() => {
@@ -233,7 +200,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     }, []);
 
     const handleSubmit = async () => {
-        if (!visitedDate || !visitedTime || !selectedRestaurantId || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
+        if (!visitedDate || !visitedTime || !restaurant?.id || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
             toast({
                 title: "필수 항목 누락",
                 description: "모든 필수 항목을 입력해주세요",
@@ -251,10 +218,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             return;
         }
 
-        if (!selectedRestaurant) {
+        if (!restaurant) {
             toast({
-                title: "맛집 선택 오류",
-                description: "선택된 맛집 정보를 찾을 수 없습니다",
+                title: "맛집 정보 오류",
+                description: "맛집 정보를 찾을 수 없습니다. 맛집 상세 페이지에서 리뷰 작성 버튼을 눌러주세요.",
                 variant: "destructive",
             });
             return;
@@ -333,8 +300,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 .from('reviews') as any)
                 .insert({
                     user_id: user.id,
-                    restaurant_id: selectedRestaurantId,
-                    title: `${selectedRestaurant.name} 방문 후기`,
+                    restaurant_id: restaurant.id,
+                    title: `${restaurant.name} 방문 후기`,
                     content: content.trim(),
                     visited_at: visitedAtDateTime,
                     verification_photo: verificationPhotoPath,
@@ -372,7 +339,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const handleClose = useCallback(() => {
         setVisitedDate("");
         setVisitedTime("");
-        setSelectedRestaurantId("");
         setCategories([]);
         setContent("");
         setVerificationPhoto(null);
@@ -380,15 +346,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         onClose();
     }, [onClose]);
 
-    // 선택된 맛집 정보 메모이제이션 (배열 탐색 최적화)
-    const selectedRestaurant = useMemo(() => {
-        return (jjyangRestaurants as any[]).find((r: any) => r.id === selectedRestaurantId);
-    }, [jjyangRestaurants, selectedRestaurantId]);
-
     // 폼 유효성 검사 메모이제이션
     const isFormValid = useMemo(() => {
-        return visitedDate && visitedTime && selectedRestaurantId && categories.length > 0 && content && verificationPhoto && foodPhotos.length > 0;
-    }, [visitedDate, visitedTime, selectedRestaurantId, categories.length, content, verificationPhoto, foodPhotos.length]);
+        return visitedDate && visitedTime && restaurant?.id && categories.length > 0 && content && verificationPhoto && foodPhotos.length > 0;
+    }, [visitedDate, visitedTime, restaurant?.id, categories.length, content, verificationPhoto, foodPhotos.length]);
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -426,38 +387,22 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 </AlertDescription>
                             </Alert>
 
-                            {/* 맛집 선택 */}
+                            {/* 방문 맛집 정보 (읽기 전용) */}
                             <div className="space-y-2">
-                                <Label htmlFor="restaurant">
+                                <Label>
                                     방문한 쯔양 맛집 <span className="text-red-500">*</span>
                                 </Label>
-                                <Select value={selectedRestaurantId} onValueChange={setSelectedRestaurantId} disabled={isLoadingRestaurants}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder={
-                                            isLoadingRestaurants
-                                                ? "맛집 목록 불러오는 중..."
-                                                : isRestaurantsError
-                                                    ? "맛집 목록 로드 실패"
-                                                    : "쯔양이 방문한 맛집을 선택해주세요"
-                                        } />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {(jjyangRestaurants as any[]).map((restaurant: any) => (
-                                            <SelectItem key={restaurant.id} value={restaurant.id}>
-                                                {restaurant.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                {isRestaurantsError && (
-                                    <p className="text-xs text-red-500">
-                                        맛집 목록을 불러오지 못했습니다. 페이지를 새로고침해주세요.
-                                    </p>
-                                )}
-                                {selectedRestaurant && (
-                                    <p className="text-xs text-muted-foreground">
-                                        선택된 맛집: {selectedRestaurant.name}
-                                    </p>
+                                {restaurant ? (
+                                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                        <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                        <span className="font-medium text-green-800">{restaurant.name}</span>
+                                    </div>
+                                ) : (
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                        <p className="text-sm text-red-600">
+                                            맛집 정보가 없습니다. 맛집 상세 페이지에서 리뷰 작성 버튼을 눌러주세요.
+                                        </p>
+                                    </div>
                                 )}
                             </div>
 
