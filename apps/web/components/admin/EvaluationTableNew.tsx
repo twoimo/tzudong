@@ -752,13 +752,13 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
               const mainRow = (
                 <TableRow
                   key={record.id}
-                  className={cn("hover:bg-muted/50 transition-colors cursor-pointer", expandedId === record.id && "bg-muted/30 border-l-4 border-l-primary")}
+                  className={cn("group hover:bg-muted/50 transition-colors cursor-pointer", expandedId === record.id && "bg-muted/30 border-l-4 border-l-primary")}
                   ref={(el) => {
                     if (el) rowRefs.current[record.id] = el;
                   }}
                   onClick={() => toggleExpand(record.id)}
                 >
-                  <TableCell className="sticky left-0 bg-background">
+                  <TableCell className="sticky left-0">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -775,7 +775,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                     </Button>
                   </TableCell>
 
-                  <TableCell className="sticky left-12 bg-background">
+                  <TableCell className="sticky left-12">
                     <div className="flex items-center gap-3">
                       {videoId && (
                         <a
@@ -877,12 +877,12 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
                   </TableCell>
 
                   {/* 고정 컬럼: 상태 */}
-                  <TableCell className="text-center sticky right-[180px] bg-background">
+                  <TableCell className="text-center sticky right-[180px]">
                     {getStatusBadge(record.status)}
                   </TableCell>
 
                   {/* 고정 컬럼: 액션 */}
-                  <TableCell className="sticky right-0 bg-background">
+                  <TableCell className="sticky right-0">
                     <div className="flex gap-2 justify-center">
                       {record.status === 'deleted' ? (
                         // 삭제된 레코드 - 되돌리기 버튼만 표시
