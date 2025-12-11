@@ -2,6 +2,20 @@
 
 <p><strong>데이터베이스</strong>는 모든 맛집 정보, 사용자 정보, 리뷰 등을 저장하는 창고예요. Supabase라는 서비스를 사용합니다.</p>
 
+<p><em>📅 최종 수정: 2025년 12월 11일 (v3.4)</em></p>
+
+<hr />
+
+<h2>v3.4 주요 변경사항</h2>
+
+<ul>
+  <li>✅ <strong>리뷰 OCR 중복 검사 시스템 추가</strong> - 영수증 해시로 중복 리뷰 방지</li>
+  <li>✅ <strong>RLS 정책 성능 최적화</strong> - <code>auth.uid()</code> → <code>(SELECT auth.uid())</code></li>
+  <li>✅ <strong>Materialized View 보안 강화</strong> - 직접 접근 차단, 함수 래퍼로 접근</li>
+  <li>✅ <strong>Extension 스키마 분리</strong> - extensions 스키마로 이동</li>
+  <li>✅ <strong>모니터링 뷰 → 함수로 변경</strong></li>
+</ul>
+
 <hr />
 
 <h2>데이터베이스란?</h2>
@@ -443,6 +457,54 @@ psql -h aws-1-ap-southeast-1.pooler.supabase.com `
 
 <hr />
 
+<h2>📷 리뷰 OCR 중복 검사 (v3.4 신규)</h2>
+
+<p>영수증 이미지를 OCR 처리하여 동일 영수증으로 중복 리뷰를 방지합니다.</p>
+
+<h3>동작 원리</h3>
+<ul>
+  <li><strong>Gemini 2.5 Flash Vision API</strong>로 영수증 정보 추출</li>
+  <li>가게명, 날짜, 시간, 금액으로 <strong>SHA-256 해시</strong> 생성</li>
+  <li>동일 해시 발견 시 <strong>중복 플래그</strong> 설정</li>
+</ul>
+
+<h3>관련 DB 컬럼 (reviews 테이블)</h3>
+<table>
+  <thead>
+    <tr>
+      <th>컬럼</th>
+      <th>타입</th>
+      <th>설명</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>receipt_hash</code></td>
+      <td>TEXT</td>
+      <td>SHA-256 영수증 해시</td>
+    </tr>
+    <tr>
+      <td><code>receipt_data</code></td>
+      <td>JSONB</td>
+      <td>OCR 추출 데이터 (가게명, 날짜, 금액 등)</td>
+    </tr>
+    <tr>
+      <td><code>is_duplicate</code></td>
+      <td>BOOLEAN</td>
+      <td>중복 영수증 여부</td>
+    </tr>
+    <tr>
+      <td><code>ocr_processed_at</code></td>
+      <td>TIMESTAMPTZ</td>
+      <td>OCR 처리 완료 시각</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>자세한 내용은 <a href="16-ocr-system.html"><strong>OCR 시스템 문서</strong></a>를 참조하세요.</p>
+
+<hr />
+
 <h2>자주 사용하는 함수들</h2>
 
 <p>데이터베이스에 미리 만들어둔 유용한 함수들이에요:</p>
@@ -466,7 +528,20 @@ psql -h aws-1-ap-southeast-1.pooler.supabase.com `
  is_admin(user_id)                   이 사용자가           
                                      관리자인지 확인       
 
+ get_restaurant_stats()              맛집 통계 조회        
+                                     (MV 래퍼 함수)       
+
+ get_user_leaderboard()              사용자 리더보드 조회  
+                                     (MV 래퍼 함수)       
+
+ get_popular_reviews()               인기 리뷰 조회        
+                                     (MV 래퍼 함수)       
+
+ refresh_materialized_views()        모든 MV 새로고침      
+
 </code></pre>
+
+<p><strong>⚠️ v3.3 이후</strong>: Materialized View는 직접 접근 불가, 함수를 통해서만 접근해야 합니다.</p>
 
 <hr />
 
