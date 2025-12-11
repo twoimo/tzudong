@@ -12,7 +12,7 @@ interface UseHomeHandlersProps {
         address: string;
         phone: string;
         category: string[];
-        youtube_reviews: { youtube_link: string; tzuyang_review: string; unique_id?: string }[];
+        youtube_reviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[];
     }>>;
     setIsEditModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSelectedRegion: React.Dispatch<React.SetStateAction<Region | null>>;
