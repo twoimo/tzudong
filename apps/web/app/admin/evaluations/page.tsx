@@ -1271,6 +1271,16 @@ function AdminEvaluationPage() {
     refetchInterval: 30000,
   });
 
+  // pending 리뷰(미승인, 거부 아닌) 건수 계산
+  const pendingReviewsCount = useMemo(() => {
+    return reviewsData.filter((r: Review) =>
+      !r.is_verified && (!r.admin_note || !r.admin_note.includes('거부'))
+    ).length;
+  }, [reviewsData]);
+
+  // 전체 대기 건수 (제보 + 리뷰)
+  const totalPendingCount = submissionsData.length + pendingReviewsCount;
+
   // 리뷰 승인 mutation
   const approveReviewMutation = useMutation({
     mutationFn: async ({ reviewId, adminNote }: { reviewId: string; adminNote: string }) => {
@@ -1806,12 +1816,12 @@ function AdminEvaluationPage() {
                   variant={showSubmissionView ? 'secondary' : 'ghost'}
                   size="icon"
                   className="h-8 w-8 relative"
-                  title={`사용자 제보 검수 (${submissionsData.length}건)`}
+                  title={`사용자 제보/리뷰 검수 (제보 ${submissionsData.length}건, 리뷰 ${pendingReviewsCount}건)`}
                 >
                   <Send className="h-4 w-4" />
-                  {submissionsData.length > 0 && (
+                  {totalPendingCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                      {submissionsData.length > 9 ? '9+' : submissionsData.length}
+                      {totalPendingCount > 9 ? '9+' : totalPendingCount}
                     </span>
                   )}
                 </Button>
