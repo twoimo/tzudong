@@ -157,20 +157,35 @@ async function processReview(review) {
             .neq('id', reviewId);
 
         const isDuplicate = existingReviews && existingReviews.length > 0;
+        const duplicateOfId = isDuplicate ? existingReviews[0].id : null;
 
         // 7. DB 업데이트
-        await supabase
+        // 중복인 경우 receipt_hash를 저장하지 않음 (UNIQUE INDEX 제약 회피)
+        const updateData = {
+            receipt_hash: isDuplicate ? null : receiptHash,
+            receipt_data: isDuplicate
+                ? { ...ocrData, duplicate_of: duplicateOfId }
+                : ocrData,
+            is_duplicate: isDuplicate,
+            ocr_processed_at: new Date().toISOString(),
+        };
+
+        const { error: updateError } = await supabase
             .from('reviews')
-            .update({
-                receipt_hash: receiptHash,
-                receipt_data: ocrData,
-                is_duplicate: isDuplicate,
-                ocr_processed_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq('id', reviewId);
 
+        if (updateError) {
+            console.error(`  ❌ DB 업데이트 실패: ${updateError.message}`);
+            console.error(`  업데이트 데이터:`, JSON.stringify(updateData, null, 2));
+            throw new Error(`DB 업데이트 실패: ${updateError.message}`);
+        }
+
         if (isDuplicate) {
-            console.log(`  ⚠️ 중복 발견! 원본 리뷰: ${existingReviews[0].id}`);
+            console.log(`  ⚠️ 중복 발견! 원본 리뷰: ${duplicateOfId}`);
+            console.log(`  ✅ 중복 정보 저장 완료`);
+        } else {
+            console.log(`  ✅ OCR 성공`);
         }
 
         return { status: isDuplicate ? 'duplicate' : 'success' };
