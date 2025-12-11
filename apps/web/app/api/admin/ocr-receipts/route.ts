@@ -50,7 +50,7 @@ export async function POST() {
 
         return NextResponse.json({
             success: true,
-            message: 'OCR 처리가 시작되었습니다. GitHub Actions에서 처리 중...'
+            message: 'OCR 처리가 시작되었습니다.'
         });
 
     } catch (err) {
