@@ -60,7 +60,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
 
   // 마이페이지 메뉴 아이템
   const myPageMenuItems = useMemo(() => [
-    { icon: User, label: "프로필", path: "/mypage/profile", onClick: () => router.push("/mypage/profile") },
+    { icon: User, label: "마이페이지", path: "/mypage/profile", onClick: () => router.push("/mypage/profile") },
     {
       icon: FileText,
       label: "제보 내역",
@@ -77,13 +77,6 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
   // 마이페이지 메뉴 렌더링
   const renderMyPageMenu = () => (
     <>
-      {/* 마이페이지 헤더 */}
-      {isOpen && (
-        <div className="px-4 py-3 border-b border-stone-800/10">
-          <h2 className="text-lg font-bold text-stone-800 font-serif">마이페이지</h2>
-        </div>
-      )}
-
       <nav className={cn("flex-1 space-y-1 overflow-y-auto relative z-10", isOpen ? "p-4" : "p-2")}>
         {myPageMenuItems.map((item, index) => {
           if (item.isParent && item.children) {

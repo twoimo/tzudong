@@ -226,7 +226,7 @@ export default function ProfilePage() {
       {/* 기본 정보 */}
       <Card>
         <CardHeader>
-          <CardTitle>내 정보</CardTitle>
+          <CardTitle>기본 정보</CardTitle>
           <CardDescription>계정 정보를 확인하고 수정할 수 있습니다</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
