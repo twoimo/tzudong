@@ -54,6 +54,17 @@ import {
     TooltipProvider,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+
+// Supabase Storage에서 리뷰 사진 public URL 생성
+function getReviewPhotoUrl(path: string): string {
+    // 이미 full URL인 경우 그대로 반환
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+    }
+    // 상대 경로인 경우 Supabase Storage에서 public URL 생성
+    return supabase.storage.from('review-photos').getPublicUrl(path).data.publicUrl;
+}
 
 // YouTube 비디오 ID 추출
 function getYoutubeVideoId(url: string | undefined): string | null {
@@ -1064,7 +1075,7 @@ export function SubmissionListView({
                                             {selectedReview.verification_photo && (
                                                 <div className="flex-shrink-0 border rounded-lg overflow-hidden relative">
                                                     <img
-                                                        src={selectedReview.verification_photo}
+                                                        src={getReviewPhotoUrl(selectedReview.verification_photo)}
                                                         alt="영수증"
                                                         className="h-32 w-auto max-w-48 object-cover"
                                                     />
@@ -1077,7 +1088,7 @@ export function SubmissionListView({
                                             {selectedReview.food_photos?.map((photo, idx) => (
                                                 <div key={idx} className="flex-shrink-0 border rounded-lg overflow-hidden relative">
                                                     <img
-                                                        src={photo}
+                                                        src={getReviewPhotoUrl(photo)}
                                                         alt={`음식 ${idx + 1}`}
                                                         className="h-32 w-auto max-w-48 object-cover"
                                                     />
