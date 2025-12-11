@@ -666,8 +666,9 @@ export function SubmissionListView({
                                                     key={review.id}
                                                     className={cn(
                                                         "group hover:bg-muted/50 transition-colors cursor-pointer",
-                                                        isApproved && "bg-green-50/50 dark:bg-green-950/20",
-                                                        isRejected && "bg-red-50/50 dark:bg-red-950/20"
+                                                        review.is_duplicate && "bg-red-100/70 dark:bg-red-950/40 hover:bg-red-200/70 dark:hover:bg-red-900/40",
+                                                        !review.is_duplicate && isApproved && "bg-green-50/50 dark:bg-green-950/20",
+                                                        !review.is_duplicate && isRejected && "bg-red-50/50 dark:bg-red-950/20"
                                                     )}
                                                     onClick={() => handleReviewAction('approve', review)}
                                                 >
@@ -680,7 +681,7 @@ export function SubmissionListView({
                                                     </TableCell>
 
                                                     {/* 리뷰 내용 미리보기 */}
-                                                    <TableCell className="bg-background group-hover:bg-muted/50 transition-colors">
+                                                    <TableCell>
                                                         <div className="min-w-0">
                                                             <div className="flex items-center gap-2">
                                                                 <p className="text-sm text-muted-foreground truncate max-w-[180px]">
@@ -715,7 +716,7 @@ export function SubmissionListView({
                                                     </TableCell>
 
                                                     {/* 상태 */}
-                                                    <TableCell className="text-center sticky right-[100px] bg-background group-hover:bg-muted/50 transition-colors">
+                                                    <TableCell className="text-center sticky right-[100px]">
                                                         {isPending && (
                                                             <Badge variant="secondary" className="text-xs gap-1">
                                                                 <Clock className="h-3 w-3" /> 대기
@@ -734,7 +735,7 @@ export function SubmissionListView({
                                                     </TableCell>
 
                                                     {/* 액션 */}
-                                                    <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 transition-colors">
+                                                    <TableCell className="sticky right-0">
                                                         <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                                                             {isPending && (
                                                                 <>
@@ -852,7 +853,7 @@ export function SubmissionListView({
                                                     onClick={() => openDetailModal(submission)}
                                                 >
                                                     {/* 맛집명 + 주소 (썸네일 삭제) */}
-                                                    <TableCell className="sticky left-0 bg-background group-hover:bg-muted/50 transition-colors">
+                                                    <TableCell className="sticky left-0">
                                                         <div className="min-w-0">
                                                             <p className="font-medium text-sm truncate">{submission.restaurant_name}</p>
                                                             <p className="text-xs text-muted-foreground">
@@ -929,12 +930,12 @@ export function SubmissionListView({
                                                     </TableCell>
 
                                                     {/* 상태 */}
-                                                    <TableCell className="text-center sticky right-[100px] bg-background group-hover:bg-muted/50 transition-colors">
+                                                    <TableCell className="text-center sticky right-[100px]">
                                                         {getStatusBadge(submission.status)}
                                                     </TableCell>
 
                                                     {/* 액션 */}
-                                                    <TableCell className="sticky right-0 bg-background group-hover:bg-muted/50 transition-colors">
+                                                    <TableCell className="sticky right-0">
                                                         <div className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
                                                             {isPending && (
                                                                 <Button
