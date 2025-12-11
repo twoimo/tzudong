@@ -1,8 +1,8 @@
 // ========================================
-// 쯔양 맛집 지도 - 데이터베이스 스키마 (v3.3)
+// 쯔양 맛집 지도 - 데이터베이스 스키마 (v3.4)
 // dbdiagram.io 형식
-// 작성일: 2025년 11월 7일 (최종 수정: 2025년 11월 11일)
-// 버전: 3.3 - 성능 및 보안 최적화
+// 작성일: 2025년 11월 7일 (최종 수정: 2025년 12월 11일)
+// 버전: 3.4 - 리뷰 OCR 중복 검사 시스템 추가
 // 
 // 주요 변경사항 (v3.3):
 // - RLS 정책 성능 최적화: auth.uid() → (SELECT auth.uid())
@@ -200,6 +200,14 @@ Table reviews {
   is_edited_by_admin boolean [not null, default: false, note: '관리자 수정 여부']
   edited_by_admin_id uuid [ref: > auth_users.id, note: '수정한 관리자 ID']
   edited_at timestamptz [note: '관리자 수정 시간']
+  
+  // OCR 중복 검사 (v3.4 추가)
+  status text [not null, default: 'pending', note: '리뷰 상태 (pending, approved, rejected)']
+  receipt_hash text [note: 'SHA-256 영수증 해시 (store_name|date|time|amount)']
+  receipt_data jsonb [note: 'OCR 추출 데이터: {store_name, date, time, total_amount, items, confidence}']
+  is_duplicate boolean [not null, default: false, note: '중복 영수증 여부']
+  ocr_processed_at timestamptz [note: 'OCR 처리 완료 시각 (NULL=미처리)']
+  
   created_at timestamptz [not null, default: `now()`]
   updated_at timestamptz [not null, default: `now()`]
   
@@ -213,6 +221,12 @@ Table reviews {
     (restaurant_id, created_at) [name: 'idx_reviews_restaurant_created']
     (user_id, created_at) [name: 'idx_reviews_user_created']
     categories [type: gin]
+    
+    // OCR 관련 인덱스 (v3.4 추가)
+    receipt_hash [unique, name: 'idx_reviews_receipt_hash', note: 'Partial Index: WHERE receipt_hash IS NOT NULL']
+    status [name: 'idx_reviews_status']
+    (created_at) [name: 'idx_reviews_ocr_pending', note: 'Partial Index: WHERE ocr_processed_at IS NULL']
+    (created_at) [name: 'idx_reviews_duplicate', note: 'Partial Index: WHERE is_duplicate = true']
   }
   
   Note: '사용자 리뷰 테이블'

@@ -481,6 +481,6 @@ const ExpensiveComponent = memo(function ExpensiveComponent() { ... })
 
 ---
 
-**Last Updated**: 2025-12-04  
+**Last Updated**: 2025-12-11  
 **Lighthouse Version**: 12.8.2  
 **Next.js Version**: 16.0.5
