@@ -147,8 +147,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   };
 
   const handleMyPageClick = () => {
-    // 마이페이지는 별도 페이지로 이동
-    router.push('/mypage');
+    // 마이페이지 프로필 페이지로 이동
+    router.push('/mypage/profile');
   };
 
   const handleAdminSubmissionsClick = () => {
