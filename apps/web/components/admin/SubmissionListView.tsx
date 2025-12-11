@@ -1332,22 +1332,27 @@ export function SubmissionListView({
 
                 {/* 이미지 확대 모달 */}
                 <Dialog open={!!previewImage} onOpenChange={() => setPreviewImage(null)}>
-                    <DialogContent className="max-w-4xl max-h-[90vh] p-4">
+                    <DialogContent className="max-w-fit max-h-[90vh] p-0 border-none bg-transparent shadow-none [&>button]:hidden">
                         <DialogHeader className="sr-only">
                             <DialogTitle>{previewImage?.alt}</DialogTitle>
                         </DialogHeader>
                         {previewImage && (
-                            <div className="flex items-center justify-center">
+                            <div className="relative">
                                 <img
                                     src={previewImage.url}
                                     alt={previewImage.alt}
-                                    className="max-w-full max-h-[80vh] object-contain rounded-lg"
+                                    className="max-w-[90vw] max-h-[90vh] object-contain rounded-lg"
                                 />
+                                <Button
+                                    variant="secondary"
+                                    size="icon"
+                                    className="absolute top-2 right-2 h-8 w-8 rounded-full bg-white/90 hover:bg-white shadow-md"
+                                    onClick={() => setPreviewImage(null)}
+                                >
+                                    <X className="h-4 w-4 text-gray-700" />
+                                </Button>
                             </div>
                         )}
-                        <p className="text-center text-muted-foreground text-sm mt-2">
-                            {previewImage?.alt}
-                        </p>
                     </DialogContent>
                 </Dialog>
             </div>
