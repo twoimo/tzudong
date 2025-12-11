@@ -1252,19 +1252,19 @@ function AdminEvaluationPage() {
 
       const { data: restaurantsData } = await supabase
         .from('restaurants')
-        .select('id, name, address')
+        .select('id, name, road_address, jibun_address')
         .in('id', restaurantIds);
 
       const typedProfilesData = (profilesData || []) as any[];
       const typedRestaurantsData = (restaurantsData || []) as any[];
 
       const profilesMap = new Map(typedProfilesData.map(p => [p.user_id, p.nickname]));
-      const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.name, address: r.address }]));
+      const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.name, address: r.road_address || r.jibun_address || '' }]));
 
       return typedReviewsData.map(review => ({
         ...review,
         profiles: { nickname: profilesMap.get(review.user_id) || '탈퇴한 사용자' },
-        restaurants: restaurantsMap.get(review.restaurant_id) || { name: '알 수 없음', address: '' }
+        restaurants: restaurantsMap.get(review.restaurant_id) || { name: '삭제된 맛집', address: '' }
       }));
     },
     enabled: !!user && isAdmin,
