@@ -1,42 +1,9 @@
-[
-    {
-        "단계": "1. 사용자 제보 제출",
-        "설명": "NEW/EDIT 타입으로 맛집 제보",
-        "상태": "status: pending"
-    },
-    {
-        "단계": "2. restaurant_submissions 저장",
-        "설명": "제보 메타데이터 저장",
-        "상태": "submission_status: pending"
-    },
-    {
-        "단계": "3-1. 정보 확인",
-        "설명": "맛집명, 주소, 유튜브 링크 검토",
-        "상태": "관리자 검토 중"
-    },
-    {
-        "단계": "3-2. 지오코딩",
-        "설명": "주소 → 좌표 변환 (필수)",
-        "상태": "네이버 Geocoding API"
-    },
-    {
-        "단계": "3-3. 중복 검사",
-        "설명": "Levenshtein 유사도 85% 기준",
-        "상태": "자동 검사"
-    },
-    {
-        "단계": "3-4. 최종 결정",
-        "설명": "승인/거부 결정",
-        "상태": "관리자 판단"
-    },
-    {
-        "단계": "4-A. 승인",
-        "설명": "restaurants 테이블에 저장",
-        "상태": "status: approved"
-    },
-    {
-        "단계": "4-B. 거부",
-        "설명": "거부 사유 기록",
-        "상태": "rejection_reason 저장"
-    }
-]
+{
+  "elements": [],
+  "appState": {
+    "gridSize": 20,
+    "gridStep": 5,
+    "gridModeEnabled": false,
+    "viewBackgroundColor": "#ffffff"
+  }
+}

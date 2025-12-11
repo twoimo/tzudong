@@ -17,14 +17,25 @@ flowchart TB
         L1[restaurants: approved only]
         L2[reviews: own records]
         L3[submissions: own or admin]
+        L4[receipts: own or admin]
+        L5[stamps: own records]
+    end
+
+    subgraph STORAGE["Storage Security"]
+        S1[receipt-images bucket]
+        S2[Authenticated upload only]
+        S3[Public read for approved]
     end
 
     subgraph KEYS["API Keys"]
         K1[anon key - public]
         K2[service_role - secret]
+        K3[Gemini API key - server]
+        K4[Naver API keys - server]
     end
 
     A1 --> A2 --> A3 --> A4
     A4 --> ROLES
     ROLES --> RLS
+    ROLES --> STORAGE
     KEYS --> RLS
