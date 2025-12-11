@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { QueryProvider } from "./providers";
 import { AppProviders } from "./app-providers";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -85,6 +86,7 @@ export default function RootLayout({
                         <MainLayout>{children}</MainLayout>
                     </AppProviders>
                 </QueryProvider>
+                <SpeedInsights />
             </body>
         </html>
     );
