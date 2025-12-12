@@ -51,9 +51,9 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
 
     // [권한 관리] 관리자 메뉴 (hydration 완료 후에만 표시)
     const adminMenuItems = (isHydrated && user && isAdmin) ? [
-      { icon: BarChart2, label: "쯔동여지도 인사이트", path: "/admin/insight", onClick: () => router.push("/admin/insight") },
       { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
       { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
+      { icon: BarChart2, label: "쯔동여지도 인사이트", path: "/admin/insight", onClick: () => router.push("/admin/insight") },
     ] : [];
 
     return [...baseMenuItems, ...adminMenuItems];
