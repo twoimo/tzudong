@@ -142,26 +142,13 @@ const RiceBowlWordCloud = memo(({
     const containerRef = useRef<HTMLDivElement>(null);
     const [positions, setPositions] = useState<Array<{ x: number; y: number; size: number; keyword: KeywordData }>>([]);
 
-    // 밥그릇 모양 경계 체크 함수
-    const isInsideRiceBowl = useCallback((x: number, y: number, width: number, height: number) => {
-        // 밥그릇 모양: 위쪽은 넓고 아래쪽은 좁은 사다리꼴 + 둥근 바닥
-        const centerX = width / 2;
-        const centerY = height / 2;
-
-        // 정규화된 좌표 (-1 ~ 1)
-        const nx = (x - centerX) / (width / 2);
-        const ny = (y - centerY) / (height / 2);
-
-        // 밥그릇 형태: 위쪽이 넓고 아래쪽이 좁음
-        // 타원 + 사다리꼴 조합
-        const topWidth = 0.95; // 위쪽 너비
-        const bottomWidth = 0.5; // 아래쪽 너비
-        const widthAtY = topWidth - (topWidth - bottomWidth) * (ny + 1) / 2;
-
-        // 타원 형태로 체크
-        const ellipseCheck = (nx * nx) / (widthAtY * widthAtY) + (ny * ny) / 1;
-
-        return ellipseCheck < 1 && ny > -0.85 && ny < 0.9;
+    // 사각형 영역 경계 체크 함수
+    const isInsideRect = useCallback((x: number, y: number, width: number, height: number, textWidth: number, textHeight: number) => {
+        const padding = 10;
+        return x - textWidth / 2 >= padding &&
+            x + textWidth / 2 <= width - padding &&
+            y - textHeight / 2 >= padding &&
+            y + textHeight / 2 <= height - padding;
     }, []);
 
     // 키워드 위치 계산
@@ -169,41 +156,41 @@ const RiceBowlWordCloud = memo(({
         if (!containerRef.current) return;
 
         const width = 500;
-        const height = 450;
+        const height = 400;
         const centerX = 250;
-        const centerY = 220;
+        const centerY = 200;
         const newPositions: typeof positions = [];
         const maxCount = Math.max(...keywords.map(k => k.count));
 
         // 키워드를 count 순으로 정렬 (큰 것부터)
         const sortedKeywords = [...keywords].sort((a, b) => b.count - a.count);
 
-        sortedKeywords.forEach((keyword, index) => {
-            const size = 12 + (keyword.count / maxCount) * 24;
+        sortedKeywords.forEach((keyword) => {
+            const size = 14 + (keyword.count / maxCount) * 28;
             let placed = false;
             let attempts = 0;
-            const maxAttempts = 200;
+            const maxAttempts = 500;
 
             while (!placed && attempts < maxAttempts) {
                 // 중앙에서 시작하여 나선형으로 배치
-                const angle = attempts * 0.5;
-                const radius = Math.sqrt(attempts) * 15;
+                const angle = attempts * 0.3;
+                const radius = Math.sqrt(attempts) * 12;
 
                 const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius * 0.8;
+                const y = centerY + Math.sin(angle) * radius * 0.9;
 
-                // 밥그릇 안에 있는지 확인
-                if (isInsideRiceBowl(x, y, width, height)) {
+                const textWidth = keyword.keyword.length * size * 0.65;
+                const textHeight = size * 1.1;
+
+                // 사각형 영역 안에 있는지 확인
+                if (isInsideRect(x, y, width, height, textWidth, textHeight)) {
                     // 다른 키워드와 겹치지 않는지 확인
-                    const textWidth = keyword.keyword.length * size * 0.7;
-                    const textHeight = size * 1.2;
-
                     const overlaps = newPositions.some(pos => {
-                        const otherWidth = pos.keyword.keyword.length * pos.size * 0.7;
-                        const otherHeight = pos.size * 1.2;
+                        const otherWidth = pos.keyword.keyword.length * pos.size * 0.65;
+                        const otherHeight = pos.size * 1.1;
 
-                        return Math.abs(x - pos.x) < (textWidth + otherWidth) / 2 + 5 &&
-                            Math.abs(y - pos.y) < (textHeight + otherHeight) / 2 + 3;
+                        return Math.abs(x - pos.x) < (textWidth + otherWidth) / 2 + 3 &&
+                            Math.abs(y - pos.y) < (textHeight + otherHeight) / 2 + 2;
                     });
 
                     if (!overlaps) {
@@ -216,7 +203,7 @@ const RiceBowlWordCloud = memo(({
         });
 
         setPositions(newPositions);
-    }, [keywords, isInsideRiceBowl]);
+    }, [keywords, isInsideRect]);
 
     // 카테고리별 색상
     const getColor = (category: string, isSelected: boolean) => {
@@ -239,81 +226,35 @@ const RiceBowlWordCloud = memo(({
 
     return (
         <div className="relative h-full flex items-center justify-center" ref={containerRef}>
-            {/* 밥그릇 아이콘 배경 */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                <span className="text-[400px]">🍚</span>
-            </div>
-
-            {/* 밥그릇 외곽선 */}
+            {/* 키워드 워드 클라우드 */}
             <svg
-                viewBox="0 0 500 450"
-                className="w-full h-full max-h-[500px]"
-                style={{ overflow: 'visible' }}
+                viewBox="0 0 500 400"
+                className="w-full h-full"
+                preserveAspectRatio="xMidYMid meet"
             >
-                {/* 밥그릇 모양 경계 (시각적 가이드) */}
-                <defs>
-                    <clipPath id="riceBowlClip">
-                        <ellipse cx="250" cy="220" rx="220" ry="190" />
-                    </clipPath>
-                </defs>
-
-                {/* 밥그릇 외곽 */}
-                <ellipse
-                    cx="250"
-                    cy="220"
-                    rx="225"
-                    ry="195"
-                    fill="none"
-                    stroke="hsl(var(--border))"
-                    strokeWidth="2"
-                    strokeDasharray="5,5"
-                    opacity="0.3"
-                />
-
                 {/* 키워드 텍스트 */}
-                {positions.map(({ x, y, size, keyword }, index) => {
+                {positions.map(({ x, y, size, keyword }) => {
                     const isSelected = selectedKeyword === keyword.keyword;
                     return (
-                        <g key={keyword.keyword}>
-                            <text
-                                x={x}
-                                y={y}
-                                fontSize={size}
-                                fontWeight={isSelected ? 'bold' : keyword.count > 40 ? '600' : '400'}
-                                fill={getColor(keyword.category, isSelected)}
-                                textAnchor="middle"
-                                dominantBaseline="middle"
-                                className="cursor-pointer transition-all duration-200 hover:opacity-80"
-                                onClick={() => onKeywordClick(keyword.keyword)}
-                                style={{
-                                    filter: isSelected ? 'drop-shadow(0 0 4px rgba(220, 38, 38, 0.5))' : 'none',
-                                }}
-                            >
-                                {keyword.keyword}
-                            </text>
-                            {keyword.trend === 'up' && (
-                                <text
-                                    x={x + (keyword.keyword.length * size * 0.35) + 8}
-                                    y={y - 2}
-                                    fontSize={size * 0.5}
-                                    fill="#22c55e"
-                                >
-                                    ↑
-                                </text>
-                            )}
-                        </g>
+                        <text
+                            key={keyword.keyword}
+                            x={x}
+                            y={y}
+                            fontSize={size}
+                            fontWeight={isSelected ? 'bold' : keyword.count > 40 ? '600' : '400'}
+                            fill={getColor(keyword.category, isSelected)}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                            className="cursor-pointer transition-all duration-200 hover:opacity-80"
+                            onClick={() => onKeywordClick(keyword.keyword)}
+                            style={{
+                                filter: isSelected ? 'drop-shadow(0 0 4px rgba(220, 38, 38, 0.5))' : 'none',
+                            }}
+                        >
+                            {keyword.keyword}
+                        </text>
                     );
                 })}
-
-                {/* 밥그릇 이모지 */}
-                <text
-                    x="250"
-                    y="420"
-                    fontSize="50"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                >
-                </text>
             </svg>
         </div>
     );
@@ -422,49 +363,12 @@ const WordCloudSectionComponent = () => {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="flex-1 min-h-0 pt-0 overflow-hidden flex flex-col">
+                <CardContent className="flex-1 min-h-0 pt-0 overflow-hidden">
                     <RiceBowlWordCloud
                         keywords={filteredKeywords}
                         selectedKeyword={selectedKeyword}
                         onKeywordClick={handleKeywordClick}
                     />
-
-                    {/* 범례 */}
-                    <div className="flex flex-wrap gap-1.5 mt-2 justify-center shrink-0">
-                        {['고기', '면류', '해산물', '한식', '중식', '일식', '양식', '분식', '치킨'].map(cat => (
-                            <Badge
-                                key={cat}
-                                variant="outline"
-                                className="text-xs"
-                                style={{
-                                    borderColor: {
-                                        '고기': '#ef4444',
-                                        '면류': '#f59e0b',
-                                        '해산물': '#3b82f6',
-                                        '한식': '#14b8a6',
-                                        '중식': '#ec4899',
-                                        '일식': '#8b5cf6',
-                                        '양식': '#a855f7',
-                                        '분식': '#eab308',
-                                        '치킨': '#f97316',
-                                    }[cat],
-                                    color: {
-                                        '고기': '#ef4444',
-                                        '면류': '#f59e0b',
-                                        '해산물': '#3b82f6',
-                                        '한식': '#14b8a6',
-                                        '중식': '#ec4899',
-                                        '일식': '#8b5cf6',
-                                        '양식': '#a855f7',
-                                        '분식': '#eab308',
-                                        '치킨': '#f97316',
-                                    }[cat],
-                                }}
-                            >
-                                {cat}
-                            </Badge>
-                        ))}
-                    </div>
                 </CardContent>
             </Card>
 
