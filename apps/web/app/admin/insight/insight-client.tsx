@@ -67,9 +67,8 @@ const SectionSkeleton = memo(({ title }: { title: string }) => (
             <CardTitle className="text-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex items-center justify-center min-h-[400px]">
-            <div className="animate-pulse flex flex-col items-center gap-4">
-                <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-muted-foreground text-sm">로딩 중...</span>
+            <div className="flex flex-col items-center gap-4">
+                <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
         </CardContent>
     </Card>
