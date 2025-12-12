@@ -1,0 +1,235 @@
+<h1>🧾 리뷰 영수증 OCR 중복 검사</h1>
+
+<p>리뷰 제출 시 <strong>영수증 이미지를 OCR 처리</strong>하여 동일 영수증으로 중복 리뷰 작성을 방지하는 시스템입니다.</p>
+
+<hr />
+
+<h2>기능 개요</h2>
+
+<table>
+    <thead>
+        <tr>
+            <th>기능</th>
+            <th>설명</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>이미지 압축</strong></td>
+            <td>업로드 전 WebP 변환, 최대 300KB</td>
+        </tr>
+        <tr>
+            <td><strong>영수증 OCR</strong></td>
+            <td>Gemini 2.5 Flash Vision API로 가게명/날짜/시간/금액 추출</td>
+        </tr>
+        <tr>
+            <td><strong>중복 검사</strong></td>
+            <td>SHA-256 해시로 동일 영수증 탐지</td>
+        </tr>
+        <tr>
+            <td><strong>관리자 UI</strong></td>
+            <td>OCR 실행 버튼 + 중복 경고 + 승인 차단</td>
+        </tr>
+    </tbody>
+</table>
+
+<hr />
+
+<h2>아키텍처</h2>
+
+<excalidraw data-path="data/ocr-flow.json"></excalidraw>
+
+<p></p>
+
+<hr />
+
+<h2>파일 구조</h2>
+
+<pre><code>apps/web/
+├── components/reviews/
+│   └── ReviewModal.tsx              # 이미지 압축 (compressImage)
+├── components/admin/
+│   └── SubmissionListView.tsx       # 리뷰 검수 UI
+│       ├── OCR 상태 표시 (대기/중복 카운트)
+│       ├── OCR 실행 버튼
+│       ├── 중복 영수증 행 빨간색 하이라이트
+│       └── 이미지 확대 모달 (클릭 시)
+└── app/api/admin/
+    └── ocr-receipts/route.ts        # OCR API Route
+
+backend/
+└── geminiCLI-ocr-receipts/
+    ├── package.json
+    └── ocr-receipts.js              # OCR 처리 스크립트
+
+.github/workflows/
+└── ocr-review-receipts.yml          # 스케줄 + 수동 트리거</code></pre>
+
+<hr />
+
+<h2>DB 스키마 (v3.4 추가)</h2>
+
+<pre><code>ALTER TABLE public.reviews 
+  ADD COLUMN receipt_hash TEXT,           -- SHA-256 해시
+  ADD COLUMN receipt_data JSONB,          -- OCR 결과
+  ADD COLUMN is_duplicate BOOLEAN,        -- 중복 여부
+  ADD COLUMN ocr_processed_at TIMESTAMPTZ; -- 처리 시각
+
+-- 유니크 인덱스 (중복 시 NULL로 저장하여 회피)
+CREATE UNIQUE INDEX idx_reviews_receipt_hash 
+  ON public.reviews(receipt_hash) 
+  WHERE receipt_hash IS NOT NULL;</code></pre>
+
+<hr />
+
+<h2>receipt_data 스키마</h2>
+
+<h3>정상 추출 시</h3>
+<pre><code>{
+  "store_name": "가게명",
+  "date": "YYYY-MM-DD",
+  "time": "HH:MM",
+  "total_amount": 15000,
+  "items": ["메뉴1", "메뉴2"],
+  "confidence": 0.95,
+  "duplicate_of": "원본_리뷰_ID"  // 중복 시에만 존재
+}</code></pre>
+
+<h3>오류 시</h3>
+<pre><code>{
+  "error": "not_receipt | unreadable | low_quality | parse_failed",
+  "confidence": 0.0
+}</code></pre>
+
+<hr />
+
+<h2>환경 변수</h2>
+
+<h3>로컬 (apps/web/.env.local)</h3>
+<pre><code>SUPABASE_SERVICE_ROLE_KEY=eyJ...
+GITHUB_TOKEN=github_pat_...
+GITHUB_OWNER=your-username
+GITHUB_REPO=tzudong</code></pre>
+
+<h3>GitHub Secrets</h3>
+<table>
+    <thead>
+        <tr>
+            <th>변수</th>
+            <th>설명</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>SUPABASE_URL</code></td>
+            <td>Supabase 프로젝트 URL</td>
+        </tr>
+        <tr>
+            <td><code>SUPABASE_SERVICE_ROLE_KEY</code></td>
+            <td>서비스 역할 키</td>
+        </tr>
+        <tr>
+            <td><code>GOOGLE_API_KEY_BYEON</code></td>
+            <td>Gemini API 키</td>
+        </tr>
+    </tbody>
+</table>
+
+<hr />
+
+<h2>사용 방법</h2>
+
+<ol>
+    <li><strong>리뷰 검수 탭</strong> 접속</li>
+    <li>헤더에서 <strong>OCR 상태</strong> 확인 (대기/중복 카운트)</li>
+    <li><strong>OCR 실행</strong> 버튼 클릭 → GitHub Actions 트리거</li>
+    <li>중복 영수증 리뷰는 <strong>빨간색 행</strong>으로 표시</li>
+    <li>중복 리뷰 클릭 시:
+        <ul>
+            <li><strong>중복 영수증 감지</strong> 경고 및 원본 리뷰 ID 표시</li>
+            <li><strong>승인 버튼 비활성화</strong> (거부만 가능)</li>
+        </ul>
+    </li>
+</ol>
+
+<hr />
+
+<h2>API Endpoints</h2>
+
+<h3>GET /api/admin/ocr-receipts</h3>
+<p>OCR 처리 상태 조회</p>
+<pre><code>{
+  "pending": 5,      // 미처리 리뷰 수
+  "duplicate": 2,    // 중복 감지된 리뷰 수
+  "processed": 100   // 처리 완료된 리뷰 수
+}</code></pre>
+
+<h3>POST /api/admin/ocr-receipts</h3>
+<p>GitHub Actions 워크플로우 수동 트리거</p>
+<pre><code>{
+  "success": true,
+  "message": "OCR 처리가 시작되었습니다."
+}</code></pre>
+
+<hr />
+
+<h2>GitHub Actions 스케줄</h2>
+
+<ul>
+    <li><strong>자동 실행</strong>: 매일 새벽 4시 (KST) - cron: <code>0 19 * * *</code> (UTC)</li>
+    <li><strong>수동 실행</strong>:
+        <ul>
+            <li>관리자 페이지 OCR 실행 버튼</li>
+            <li>GitHub Actions 탭 → Run workflow</li>
+        </ul>
+    </li>
+</ul>
+
+<hr />
+
+<h2>OCR 프롬프트</h2>
+
+<pre><code>당신은 한국어 영수증 OCR 전문가입니다.
+다음 이미지에서 영수증 정보를 추출하여 JSON으로 반환하세요.
+
+{
+  "store_name": "가게명",
+  "date": "YYYY-MM-DD",
+  "time": "HH:MM",
+  "total_amount": 금액(숫자),
+  "items": ["메뉴1", "메뉴2"],
+  "confidence": 0.0~1.0
+}
+
+영수증이 아니거나 읽을 수 없으면:
+{
+  "error": "사유",
+  "confidence": 0.0
+}</code></pre>
+
+<hr />
+
+<h2>해시 생성 규칙</h2>
+
+<pre><code>receipt_hash = SHA-256(store_name | date | time | amount)
+
+예시:
+입력: "맛있는식당|2024-12-11|18:30|25000"
+해시: "4ed18d7db97160cecaf8ec7d848d2393..."</code></pre>
+
+<hr />
+
+<h2>중복 판정 로직</h2>
+
+<ol>
+    <li>새 리뷰의 영수증 OCR 처리</li>
+    <li><code>receipt_hash</code> 생성</li>
+    <li>DB에서 동일 해시 검색</li>
+    <li>중복 발견 시:
+        <ul>
+            <li><code>is_duplicate = true</code></li>
+            <li><code>receipt_data.duplicate_of = 원본_리뷰_ID</code></li>
+            <li>관리자에게 경고 표시</li>
+        </ul>
+    </li>
+</ol>

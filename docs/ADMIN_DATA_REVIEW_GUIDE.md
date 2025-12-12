@@ -172,7 +172,7 @@ function normalizeAddress(address: string): string {
 ## 4. 관리자 데이터 검수 (AdminReviewPanel)
 
 ### 4.1 위치
-- **파일**: `components/admin/AdminReviewPanel.tsx`
+- **파일**: `apps/web/components/admin/AdminReviewPanel.tsx`
 - **접근**: 홈 화면 → 관리자 메뉴 → "데이터 검수"
 
 ### 4.2 대상 데이터
@@ -254,7 +254,7 @@ function normalizeAddress(address: string): string {
 ## 5. 사용자 제보 관리 (AdminSubmissionPanel)
 
 ### 5.1 위치
-- **파일**: `components/admin/AdminSubmissionPanelV2.tsx`
+- **파일**: `apps/web/components/admin/SubmissionListView.tsx`
 - **접근**: 홈 화면 → 관리자 메뉴 → "제보 관리"
 
 ### 5.2 검토 단계 (4단계 워크플로우)

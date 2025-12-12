@@ -1,15 +1,4 @@
-﻿<h1>데이터베이스 가이드</h1>
-
-<p><strong>데이터베이스</strong>는 모든 맛집 정보, 사용자 정보, 리뷰 등을 저장하는 창고예요. Supabase라는 서비스를 사용합니다.</p>
-
-<hr />
-
-<h2>데이터베이스란?</h2>
-
-<p><strong>데이터베이스</strong>를 쉽게 설명하면 <strong>엑셀 표</strong>와 비슷해요!</p>
-
-<pre><code>
- 엑셀 시트 = 데이터베이스 테이블
+<h1>데이터베이스 가이드</h1><p><strong>데이터베이스</strong>는 모든 맛집 정보, 사용자 정보, 리뷰 등을 저장하는 창고예요. Supabase라는 서비스를 사용합니다.</p><p><em>📅 최종 수정: 2025년 12월 11일 (v3.4)</em></p><hr><h2>v3.4 주요 변경사항</h2><ul><li><p>✅ <strong>리뷰 OCR 중복 검사 시스템 추가</strong> - 영수증 해시로 중복 리뷰 방지</p></li><li><p>✅ <strong>RLS 정책 성능 최적화</strong> - <code>auth.uid()</code> → <code>(SELECT auth.uid())</code></p></li><li><p>✅ <strong>Materialized View 보안 강화</strong> - 직접 접근 차단, 함수 래퍼로 접근</p></li><li><p>✅ <strong>Extension 스키마 분리</strong> - extensions 스키마로 이동</p></li><li><p>✅ <strong>모니터링 뷰 → 함수로 변경</strong></p></li></ul><hr><h2>데이터베이스란?</h2><p><strong>데이터베이스</strong>를 쉽게 설명하면 <strong>엑셀 표</strong>와 비슷해요!</p><pre><code> 엑셀 시트 = 데이터베이스 테이블
 
 
   맛집 목록 (restaurants 테이블)                     
@@ -18,43 +7,7 @@
 
  1     맛있는집     서울시 강남구...    9.5         
  2     멋진식당     부산시 해운대구...  8.7         
- 3     좋은음식점   대구시 중구...      9.0         
-
-</code></pre>
-
-<p>엑셀처럼 <strong>행(row)</strong>과 <strong>열(column)</strong>로 데이터를 정리해요:</p>
-<ul>
-  <li><strong>테이블(Table)</strong> = 엑셀 시트 하나 (예: 맛집 목록, 사용자 목록)</li>
-  <li><strong>행(Row)</strong> = 시트의 한 줄 (예: 맛집 하나의 정보)</li>
-  <li><strong>열(Column)</strong> = 시트의 세로줄 (예: 이름, 주소, 별점)</li>
-</ul>
-
-<hr />
-
-<h2>Supabase란?</h2>
-
-<p><strong>Supabase</strong>는 데이터베이스를 쉽게 사용할 수 있게 해주는 서비스예요:</p>
-
-<ul>
-  <li><strong>웹 대시보드</strong> - 브라우저에서 데이터를 직접 보고 수정할 수 있어요</li>
-  <li><strong>자동 API</strong> - 테이블을 만들면 데이터를 가져오는 API가 자동으로 생성돼요</li>
-  <li><strong>인증</strong> - Google 로그인 같은 기능을 쉽게 구현할 수 있어요</li>
-  <li><strong>실시간</strong> - 데이터가 바뀌면 실시간으로 화면에 반영할 수 있어요</li>
-</ul>
-
-<p>내부적으로는 <strong>PostgreSQL</strong>이라는 오랜 역사의 안정적인 데이터베이스를 사용해요.</p>
-
-<hr />
-
-<h2>테이블 목록</h2>
-
-<p>쯔동여지도에서 사용하는 모든 테이블이에요:</p>
-
-<database-view data-path="data/database-tables.json"></database-view>
-
-<h3>테이블별 역할 설명</h3>
-
-<pre><code>
+ 3     좋은음식점   대구시 중구...      9.0         </code></pre><p>엑셀처럼 <strong>행(row)</strong>과 <strong>열(column)</strong>로 데이터를 정리해요:</p><ul><li><p><strong>테이블(Table)</strong> = 엑셀 시트 하나 (예: 맛집 목록, 사용자 목록)</p></li><li><p><strong>행(Row)</strong> = 시트의 한 줄 (예: 맛집 하나의 정보)</p></li><li><p><strong>열(Column)</strong> = 시트의 세로줄 (예: 이름, 주소, 별점)</p></li></ul><hr><h2>Supabase란?</h2><p><strong>Supabase</strong>는 데이터베이스를 쉽게 사용할 수 있게 해주는 서비스예요:</p><ul><li><p><strong>웹 대시보드</strong> - 브라우저에서 데이터를 직접 보고 수정할 수 있어요</p></li><li><p><strong>자동 API</strong> - 테이블을 만들면 데이터를 가져오는 API가 자동으로 생성돼요</p></li><li><p><strong>인증</strong> - Google 로그인 같은 기능을 쉽게 구현할 수 있어요</p></li><li><p><strong>실시간</strong> - 데이터가 바뀌면 실시간으로 화면에 반영할 수 있어요</p></li></ul><p>내부적으로는 <strong>PostgreSQL</strong>이라는 오랜 역사의 안정적인 데이터베이스를 사용해요.</p><hr><h2>테이블 목록</h2><p>쯔동여지도에서 사용하는 모든 테이블이에요:</p><database-view data-path="data/database-tables.json"></database-view><h3>테이블별 역할 설명</h3><pre><code>
  테이블 구조
 
 
@@ -99,17 +52,7 @@
    notifications (알림)                                    
      사용자에게 보내는 알림 (제보 승인됨, 좋아요 받음 등)        
 
-</code></pre>
-
-<hr />
-
-<h2>핵심 테이블: restaurants</h2>
-
-<p>가장 중요한 <strong>맛집 테이블</strong>을 자세히 알아볼게요!</p>
-
-<h3>기본 정보</h3>
-<p>맛집의 기본적인 정보예요:</p>
-<pre><code>
+</code></pre><hr><h2>핵심 테이블: restaurants</h2><p>가장 중요한 <strong>맛집 테이블</strong>을 자세히 알아볼게요!</p><h3>기본 정보</h3><p>맛집의 기본적인 정보예요:</p><pre><code>
 
  컬럼 이름        설명                                   
 
@@ -119,11 +62,7 @@
  categories      음식 종류 (예: ["한식", "삼겹살"])       
  description     맛집 설명                               
 
-</code></pre>
-
-<h3>위치 정보</h3>
-<p>맛집의 위치를 저장해요 (지도에 표시하려면 필요!):</p>
-<pre><code>
+</code></pre><h3>위치 정보</h3><p>맛집의 위치를 저장해요 (지도에 표시하려면 필요!):</p><pre><code>
 
  컬럼 이름        설명                                   
 
@@ -133,18 +72,7 @@
  jibun_address   지번 주소 (예: "서울시 강남구 역삼동 123")  
  origin_address  AI가 크롤링한 원본 주소 (JSON 형태)       
 
-</code></pre>
-
-<p><strong>위도(lat)와 경도(lng)란?</strong></p>
-<ul>
-  <li><strong>위도</strong>: 지구의 세로 위치 (적도를 0으로, 북쪽은 +, 남쪽은 -)</li>
-  <li><strong>경도</strong>: 지구의 가로 위치 (영국 그리니치를 0으로, 동쪽은 +, 서쪽은 -)</li>
-  <li>서울은 대략 위도 37.5, 경도 127 근처예요</li>
-</ul>
-
-<h3>YouTube 연동</h3>
-<p>쯔양님의 영상 정보와 연결해요:</p>
-<pre><code>
+</code></pre><p><strong>위도(lat)와 경도(lng)란?</strong></p><ul><li><p><strong>위도</strong>: 지구의 세로 위치 (적도를 0으로, 북쪽은 +, 남쪽은 -)</p></li><li><p><strong>경도</strong>: 지구의 가로 위치 (영국 그리니치를 0으로, 동쪽은 +, 서쪽은 -)</p></li><li><p>서울은 대략 위도 37.5, 경도 127 근처예요</p></li></ul><h3>YouTube 연동</h3><p>쯔양님의 영상 정보와 연결해요:</p><pre><code>
 
  컬럼 이름        설명                                   
 
@@ -153,11 +81,7 @@
  youtube_meta    영상 정보 (제목, 썸네일, 업로드 날짜)     
  unique_id       중복 방지용 고유 ID (해시값)             
 
-</code></pre>
-
-<h3>쿠양 리뷰</h3>
-<p>쿠양님의 리뷰 정보예요:</p>
-<pre><code>
+</code></pre><h3>쿠양 리뷰</h3><p>쿠양님의 리뷰 정보예요:</p><pre><code>
 
  컨럼 이름             설명                              
 
@@ -170,11 +94,7 @@
  reasoning_basis      AI가 이 맛집을 추출한 근거          
                       (예: "자막에서 식당명 확인")
 
-</code></pre>
-
-<h3>상태 관리</h3>
-<p>맛집의 승인 상태를 관리해요:</p>
-<pre><code>
+</code></pre><h3>상태 관리</h3><p>맛집의 승인 상태를 관리해요:</p><pre><code>
 
  컬럼 이름           설명                                
 
@@ -191,31 +111,7 @@
  geocoding_success  주소를 좌표로 바꾸는데 성공했는지     
                     (true/false)                        
 
-</code></pre>
-
-<hr />
-
-<h2>RLS - 데이터 보안</h2>
-
-<p><strong>RLS (Row Level Security)</strong>는 "누가 어떤 데이터를 볼 수 있는지" 제한하는 기능이에요.</p>
-
-<h3>왜 필요한가요?</h3>
-<p>만약 RLS가 없다면...</p>
-<ul>
-  <li> 아무나 다른 사람의 프로필을 수정할 수 있음</li>
-  <li> 승인되지 않은 맛집이 지도에 보일 수 있음</li>
-  <li> 다른 사람의 리뷰를 삭제할 수 있음</li>
-</ul>
-
-<p>RLS를 적용하면...</p>
-<ul>
-  <li> 내 프로필만 수정 가능</li>
-  <li> 승인된 맛집만 보임</li>
-  <li> 내 리뷰만 수정/삭제 가능</li>
-</ul>
-
-<h3>일반 사용자의 권한</h3>
-<pre><code>
+</code></pre><hr><h2>RLS - 데이터 보안</h2><p><strong>RLS (Row Level Security)</strong>는 "누가 어떤 데이터를 볼 수 있는지" 제한하는 기능이에요.</p><h3>왜 필요한가요?</h3><p>만약 RLS가 없다면...</p><ul><li><p>아무나 다른 사람의 프로필을 수정할 수 있음</p></li><li><p>승인되지 않은 맛집이 지도에 보일 수 있음</p></li><li><p>다른 사람의 리뷰를 삭제할 수 있음</p></li></ul><p>RLS를 적용하면...</p><ul><li><p>내 프로필만 수정 가능</p></li><li><p>승인된 맛집만 보임</p></li><li><p>내 리뷰만 수정/삭제 가능</p></li></ul><h3>일반 사용자의 권한</h3><pre><code>
 
  일반 사용자 (user)                                          
 
@@ -236,10 +132,7 @@
      수정: 본인 프로필만 수정 가능                          
                                                              
 
-</code></pre>
-
-<h3>관리자의 권한</h3>
-<pre><code>
+</code></pre><h3>관리자의 권한</h3><pre><code>
 
  관리자 (admin)                                              
 
@@ -258,10 +151,7 @@
      역할 변경 (user  admin)                              
                                                              
 
-</code></pre>
-
-<h3>RLS 정책 예시 코드</h3>
-<pre><code>-- 승인된 맛집만 조회 가능하게 하는 정책
+</code></pre><h3>RLS 정책 예시 코드</h3><pre><code>-- 승인된 맛집만 조회 가능하게 하는 정책
 CREATE POLICY "일반 사용자는 승인된 맛집만 조회"
 ON restaurants
 FOR SELECT                    -- 조회할 때만 적용
@@ -279,16 +169,7 @@ FOR UPDATE                   -- 수정할 때만 적용
 TO authenticated
 USING (
   user_id = auth.uid()       -- 작성자 ID가 본인인 경우만
-);</code></pre>
-
-<hr />
-
-<h2>성능 최적화 - 인덱스</h2>
-
-<p><strong>인덱스(Index)</strong>는 책의 <strong>목차</strong>와 같아요!</p>
-
-<h3>인덱스가 없다면?</h3>
-<pre><code>
+);</code></pre><hr><h2>성능 최적화 - 인덱스</h2><p><strong>인덱스(Index)</strong>는 책의 <strong>목차</strong>와 같아요!</p><h3>인덱스가 없다면?</h3><pre><code>
  500페이지 책에서 "데이터베이스" 단어 찾기
 
  인덱스 없이: 1페이지부터 500페이지까지 모두 읽어야 함
@@ -296,10 +177,7 @@ USING (
 
  인덱스 있으면: 목차에서 "데이터베이스  123페이지" 확인
     바로 찾을 수 있음!
-</code></pre>
-
-<h3>적용된 인덱스들</h3>
-<pre><code>
+</code></pre><h3>적용된 인덱스들</h3><pre><code>
 
  인덱스 이름                     용도                     
 
@@ -318,44 +196,7 @@ USING (
  idx_restaurants_approved       승인된 것만 모아둔       
  WHERE status='approved'        부분 인덱스 (더 빠름)    
 
-</code></pre>
-
-<hr />
-
-<h2>백업 및 복구</h2>
-
-<p>데이터가 날아가면 안 되겠죠? 정기적으로 백업해야 해요!</p>
-
-<h3>연결 정보</h3>
-<table>
-  <tbody>
-    <tr>
-      <td><strong>Host</strong></td>
-      <td><code>aws-1-ap-southeast-1.pooler.supabase.com</code></td>
-    </tr>
-    <tr>
-      <td><strong>Port</strong></td>
-      <td><code>5432</code></td>
-    </tr>
-    <tr>
-      <td><strong>User</strong></td>
-      <td><code>postgres.aqlcofblfxdrjhhdmarw</code></td>
-    </tr>
-    <tr>
-      <td><strong>Database</strong></td>
-      <td><code>postgres</code></td>
-    </tr>
-    <tr>
-      <td><strong>Password</strong></td>
-      <td>Supabase Dashboard → Project Settings → Database에서 확인</td>
-    </tr>
-  </tbody>
-</table>
-
-<h3>데이터베이스 백업하기</h3>
-
-<h4>Windows PowerShell</h4>
-<pre><code># 1. 현재 날짜로 파일명 만들기
+</code></pre><hr><h2>백업 및 복구</h2><p>데이터가 날아가면 안 되겠죠? 정기적으로 백업해야 해요!</p><h3>연결 정보</h3><p><strong>Host</strong> <code>aws-1-ap-southeast-1.pooler.supabase.com</code> <strong>Port</strong> <code>5432</code> <strong>User</strong> <code>postgres.aqlcofblfxdrjhhdmarw</code> <strong>Database</strong> <code>postgres</code> <strong>Password</strong> Supabase Dashboard → Project Settings → Database에서 확인</p><h3>데이터베이스 백업하기</h3><p>Windows PowerShell</p><pre><code># 1. 현재 날짜로 파일명 만들기
 $timestamp = Get-Date -Format "yyyy-MM-dd_HHmmss"
 
 # 2. 비밀번호 설정 (환경변수로)
@@ -368,86 +209,24 @@ pg_dump -h aws-1-ap-southeast-1.pooler.supabase.com `
   -d postgres `
   -f "supabase\backup-db\backup_$timestamp.sql"
 
-# 결과: supabase\backup-db\backup_2025-01-15_143022.sql 파일 생성됨</code></pre>
-
-<h4>macOS / Linux</h4>
-<pre><code># 백업
+# 결과: supabase\backup-db\backup_2025-01-15_143022.sql 파일 생성됨</code></pre><p>macOS / Linux</p><pre><code># 백업
 timestamp=$(date +"%Y-%m-%d_%H%M%S")
 PGPASSWORD='[YOUR_PASSWORD]' pg_dump \
   -h aws-1-ap-southeast-1.pooler.supabase.com \
   -p 5432 \
   -U postgres.aqlcofblfxdrjhhdmarw \
   -d postgres \
-  -f "supabase/backup-db/backup_$timestamp.sql"</code></pre>
-
-<h3>백업에서 복구하기</h3>
-
-<h4>Windows PowerShell</h4>
-<pre><code>$env:PGPASSWORD = '[YOUR_PASSWORD]'
+  -f "supabase/backup-db/backup_$timestamp.sql"</code></pre><h3>백업에서 복구하기</h3><p>Windows PowerShell</p><pre><code>$env:PGPASSWORD = '[YOUR_PASSWORD]'
 psql -h aws-1-ap-southeast-1.pooler.supabase.com `
   -p 5432 `
   -U postgres.aqlcofblfxdrjhhdmarw `
   -d postgres `
-  -f "supabase\backup-db\backup_2025-01-15_143022.sql"</code></pre>
-
-<h4>macOS / Linux</h4>
-<pre><code>PGPASSWORD='[YOUR_PASSWORD]' psql \
+  -f "supabase\backup-db\backup_2025-01-15_143022.sql"</code></pre><p>macOS / Linux</p><pre><code>PGPASSWORD='[YOUR_PASSWORD]' psql \
   -h aws-1-ap-southeast-1.pooler.supabase.com \
   -p 5432 \
   -U postgres.aqlcofblfxdrjhhdmarw \
   -d postgres \
-  -f "supabase/backup-db/backup_2025-01-15_143022.sql"</code></pre>
-
-<h3>주의사항</h3>
-<ul>
-  <li><strong>정기 백업</strong>: 매일 또는 매주 백업 권장</li>
-  <li><strong>백업 파일 보관</strong>: 다른 곳에도 저장 (클라우드, 외장하드)</li>
-  <li><strong>복구 테스트</strong>: 가끔 복구가 잘 되는지 확인</li>
-  <li><strong>비밀번호</strong>: <code>[YOUR_PASSWORD]</code>를 실제 비밀번호로 교체</li>
-</ul>
-
-<hr />
-
-<h2>중복 검사 시스템</h2>
-
-<p>맛집 승인 시 <strong>기존 데이터와의 중복을 자동으로 감지</strong>하는 시스템이 적용되어 있습니다.</p>
-
-<h3>동작 원리</h3>
-<ul>
-  <li>Levenshtein Distance 알고리즘 사용</li>
-  <li>이름 유사도 <strong>85% 이상</strong>이면 중복으로 판정</li>
-  <li>같은 지역(지번주소 앞 20자) 내에서만 비교 (성능 최적화)</li>
-</ul>
-
-<h3>관련 DB 컬럼</h3>
-<table>
-  <thead>
-    <tr>
-      <th>컬럼</th>
-      <th>설명</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>db_error_message</code></td>
-      <td>중복 에러 메시지 (사용자 표시용)</td>
-    </tr>
-    <tr>
-      <td><code>db_error_details</code></td>
-      <td>중복된 맛집 정보 (JSONB)</td>
-    </tr>
-  </tbody>
-</table>
-
-<p>자세한 내용은 <a href="14-duplicate-check.html"><strong>중복 검사 시스템 문서</strong></a>를 참조하세요.</p>
-
-<hr />
-
-<h2>자주 사용하는 함수들</h2>
-
-<p>데이터베이스에 미리 만들어둔 유용한 함수들이에요:</p>
-
-<pre><code>
+  -f "supabase/backup-db/backup_2025-01-15_143022.sql"</code></pre><h3>주의사항</h3><ul><li><p><strong>정기 백업</strong>: 매일 또는 매주 백업 권장</p></li><li><p><strong>백업 파일 보관</strong>: 다른 곳에도 저장 (클라우드, 외장하드)</p></li><li><p><strong>복구 테스트</strong>: 가끔 복구가 잘 되는지 확인</p></li><li><p><strong>비밀번호</strong>: <code>[YOUR_PASSWORD]</code>를 실제 비밀번호로 교체</p></li></ul><hr><h2>중복 검사 시스템</h2><p>맛집 승인 시 <strong>기존 데이터와의 중복을 자동으로 감지</strong>하는 시스템이 적용되어 있습니다.</p><h3>동작 원리</h3><ul><li><p>Levenshtein Distance 알고리즘 사용</p></li><li><p>이름 유사도 <strong>85% 이상</strong>이면 중복으로 판정</p></li><li><p>같은 지역(지번주소 앞 20자) 내에서만 비교 (성능 최적화)</p></li></ul><h3>관련 DB 컬럼</h3><p>컬럼 설명 <code>db_error_message</code> 중복 에러 메시지 (사용자 표시용) <code>db_error_details</code> 중복된 맛집 정보 (JSONB)</p><p>자세한 내용은 <a target="_blank" rel="noopener noreferrer nofollow" href="14-duplicate-check.html"><strong>중복 검사 시스템 문서</strong></a>를 참조하세요.</p><hr><h2>📷 리뷰 OCR 중복 검사 (v3.4 신규)</h2><p>영수증 이미지를 OCR 처리하여 동일 영수증으로 중복 리뷰를 방지합니다.</p><h3>동작 원리</h3><ul><li><p><strong>Gemini 2.5 Flash Vision API</strong>로 영수증 정보 추출</p></li><li><p>가게명, 날짜, 시간, 금액으로 <strong>SHA-256 해시</strong> 생성</p></li><li><p>동일 해시 발견 시 <strong>중복 플래그</strong> 설정</p></li></ul><h3>관련 DB 컬럼 (reviews 테이블)</h3><p>컬럼 타입 설명 <code>receipt_hash</code> TEXT SHA-256 영수증 해시 <code>receipt_data</code> JSONB OCR 추출 데이터 (가게명, 날짜, 금액 등) <code>is_duplicate</code> BOOLEAN 중복 영수증 여부 <code>ocr_processed_at</code> TIMESTAMPTZ OCR 처리 완료 시각</p><p>자세한 내용은 <a target="_blank" rel="noopener noreferrer nofollow" href="16-ocr-system.html"><strong>OCR 시스템 문서</strong></a>를 참조하세요.</p><hr><h2>자주 사용하는 함수들</h2><p>데이터베이스에 미리 만들어둔 유용한 함수들이에요:</p><pre><code>
 
  함수 이름                           하는 일               
 
@@ -466,15 +245,18 @@ psql -h aws-1-ap-southeast-1.pooler.supabase.com `
  is_admin(user_id)                   이 사용자가           
                                      관리자인지 확인       
 
-</code></pre>
+ get_restaurant_stats()              맛집 통계 조회        
+                                     (MV 래퍼 함수)       
 
-<hr />
+ get_user_leaderboard()              사용자 리더보드 조회  
+                                     (MV 래퍼 함수)       
 
-<h2>테이블 관계도</h2>
+ get_popular_reviews()               인기 리뷰 조회        
+                                     (MV 래퍼 함수)       
 
-<p>테이블들이 어떻게 연결되어 있는지 보여드릴게요:</p>
+ refresh_materialized_views()        모든 MV 새로고침      
 
-<pre><code>
+</code></pre><p><strong>⚠️ v3.3 이후</strong>: Materialized View는 직접 접근 불가, 함수를 통해서만 접근해야 합니다.</p><hr><h2>테이블 관계도</h2><p>테이블들이 어떻게 연결되어 있는지 보여드릴게요:</p><pre><code>
                         
                            auth.users        
                            (Supabase 인증)    
@@ -524,20 +306,4 @@ psql -h aws-1-ap-southeast-1.pooler.supabase.com `
 1:N  = 한 사용자  여러 리뷰 (1대다)
 N:1  = 여러 리뷰  한 맛집 (다대1)
 N:M  = 여러 사용자  여러 리뷰 좋아요 (다대다)
-</code></pre>
-
-<hr />
-
-<h2>자주 묻는 질문</h2>
-
-<h3>Q: 데이터가 안 보여요!</h3>
-<p><strong>A:</strong> RLS 때문일 수 있어요. 관리자 권한이 필요한 데이터일 수 있습니다.</p>
-
-<h3>Q: 데이터 수정이 안 돼요!</h3>
-<p><strong>A:</strong> 본인 데이터만 수정 가능해요. 다른 사람 데이터는 관리자만 수정 가능합니다.</p>
-
-<h3>Q: 새 맛집이 지도에 안 보여요!</h3>
-<p><strong>A:</strong> status가 'pending'이면 지도에 안 보여요. 관리자가 'approved'로 바꿔야 합니다.</p>
-
-<h3>Q: 검색이 느려요!</h3>
-<p><strong>A:</strong> 인덱스가 제대로 적용됐는지 확인하세요. `EXPLAIN ANALYZE` 명령으로 성능 분석 가능해요.</p>
+</code></pre><hr><h2>자주 묻는 질문</h2><h3>Q: 데이터가 안 보여요!</h3><p><strong>A:</strong> RLS 때문일 수 있어요. 관리자 권한이 필요한 데이터일 수 있습니다.</p><h3>Q: 데이터 수정이 안 돼요!</h3><p><strong>A:</strong> 본인 데이터만 수정 가능해요. 다른 사람 데이터는 관리자만 수정 가능합니다.</p><h3>Q: 새 맛집이 지도에 안 보여요!</h3><p><strong>A:</strong> status가 'pending'이면 지도에 안 보여요. 관리자가 'approved'로 바꿔야 합니다.</p><h3>Q: 검색이 느려요!</h3><p><strong>A:</strong> 인덱스가 제대로 적용됐는지 확인하세요. `EXPLAIN ANALYZE` 명령으로 성능 분석 가능해요.</p>

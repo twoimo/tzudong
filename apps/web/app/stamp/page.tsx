@@ -31,6 +31,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 
 // 지역 목록
 const REGIONS = [
@@ -311,6 +312,10 @@ export default function StampPage() {
     }, [userReviews]);
 
     // --- Data Fetching: Restaurants ---
+    // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
+    const { data: allMergedRestaurants = [] } = useRestaurants({ enabled: true });
+    const totalRestaurantCount = allMergedRestaurants.length;
+
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
     const { data: allRestaurants = [], isLoading: isLoadingAllRestaurants } = useQuery({
         queryKey: ['all-restaurants', searchQuery],
@@ -365,37 +370,17 @@ export default function StampPage() {
         enabled: !searchQuery.trim(),
     });
 
-    // 데이터 병합 및 필터링 로직
+    // 데이터 병합 및 필터링 로직 (hooks의 mergeRestaurants 사용)
     const rawRestaurants = useMemo(() => {
         return restaurantsData?.pages.flatMap(page => page.restaurants) || [];
     }, [restaurantsData]);
 
-    const mergeRestaurants = useCallback((restaurantList: Restaurant[]) => {
-        const mergedMap = new Map<string, Restaurant>();
-        restaurantList.forEach(restaurant => {
-            const address = restaurant.road_address || restaurant.jibun_address || restaurant.address || '';
-            const key = `${restaurant.name}_${address}`;
-            if (mergedMap.has(key)) {
-                const existing = mergedMap.get(key)!;
-                mergedMap.set(key, {
-                    ...existing,
-                    youtube_link: existing.youtube_link || restaurant.youtube_link,
-                    youtube_meta: existing.youtube_meta || restaurant.youtube_meta,
-                    tzuyang_review: existing.tzuyang_review || restaurant.tzuyang_review,
-                    review_count: Math.max(existing.review_count || 0, restaurant.review_count || 0),
-                });
-            } else {
-                mergedMap.set(key, restaurant);
-            }
-        });
-        return Array.from(mergedMap.values());
-    }, []);
-
-    const restaurants = useMemo(() => mergeRestaurants(rawRestaurants), [rawRestaurants, mergeRestaurants]);
-    const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants), [allRestaurants, mergeRestaurants]);
+    const restaurants = useMemo(() => mergeRestaurants(rawRestaurants as any), [rawRestaurants]);
+    const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants as any), [allRestaurants]);
 
     const filteredAndSortedRestaurants = useMemo(() => {
-        const sourceData = searchQuery.trim() ? mergedAllRestaurants : restaurants;
+        // 검색어가 있으면 검색 결과, 없으면 useRestaurants 훅의 전체 데이터 사용
+        const sourceData = searchQuery.trim() ? mergedAllRestaurants : allMergedRestaurants;
         if (!sourceData || sourceData.length === 0) return [];
 
         let result = [...sourceData];
@@ -477,15 +462,31 @@ export default function StampPage() {
         return result;
     }, [restaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
+    // --- 클라이언트 측 페이지네이션: 50개씩 표시 ---
+    const [displayLimit, setDisplayLimit] = useState(50);
+
+    // 필터 변경 시 표시 개수 리셋
+    useEffect(() => {
+        setDisplayLimit(50);
+    }, [filters, sortColumn, sortDirection, searchQuery]);
+
+    // 현재 표시할 맛집 목록 (displayLimit까지만)
+    const displayedRestaurants = useMemo(() => {
+        return filteredAndSortedRestaurants.slice(0, displayLimit);
+    }, [filteredAndSortedRestaurants, displayLimit]);
+
+    // 더 불러올 데이터가 있는지 확인
+    const hasMoreToDisplay = displayLimit < filteredAndSortedRestaurants.length;
+
     // --- Infinite Scroll Observer ---
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
 
     const loadMoreRestaurants = useCallback(() => {
-        if (hasNextRestaurantPage && !isFetchingNextRestaurantPage) {
-            fetchNextRestaurants();
+        if (hasMoreToDisplay) {
+            setDisplayLimit(prev => prev + 50);
         }
-    }, [hasNextRestaurantPage, isFetchingNextRestaurantPage, fetchNextRestaurants]);
+    }, [hasMoreToDisplay]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -720,12 +721,7 @@ export default function StampPage() {
                                     </h1>
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    총 {filteredAndSortedRestaurants.length}개의 맛집
-                                    {activeFilterCount > 0 && (
-                                        <span className="ml-2 text-primary font-medium">
-                                            ({activeFilterCount}개 필터 적용 중)
-                                        </span>
-                                    )}
+                                    전체 {totalRestaurantCount.toLocaleString()}개
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
@@ -893,7 +889,7 @@ export default function StampPage() {
                         {viewMode === 'grid' ? (
                             /* Grid View */
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                {filteredAndSortedRestaurants.map((restaurant, index) => (
+                                {displayedRestaurants.map((restaurant, index) => (
                                     <RestaurantCard
                                         key={`${restaurant.id}-${index}`}
                                         restaurant={restaurant}
@@ -902,7 +898,14 @@ export default function StampPage() {
                                         onClick={handleRestaurantClick}
                                     />
                                 ))}
-                                <div ref={loadMoreRef} className="h-4 w-full" />
+                                {/* 무한 스크롤 트리거 및 로딩 표시 */}
+                                <div ref={loadMoreRef} className="col-span-full h-10 flex items-center justify-center">
+                                    {hasMoreToDisplay && (
+                                        <span className="text-sm text-muted-foreground">
+                                            더 불러오는 중... ({displayedRestaurants.length} / {filteredAndSortedRestaurants.length}개)
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             /* List View */
@@ -929,7 +932,7 @@ export default function StampPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredAndSortedRestaurants.map((restaurant) => (
+                                        {displayedRestaurants.map((restaurant) => (
                                             <RestaurantRow
                                                 key={restaurant.id}
                                                 restaurant={restaurant}
@@ -938,8 +941,11 @@ export default function StampPage() {
                                                 onClick={handleRestaurantClick}
                                             />
                                         ))}
+                                        {/* 무한 스크롤 트리거 및 로딩 표시 */}
                                         <TableRow ref={loadMoreTableRef}>
-                                            <TableCell colSpan={4} className="h-4 p-0" />
+                                            <TableCell colSpan={4} className="h-10 text-center text-sm text-muted-foreground">
+                                                {hasMoreToDisplay && `더 불러오는 중... (${displayedRestaurants.length} / ${filteredAndSortedRestaurants.length}개)`}
+                                            </TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>

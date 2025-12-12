@@ -3,41 +3,45 @@
 flowchart LR
     subgraph VISIT["1. Visit"]
         V1[Open Website]
-        V2[View Map]
+        V2[View Map with Markers]
     end
 
     subgraph EXPLORE["2. Explore"]
-        E1[Search]
-        E2[Filter]
+        E1[Search by Name]
+        E2[Filter by Youtuber]
         E3[Click Marker]
     end
 
     subgraph DETAIL["3. Detail"]
         D1[Restaurant Info]
-        D2[YouTube Video]
-        D3[Reviews]
+        D2[Embedded YouTube]
+        D3[User Reviews]
+        D4[Menu & Hours]
     end
 
     subgraph AUTH["4. Auth"]
-        A1[Login]
-        A2[Signup]
+        A1[Email Login]
+        A2[Signup with Nickname]
     end
 
     subgraph ACTION["5. Action"]
         AC1[Write Review]
-        AC2[Submit Restaurant]
-        AC3[Collect Stamp]
+        AC2[Submit New Restaurant]
+        AC3[Upload Receipt]
+        AC4[Get Stamp via OCR]
     end
 
     subgraph MYPAGE["6. MyPage"]
         M1[My Reviews]
         M2[My Submissions]
-        M3[My Stamps]
+        M3[My Stamps Collection]
+        M4[Receipt History]
     end
 
     V1 --> V2 --> EXPLORE
     E1 & E2 --> E3 --> DETAIL
-    D1 & D2 --> D3
+    D1 & D2 & D4 --> D3
     
     AUTH --> ACTION
-    AC1 & AC2 & AC3 --> MYPAGE
+    AC1 & AC2 --> MYPAGE
+    AC3 --> AC4 --> M3 & M4

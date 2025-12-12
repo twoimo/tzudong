@@ -271,6 +271,7 @@ export default function HomeClient() {
                     state.setSearchedRestaurant(null);
                     setMapMode(mode);
                 }}
+                isAdmin={isAdmin}
             />
 
             <HomeControlPanel

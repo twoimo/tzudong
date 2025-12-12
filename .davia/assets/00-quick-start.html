@@ -81,6 +81,7 @@ pnpm dev</code></pre>
     <li><a href="02-for-developers.html">개발자 가이드</a> - 상세 설정 및 폴더 구조</li>
     <li><a href="03-architecture.html">아키텍처</a> - 시스템 구성 이해하기</li>
     <li><a href="07-troubleshooting.html">트러블슈팅</a> - 문제 해결</li>
+    <li><a href="15-admin-guide.html">관리자 가이드</a> - 데이터 검수 및 제보 관리</li>
 </ul>
 
 <hr />
@@ -90,26 +91,66 @@ pnpm dev</code></pre>
 <h3>Supabase (필수)</h3>
 <ol>
     <li><a href="https://supabase.com">supabase.com</a> 접속</li>
-    <li>새 프로젝트 생성</li>
+    <li>새 프로젝트 생성 (Region: Northeast Asia Seoul 권장)</li>
     <li>Settings → API에서 URL과 anon key 복사</li>
 </ol>
 
-<h3>네이버 지도 (국내 지도용)</h3>
-<ol>
-    <li><a href="https://console.ncloud.com">console.ncloud.com</a> 접속</li>
-    <li>Maps → Application 등록</li>
-    <li>Client ID 복사</li>
-</ol>
-
-<h3>Google Maps (해외 지도용)</h3>
+<h3>Google Maps (필수)</h3>
 <ol>
     <li><a href="https://console.cloud.google.com">console.cloud.google.com</a> 접속</li>
     <li>새 프로젝트 생성</li>
-    <li>Maps JavaScript API 활성화</li>
+    <li>Maps JavaScript API, Geocoding API 활성화</li>
     <li>API 키 생성 및 복사</li>
+    <li>⚠️ 빌링 설정 필수 (무료 크레딧 $200/월 제공)</li>
+</ol>
+
+<h3>네이버 지도 Geocoding</h3>
+<p>외부 프록시 서버 사용 시 API 키 불필요:</p>
+<pre><code>http://www.moamodu.com/develop/naver_map_new_proxy.php</code></pre>
+
+<p>직접 사용 시:</p>
+<ol>
+    <li><a href="https://console.ncloud.com">console.ncloud.com</a> 접속</li>
+    <li>Maps → Application 등록 → Geocoding 선택</li>
+    <li>Client ID, Client Secret 복사</li>
+</ol>
+
+<h3>YouTube API</h3>
+<ol>
+    <li>Google Cloud Console → YouTube Data API v3 활성화</li>
+    <li>API 키 생성</li>
 </ol>
 
 <p>더 자세한 환경변수 설정은 <a href="09-environment-variables.html">환경변수 가이드</a>를 참조하세요.</p>
+
+<hr />
+
+<h2>데이터베이스 마이그레이션</h2>
+
+<pre><code># Supabase CLI 로그인
+supabase login
+
+# 프로젝트 연결
+supabase link --project-ref your-project-ref
+
+# 마이그레이션 실행
+supabase db push
+
+# 마이그레이션 확인
+supabase migration list</code></pre>
+
+<hr />
+
+<h2>관리자 계정 설정</h2>
+
+<p>회원가입 후 Supabase SQL Editor에서 실행:</p>
+
+<pre><code>-- 사용자 ID 확인
+SELECT id, email FROM auth.users WHERE email = 'your-email@example.com';
+
+-- 관리자 권한 부여
+INSERT INTO user_roles (user_id, role)
+VALUES ('사용자-id', 'admin');</code></pre>
 
 <hr />
 
