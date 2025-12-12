@@ -47,11 +47,11 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
       { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
       { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
       { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
-      { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
     ];
 
     // [권한 관리] 관리자 메뉴 (hydration 완료 후에만 표시)
     const adminMenuItems = (isHydrated && user && isAdmin) ? [
+      { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
       { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
     ] : [];
 
