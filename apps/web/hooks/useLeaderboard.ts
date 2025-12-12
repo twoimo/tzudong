@@ -105,9 +105,9 @@ export const useLeaderboard = () => {
                     };
                 });
 
-                // 리뷰 수 기준 내림차순 정렬 및 순위 부여
+                // 승인된 리뷰 수 기준 내림차순 정렬 및 순위 부여
                 return users
-                    .sort((a: any, b: any) => b.reviewCount - a.reviewCount)
+                    .sort((a: any, b: any) => b.verifiedReviewCount - a.verifiedReviewCount)
                     .map((user: any, index: number) => ({
                         ...user,
                         rank: index + 1,
