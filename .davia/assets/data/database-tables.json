@@ -30,6 +30,12 @@
         "인덱스": "review_id + user_id (unique)"
     },
     {
+        "테이블": "restaurant_submissions",
+        "설명": "사용자 맛집 제보 (v3.4)",
+        "주요 컬럼": "user_id, youtube_link, restaurant_name, status, review_result",
+        "인덱스": "user_id, status, youtube_link_hash"
+    },
+    {
         "테이블": "user_stats",
         "설명": "사용자 활동 통계",
         "주요 컬럼": "review_count, verified_review_count, trust_score",
