@@ -30,7 +30,7 @@ import {
     PopoverTrigger,
 } from "@/components/ui/popover";
 import { RESTAURANT_CATEGORIES, Restaurant } from "@/types/restaurant";
-import { useRestaurants } from "@/hooks/use-restaurants";
+import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -239,46 +239,15 @@ export default function FilteringPage() {
         return restaurantsData?.pages.flatMap(page => page.restaurants) || [];
     }, [restaurantsData]);
 
-    // 맛집 병합: 동일한 name + address를 가진 맛집들을 하나로 합침
-    const mergeRestaurants = useCallback((restaurantList: Restaurant[]) => {
-        const mergedMap = new Map<string, Restaurant>();
-
-        restaurantList.forEach(restaurant => {
-            const address = restaurant.road_address || restaurant.jibun_address || restaurant.address || '';
-            const key = `${restaurant.name}_${address}`;
-
-            if (mergedMap.has(key)) {
-                const existing = mergedMap.get(key)!;
-
-                // 단일 값 처리: 기존 값 유지, 없으면 새 값 사용
-                const mergedYoutubeLink = existing.youtube_link || restaurant.youtube_link;
-                const mergedTzuyangReview = existing.tzuyang_review || restaurant.tzuyang_review;
-
-                mergedMap.set(key, {
-                    ...existing,
-                    youtube_link: mergedYoutubeLink,
-                    youtube_meta: existing.youtube_meta || restaurant.youtube_meta, // 첫 번째 값 사용
-                    tzuyang_review: mergedTzuyangReview,
-                    // review_count는 더 큰 값 사용
-                    review_count: Math.max(existing.review_count || 0, restaurant.review_count || 0),
-                });
-            } else {
-                mergedMap.set(key, restaurant);
-            }
-        });
-
-        return Array.from(mergedMap.values());
-    }, []);
-
-    // 병합된 맛집 데이터
+    // 병합된 맛집 데이터 (hooks의 mergeRestaurants 사용)
     const restaurants = useMemo(() => {
-        return mergeRestaurants(rawRestaurants);
-    }, [rawRestaurants, mergeRestaurants]);
+        return mergeRestaurants(rawRestaurants as any);
+    }, [rawRestaurants]);
 
     // 검색된 맛집도 병합
     const mergedAllRestaurants = useMemo(() => {
-        return mergeRestaurants(allRestaurants);
-    }, [allRestaurants, mergeRestaurants]);
+        return mergeRestaurants(allRestaurants as any);
+    }, [allRestaurants]);
 
     // 테이블 무한 스크롤을 위한 Intersection Observer
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
@@ -598,8 +567,8 @@ export default function FilteringPage() {
     };
 
     const filteredAndSortedRestaurants = useMemo(() => {
-        // 검색어가 있을 때는 병합된 검색 데이터를 사용, 없으면 병합된 페이징 데이터를 사용
-        const sourceData = searchQuery.trim() ? mergedAllRestaurants : restaurants;
+        // 검색어가 있으면 검색 결과, 없으면 useRestaurants 훅의 전체 데이터 사용
+        const sourceData = searchQuery.trim() ? mergedAllRestaurants : allMergedRestaurants;
         if (!sourceData || sourceData.length === 0) return [];
 
         let result = [...sourceData];

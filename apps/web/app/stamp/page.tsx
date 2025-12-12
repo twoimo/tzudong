@@ -31,7 +31,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
-import { useRestaurants } from "@/hooks/use-restaurants";
+import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 
 // 지역 목록
 const REGIONS = [
@@ -370,37 +370,17 @@ export default function StampPage() {
         enabled: !searchQuery.trim(),
     });
 
-    // 데이터 병합 및 필터링 로직
+    // 데이터 병합 및 필터링 로직 (hooks의 mergeRestaurants 사용)
     const rawRestaurants = useMemo(() => {
         return restaurantsData?.pages.flatMap(page => page.restaurants) || [];
     }, [restaurantsData]);
 
-    const mergeRestaurants = useCallback((restaurantList: Restaurant[]) => {
-        const mergedMap = new Map<string, Restaurant>();
-        restaurantList.forEach(restaurant => {
-            const address = restaurant.road_address || restaurant.jibun_address || restaurant.address || '';
-            const key = `${restaurant.name}_${address}`;
-            if (mergedMap.has(key)) {
-                const existing = mergedMap.get(key)!;
-                mergedMap.set(key, {
-                    ...existing,
-                    youtube_link: existing.youtube_link || restaurant.youtube_link,
-                    youtube_meta: existing.youtube_meta || restaurant.youtube_meta,
-                    tzuyang_review: existing.tzuyang_review || restaurant.tzuyang_review,
-                    review_count: Math.max(existing.review_count || 0, restaurant.review_count || 0),
-                });
-            } else {
-                mergedMap.set(key, restaurant);
-            }
-        });
-        return Array.from(mergedMap.values());
-    }, []);
-
-    const restaurants = useMemo(() => mergeRestaurants(rawRestaurants), [rawRestaurants, mergeRestaurants]);
-    const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants), [allRestaurants, mergeRestaurants]);
+    const restaurants = useMemo(() => mergeRestaurants(rawRestaurants as any), [rawRestaurants]);
+    const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants as any), [allRestaurants]);
 
     const filteredAndSortedRestaurants = useMemo(() => {
-        const sourceData = searchQuery.trim() ? mergedAllRestaurants : restaurants;
+        // 검색어가 있으면 검색 결과, 없으면 useRestaurants 훅의 전체 데이터 사용
+        const sourceData = searchQuery.trim() ? mergedAllRestaurants : allMergedRestaurants;
         if (!sourceData || sourceData.length === 0) return [];
 
         let result = [...sourceData];
