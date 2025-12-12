@@ -1,0 +1,32 @@
+[
+    {
+        "area": "프론트엔드",
+        "technology": "Next.js 16, TypeScript",
+        "purpose": "앱 프레임워크"
+    },
+    {
+        "area": "UI",
+        "technology": "shadcn/ui, Tailwind CSS",
+        "purpose": "컴포넌트 및 스타일링"
+    },
+    {
+        "area": "차트",
+        "technology": "recharts",
+        "purpose": "히트맵 AreaChart"
+    },
+    {
+        "area": "지도",
+        "technology": "Naver Map API",
+        "purpose": "맛집 마커 표시"
+    },
+    {
+        "area": "워드 클라우드",
+        "technology": "d3-cloud",
+        "purpose": "키워드 배치 알고리즘"
+    },
+    {
+        "area": "상태 관리",
+        "technology": "React Query",
+        "purpose": "YouTube API 캐싱"
+    }
+]

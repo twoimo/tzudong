@@ -10,52 +10,7 @@
 
 <h3>필수 환경변수 (7개)</h3>
 
-<table>
-    <thead>
-        <tr>
-            <th>변수명</th>
-            <th>설명</th>
-            <th>발급처</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td><code>NEXT_PUBLIC_SUPABASE_URL</code></td>
-            <td>Supabase 프로젝트 URL</td>
-            <td><a href="https://supabase.com" target="_blank">Supabase Dashboard</a></td>
-        </tr>
-        <tr>
-            <td><code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code></td>
-            <td>Supabase 익명 API 키</td>
-            <td><a href="https://supabase.com" target="_blank">Supabase Dashboard</a></td>
-        </tr>
-        <tr>
-            <td><code>NEXT_PUBLIC_GOOGLE_MAPS_API_KEY</code></td>
-            <td>구글 지도 API 키</td>
-            <td><a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></td>
-        </tr>
-        <tr>
-            <td><code>NEXT_PUBLIC_NAVER_CLIENT_ID</code></td>
-            <td>네이버 클라이언트 ID</td>
-            <td><a href="https://console.ncloud.com" target="_blank">Naver Cloud Console</a></td>
-        </tr>
-        <tr>
-            <td><code>NEXT_PUBLIC_NAVER_CLIENT_SECRET</code></td>
-            <td>네이버 클라이언트 시크릿</td>
-            <td><a href="https://console.ncloud.com" target="_blank">Naver Cloud Console</a></td>
-        </tr>
-        <tr>
-            <td><code>NEXT_PUBLIC_YOUTUBE_API_KEY</code></td>
-            <td>YouTube Data API 키</td>
-            <td><a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></td>
-        </tr>
-        <tr>
-            <td><code>NEXT_OPENAI_API_KEY_BYEON</code></td>
-            <td>OpenAI API 키</td>
-            <td><a href="https://platform.openai.com" target="_blank">OpenAI Platform</a></td>
-        </tr>
-    </tbody>
-</table>
+<database-view data-path="data/env-frontend.json"></database-view>
 
 <h3>프론트엔드 .env.local 템플릿</h3>
 <pre><code># ===================
@@ -92,71 +47,11 @@ NEXT_OPENAI_API_KEY_BYEON=your_openai_api_key</code></pre>
 
 <h3>필수 환경변수</h3>
 
-<table>
-    <thead>
-        <tr>
-            <th>변수명</th>
-            <th>설명</th>
-            <th>용도</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td><code>SUPABASE_URL</code></td>
-            <td>Supabase 프로젝트 URL</td>
-            <td>DB 연결</td>
-        </tr>
-        <tr>
-            <td><code>SUPABASE_SERVICE_KEY</code></td>
-            <td>Supabase 서비스 역할 키</td>
-            <td>RLS 우회 (관리자 권한)</td>
-        </tr>
-        <tr>
-            <td><code>NAVER_CLIENT_ID</code></td>
-            <td>네이버 클라이언트 ID</td>
-            <td>Geocoding API</td>
-        </tr>
-        <tr>
-            <td><code>NAVER_CLIENT_SECRET</code></td>
-            <td>네이버 클라이언트 시크릿</td>
-            <td>Geocoding API</td>
-        </tr>
-        <tr>
-            <td><code>YOUTUBE_API_KEY</code></td>
-            <td>YouTube Data API 키</td>
-            <td>메타데이터 조회</td>
-        </tr>
-    </tbody>
-</table>
+<database-view data-path="data/env-backend-required.json"></database-view>
 
 <h3>선택 환경변수</h3>
 
-<table>
-    <thead>
-        <tr>
-            <th>변수명</th>
-            <th>설명</th>
-            <th>기본값</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td><code>GEMINI_MODEL</code></td>
-            <td>Gemini 모델 버전</td>
-            <td><code>gemini-2.0-flash</code></td>
-        </tr>
-        <tr>
-            <td><code>REQUEST_DELAY</code></td>
-            <td>API 요청 딜레이 (초)</td>
-            <td><code>1</code></td>
-        </tr>
-        <tr>
-            <td><code>MAX_RETRIES</code></td>
-            <td>에러 시 최대 재시도 횟수</td>
-            <td><code>5</code></td>
-        </tr>
-    </tbody>
-</table>
+<database-view data-path="data/env-backend-optional.json"></database-view>
 
 <h3>백엔드 .env 템플릿</h3>
 <pre><code># ===================

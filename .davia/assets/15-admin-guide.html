@@ -17,56 +17,10 @@
 <h2>상태 값 정의</h2>
 
 <h3>restaurants.status</h3>
-<table>
-    <thead>
-        <tr>
-            <th>값</th>
-            <th>설명</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td><code>pending</code></td>
-            <td>대기 (검수 전)</td>
-        </tr>
-        <tr>
-            <td><code>approved</code></td>
-            <td>승인됨 (지도에 표시)</td>
-        </tr>
-        <tr>
-            <td><code>deleted</code></td>
-            <td>삭제됨 (복원 가능)</td>
-        </tr>
-    </tbody>
-</table>
+<database-view data-path="data/admin-restaurant-status.json"></database-view>
 
 <h3>restaurant_submissions.status</h3>
-<table>
-    <thead>
-        <tr>
-            <th>값</th>
-            <th>설명</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr>
-            <td><code>pending</code></td>
-            <td>검토 대기</td>
-        </tr>
-        <tr>
-            <td><code>approved</code></td>
-            <td>전체 승인</td>
-        </tr>
-        <tr>
-            <td><code>partially_approved</code></td>
-            <td>부분 승인 (일부 항목만)</td>
-        </tr>
-        <tr>
-            <td><code>rejected</code></td>
-            <td>전체 거부</td>
-        </tr>
-    </tbody>
-</table>
+<database-view data-path="data/admin-submission-status.json"></database-view>
 
 <hr />
 
