@@ -18,6 +18,7 @@ import {
     Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import cloud from 'd3-cloud';
 
 // [TYPE] 키워드 데이터 타입
 interface KeywordData {
@@ -41,28 +42,168 @@ interface VideoWithKeyword {
 const MOCK_KEYWORDS: KeywordData[] = [
     { keyword: '삼겹살', count: 89, trend: 'up', category: '고기' },
     { keyword: '냉면', count: 67, trend: 'stable', category: '면류' },
+    { keyword: '불고기', count: 62, trend: 'up', category: '고기' },
+    { keyword: '짬뽕', count: 55, trend: 'stable', category: '중식' },
     { keyword: '횟집', count: 54, trend: 'up', category: '해산물' },
     { keyword: '곱창', count: 48, trend: 'down', category: '고기' },
     { keyword: '치킨', count: 45, trend: 'stable', category: '치킨' },
+    { keyword: '우동', count: 44, trend: 'stable', category: '일식' },
     { keyword: '짜장면', count: 42, trend: 'up', category: '중식' },
+    { keyword: '쌀국수', count: 41, trend: 'up', category: '면류' },
+    { keyword: '닭갈비', count: 39, trend: 'up', category: '고기' },
     { keyword: '돈까스', count: 38, trend: 'stable', category: '일식' },
+    { keyword: '회덮밥', count: 36, trend: 'stable', category: '해산물' },
     { keyword: '떡볶이', count: 35, trend: 'up', category: '분식' },
+    { keyword: '김밥', count: 34, trend: 'stable', category: '분식' },
+    { keyword: '탕수육', count: 33, trend: 'up', category: '중식' },
     { keyword: '순대', count: 32, trend: 'stable', category: '분식' },
+    { keyword: '오징어', count: 31, trend: 'stable', category: '해산물' },
     { keyword: '갈비', count: 30, trend: 'down', category: '고기' },
+    { keyword: '육회', count: 29, trend: 'up', category: '고기' },
     { keyword: '초밥', count: 28, trend: 'up', category: '일식' },
+    { keyword: '샤브샤브', count: 27, trend: 'stable', category: '일식' },
+    { keyword: '양꼬치', count: 26, trend: 'up', category: '고기' },
     { keyword: '파스타', count: 25, trend: 'stable', category: '양식' },
+    { keyword: '타코', count: 24, trend: 'stable', category: '양식' },
     { keyword: '햄버거', count: 23, trend: 'up', category: '패스트푸드' },
+    { keyword: '감자탕', count: 22, trend: 'stable', category: '한식' },
     { keyword: '마라탕', count: 21, trend: 'up', category: '중식' },
+    { keyword: '설렁탕', count: 20, trend: 'stable', category: '한식' },
     { keyword: '김치찌개', count: 19, trend: 'stable', category: '한식' },
+    { keyword: '순두부', count: 18, trend: 'up', category: '한식' },
     { keyword: '부대찌개', count: 17, trend: 'down', category: '한식' },
+    { keyword: '닭발', count: 16, trend: 'stable', category: '고기' },
     { keyword: '족발', count: 15, trend: 'stable', category: '고기' },
+    { keyword: '막창', count: 15, trend: 'up', category: '고기' },
     { keyword: '보쌈', count: 14, trend: 'stable', category: '고기' },
+    { keyword: '조개구이', count: 14, trend: 'stable', category: '해산물' },
+    { keyword: '장어', count: 13, trend: 'up', category: '해산물' },
     { keyword: '라멘', count: 12, trend: 'up', category: '일식' },
+    { keyword: '케밥', count: 11, trend: 'stable', category: '양식' },
     { keyword: '스테이크', count: 10, trend: 'stable', category: '양식' },
+    { keyword: '오므라이스', count: 10, trend: 'stable', category: '양식' },
     { keyword: '칼국수', count: 9, trend: 'stable', category: '면류' },
+    { keyword: '덮밥', count: 9, trend: 'stable', category: '일식' },
     { keyword: '비빔밥', count: 8, trend: 'up', category: '한식' },
+    { keyword: '카레', count: 8, trend: 'up', category: '일식' },
     { keyword: '국밥', count: 7, trend: 'stable', category: '한식' },
+    { keyword: '곱도리탕', count: 7, trend: 'stable', category: '한식' },
     { keyword: '피자', count: 6, trend: 'stable', category: '양식' },
+    { keyword: '낙곱새', count: 6, trend: 'up', category: '해산물' },
+    { keyword: '대창', count: 5, trend: 'stable', category: '고기' },
+    { keyword: '갈비찜', count: 58, trend: 'up', category: '고기' },
+    { keyword: '아구찜', count: 47, trend: 'stable', category: '해산물' },
+    { keyword: '해물탕', count: 43, trend: 'up', category: '해산물' },
+    { keyword: '간장게장', count: 40, trend: 'up', category: '해산물' },
+    { keyword: '양념게장', count: 37, trend: 'stable', category: '해산물' },
+    { keyword: '물회', count: 35, trend: 'up', category: '해산물' },
+    { keyword: '전복죽', count: 32, trend: 'stable', category: '한식' },
+    { keyword: '홍합탕', count: 29, trend: 'stable', category: '해산물' },
+    { keyword: '꼼장어', count: 26, trend: 'up', category: '해산물' },
+    { keyword: '철판볶음', count: 24, trend: 'stable', category: '한식' },
+    { keyword: '제육볶음', count: 22, trend: 'up', category: '고기' },
+    { keyword: '낙지볶음', count: 20, trend: 'stable', category: '해산물' },
+    { keyword: '쭈꾸미', count: 18, trend: 'up', category: '해산물' },
+    { keyword: '골뱅이', count: 16, trend: 'stable', category: '해산물' },
+    { keyword: '백숙', count: 14, trend: 'stable', category: '한식' },
+    { keyword: '삼계탕', count: 12, trend: 'up', category: '한식' },
+    { keyword: '추어탕', count: 10, trend: 'stable', category: '한식' },
+    { keyword: '해장국', count: 9, trend: 'stable', category: '한식' },
+    { keyword: '순댓국', count: 8, trend: 'up', category: '한식' },
+    { keyword: '만두', count: 45, trend: 'stable', category: '분식' },
+    { keyword: '찐빵', count: 38, trend: 'up', category: '분식' },
+    { keyword: '호떡', count: 35, trend: 'stable', category: '분식' },
+    { keyword: '어묵', count: 30, trend: 'stable', category: '분식' },
+    { keyword: '튀김', count: 28, trend: 'up', category: '분식' },
+    { keyword: '군만두', count: 25, trend: 'stable', category: '분식' },
+    { keyword: '물만두', count: 22, trend: 'stable', category: '분식' },
+    { keyword: '볶음밥', count: 40, trend: 'up', category: '중식' },
+    { keyword: '유린기', count: 32, trend: 'stable', category: '중식' },
+    { keyword: '깐풍기', count: 28, trend: 'up', category: '중식' },
+    { keyword: '팔보채', count: 22, trend: 'stable', category: '중식' },
+    { keyword: '마파두부', count: 18, trend: 'up', category: '중식' },
+    { keyword: '양장피', count: 15, trend: 'stable', category: '중식' },
+    { keyword: '동파육', count: 12, trend: 'stable', category: '중식' },
+    { keyword: '소바', count: 25, trend: 'stable', category: '일식' },
+    { keyword: '덴뿌라', count: 20, trend: 'up', category: '일식' },
+    { keyword: '타코야키', count: 18, trend: 'stable', category: '일식' },
+    { keyword: '규동', count: 15, trend: 'up', category: '일식' },
+    { keyword: '가츠동', count: 12, trend: 'stable', category: '일식' },
+    { keyword: '오코노미야키', count: 10, trend: 'up', category: '일식' },
+    { keyword: '리조또', count: 22, trend: 'stable', category: '양식' },
+    { keyword: '뇨끼', count: 16, trend: 'up', category: '양식' },
+    { keyword: '라자냐', count: 14, trend: 'stable', category: '양식' },
+    { keyword: '샐러드', count: 11, trend: 'up', category: '양식' },
+    { keyword: '핫도그', count: 30, trend: 'stable', category: '패스트푸드' },
+    { keyword: '감자튀김', count: 25, trend: 'up', category: '패스트푸드' },
+    { keyword: '너겟', count: 18, trend: 'stable', category: '패스트푸드' },
+    { keyword: '버거킹', count: 15, trend: 'up', category: '패스트푸드' },
+    // 추가 키워드 5차
+    { keyword: '소고기', count: 85, trend: 'up', category: '고기' },
+    { keyword: '한우', count: 78, trend: 'up', category: '고기' },
+    { keyword: '등심', count: 65, trend: 'stable', category: '고기' },
+    { keyword: '안심', count: 60, trend: 'up', category: '고기' },
+    { keyword: '차돌박이', count: 52, trend: 'up', category: '고기' },
+    { keyword: '양념갈비', count: 46, trend: 'stable', category: '고기' },
+    { keyword: '생갈비', count: 42, trend: 'up', category: '고기' },
+    { keyword: 'LA갈비', count: 38, trend: 'stable', category: '고기' },
+    { keyword: '수육', count: 34, trend: 'up', category: '고기' },
+    { keyword: '항정살', count: 30, trend: 'up', category: '고기' },
+    { keyword: '가브리살', count: 26, trend: 'stable', category: '고기' },
+    { keyword: '토시살', count: 22, trend: 'up', category: '고기' },
+    { keyword: '꽃등심', count: 18, trend: 'stable', category: '고기' },
+    { keyword: '채끝', count: 14, trend: 'up', category: '고기' },
+    { keyword: '부채살', count: 10, trend: 'stable', category: '고기' },
+    // 추가 키워드 6차 - 해산물
+    { keyword: '광어', count: 50, trend: 'up', category: '해산물' },
+    { keyword: '우럭', count: 45, trend: 'stable', category: '해산물' },
+    { keyword: '도미', count: 40, trend: 'up', category: '해산물' },
+    { keyword: '방어', count: 35, trend: 'up', category: '해산물' },
+    { keyword: '연어', count: 32, trend: 'up', category: '해산물' },
+    { keyword: '참치', count: 28, trend: 'stable', category: '해산물' },
+    { keyword: '새우', count: 24, trend: 'up', category: '해산물' },
+    { keyword: '랍스터', count: 20, trend: 'stable', category: '해산물' },
+    { keyword: '바닷가재', count: 16, trend: 'up', category: '해산물' },
+    { keyword: '킹크랩', count: 12, trend: 'up', category: '해산물' },
+    { keyword: '대게', count: 48, trend: 'up', category: '해산물' },
+    { keyword: '꽃게', count: 36, trend: 'stable', category: '해산물' },
+    { keyword: '전복', count: 30, trend: 'up', category: '해산물' },
+    { keyword: '굴', count: 26, trend: 'stable', category: '해산물' },
+    { keyword: '홍어', count: 22, trend: 'up', category: '해산물' },
+    // 추가 키워드 7차 - 한식
+    { keyword: '된장찌개', count: 44, trend: 'stable', category: '한식' },
+    { keyword: '청국장', count: 36, trend: 'up', category: '한식' },
+    { keyword: '동태찌개', count: 32, trend: 'stable', category: '한식' },
+    { keyword: '알탕', count: 28, trend: 'up', category: '한식' },
+    { keyword: '육개장', count: 24, trend: 'stable', category: '한식' },
+    { keyword: '갈비탕', count: 20, trend: 'up', category: '한식' },
+    { keyword: '곰탕', count: 16, trend: 'stable', category: '한식' },
+    { keyword: '도가니탕', count: 12, trend: 'up', category: '한식' },
+    { keyword: '꼬리곰탕', count: 8, trend: 'stable', category: '한식' },
+    { keyword: '닭볶음탕', count: 38, trend: 'up', category: '한식' },
+    { keyword: '찜닭', count: 34, trend: 'stable', category: '한식' },
+    { keyword: '닭강정', count: 30, trend: 'up', category: '한식' },
+    { keyword: '양념치킨', count: 52, trend: 'up', category: '치킨' },
+    { keyword: '후라이드', count: 48, trend: 'stable', category: '치킨' },
+    { keyword: '간장치킨', count: 40, trend: 'up', category: '치킨' },
+    { keyword: '마늘치킨', count: 36, trend: 'stable', category: '치킨' },
+    { keyword: '파닭', count: 32, trend: 'up', category: '치킨' },
+    { keyword: '불닭', count: 28, trend: 'stable', category: '치킨' },
+    { keyword: '순살치킨', count: 24, trend: 'up', category: '치킨' },
+    { keyword: '반반치킨', count: 20, trend: 'stable', category: '치킨' },
+    // 추가 키워드 8차 - 기타
+    { keyword: '곱빼기', count: 15, trend: 'up', category: '한식' },
+    { keyword: '백반', count: 42, trend: 'stable', category: '한식' },
+    { keyword: '정식', count: 38, trend: 'up', category: '한식' },
+    { keyword: '한정식', count: 34, trend: 'stable', category: '한식' },
+    { keyword: '뷔페', count: 30, trend: 'up', category: '양식' },
+    { keyword: '브런치', count: 26, trend: 'stable', category: '양식' },
+    { keyword: '에그베네딕트', count: 22, trend: 'up', category: '양식' },
+    { keyword: '크로와상', count: 18, trend: 'stable', category: '양식' },
+    { keyword: '베이글', count: 14, trend: 'up', category: '양식' },
+    { keyword: '팬케이크', count: 10, trend: 'stable', category: '양식' },
+    { keyword: '와플', count: 8, trend: 'up', category: '양식' },
+    { keyword: '토스트', count: 6, trend: 'stable', category: '양식' },
 ];
 
 // [MOCK] 키워드별 관련 영상 데이터
@@ -129,7 +270,23 @@ const MOCK_VIDEOS_BY_KEYWORD: Record<string, VideoWithKeyword[]> = {
     ],
 };
 
-// [COMPONENT] 밥그릇 모양 워드 클라우드
+// [COMPONENT] d3-cloud 기반 워드 클라우드
+interface WordCloudWord {
+    text: string;
+    size: number;
+    x?: number;
+    y?: number;
+    rotate?: number;
+    font?: string;
+    category: string;
+}
+
+// 애니메이션용 인터페이스
+interface AnimatedWord extends WordCloudWord {
+    delay: number;
+    floatPhase: number;
+}
+
 const RiceBowlWordCloud = memo(({
     keywords,
     selectedKeyword,
@@ -140,85 +297,15 @@ const RiceBowlWordCloud = memo(({
     onKeywordClick: (keyword: string) => void;
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [positions, setPositions] = useState<Array<{ x: number; y: number; size: number; keyword: KeywordData }>>([]);
-
-    // 밥그릇 모양 경계 체크 함수
-    const isInsideRiceBowl = useCallback((x: number, y: number, width: number, height: number) => {
-        // 밥그릇 모양: 위쪽은 넓고 아래쪽은 좁은 사다리꼴 + 둥근 바닥
-        const centerX = width / 2;
-        const centerY = height / 2;
-
-        // 정규화된 좌표 (-1 ~ 1)
-        const nx = (x - centerX) / (width / 2);
-        const ny = (y - centerY) / (height / 2);
-
-        // 밥그릇 형태: 위쪽이 넓고 아래쪽이 좁음
-        // 타원 + 사다리꼴 조합
-        const topWidth = 0.95; // 위쪽 너비
-        const bottomWidth = 0.5; // 아래쪽 너비
-        const widthAtY = topWidth - (topWidth - bottomWidth) * (ny + 1) / 2;
-
-        // 타원 형태로 체크
-        const ellipseCheck = (nx * nx) / (widthAtY * widthAtY) + (ny * ny) / 1;
-
-        return ellipseCheck < 1 && ny > -0.85 && ny < 0.9;
-    }, []);
-
-    // 키워드 위치 계산
-    useEffect(() => {
-        if (!containerRef.current) return;
-
-        const width = 450;
-        const height = 400;
-        const newPositions: typeof positions = [];
-        const maxCount = Math.max(...keywords.map(k => k.count));
-
-        // 키워드를 count 순으로 정렬 (큰 것부터)
-        const sortedKeywords = [...keywords].sort((a, b) => b.count - a.count);
-
-        sortedKeywords.forEach((keyword, index) => {
-            const size = 12 + (keyword.count / maxCount) * 24;
-            let placed = false;
-            let attempts = 0;
-            const maxAttempts = 200;
-
-            while (!placed && attempts < maxAttempts) {
-                // 중앙에서 시작하여 나선형으로 배치
-                const angle = attempts * 0.5;
-                const radius = Math.sqrt(attempts) * 15;
-
-                const x = width / 2 + Math.cos(angle) * radius;
-                const y = height / 2 + Math.sin(angle) * radius * 0.8;
-
-                // 밥그릇 안에 있는지 확인
-                if (isInsideRiceBowl(x, y, width, height)) {
-                    // 다른 키워드와 겹치지 않는지 확인
-                    const textWidth = keyword.keyword.length * size * 0.7;
-                    const textHeight = size * 1.2;
-
-                    const overlaps = newPositions.some(pos => {
-                        const otherWidth = pos.keyword.keyword.length * pos.size * 0.7;
-                        const otherHeight = pos.size * 1.2;
-
-                        return Math.abs(x - pos.x) < (textWidth + otherWidth) / 2 + 5 &&
-                            Math.abs(y - pos.y) < (textHeight + otherHeight) / 2 + 3;
-                    });
-
-                    if (!overlaps) {
-                        newPositions.push({ x, y, size, keyword });
-                        placed = true;
-                    }
-                }
-                attempts++;
-            }
-        });
-
-        setPositions(newPositions);
-    }, [keywords, isInsideRiceBowl]);
+    const [words, setWords] = useState<AnimatedWord[]>([]);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [hoveredWord, setHoveredWord] = useState<string | null>(null);
+    const [isReady, setIsReady] = useState(false);
 
     // 카테고리별 색상
-    const getColor = (category: string, isSelected: boolean) => {
-        if (isSelected) return '#dc2626'; // 선택된 경우 빨간색
+    const getColor = useCallback((category: string, isSelected: boolean, isHovered: boolean) => {
+        if (isSelected) return '#dc2626';
+        if (isHovered) return '#f97316';
 
         const colors: Record<string, string> = {
             '고기': '#ef4444',
@@ -233,86 +320,105 @@ const RiceBowlWordCloud = memo(({
             '한식': '#14b8a6',
         };
         return colors[category] || '#6b7280';
-    };
+    }, []);
+
+    // 컨테이너 크기 감지
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const { width, height } = entry.contentRect;
+                if (width > 0 && height > 0) {
+                    setDimensions({ width, height });
+                }
+            }
+        });
+
+        resizeObserver.observe(containerRef.current);
+        return () => resizeObserver.disconnect();
+    }, []);
+
+    // d3-cloud 레이아웃 계산
+    useEffect(() => {
+        if (keywords.length === 0 || dimensions.width === 0 || dimensions.height === 0) return;
+
+        setIsReady(false);
+
+        const maxCount = Math.max(...keywords.map(k => k.count));
+        const minCount = Math.min(...keywords.map(k => k.count));
+
+        const minFontSize = 12;
+        const maxFontSize = 48;
+
+        const wordData = keywords.map(k => ({
+            text: k.keyword,
+            size: minFontSize + ((k.count - minCount) / (maxCount - minCount || 1)) * (maxFontSize - minFontSize),
+            category: k.category,
+        }));
+
+        const layout = cloud<WordCloudWord>()
+            .size([dimensions.width, dimensions.height])
+            .words(wordData)
+            .padding(6)
+            .rotate(() => 0)
+            .font('Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif')
+            .fontSize((d: WordCloudWord) => d.size || 14)
+            .spiral('archimedean')
+            .on('end', (computedWords: WordCloudWord[]) => {
+                setWords(computedWords as AnimatedWord[]);
+                setIsReady(true);
+            });
+
+        layout.start();
+    }, [keywords, dimensions]);
+
+    // 준비되지 않았으면 로딩 표시
+    if (!isReady || dimensions.width === 0) {
+        return (
+            <div className="relative h-full w-full flex items-center justify-center" ref={containerRef}>
+                <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     return (
-        <div className="relative" ref={containerRef}>
-            {/* 밥그릇 아이콘 배경 */}
-            <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                <span className="text-[300px]">🍚</span>
-            </div>
-
-            {/* 밥그릇 외곽선 */}
+        <div className="relative h-full w-full flex items-center justify-center" ref={containerRef}>
             <svg
-                viewBox="0 0 450 400"
-                className="w-full h-[400px]"
-                style={{ overflow: 'visible' }}
+                width={dimensions.width}
+                height={dimensions.height}
+                className="w-full h-full"
             >
-                {/* 밥그릇 모양 경계 (시각적 가이드) */}
-                <defs>
-                    <clipPath id="riceBowlClip">
-                        <ellipse cx="225" cy="200" rx="200" ry="170" />
-                    </clipPath>
-                </defs>
+                <g transform={`translate(${dimensions.width / 2}, ${dimensions.height / 2})`}>
+                    {words.map((word) => {
+                        const isSelected = selectedKeyword === word.text;
+                        const isHovered = hoveredWord === word.text;
+                        const scale = isHovered ? 1.15 : isSelected ? 1.05 : 1;
 
-                {/* 밥그릇 외곽 */}
-                <ellipse
-                    cx="225"
-                    cy="200"
-                    rx="205"
-                    ry="175"
-                    fill="none"
-                    stroke="hsl(var(--border))"
-                    strokeWidth="2"
-                    strokeDasharray="5,5"
-                    opacity="0.3"
-                />
-
-                {/* 키워드 텍스트 */}
-                {positions.map(({ x, y, size, keyword }, index) => {
-                    const isSelected = selectedKeyword === keyword.keyword;
-                    return (
-                        <g key={keyword.keyword}>
+                        return (
                             <text
-                                x={x}
-                                y={y}
-                                fontSize={size}
-                                fontWeight={isSelected ? 'bold' : keyword.count > 40 ? '600' : '400'}
-                                fill={getColor(keyword.category, isSelected)}
+                                key={word.text}
+                                x={word.x}
+                                y={word.y}
+                                fontSize={(word.size || 14) * scale}
+                                fontWeight={isSelected ? 'bold' : word.size && word.size > 30 ? '600' : '400'}
+                                fill={getColor(word.category, isSelected, isHovered)}
                                 textAnchor="middle"
                                 dominantBaseline="middle"
-                                className="cursor-pointer transition-all duration-200 hover:opacity-80"
-                                onClick={() => onKeywordClick(keyword.keyword)}
+                                className="cursor-pointer"
+                                onClick={() => onKeywordClick(word.text)}
+                                onMouseEnter={() => setHoveredWord(word.text)}
+                                onMouseLeave={() => setHoveredWord(null)}
                                 style={{
-                                    filter: isSelected ? 'drop-shadow(0 0 4px rgba(220, 38, 38, 0.5))' : 'none',
+                                    fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                                    transition: 'font-size 0.15s ease-out, fill 0.15s ease-out',
                                 }}
                             >
-                                {keyword.keyword}
+                                {word.text}
                             </text>
-                            {keyword.trend === 'up' && (
-                                <text
-                                    x={x + (keyword.keyword.length * size * 0.35) + 8}
-                                    y={y - 2}
-                                    fontSize={size * 0.5}
-                                    fill="#22c55e"
-                                >
-                                    ↑
-                                </text>
-                            )}
-                        </g>
-                    );
-                })}
-
-                {/* 밥그릇 이모지 */}
-                <text
-                    x="225"
-                    y="380"
-                    fontSize="40"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                >
-                    🍚
-                </text>
+                        );
+                    })}
+                </g>
             </svg>
         </div>
     );
@@ -397,14 +503,14 @@ const WordCloudSectionComponent = () => {
     }, []);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full min-h-0">
             {/* 좌측: 밥그릇 모양 워드 클라우드 */}
-            <Card className="lg:col-span-3">
+            <Card className="lg:col-span-3 flex flex-col min-h-0">
                 <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="text-base flex items-center gap-2">
-                                🍚 리뷰 키워드 분석
+                                리뷰 키워드 분석
                             </CardTitle>
                             <CardDescription className="text-xs mt-1">
                                 쯔양의 리뷰에서 가장 많이 언급된 음식 키워드입니다. 클릭하면 관련 영상을 확인할 수 있습니다.
@@ -421,54 +527,17 @@ const WordCloudSectionComponent = () => {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="flex-1 min-h-0 pt-0 overflow-hidden">
                     <RiceBowlWordCloud
                         keywords={filteredKeywords}
                         selectedKeyword={selectedKeyword}
                         onKeywordClick={handleKeywordClick}
                     />
-
-                    {/* 범례 */}
-                    <div className="flex flex-wrap gap-2 mt-4 justify-center">
-                        {['고기', '면류', '해산물', '한식', '중식', '일식', '양식', '분식', '치킨'].map(cat => (
-                            <Badge
-                                key={cat}
-                                variant="outline"
-                                className="text-xs"
-                                style={{
-                                    borderColor: {
-                                        '고기': '#ef4444',
-                                        '면류': '#f59e0b',
-                                        '해산물': '#3b82f6',
-                                        '한식': '#14b8a6',
-                                        '중식': '#ec4899',
-                                        '일식': '#8b5cf6',
-                                        '양식': '#a855f7',
-                                        '분식': '#eab308',
-                                        '치킨': '#f97316',
-                                    }[cat],
-                                    color: {
-                                        '고기': '#ef4444',
-                                        '면류': '#f59e0b',
-                                        '해산물': '#3b82f6',
-                                        '한식': '#14b8a6',
-                                        '중식': '#ec4899',
-                                        '일식': '#8b5cf6',
-                                        '양식': '#a855f7',
-                                        '분식': '#eab308',
-                                        '치킨': '#f97316',
-                                    }[cat],
-                                }}
-                            >
-                                {cat}
-                            </Badge>
-                        ))}
-                    </div>
                 </CardContent>
             </Card>
 
             {/* 우측: 관련 영상 및 리뷰 목록 */}
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 flex flex-col min-h-0">
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                         <div>
@@ -493,8 +562,8 @@ const WordCloudSectionComponent = () => {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-0">
-                    <ScrollArea className="h-[480px] px-4 pb-4">
+                <CardContent className="flex-1 p-0 overflow-hidden">
+                    <ScrollArea className="h-full px-4 pb-4">
                         {relatedVideos.length === 0 ? (
                             <div className="text-center py-12 text-muted-foreground text-sm">
                                 <div className="text-4xl mb-3">🔍</div>

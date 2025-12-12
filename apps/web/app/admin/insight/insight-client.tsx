@@ -1,11 +1,12 @@
 'use client';
 
 import { memo, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users } from 'lucide-react';
+import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users, Play } from 'lucide-react';
 
 // [OPTIMIZATION] 각 섹션 컴포넌트를 동적 임포트로 코드 스플리팅
 const HeatmapSection = dynamic(
@@ -44,7 +45,7 @@ const CompactStatCard = memo(({
     value: string | number;
     trend?: 'up' | 'down';
 }) => (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border shrink-0">
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 shrink-0">
         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
             <Icon className="h-4 w-4 text-primary" />
         </div>
@@ -60,6 +61,88 @@ const CompactStatCard = memo(({
 ));
 CompactStatCard.displayName = 'CompactStatCard';
 
+const YoutubeSubscriberCard = memo(() => {
+    const { data: subscriberCount, isLoading, error } = useQuery({
+        queryKey: ['youtube-subscriber-count'],
+        queryFn: async () => {
+            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+            if (!apiKey) throw new Error('API Key missing');
+
+            // fetch using handle
+            const response = await fetch(
+                `https://www.googleapis.com/youtube/v3/channels?part=statistics&forHandle=@tzuyang6145&key=${apiKey}`
+            );
+
+            if (!response.ok) {
+                throw new Error('Youtube API fetch failed');
+            }
+
+            const data = await response.json();
+            return data.items?.[0]?.statistics?.subscriberCount;
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    const displayValue = isLoading
+        ? '로딩중...'
+        : error
+            ? '-'
+            : subscriberCount
+                ? parseInt(subscriberCount).toLocaleString()
+                : '-';
+
+    return (
+        <CompactStatCard
+            icon={Youtube}
+            title="쯔양 구독자수"
+            value={displayValue}
+            trend="up"
+        />
+    );
+});
+YoutubeSubscriberCard.displayName = 'YoutubeSubscriberCard';
+
+// [COMPONENT] 유튜브 동영상 개수 카드
+const YoutubeVideoCountCard = memo(() => {
+    const { data: videoCount, isLoading, error } = useQuery({
+        queryKey: ['youtube-video-count'],
+        queryFn: async () => {
+            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+            if (!apiKey) throw new Error('API Key missing');
+
+            const response = await fetch(
+                `https://www.googleapis.com/youtube/v3/channels?part=statistics&forHandle=@tzuyang6145&key=${apiKey}`
+            );
+
+            if (!response.ok) {
+                throw new Error('Youtube API fetch failed');
+            }
+
+            const data = await response.json();
+            return data.items?.[0]?.statistics?.videoCount;
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    const displayValue = isLoading
+        ? '로딩중...'
+        : error
+            ? '-'
+            : videoCount
+                ? parseInt(videoCount).toLocaleString() + '개'
+                : '-';
+
+    return (
+        <CompactStatCard
+            icon={Play}
+            title="쯔양 동영상 수"
+            value={displayValue}
+        />
+    );
+});
+YoutubeVideoCountCard.displayName = 'YoutubeVideoCountCard';
+
+
 // [COMPONENT] 섹션 로딩 스켈레톤
 const SectionSkeleton = memo(({ title }: { title: string }) => (
     <Card className="h-full">
@@ -67,9 +150,8 @@ const SectionSkeleton = memo(({ title }: { title: string }) => (
             <CardTitle className="text-lg">{title}</CardTitle>
         </CardHeader>
         <CardContent className="flex-1 flex items-center justify-center min-h-[400px]">
-            <div className="animate-pulse flex flex-col items-center gap-4">
-                <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-                <span className="text-muted-foreground text-sm">로딩 중...</span>
+            <div className="flex flex-col items-center gap-4">
+                <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
             </div>
         </CardContent>
     </Card>
@@ -123,18 +205,20 @@ const InsightClientComponent = () => {
 
                     {/* 우측: 압축된 통계 카드 */}
                     <div className="flex items-center gap-3 overflow-x-auto">
-                        <CompactStatCard icon={Youtube} title="분석 영상" value="127" trend="up" />
-                        <CompactStatCard icon={Map} title="제보 맛집" value="48" />
-                        <CompactStatCard icon={Users} title="타 유튜버" value="312" trend="up" />
-                        <CompactStatCard icon={Cloud} title="키워드" value="1,024" />
+                        <YoutubeSubscriberCard />
+                        <YoutubeVideoCountCard />
+                        <CompactStatCard icon={Youtube} title="유튜브 히트맵" value="127" trend="up" />
+                        <CompactStatCard icon={Map} title="구독자 제보 맛집" value="48" />
+                        <CompactStatCard icon={Users} title="타 유튜버 맛집" value="312" trend="up" />
+                        <CompactStatCard icon={Cloud} title="워드 클라우드" value="1,024" />
                     </div>
                 </div>
             </div>
 
             {/* [TABS] 메인 콘텐츠 */}
-            <div className="flex-1 overflow-hidden p-6">
+            <div className="flex-1 min-h-0 p-4">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
-                    <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid mb-4">
+                    <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid mb-3 shrink-0 bg-secondary/50">
                         <TabsTrigger value="heatmap" className="flex items-center gap-2">
                             <Youtube className="h-4 w-4" />
                             <span className="hidden sm:inline">유튜브 히트맵</span>
@@ -152,7 +236,7 @@ const InsightClientComponent = () => {
                         </TabsTrigger>
                     </TabsList>
 
-                    <div className="flex-1 overflow-auto">
+                    <div className="flex-1 min-h-0">
                         <TabsContent value="heatmap" className="mt-0 h-full">
                             <HeatmapSection />
                         </TabsContent>
