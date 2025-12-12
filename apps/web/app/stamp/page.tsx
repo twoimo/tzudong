@@ -31,6 +31,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { useRestaurants } from "@/hooks/use-restaurants";
 
 // 지역 목록
 const REGIONS = [
@@ -311,6 +312,10 @@ export default function StampPage() {
     }, [userReviews]);
 
     // --- Data Fetching: Restaurants ---
+    // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
+    const { data: allMergedRestaurants = [] } = useRestaurants({ enabled: true });
+    const totalRestaurantCount = allMergedRestaurants.length;
+
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
     const { data: allRestaurants = [], isLoading: isLoadingAllRestaurants } = useQuery({
         queryKey: ['all-restaurants', searchQuery],
@@ -720,12 +725,10 @@ export default function StampPage() {
                                     </h1>
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
-                                    총 {filteredAndSortedRestaurants.length}개의 맛집
-                                    {activeFilterCount > 0 && (
-                                        <span className="ml-2 text-primary font-medium">
-                                            ({activeFilterCount}개 필터 적용 중)
-                                        </span>
-                                    )}
+                                    전체 {totalRestaurantCount.toLocaleString()}개
+                                    <span className="ml-1 text-xs">
+                                        ({filteredAndSortedRestaurants.length.toLocaleString()}개 표시 중)
+                                    </span>
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
