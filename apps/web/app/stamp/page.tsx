@@ -706,9 +706,6 @@ export default function StampPage() {
                                 </div>
                                 <p className="text-sm text-muted-foreground mt-1">
                                     전체 {totalRestaurantCount.toLocaleString()}개
-                                    <span className="ml-1 text-xs">
-                                        ({filteredAndSortedRestaurants.length.toLocaleString()}개 표시 중)
-                                    </span>
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
