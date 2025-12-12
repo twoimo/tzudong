@@ -20,6 +20,7 @@ import {
     Clock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNaverMaps } from '@/hooks/use-naver-maps';
 
 // [TYPE] 맛집 마커 데이터 타입
 interface RestaurantMarker {
@@ -275,70 +276,207 @@ const DetailPanel = memo(({
 });
 DetailPanel.displayName = 'DetailPanel';
 
-// [COMPONENT] 지도 플레이스홀더 (실제 NaverMap 대체)
-const MapPlaceholder = memo(({ markers, onMarkerClick, selectedMarkerId }: {
+// [COMPONENT] 네이버 지도 뷰
+const NaverMapView = memo(({ markers, onMarkerClick, selectedMarkerId, isPanelOpen }: {
     markers: RestaurantMarker[];
     onMarkerClick: (marker: RestaurantMarker) => void;
     selectedMarkerId: string | null;
+    isPanelOpen: boolean;
 }) => {
-    return (
-        <div className="h-full w-full bg-muted/30 rounded-lg flex items-center justify-center relative overflow-hidden">
-            {/* 그리드 배경 */}
-            <div
-                className="absolute inset-0 opacity-20"
-                style={{
-                    backgroundImage: `
-                        linear-gradient(to right, hsl(var(--border)) 1px, transparent 1px),
-                        linear-gradient(to bottom, hsl(var(--border)) 1px, transparent 1px)
-                    `,
-                    backgroundSize: '40px 40px',
-                }}
-            />
+    const mapRef = useRef<HTMLDivElement>(null);
+    const mapInstanceRef = useRef<any>(null);
+    const markersRef = useRef<any[]>([]);
+    const selectedMarkerRef = useRef<RestaurantMarker | null>(null);
+    const { isLoaded, isLoading, loadError, load } = useNaverMaps({ autoLoad: true });
 
-            {/* 마커 시뮬레이션 */}
-            <div className="absolute inset-0 p-4">
-                {markers.map((marker, idx) => (
-                    <div
-                        key={marker.id}
-                        onClick={() => onMarkerClick(marker)}
-                        className={cn(
-                            "absolute cursor-pointer transition-all duration-200 hover:scale-110",
-                            selectedMarkerId === marker.id && "scale-125 z-10"
-                        )}
-                        style={{
-                            left: `${20 + (idx * 15) % 60}%`,
-                            top: `${20 + (idx * 20) % 50}%`,
-                        }}
-                    >
-                        <div className={cn(
-                            "w-8 h-8 rounded-full flex items-center justify-center shadow-md border-2 border-white",
-                            marker.source === 'user_report'
-                                ? "bg-blue-500"
-                                : "bg-red-500"
-                        )}>
-                            {marker.source === 'user_report'
-                                ? <Users className="h-4 w-4 text-white" />
-                                : <Youtube className="h-4 w-4 text-white" />
-                            }
+    // 지도 중심 이동 함수 (단순 이동)
+    const updateCenter = useCallback((targetMarker: RestaurantMarker) => {
+        const map = mapInstanceRef.current;
+        if (!map || !window.naver?.maps) return;
+
+        const { naver } = window;
+        const targetLatLng = new naver.maps.LatLng(targetMarker.lat, targetMarker.lng);
+        map.panTo(targetLatLng, { duration: 300, easing: 'easeOutCubic' });
+    }, []);
+
+    // 지도 초기화
+    useEffect(() => {
+        if (!isLoaded || !mapRef.current || !window.naver?.maps) return;
+
+        const { naver } = window;
+
+        // 서울 중심 좌표
+        const center = new naver.maps.LatLng(37.5665, 126.9780);
+
+        const map = new naver.maps.Map(mapRef.current, {
+            center,
+            zoom: 12,
+            minZoom: 8,
+            maxZoom: 19,
+            zoomControl: true,
+            zoomControlOptions: {
+                position: naver.maps.Position.TOP_RIGHT,
+            },
+        });
+
+        mapInstanceRef.current = map;
+
+        return () => {
+            markersRef.current.forEach(marker => marker.setMap(null));
+            markersRef.current = [];
+        };
+    }, [isLoaded]);
+
+    // Resizing Observer - 컨테이너 크기 변경 감지 및 지도 리사이즈
+    useEffect(() => {
+        if (!mapRef.current || !mapInstanceRef.current || !window.naver?.maps) return;
+
+        const map = mapInstanceRef.current;
+        const { naver } = window;
+
+        const resizeObserver = new ResizeObserver(() => {
+            // 현재 중심 좌표 저장
+            const center = map.getCenter();
+
+            // 지도 사이즈 업데이트
+            naver.maps.Event.trigger(map, 'resize');
+
+            // 중심 복구 (선택된 마커가 있으면 그 위치로, 없으면 기존 중심 유지)
+            if (selectedMarkerRef.current) {
+                map.setCenter(new naver.maps.LatLng(selectedMarkerRef.current.lat, selectedMarkerRef.current.lng));
+            } else {
+                map.setCenter(center);
+            }
+        });
+
+        resizeObserver.observe(mapRef.current);
+
+        return () => resizeObserver.disconnect();
+    }, [isLoaded]);
+
+    // 패널 상태 변경 시 지연 리사이즈 (CSS transition 대응)
+    useEffect(() => {
+        if (!mapInstanceRef.current || !window.naver?.maps) return;
+        const map = mapInstanceRef.current;
+        const { naver } = window;
+
+        const timer = setTimeout(() => {
+            naver.maps.Event.trigger(map, 'resize');
+
+            // 애니메이션이 끝난 후, 선택된 마커가 있다면 확실하게 중심 이동
+            if (selectedMarkerRef.current) {
+                updateCenter(selectedMarkerRef.current);
+            }
+        }, 320); // transition duration(300ms) + buffer
+
+        return () => clearTimeout(timer);
+    }, [isPanelOpen, updateCenter]);
+
+    // 마커 업데이트
+    useEffect(() => {
+        if (!mapInstanceRef.current || !window.naver?.maps) return;
+
+        const { naver } = window;
+        const map = mapInstanceRef.current;
+
+        // 기존 마커 제거
+        markersRef.current.forEach(marker => marker.setMap(null));
+        markersRef.current = [];
+
+        // 새 마커 추가
+        markers.forEach((markerData) => {
+            const isSelected = selectedMarkerId === markerData.id;
+            const isUserReport = markerData.source === 'user_report';
+
+            const marker = new naver.maps.Marker({
+                position: new naver.maps.LatLng(markerData.lat, markerData.lng),
+                map,
+                icon: {
+                    content: `
+                        <div style="
+                            width: ${isSelected ? '36px' : '28px'};
+                            height: ${isSelected ? '36px' : '28px'};
+                            background-color: ${isUserReport ? '#3b82f6' : '#ef4444'};
+                            border-radius: 50%;
+                            border: 2px solid white;
+                            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: all 0.2s;
+                            cursor: pointer;
+                        ">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2">
+                                ${isUserReport
+                            ? '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+                            : '<path d="M2.5 17a24.12 24.12 0 0 1 0-10 2 2 0 0 1 1.4-1.4 49.56 49.56 0 0 1 16.2 0A2 2 0 0 1 21.5 7a24.12 24.12 0 0 1 0 10 2 2 0 0 1-1.4 1.4 49.55 49.55 0 0 1-16.2 0A2 2 0 0 1 2.5 17"/><path d="m10 15 5-3-5-3z"/>'
+                        }
+                            </svg>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    `,
+                    anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14),
+                },
+            });
 
-            {/* 중앙 안내 메시지 */}
-            <div className="text-center z-20 bg-background/80 backdrop-blur-sm p-4 rounded-lg border">
-                <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                    네이버 지도가 여기에 표시됩니다
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                    마커: {markers.length}개
-                </p>
+            naver.maps.Event.addListener(marker, 'click', () => {
+                onMarkerClick(markerData);
+            });
+
+            markersRef.current.push(marker);
+        });
+
+    }, [markers, selectedMarkerId, onMarkerClick, isLoaded]);
+
+    // 선택된 마커 변경 시 ref 업데이트 및 중심 이동
+    useEffect(() => {
+        if (selectedMarkerId) {
+            const selected = markers.find(m => m.id === selectedMarkerId);
+            if (selected) {
+                selectedMarkerRef.current = selected;
+                // 패널이 이미 열려있는 상태에서의 클릭은 즉시 이동
+                if (isPanelOpen) {
+                    updateCenter(selected);
+                }
+                // 패널이 닫혀있다가 열리는 경우는 위쪽 useEffect가 처리 (시간차 resize 후 이동)
+            }
+        } else {
+            selectedMarkerRef.current = null;
+        }
+    }, [selectedMarkerId, markers, updateCenter, isPanelOpen]);
+
+    // 로딩 중
+    if (isLoading) {
+        return (
+            <div className="h-full w-full bg-muted/30 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                    <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">지도 로딩 중...</p>
+                </div>
             </div>
-        </div>
+        );
+    }
+
+    // 로드 에러
+    if (loadError) {
+        return (
+            <div className="h-full w-full bg-muted/30 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                    <MapPin className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">지도를 불러올 수 없습니다</p>
+                    <p className="text-xs text-muted-foreground mt-1">{loadError.message}</p>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={load}>
+                        다시 시도
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div ref={mapRef} className="h-full w-full rounded-lg overflow-hidden" />
     );
 });
-MapPlaceholder.displayName = 'MapPlaceholder';
+NaverMapView.displayName = 'NaverMapView';
 
 // [MAIN] 맵 섹션 메인 컴포넌트
 const MapSectionComponent = () => {
@@ -455,10 +593,11 @@ const MapSectionComponent = () => {
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 p-4 pt-0">
-                    <MapPlaceholder
+                    <NaverMapView
                         markers={filteredMarkers}
                         onMarkerClick={handleMarkerClick}
                         selectedMarkerId={selectedMarker?.id ?? null}
+                        isPanelOpen={!!selectedMarker}
                     />
                 </CardContent>
             </Card>
