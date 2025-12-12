@@ -31,16 +31,24 @@ interface RestaurantMarker {
     lat: number;
     lng: number;
     source: 'user_report' | 'other_youtuber';
+
+    // 타 유튜버 정보
     youtuberName?: string;
     youtuberChannel?: string;
-    videoUrl?: string;
     videoTitle?: string;
+
+    // 제보 공통 정보
+    phone?: string;
+    description?: string; // 쯔양 리뷰 또는 추천 이유
+    youtubeUrl?: string; // 제보된 영상 링크
+    submitterNickname?: string; // 제보자명 (선택)
+
+    // 통계 (사용자 제보)
     reportCount?: number;
-    reportReasons?: string[];
     reportedAt?: string;
-    rating?: number;
 }
 
+// [MOCK] 사용자 제보 맛집 데이터
 // [MOCK] 사용자 제보 맛집 데이터
 const MOCK_USER_REPORTS: RestaurantMarker[] = [
     {
@@ -52,9 +60,11 @@ const MOCK_USER_REPORTS: RestaurantMarker[] = [
         lng: 126.9847,
         source: 'user_report',
         reportCount: 15,
-        reportReasons: ['쯔양님이 좋아하실 것 같아요', '해장국이 정말 맛있어요', '가성비 최고'],
         reportedAt: '2025-12-10',
-        rating: 4.5,
+        phone: '02-1234-5678',
+        description: '쯔양님이 예전에 다녀가셨던 곳입니다! 해장국 국물이 정말 끝내줘요.',
+        youtubeUrl: 'https://youtube.com/watch?v=example_user1',
+        submitterNickname: '해장국매니아',
     },
     {
         id: 'ur2',
@@ -65,9 +75,9 @@ const MOCK_USER_REPORTS: RestaurantMarker[] = [
         lng: 126.9236,
         source: 'user_report',
         reportCount: 8,
-        reportReasons: ['곱창이 진짜 맛있어요', '분위기도 좋아요'],
         reportedAt: '2025-12-08',
-        rating: 4.2,
+        description: '여기는 진짜 숨겨진 맛집이에요. 곱이 가득 차 있어서 쯔양님이 꼭 드셔보셨으면 좋겠어요!',
+        submitterNickname: '곱창러버',
     },
 ];
 
@@ -83,9 +93,8 @@ const MOCK_YOUTUBER_SPOTS: RestaurantMarker[] = [
         source: 'other_youtuber',
         youtuberName: '먹방유튜버A',
         youtuberChannel: '@mukbangA',
-        videoUrl: 'https://youtube.com/watch?v=example1',
+        youtubeUrl: 'https://youtube.com/watch?v=example1',
         videoTitle: '명동 최고의 냉면집!',
-        rating: 4.8,
     },
     {
         id: 'yt2',
@@ -97,9 +106,8 @@ const MOCK_YOUTUBER_SPOTS: RestaurantMarker[] = [
         source: 'other_youtuber',
         youtuberName: '먹방유튜버B',
         youtuberChannel: '@foodieB',
-        videoUrl: 'https://youtube.com/watch?v=example2',
+        youtubeUrl: 'https://youtube.com/watch?v=example2',
         videoTitle: '평양냉면 맛집 탐방',
-        rating: 4.6,
     },
     {
         id: 'yt3',
@@ -111,9 +119,8 @@ const MOCK_YOUTUBER_SPOTS: RestaurantMarker[] = [
         source: 'other_youtuber',
         youtuberName: '먹방유튜버C',
         youtuberChannel: '@gourmetC',
-        videoUrl: 'https://youtube.com/watch?v=example3',
+        youtubeUrl: 'https://youtube.com/watch?v=example3',
         videoTitle: '강남에서 만난 평양냉면',
-        rating: 4.4,
     },
 ];
 
@@ -151,12 +158,6 @@ const RestaurantListItem = memo(({
                             <Users className="h-3 w-3 mr-1" />
                             {marker.reportCount}명 제보
                         </Badge>
-                        {marker.rating && (
-                            <span className="flex items-center text-amber-600">
-                                <Star className="h-3 w-3 mr-0.5 fill-current" />
-                                {marker.rating}
-                            </span>
-                        )}
                     </div>
                 ) : (
                     <div className="flex items-center gap-2 mt-2 text-xs">
@@ -201,36 +202,60 @@ const DetailPanel = memo(({
                             <span className="text-sm">{marker.address}</span>
                         </div>
                         <Badge variant="secondary">{marker.category}</Badge>
-                        {marker.rating && (
-                            <div className="flex items-center gap-1 text-amber-600">
-                                <Star className="h-4 w-4 fill-current" />
-                                <span className="font-medium">{marker.rating}</span>
-                            </div>
-                        )}
                     </div>
 
                     <Separator />
 
                     {/* 사용자 제보인 경우 */}
                     {marker.source === 'user_report' && (
-                        <div className="space-y-3">
-                            <h4 className="font-medium text-sm flex items-center gap-2">
-                                <Users className="h-4 w-4" />
-                                제보 현황 ({marker.reportCount}명)
-                            </h4>
+                        <div className="space-y-4">
+                            {/* 부가 정보 (전화번호) */}
+                            {marker.phone && (
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 p-2 rounded">
+                                    <span className="text-xs font-semibold">전화번호</span>
+                                    <span>{marker.phone}</span>
+                                </div>
+                            )}
+
+                            {/* 제보/추천 사유 */}
                             <div className="space-y-2">
-                                {marker.reportReasons?.map((reason, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="p-3 bg-muted/50 rounded-lg text-sm"
-                                    >
-                                        "{reason}"
+                                <h4 className="font-medium text-sm flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <Users className="h-4 w-4 text-blue-500" />
+                                        <span>제보 내용</span>
                                     </div>
-                                ))}
+                                    {marker.submitterNickname && (
+                                        <Badge variant="outline" className="text-xs font-normal">
+                                            by {marker.submitterNickname}
+                                        </Badge>
+                                    )}
+                                </h4>
+                                <div className="p-3 bg-muted/50 rounded-lg text-sm leading-relaxed whitespace-pre-wrap">
+                                    {marker.description || "제보 내용이 없습니다."}
+                                </div>
                             </div>
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <Clock className="h-3 w-3" />
-                                최근 제보: {marker.reportedAt}
+
+                            {/* 영상 링크가 있는 경우 */}
+                            {marker.youtubeUrl && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full border-red-200 hover:bg-red-50 hover:text-red-600"
+                                    onClick={() => window.open(marker.youtubeUrl, '_blank')}
+                                >
+                                    <Youtube className="h-4 w-4 mr-2 text-red-500" />
+                                    관련 영상 보기
+                                </Button>
+                            )}
+
+                            {/* 제보 통계 */}
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                                <span>총 {marker.reportCount}명 제보</span>
+                                <span className="text-muted-foreground/50">|</span>
+                                <div className="flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    <span>최근: {marker.reportedAt}</span>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -252,7 +277,7 @@ const DetailPanel = memo(({
                                 variant="outline"
                                 size="sm"
                                 className="w-full"
-                                onClick={() => window.open(marker.videoUrl, '_blank')}
+                                onClick={() => window.open(marker.youtubeUrl, '_blank')}
                             >
                                 <ExternalLink className="h-4 w-4 mr-2" />
                                 유튜브에서 보기
