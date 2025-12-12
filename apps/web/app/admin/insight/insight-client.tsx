@@ -44,7 +44,7 @@ const CompactStatCard = memo(({
     value: string | number;
     trend?: 'up' | 'down';
 }) => (
-    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 border border-border shrink-0">
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary/50 shrink-0">
         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
             <Icon className="h-4 w-4 text-primary" />
         </div>
@@ -133,7 +133,7 @@ const InsightClientComponent = () => {
             {/* [TABS] 메인 콘텐츠 */}
             <div className="flex-1 min-h-0 p-4">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
-                    <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid mb-3 shrink-0">
+                    <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid mb-3 shrink-0 bg-secondary/50">
                         <TabsTrigger value="heatmap" className="flex items-center gap-2">
                             <Youtube className="h-4 w-4" />
                             <span className="hidden sm:inline">유튜브 히트맵</span>
