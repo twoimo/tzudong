@@ -18,6 +18,7 @@ import {
     Star
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import cloud from 'd3-cloud';
 
 // [TYPE] 키워드 데이터 타입
 interface KeywordData {
@@ -269,7 +270,23 @@ const MOCK_VIDEOS_BY_KEYWORD: Record<string, VideoWithKeyword[]> = {
     ],
 };
 
-// [COMPONENT] 밥그릇 모양 워드 클라우드
+// [COMPONENT] d3-cloud 기반 워드 클라우드
+interface WordCloudWord {
+    text: string;
+    size: number;
+    x?: number;
+    y?: number;
+    rotate?: number;
+    font?: string;
+    category: string;
+}
+
+// 애니메이션용 인터페이스
+interface AnimatedWord extends WordCloudWord {
+    delay: number;
+    floatPhase: number;
+}
+
 const RiceBowlWordCloud = memo(({
     keywords,
     selectedKeyword,
@@ -280,74 +297,15 @@ const RiceBowlWordCloud = memo(({
     onKeywordClick: (keyword: string) => void;
 }) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const [positions, setPositions] = useState<Array<{ x: number; y: number; size: number; keyword: KeywordData }>>([]);
-
-    // 사각형 영역 경계 체크 함수
-    const isInsideRect = useCallback((x: number, y: number, width: number, height: number, textWidth: number, textHeight: number) => {
-        const padding = 10;
-        return x - textWidth / 2 >= padding &&
-            x + textWidth / 2 <= width - padding &&
-            y - textHeight / 2 >= padding &&
-            y + textHeight / 2 <= height - padding;
-    }, []);
-
-    // 키워드 위치 계산
-    useEffect(() => {
-        if (!containerRef.current) return;
-
-        const width = 500;
-        const height = 400;
-        const centerX = 250;
-        const centerY = 200;
-        const newPositions: typeof positions = [];
-        const maxCount = Math.max(...keywords.map(k => k.count));
-
-        // 키워드를 count 순으로 정렬 (큰 것부터)
-        const sortedKeywords = [...keywords].sort((a, b) => b.count - a.count);
-
-        sortedKeywords.forEach((keyword) => {
-            const size = 14 + (keyword.count / maxCount) * 28;
-            let placed = false;
-            let attempts = 0;
-            const maxAttempts = 500;
-
-            while (!placed && attempts < maxAttempts) {
-                // 중앙에서 시작하여 나선형으로 배치
-                const angle = attempts * 0.3;
-                const radius = Math.sqrt(attempts) * 12;
-
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius * 0.9;
-
-                const textWidth = keyword.keyword.length * size * 0.65;
-                const textHeight = size * 1.1;
-
-                // 사각형 영역 안에 있는지 확인
-                if (isInsideRect(x, y, width, height, textWidth, textHeight)) {
-                    // 다른 키워드와 겹치지 않는지 확인
-                    const overlaps = newPositions.some(pos => {
-                        const otherWidth = pos.keyword.keyword.length * pos.size * 0.65;
-                        const otherHeight = pos.size * 1.1;
-
-                        return Math.abs(x - pos.x) < (textWidth + otherWidth) / 2 + 3 &&
-                            Math.abs(y - pos.y) < (textHeight + otherHeight) / 2 + 2;
-                    });
-
-                    if (!overlaps) {
-                        newPositions.push({ x, y, size, keyword });
-                        placed = true;
-                    }
-                }
-                attempts++;
-            }
-        });
-
-        setPositions(newPositions);
-    }, [keywords, isInsideRect]);
+    const [words, setWords] = useState<AnimatedWord[]>([]);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [hoveredWord, setHoveredWord] = useState<string | null>(null);
+    const [isReady, setIsReady] = useState(false);
 
     // 카테고리별 색상
-    const getColor = (category: string, isSelected: boolean) => {
-        if (isSelected) return '#dc2626'; // 선택된 경우 빨간색
+    const getColor = useCallback((category: string, isSelected: boolean, isHovered: boolean) => {
+        if (isSelected) return '#dc2626';
+        if (isHovered) return '#f97316';
 
         const colors: Record<string, string> = {
             '고기': '#ef4444',
@@ -362,39 +320,105 @@ const RiceBowlWordCloud = memo(({
             '한식': '#14b8a6',
         };
         return colors[category] || '#6b7280';
-    };
+    }, []);
+
+    // 컨테이너 크기 감지
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const { width, height } = entry.contentRect;
+                if (width > 0 && height > 0) {
+                    setDimensions({ width, height });
+                }
+            }
+        });
+
+        resizeObserver.observe(containerRef.current);
+        return () => resizeObserver.disconnect();
+    }, []);
+
+    // d3-cloud 레이아웃 계산
+    useEffect(() => {
+        if (keywords.length === 0 || dimensions.width === 0 || dimensions.height === 0) return;
+
+        setIsReady(false);
+
+        const maxCount = Math.max(...keywords.map(k => k.count));
+        const minCount = Math.min(...keywords.map(k => k.count));
+
+        const minFontSize = 12;
+        const maxFontSize = 48;
+
+        const wordData = keywords.map(k => ({
+            text: k.keyword,
+            size: minFontSize + ((k.count - minCount) / (maxCount - minCount || 1)) * (maxFontSize - minFontSize),
+            category: k.category,
+        }));
+
+        const layout = cloud<WordCloudWord>()
+            .size([dimensions.width, dimensions.height])
+            .words(wordData)
+            .padding(6)
+            .rotate(() => 0)
+            .font('Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif')
+            .fontSize((d: WordCloudWord) => d.size || 14)
+            .spiral('archimedean')
+            .on('end', (computedWords: WordCloudWord[]) => {
+                setWords(computedWords as AnimatedWord[]);
+                setIsReady(true);
+            });
+
+        layout.start();
+    }, [keywords, dimensions]);
+
+    // 준비되지 않았으면 로딩 표시
+    if (!isReady || dimensions.width === 0) {
+        return (
+            <div className="relative h-full w-full flex items-center justify-center" ref={containerRef}>
+                <div className="h-8 w-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     return (
-        <div className="relative h-full flex items-center justify-center" ref={containerRef}>
-            {/* 키워드 워드 클라우드 */}
+        <div className="relative h-full w-full flex items-center justify-center" ref={containerRef}>
             <svg
-                viewBox="0 0 500 400"
+                width={dimensions.width}
+                height={dimensions.height}
                 className="w-full h-full"
-                preserveAspectRatio="xMidYMid meet"
             >
-                {/* 키워드 텍스트 */}
-                {positions.map(({ x, y, size, keyword }) => {
-                    const isSelected = selectedKeyword === keyword.keyword;
-                    return (
-                        <text
-                            key={keyword.keyword}
-                            x={x}
-                            y={y}
-                            fontSize={size}
-                            fontWeight={isSelected ? 'bold' : keyword.count > 40 ? '600' : '400'}
-                            fill={getColor(keyword.category, isSelected)}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                            className="cursor-pointer transition-all duration-200 hover:opacity-80"
-                            onClick={() => onKeywordClick(keyword.keyword)}
-                            style={{
-                                filter: isSelected ? 'drop-shadow(0 0 4px rgba(220, 38, 38, 0.5))' : 'none',
-                            }}
-                        >
-                            {keyword.keyword}
-                        </text>
-                    );
-                })}
+                <g transform={`translate(${dimensions.width / 2}, ${dimensions.height / 2})`}>
+                    {words.map((word) => {
+                        const isSelected = selectedKeyword === word.text;
+                        const isHovered = hoveredWord === word.text;
+                        const scale = isHovered ? 1.15 : isSelected ? 1.05 : 1;
+
+                        return (
+                            <text
+                                key={word.text}
+                                x={word.x}
+                                y={word.y}
+                                fontSize={(word.size || 14) * scale}
+                                fontWeight={isSelected ? 'bold' : word.size && word.size > 30 ? '600' : '400'}
+                                fill={getColor(word.category, isSelected, isHovered)}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                                className="cursor-pointer"
+                                onClick={() => onKeywordClick(word.text)}
+                                onMouseEnter={() => setHoveredWord(word.text)}
+                                onMouseLeave={() => setHoveredWord(null)}
+                                style={{
+                                    fontFamily: 'Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif',
+                                    transition: 'font-size 0.15s ease-out, fill 0.15s ease-out',
+                                }}
+                            >
+                                {word.text}
+                            </text>
+                        );
+                    })}
+                </g>
             </svg>
         </div>
     );
