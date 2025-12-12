@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users } from 'lucide-react';
+import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users, Play } from 'lucide-react';
 
 // [OPTIMIZATION] 각 섹션 컴포넌트를 동적 임포트로 코드 스플리팅
 const HeatmapSection = dynamic(
@@ -102,6 +102,47 @@ const YoutubeSubscriberCard = memo(() => {
 });
 YoutubeSubscriberCard.displayName = 'YoutubeSubscriberCard';
 
+// [COMPONENT] 유튜브 동영상 개수 카드
+const YoutubeVideoCountCard = memo(() => {
+    const { data: videoCount, isLoading, error } = useQuery({
+        queryKey: ['youtube-video-count'],
+        queryFn: async () => {
+            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+            if (!apiKey) throw new Error('API Key missing');
+
+            const response = await fetch(
+                `https://www.googleapis.com/youtube/v3/channels?part=statistics&forHandle=@tzuyang6145&key=${apiKey}`
+            );
+
+            if (!response.ok) {
+                throw new Error('Youtube API fetch failed');
+            }
+
+            const data = await response.json();
+            return data.items?.[0]?.statistics?.videoCount;
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    const displayValue = isLoading
+        ? '로딩중...'
+        : error
+            ? '-'
+            : videoCount
+                ? parseInt(videoCount).toLocaleString() + '개'
+                : '-';
+
+    return (
+        <CompactStatCard
+            icon={Play}
+            title="쯔양 동영상 수"
+            value={displayValue}
+        />
+    );
+});
+YoutubeVideoCountCard.displayName = 'YoutubeVideoCountCard';
+
+
 // [COMPONENT] 섹션 로딩 스켈레톤
 const SectionSkeleton = memo(({ title }: { title: string }) => (
     <Card className="h-full">
@@ -165,6 +206,7 @@ const InsightClientComponent = () => {
                     {/* 우측: 압축된 통계 카드 */}
                     <div className="flex items-center gap-3 overflow-x-auto">
                         <YoutubeSubscriberCard />
+                        <YoutubeVideoCountCard />
                         <CompactStatCard icon={Youtube} title="유튜브 히트맵" value="127" trend="up" />
                         <CompactStatCard icon={Map} title="구독자 제보 맛집" value="48" />
                         <CompactStatCard icon={Users} title="타 유튜버 맛집" value="312" trend="up" />
