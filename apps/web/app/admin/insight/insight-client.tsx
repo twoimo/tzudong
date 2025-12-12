@@ -1,6 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -59,6 +60,47 @@ const CompactStatCard = memo(({
     </div>
 ));
 CompactStatCard.displayName = 'CompactStatCard';
+
+const YoutubeSubscriberCard = memo(() => {
+    const { data: subscriberCount, isLoading, error } = useQuery({
+        queryKey: ['youtube-subscriber-count'],
+        queryFn: async () => {
+            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+            if (!apiKey) throw new Error('API Key missing');
+
+            // fetch using handle
+            const response = await fetch(
+                `https://www.googleapis.com/youtube/v3/channels?part=statistics&forHandle=@tzuyang6145&key=${apiKey}`
+            );
+
+            if (!response.ok) {
+                throw new Error('Youtube API fetch failed');
+            }
+
+            const data = await response.json();
+            return data.items?.[0]?.statistics?.subscriberCount;
+        },
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
+
+    const displayValue = isLoading
+        ? '로딩중...'
+        : error
+            ? '-'
+            : subscriberCount
+                ? parseInt(subscriberCount).toLocaleString()
+                : '-';
+
+    return (
+        <CompactStatCard
+            icon={Youtube}
+            title="쯔양 구독자수"
+            value={displayValue}
+            trend="up"
+        />
+    );
+});
+YoutubeSubscriberCard.displayName = 'YoutubeSubscriberCard';
 
 // [COMPONENT] 섹션 로딩 스켈레톤
 const SectionSkeleton = memo(({ title }: { title: string }) => (
@@ -122,10 +164,11 @@ const InsightClientComponent = () => {
 
                     {/* 우측: 압축된 통계 카드 */}
                     <div className="flex items-center gap-3 overflow-x-auto">
-                        <CompactStatCard icon={Youtube} title="분석 영상" value="127" trend="up" />
-                        <CompactStatCard icon={Map} title="제보 맛집" value="48" />
-                        <CompactStatCard icon={Users} title="타 유튜버" value="312" trend="up" />
-                        <CompactStatCard icon={Cloud} title="키워드" value="1,024" />
+                        <YoutubeSubscriberCard />
+                        <CompactStatCard icon={Youtube} title="유튜브 히트맵" value="127" trend="up" />
+                        <CompactStatCard icon={Map} title="구독자 제보 맛집" value="48" />
+                        <CompactStatCard icon={Users} title="타 유튜버 맛집" value="312" trend="up" />
+                        <CompactStatCard icon={Cloud} title="워드 클라우드" value="1,024" />
                     </div>
                 </div>
             </div>
