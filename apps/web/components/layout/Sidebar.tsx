@@ -1,4 +1,4 @@
-import { Home, Trophy, Stamp, DollarSign, ClipboardCheck, User, FileText, MessageSquare, PlusCircle, Edit3, Heart, ChevronDown } from "lucide-react";
+import { Home, Trophy, Stamp, DollarSign, ClipboardCheck, User, FileText, MessageSquare, PlusCircle, Edit3, Heart, ChevronDown, BarChart2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRouter, usePathname } from "next/navigation";
@@ -53,6 +53,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
     const adminMenuItems = (isHydrated && user && isAdmin) ? [
       { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
       { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
+      { icon: BarChart2, label: "쯔동여지도 인사이트", path: "/admin/insight", onClick: () => router.push("/admin/insight") },
     ] : [];
 
     return [...baseMenuItems, ...adminMenuItems];
