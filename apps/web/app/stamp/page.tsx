@@ -462,15 +462,31 @@ export default function StampPage() {
         return result;
     }, [restaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
+    // --- 클라이언트 측 페이지네이션: 50개씩 표시 ---
+    const [displayLimit, setDisplayLimit] = useState(50);
+
+    // 필터 변경 시 표시 개수 리셋
+    useEffect(() => {
+        setDisplayLimit(50);
+    }, [filters, sortColumn, sortDirection, searchQuery]);
+
+    // 현재 표시할 맛집 목록 (displayLimit까지만)
+    const displayedRestaurants = useMemo(() => {
+        return filteredAndSortedRestaurants.slice(0, displayLimit);
+    }, [filteredAndSortedRestaurants, displayLimit]);
+
+    // 더 불러올 데이터가 있는지 확인
+    const hasMoreToDisplay = displayLimit < filteredAndSortedRestaurants.length;
+
     // --- Infinite Scroll Observer ---
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
 
     const loadMoreRestaurants = useCallback(() => {
-        if (hasNextRestaurantPage && !isFetchingNextRestaurantPage) {
-            fetchNextRestaurants();
+        if (hasMoreToDisplay) {
+            setDisplayLimit(prev => prev + 50);
         }
-    }, [hasNextRestaurantPage, isFetchingNextRestaurantPage, fetchNextRestaurants]);
+    }, [hasMoreToDisplay]);
 
     useEffect(() => {
         const observer = new IntersectionObserver(
@@ -873,7 +889,7 @@ export default function StampPage() {
                         {viewMode === 'grid' ? (
                             /* Grid View */
                             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                {filteredAndSortedRestaurants.map((restaurant, index) => (
+                                {displayedRestaurants.map((restaurant, index) => (
                                     <RestaurantCard
                                         key={`${restaurant.id}-${index}`}
                                         restaurant={restaurant}
@@ -882,7 +898,14 @@ export default function StampPage() {
                                         onClick={handleRestaurantClick}
                                     />
                                 ))}
-                                <div ref={loadMoreRef} className="h-4 w-full" />
+                                {/* 무한 스크롤 트리거 및 로딩 표시 */}
+                                <div ref={loadMoreRef} className="col-span-full h-10 flex items-center justify-center">
+                                    {hasMoreToDisplay && (
+                                        <span className="text-sm text-muted-foreground">
+                                            더 불러오는 중... ({displayedRestaurants.length} / {filteredAndSortedRestaurants.length}개)
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         ) : (
                             /* List View */
@@ -909,7 +932,7 @@ export default function StampPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredAndSortedRestaurants.map((restaurant) => (
+                                        {displayedRestaurants.map((restaurant) => (
                                             <RestaurantRow
                                                 key={restaurant.id}
                                                 restaurant={restaurant}
@@ -918,8 +941,11 @@ export default function StampPage() {
                                                 onClick={handleRestaurantClick}
                                             />
                                         ))}
+                                        {/* 무한 스크롤 트리거 및 로딩 표시 */}
                                         <TableRow ref={loadMoreTableRef}>
-                                            <TableCell colSpan={4} className="h-4 p-0" />
+                                            <TableCell colSpan={4} className="h-10 text-center text-sm text-muted-foreground">
+                                                {hasMoreToDisplay && `더 불러오는 중... (${displayedRestaurants.length} / ${filteredAndSortedRestaurants.length}개)`}
+                                            </TableCell>
                                         </TableRow>
                                     </TableBody>
                                 </Table>
