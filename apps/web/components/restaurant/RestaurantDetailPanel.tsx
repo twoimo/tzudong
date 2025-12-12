@@ -13,6 +13,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Image from "next/image";
+import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -437,7 +438,7 @@ export function RestaurantDetailPanel({
                             )}
                             {viewMode === 'detail' && (
                                 <div className="flex-1">
-                                    <div className="flex gap-1 mb-1 overflow-x-auto scrollbar-hide">
+                                    <ScrollableTagContainer className="mb-1" maxWidth="320px">
                                         {categories.map((cat, index) => (
                                             <Badge
                                                 key={index}
@@ -480,7 +481,7 @@ export function RestaurantDetailPanel({
                                                 </>
                                             ) : null;
                                         })()}
-                                    </div>
+                                    </ScrollableTagContainer>
                                     <div className="flex items-center gap-2">
                                         <span className="text-2xl">{getCategoryEmoji(categories[0] || '')}</span>
                                         <h2 className="text-xl font-bold line-clamp-2">

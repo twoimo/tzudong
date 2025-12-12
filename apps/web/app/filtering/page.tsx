@@ -37,6 +37,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
 
 // 지역 목록
 const REGIONS = [
@@ -963,7 +964,7 @@ export default function FilteringPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+                                                <ScrollableTagContainer maxWidth="140px">
                                                     {Array.isArray(restaurant.categories) && restaurant.categories.length > 0
                                                         ? restaurant.categories.map((cat, idx) => (
                                                             <Badge key={idx} variant="outline" className="whitespace-nowrap">{cat}</Badge>
@@ -993,7 +994,7 @@ export default function FilteringPage() {
                                                         }
                                                         return null;
                                                     })()}
-                                                </div>
+                                                </ScrollableTagContainer>
                                             </TableCell>
                                             <TableCell className="text-center">
                                                 <span className="font-semibold">
