@@ -382,9 +382,9 @@ const MapSectionComponent = () => {
     }, []);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full min-h-0">
             {/* 좌측: 맛집 목록 */}
-            <Card className="lg:col-span-1 flex flex-col">
+            <Card className="lg:col-span-1 flex flex-col min-h-0">
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base">맛집 목록</CardTitle>
                     <div className="space-y-2 mt-2">
@@ -433,7 +433,7 @@ const MapSectionComponent = () => {
 
             {/* 중앙: 지도 */}
             <Card className={cn(
-                "flex flex-col transition-all duration-300",
+                "flex flex-col transition-all duration-300 min-h-0",
                 selectedMarker ? "lg:col-span-2" : "lg:col-span-3"
             )}>
                 <CardHeader className="pb-3">
@@ -465,7 +465,7 @@ const MapSectionComponent = () => {
 
             {/* 우측: 상세 패널 (선택 시에만 표시) */}
             {selectedMarker && (
-                <Card className="lg:col-span-1 flex flex-col">
+                <Card className="lg:col-span-1 flex flex-col min-h-0">
                     <DetailPanel
                         marker={selectedMarker}
                         onClose={handleCloseDetail}

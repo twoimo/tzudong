@@ -168,8 +168,10 @@ const RiceBowlWordCloud = memo(({
     useEffect(() => {
         if (!containerRef.current) return;
 
-        const width = 450;
-        const height = 400;
+        const width = 500;
+        const height = 450;
+        const centerX = 250;
+        const centerY = 220;
         const newPositions: typeof positions = [];
         const maxCount = Math.max(...keywords.map(k => k.count));
 
@@ -187,8 +189,8 @@ const RiceBowlWordCloud = memo(({
                 const angle = attempts * 0.5;
                 const radius = Math.sqrt(attempts) * 15;
 
-                const x = width / 2 + Math.cos(angle) * radius;
-                const y = height / 2 + Math.sin(angle) * radius * 0.8;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius * 0.8;
 
                 // 밥그릇 안에 있는지 확인
                 if (isInsideRiceBowl(x, y, width, height)) {
@@ -236,31 +238,31 @@ const RiceBowlWordCloud = memo(({
     };
 
     return (
-        <div className="relative" ref={containerRef}>
+        <div className="relative h-full flex items-center justify-center" ref={containerRef}>
             {/* 밥그릇 아이콘 배경 */}
             <div className="absolute inset-0 flex items-center justify-center opacity-5 pointer-events-none">
-                <span className="text-[300px]">🍚</span>
+                <span className="text-[400px]">🍚</span>
             </div>
 
             {/* 밥그릇 외곽선 */}
             <svg
-                viewBox="0 0 450 400"
-                className="w-full h-[400px]"
+                viewBox="0 0 500 450"
+                className="w-full h-full max-h-[500px]"
                 style={{ overflow: 'visible' }}
             >
                 {/* 밥그릇 모양 경계 (시각적 가이드) */}
                 <defs>
                     <clipPath id="riceBowlClip">
-                        <ellipse cx="225" cy="200" rx="200" ry="170" />
+                        <ellipse cx="250" cy="220" rx="220" ry="190" />
                     </clipPath>
                 </defs>
 
                 {/* 밥그릇 외곽 */}
                 <ellipse
-                    cx="225"
-                    cy="200"
-                    rx="205"
-                    ry="175"
+                    cx="250"
+                    cy="220"
+                    rx="225"
+                    ry="195"
                     fill="none"
                     stroke="hsl(var(--border))"
                     strokeWidth="2"
@@ -305,13 +307,12 @@ const RiceBowlWordCloud = memo(({
 
                 {/* 밥그릇 이모지 */}
                 <text
-                    x="225"
-                    y="380"
-                    fontSize="40"
+                    x="250"
+                    y="420"
+                    fontSize="50"
                     textAnchor="middle"
                     dominantBaseline="middle"
                 >
-                    🍚
                 </text>
             </svg>
         </div>
@@ -397,14 +398,14 @@ const WordCloudSectionComponent = () => {
     }, []);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 h-full min-h-0">
             {/* 좌측: 밥그릇 모양 워드 클라우드 */}
-            <Card className="lg:col-span-3">
+            <Card className="lg:col-span-3 flex flex-col min-h-0">
                 <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
                         <div>
                             <CardTitle className="text-base flex items-center gap-2">
-                                🍚 리뷰 키워드 분석
+                                리뷰 키워드 분석
                             </CardTitle>
                             <CardDescription className="text-xs mt-1">
                                 쯔양의 리뷰에서 가장 많이 언급된 음식 키워드입니다. 클릭하면 관련 영상을 확인할 수 있습니다.
@@ -421,7 +422,7 @@ const WordCloudSectionComponent = () => {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="flex-1 min-h-0 pt-0 overflow-hidden flex flex-col">
                     <RiceBowlWordCloud
                         keywords={filteredKeywords}
                         selectedKeyword={selectedKeyword}
@@ -429,7 +430,7 @@ const WordCloudSectionComponent = () => {
                     />
 
                     {/* 범례 */}
-                    <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                    <div className="flex flex-wrap gap-1.5 mt-2 justify-center shrink-0">
                         {['고기', '면류', '해산물', '한식', '중식', '일식', '양식', '분식', '치킨'].map(cat => (
                             <Badge
                                 key={cat}
@@ -468,7 +469,7 @@ const WordCloudSectionComponent = () => {
             </Card>
 
             {/* 우측: 관련 영상 및 리뷰 목록 */}
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 flex flex-col min-h-0">
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                         <div>
@@ -493,8 +494,8 @@ const WordCloudSectionComponent = () => {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent className="p-0">
-                    <ScrollArea className="h-[480px] px-4 pb-4">
+                <CardContent className="flex-1 p-0 overflow-hidden">
+                    <ScrollArea className="h-full px-4 pb-4">
                         {relatedVideos.length === 0 ? (
                             <div className="text-center py-12 text-muted-foreground text-sm">
                                 <div className="text-4xl mb-3">🔍</div>

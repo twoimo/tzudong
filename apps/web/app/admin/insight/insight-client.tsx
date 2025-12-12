@@ -131,9 +131,9 @@ const InsightClientComponent = () => {
             </div>
 
             {/* [TABS] 메인 콘텐츠 */}
-            <div className="flex-1 overflow-hidden p-6">
+            <div className="flex-1 min-h-0 p-4">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
-                    <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid mb-4">
+                    <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid mb-3 shrink-0">
                         <TabsTrigger value="heatmap" className="flex items-center gap-2">
                             <Youtube className="h-4 w-4" />
                             <span className="hidden sm:inline">유튜브 히트맵</span>
@@ -151,7 +151,7 @@ const InsightClientComponent = () => {
                         </TabsTrigger>
                     </TabsList>
 
-                    <div className="flex-1 overflow-auto">
+                    <div className="flex-1 min-h-0">
                         <TabsContent value="heatmap" className="mt-0 h-full">
                             <HeatmapSection />
                         </TabsContent>

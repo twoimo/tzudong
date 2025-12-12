@@ -85,6 +85,51 @@ const MOCK_VIDEOS: VideoHeatmapData[] = [
         lowestSegment: { start: 70, end: 85, engagement: 0.28 },
         weeklyChange: 28.7,
     },
+    {
+        videoId: 'jkl012',
+        title: '[쯔양] 전주 한옥마을 비빔밥 투어',
+        thumbnail: '/placeholder-video.jpg',
+        publishedAt: '2025-11-22',
+        totalViews: 1580000,
+        duration: '20:10',
+        heatmapData: Array.from({ length: 100 }, (_, i) => ({
+            position: i,
+            engagement: Math.sin(i * 0.12) * 0.2 + 0.6 + (i > 30 && i < 50 ? 0.28 : 0),
+        })),
+        peakSegment: { start: 32, end: 48, engagement: 0.91 },
+        lowestSegment: { start: 90, end: 100, engagement: 0.30 },
+        weeklyChange: 12.1,
+    },
+    {
+        videoId: 'mno345',
+        title: '[쯔양] 인천 차이나타운 짜장면 도전!',
+        thumbnail: '/placeholder-video.jpg',
+        publishedAt: '2025-11-19',
+        totalViews: 890000,
+        duration: '16:45',
+        heatmapData: Array.from({ length: 100 }, (_, i) => ({
+            position: i,
+            engagement: Math.cos(i * 0.09) * 0.3 + 0.5 + (i > 50 && i < 70 ? 0.32 : 0),
+        })),
+        peakSegment: { start: 52, end: 68, engagement: 0.89 },
+        lowestSegment: { start: 5, end: 15, engagement: 0.22 },
+        weeklyChange: -2.8,
+    },
+    {
+        videoId: 'pqr678',
+        title: '[쯔양] 제주도 흑돼지 ASMR 먹방',
+        thumbnail: '/placeholder-video.jpg',
+        publishedAt: '2025-11-16',
+        totalViews: 3200000,
+        duration: '25:30',
+        heatmapData: Array.from({ length: 100 }, (_, i) => ({
+            position: i,
+            engagement: 0.45 + Math.sin(i * 0.15) * 0.25 + (i > 15 && i < 35 ? 0.35 : 0),
+        })),
+        peakSegment: { start: 18, end: 33, engagement: 0.97 },
+        lowestSegment: { start: 75, end: 90, engagement: 0.26 },
+        weeklyChange: 35.4,
+    },
 ];
 
 // [COMPONENT] 개별 비디오 히트맵 카드
@@ -241,9 +286,9 @@ const HeatmapSectionComponent = () => {
     }, []);
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-full min-h-0">
             {/* 좌측: 비디오 목록 */}
-            <Card className="lg:col-span-1">
+            <Card className="lg:col-span-1 flex flex-col min-h-0">
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                         <CardTitle className="text-base">영상 목록</CardTitle>
@@ -262,8 +307,8 @@ const HeatmapSectionComponent = () => {
                         히트맵 변화가 큰 영상 순으로 정렬됩니다
                     </CardDescription>
                 </CardHeader>
-                <CardContent className="p-0">
-                    <ScrollArea className="h-[400px] px-4 pb-4">
+                <CardContent className="flex-1 p-0 overflow-hidden">
+                    <ScrollArea className="h-full px-4 pb-4">
                         <div className="space-y-2">
                             {MOCK_VIDEOS.map((video, index) => (
                                 <VideoHeatmapCard
@@ -279,7 +324,7 @@ const HeatmapSectionComponent = () => {
             </Card>
 
             {/* 우측: 히트맵 차트 및 분석 */}
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 flex flex-col min-h-0">
                 <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                         <div>
@@ -300,7 +345,7 @@ const HeatmapSectionComponent = () => {
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 flex flex-col">
                     {/* 히트맵 차트 */}
                     <HeatmapChart
                         data={selectedVideo.heatmapData}
