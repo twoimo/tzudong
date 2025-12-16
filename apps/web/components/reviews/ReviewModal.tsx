@@ -472,12 +472,35 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0">
                 <div className="flex flex-col h-full max-h-[90vh]">
                     <DialogHeader className="px-6 pt-6 pb-4 border-b">
-                        <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                            쯔동여지도 리뷰 작성
-                        </DialogTitle>
-                        <DialogDescription>
-                            쯔양이 방문한 맛집에 대한 방문 후기를 공유해주세요
-                        </DialogDescription>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                                <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                                    쯔동여지도 리뷰 작성
+                                </DialogTitle>
+                                <DialogDescription>
+                                    쯔양이 방문한 맛집에 대한 방문 후기를 공유해주세요
+                                </DialogDescription>
+                            </div>
+
+                            {/* 자동 저장 상태 표시 */}
+                            {lastSavedAt && (
+                                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    {isSaving ? (
+                                        <>
+                                            <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+                                            <span>저장 중...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                            <span className="text-green-600">
+                                                저장됨 ({lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })})
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </DialogHeader>
 
                     <div className="flex-1 overflow-y-auto px-6 py-4">

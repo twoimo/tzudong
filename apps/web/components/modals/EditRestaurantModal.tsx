@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState } from "react";
+import { memo, useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -8,12 +8,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronsUpDown, X } from "lucide-react";
+import { Check, ChevronsUpDown, X, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Restaurant } from "@/types/restaurant";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { saveDraft, getDraft, deleteDraft } from "@/lib/editRequestDraftDB";
 
 interface EditRestaurantModalProps {
     isOpen: boolean;
@@ -32,6 +33,8 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     const [editFormData, setEditFormData] = useState(initialFormData);
     const [isCategoryPopoverOpen, setIsCategoryPopoverOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
     const handleEditFormChange = (field: string, value: string | string[]) => {
         setEditFormData(prev => ({
@@ -96,7 +99,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 .single();
 
             if (submissionError) throw submissionError;
-            
+
             const submissionId = (submission as { id: string }).id;
 
             // 2. restaurant_submission_items 테이블에 각 영상별 INSERT (각 아이템에 해당 레코드의 target_restaurant_id 저장)
@@ -117,6 +120,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                 throw itemsError;
             }
 
+            await clearDraft();
             toast.success('맛집 수정 요청이 성공적으로 제출되었습니다!');
             onClose();
         } catch (error: any) {
@@ -127,16 +131,125 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
         }
     };
 
+    // 임시 저장된 데이터 불러오기
+    const loadDraft = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id || !restaurant?.id) return;
+
+        try {
+            const draft = await getDraft(user.id, restaurant.id);
+            if (draft) {
+                setEditFormData({
+                    name: draft.name,
+                    address: draft.address,
+                    phone: draft.phone,
+                    category: draft.category,
+                    youtube_reviews: draft.youtube_reviews,
+                });
+                setLastSavedAt(new Date(draft.savedAt));
+
+                toast.success("임시 저장된 내용을 불러왔습니다", {
+                    description: `저장 시간: ${new Date(draft.savedAt).toLocaleString('ko-KR')}`,
+                });
+            }
+        } catch (error) {
+            console.error('임시 저장 데이터 로드 실패:', error);
+        }
+    }, [restaurant?.id]);
+
+    // 자동 저장
+    const autoSave = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id || !restaurant?.id) return;
+
+        // 내용이 하나라도 있을 때만 저장
+        if (!editFormData.name && !editFormData.address && !editFormData.phone && editFormData.category.length === 0 && editFormData.youtube_reviews.length === 0) {
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            await saveDraft({
+                userId: user.id,
+                restaurantId: restaurant.id,
+                name: editFormData.name,
+                address: editFormData.address,
+                phone: editFormData.phone,
+                category: editFormData.category,
+                youtube_reviews: editFormData.youtube_reviews,
+            });
+            setLastSavedAt(new Date());
+        } catch (error) {
+            console.error('자동 저장 실패:', error);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [restaurant?.id, editFormData]);
+
+    // 임시 저장 데이터 삭제
+    const clearDraft = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user?.id || !restaurant?.id) return;
+
+        try {
+            await deleteDraft(user.id, restaurant.id);
+            setLastSavedAt(null);
+        } catch (error) {
+            console.error('임시 저장 데이터 삭제 실패:', error);
+        }
+    }, [restaurant?.id]);
+
+    // 디바운스된 자동 저장 (500ms)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const timer = setTimeout(() => {
+            autoSave();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [isOpen, editFormData, autoSave]);
+
+    // 모달이 열릴 때 임시 저장된 데이터 확인
+    useEffect(() => {
+        if (isOpen && restaurant?.id) {
+            loadDraft();
+        }
+    }, [isOpen, restaurant?.id, loadDraft]);
+
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl text-primary font-bold">
-                        맛집 수정 요청
-                    </DialogTitle>
-                    <DialogDescription>
-                        해당 맛집의 유튜브 영상별 정보를 수정해주세요
-                    </DialogDescription>
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                            <DialogTitle className="text-2xl text-primary font-bold">
+                                맛집 수정 요청
+                            </DialogTitle>
+                            <DialogDescription>
+                                해당 맛집의 유튜브 영상별 정보를 수정해주세요
+                            </DialogDescription>
+                        </div>
+
+                        {/* 자동 저장 상태 표시 */}
+                        {lastSavedAt && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                                {isSaving ? (
+                                    <>
+                                        <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+                                        <span>저장 중...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                        <span className="text-green-600">
+                                            저장됨 ({lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })})
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </DialogHeader>
 
                 {restaurant && (
