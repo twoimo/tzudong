@@ -31,10 +31,9 @@ interface SubmissionItem {
   submission_id: string;
   youtube_link: string;
   tzuyang_review: string | null;
-  target_restaurant_id: string | null; // 아이템별 수정 대상 레스토랑 ID (new 타입에서는 사용 안함)
+  target_restaurant_id: string | null; // 아이템별 수정 대상 레스토랑 ID (new 타입에서는 승인 후 연결됨)
   item_status: ItemStatus;
   rejection_reason: string | null;
-  approved_restaurant_id: string | null;
   created_at: string;
 }
 

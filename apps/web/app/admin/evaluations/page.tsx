@@ -14,7 +14,7 @@ import { DbConflictResolutionPanel } from '@/components/admin/DbConflictResoluti
 import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { EvaluationSlideView } from '@/components/admin/EvaluationSlideView';
 import { SubmissionListView, Review } from '@/components/admin/SubmissionListView';
-import { SubmissionRecord, ApprovalData, SubmissionItem } from '@/components/admin/SubmissionDetailView';
+import { SubmissionRecord, ApprovalData, SubmissionItem, ItemDecision } from '@/components/admin/SubmissionDetailView';
 import { createNewRestaurantNotification } from '@/contexts/NotificationContext';
 import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle, LayoutList, MonitorPlay, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -1414,7 +1414,7 @@ function AdminEvaluationPage() {
     }: {
       submission: SubmissionRecord;
       approvalData: ApprovalData;
-      itemDecisions: Record<string, { approved: boolean; rejectionReason: string }>;
+      itemDecisions: Record<string, ItemDecision>;
       forceApprove: boolean;
       editableData: { name: string; address: string; phone: string; categories: string[] };
     }) => {
@@ -1423,7 +1423,7 @@ function AdminEvaluationPage() {
       const lng = parseFloat(approvalData.lng);
       if (isNaN(lat) || isNaN(lng)) throw new Error('올바른 좌표가 필요합니다');
 
-      // 승인할 아이템들의 youtube_link와 tzuyang_review 수집
+      // 승인할 아이템들 수집
       const approvedItems = submission.items.filter((item: SubmissionItem) =>
         item.item_status === 'pending' && itemDecisions[item.id]?.approved
       );
@@ -1432,61 +1432,84 @@ function AdminEvaluationPage() {
         throw new Error('승인할 항목이 없습니다');
       }
 
-      // 중복 검사 (forceApprove가 false일 때만) - 관리자가 수정한 이름과 주소 사용
-      if (!forceApprove) {
-        const duplicateResult = await checkRestaurantDuplicate(
-          editableData.name,
-          approvalData.road_address || approvalData.jibun_address || ''
-        );
-
-        if (duplicateResult.isDuplicate && duplicateResult.matchedRestaurant) {
-          throw new Error(
-            `중복 맛집이 발견되었습니다: "${duplicateResult.matchedRestaurant.name}" (${duplicateResult.matchedRestaurant.road_address || duplicateResult.matchedRestaurant.jibun_address}). 유사도: ${duplicateResult.similarityScore.toFixed(0)}%. 강제 승인하려면 '중복 무시' 옵션을 체크하세요.`
-          );
+      // 검증: 승인된 모든 아이템에 tzuyang_review와 metaData가 있어야 함
+      for (const item of approvedItems) {
+        const decision = itemDecisions[item.id];
+        if (!decision.tzuyang_review?.trim()) {
+          throw new Error('쯔양 리뷰를 입력해주세요');
+        }
+        if (!decision.metaData) {
+          throw new Error('YouTube 메타데이터가 없습니다. 메타데이터를 불러온 뒤 승인해주세요.');
         }
       }
 
-      // 첫 번째 승인 아이템의 정보로 레스토랑 생성 (관리자 수정 데이터 사용)
-      const firstItem = approvedItems[0];
-      const allYoutubeLinks = approvedItems.map((item: SubmissionItem) => item.youtube_link).join(', ');
-      const allReviews = approvedItems.map((item: SubmissionItem) => item.tzuyang_review).filter(Boolean).join('\n');
-
-      // 레스토랑 생성 (관리자가 수정한 데이터 사용)
-      const { data: restaurant, error: restaurantError } = await (supabase
-        .from('restaurants') as any)
-        .insert({
-          name: editableData.name,
-          road_address: approvalData.road_address,
-          jibun_address: approvalData.jibun_address,
-          english_address: approvalData.english_address,
-          address_elements: approvalData.address_elements,
-          phone: editableData.phone || null,
-          categories: editableData.categories || [],
-          youtube_link: allYoutubeLinks,
-          tzuyang_review: allReviews,
-          lat, lng,
-          geocoding_success: true,
-          status: 'approved',
-          source_type: 'user_submission_new',
-        })
-        .select()
-        .single();
-
-      if (restaurantError) throw restaurantError;
-
-      // 각 아이템 상태 업데이트
+      let restaurant = null;
+      
+      // 각 아이템별로 RPC 호출 (unique_id 생성, 중복 검사 등은 RPC에서 처리)
       for (const item of submission.items) {
         if (item.item_status !== 'pending') continue;
 
         const decision = itemDecisions[item.id];
         if (decision?.approved) {
-          // 승인
-          await (supabase.from('restaurant_submission_items') as any)
-            .update({
-              item_status: 'approved',
-              approved_restaurant_id: restaurant.id,
-            })
-            .eq('id', item.id);
+          // 관리자가 수정한 데이터로 restaurantData 구성
+          const restaurantData = {
+            name: editableData.name,
+            phone: editableData.phone || null,
+            categories: editableData.categories || [],
+            tzuyang_review: decision.tzuyang_review || null,  // 관리자가 수정한 리뷰
+            youtube_link: decision.youtube_link || item.youtube_link || null,  // 관리자가 수정한 링크
+            jibun_address: approvalData.jibun_address,
+            road_address: approvalData.road_address,
+            english_address: approvalData.english_address || null,
+            address_elements: approvalData.address_elements || {},
+            lat,
+            lng,
+            // YouTube 메타데이터 (모달에서 가져온 값)
+            youtube_meta: decision.metaData ? {
+              title: decision.metaData.title,
+              published_at: decision.metaData.publishedAt,
+              duration: decision.metaData.duration,
+              is_shorts: decision.metaData.is_shorts,
+              is_ads: decision.metaData.ads_info?.is_ads ?? false,
+              what_ads: decision.metaData.ads_info?.what_ads ?? null,
+            } : null,
+          };
+
+          console.log('🔍 [DEBUG] RPC에 전달할 restaurantData:', restaurantData);
+
+          if (submission.submission_type === 'edit' && item.target_restaurant_id) {
+            // 수정 제보: approve_edit_submission_item RPC 호출
+            const { data: result, error } = await (supabase.rpc as any)(
+              'approve_edit_submission_item',
+              {
+                p_item_id: item.id,
+                p_admin_user_id: user.id,
+                p_updated_data: restaurantData,
+              }
+            );
+            if (error) throw error;
+            const rpcResult = Array.isArray(result) ? result[0] : result;
+            if (rpcResult && !rpcResult.success) {
+              throw new Error(rpcResult.message || '수정 승인에 실패했습니다');
+            }
+            restaurant = { id: rpcResult?.restaurant_id || item.target_restaurant_id };
+          } else {
+            // 신규 제보: approve_submission_item RPC 호출
+            const { data: result, error } = await (supabase.rpc as any)(
+              'approve_submission_item',
+              {
+                p_item_id: item.id,
+                p_admin_user_id: user.id,
+                p_restaurant_data: restaurantData,
+              }
+            );
+            if (error) throw error;
+            const rpcResult = Array.isArray(result) ? result[0] : result;
+            if (rpcResult && !rpcResult.success) {
+              throw new Error(rpcResult.message || '승인에 실패했습니다');
+            }
+            restaurant = { id: rpcResult?.created_restaurant_id };
+          }
         } else {
           // 거부
           await (supabase.from('restaurant_submission_items') as any)
@@ -1612,7 +1635,7 @@ function AdminEvaluationPage() {
   const handleApproveSubmission = (
     submission: SubmissionRecord,
     approvalData: ApprovalData,
-    itemDecisions: Record<string, { approved: boolean; rejectionReason: string }>,
+    itemDecisions: Record<string, ItemDecision>,
     forceApprove: boolean,
     editableData: { name: string; address: string; phone: string; categories: string[] }
   ) => {

@@ -238,6 +238,12 @@ export function SubmissionListView({
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [rejectionReason, setRejectionReason] = useState('');
 
+    // 네이버 검색 검증 상태
+    const [naverSearchLoading, setNaverSearchLoading] = useState(false);
+    const [naverSearchResults, setNaverSearchResults] = useState<any[]>([]);
+    const [showWarningModal, setShowWarningModal] = useState(false);
+    const [verificationDone, setVerificationDone] = useState(false);
+
     // 리뷰 관련 상태
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | null>(null);
@@ -398,6 +404,9 @@ export function SubmissionListView({
             address_elements: null,
         });
         setGeocodingResults([]);
+        setNaverSearchResults([]);
+        setVerificationDone(false);
+        setShowWarningModal(false);
         setSelectedGeocodingIndex(null);
         setForceApprove(false);
         setRejectionReason('');
@@ -430,24 +439,196 @@ export function SubmissionListView({
         setSelectedSubmission(null);
     }, []);
 
-    // 승인 가능 여부 체크
+    // 네이버 검색 API 호출 함수
+    const searchNaverPlace = async (query: string, display: number = 5) => {
+        try {
+            const response = await fetch(`/api/naver-search?query=${encodeURIComponent(query)}&display=${display}`);
+            if (!response.ok) throw new Error('Search failed');
+            const data = await response.json();
+            return data.items || [];
+        } catch (error) {
+            console.error('Naver search error:', error);
+            return [];
+        }
+    };
+
+    // 주소 정규화 및 비교 함수
+    const normalizeAddress = (addr: string) => {
+        if (!addr) return "";
+        let a = addr.replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
+        a = a.replace(/\d+/g, ""); 
+        a = a.replace(/\s*\S+(원|쇼핑|園)/g, ""); 
+        return a.trim();
+    };
+
+    const extractCityDistrictGu = (address: string): string | null => {
+        const parts = address.trim().split(/\s+/);
+        if (parts.length >= 2) {
+            let region = `${parts[0]} ${parts[1]}`;
+            if (parts.length >= 3) {
+                const p3 = parts[2];
+                // 시/군/구 까지만 포함 (읍/면/동/로/길 제외)
+                // 예: '성남시 분당구' -> 포함, '금산군 제원면' -> 제외
+                if (p3.endsWith('구') || p3.endsWith('시') || p3.endsWith('군')) {
+                    region += ` ${p3}`;
+                }
+            }
+            return region;
+        }
+        return null;
+    };
+
+    // 네이버 검색 및 검증 실행
+    const handleNaverSearchAndVerify = async () => {
+        if (!editableData.name) {
+            toast.error('맛집명이 필요합니다.');
+            return;
+        }
+
+        // 지오코딩 선택 여부 확인
+        if (!approvalData.road_address && !approvalData.jibun_address) {
+            toast.error('지오코딩 결과를 먼저 선택해주세요.');
+            return;
+        }
+
+        const targetAddress = approvalData.road_address || approvalData.jibun_address;
+
+        setNaverSearchLoading(true);
+        setNaverSearchResults([]);
+
+        try {
+            const queries = new Set<string>();
+            // 지오코딩된 주소 기반 검색
+            queries.add(`${editableData.name} ${targetAddress}`);
+            
+            const region = extractCityDistrictGu(targetAddress);
+            if (region) {
+                queries.add(`${editableData.name} ${region}`);
+            }
+
+            const searchPromises = Array.from(queries).map(q => searchNaverPlace(q, 5));
+            const resultsArrays = await Promise.all(searchPromises);
+            const allResults = resultsArrays.flat();
+            const uniqueResults = Array.from(new Map(allResults.map(item => [item.address, item])).values());
+
+            // 검증 대상: 지오코딩된 주소들
+            const targetAddresses = [approvalData.road_address, approvalData.jibun_address].filter(Boolean);
+            const normalizedTargets = targetAddresses.map(normalizeAddress).filter(Boolean);
+
+            const verifiedResults = uniqueResults.map(item => {
+                const normAddr = normalizeAddress(item.address);
+                const normRoad = normalizeAddress(item.roadAddress || '');
+                
+                const isMatch = normalizedTargets.some(target => {
+                    if (!target) return false;
+                    return target === normAddr || target === normRoad || 
+                           (normAddr && target.includes(normAddr)) || 
+                           (normAddr && normAddr.includes(target)) ||
+                           (normRoad && target.includes(normRoad)) ||
+                           (normRoad && normRoad.includes(target));
+                });
+
+                return { ...item, isMatch };
+            });
+
+            setNaverSearchResults(verifiedResults);
+            
+            const hasMatch = verifiedResults.some(r => r.isMatch);
+            
+            if (hasMatch) {
+                setVerificationDone(true);
+                toast.success('주소 검증이 완료되었습니다. 승인 버튼을 눌러주세요.');
+            } else {
+                setVerificationDone(false);
+                toast.warning('일치하는 주소를 찾지 못했습니다. 결과를 확인해주세요.');
+            }
+
+        } catch (error) {
+            console.error('Naver search verification failed', error);
+            toast.error('검증 중 오류가 발생했습니다. 다시 시도해주세요.');
+        } finally {
+            setNaverSearchLoading(false);
+        }
+    };
+
+    // 승인 가능 여부 체크 (엄격한 기준 적용)
     const canApprove = useMemo(() => {
         if (!selectedSubmission) return false;
 
+        // 1. 지오코딩 완료
         const geocodingDone = !!approvalData.lat && !!approvalData.lng && !!approvalData.road_address;
+        
+        // 2. 최소 하나의 아이템 승인
         const hasSelectedItem = Object.values(itemDecisions).some(d => d.approved);
 
+        // 3. 승인된 아이템의 메타데이터 존재
         const selectedItemsMetaFetched = Object.entries(itemDecisions)
             .filter(([, d]) => d.approved)
-            .every(([, d]) => d.metaFetched);
+            .every(([, d]) => d.metaFetched || d.metaData);
 
+        // 4. 이름 존재
         const hasName = !!editableData.name.trim();
 
-        return geocodingDone && hasSelectedItem && selectedItemsMetaFetched && hasName;
-    }, [approvalData, selectedSubmission, itemDecisions, editableData.name]);
+        // 5. 네이버 검색 검증 완료
+        const isVerified = verificationDone;
+
+        return geocodingDone && hasSelectedItem && selectedItemsMetaFetched && hasName && isVerified;
+    }, [approvalData, selectedSubmission, itemDecisions, editableData.name, verificationDone]);
+
+    // 데이터 변경 핸들러 (검증 상태 초기화)
+    const handleEditableDataChange = (newData: typeof editableData) => {
+        const nameChanged = newData.name !== editableData.name;
+        const addressChanged = newData.address !== editableData.address;
+
+        if (nameChanged) {
+            setVerificationDone(false);
+            setNaverSearchResults([]);
+        }
+
+        if (addressChanged) {
+            setVerificationDone(false);
+            setNaverSearchResults([]);
+            // 주소가 바뀌면 지오코딩 결과도 초기화
+            setGeocodingResults([]);
+            setSelectedGeocodingIndex(null);
+            setApprovalData({
+                lat: '',
+                lng: '',
+                road_address: '',
+                jibun_address: '',
+                english_address: '',
+                address_elements: null,
+            });
+        }
+
+        setEditableData(newData);
+    };
+
+    // 지오코딩 결과 선택 핸들러 (원자적 업데이트)
+    const handleGeocodingSelect = (result: GeocodingResult, index: number) => {
+        // 1. 선택 인덱스 업데이트
+        setSelectedGeocodingIndex(index);
+        
+        // 2. 승인 데이터 업데이트
+        setApprovalData({
+            lat: result.y,
+            lng: result.x,
+            road_address: result.road_address,
+            jibun_address: result.jibun_address,
+            english_address: result.english_address,
+            address_elements: result.address_elements,
+        });
+
+        // 3. 주소 필드 업데이트 (handleEditableDataChange의 초기화 로직 우회)
+        setEditableData(prev => ({ ...prev, address: result.jibun_address }));
+
+        // 4. 검증 상태 초기화
+        setVerificationDone(false);
+        setNaverSearchResults([]);
+    };
 
     // 승인 핸들러
-    const handleApprove = useCallback(() => {
+    const handleApprove = useCallback(async () => {
         if (!selectedSubmission) return;
 
         if (!approvalData.lat || !approvalData.lng || !approvalData.road_address) {
@@ -468,9 +649,17 @@ export function SubmissionListView({
             return;
         }
 
-        onApprove(selectedSubmission, approvalData, itemDecisions, forceApprove, editableData);
-        closeDetailModal();
-    }, [canApprove, approvalData, selectedSubmission, itemDecisions, forceApprove, editableData, onApprove, closeDetailModal]);
+        // 이미 검증했거나 강제 승인인 경우 바로 승인
+        if (verificationDone || forceApprove) {
+            onApprove(selectedSubmission, approvalData, itemDecisions, forceApprove, editableData);
+            closeDetailModal();
+            return;
+        }
+
+        // 검증 실행
+        await handleNaverSearchAndVerify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [canApprove, approvalData, selectedSubmission, itemDecisions, forceApprove, editableData, onApprove, closeDetailModal, verificationDone, geocodingResults]);
 
     // 거부 핸들러
     const handleReject = useCallback(() => {
@@ -1057,9 +1246,74 @@ export function SubmissionListView({
                                         forceApprove={forceApprove}
                                         onForceApproveChange={setForceApprove}
                                         editableData={editableData}
-                                        onEditableDataChange={setEditableData}
+                                        onEditableDataChange={handleEditableDataChange}
+                                        naverSearchResults={naverSearchResults}
+                                        naverSearchLoading={naverSearchLoading}
+                                        onVerifyNaverSearch={handleNaverSearchAndVerify}
+                                        onGeocodingSelect={handleGeocodingSelect}
                                     />
                                 </div>
+
+                                {/* 검증 실패 경고 모달 */}
+                                <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle className="text-amber-600 flex items-center gap-2">
+                                                <AlertCircle className="h-5 w-5" />
+                                                주소 검증 경고
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                                네이버 검색 결과와 입력된 주소가 일치하지 않습니다.
+                                                <br />
+                                                그래도 승인하시겠습니까?
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        
+                                        <div className="py-4 space-y-4">
+                                            <div className="bg-slate-50 p-3 rounded-md border text-sm">
+                                                <p className="font-semibold mb-1">입력된 정보:</p>
+                                                <p>이름: {editableData.name}</p>
+                                                <p>주소: {editableData.address}</p>
+                                            </div>
+
+                                            {naverSearchResults.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    <p className="text-sm font-semibold">검색된 유사 결과:</p>
+                                                    <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
+                                                        {naverSearchResults.map((result, idx) => (
+                                                            <div key={idx} className="text-xs p-2 bg-white border rounded">
+                                                                <p className="font-medium">{result.title.replace(/<[^>]+>/g, '')}</p>
+                                                                <p className="text-muted-foreground">{result.address}</p>
+                                                                {result.roadAddress && <p className="text-muted-foreground">{result.roadAddress}</p>}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-sm text-muted-foreground p-2 border rounded bg-slate-50">
+                                                    검색된 결과가 없습니다.
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <DialogFooter>
+                                            <Button variant="outline" onClick={() => setShowWarningModal(false)}>
+                                                취소 (수정하기)
+                                            </Button>
+                                            <Button 
+                                                className="bg-amber-600 hover:bg-amber-700"
+                                                onClick={() => {
+                                                    setShowWarningModal(false);
+                                                    setVerificationDone(true); // 강제 승인 처리
+                                                    onApprove(selectedSubmission!, approvalData, itemDecisions, forceApprove, editableData);
+                                                    closeDetailModal();
+                                                }}
+                                            >
+                                                무시하고 승인
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
 
                                 {/* 푸터 */}
                                 {(selectedSubmission.status === 'pending' || selectedSubmission.status === 'partially_approved') && (
@@ -1094,6 +1348,67 @@ export function SubmissionListView({
                                 )}
                             </>
                         )}
+                    </DialogContent>
+                </Dialog>
+
+                {/* 검증 실패 경고 모달 */}
+                <Dialog open={showWarningModal} onOpenChange={setShowWarningModal}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle className="text-amber-600 flex items-center gap-2">
+                                <AlertCircle className="h-5 w-5" />
+                                주소 검증 경고
+                            </DialogTitle>
+                            <DialogDescription>
+                                네이버 검색 결과와 입력된 주소가 일치하지 않습니다.
+                                <br />
+                                그래도 승인하시겠습니까?
+                            </DialogDescription>
+                        </DialogHeader>
+                        
+                        <div className="py-4 space-y-4">
+                            <div className="bg-slate-50 p-3 rounded-md border text-sm">
+                                <p className="font-semibold mb-1">입력된 정보:</p>
+                                <p>이름: {editableData.name}</p>
+                                <p>주소: {editableData.address}</p>
+                            </div>
+
+                            {naverSearchResults.length > 0 ? (
+                                <div className="space-y-2">
+                                    <p className="text-sm font-semibold">검색된 유사 결과:</p>
+                                    <div className="max-h-40 overflow-y-auto space-y-2 border rounded-md p-2">
+                                        {naverSearchResults.map((result, idx) => (
+                                            <div key={idx} className="text-xs p-2 bg-white border rounded">
+                                                <p className="font-medium">{result.title.replace(/<[^>]+>/g, '')}</p>
+                                                <p className="text-muted-foreground">{result.address}</p>
+                                                {result.roadAddress && <p className="text-muted-foreground">{result.roadAddress}</p>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-sm text-muted-foreground p-2 border rounded bg-slate-50">
+                                    검색된 결과가 없습니다.
+                                </div>
+                            )}
+                        </div>
+
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowWarningModal(false)}>
+                                취소 (수정하기)
+                            </Button>
+                            <Button 
+                                className="bg-amber-600 hover:bg-amber-700"
+                                onClick={() => {
+                                    setShowWarningModal(false);
+                                    setVerificationDone(true); // 강제 승인 처리
+                                    onApprove(selectedSubmission!, approvalData, itemDecisions, forceApprove, editableData);
+                                    closeDetailModal();
+                                }}
+                            >
+                                무시하고 승인
+                            </Button>
+                        </DialogFooter>
                     </DialogContent>
                 </Dialog>
 

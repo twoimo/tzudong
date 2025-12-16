@@ -19,6 +19,7 @@ import {
     X,
     Sparkles,
     Check,
+    Search,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { RESTAURANT_CATEGORIES } from '@/constants/categories';
@@ -31,10 +32,9 @@ export interface SubmissionItem {
     submission_id: string;
     youtube_link: string;
     tzuyang_review: string | null;
-    target_restaurant_id: string | null; // EDIT 시 수정 대상 식당 ID
+    target_restaurant_id: string | null; // 승인된 레스토랑 ID 또는 EDIT 시 수정 대상 식당 ID
     item_status: 'pending' | 'approved' | 'rejected';
     rejection_reason: string | null;
-    approved_restaurant_id: string | null;
     duplicate_check_result?: {
         isDuplicate: boolean;
         existingRestaurantId?: string;
@@ -151,6 +151,12 @@ interface SubmissionDetailViewProps {
     };
     onEditableDataChange: (data: { name: string; address: string; phone: string; categories: string[] }) => void;
     className?: string;
+    // 네이버 검색 검증 관련 props 추가
+    naverSearchResults: any[];
+    naverSearchLoading: boolean;
+    onVerifyNaverSearch: () => void;
+    // 지오코딩 선택 핸들러 (선택적)
+    onGeocodingSelect?: (result: GeocodingResult, index: number) => void;
 }
 
 // ==================== 유틸리티 함수 ====================
@@ -170,9 +176,25 @@ function getYoutubeVideoId(url: string | undefined): string | null {
 }
 
 function extractCityDistrictGu(address: string): string | null {
-    const regex = /(.*?[시도]\s+.*?[시군구])/;
-    const match = address.match(regex);
-    return match ? match[1] : null;
+    // 공백 기준으로 분리하여 앞 2~3어절 추출 (시/도 + 시/군/구 + 읍/면/동/도로명)
+    const parts = address.trim().split(/\s+/);
+    if (parts.length >= 2) {
+        // 기본: 시/도 + 시/군/구
+        let region = `${parts[0]} ${parts[1]}`;
+        
+        // 3번째 어절이 있고, (구/시/군/읍/면/동/로/길)로 끝나면 추가
+        // 예: 성남시 분당구, 마포구 양화로, 제주시 애월읍
+        if (parts.length >= 3) {
+            const p3 = parts[2];
+            if (p3.endsWith('구') || p3.endsWith('시') || p3.endsWith('군') || 
+                p3.endsWith('읍') || p3.endsWith('면') || p3.endsWith('동') ||
+                p3.endsWith('로') || p3.endsWith('길')) {
+                region += ` ${p3}`;
+            }
+        }
+        return region;
+    }
+    return null;
 }
 
 function removeDuplicateAddresses(addresses: GeocodingResult[]): GeocodingResult[] {
@@ -271,6 +293,11 @@ export function SubmissionDetailView({
     onForceApproveChange,
     editableData,
     onEditableDataChange,
+    // 네이버 검색 검증 관련 props 추가
+    naverSearchResults,
+    naverSearchLoading,
+    onVerifyNaverSearch,
+    onGeocodingSelect,
     className,
 }: SubmissionDetailViewProps) {
     const [geocodingNaver, setGeocodingNaver] = useState(false);
@@ -382,9 +409,18 @@ export function SubmissionDetailView({
 
     const handleSelectGeocodingResult = (index: number) => {
         const result = geocodingResults[index];
+        
         // 먼저 initialAddress 업데이트 (handleFieldChange 트리거 방지)
         setInitialAddress(result.jibun_address);
         setAddressChanged(false);
+
+        // 새로운 핸들러가 있으면 사용 (부모에서 원자적 업데이트 처리)
+        if (onGeocodingSelect) {
+            onGeocodingSelect(result, index);
+            return;
+        }
+
+        // 기존 로직 (fallback)
         // 그 다음 선택 인덱스 업데이트
         onSelectedGeocodingIndexChange(index);
         onApprovalDataChange({
@@ -404,8 +440,16 @@ export function SubmissionDetailView({
         try {
             const meta = await fetchYoutubeMetadata(youtubeLink);
             if (meta) {
-                handleItemDecisionChange(itemId, 'metaFetched', true);
-                handleItemDecisionChange(itemId, 'metaData', meta);
+                // 함수형 업데이트 사용 (타입 캐스팅 필요할 수 있음)
+                // @ts-ignore - onItemDecisionsChange가 setState 함수인 경우 함수형 업데이트 지원
+                onItemDecisionsChange((prev: Record<string, ItemDecision>) => ({
+                    ...prev,
+                    [itemId]: { 
+                        ...prev[itemId], 
+                        metaFetched: true, 
+                        metaData: meta 
+                    },
+                }));
                 toast.success(`메타데이터 가져오기 완료`);
             } else {
                 toast.error('메타데이터를 가져오지 못했습니다');
@@ -416,6 +460,95 @@ export function SubmissionDetailView({
             setFetchingMeta(null);
         }
     };
+
+    // 자동 메타데이터 가져오기
+    useEffect(() => {
+        let isMounted = true;
+        const fetchAllMetadata = async () => {
+            const pendingItems = submission.items.filter(item => item.item_status === 'pending');
+            const updates: Record<string, any> = {};
+            let hasUpdates = false;
+
+            // 병렬로 메타데이터 가져오기
+            await Promise.all(pendingItems.map(async (item) => {
+                if (!isMounted) return;
+                
+                // 초기 상태의 decision 참조 (여기서는 youtube_link만 필요하므로 안전)
+                const decision = itemDecisions[item.id];
+                const link = decision?.youtube_link || item.youtube_link;
+                
+                if (decision && !decision.metaFetched && link) {
+                    try {
+                        const meta = await fetchYoutubeMetadata(link);
+                        if (meta) {
+                            updates[item.id] = {
+                                metaFetched: true,
+                                metaData: meta
+                            };
+                            hasUpdates = true;
+                        }
+                    } catch (e) {
+                        console.error(`Failed to fetch meta for ${item.id}`, e);
+                    }
+                }
+            }));
+
+            if (isMounted && hasUpdates) {
+                // @ts-ignore - 함수형 업데이트로 안전하게 병합
+                onItemDecisionsChange((prev: Record<string, ItemDecision>) => {
+                    const next = { ...prev };
+                    Object.entries(updates).forEach(([id, update]) => {
+                        if (next[id]) {
+                            next[id] = { ...next[id], ...update };
+                        }
+                    });
+                    return next;
+                });
+                toast.success('메타데이터 자동 가져오기 완료');
+            }
+        };
+        
+        const timer = setTimeout(() => {
+            fetchAllMetadata();
+        }, 500);
+        
+        return () => {
+            isMounted = false;
+            clearTimeout(timer);
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [submission.id]); // itemDecisions를 의존성에 넣으면 무한 루프 가능성 있음
+
+    // 자동 지오코딩 (주소가 있고 결과가 없을 때)
+    useEffect(() => {
+        const autoGeocode = async () => {
+            if (editableData.address && geocodingResults.length === 0 && !geocodingNaver && !geocodingGoogle) {
+                // 승인 데이터가 없을 때만 실행
+                if (!approvalData.lat || !approvalData.lng) {
+                    await handleReGeocodeNaver();
+                }
+            }
+        };
+
+        const timer = setTimeout(() => {
+            autoGeocode();
+        }, 100);
+
+        return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [submission.id]); 
+
+    // 지오코딩 결과 선택 시 자동으로 네이버 검색 검증 실행
+    useEffect(() => {
+        if (selectedGeocodingIndex !== null && geocodingResults.length > 0) {
+            // 상태 업데이트가 반영될 시간을 주기 위해 약간의 지연
+            const timer = setTimeout(() => {
+                onVerifyNaverSearch();
+            }, 200);
+            return () => clearTimeout(timer);
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedGeocodingIndex]);
 
     return (
         <div className={cn("overflow-y-auto", className)}>
@@ -556,6 +689,55 @@ export function SubmissionDetailView({
                         )}
                     </div>
                 )}
+
+                {/* 네이버 검색 검증 (지오코딩 선택 후 활성화) */}
+                <div className="space-y-2 pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                        <Label className="text-sm font-semibold flex items-center gap-1">
+                            <span className="text-green-600">N</span> 네이버 검색 검증
+                        </Label>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={onVerifyNaverSearch}
+                            disabled={naverSearchLoading || selectedGeocodingIndex === null}
+                            className="h-6 text-xs"
+                        >
+                            {naverSearchLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+                            검증 실행
+                        </Button>
+                    </div>
+                    
+                    {selectedGeocodingIndex === null ? (
+                        <div className="text-xs text-muted-foreground p-2 border rounded-md bg-gray-50 text-center">
+                            지오코딩 결과를 선택하면 검증이 가능합니다.
+                        </div>
+                    ) : naverSearchResults.length > 0 ? (
+                        <div className="border rounded-md p-2 bg-gray-50 space-y-2">
+                            {naverSearchResults.map((result, idx) => (
+                                <div key={idx} className={cn(
+                                    "text-xs p-2 rounded border flex justify-between items-start",
+                                    result.isMatch ? "bg-green-50 border-green-200" : "bg-white border-gray-200"
+                                )}>
+                                    <div>
+                                        <p className="font-medium text-gray-900" dangerouslySetInnerHTML={{ __html: result.title }} />
+                                        <p className="text-gray-500 mt-0.5">{result.address}</p>
+                                        {result.roadAddress && <p className="text-gray-400 text-[10px]">{result.roadAddress}</p>}
+                                    </div>
+                                    {result.isMatch ? (
+                                        <Badge variant="default" className="bg-green-600 text-[10px] shrink-0">주소 일치</Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="text-gray-500 text-[10px] shrink-0">불일치</Badge>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-xs text-muted-foreground p-2 border rounded-md bg-gray-50 text-center">
+                            {naverSearchLoading ? "검색 중..." : "검증이 필요합니다. 검증 실행 버튼을 눌러주세요."}
+                        </div>
+                    )}
+                </div>
 
                 {/* 전화번호 */}
                 <div className="space-y-1">
