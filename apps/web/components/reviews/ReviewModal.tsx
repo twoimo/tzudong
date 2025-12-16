@@ -923,25 +923,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                     </span>
                                 )}
                             </div>
-
-                            {/* 자동 저장 상태 표시 */}
-                            {lastSavedAt && (
-                                <div className="text-xs text-muted-foreground flex items-center gap-1">
-                                    {isSaving ? (
-                                        <>
-                                            <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
-                                            <span>저장 중...</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                            <span className="text-green-600">
-                                                저장됨 ({lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })})
-                                            </span>
-                                        </>
-                                    )}
-                                </div>
-                            )}
                         </div>
 
                         <div className="flex gap-2">
