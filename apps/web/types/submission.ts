@@ -44,16 +44,15 @@ export interface RestaurantSubmission {
     updated_at: string;
 }
 
-// restaurant_submission_items 테이블
+// restaurant_submission_items 테이블 (20251216 마이그레이션 반영)
 export interface SubmissionItem {
     id: string;
     submission_id: string;
     youtube_link: string;
     tzuyang_review: string | null;
-    target_unique_id: string | null;
     item_status: ItemStatus;
     rejection_reason: string | null;
-    approved_restaurant_id: string | null;
+    target_restaurant_id: string | null; // 승인 후 연결된 restaurants.id
     created_at: string;
 }
 

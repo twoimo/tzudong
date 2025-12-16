@@ -201,11 +201,20 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
       case 'admin_announcement':
         return '📢';
       case 'new_restaurant':
+      case 'new_restaurants_batch':
         return '🍽️';
+      case 'submission_approved':
+        return '📝✅';
+      case 'submission_rejected':
+        return '📝❌';
       case 'review_approved':
         return '✅';
       case 'review_rejected':
         return '❌';
+      case 'recommendation_approved':
+        return '💖✅';
+      case 'recommendation_rejected':
+        return '💖❌';
       case 'user_ranking':
         return '🏆';
       default:
@@ -218,7 +227,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
       case 'admin_announcement':
         return 'bg-blue-500';
       case 'new_restaurant':
+      case 'new_restaurants_batch':
         return 'bg-green-500';
+      case 'submission_approved':
+      case 'recommendation_approved':
+        return 'bg-emerald-500';
+      case 'submission_rejected':
+      case 'recommendation_rejected':
+        return 'bg-red-500';
       case 'review_approved':
         return 'bg-emerald-500';
       case 'review_rejected':

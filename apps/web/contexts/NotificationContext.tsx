@@ -269,3 +269,128 @@ export const createUserNotification = async (
         console.warn('알림 시스템이 아직 설정되지 않았습니다.');
     }
 };
+
+// 제보 승인 알림 생성 함수
+export const createSubmissionApprovedNotification = async (
+    userId: string,
+    restaurantName: string,
+    submissionType: 'new' | 'edit',
+    customData?: Record<string, unknown>
+) => {
+    const typeLabel = submissionType === 'new' ? '신규 맛집 제보' : '정보 수정 제보';
+    const title = '제보가 승인되었습니다 ✅';
+    const message = `"${restaurantName}" ${typeLabel}가 관리자에 의해 승인되어 지도에 반영되었습니다!`;
+
+    try {
+        const { error } = await (supabase as any).rpc('create_user_notification', {
+            p_user_id: userId,
+            p_type: 'submission_approved',
+            p_title: title,
+            p_message: message,
+            p_data: { restaurantName, submissionType, ...customData }
+        });
+        if (error) throw error;
+    } catch (error) {
+        console.error('제보 승인 알림 생성 실패:', error);
+    }
+};
+
+// 제보 거부 알림 생성 함수 (거부 사유 포함)
+export const createSubmissionRejectedNotification = async (
+    userId: string,
+    restaurantName: string,
+    rejectionReason: string,
+    submissionType: 'new' | 'edit',
+    customData?: Record<string, unknown>
+) => {
+    const typeLabel = submissionType === 'new' ? '신규 맛집 제보' : '정보 수정 제보';
+    const title = '제보가 반려되었습니다';
+    const message = `"${restaurantName}" ${typeLabel}가 다음 사유로 반려되었습니다: ${rejectionReason}`;
+
+    try {
+        const { error } = await (supabase as any).rpc('create_user_notification', {
+            p_user_id: userId,
+            p_type: 'submission_rejected',
+            p_title: title,
+            p_message: message,
+            p_data: { restaurantName, rejectionReason, submissionType, ...customData }
+        });
+        if (error) throw error;
+    } catch (error) {
+        console.error('제보 거부 알림 생성 실패:', error);
+    }
+};
+
+// 리뷰 승인 알림 생성 함수
+export const createReviewApprovedNotification = async (
+    userId: string,
+    restaurantName: string,
+    customData?: Record<string, unknown>
+) => {
+    const title = '리뷰가 승인되었습니다 ✅';
+    const message = `"${restaurantName}" 리뷰가 관리자에 의해 승인되었습니다!`;
+
+    try {
+        const { error } = await (supabase as any).rpc('create_user_notification', {
+            p_user_id: userId,
+            p_type: 'review_approved',
+            p_title: title,
+            p_message: message,
+            p_data: { restaurantName, ...customData }
+        });
+        if (error) throw error;
+    } catch (error) {
+        console.error('리뷰 승인 알림 생성 실패:', error);
+    }
+};
+
+// 리뷰 거부 알림 생성 함수 (거부 사유 포함)
+export const createReviewRejectedNotification = async (
+    userId: string,
+    restaurantName: string,
+    rejectionReason: string,
+    customData?: Record<string, unknown>
+) => {
+    const title = '리뷰가 반려되었습니다';
+    const message = `"${restaurantName}" 리뷰가 다음 사유로 반려되었습니다: ${rejectionReason}`;
+
+    try {
+        const { error } = await (supabase as any).rpc('create_user_notification', {
+            p_user_id: userId,
+            p_type: 'review_rejected',
+            p_title: title,
+            p_message: message,
+            p_data: { restaurantName, rejectionReason, ...customData }
+        });
+        if (error) throw error;
+    } catch (error) {
+        console.error('리뷰 거부 알림 생성 실패:', error);
+    }
+};
+
+// 여러 맛집 일괄 등록 알림 (배치 알림)
+export const createBatchNewRestaurantsNotification = async (
+    restaurantNames: string[],
+    customData?: Record<string, unknown>
+) => {
+    const count = restaurantNames.length;
+    if (count === 0) return;
+
+    const title = count === 1 ? '새로운 맛집 등록' : `${count}개의 새로운 맛집 등록`;
+    const message = count === 1
+        ? `"${restaurantNames[0]}" 맛집이 쯔동여지도에 새로 등록되었습니다!`
+        : `"${restaurantNames.slice(0, 3).join('", "')}"${count > 3 ? ` 외 ${count - 3}곳` : ''} 맛집이 쯔동여지도에 새로 등록되었습니다!`;
+
+    try {
+        const { error } = await (supabase as any).rpc('create_new_restaurant_notification', {
+            p_title: title,
+            p_message: message,
+            p_data: { restaurantNames, count, ...customData }
+        });
+        if (error) throw error;
+    } catch (error) {
+        console.error('배치 맛집 알림 생성 실패:', error);
+        console.warn('알림 시스템이 아직 설정되지 않았습니다.');
+    }
+};
+

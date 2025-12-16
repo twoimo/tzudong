@@ -127,9 +127,24 @@ export default function AdminSubmissionsPage() {
             // 승인된 항목만 처리
             const approvedItems = Object.entries(itemDecisions).filter(([, d]) => d.approved);
 
+            // 공통 입력 검증 (모달에서 관리자가 입력한 값)
+            if (!editableData.name?.trim()) throw new Error('가게 이름을 입력해주세요');
+            if (!approvalData.jibun_address?.trim()) throw new Error('지번 주소를 선택/입력해주세요');
+            if (!approvalData.lat || !approvalData.lng) throw new Error('좌표(lat, lng)가 없습니다. 지오코딩을 완료해주세요.');
+            if (Number.isNaN(parseFloat(approvalData.lat)) || Number.isNaN(parseFloat(approvalData.lng))) {
+                throw new Error('좌표(lat, lng)가 올바르지 않습니다.');
+            }
+
             for (const [itemId, decision] of approvedItems) {
-                // 지오코딩 데이터 + 메타데이터 포함
-                const geocodedData = {
+                if (!decision.tzuyang_review?.trim()) {
+                    throw new Error('쯔양 리뷰를 입력해주세요');
+                }
+                if (!decision.metaData) {
+                    throw new Error('YouTube 메타데이터가 없습니다. 메타데이터를 불러온 뒤 승인해주세요.');
+                }
+
+                // 지오코딩 데이터 + 메타데이터 + 관리자 수정 데이터 포함
+                const restaurantData = {
                     jibun_address: approvalData.jibun_address || approvalData.road_address,
                     road_address: approvalData.road_address,
                     english_address: approvalData.english_address || '',
@@ -142,45 +157,34 @@ export default function AdminSubmissionsPage() {
                         published_at: decision.metaData.publishedAt,
                         duration: decision.metaData.duration,
                         is_shorts: decision.metaData.is_shorts,
-                        is_ads: decision.metaData.ads_info?.is_ads || false,
-                        what_ads: decision.metaData.ads_info?.what_ads || null,
+                        is_ads: decision.metaData.ads_info?.is_ads ?? false,
+                        what_ads: decision.metaData.ads_info?.what_ads ?? null,
                     } : null,
+                    // 관리자 수정 데이터 (이름, 전화번호, 카테고리, 리뷰)
+                    name: editableData.name,
+                    phone: editableData.phone,
+                    categories: editableData.categories,
+                    tzuyang_review: decision.tzuyang_review,
                 };
 
                 // 신규 제보인 경우
                 if (submission.submission_type === 'new') {
-                    // 음식점 정보도 업데이트해야 함
-                    // 먼저 submission에 관리자가 수정한 정보 반영
-                    if (editableData.name !== submission.restaurant_name ||
-                        editableData.phone !== submission.restaurant_phone ||
-                        JSON.stringify(editableData.categories) !== JSON.stringify(submission.restaurant_categories)) {
-                        await (supabase
-                            .from("restaurant_submissions") as any)
-                            .update({
-                                restaurant_name: editableData.name,
-                                restaurant_phone: editableData.phone,
-                                restaurant_categories: editableData.categories,
-                            })
-                            .eq("id", submission.id);
-                    }
-
+                    // submission 테이블은 업데이트하지 않고 (사용자 원본 유지),
+                    // restaurants 테이블 생성 시에만 관리자 수정 데이터를 사용함 (RPC 내부 처리)
+                    
                     const { error } = await (supabase.rpc as any)(
                         "approve_submission_item",
                         {
                             p_item_id: itemId,
                             p_admin_user_id: user?.id,
-                            p_geocoded_data: geocodedData,
+                            p_restaurant_data: restaurantData, // 파라미터 이름 변경 (개념적)
                         }
                     );
                     if (error) throw error;
                 } else {
                     // 수정 제보인 경우
-                    const updatedData = {
-                        ...geocodedData,
-                        name: editableData.name,
-                        phone: editableData.phone,
-                        categories: editableData.categories,
-                    };
+                    // name, phone, categories는 이미 restaurantData에 포함됨
+                    const updatedData = restaurantData;
 
                     const { error } = await (supabase.rpc as any)(
                         "approve_edit_submission_item",

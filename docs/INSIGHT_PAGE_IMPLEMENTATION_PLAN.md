@@ -1,7 +1,7 @@
 # 쯔동여지도 인사이트 페이지 구현 계획
 
 > **최종 수정일**: 2025-12-12
-> **상태**: 진행 중 (UI 구현 완료, 데이터 연동 필요)
+> **상태**: 진행 중 (UI 구현 완료, 유튜브 구독자 연동 완료, 모의 데이터 확장됨)
 
 ## 1. 개요
 
@@ -17,9 +17,9 @@
 - **프론트엔드**: Next.js 16, React, TypeScript
 - **UI 라이브러리**: shadcn/ui, Tailwind CSS
 - **차트**: recharts
-- **지도**: Naver Map API (향후 통합 예정)
+- **지도**: Naver Map API (컴포넌트 구현됨)
 - **상태 관리**: React Query, useState/useCallback/useMemo
-- **성능 최적화**: next/dynamic, React.memo
+- **성능 최적화**: next/dynamic, React.memo, ScrollArea 최적화 (페이지 스크롤 제거)
 
 ---
 
@@ -28,12 +28,12 @@
 ```
 apps/web/
 ├── app/admin/insight/
-│   ├── page.tsx              # 서버 컴포넌트 진입점 (클라이언트로 변환됨)
-│   └── insight-client.tsx    # 메인 클라이언트 컴포넌트
+│   ├── page.tsx              # 서버 컴포넌트 진입점
+│   └── insight-client.tsx    # 메인 클라이언트 컴포넌트 (탭 관리, 헤더 통계)
 ├── components/insight/
-│   ├── HeatmapSection.tsx    # 유튜브 히트맵 분석 섹션
-│   ├── MapSection.tsx        # 맛집 지도 섹션
-│   └── WordCloudSection.tsx  # 워드 클라우드 섹션
+│   ├── HeatmapSection.tsx    # 유튜브 히트맵 분석 섹션 (AI 심층 분석 포함)
+│   ├── MapSection.tsx        # 맛집 지도 섹션 (사용자 제보/타 유튜버 필터)
+│   └── WordCloudSection.tsx  # 워드 클라우드 섹션 (밥그릇 모양 SVG)
 └── components/layout/
     └── Sidebar.tsx           # 사이드바 (인사이트 메뉴 추가됨)
 ```
@@ -46,41 +46,44 @@ apps/web/
 
 - `'use client'` 지시어로 클라이언트 컴포넌트로 설정
 - `InsightClient`를 `next/dynamic`으로 동적 임포트 (`ssr: false`)
-- `Suspense`를 사용한 로딩 폴백 제공
+- `GlobalLoader` 및 `Suspense`를 사용한 로딩 처리
 
 ### 4.2 메인 클라이언트 (`insight-client.tsx`)
 
-- **헤더**: 관리자 데이터 검수 페이지와 동일한 스타일
+- **헤더**: 관리자 데이터 검수 페이지와 동일한 스타일 적용
   - 좌측: 타이틀 + 설명
-  - 우측: 압축된 통계 카드 (`CompactStatCard`)
+  - 우측: **압축된 통계 카드 (`CompactStatCard`)** 스크롤 영역
+    - `YoutubeSubscriberCard`: YouTube Data API 연동하여 실시간 구독자 수 표시
+    - `YoutubeVideoCountCard`: 실시간 영상 개수 표시
 - **탭 구조**: 유튜브 히트맵 / 맛집 지도 / 워드 클라우드
-- **관리자 접근 제어**: `useAuth().isAdmin` 확인
+- **레이아웃**: `flex`와 `min-h-0`을 활용하여 전체 페이지 스크롤 없이 내부 스크롤만 동작하도록 최적화
 
 ### 4.3 유튜브 히트맵 섹션 (`HeatmapSection.tsx`)
 
-- **좌측 패널**: 영상 목록 (썸네일, 제목, 조회수)
-- **우측 콘텐츠**:
-  - recharts `AreaChart`로 시청 유지율 시각화
-  - 가장 많이/적게 본 구간 분석 카드
-- **현재 상태**: 모의 데이터 사용
+- **영상 목록**: 6개의 모의 데이터 영상 제공 (확장됨)
+- **히트맵 차트**: `recharts` AreaChart 커스텀 (그라데이션 효과)
+- **AI 심층 분석 리포트 UI**:
+  - Peak/Low 구간 원인 분석
+  - 종합 인사이트 및 핵심 키워드 태그
+- **통계**: 조회수, 게시일, 주간 변화율(%) 표시
 
 ### 4.4 맛집 지도 섹션 (`MapSection.tsx`)
 
 - **좌측 패널**: 맛집 검색 및 목록
-  - 필터: 사용자 제보 / 타 유튜버
-  - 맛집 카드: 이름, 주소, 카테고리, 별점
-- **중앙**: 지도 플레이스홀더 (NaverMap 통합 예정)
-- **우측 패널**: 선택된 맛집 상세 정보
-- **현재 상태**: 모의 데이터 사용
+  - 검색 기능 구현 (이름, 주소, 카테고리)
+  - 필터 탭: 전체 / 사용자 제보 / 타 유튜버
+- **중앙**: `NaverMapView` 컴포넌트 (실제 로직 구현됨, 데이터 연동 대기)
+  - 마커 커스텀 (사용자 제보: 파란색, 타 유튜버: 빨간색)
+  - 마커 클릭 시 상세 패널 열림 + 지도 중심 이동 애니메이션
+- **우측 패널**: 선택된 맛집 상세 정보 (유튜브 링크 연동)
 
 ### 4.5 워드 클라우드 섹션 (`WordCloudSection.tsx`)
 
-- **좌측**: 밥그릇(🍚) 모양 워드 클라우드
-  - SVG 기반 나선형 배치 알고리즘
-  - 카테고리별 색상 구분
-  - 클릭 시 관련 영상 표시
-- **우측**: 선택된 키워드의 관련 영상 및 쯔양 리뷰 목록
-- **현재 상태**: 모의 데이터 사용
+- **시각화**: 밥그릇(🍚) 모양 내부에 `d3-cloud` 알고리즘으로 키워드 배치
+- **데이터**: 수십 종의 음식 키워드 데이터 확장 (트렌드, 카테고리 포함)
+- **인터랙션**:
+  - 키워드 클릭 시 우측 패널에 관련 영상 및 리뷰 표시
+  - 쯔양의 리뷰 텍스트 하이라이트
 
 ---
 
@@ -89,9 +92,10 @@ apps/web/
 | 기법 | 적용 위치 | 효과 |
 |------|----------|------|
 | `next/dynamic` | 각 섹션 컴포넌트 | 초기 번들 크기 감소, 탭 전환 시 지연 로딩 |
-| `React.memo` | StatCard, SectionSkeleton 등 | 불필요한 리렌더링 방지 |
+| `React.memo` | StatCard, ListItems | 불필요한 리렌더링 방지 |
 | `useCallback` | 이벤트 핸들러 | 함수 재생성 방지 |
-| `useMemo` | 필터링된 데이터, 계산 값 | 비용이 큰 연산 캐싱 |
+| `useMemo` | 필터링된 데이터 | 검색/필터 연산 캐싱 |
+| `staleTime` | React Query | YouTube API 호출 최소화 (5분 캐싱) |
 
 ---
 
@@ -99,32 +103,21 @@ apps/web/
 
 ### 6.1 데이터 연동
 
-- [ ] YouTube Data API 연동 (영상 목록, 조회수)
-- [ ] YouTube Analytics API 연동 (시청 유지율 데이터) - **제한적 접근 확인 필요**
+- [x] YouTube Data API 연동 (구독자 수)
+- [ ] YouTube Analytics API 연동 or 크롤링 (히트맵 데이터)
 - [ ] `backend/geminiCLI-insight-heatmap` 크롤러 완성
 - [ ] Supabase `reviews` 테이블에서 키워드 추출 로직 구현
-- [ ] 타 유튜버 맛집 데이터 수집 파이프라인 구축
 
-### 6.2 지도 통합
+### 6.2 지도 통합 마무리
 
-- [ ] `MapSection`의 플레이스홀더를 실제 `NaverMapView`로 교체
-- [ ] 마커 클릭 → 상세 패널 연동
-- [ ] 사용자 제보 / 타 유튜버 마커 스타일 구분
+- [ ] `MapSection`의 마커를 실제 `NaverMapView` API로 렌더링 (현재 컴포넌트는 준비됨)
+- [ ] 클러스터링 적용 고려 (맛집 데이터 증가 시)
 
-### 6.3 UI/UX 개선
+### 6.3 백엔드 자동화 (GitHub Actions)
 
-- [ ] 반응형 디자인 세밀 조정 (모바일)
-- [ ] 로딩 스켈레톤 개선
-- [ ] 에러 상태 처리 UI
-
-### 6.4 백엔드 작업 (GitHub Actions 자동화)
-
-> **자동화 전략**: GitHub Actions를 활용하여 주기적으로 백엔드 로직 실행
-
-- [ ] YouTube 히트맵 크롤링 스크립트 (`puppeteer` + SVG 파싱)
-- [ ] 키워드 추출 스크립트 (Supabase → 키워드 분석 → 저장)
-- [ ] 영상별 히트맵 데이터 저장 테이블 설계
-- [ ] GitHub Actions 워크플로우 작성
+- [ ] YouTube 히트맵 크롤링 스크립트 작성
+- [ ] 키워드 분석 스크립트 작성
+- [ ] `insight-video-sync.yml` 등 워크플로우 설정
 
 ---
 
@@ -138,45 +131,17 @@ apps/web/
 | 키워드 분석 | `insight-keyword-analyze.yml` | 매일 05:00 KST | 리뷰에서 키워드 추출 및 통계 |
 | 영상 목록 동기화 | `insight-video-sync.yml` | 매일 03:00 KST | 새로운 영상 감지 및 메타데이터 수집 |
 
-### 8.2 워크플로우 구조 예시
-
-```yaml
-# .github/workflows/insight-heatmap-collect.yml
-name: Insight Heatmap Collection
-
-on:
-  schedule:
-    - cron: '0 19 * * *'  # 매일 04:00 KST (UTC 19:00)
-  workflow_dispatch:  # 수동 실행 가능
-
-jobs:
-  collect-heatmap:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Install dependencies
-        run: cd backend/geminiCLI-insight-heatmap && npm ci
-      - name: Run heatmap collector
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: node backend/geminiCLI-insight-heatmap/collect.js
-```
-
 ### 8.3 필요한 Secrets
 
-- `SUPABASE_URL` - Supabase 프로젝트 URL
-- `SUPABASE_SERVICE_ROLE_KEY` - 서비스 역할 키 (백엔드 전용)
-- `YOUTUBE_API_KEY` - YouTube Data API 키 (선택)
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `YOUTUBE_API_KEY` (구독자 수 연동 시 사용됨)
 
 ---
 
 ## 7. 참고 자료
 
-- [YouTube Analytics API](https://developers.google.com/youtube/analytics)
+- [YouTube Data API v3](https://developers.google.com/youtube/v3)
 - [Naver Map API](https://navermaps.github.io/maps.js/)
 - [recharts 문서](https://recharts.org/en-US/)
-- 기존 `backend/geminiCLI-insight-heatmap` 폴더 참조
+- `d3-cloud` 라이브러리 (워드 클라우드용)

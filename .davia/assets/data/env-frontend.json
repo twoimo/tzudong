@@ -1,0 +1,37 @@
+[
+    {
+        "variable": "NEXT_PUBLIC_SUPABASE_URL",
+        "description": "Supabase 프로젝트 URL",
+        "source": "Supabase Dashboard"
+    },
+    {
+        "variable": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "description": "Supabase 익명 API 키",
+        "source": "Supabase Dashboard"
+    },
+    {
+        "variable": "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY",
+        "description": "구글 지도 API 키",
+        "source": "Google Cloud Console"
+    },
+    {
+        "variable": "NEXT_PUBLIC_NAVER_CLIENT_ID",
+        "description": "네이버 클라이언트 ID",
+        "source": "Naver Cloud Console"
+    },
+    {
+        "variable": "NEXT_PUBLIC_NAVER_CLIENT_SECRET",
+        "description": "네이버 클라이언트 시크릿",
+        "source": "Naver Cloud Console"
+    },
+    {
+        "variable": "NEXT_PUBLIC_YOUTUBE_API_KEY",
+        "description": "YouTube Data API 키",
+        "source": "Google Cloud Console"
+    },
+    {
+        "variable": "NEXT_OPENAI_API_KEY_BYEON",
+        "description": "OpenAI API 키",
+        "source": "OpenAI Platform"
+    }
+]

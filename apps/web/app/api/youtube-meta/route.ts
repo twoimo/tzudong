@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Invalid YouTube URL' }, { status: 400 });
         }
 
-        const youtubeApiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+        const youtubeApiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
         if (!youtubeApiKey) {
             return NextResponse.json({ error: 'YouTube API key not configured' }, { status: 500 });
         }

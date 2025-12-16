@@ -11,8 +11,13 @@ export interface Notification {
 export type NotificationType =
   | 'admin_announcement'    // 관리자 공지사항 등록
   | 'new_restaurant'        // 신규 맛집 등록
-  | 'review_approved'       // 제보 & 리뷰 승인
-  | 'review_rejected'       // 제보 & 리뷰 거부
+  | 'new_restaurants_batch' // 여러 맛집 일괄 등록
+  | 'submission_approved'   // 제보 승인
+  | 'submission_rejected'   // 제보 거부
+  | 'review_approved'       // 리뷰 승인
+  | 'review_rejected'       // 리뷰 거부
+  | 'recommendation_approved' // 맛집 추천 승인
+  | 'recommendation_rejected' // 맛집 추천 거부
   | 'user_ranking';         // 사용자 랭킹 업데이트
 
 export interface NotificationContextType {

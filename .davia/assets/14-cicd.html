@@ -1,0 +1,216 @@
+<h1>CI/CD 및 배포</h1>
+
+<p>쯔동여지도의 <strong>자동화된 배포</strong>와 <strong>데이터 파이프라인</strong> 워크플로우를 설명합니다.</p>
+
+<hr />
+
+<h2>배포 환경</h2>
+
+<h3>프론트엔드: Vercel</h3>
+<p>Next.js 앱은 <strong>Vercel</strong>에서 자동 배포됩니다:</p>
+<ul>
+    <li><strong>자동 배포</strong> - main 브랜치에 push하면 자동으로 프로덕션 배포</li>
+    <li><strong>Preview 배포</strong> - PR을 열면 자동으로 Preview URL 생성</li>
+    <li><strong>환경변수</strong> - Vercel Dashboard에서 설정</li>
+</ul>
+
+<pre><code># Vercel CLI로 수동 배포
+npm install -g vercel
+vercel login
+vercel --prod</code></pre>
+
+<h3>백엔드 파이프라인: GitHub Actions</h3>
+<p>데이터 수집/평가 파이프라인은 <strong>GitHub Actions</strong>로 자동 실행됩니다.</p>
+
+<h3>데이터베이스: Supabase</h3>
+<p>Supabase는 별도 배포 없이 <strong>클라우드에서 자동 관리</strong>됩니다.</p>
+
+<hr />
+
+<h2>GitHub Actions 워크플로우</h2>
+
+<p>현재 4개의 워크플로우가 설정되어 있습니다:</p>
+
+<h3>1. Restaurant Pipeline (통합) - 메인</h3>
+<p>파일: <code>.github/workflows/restaurant-pipeline.yml</code></p>
+
+<table>
+    <thead>
+        <tr>
+            <th>항목</th>
+            <th>내용</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>실행 주기</strong></td>
+            <td>2일마다 KST 02:00 자동 실행</td>
+        </tr>
+        <tr>
+            <td><strong>수동 실행</strong></td>
+            <td>workflow_dispatch로 단계별 선택 가능</td>
+        </tr>
+        <tr>
+            <td><strong>브랜치</strong></td>
+            <td>github-actions-restaurant</td>
+        </tr>
+    </tbody>
+</table>
+
+<p><strong>파이프라인 단계:</strong></p>
+<ol>
+    <li><strong>URL 수집</strong> - YouTube API로 쯔양 채널 영상 URL 수집</li>
+    <li><strong>Transcript 수집</strong> - 영상별 자막 추출</li>
+    <li><strong>크롤링 + 평가</strong> - Gemini AI로 맛집 정보 추출 및 검증</li>
+</ol>
+
+<pre><code># 수동 실행 옵션
+step:
+  - all                    # 전체 파이프라인
+  - url-collection         # URL 수집만
+  - transcript-collection  # Transcript 수집만
+  - crawling-evaluation    # 크롤링+평가만</code></pre>
+
+<h3>2. Backfill Duration (수동)</h3>
+<p>파일: <code>.github/workflows/backfill-duration.yml</code></p>
+<p>영상 길이 정보가 누락된 데이터를 수동으로 보완합니다.</p>
+
+<pre><code># 입력 옵션
+date: '25-12-03'    # 특정 날짜만 처리
+max: '100'          # 최대 처리 개수
+dry_run: true       # 테스트 실행</code></pre>
+
+<h3>3-4. 비활성화된 워크플로우</h3>
+<p>아래 워크플로우들은 <code>restaurant-pipeline.yml</code>에 통합되어 비활성화:</p>
+<ul>
+    <li><code>api-youtube-urls.yml</code> - URL 수집 (통합됨)</li>
+    <li><code>crawling-evaluation.yml</code> - 크롤링+평가 (통합됨)</li>
+</ul>
+
+<hr />
+
+<h2>워크플로우 실행 방법</h2>
+
+<h3>자동 실행 (스케줄)</h3>
+<p>설정된 cron에 따라 자동 실행됩니다:</p>
+<pre><code># 2일마다 KST 02:00 (UTC 17:00)
+schedule:
+  - cron: '0 17 */2 * *'</code></pre>
+
+<h3>수동 실행</h3>
+<ol>
+    <li>GitHub 저장소 → <strong>Actions</strong> 탭</li>
+    <li>왼쪽에서 워크플로우 선택</li>
+    <li><strong>Run workflow</strong> 버튼 클릭</li>
+    <li>옵션 선택 후 실행</li>
+</ol>
+
+<hr />
+
+<h2>필요한 GitHub Secrets</h2>
+
+<p>워크플로우 실행에 필요한 환경변수들:</p>
+
+<table>
+    <thead>
+        <tr>
+            <th>Secret 이름</th>
+            <th>설명</th>
+            <th>발급처</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><code>YOUTUBE_API_KEY</code></td>
+            <td>YouTube Data API 키</td>
+            <td>Google Cloud Console</td>
+        </tr>
+        <tr>
+            <td><code>SUPABASE_URL</code></td>
+            <td>Supabase 프로젝트 URL</td>
+            <td>Supabase Dashboard</td>
+        </tr>
+        <tr>
+            <td><code>SUPABASE_SERVICE_KEY</code></td>
+            <td>Supabase 서비스 키</td>
+            <td>Supabase Dashboard</td>
+        </tr>
+        <tr>
+            <td><code>NAVER_CLIENT_ID</code></td>
+            <td>네이버 API 클라이언트 ID</td>
+            <td>Naver Cloud Console</td>
+        </tr>
+        <tr>
+            <td><code>NAVER_CLIENT_SECRET</code></td>
+            <td>네이버 API 시크릿</td>
+            <td>Naver Cloud Console</td>
+        </tr>
+    </tbody>
+</table>
+
+<p><strong>설정 방법:</strong></p>
+<ol>
+    <li>GitHub 저장소 → Settings → Secrets and variables → Actions</li>
+    <li>New repository secret 클릭</li>
+    <li>Name과 Value 입력 후 저장</li>
+</ol>
+
+<hr />
+
+<h2>Vercel 배포 설정</h2>
+
+<h3>프로젝트 연결</h3>
+<ol>
+    <li><a href="https://vercel.com">vercel.com</a> 로그인</li>
+    <li>Import Git Repository → GitHub 저장소 선택</li>
+    <li>Root Directory: <code>apps/web</code></li>
+    <li>Framework Preset: <strong>Next.js</strong></li>
+</ol>
+
+<h3>환경변수 설정</h3>
+<p>Vercel Dashboard → Project → Settings → Environment Variables:</p>
+<pre><code>NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1...
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_key
+NEXT_PUBLIC_NAVER_CLIENT_ID=your_id
+NEXT_PUBLIC_NAVER_CLIENT_SECRET=your_secret
+NEXT_PUBLIC_YOUTUBE_API_KEY=your_key
+NEXT_OPENAI_API_KEY_BYEON=your_key</code></pre>
+
+<h3>빌드 설정</h3>
+<pre><code># Build Command
+pnpm build
+
+# Output Directory
+.next
+
+# Install Command
+pnpm install</code></pre>
+
+<hr />
+
+<h2>트러블슈팅</h2>
+
+<h3>GitHub Actions 실패</h3>
+<ul>
+    <li><strong>Secrets 확인</strong> - 모든 환경변수가 설정되어 있는지 확인</li>
+    <li><strong>브랜치 확인</strong> - github-actions-restaurant 브랜치 존재 확인</li>
+    <li><strong>권한 확인</strong> - Settings → Actions → General → Workflow permissions이 "Read and write permissions"인지 확인
+    </li>
+</ul>
+
+<h3>Vercel 배포 실패</h3>
+<ul>
+    <li><strong>빌드 로그 확인</strong> - Vercel Dashboard에서 에러 메시지 확인</li>
+    <li><strong>환경변수 확인</strong> - 모든 NEXT_PUBLIC_* 변수가 설정되어 있는지</li>
+    <li><strong>Node 버전</strong> - package.json의 engines와 Vercel 설정 일치 확인</li>
+</ul>
+
+<hr />
+
+<h2>관련 문서</h2>
+<ul>
+    <li><a href="09-environment-variables.html">환경변수 가이드</a> - 전체 환경변수 목록</li>
+    <li><a href="04-data-pipeline.html">데이터 파이프라인</a> - 파이프라인 동작 원리</li>
+    <li><a href="07-troubleshooting.html">트러블슈팅</a> - 문제 해결 가이드</li>
+</ul>
