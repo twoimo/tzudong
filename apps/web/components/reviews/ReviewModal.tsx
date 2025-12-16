@@ -210,10 +210,21 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     }, []);
 
     const handleSubmit = async () => {
+        // 필수 항목 검증
         if (!visitedDate || !visitedTime || !restaurant?.id || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
             toast({
                 title: "필수 항목 누락",
                 description: "모든 필수 항목을 입력해주세요",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // 리뷰 내용 길이 검증 (최소 20자)
+        if (content.trim().length < 20) {
+            toast({
+                title: "리뷰 내용이 너무 짧습니다",
+                description: "최소 20자 이상 작성해주세요 (현재 " + content.trim().length + "자)",
                 variant: "destructive",
             });
             return;
@@ -359,9 +370,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         onClose();
     }, [onClose]);
 
-    // 폼 유효성 검사 메모이제이션
+    // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
     const isFormValid = useMemo(() => {
-        return visitedDate && visitedTime && restaurant?.id && categories.length > 0 && content && verificationPhoto && foodPhotos.length > 0;
+        return visitedDate && visitedTime && restaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
     }, [visitedDate, visitedTime, restaurant?.id, categories.length, content, verificationPhoto, foodPhotos.length]);
 
     // 임시 저장된 데이터 불러오기 (IndexedDB)
