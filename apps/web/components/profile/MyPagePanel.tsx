@@ -19,9 +19,9 @@ interface SubmissionItem {
     youtube_link: string;
     tzuyang_review: string | null;
     target_unique_id: string | null;
+    target_restaurant_id: string | null; // 승인된 레스토랑 ID 또는 수정 대상 ID
     item_status: 'pending' | 'approved' | 'rejected';
     rejection_reason: string | null;
-    approved_restaurant_id: string | null;
     created_at: string;
 }
 

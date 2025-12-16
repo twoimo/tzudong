@@ -65,7 +65,7 @@ const YoutubeSubscriberCard = memo(() => {
     const { data: subscriberCount, isLoading, error } = useQuery({
         queryKey: ['youtube-subscriber-count'],
         queryFn: async () => {
-            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
             if (!apiKey) throw new Error('API Key missing');
 
             // fetch using handle
@@ -107,7 +107,7 @@ const YoutubeVideoCountCard = memo(() => {
     const { data: videoCount, isLoading, error } = useQuery({
         queryKey: ['youtube-video-count'],
         queryFn: async () => {
-            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+            const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
             if (!apiKey) throw new Error('API Key missing');
 
             const response = await fetch(

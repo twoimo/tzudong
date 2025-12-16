@@ -62,7 +62,7 @@ const fetchYouTubeMeta = async (youtubeLink: string) => {
 
     try {
         // YouTube Data API v3 호출
-        const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+        const apiKey = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY_BYEON || process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
         if (!apiKey) {
             console.error('YouTube API key not found');
             return null;
