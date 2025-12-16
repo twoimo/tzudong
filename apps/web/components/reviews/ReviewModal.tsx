@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
+import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
 
 // 이미지 압축 옵션 (컴포넌트 외부에서 상수로 정의)
 const COMPRESSION_OPTIONS = {
@@ -16,13 +17,20 @@ const COMPRESSION_OPTIONS = {
     useWebWorker: true,
 };
 
+// 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
+const generateSafeFilename = (): string => {
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const timestamp = Date.now();
+    return `${timestamp}_${randomString}.webp`;
+};
+
 // 이미지 압축 유틸리티 함수 (WebP 변환, 최대 300KB)
 const compressImage = async (file: File): Promise<File> => {
     try {
         const compressedBlob = await imageCompression(file, COMPRESSION_OPTIONS);
-        // Blob을 File로 변환 (원본 파일명에서 확장자를 .webp로 변경)
-        const newFileName = file.name.replace(/\.[^.]+$/, ".webp");
-        return new File([compressedBlob], newFileName, { type: "image/webp" });
+        // 안전한 파일명 생성 (한글 파일명 문제 방지)
+        const safeFileName = generateSafeFilename();
+        return new File([compressedBlob], safeFileName, { type: "image/webp" });
     } catch (error) {
         console.warn("이미지 압축 실패, 원본 사용:", error);
         return file;
@@ -79,6 +87,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
     // 드래그 앤 드롭을 위한 ref들
     const verificationDropRef = useRef<HTMLDivElement>(null);
@@ -314,6 +324,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 throw new Error(`리뷰 등록 실패: ${insertError.message}`);
             }
 
+            // 임시 저장 데이터 삭제
+            clearDraft();
+
             toast({
                 title: "리뷰 등록 성공! 🎉",
                 description: "관리자 검토 후 공개됩니다. 소중한 후기 감사합니다!",
@@ -350,6 +363,98 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const isFormValid = useMemo(() => {
         return visitedDate && visitedTime && restaurant?.id && categories.length > 0 && content && verificationPhoto && foodPhotos.length > 0;
     }, [visitedDate, visitedTime, restaurant?.id, categories.length, content, verificationPhoto, foodPhotos.length]);
+
+    // 임시 저장된 데이터 불러오기 (IndexedDB)
+    const loadDraft = useCallback(async () => {
+        if (!user?.id || !restaurant?.id) return;
+
+        try {
+            const draft = await getDraft(user.id, restaurant.id);
+            if (draft) {
+                setVisitedDate(draft.visitedDate);
+                setVisitedTime(draft.visitedTime);
+                setCategories(draft.categories as Category[]);
+                setContent(draft.content);
+
+                // 사진 복원
+                if (draft.verificationPhoto) {
+                    setVerificationPhoto(draft.verificationPhoto);
+                }
+                if (draft.foodPhotos && draft.foodPhotos.length > 0) {
+                    setFoodPhotos(draft.foodPhotos);
+                }
+
+                setLastSavedAt(new Date(draft.savedAt));
+
+                const photoCount = (draft.verificationPhoto ? 1 : 0) + draft.foodPhotos.length;
+                toast({
+                    title: "임시 저장된 내용을 불러왔습니다",
+                    description: `저장 시간: ${new Date(draft.savedAt).toLocaleString('ko-KR')}${photoCount > 0 ? ` (사진 ${photoCount}장 포함)` : ''}`,
+                });
+            }
+        } catch (error) {
+            console.error('임시 저장 데이터 로드 실패:', error);
+        }
+    }, [user?.id, restaurant?.id]);
+
+    // 자동 저장 (IndexedDB)
+    const autoSave = useCallback(async () => {
+        if (!user?.id || !restaurant?.id) return;
+
+        // 내용이 하나라도 있을 때만 저장
+        if (!visitedDate && !visitedTime && categories.length === 0 && !content && !verificationPhoto && foodPhotos.length === 0) {
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            await saveDraft({
+                userId: user.id,
+                restaurantId: restaurant.id,
+                visitedDate,
+                visitedTime,
+                categories,
+                content,
+                verificationPhoto,
+                foodPhotos,
+            });
+            setLastSavedAt(new Date());
+        } catch (error) {
+            console.error('자동 저장 실패:', error);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [user?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos]);
+
+    // 임시 저장 데이터 삭제 (IndexedDB)
+    const clearDraft = useCallback(async () => {
+        if (!user?.id || !restaurant?.id) return;
+
+        try {
+            await deleteDraft(user.id, restaurant.id);
+            setLastSavedAt(null);
+        } catch (error) {
+            console.error('임시 저장 데이터 삭제 실패:', error);
+        }
+    }, [user?.id, restaurant?.id]);
+
+    // 디바운스된 자동 저장 (500ms)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const timer = setTimeout(() => {
+            autoSave();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, autoSave]);
+
+    // 모달이 열릴 때 임시 저장된 데이터 확인
+    useEffect(() => {
+        if (isOpen && user?.id && restaurant?.id) {
+            loadDraft();
+        }
+    }, [isOpen, user?.id, restaurant?.id, loadDraft]);
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -769,17 +874,39 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
 
                     {/* 푸터 */}
                     <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/50">
-                        <div className="text-xs text-muted-foreground">
-                            {isFormValid ? (
-                                <span className="text-green-600 flex items-center gap-1">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    모든 필수 항목이 입력되었습니다
-                                </span>
-                            ) : (
-                                <span className="text-amber-600 flex items-center gap-1">
-                                    <AlertCircle className="h-3 w-3" />
-                                    필수 항목을 모두 입력해주세요
-                                </span>
+                        <div className="flex items-center gap-4">
+                            {/* 폼 유효성 상태 */}
+                            <div className="text-xs text-muted-foreground">
+                                {isFormValid ? (
+                                    <span className="text-green-600 flex items-center gap-1">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        모든 필수 항목이 입력되었습니다
+                                    </span>
+                                ) : (
+                                    <span className="text-amber-600 flex items-center gap-1">
+                                        <AlertCircle className="h-3 w-3" />
+                                        필수 항목을 모두 입력해주세요
+                                    </span>
+                                )}
+                            </div>
+
+                            {/* 자동 저장 상태 표시 */}
+                            {lastSavedAt && (
+                                <div className="text-xs text-muted-foreground flex items-center gap-1">
+                                    {isSaving ? (
+                                        <>
+                                            <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+                                            <span>저장 중...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                            <span className="text-green-600">
+                                                저장됨 ({lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })})
+                                            </span>
+                                        </>
+                                    )}
+                                </div>
                             )}
                         </div>
 
