@@ -366,7 +366,7 @@ export default function ReviewsPage() {
                       </div>
                       <p className="text-sm text-red-600 dark:text-red-400">
                         {review.adminNote.startsWith("거부: ")
-                          ? review.adminNote.substring(4)
+                          ? review.adminNote.substring(4) // "거부: " 제거 (한글2 + 콜론1 + 공백1 = 4글자)
                           : review.adminNote}
                       </p>
                     </div>

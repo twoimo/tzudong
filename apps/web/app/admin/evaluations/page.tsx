@@ -15,7 +15,13 @@ import { EditRestaurantModal } from '@/components/admin/EditRestaurantModal';
 import { EvaluationSlideView } from '@/components/admin/EvaluationSlideView';
 import { SubmissionListView, Review } from '@/components/admin/SubmissionListView';
 import { SubmissionRecord, ApprovalData, SubmissionItem, ItemDecision } from '@/components/admin/SubmissionDetailView';
-import { createNewRestaurantNotification } from '@/contexts/NotificationContext';
+import {
+  createNewRestaurantNotification,
+  createSubmissionApprovedNotification,
+  createSubmissionRejectedNotification,
+  createReviewApprovedNotification,
+  createReviewRejectedNotification
+} from '@/contexts/NotificationContext';
 import { ClipboardCheck, Loader2, FileText, CheckCircle2, XCircle, AlertCircle, LayoutList, MonitorPlay, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GlobalLoader } from "@/components/ui/global-loader";
@@ -1296,13 +1302,20 @@ function AdminEvaluationPage() {
     mutationFn: async ({ reviewId, adminNote }: { reviewId: string; adminNote: string }) => {
       const { data: review, error: reviewError } = await supabase
         .from('reviews')
-        .select('restaurant_id, is_verified')
+        .select('user_id, restaurant_id, is_verified')
         .eq('id', reviewId)
         .single();
 
       if (reviewError) throw reviewError;
       const typedReview = review as any;
       const wasAlreadyVerified = typedReview.is_verified;
+
+      // 레스토랑 이름 조회
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name, review_count')
+        .eq('id', typedReview.restaurant_id)
+        .single();
 
       const { error: approveError } = await (supabase.from('reviews') as any)
         .update({
@@ -1316,12 +1329,6 @@ function AdminEvaluationPage() {
       if (approveError) throw approveError;
 
       if (!wasAlreadyVerified) {
-        const { data: restaurant } = await supabase
-          .from('restaurants')
-          .select('review_count')
-          .eq('id', typedReview.restaurant_id)
-          .single();
-
         const typedRestaurant = restaurant as any;
         await (supabase.from('restaurants') as any)
           .update({
@@ -1330,9 +1337,19 @@ function AdminEvaluationPage() {
           })
           .eq('id', typedReview.restaurant_id);
       }
+
+      return {
+        reviewId,
+        userId: typedReview.user_id,
+        restaurantName: (restaurant as any)?.name || '맛집'
+      };
     },
-    onSuccess: () => {
+    onSuccess: ({ userId, restaurantName }) => {
       toast({ title: '리뷰 승인됨', description: '리뷰가 승인되었습니다.' });
+      // 리뷰 작성자에게 승인 알림 전송
+      if (userId) {
+        createReviewApprovedNotification(userId, restaurantName);
+      }
       queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
     },
     onError: (error: any) => {
@@ -1345,17 +1362,25 @@ function AdminEvaluationPage() {
     mutationFn: async ({ reviewId, adminNote }: { reviewId: string; adminNote: string }) => {
       const { data: review, error: reviewError } = await supabase
         .from('reviews')
-        .select('restaurant_id, is_verified')
+        .select('user_id, restaurant_id, is_verified')
         .eq('id', reviewId)
         .single();
 
       if (reviewError) throw reviewError;
       const typedReview = review as any;
 
+      // 레스토랑 이름 조회
+      const { data: restaurant } = await supabase
+        .from('restaurants')
+        .select('name, review_count')
+        .eq('id', typedReview.restaurant_id)
+        .single();
+
+      const rejectionReason = adminNote || '관리자에 의해 거부됨';
       const { error: rejectError } = await (supabase.from('reviews') as any)
         .update({
           is_verified: false,
-          admin_note: adminNote ? `거부: ${adminNote}` : '거부: 관리자에 의해 거부됨',
+          admin_note: `거부: ${rejectionReason}`,
           edited_by_admin: true,
           updated_at: new Date().toISOString(),
         })
@@ -1364,12 +1389,6 @@ function AdminEvaluationPage() {
       if (rejectError) throw rejectError;
 
       if (typedReview.is_verified) {
-        const { data: restaurant } = await supabase
-          .from('restaurants')
-          .select('review_count')
-          .eq('id', typedReview.restaurant_id)
-          .single();
-
         const typedRestaurant = restaurant as any;
         await (supabase.from('restaurants') as any)
           .update({
@@ -1378,9 +1397,20 @@ function AdminEvaluationPage() {
           })
           .eq('id', typedReview.restaurant_id);
       }
+
+      return {
+        reviewId,
+        userId: typedReview.user_id,
+        restaurantName: (restaurant as any)?.name || '맛집',
+        rejectionReason
+      };
     },
-    onSuccess: () => {
+    onSuccess: ({ userId, restaurantName, rejectionReason }) => {
       toast({ title: '리뷰 거부됨', description: '리뷰가 거부되었습니다.' });
+      // 리뷰 작성자에게 거부 알림 전송 (거부 사유 포함)
+      if (userId) {
+        createReviewRejectedNotification(userId, restaurantName, rejectionReason);
+      }
       queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
     },
     onError: (error: any) => {
@@ -1444,7 +1474,7 @@ function AdminEvaluationPage() {
       }
 
       let restaurant = null;
-      
+
       // 각 아이템별로 RPC 호출 (unique_id 생성, 중복 검사 등은 RPC에서 처리)
       for (const item of submission.items) {
         if (item.item_status !== 'pending') continue;
@@ -1537,6 +1567,15 @@ function AdminEvaluationPage() {
         category: submission.restaurant_categories,
         submissionId: submission.id
       });
+      // 제보자에게 승인 알림 전송
+      if (submission.user_id) {
+        createSubmissionApprovedNotification(
+          submission.user_id,
+          submission.restaurant_name,
+          submission.submission_type,
+          { submissionId: submission.id }
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
       queryClient.invalidateQueries({ queryKey: ['restaurants'] });
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
@@ -1575,10 +1614,20 @@ function AdminEvaluationPage() {
         })
         .eq('id', submission.id);
       if (error) throw error;
-      return submission;
+      return { submission, reason };
     },
-    onSuccess: ({ restaurant_name }) => {
-      toast({ title: '제보 거부됨', description: `"${restaurant_name}" 제보가 거부되었습니다` });
+    onSuccess: ({ submission, reason }) => {
+      toast({ title: '제보 거부됨', description: `"${submission.restaurant_name}" 제보가 거부되었습니다` });
+      // 제보자에게 거부 알림 전송 (거부 사유 포함)
+      if (submission.user_id) {
+        createSubmissionRejectedNotification(
+          submission.user_id,
+          submission.restaurant_name,
+          reason || '관리자에 의해 반려됨',
+          submission.submission_type,
+          { submissionId: submission.id }
+        );
+      }
       queryClient.invalidateQueries({ queryKey: ['admin-submissions-inline'] });
       if (currentSubmissionIndex >= submissionsData.length - 1 && currentSubmissionIndex > 0) {
         setCurrentSubmissionIndex(currentSubmissionIndex - 1);
