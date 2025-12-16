@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users, Play } from 'lucide-react';
+import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users, Play, CalendarDays } from 'lucide-react';
 
 // [OPTIMIZATION] 각 섹션 컴포넌트를 동적 임포트로 코드 스플리팅
 const HeatmapSection = dynamic(
@@ -30,6 +30,14 @@ const WordCloudSection = dynamic(
     {
         ssr: false,
         loading: () => <SectionSkeleton title="리뷰 워드 클라우드" />,
+    }
+);
+
+const SeasonCalendarSection = dynamic(
+    () => import('@/components/insight/SeasonCalendarSection'),
+    {
+        ssr: false,
+        loading: () => <SectionSkeleton title="시즌 캘린더 알림" />,
     }
 );
 
@@ -218,7 +226,7 @@ const InsightClientComponent = () => {
             {/* [TABS] 메인 콘텐츠 */}
             <div className="flex-1 min-h-0 p-4">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
-                    <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-grid mb-3 shrink-0 bg-secondary/50">
+                    <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid mb-3 shrink-0 bg-secondary/50">
                         <TabsTrigger value="heatmap" className="flex items-center gap-2">
                             <Youtube className="h-4 w-4" />
                             <span className="hidden sm:inline">유튜브 히트맵</span>
@@ -234,6 +242,11 @@ const InsightClientComponent = () => {
                             <span className="hidden sm:inline">워드 클라우드</span>
                             <span className="sm:hidden">키워드</span>
                         </TabsTrigger>
+                        <TabsTrigger value="season" className="flex items-center gap-2">
+                            <CalendarDays className="h-4 w-4" />
+                            <span className="hidden sm:inline">시즌 캘린더</span>
+                            <span className="sm:hidden">시즌</span>
+                        </TabsTrigger>
                     </TabsList>
 
                     <div className="flex-1 min-h-0">
@@ -247,6 +260,10 @@ const InsightClientComponent = () => {
 
                         <TabsContent value="wordcloud" className="mt-0 h-full">
                             <WordCloudSection />
+                        </TabsContent>
+
+                        <TabsContent value="season" className="mt-0 h-full">
+                            <SeasonCalendarSection />
                         </TabsContent>
                     </div>
                 </Tabs>
