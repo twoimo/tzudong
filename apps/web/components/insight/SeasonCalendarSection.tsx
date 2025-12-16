@@ -1002,35 +1002,40 @@ const KeywordCard = memo(({
 }: {
     keyword: SeasonalKeyword;
 }) => (
-    <div className="p-4 rounded-lg border transition-all bg-card border-border hover:border-primary/50">
-        <div className="flex items-start gap-3">
-            <span className="text-2xl">{keyword.icon}</span>
-            <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-semibold">{keyword.keyword}</h4>
-                    <Badge variant="secondary" className="text-xs">{keyword.category}</Badge>
+    <div className="p-6 rounded-lg border transition-all bg-card border-border hover:border-primary/50 min-h-[180px]">
+        <div className="flex items-start justify-between gap-3">
+            {/* 왼쪽: 아이콘 + 키워드 정보 */}
+            <div className="flex items-start gap-3 min-w-0">
+                <span className="text-2xl">{keyword.icon}</span>
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-semibold">{keyword.keyword}</h4>
+                        <Badge variant="secondary" className="text-xs">{keyword.category}</Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-sm">
+                        <span className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
+                            <TrendingUp className="h-3 w-3" />
+                            +{keyword.predictedGrowth}%
+                        </span>
+                        <span className="text-muted-foreground">예상 증가</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2 mt-1 text-sm">
-                    <span className="text-green-600 dark:text-green-400 font-medium flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        +{keyword.predictedGrowth}%
-                    </span>
-                    <span className="text-muted-foreground">예상 증가</span>
+            </div>
+
+            {/* 오른쪽: 날짜 정보 */}
+            <div className="text-right text-xs shrink-0 space-y-1">
+                <div className="text-blue-600 dark:text-blue-400 font-medium">
+                    📅 업로드: {keyword.recommendedUploadDate}
                 </div>
-                <div className="flex items-center gap-2 mt-2 text-xs">
-                    <CalendarDays className="h-3 w-3 text-blue-500" />
-                    <span className="text-blue-600 dark:text-blue-400 font-medium">업로드: {keyword.recommendedUploadDate}</span>
+                <div className="text-orange-600 dark:text-orange-400">
+                    🎬 촬영: {keyword.recommendedShootDate}
                 </div>
-                <div className="flex items-center gap-2 mt-1 text-xs">
-                    <Video className="h-3 w-3 text-orange-500" />
-                    <span className="text-orange-600 dark:text-orange-400">촬영 시작: {keyword.recommendedShootDate}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
-                    <span>피크: {keyword.peakWeek}</span>
+                <div className="text-muted-foreground">
+                    📈 피크: {keyword.peakWeek}
                 </div>
             </div>
         </div>
+
         {keyword.relatedVideos.length > 0 && (
             <div className="mt-3 pt-3 border-t">
                 <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
@@ -1142,7 +1147,7 @@ const SeasonCalendarSectionComponent = () => {
                         <CardHeader className="pb-3">
                             <CardTitle className="text-lg flex items-center gap-2">
                                 <Flame className="h-5 w-5 text-orange-500" />
-                                🔥 이번 시즌 핫 키워드
+                                이번 시즌 핫 키워드
                             </CardTitle>
                             <CardDescription>
                                 작년 데이터 기반 예측 - 지금 촬영하면 알고리즘 흐름에 탈 수 있어요!
