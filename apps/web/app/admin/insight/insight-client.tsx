@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users, Play, CalendarDays } from 'lucide-react';
+import { BarChart2, Map, Cloud, TrendingUp, TrendingDown, Youtube, Users, Play, CalendarDays, Sparkles } from 'lucide-react';
 
 // [OPTIMIZATION] 각 섹션 컴포넌트를 동적 임포트로 코드 스플리팅
 const HeatmapSection = dynamic(
@@ -38,6 +38,14 @@ const SeasonCalendarSection = dynamic(
     {
         ssr: false,
         loading: () => <SectionSkeleton title="시즌 캘린더 알림" />,
+    }
+);
+
+const InsightChatSection = dynamic(
+    () => import('@/components/insight/InsightChatSection'),
+    {
+        ssr: false,
+        loading: () => <SectionSkeleton title="AI 인사이트" />,
     }
 );
 
@@ -169,7 +177,7 @@ SectionSkeleton.displayName = 'SectionSkeleton';
 // [MAIN] 인사이트 클라이언트 컴포넌트
 const InsightClientComponent = () => {
     const { isAdmin } = useAuth();
-    const [activeTab, setActiveTab] = useState('heatmap');
+    const [activeTab, setActiveTab] = useState('chat');
 
     // [OPTIMIZATION] 탭 변경 핸들러 메모이제이션
     const handleTabChange = useCallback((value: string) => {
@@ -226,7 +234,12 @@ const InsightClientComponent = () => {
             {/* [TABS] 메인 콘텐츠 */}
             <div className="flex-1 min-h-0 p-4">
                 <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
-                    <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid mb-3 shrink-0 bg-secondary/50">
+                    <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid mb-3 shrink-0 bg-secondary/50">
+                        <TabsTrigger value="chat" className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4" />
+                            <span className="hidden sm:inline">AI 인사이트</span>
+                            <span className="sm:hidden">AI</span>
+                        </TabsTrigger>
                         <TabsTrigger value="heatmap" className="flex items-center gap-2">
                             <Youtube className="h-4 w-4" />
                             <span className="hidden sm:inline">유튜브 히트맵</span>
@@ -250,6 +263,10 @@ const InsightClientComponent = () => {
                     </TabsList>
 
                     <div className="flex-1 min-h-0">
+                        <TabsContent value="chat" className="mt-0 h-full">
+                            <InsightChatSection />
+                        </TabsContent>
+
                         <TabsContent value="heatmap" className="mt-0 h-full">
                             <HeatmapSection />
                         </TabsContent>
