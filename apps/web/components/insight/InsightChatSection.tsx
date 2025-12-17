@@ -83,19 +83,37 @@ const MOCK_SESSIONS: ChatSession[] = [
             {
                 id: 'msg-ai-1',
                 role: 'assistant',
-                content: `**890원 회전초밥 121접시** 분석
+                content: `## 🔥 최근 인기 콘텐츠 TOP 3 분석
 
-🎯 **성공 요인**: 극단적 가성비 + 도전 포맷 조합
-📈 **조회수**: 210만 (채널 평균 대비 +48%)
-⏱️ **피크 구간**: 100접시 돌파 순간 (8:30)
-💬 **댓글 반응**: "가성비 미쳤다", "도전 성공각"`,
+### 1위: 890원 회전초밥 121접시 (210만)
+- **성공 요인**: 극단적 가성비 + 도전 포맷
+- **피크 구간**: 100접시 돌파 (8:30)
+- **핵심 키워드**: "가성비", "미쳤다"
+
+### 2위: 대전 성심당 빵 대량 구매 (195만)
+- **성공 요인**: 유명 베이커리 + 대량 구매 포맷
+- **피크 구간**: 트레이 가득 담는 장면 (5:20)
+- **핵심 키워드**: "빵지순례", "성심당"
+
+### 3위: 전주 한옥마을 비빔밥 투어 (158만)
+- **성공 요인**: 지역 맛집 + 전통 음식
+- **피크 구간**: 비빔밥 비비는 장면 (4:10)
+- **핵심 키워드**: "전주", "비빔밥"`,
                 visualComponent: 'heatmap',
-                sources: [{
-                    videoTitle: '[쯔양] 890원 회전초밥 121접시!',
-                    youtubeLink: 'https://www.youtube.com/watch?v=Tx_yrWwGCL4',
-                    timestamp: '8:30',
-                    text: '100접시 돌파!'
-                }],
+                sources: [
+                    {
+                        videoTitle: '[쯔양] 890원 회전초밥 121접시!',
+                        youtubeLink: 'https://www.youtube.com/watch?v=Tx_yrWwGCL4',
+                        timestamp: '8:30',
+                        text: '100접시 돌파!'
+                    },
+                    {
+                        videoTitle: '[쯔양] 대전 성심당 빵 대량 구매!',
+                        youtubeLink: 'https://example.com',
+                        timestamp: '5:20',
+                        text: '튀김소보로 포함 트레이 가득'
+                    }
+                ],
                 createdAt: new Date(Date.now() - 280000)
             },
             {
@@ -107,13 +125,21 @@ const MOCK_SESSIONS: ChatSession[] = [
             {
                 id: 'msg-ai-2',
                 role: 'assistant',
-                content: `**지역별 맛집 분포** (총 312개)
+                content: `## 🗺️ 지역별 맛집 분포 (총 312개)
 
-🏙️ **수도권**: 서울(98) + 경기(65) = 52%
-🌊 **부산권**: 32개 (평균 조회수 142만, 효율 TOP)
-🍞 **대전권**: 28개 (성심당 효과로 156만 평균)
+### 📍 지역별 TOP 맛집
+| 지역 | 맛집 수 | 대표 맛집 | 평균 조회수 |
+|------|--------|----------|------------|
+| 서울 | 98개 | 하남돼지집, 남대문시장 | 125만 |
+| 경기 | 65개 | 오늘초밥 수지점, 수원왕갈비 | 108만 |
+| 부산 | 32개 | 자갈치시장, 해운대 횟집 | 142만 |
+| 대전 | 28개 | 성심당, 대전시장 | 156만 |
+| 전주 | 18개 | 한옥마을 비빔밥 | 135만 |
 
-💡 **미개척 지역**: 광주, 울산, 세종 - 성장 잠재력 높음`,
+### � 구독자 제보 인기 맛집
+1. **하남돼지집** (서울) - 제보 158건
+2. **성심당** (대전) - 제보 142건
+3. **자갈치시장** (부산) - 제보 98건`,
                 visualComponent: 'map',
                 sources: [],
                 createdAt: new Date(Date.now() - 180000)
@@ -608,24 +634,34 @@ const MiniCalendar = memo(() => (
 ));
 MiniCalendar.displayName = 'MiniCalendar';
 
-// [COMPONENT] 미니 통계 카드
+// [COMPONENT] 미니 통계 카드 (강화 버전)
 const MiniStats = memo(() => (
-    <div className="grid grid-cols-4 gap-2 mt-2">
-        {[
-            { label: '영상', value: '127', change: '+8', color: 'from-blue-500/20 to-blue-600/10' },
-            { label: '조회수', value: '142만', change: '▲12%', color: 'from-green-500/20 to-green-600/10' },
-            { label: '맛집', value: '312', change: '+15', color: 'from-orange-500/20 to-orange-600/10' },
-            { label: '자막', value: '1,024', change: '', color: 'from-purple-500/20 to-purple-600/10' },
-        ].map((stat, i) => (
-            <div key={i} className={cn("bg-gradient-to-br rounded-lg p-2 border border-border/30", stat.color)}>
-                <p className="text-[10px] text-muted-foreground">{stat.label}</p>
-                <p className="text-sm font-bold">{stat.value}</p>
-                {stat.change && <p className="text-[10px] text-green-400">{stat.change}</p>}
-            </div>
-        ))}
+    <div className="bg-secondary/30 rounded-lg p-3 mt-3 border border-border/30">
+        <div className="flex items-center gap-2 mb-3">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <span className="text-xs font-medium">핵심 지표 (최근 30일)</span>
+        </div>
+        <div className="grid grid-cols-4 gap-2">
+            {[
+                { label: '총 영상', value: '127', change: '+8', icon: '📹', color: 'from-blue-500/30 to-blue-600/20', borderColor: 'border-blue-500/40' },
+                { label: '평균 조회', value: '142만', change: '▲12%', icon: '👀', color: 'from-green-500/30 to-green-600/20', borderColor: 'border-green-500/40' },
+                { label: '맛집 수', value: '312', change: '+15', icon: '🍽️', color: 'from-orange-500/30 to-orange-600/20', borderColor: 'border-orange-500/40' },
+                { label: '자막 청크', value: '1,024', change: '', icon: '📝', color: 'from-purple-500/30 to-purple-600/20', borderColor: 'border-purple-500/40' },
+            ].map((stat, i) => (
+                <div key={i} className={cn("bg-gradient-to-br rounded-xl p-2.5 border", stat.color, stat.borderColor)}>
+                    <div className="flex items-center gap-1 mb-1">
+                        <span className="text-sm">{stat.icon}</span>
+                        <span className="text-[10px] text-muted-foreground">{stat.label}</span>
+                    </div>
+                    <p className="text-lg font-bold">{stat.value}</p>
+                    {stat.change && <p className="text-[10px] text-green-400 font-medium">{stat.change}</p>}
+                </div>
+            ))}
+        </div>
     </div>
 ));
 MiniStats.displayName = 'MiniStats';
+
 
 // [COMPONENT] 시각화 컴포넌트 렌더러
 const VisualComponentRenderer = memo(({ type }: { type: VisualComponentType }) => {
