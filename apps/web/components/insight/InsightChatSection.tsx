@@ -72,16 +72,21 @@ const MOCK_SESSIONS: ChatSession[] = [
         id: 'session-main',
         title: '종합 인사이트',
         createdAt: new Date(),
+        messages: [INITIAL_INSIGHT_MESSAGE]
+    },
+    {
+        id: 'session-1',
+        title: '인기 콘텐츠 TOP 3',
+        createdAt: new Date('2025-12-17T10:00:00'),
         messages: [
-            INITIAL_INSIGHT_MESSAGE,
             {
-                id: 'msg-user-1',
+                id: 'msg-1-user',
                 role: 'user',
                 content: '최근 인기 콘텐츠 TOP 3 자세히 분석해줘',
-                createdAt: new Date(Date.now() - 300000)
+                createdAt: new Date('2025-12-17T10:00:00')
             },
             {
-                id: 'msg-ai-1',
+                id: 'msg-1-ai',
                 role: 'assistant',
                 content: `## 🔥 최근 인기 콘텐츠 TOP 3 분석
 
@@ -99,31 +104,31 @@ const MOCK_SESSIONS: ChatSession[] = [
 - **성공 요인**: 지역 맛집 + 전통 음식
 - **피크 구간**: 비빔밥 비비는 장면 (4:10)
 - **핵심 키워드**: "전주", "비빔밥"`,
-                visualComponent: 'heatmap',
                 sources: [
                     {
                         videoTitle: '[쯔양] 890원 회전초밥 121접시!',
                         youtubeLink: 'https://www.youtube.com/watch?v=Tx_yrWwGCL4',
                         timestamp: '8:30',
                         text: '100접시 돌파!'
-                    },
-                    {
-                        videoTitle: '[쯔양] 대전 성심당 빵 대량 구매!',
-                        youtubeLink: 'https://example.com',
-                        timestamp: '5:20',
-                        text: '튀김소보로 포함 트레이 가득'
                     }
                 ],
-                createdAt: new Date(Date.now() - 280000)
-            },
+                createdAt: new Date('2025-12-17T10:00:10')
+            }
+        ]
+    },
+    {
+        id: 'session-2',
+        title: '지역별 맛집 현황',
+        createdAt: new Date('2025-12-16T14:30:00'),
+        messages: [
             {
-                id: 'msg-user-2',
+                id: 'msg-2-user',
                 role: 'user',
                 content: '지역별 맛집 분포는 어때?',
-                createdAt: new Date(Date.now() - 200000)
+                createdAt: new Date('2025-12-16T14:30:00')
             },
             {
-                id: 'msg-ai-2',
+                id: 'msg-2-ai',
                 role: 'assistant',
                 content: `## 🗺️ 지역별 맛집 분포 (총 312개)
 
@@ -136,22 +141,28 @@ const MOCK_SESSIONS: ChatSession[] = [
 | 대전 | 28개 | 성심당, 대전시장 | 156만 |
 | 전주 | 18개 | 한옥마을 비빔밥 | 135만 |
 
-### � 구독자 제보 인기 맛집
+### 🔥 구독자 제보 인기 맛집
 1. **하남돼지집** (서울) - 제보 158건
 2. **성심당** (대전) - 제보 142건
 3. **자갈치시장** (부산) - 제보 98건`,
-                visualComponent: 'map',
                 sources: [],
-                createdAt: new Date(Date.now() - 180000)
-            },
+                createdAt: new Date('2025-12-16T14:30:10')
+            }
+        ]
+    },
+    {
+        id: 'session-3',
+        title: '12월 시즌 콘텐츠',
+        createdAt: new Date('2025-12-15T09:15:00'),
+        messages: [
             {
-                id: 'msg-user-3',
+                id: 'msg-3-user',
                 role: 'user',
                 content: '이번 달 시즌 콘텐츠 추천해줘',
-                createdAt: new Date(Date.now() - 100000)
+                createdAt: new Date('2025-12-15T09:15:00')
             },
             {
-                id: 'msg-ai-3',
+                id: 'msg-3-ai',
                 role: 'assistant',
                 content: `**12월 시즌 콘텐츠 추천**
 
@@ -166,23 +177,23 @@ const MOCK_SESSIONS: ChatSession[] = [
 ⏰ **추천 업로드 시점**: 12/18~20 (검색량 피크 예상)`,
                 visualComponent: 'calendar',
                 sources: [],
-                createdAt: new Date(Date.now() - 80000)
+                createdAt: new Date('2025-12-15T09:15:10')
             }
         ]
     },
     {
-        id: 'session-1',
+        id: 'session-4',
         title: '초밥 맛집 분석',
-        createdAt: new Date('2025-12-17T10:00:00'),
+        createdAt: new Date('2025-12-14T11:20:00'),
         messages: [
             {
-                id: 'msg-1',
+                id: 'msg-4-user',
                 role: 'user',
                 content: '쯔양이 최근에 간 초밥집 어디야?',
-                createdAt: new Date('2025-12-17T10:00:00'),
+                createdAt: new Date('2025-12-14T11:20:00')
             },
             {
-                id: 'msg-2',
+                id: 'msg-4-ai',
                 role: 'assistant',
                 content: '최근 쯔양님이 방문한 초밥집은 **오늘초밥 수지구청점**입니다.\n\n주요 특징:\n- 1접시 890원의 가성비 회전초밥\n- 50~60가지 다양한 메뉴\n- 아귀간한치, 연어장초밥 등 특색 메뉴',
                 sources: [
@@ -193,27 +204,9 @@ const MOCK_SESSIONS: ChatSession[] = [
                         text: '오늘은 초밥을 먹으러 왔는데 제가 진짜 엄청난 가성비 초밥을 먹으러 왔거든요'
                     }
                 ],
-                createdAt: new Date('2025-12-17T10:00:10'),
+                createdAt: new Date('2025-12-14T11:20:10')
             }
         ]
-    },
-    {
-        id: 'session-2',
-        title: '지역별 맛집 현황',
-        createdAt: new Date('2025-12-16T14:30:00'),
-        messages: []
-    },
-    {
-        id: 'session-3',
-        title: '시즌별 콘텐츠 트렌드',
-        createdAt: new Date('2025-12-15T09:15:00'),
-        messages: []
-    },
-    {
-        id: 'session-4',
-        title: '고기 맛집 추천',
-        createdAt: new Date('2025-12-14T11:20:00'),
-        messages: []
     },
     {
         id: 'session-5',
@@ -634,29 +627,31 @@ const MiniCalendar = memo(() => (
 ));
 MiniCalendar.displayName = 'MiniCalendar';
 
-// [COMPONENT] 미니 통계 카드 (강화 버전)
+// [COMPONENT] 미니 통계 (심플 버전)
 const MiniStats = memo(() => (
-    <div className="bg-secondary/30 rounded-lg p-3 mt-3 border border-border/30">
-        <div className="flex items-center gap-2 mb-3">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            <span className="text-xs font-medium">핵심 지표 (최근 30일)</span>
+    <div className="flex flex-wrap gap-3 mt-3">
+        <div className="flex items-center gap-1.5 text-sm">
+            <span className="text-blue-400">📹</span>
+            <span className="text-muted-foreground">영상</span>
+            <span className="font-bold">127</span>
+            <span className="text-[10px] text-green-400">+8</span>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-            {[
-                { label: '총 영상', value: '127', change: '+8', icon: '📹', color: 'from-blue-500/30 to-blue-600/20', borderColor: 'border-blue-500/40' },
-                { label: '평균 조회', value: '142만', change: '▲12%', icon: '👀', color: 'from-green-500/30 to-green-600/20', borderColor: 'border-green-500/40' },
-                { label: '맛집 수', value: '312', change: '+15', icon: '🍽️', color: 'from-orange-500/30 to-orange-600/20', borderColor: 'border-orange-500/40' },
-                { label: '자막 청크', value: '1,024', change: '', icon: '📝', color: 'from-purple-500/30 to-purple-600/20', borderColor: 'border-purple-500/40' },
-            ].map((stat, i) => (
-                <div key={i} className={cn("bg-gradient-to-br rounded-xl p-2.5 border", stat.color, stat.borderColor)}>
-                    <div className="flex items-center gap-1 mb-1">
-                        <span className="text-sm">{stat.icon}</span>
-                        <span className="text-[10px] text-muted-foreground">{stat.label}</span>
-                    </div>
-                    <p className="text-lg font-bold">{stat.value}</p>
-                    {stat.change && <p className="text-[10px] text-green-400 font-medium">{stat.change}</p>}
-                </div>
-            ))}
+        <div className="flex items-center gap-1.5 text-sm">
+            <span className="text-green-400">👀</span>
+            <span className="text-muted-foreground">평균</span>
+            <span className="font-bold">142만</span>
+            <span className="text-[10px] text-green-400">▲12%</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-sm">
+            <span className="text-orange-400">🍽️</span>
+            <span className="text-muted-foreground">맛집</span>
+            <span className="font-bold">312</span>
+            <span className="text-[10px] text-green-400">+15</span>
+        </div>
+        <div className="flex items-center gap-1.5 text-sm">
+            <span className="text-purple-400">📝</span>
+            <span className="text-muted-foreground">자막</span>
+            <span className="font-bold">1,024</span>
         </div>
     </div>
 ));
@@ -666,11 +661,8 @@ MiniStats.displayName = 'MiniStats';
 // [COMPONENT] 시각화 컴포넌트 렌더러
 const VisualComponentRenderer = memo(({ type }: { type: VisualComponentType }) => {
     switch (type) {
-        case 'heatmap': return <MiniHeatmap />;
-        case 'map': return <MiniMap />;
         case 'wordcloud': return <MiniWordCloud />;
         case 'calendar': return <MiniCalendar />;
-        case 'stats': return <MiniStats />;
         default: return null;
     }
 });
