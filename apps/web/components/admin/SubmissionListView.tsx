@@ -96,7 +96,7 @@ export interface Review {
     is_verified: boolean;
     admin_note: string | null;
     is_pinned: boolean;
-    edited_by_admin: boolean;
+    is_edited_by_admin: boolean;
     created_at: string;
     updated_at: string;
     // OCR 중복 검사 관련 필드
@@ -254,7 +254,7 @@ export function SubmissionListView({
     // OCR 관련 상태
     const [ocrStatus, setOcrStatus] = useState<{ pending: number; duplicate: number; processed: number } | null>(null);
     const [isOcrRunning, setIsOcrRunning] = useState(false);
-    const [isOcrRerunning, setIsOcrRerunning] = useState(false);
+    const [ocrRerunningIds, setOcrRerunningIds] = useState<Set<string>>(new Set());
     const ocrPollingRef = useRef<NodeJS.Timeout | null>(null);
     const ocrRealtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
@@ -306,7 +306,8 @@ export function SubmissionListView({
 
     // 단일 리뷰 OCR 재실행
     const handleRerunOcr = useCallback(async (reviewId: string) => {
-        setIsOcrRerunning(true);
+        // 해당 리뷰 ID를 재실행 중 상태로 추가
+        setOcrRerunningIds(prev => new Set(prev).add(reviewId));
         try {
             const response = await fetch('/api/admin/ocr-receipts/rerun', {
                 method: 'POST',
@@ -328,11 +329,20 @@ export function SubmissionListView({
                 }
             } else {
                 toast.error(`OCR 재실행 실패: ${data.error || '알 수 없는 오류'}`);
-                setIsOcrRerunning(false);
+                // 실패 시 해당 ID 제거
+                setOcrRerunningIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(reviewId);
+                    return next;
+                });
             }
         } catch (error) {
             toast.error('OCR 재실행 중 오류가 발생했습니다.');
-            setIsOcrRerunning(false);
+            setOcrRerunningIds(prev => {
+                const next = new Set(prev);
+                next.delete(reviewId);
+                return next;
+            });
         }
     }, [selectedReview]);
 
@@ -375,7 +385,12 @@ export function SubmissionListView({
                             receipt_data: updated.receipt_data,
                             is_duplicate: updated.is_duplicate,
                         } : null);
-                        setIsOcrRerunning(false);
+                        // 완료된 리뷰 ID를 재실행 중 상태에서 제거
+                        setOcrRerunningIds(prev => {
+                            const next = new Set(prev);
+                            next.delete(reviewId);
+                            return next;
+                        });
                         toast.success('OCR 처리가 완료되었습니다.');
 
                         // 폴링 중단
@@ -402,7 +417,11 @@ export function SubmissionListView({
                     clearInterval(ocrPollingRef.current);
                     ocrPollingRef.current = null;
                 }
-                setIsOcrRerunning(false);
+                setOcrRerunningIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(reviewId);
+                    return next;
+                });
                 return;
             }
 
@@ -423,7 +442,11 @@ export function SubmissionListView({
                         receipt_data: ocrData.receipt_data,
                         is_duplicate: ocrData.is_duplicate ?? false,
                     } : null);
-                    setIsOcrRerunning(false);
+                    setOcrRerunningIds(prev => {
+                        const next = new Set(prev);
+                        next.delete(reviewId);
+                        return next;
+                    });
                     toast.success('OCR 처리가 완료되었습니다.');
 
                     // 폴링 중단
@@ -438,7 +461,8 @@ export function SubmissionListView({
         };
 
         // OCR 재실행 중일 때만 폴링 시작
-        if (isOcrRerunning) {
+        const isRerunning = ocrRerunningIds.has(reviewId);
+        if (isRerunning) {
             ocrPollingRef.current = setInterval(pollReviewOcr, 5000);
         }
 
@@ -449,7 +473,7 @@ export function SubmissionListView({
             }
             supabase.removeChannel(channel);
         };
-    }, [showReviewModal, selectedReview?.id, selectedReview?.ocr_processed_at, isOcrRerunning]);
+    }, [showReviewModal, selectedReview?.id, selectedReview?.ocr_processed_at, ocrRerunningIds]);
 
     // 필터링 (제보)
     const filteredSubmissions = useMemo(() => {
@@ -1700,20 +1724,20 @@ export function SubmissionListView({
                                                 size="sm"
                                                 variant="outline"
                                                 onClick={() => handleRerunOcr(selectedReview.id)}
-                                                disabled={isOcrRerunning}
+                                                disabled={ocrRerunningIds.has(selectedReview.id)}
                                                 className="ml-auto gap-1 h-6 text-xs"
                                             >
-                                                {isOcrRerunning ? (
+                                                {ocrRerunningIds.has(selectedReview.id) ? (
                                                     <Loader2 className="h-3 w-3 animate-spin" />
                                                 ) : (
                                                     <RefreshCw className="h-3 w-3" />
                                                 )}
-                                                {isOcrRerunning ? '처리중...' : 'OCR 다시 실행'}
+                                                {ocrRerunningIds.has(selectedReview.id) ? '처리중...' : 'OCR 다시 실행'}
                                             </Button>
                                         </Label>
 
                                         {/* OCR 재실행 중 상태 표시 */}
-                                        {isOcrRerunning && !selectedReview.ocr_processed_at && (
+                                        {ocrRerunningIds.has(selectedReview.id) && !selectedReview.ocr_processed_at && (
                                             <Card className="p-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
                                                 <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm">
                                                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -1723,7 +1747,7 @@ export function SubmissionListView({
                                         )}
 
                                         {/* OCR 미처리 상태 */}
-                                        {!isOcrRerunning && !selectedReview.ocr_processed_at && (
+                                        {!ocrRerunningIds.has(selectedReview.id) && !selectedReview.ocr_processed_at && (
                                             <Card className="p-3 bg-muted/50">
                                                 <span className="text-sm text-muted-foreground">OCR 미처리 - 위 버튼을 눌러 OCR을 실행하세요</span>
                                             </Card>

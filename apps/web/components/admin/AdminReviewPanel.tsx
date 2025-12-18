@@ -41,7 +41,7 @@ interface Review {
     is_verified: boolean;
     admin_note: string | null;
     is_pinned: boolean;
-    edited_by_admin: boolean;
+    is_edited_by_admin: boolean;
     created_at: string;
     updated_at: string;
     profiles: {
@@ -171,7 +171,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 .update({
                     is_verified: true,
                     admin_note: adminNote.trim() || null,
-                    edited_by_admin: !!adminNote.trim(),
+                    is_edited_by_admin: !!adminNote.trim(),
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', reviewId);
@@ -240,7 +240,7 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 .update({
                     is_verified: false,
                     admin_note: adminNote.trim() ? `거부: ${adminNote.trim()}` : '거부: 관리자에 의해 거부됨',
-                    edited_by_admin: true,
+                    is_edited_by_admin: true,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', reviewId);
