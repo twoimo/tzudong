@@ -1321,7 +1321,7 @@ function AdminEvaluationPage() {
         .update({
           is_verified: true,
           admin_note: adminNote || null,
-          edited_by_admin: !!adminNote,
+          is_edited_by_admin: !!adminNote,
           updated_at: new Date().toISOString(),
         })
         .eq('id', reviewId);
@@ -1381,7 +1381,7 @@ function AdminEvaluationPage() {
         .update({
           is_verified: false,
           admin_note: `거부: ${rejectionReason}`,
-          edited_by_admin: true,
+          is_edited_by_admin: true,
           updated_at: new Date().toISOString(),
         })
         .eq('id', reviewId);
