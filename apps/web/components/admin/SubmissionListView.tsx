@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
@@ -32,6 +32,7 @@ import {
     MessageSquare,
     AlertTriangle,
     ScanSearch,
+    RefreshCw,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -105,7 +106,7 @@ export interface Review {
         date?: string;
         time?: string;
         total_amount?: number;
-        items?: string[];
+        items?: string[] | { name: string; price: number | null }[];
         confidence?: number;
         error?: string;
         duplicate_of?: string; // 중복 원본 리뷰 ID
@@ -253,6 +254,9 @@ export function SubmissionListView({
     // OCR 관련 상태
     const [ocrStatus, setOcrStatus] = useState<{ pending: number; duplicate: number; processed: number } | null>(null);
     const [isOcrRunning, setIsOcrRunning] = useState(false);
+    const [isOcrRerunning, setIsOcrRerunning] = useState(false);
+    const ocrPollingRef = useRef<NodeJS.Timeout | null>(null);
+    const ocrRealtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
     // 이미지 확대 모달 상태
     const [previewImage, setPreviewImage] = useState<{ url: string; alt: string } | null>(null);
@@ -299,6 +303,153 @@ export function SubmissionListView({
             return () => clearInterval(interval);
         }
     }, [activeTab, fetchOcrStatus]);
+
+    // 단일 리뷰 OCR 재실행
+    const handleRerunOcr = useCallback(async (reviewId: string) => {
+        setIsOcrRerunning(true);
+        try {
+            const response = await fetch('/api/admin/ocr-receipts/rerun', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reviewId }),
+            });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                toast.success(data.message || 'OCR 재실행이 시작되었습니다.');
+
+                // 선택된 리뷰 OCR 상태 초기화 (UI 즉시 반영)
+                if (selectedReview && selectedReview.id === reviewId) {
+                    setSelectedReview(prev => prev ? {
+                        ...prev,
+                        ocr_processed_at: null,
+                        receipt_data: null,
+                        is_duplicate: false,
+                    } : null);
+                }
+            } else {
+                toast.error(`OCR 재실행 실패: ${data.error || '알 수 없는 오류'}`);
+                setIsOcrRerunning(false);
+            }
+        } catch (error) {
+            toast.error('OCR 재실행 중 오류가 발생했습니다.');
+            setIsOcrRerunning(false);
+        }
+    }, [selectedReview]);
+
+    // 리뷰 모달 열릴 때 Supabase Realtime 구독 + 폴링 시작
+    useEffect(() => {
+        if (!showReviewModal || !selectedReview?.id) {
+            // 모달 닫힐 때 정리
+            if (ocrPollingRef.current) {
+                clearInterval(ocrPollingRef.current);
+                ocrPollingRef.current = null;
+            }
+            if (ocrRealtimeChannelRef.current) {
+                supabase.removeChannel(ocrRealtimeChannelRef.current);
+                ocrRealtimeChannelRef.current = null;
+            }
+            return;
+        }
+
+        const reviewId = selectedReview.id;
+        const originalOcrProcessedAt = selectedReview.ocr_processed_at;
+
+        // Supabase Realtime 구독 (reviews 테이블 변경 감지)
+        const channel = supabase
+            .channel(`review-ocr-${reviewId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'reviews',
+                    filter: `id=eq.${reviewId}`,
+                },
+                (payload) => {
+                    const updated = payload.new as Review;
+                    // OCR 처리가 완료된 경우 (ocr_processed_at가 갱신됨)
+                    if (updated.ocr_processed_at && updated.ocr_processed_at !== originalOcrProcessedAt) {
+                        setSelectedReview(prev => prev ? {
+                            ...prev,
+                            ocr_processed_at: updated.ocr_processed_at,
+                            receipt_data: updated.receipt_data,
+                            is_duplicate: updated.is_duplicate,
+                        } : null);
+                        setIsOcrRerunning(false);
+                        toast.success('OCR 처리가 완료되었습니다.');
+
+                        // 폴링 중단
+                        if (ocrPollingRef.current) {
+                            clearInterval(ocrPollingRef.current);
+                            ocrPollingRef.current = null;
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        ocrRealtimeChannelRef.current = channel;
+
+        // 폴링 fallback (Realtime이 작동하지 않는 환경용, 5초 간격, 최대 60초)
+        let pollCount = 0;
+        const maxPolls = 12; // 12 * 5초 = 60초
+
+        const pollReviewOcr = async () => {
+            pollCount++;
+            if (pollCount > maxPolls) {
+                // 60초 초과 시 폴링 중단
+                if (ocrPollingRef.current) {
+                    clearInterval(ocrPollingRef.current);
+                    ocrPollingRef.current = null;
+                }
+                setIsOcrRerunning(false);
+                return;
+            }
+
+            try {
+                const { data, error } = await supabase
+                    .from('reviews')
+                    .select('ocr_processed_at, receipt_data, is_duplicate')
+                    .eq('id', reviewId)
+                    .single();
+
+                // 타입 추론을 위한 캐스팅
+                const ocrData = data as { ocr_processed_at: string | null; receipt_data: Review['receipt_data']; is_duplicate: boolean | null } | null;
+
+                if (!error && ocrData?.ocr_processed_at && ocrData.ocr_processed_at !== originalOcrProcessedAt) {
+                    setSelectedReview(prev => prev ? {
+                        ...prev,
+                        ocr_processed_at: ocrData.ocr_processed_at,
+                        receipt_data: ocrData.receipt_data,
+                        is_duplicate: ocrData.is_duplicate ?? false,
+                    } : null);
+                    setIsOcrRerunning(false);
+                    toast.success('OCR 처리가 완료되었습니다.');
+
+                    // 폴링 중단
+                    if (ocrPollingRef.current) {
+                        clearInterval(ocrPollingRef.current);
+                        ocrPollingRef.current = null;
+                    }
+                }
+            } catch (err) {
+                console.error('OCR 상태 폴링 오류:', err);
+            }
+        };
+
+        // OCR 재실행 중일 때만 폴링 시작
+        if (isOcrRerunning) {
+            ocrPollingRef.current = setInterval(pollReviewOcr, 5000);
+        }
+
+        return () => {
+            if (ocrPollingRef.current) {
+                clearInterval(ocrPollingRef.current);
+                ocrPollingRef.current = null;
+            }
+            supabase.removeChannel(channel);
+        };
+    }, [showReviewModal, selectedReview?.id, selectedReview?.ocr_processed_at, isOcrRerunning]);
 
     // 필터링 (제보)
     const filteredSubmissions = useMemo(() => {
@@ -456,8 +607,8 @@ export function SubmissionListView({
     const normalizeAddress = (addr: string) => {
         if (!addr) return "";
         let a = addr.replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
-        a = a.replace(/\d+/g, ""); 
-        a = a.replace(/\s*\S+(원|쇼핑|園)/g, ""); 
+        a = a.replace(/\d+/g, "");
+        a = a.replace(/\s*\S+(원|쇼핑|園)/g, "");
         return a.trim();
     };
 
@@ -500,7 +651,7 @@ export function SubmissionListView({
             const queries = new Set<string>();
             // 지오코딩된 주소 기반 검색
             queries.add(`${editableData.name} ${targetAddress}`);
-            
+
             const region = extractCityDistrictGu(targetAddress);
             if (region) {
                 queries.add(`${editableData.name} ${region}`);
@@ -518,23 +669,23 @@ export function SubmissionListView({
             const verifiedResults = uniqueResults.map(item => {
                 const normAddr = normalizeAddress(item.address);
                 const normRoad = normalizeAddress(item.roadAddress || '');
-                
+
                 const isMatch = normalizedTargets.some(target => {
                     if (!target) return false;
-                    return target === normAddr || target === normRoad || 
-                           (normAddr && target.includes(normAddr)) || 
-                           (normAddr && normAddr.includes(target)) ||
-                           (normRoad && target.includes(normRoad)) ||
-                           (normRoad && normRoad.includes(target));
+                    return target === normAddr || target === normRoad ||
+                        (normAddr && target.includes(normAddr)) ||
+                        (normAddr && normAddr.includes(target)) ||
+                        (normRoad && target.includes(normRoad)) ||
+                        (normRoad && normRoad.includes(target));
                 });
 
                 return { ...item, isMatch };
             });
 
             setNaverSearchResults(verifiedResults);
-            
+
             const hasMatch = verifiedResults.some(r => r.isMatch);
-            
+
             if (hasMatch) {
                 setVerificationDone(true);
                 toast.success('주소 검증이 완료되었습니다. 승인 버튼을 눌러주세요.');
@@ -557,7 +708,7 @@ export function SubmissionListView({
 
         // 1. 지오코딩 완료
         const geocodingDone = !!approvalData.lat && !!approvalData.lng && !!approvalData.road_address;
-        
+
         // 2. 최소 하나의 아이템 승인
         const hasSelectedItem = Object.values(itemDecisions).some(d => d.approved);
 
@@ -608,7 +759,7 @@ export function SubmissionListView({
     const handleGeocodingSelect = (result: GeocodingResult, index: number) => {
         // 1. 선택 인덱스 업데이트
         setSelectedGeocodingIndex(index);
-        
+
         // 2. 승인 데이터 업데이트
         setApprovalData({
             lat: result.y,
@@ -658,7 +809,7 @@ export function SubmissionListView({
 
         // 검증 실행
         await handleNaverSearchAndVerify();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [canApprove, approvalData, selectedSubmission, itemDecisions, forceApprove, editableData, onApprove, closeDetailModal, verificationDone, geocodingResults]);
 
     // 거부 핸들러
@@ -1268,7 +1419,7 @@ export function SubmissionListView({
                                                 그래도 승인하시겠습니까?
                                             </DialogDescription>
                                         </DialogHeader>
-                                        
+
                                         <div className="py-4 space-y-4">
                                             <div className="bg-slate-50 p-3 rounded-md border text-sm">
                                                 <p className="font-semibold mb-1">입력된 정보:</p>
@@ -1300,7 +1451,7 @@ export function SubmissionListView({
                                             <Button variant="outline" onClick={() => setShowWarningModal(false)}>
                                                 취소 (수정하기)
                                             </Button>
-                                            <Button 
+                                            <Button
                                                 className="bg-amber-600 hover:bg-amber-700"
                                                 onClick={() => {
                                                     setShowWarningModal(false);
@@ -1365,7 +1516,7 @@ export function SubmissionListView({
                                 그래도 승인하시겠습니까?
                             </DialogDescription>
                         </DialogHeader>
-                        
+
                         <div className="py-4 space-y-4">
                             <div className="bg-slate-50 p-3 rounded-md border text-sm">
                                 <p className="font-semibold mb-1">입력된 정보:</p>
@@ -1397,7 +1548,7 @@ export function SubmissionListView({
                             <Button variant="outline" onClick={() => setShowWarningModal(false)}>
                                 취소 (수정하기)
                             </Button>
-                            <Button 
+                            <Button
                                 className="bg-amber-600 hover:bg-amber-700"
                                 onClick={() => {
                                     setShowWarningModal(false);
@@ -1536,91 +1687,141 @@ export function SubmissionListView({
                                 </div>
 
                                 {/* OCR 결과 */}
-                                {selectedReview.ocr_processed_at && (
+                                {selectedReview.verification_photo && (
                                     <div className="space-y-2">
                                         <Label className="text-sm font-medium flex items-center gap-1">
                                             <ScanSearch className="h-4 w-4" /> OCR 분석 결과
-                                            <span className="text-xs text-muted-foreground font-normal ml-auto">
-                                                {new Date(selectedReview.ocr_processed_at).toLocaleDateString('ko-KR')}
-                                            </span>
+                                            {selectedReview.ocr_processed_at && (
+                                                <span className="text-xs text-muted-foreground font-normal ml-1">
+                                                    {new Date(selectedReview.ocr_processed_at).toLocaleDateString('ko-KR')}
+                                                </span>
+                                            )}
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => handleRerunOcr(selectedReview.id)}
+                                                disabled={isOcrRerunning}
+                                                className="ml-auto gap-1 h-6 text-xs"
+                                            >
+                                                {isOcrRerunning ? (
+                                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                                ) : (
+                                                    <RefreshCw className="h-3 w-3" />
+                                                )}
+                                                {isOcrRerunning ? '처리중...' : 'OCR 다시 실행'}
+                                            </Button>
                                         </Label>
-                                        {selectedReview.receipt_data ? (
-                                            selectedReview.receipt_data.error ? (
-                                                <Card className="p-3 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
-                                                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
-                                                        <AlertCircle className="h-4 w-4" />
-                                                        <span>OCR 오류: {selectedReview.receipt_data.error}</span>
-                                                    </div>
-                                                </Card>
-                                            ) : (
-                                                <Card className="p-3 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
-                                                    <div className="space-y-2 text-sm">
-                                                        {selectedReview.receipt_data.store_name && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-muted-foreground">가게명</span>
-                                                                <span className="font-medium">{selectedReview.receipt_data.store_name}</span>
-                                                            </div>
-                                                        )}
-                                                        {selectedReview.receipt_data.date && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-muted-foreground">날짜</span>
-                                                                <span>{selectedReview.receipt_data.date}</span>
-                                                            </div>
-                                                        )}
-                                                        {selectedReview.receipt_data.time && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-muted-foreground">시간</span>
-                                                                <span>{selectedReview.receipt_data.time}</span>
-                                                            </div>
-                                                        )}
-                                                        {selectedReview.receipt_data.total_amount && (
-                                                            <div className="flex items-center justify-between">
-                                                                <span className="text-muted-foreground">결제 금액</span>
-                                                                <span className="font-medium text-green-600">
-                                                                    {selectedReview.receipt_data.total_amount.toLocaleString()}원
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        {selectedReview.receipt_data.items && selectedReview.receipt_data.items.length > 0 && (
-                                                            <div className="pt-2 border-t">
-                                                                <span className="text-muted-foreground text-xs">주문 항목</span>
-                                                                <ul className="mt-1 text-xs space-y-0.5">
-                                                                    {selectedReview.receipt_data.items.map((item, idx) => (
-                                                                        <li key={idx} className="text-muted-foreground">• {item}</li>
-                                                                    ))}
-                                                                </ul>
-                                                            </div>
-                                                        )}
-                                                        {selectedReview.receipt_data.confidence !== undefined && (
-                                                            <div className="flex items-center justify-between pt-2 border-t">
-                                                                <span className="text-muted-foreground text-xs">OCR 신뢰도</span>
-                                                                <Badge
-                                                                    variant={selectedReview.receipt_data.confidence >= 0.8 ? 'default' : 'secondary'}
-                                                                    className="text-xs"
-                                                                >
-                                                                    {(selectedReview.receipt_data.confidence * 100).toFixed(0)}%
-                                                                </Badge>
-                                                            </div>
-                                                        )}
-                                                        {/* 중복 영수증 경고 */}
-                                                        {selectedReview.is_duplicate && selectedReview.receipt_data.duplicate_of && (
-                                                            <div className="pt-2 border-t">
-                                                                <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
-                                                                    <AlertTriangle className="h-4 w-4" />
-                                                                    <span className="text-sm font-medium">중복 영수증 감지!</span>
-                                                                </div>
-                                                                <p className="mt-1 text-xs text-muted-foreground">
-                                                                    원본 리뷰 ID: <code className="bg-muted px-1 rounded">{selectedReview.receipt_data.duplicate_of.slice(0, 8)}...</code>
-                                                                </p>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </Card>
-                                            )
-                                        ) : (
-                                            <Card className="p-3 bg-muted/50">
-                                                <span className="text-sm text-muted-foreground">OCR 데이터 없음</span>
+
+                                        {/* OCR 재실행 중 상태 표시 */}
+                                        {isOcrRerunning && !selectedReview.ocr_processed_at && (
+                                            <Card className="p-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
+                                                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm">
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    <span>OCR 처리 중입니다. 약 30~40초 후 결과가 자동으로 반영됩니다.</span>
+                                                </div>
                                             </Card>
+                                        )}
+
+                                        {/* OCR 미처리 상태 */}
+                                        {!isOcrRerunning && !selectedReview.ocr_processed_at && (
+                                            <Card className="p-3 bg-muted/50">
+                                                <span className="text-sm text-muted-foreground">OCR 미처리 - 위 버튼을 눌러 OCR을 실행하세요</span>
+                                            </Card>
+                                        )}
+
+                                        {/* OCR 처리 완료 상태 */}
+                                        {selectedReview.ocr_processed_at && (
+                                            <>
+                                                {selectedReview.receipt_data ? (
+                                                    selectedReview.receipt_data.error ? (
+                                                        <Card className="p-3 bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
+                                                            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm">
+                                                                <AlertCircle className="h-4 w-4" />
+                                                                <span>OCR 오류: {selectedReview.receipt_data.error}</span>
+                                                            </div>
+                                                        </Card>
+                                                    ) : (
+                                                        <Card className="p-3 bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
+                                                            <div className="space-y-2 text-sm">
+                                                                {selectedReview.receipt_data.store_name && (
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-muted-foreground">가게명</span>
+                                                                        <span className="font-medium">{selectedReview.receipt_data.store_name}</span>
+                                                                    </div>
+                                                                )}
+                                                                {selectedReview.receipt_data.date && (
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-muted-foreground">날짜</span>
+                                                                        <span>{selectedReview.receipt_data.date}</span>
+                                                                    </div>
+                                                                )}
+                                                                {selectedReview.receipt_data.time && (
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-muted-foreground">시간</span>
+                                                                        <span>{selectedReview.receipt_data.time}</span>
+                                                                    </div>
+                                                                )}
+                                                                {selectedReview.receipt_data.total_amount && (
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-muted-foreground">결제 금액</span>
+                                                                        <span className="font-medium text-green-600">
+                                                                            {selectedReview.receipt_data.total_amount.toLocaleString()}원
+                                                                        </span>
+                                                                    </div>
+                                                                )}
+                                                                {selectedReview.receipt_data.items && selectedReview.receipt_data.items.length > 0 && (
+                                                                    <div className="pt-2 border-t">
+                                                                        <span className="text-muted-foreground text-xs">주문 항목</span>
+                                                                        <ul className="mt-1 text-xs space-y-0.5">
+                                                                            {selectedReview.receipt_data.items.map((item, idx) => {
+                                                                                // 문자열 또는 객체 형식 모두 지원
+                                                                                const isObject = typeof item === 'object' && item !== null;
+                                                                                const name = isObject ? item.name : item;
+                                                                                const price = isObject ? item.price : null;
+                                                                                return (
+                                                                                    <li key={idx} className="text-muted-foreground flex justify-between">
+                                                                                        <span>• {name}</span>
+                                                                                        {price !== null && price !== undefined && (
+                                                                                            <span className="text-primary">{price.toLocaleString()}원</span>
+                                                                                        )}
+                                                                                    </li>
+                                                                                );
+                                                                            })}
+                                                                        </ul>
+                                                                    </div>
+                                                                )}
+                                                                {selectedReview.receipt_data.confidence !== undefined && (
+                                                                    <div className="flex items-center justify-between pt-2 border-t">
+                                                                        <span className="text-muted-foreground text-xs">OCR 신뢰도</span>
+                                                                        <Badge
+                                                                            variant={selectedReview.receipt_data.confidence >= 0.8 ? 'default' : 'secondary'}
+                                                                            className="text-xs"
+                                                                        >
+                                                                            {(selectedReview.receipt_data.confidence * 100).toFixed(0)}%
+                                                                        </Badge>
+                                                                    </div>
+                                                                )}
+                                                                {/* 중복 영수증 경고 */}
+                                                                {selectedReview.is_duplicate && selectedReview.receipt_data.duplicate_of && (
+                                                                    <div className="pt-2 border-t">
+                                                                        <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
+                                                                            <AlertTriangle className="h-4 w-4" />
+                                                                            <span className="text-sm font-medium">중복 영수증 감지!</span>
+                                                                        </div>
+                                                                        <p className="mt-1 text-xs text-muted-foreground">
+                                                                            원본 리뷰 ID: <code className="bg-muted px-1 rounded">{selectedReview.receipt_data.duplicate_of.slice(0, 8)}...</code>
+                                                                        </p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </Card>
+                                                    )
+                                                ) : (
+                                                    <Card className="p-3 bg-muted/50">
+                                                        <span className="text-sm text-muted-foreground">OCR 데이터 없음</span>
+                                                    </Card>
+                                                )}
+                                            </>
                                         )}
                                     </div>
                                 )}
