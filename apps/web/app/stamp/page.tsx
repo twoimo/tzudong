@@ -583,7 +583,7 @@ export default function StampPage() {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor ?? null,
         initialPageParam: 0,
         enabled: !!selectedRestaurant?.id,
     });
@@ -1052,22 +1052,24 @@ export default function StampPage() {
                             <ScrollArea className="flex-1 p-4">
                                 {selectedRestaurant ? (
                                     <>
-                                        {/* 리뷰 섹션 헤더 */}
-                                        <div className="flex items-center justify-between gap-2 mb-4">
-                                            <h3 className="font-semibold flex items-center gap-2">
-                                                <Trophy className="h-4 w-4 text-primary" />
-                                                방문자 리뷰 ({restaurantReviews.length})
-                                            </h3>
-                                            <Button
-                                                onClick={handleWriteReview}
-                                                size="sm"
-                                                className="h-8 gap-1.5"
-                                                variant={restaurantReviews.length > 0 ? "outline" : "default"}
-                                            >
-                                                <PenSquare className="h-3.5 w-3.5" />
-                                                리뷰 작성
-                                            </Button>
-                                        </div>
+                                        {/* 리뷰 섹션 헤더 - 리뷰 상세가 아닐 때만 표시 */}
+                                        {!selectedReview && (
+                                            <div className="flex items-center justify-between gap-2 mb-4">
+                                                <h3 className="font-semibold flex items-center gap-2">
+                                                    <Trophy className="h-4 w-4 text-primary" />
+                                                    방문자 리뷰 ({restaurantReviews.length})
+                                                </h3>
+                                                <Button
+                                                    onClick={handleWriteReview}
+                                                    size="sm"
+                                                    className="h-8 gap-1.5"
+                                                    variant={restaurantReviews.length > 0 ? "outline" : "default"}
+                                                >
+                                                    <PenSquare className="h-3.5 w-3.5" />
+                                                    리뷰 작성
+                                                </Button>
+                                            </div>
+                                        )}
 
                                         {selectedReview ? (
                                             /* 리뷰 상세 뷰 */
@@ -1095,20 +1097,22 @@ export default function StampPage() {
                                                             </Badge>
                                                         )}
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className={cn(
-                                                                "h-8 px-2 text-xs gap-1",
-                                                                selectedReview.isLikedByUser ? "text-red-500 hover:text-red-600" : "text-muted-foreground"
-                                                            )}
-                                                            onClick={() => toggleLike(selectedReview.id, selectedReview.isLikedByUser)}
-                                                        >
-                                                            <Heart className={`h-4 w-4 ${selectedReview.isLikedByUser ? 'fill-current' : ''}`} />
-                                                            {selectedReview.likeCount}
-                                                        </Button>
-                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 px-2 bg-muted hover:bg-muted/80 rounded-full flex items-center gap-1"
+                                                        onClick={() => toggleLike(selectedReview.id, selectedReview.isLikedByUser)}
+                                                    >
+                                                        <Heart
+                                                            className={`h-4 w-4 ${selectedReview.isLikedByUser
+                                                                ? 'fill-red-500 text-red-500'
+                                                                : 'text-muted-foreground'
+                                                                }`}
+                                                        />
+                                                        <span className="text-xs font-medium">
+                                                            {selectedReview.likeCount >= 100 ? '99+' : selectedReview.likeCount}
+                                                        </span>
+                                                    </Button>
                                                 </div>
 
                                                 {/* 방문일 */}
@@ -1191,29 +1195,37 @@ export default function StampPage() {
                                                 {restaurantReviews.map((review) => (
                                                     <Card
                                                         key={review.id}
-                                                        className="p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                                                        className="p-0 relative cursor-pointer hover:bg-muted/50 transition-colors overflow-hidden"
                                                         onClick={() => handleReviewClick(review)}
                                                     >
-                                                        <div className="flex justify-between items-start mb-2">
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="font-medium text-sm">{review.userName}</span>
-                                                                {review.isVerified && (
-                                                                    <Badge variant="outline" className="text-[10px] border-green-500 text-green-500 px-1 py-0 h-4">
-                                                                        인증됨
-                                                                    </Badge>
-                                                                )}
-                                                            </div>
-                                                            <span className="text-xs text-muted-foreground">
-                                                                {new Date(review.visitedAt).toLocaleDateString()}
+                                                        {/* 좋아요 버튼 - 이미지 우측 상단 */}
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            className="absolute top-2 right-2 z-10 h-8 px-2 bg-black/50 hover:bg-black/70 backdrop-blur-sm rounded-full flex items-center gap-1"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                toggleLike(review.id, review.isLikedByUser);
+                                                            }}
+                                                        >
+                                                            <Heart
+                                                                className={`h-4 w-4 ${review.isLikedByUser
+                                                                    ? 'fill-red-500 text-red-500'
+                                                                    : 'text-white'
+                                                                    }`}
+                                                            />
+                                                            <span className="text-xs text-white font-medium">
+                                                                {review.likeCount >= 100 ? '99+' : review.likeCount}
                                                             </span>
-                                                        </div>
+                                                        </Button>
 
+                                                        {/* 사진 먼저 (인스타그램 스타일) */}
                                                         {review.photos && review.photos.length > 0 && (
-                                                            <div className="relative mb-2">
+                                                            <div className="relative w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
                                                                 <img
                                                                     src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
                                                                     alt="리뷰 사진"
-                                                                    className="w-full aspect-square object-cover rounded-md"
+                                                                    className="w-full h-full object-cover"
                                                                     onError={(e) => {
                                                                         (e.target as HTMLImageElement).style.display = 'none';
                                                                     }}
@@ -1227,24 +1239,24 @@ export default function StampPage() {
                                                             </div>
                                                         )}
 
-                                                        <p className="text-sm whitespace-pre-wrap line-clamp-3 mb-3">{review.content}</p>
-
-                                                        <div className="flex items-center justify-between">
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                className={cn(
-                                                                    "h-8 px-2 text-xs gap-1",
-                                                                    review.isLikedByUser ? "text-red-500 hover:text-red-600" : "text-muted-foreground"
+                                                        {/* 사용자 정보와 내용 */}
+                                                        <div className="p-3">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="text-xs font-medium truncate">
+                                                                    {review.userName}
+                                                                </span>
+                                                                {review.isVerified && (
+                                                                    <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
+                                                                        인증
+                                                                    </Badge>
                                                                 )}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    toggleLike(review.id, review.isLikedByUser);
-                                                                }}
-                                                            >
-                                                                <span className={review.isLikedByUser ? "fill-current" : ""}>♥</span>
-                                                                {review.likeCount}
-                                                            </Button>
+                                                                <span className="text-[10px] text-muted-foreground ml-auto">
+                                                                    {new Date(review.visitedAt).toLocaleDateString()}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground line-clamp-2">
+                                                                {review.content}
+                                                            </p>
                                                         </div>
                                                     </Card>
                                                 ))}
