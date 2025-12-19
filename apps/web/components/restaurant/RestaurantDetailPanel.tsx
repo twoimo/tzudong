@@ -27,6 +27,7 @@ interface RestaurantDetailPanelProps {
 
 interface Review {
     id: string;
+    userId: string;
     restaurantName: string;
     restaurantCategories: string[];
     userName: string;
@@ -55,7 +56,9 @@ export function RestaurantDetailPanel({
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
+    const [viewMode, setViewMode] = useState<'detail' | 'reviews' | 'review-detail'>('detail');
+    const [selectedReview, setSelectedReview] = useState<Review | null>(null);
+    const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
     const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | 'english' | null>(null);
     const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
@@ -170,6 +173,7 @@ export function RestaurantDetailPanel({
                     const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
                     return {
                         id: review.id,
+                        userId: review.user_id,
                         restaurantName: restaurant.name,
                         restaurantCategories: categories,
                         userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
@@ -254,7 +258,44 @@ export function RestaurantDetailPanel({
     };
 
     const handleBackToDetail = () => {
-        setViewMode('detail');
+        if (viewMode === 'review-detail') {
+            // 리뷰 상세에서 돌아갈 때: 이전 화면으로
+            setSelectedReview(null);
+            setCurrentPhotoIndex(0);
+            // 전체 리뷰 목록에서 왔는지 여부에 따라 분기
+            setViewMode('detail');
+        } else {
+            setViewMode('detail');
+        }
+    };
+
+    const handleBackFromReviewDetail = () => {
+        setSelectedReview(null);
+        setCurrentPhotoIndex(0);
+        // 전체 보기 목록에서 왔으면 reviews로, 아니면 detail로
+        setViewMode('reviews');
+    };
+
+    const handleReviewClick = (review: Review) => {
+        setSelectedReview(review);
+        setCurrentPhotoIndex(0);
+        setViewMode('review-detail');
+    };
+
+    const handlePrevPhoto = () => {
+        if (selectedReview && selectedReview.photos.length > 0) {
+            setCurrentPhotoIndex(prev =>
+                prev === 0 ? selectedReview.photos.length - 1 : prev - 1
+            );
+        }
+    };
+
+    const handleNextPhoto = () => {
+        if (selectedReview && selectedReview.photos.length > 0) {
+            setCurrentPhotoIndex(prev =>
+                prev === selectedReview.photos.length - 1 ? 0 : prev + 1
+            );
+        }
     };
 
     const handleCopyAddress = async (address: string, type: 'road' | 'jibun' | 'english') => {
@@ -359,6 +400,32 @@ export function RestaurantDetailPanel({
                     });
 
                 if (error) throw error;
+
+                // 리뷰 작성자에게 알림 전송 (자기 자신 제외)
+                const targetReview = safeReviewsData.find(r => r.id === reviewId);
+                if (targetReview && targetReview.userId && targetReview.userId !== user.id) {
+                    try {
+                        // 현재 사용자의 닉네임 가져오기
+                        const { data: profileData } = await (supabase
+                            .from('profiles') as any)
+                            .select('nickname')
+                            .eq('user_id', user.id)
+                            .single();
+
+                        const likerName = (profileData as any)?.nickname || '누군가';
+
+                        await (supabase as any).rpc('create_user_notification', {
+                            p_user_id: targetReview.userId,
+                            p_type: 'review_like',
+                            p_title: '리뷰에 좋아요가 눌렸어요!',
+                            p_message: `${likerName}님이 ${restaurant.name}에 대한 리뷰에 좋아요를 눌렀습니다.`,
+                            p_data: { reviewId, restaurantId: restaurant.id, restaurantName: restaurant.name }
+                        });
+                    } catch (notifError) {
+                        console.error('알림 생성 실패:', notifError);
+                        // 알림 실패는 좋아요 처리에 영향을 주지 않음
+                    }
+                }
             }
 
             // 성공 시 쿼리 캐시 무효화하여 좋아요 수 업데이트
@@ -419,6 +486,23 @@ export function RestaurantDetailPanel({
                 <div className="p-4 border-b border-border">
                     <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1">
+                            {viewMode === 'review-detail' && selectedReview && (
+                                <>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={handleBackToDetail}
+                                        className="mr-2"
+                                    >
+                                        <ArrowLeft className="h-4 w-4" />
+                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="text-xl font-bold">
+                                            리뷰 상세
+                                        </h3>
+                                    </div>
+                                </>
+                            )}
                             {viewMode === 'reviews' && (
                                 <>
                                     <Button
@@ -793,7 +877,11 @@ export function RestaurantDetailPanel({
                                     ) : (
                                         <div className="space-y-2">
                                             {recentReviews.map((review) => (
-                                                <Card key={review.id} className="p-3 relative">
+                                                <Card
+                                                    key={review.id}
+                                                    className="p-3 relative cursor-pointer hover:bg-muted/50 transition-colors"
+                                                    onClick={() => handleReviewClick(review)}
+                                                >
                                                     <div className="absolute top-2 right-2 z-10 flex items-center gap-1">
                                                         <span className="text-xs text-gray-600 bg-white/80 px-1 py-0.5 rounded backdrop-blur-sm">
                                                             {getRealtimeLikeCount(review)}
@@ -802,7 +890,10 @@ export function RestaurantDetailPanel({
                                                             variant="ghost"
                                                             size="icon"
                                                             className="h-6 w-6 bg-white/80 hover:bg-white/90 backdrop-blur-sm"
-                                                            onClick={() => handleLikeReview(review.id)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleLikeReview(review.id);
+                                                            }}
                                                         >
                                                             <Heart
                                                                 className={`h-3 w-3 ${likedReviews.has(review.id)
@@ -834,7 +925,7 @@ export function RestaurantDetailPanel({
                                                     <p className="text-xs text-muted-foreground line-clamp-2">
                                                         {review.content}
                                                     </p>
-                                                    {/* Photos */}
+                                                    {/* Photos with count overlay */}
                                                     {review.photos.length > 0 && (
                                                         <div className="mt-2">
                                                             <div className="relative w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
@@ -849,6 +940,12 @@ export function RestaurantDetailPanel({
                                                                         (e.target as HTMLImageElement).style.display = 'none';
                                                                     }}
                                                                 />
+                                                                {/* Photo count overlay */}
+                                                                {review.photos.length > 1 && (
+                                                                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+                                                                        +{review.photos.length - 1}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     )}
@@ -858,7 +955,142 @@ export function RestaurantDetailPanel({
                                     )}
                                 </div>
                             </>
-                        ) : (
+                        ) : viewMode === 'review-detail' && selectedReview ? (
+                            /* Review Detail View - 리뷰 상세 + 캐러셀 */
+                            <div className="space-y-4">
+                                {/* User Info */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        {selectedReview.isPinned && (
+                                            <Pin className="h-4 w-4 text-primary fill-primary" />
+                                        )}
+                                        <span className="font-semibold">{selectedReview.userName}</span>
+                                        {selectedReview.isVerified && (
+                                            <Badge variant="default" className="h-5 px-1.5 text-xs bg-green-600">
+                                                <CheckCircle className="h-3 w-3 mr-0.5" />
+                                                인증
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-muted-foreground">
+                                            {getRealtimeLikeCount(selectedReview)}
+                                        </span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={() => handleLikeReview(selectedReview.id)}
+                                        >
+                                            <Heart
+                                                className={`h-4 w-4 ${likedReviews.has(selectedReview.id)
+                                                    ? 'fill-red-500 text-red-500'
+                                                    : 'text-gray-400'
+                                                    }`}
+                                            />
+                                        </Button>
+                                    </div>
+                                </div>
+
+                                {/* Date */}
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{formatDateTime(selectedReview.submittedAt)}</span>
+                                </div>
+
+                                {selectedReview.isEditedByAdmin && (
+                                    <Badge variant="outline" className="border-orange-500 text-orange-500 text-xs">
+                                        ⚠️ 관리자가 수정함
+                                    </Badge>
+                                )}
+
+                                {/* Photo Carousel - Instagram Style */}
+                                {selectedReview.photos.length > 0 && (
+                                    <div className="relative">
+                                        <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden">
+                                            <Image
+                                                src={supabase.storage.from('review-photos').getPublicUrl(selectedReview.photos[currentPhotoIndex].url).data.publicUrl}
+                                                alt={`음식 사진 ${currentPhotoIndex + 1}`}
+                                                fill
+                                                className="object-cover"
+                                                sizes="(max-width: 400px) 100vw, 400px"
+                                                onError={(e) => {
+                                                    console.error('이미지 로딩 실패:', selectedReview.photos[currentPhotoIndex].url);
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+
+                                            {/* Navigation Arrows */}
+                                            {selectedReview.photos.length > 1 && (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 hover:bg-black/60 text-white rounded-full"
+                                                        onClick={handlePrevPhoto}
+                                                    >
+                                                        <ChevronLeft className="h-5 w-5" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 hover:bg-black/60 text-white rounded-full"
+                                                        onClick={handleNextPhoto}
+                                                    >
+                                                        <ChevronRight className="h-5 w-5" />
+                                                    </Button>
+                                                </>
+                                            )}
+
+                                            {/* Photo Counter */}
+                                            {selectedReview.photos.length > 1 && (
+                                                <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                                                    {currentPhotoIndex + 1} / {selectedReview.photos.length}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Dot Indicators */}
+                                        {selectedReview.photos.length > 1 && (
+                                            <div className="flex justify-center gap-1.5 mt-3">
+                                                {selectedReview.photos.map((_, index) => (
+                                                    <button
+                                                        key={index}
+                                                        className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
+                                                            ? 'bg-primary'
+                                                            : 'bg-muted-foreground/30'
+                                                            }`}
+                                                        onClick={() => setCurrentPhotoIndex(index)}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Full Content */}
+                                <div>
+                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
+                                        {selectedReview.content}
+                                    </p>
+                                </div>
+
+                                {/* Rejection Note */}
+                                {selectedReview.admin_note && selectedReview.admin_note.includes('거부') && (
+                                    <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <XCircle className="h-4 w-4 text-red-600" />
+                                            <span className="text-sm font-medium text-red-700 dark:text-red-300">
+                                                거부 사유
+                                            </span>
+                                        </div>
+                                        <p className="text-sm text-red-600 dark:text-red-400">
+                                            {selectedReview.admin_note.startsWith('거부: ') ? selectedReview.admin_note.substring(4) : selectedReview.admin_note}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        ) : viewMode === 'reviews' ? (
                             /* Reviews View - 모든 리뷰 표시 */
                             <div className="space-y-4">
                                 {reviewsLoading ? (
@@ -872,7 +1104,11 @@ export function RestaurantDetailPanel({
                                 ) : (
                                     <div className="space-y-4">
                                         {safeReviewsData.map((review) => (
-                                            <Card key={review.id} className={`p-4 ${review.isPinned ? "border-primary border-2" : ""}`}>
+                                            <Card
+                                                key={review.id}
+                                                className={`p-4 cursor-pointer hover:bg-muted/50 transition-colors ${review.isPinned ? "border-primary border-2" : ""}`}
+                                                onClick={() => handleReviewClick(review)}
+                                            >
                                                 {/* Header */}
                                                 <div className="flex items-start justify-between mb-3">
                                                     <div className="flex-1">
@@ -901,7 +1137,10 @@ export function RestaurantDetailPanel({
                                                             variant="ghost"
                                                             size="icon"
                                                             className="h-8 w-8"
-                                                            onClick={() => handleLikeReview(review.id)}
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleLikeReview(review.id);
+                                                            }}
                                                         >
                                                             <Heart
                                                                 className={`h-4 w-4 ${likedReviews.has(review.id)
@@ -919,27 +1158,12 @@ export function RestaurantDetailPanel({
                                                     </Badge>
                                                 )}
 
-                                                {/* Content */}
+                                                {/* Content - truncated */}
                                                 <div className="mb-3">
-                                                    <p className="text-sm whitespace-pre-wrap">{review.content}</p>
+                                                    <p className="text-sm line-clamp-3">{review.content}</p>
                                                 </div>
 
-                                                {/* 거부 사유 (거부된 리뷰인 경우) */}
-                                                {review.admin_note && review.admin_note.includes('거부') && (
-                                                    <div className="mb-3 p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <XCircle className="h-4 w-4 text-red-600" />
-                                                            <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                                                                거부 사유
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-sm text-red-600 dark:text-red-400">
-                                                            {review.admin_note.startsWith('거부: ') ? review.admin_note.substring(4) : review.admin_note}
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Photos */}
+                                                {/* Photos with count overlay */}
                                                 {review.photos.length > 0 && (
                                                     <div className="mb-3">
                                                         <div className="relative w-full aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden">
@@ -954,6 +1178,12 @@ export function RestaurantDetailPanel({
                                                                     (e.target as HTMLImageElement).style.display = 'none';
                                                                 }}
                                                             />
+                                                            {/* Photo count overlay */}
+                                                            {review.photos.length > 1 && (
+                                                                <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
+                                                                    +{review.photos.length - 1}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
@@ -962,7 +1192,7 @@ export function RestaurantDetailPanel({
                                     </div>
                                 )}
                             </div>
-                        )}
+                        ) : null}
                     </div>
                 </ScrollArea>
 

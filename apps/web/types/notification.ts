@@ -16,6 +16,7 @@ export type NotificationType =
   | 'submission_rejected'   // 제보 거부
   | 'review_approved'       // 리뷰 승인
   | 'review_rejected'       // 리뷰 거부
+  | 'review_like'           // 리뷰 좋아요
   | 'recommendation_approved' // 맛집 추천 승인
   | 'recommendation_rejected' // 맛집 추천 거부
   | 'user_ranking';         // 사용자 랭킹 업데이트
