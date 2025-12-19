@@ -391,7 +391,7 @@ export default function AdminReviewsPage() {
 
     const getStatusBadge = (isVerified: boolean) => {
         return isVerified ? (
-            <Badge className="bg-green-500 hover:bg-green-600 gap-1">
+            <Badge className="bg-green-700 hover:bg-green-800 gap-1">
                 <CheckCircle2 className="h-3 w-3" />
                 승인됨
             </Badge>
