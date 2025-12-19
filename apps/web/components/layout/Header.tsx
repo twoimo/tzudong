@@ -217,6 +217,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         return '💖❌';
       case 'user_ranking':
         return '🏆';
+      case 'review_like':
+        return '❤️';
       default:
         return '🔔';
     }
@@ -241,6 +243,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         return 'bg-red-500';
       case 'user_ranking':
         return 'bg-yellow-500';
+      case 'review_like':
+        return 'bg-pink-500';
       default:
         return 'bg-gray-500';
     }
