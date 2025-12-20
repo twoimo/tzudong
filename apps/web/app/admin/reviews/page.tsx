@@ -32,10 +32,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface ReceiptStages {
-    original?: string;
-    contour?: string;
     warped?: string;
-    binarized?: string;
 }
 
 interface ReceiptData {
@@ -962,67 +959,27 @@ export default function AdminReviewsPage() {
                                     </Card>
                                 </TabsContent>
 
-                                {/* 탭 2: OCR 전처리 단계 */}
+                                {/* 탭 2: 최종 처리 이미지 */}
                                 <TabsContent value="ocr-stages" className="mt-4">
-                                    {selectedReview.receipt_data?.stages ? (
-                                        <div className="grid grid-cols-2 gap-4">
-                                            {/* Original */}
-                                            <div className="space-y-2">
-                                                <Label className="text-xs text-muted-foreground">1. 원본 이미지</Label>
-                                                {selectedReview.receipt_data.stages.original ? (
-                                                    <img
-                                                        src={selectedReview.receipt_data.stages.original}
-                                                        alt="Original"
-                                                        className="w-full rounded border"
-                                                    />
-                                                ) : (
-                                                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">없음</div>
-                                                )}
+                                    {selectedReview.receipt_data?.stages?.warped ? (
+                                        <div className="space-y-3">
+                                            <div className="flex items-center gap-2">
+                                                <Label className="text-sm font-medium">최종 처리 이미지 (Warped)</Label>
+                                                <Badge variant="secondary" className="text-xs">OCR 입력</Badge>
                                             </div>
-                                            {/* Contour */}
-                                            <div className="space-y-2">
-                                                <Label className="text-xs text-muted-foreground">2. 윤곽선 검출</Label>
-                                                {selectedReview.receipt_data.stages.contour ? (
-                                                    <img
-                                                        src={selectedReview.receipt_data.stages.contour}
-                                                        alt="Contour"
-                                                        className="w-full rounded border"
-                                                    />
-                                                ) : (
-                                                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">윤곽선 미검출</div>
-                                                )}
-                                            </div>
-                                            {/* Warped */}
-                                            <div className="space-y-2">
-                                                <Label className="text-xs text-muted-foreground">3. 투시 변환 / 크롭</Label>
-                                                {selectedReview.receipt_data.stages.warped ? (
-                                                    <img
-                                                        src={selectedReview.receipt_data.stages.warped}
-                                                        alt="Warped"
-                                                        className="w-full rounded border"
-                                                    />
-                                                ) : (
-                                                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">없음</div>
-                                                )}
-                                            </div>
-                                            {/* Binarized */}
-                                            <div className="space-y-2">
-                                                <Label className="text-xs text-muted-foreground">4. 이진화 (최종)</Label>
-                                                {selectedReview.receipt_data.stages.binarized ? (
-                                                    <img
-                                                        src={selectedReview.receipt_data.stages.binarized}
-                                                        alt="Binarized"
-                                                        className="w-full rounded border"
-                                                    />
-                                                ) : (
-                                                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">없음</div>
-                                                )}
-                                            </div>
+                                            <img
+                                                src={selectedReview.receipt_data.stages.warped}
+                                                alt="최종 처리 이미지"
+                                                className="w-full max-h-96 object-contain rounded border bg-muted/30"
+                                            />
+                                            <p className="text-xs text-muted-foreground">
+                                                투시 변환 및 자동 회전이 적용된 최종 이미지입니다.
+                                            </p>
                                         </div>
                                     ) : (
                                         <Card className="p-8 text-center">
                                             <div className="text-4xl mb-2">🔍</div>
-                                            <p className="text-muted-foreground">OCR 전처리 단계 이미지가 없습니다.</p>
+                                            <p className="text-muted-foreground">전처리 이미지가 없습니다.</p>
                                             <p className="text-xs text-muted-foreground mt-1">OCR이 아직 처리되지 않았거나 이전 버전에서 처리되었습니다.</p>
                                         </Card>
                                     )}

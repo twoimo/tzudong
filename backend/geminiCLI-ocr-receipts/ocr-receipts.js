@@ -266,12 +266,12 @@ async function processReview(review) {
             console.log('  ✅ 전처리 완료');
         } catch (preprocessError) {
             console.warn('  ⚠️ 전처리 실패, 원본 사용:', preprocessError.message);
-            preprocessResult = { binarized: tempInputPath, original: tempInputPath };
+            preprocessResult = { warped: tempInputPath };
         }
 
         // 4. 중간 단계 이미지를 Supabase Storage에 업로드
         const stages = {};
-        const stageNames = ['original', 'contour', 'warped', 'binarized'];
+        const stageNames = ['warped'];  // 최종 이미지만 저장 (스토리지 최적화)
 
         for (const stageName of stageNames) {
             const localPath = preprocessResult[stageName];
@@ -285,8 +285,8 @@ async function processReview(review) {
         }
         console.log('  📤 스테이지 이미지 업로드 완료:', Object.keys(stages).length, '개');
 
-        // 5. 최종 이미지(binarized 또는 원본) Base64 변환
-        const finalImagePath = preprocessResult.binarized || tempInputPath;
+        // 5. 최종 이미지(warped 또는 원본) Base64 변환
+        const finalImagePath = preprocessResult.warped || tempInputPath;
         const finalImageBuffer = fs.readFileSync(finalImagePath);
         const imageBase64 = finalImageBuffer.toString('base64');
 
