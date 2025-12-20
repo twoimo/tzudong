@@ -60,13 +60,173 @@ def four_point_transform(image, pts):
     return warped
 
 
+def detect_orientation_osd(image):
+    """
+    pytesseract OSD를 사용한 이미지 방향 감지
+    
+    Returns:
+        rotation_angle: 정방향으로 만들기 위한 회전 각도 (0, 90, 180, 270)
+        confidence: 신뢰도 (0-100)
+        success: 성공 여부
+    """
+    try:
+        import pytesseract
+        from pytesseract import Output
+        
+        # 그레이스케일 변환
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+        
+        # OSD 정확도를 높이기 위한 전처리
+        # 1. 적절한 크기로 리사이즈 (너무 크면 느리고, 너무 작으면 부정확)
+        h, w = gray.shape[:2]
+        max_dim = 1500
+        if max(h, w) > max_dim:
+            scale = max_dim / max(h, w)
+            gray = cv2.resize(gray, (int(w * scale), int(h * scale)))
+        
+        # 2. 대비 향상
+        gray = cv2.convertScaleAbs(gray, alpha=1.2, beta=10)
+        
+        # 3. 이진화 (텍스트 강조)
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        
+        # OSD 실행 (Orientation and Script Detection)
+        # --psm 0: OSD only (orientation and script detection)
+        osd = pytesseract.image_to_osd(binary, output_type=Output.DICT)
+        
+        rotation = osd.get('rotate', 0)
+        confidence = osd.get('orientation_conf', 0)
+        
+        return rotation, confidence, True
+        
+    except Exception as e:
+        # pytesseract 없거나 OSD 실패 - stderr로 에러 출력
+        import sys
+        print(f"[OSD 경고] Tesseract OSD 실패: {e}", file=sys.stderr)
+        return 0, 0, False
+
+
+def detect_barcode_position(image):
+    """
+    바코드 위치 감지 (영수증 하단에 있는 경향)
+    
+    Returns:
+        position: 'top', 'bottom', 'none'
+        confidence: 신뢰도 (0-1)
+    """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+    h, w = gray.shape[:2]
+    
+    # 바코드 특성: 수직 줄무늬 패턴 (수평 그래디언트가 강함)
+    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+    
+    # 수평 그래디언트가 수직보다 훨씬 강한 영역 = 바코드 후보
+    gradient_ratio = np.abs(sobelx) / (np.abs(sobely) + 1)
+    barcode_mask = (gradient_ratio > 3).astype(np.uint8) * 255
+    
+    # 모폴로지로 수평 줄무늬 연결
+    kernel_h = cv2.getStructuringElement(cv2.MORPH_RECT, (25, 1))
+    barcode_mask = cv2.morphologyEx(barcode_mask, cv2.MORPH_CLOSE, kernel_h)
+    
+    # 작은 노이즈 제거
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    barcode_mask = cv2.morphologyEx(barcode_mask, cv2.MORPH_OPEN, kernel)
+    
+    # 상단/하단 바코드 밀도 비교
+    top_region = barcode_mask[:h//3, :]
+    bottom_region = barcode_mask[2*h//3:, :]
+    
+    top_density = np.sum(top_region) / (top_region.size + 1)
+    bottom_density = np.sum(bottom_region) / (bottom_region.size + 1)
+    
+    total_density = top_density + bottom_density
+    
+    if total_density < 5:  # 바코드 없음
+        return 'none', 0
+    
+    if bottom_density > top_density * 1.5:
+        confidence = min((bottom_density - top_density) / (total_density + 1), 1.0)
+        return 'bottom', confidence
+    elif top_density > bottom_density * 1.5:
+        confidence = min((top_density - bottom_density) / (total_density + 1), 1.0)
+        return 'top', confidence
+    
+    return 'none', 0
+
+
+def analyze_text_density_distribution(image):
+    """
+    텍스트 밀도 분포 분석
+    영수증 특성: 상단에 점포명/로고, 중간에 상품목록, 하단에 합계/바코드
+    
+    Returns:
+        is_upright: 정방향 여부
+        confidence: 신뢰도 (0-1)
+    """
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
+    h, w = gray.shape[:2]
+    
+    # 이진화
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    
+    # 영역별 텍스트 밀도 계산 (5등분)
+    regions = 5
+    region_height = h // regions
+    densities = []
+    
+    for i in range(regions):
+        region = binary[i * region_height:(i + 1) * region_height, :]
+        density = np.sum(region) / (region.size + 1)
+        densities.append(density)
+    
+    # 정방향 영수증 특성:
+    # - 상단(0): 로고/점포명 (중간~높은 밀도, 큰 글자)
+    # - 중간(1-3): 상품목록 (높은 밀도, 균일)
+    # - 하단(4): 합계/바코드 (낮거나 특이한 밀도)
+    
+    top_density = densities[0]
+    middle_density = sum(densities[1:4]) / 3
+    bottom_density = densities[4]
+    
+    # 상단이 중간보다 약간 낮거나 비슷하면 정방향
+    # 영수증 로고는 보통 굵은 글씨 + 여백이 있어서 밀도가 높지 않음
+    
+    # 하단에 바코드나 여백이 있으면 밀도가 낮음
+    if bottom_density < middle_density * 0.7 and top_density <= middle_density * 1.3:
+        return True, 0.6
+    
+    # 뒤집힌 경우: 하단 밀도가 높고 상단 밀도가 낮음
+    if top_density < middle_density * 0.7 and bottom_density >= middle_density:
+        return False, 0.6
+    
+    return True, 0.3  # 불확실
+
+
 def auto_rotate_receipt(image):
     """
     영수증을 올바른 방향으로 회전
     
-    핵심 신호: 노란 테이프 위치 (상단에 있어야 정방향)
+    전략:
+    1. pytesseract OSD 시도 (가장 정확)
+    2. 실패 시 바코드 위치 + 텍스트 밀도 휴리스틱 사용
     """
     
+    # === 방법 1: pytesseract OSD (우선) ===
+    rotation, osd_conf, osd_success = detect_orientation_osd(image)
+    
+    # OSD가 성공하고 신뢰도가 있으면 사용 (임계값 0.5)
+    if osd_success and osd_conf >= 0.5:
+        if rotation == 90:
+            return cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE)
+        elif rotation == 180:
+            return cv2.rotate(image, cv2.ROTATE_180)
+        elif rotation == 270:
+            return cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        # rotation == 0이면 그대로 반환
+        return image
+    
+    # === 방법 2: 휴리스틱 Fallback ===
     def calculate_orientation_score(img):
         """점수 계산 - 높을수록 정방향"""
         h, w = img.shape[:2]
@@ -77,59 +237,68 @@ def auto_rotate_receipt(image):
         
         score = 0.0
         
-        # === 방법 1: 노란색/색상 블록 위치 (가장 강력한 신호) ===
+        # --- 2.1: 바코드 위치 분석 (가장 강력한 신호) ---
+        barcode_pos, barcode_conf = detect_barcode_position(img)
+        if barcode_pos == 'bottom':
+            score += barcode_conf * 8.0  # 바코드가 하단에 있으면 정방향
+        elif barcode_pos == 'top':
+            score -= barcode_conf * 8.0  # 바코드가 상단에 있으면 뒤집힘
+        
+        # --- 2.2: 텍스트 밀도 분포 ---
+        is_upright, density_conf = analyze_text_density_distribution(img)
+        if is_upright:
+            score += density_conf * 3.0
+        else:
+            score -= density_conf * 3.0
+        
+        # --- 2.3: 노란색/색상 블록 위치 (점포 스티커/테이프) ---
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         h_channel = hsv[:, :, 0]
         s_channel = hsv[:, :, 1]
         v_channel = hsv[:, :, 2]
         
-        # 노란색 감지 (Hue: 20-40, 높은 채도, 높은 밝기)
+        # 노란색 감지 (상단 점포 스티커 등)
         yellow_mask = ((h_channel >= 15) & (h_channel <= 45) & 
                        (s_channel > 80) & (v_channel > 150)).astype(np.uint8)
         
         # 일반 색상 영역
         colored = ((s_channel > 100) & (v_channel > 150)).astype(np.uint8)
-        
-        # 노란색 + 일반 색상
         color_mask = cv2.bitwise_or(yellow_mask, colored)
         
         # 상단 1/4 vs 하단 1/4
         top_quarter = color_mask[:h//4, :]
         bottom_quarter = color_mask[3*h//4:, :]
         
-        top_sum = int(np.sum(top_quarter))  # int로 변환하여 오버플로우 방지
+        top_sum = int(np.sum(top_quarter))
         bottom_sum = int(np.sum(bottom_quarter))
         total_color = top_sum + bottom_sum
         
-        if total_color > 100:  # 색상이 충분히 있을 때만
+        if total_color > 100:
             color_score = (top_sum - bottom_sum) / max(total_color, 1)
-            score += color_score * 5.0  # 강한 가중치
+            score += color_score * 2.0
         
-        # === 방법 2: 텍스트 블록 크기 분석 ===
+        # --- 2.4: 큰 텍스트 블록 (로고/점포명은 상단) ---
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
-        # 상단 1/4 vs 하단 1/4
-        top_region = binary[:h//4, :]
-        bottom_region = binary[3*h//4:, :]
+        # 상단 1/5 vs 하단 1/5
+        top_region = binary[:h//5, :]
+        bottom_region = binary[4*h//5:, :]
         
         top_contours, _ = cv2.findContours(top_region, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         bottom_contours, _ = cv2.findContours(bottom_region, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        # 가장 큰 3개 블록의 평균 면적
-        top_areas = sorted([cv2.contourArea(c) for c in top_contours], reverse=True)[:3]
-        bottom_areas = sorted([cv2.contourArea(c) for c in bottom_contours], reverse=True)[:3]
+        # 가장 큰 블록 (로고는 보통 단일 큰 블록)
+        top_max = max([cv2.contourArea(c) for c in top_contours], default=0)
+        bottom_max = max([cv2.contourArea(c) for c in bottom_contours], default=0)
         
-        top_avg = sum(top_areas) / len(top_areas) if top_areas else 0
-        bottom_avg = sum(bottom_areas) / len(bottom_areas) if bottom_areas else 0
-        
-        if top_avg + bottom_avg > 0:
-            block_score = (top_avg - bottom_avg) / max(top_avg + bottom_avg, 1)
-            score += block_score * 1.0
+        if top_max + bottom_max > 0:
+            block_score = (top_max - bottom_max) / max(top_max + bottom_max, 1)
+            score += block_score * 1.5
         
         return score
     
-    # 0°와 180° 비교 (90°/270°는 가로이므로 큰 패널티)
+    # 4방향 비교
     rotations = [
         (image, 0),
         (cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE), 90),
