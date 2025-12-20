@@ -262,15 +262,20 @@ def get_white_paper_mask(image):
                 best_score = score
                 best_threshold = (v_thresh, s_thresh, l_thresh)
                 
-                # 최적 마스크 생성
+                # 최적 마스크 생성 - convex hull 사용 (그림자로 인한 오목한 부분 채움)
+                hull = cv2.convexHull(contour)
                 best_mask = np.zeros((h, w), dtype=np.uint8)
-                cv2.drawContours(best_mask, [contour], -1, 255, -1)
+                cv2.drawContours(best_mask, [hull], -1, 255, -1)
     
     if best_mask is None:
         # fallback: 가장 밝은 영역
         _, best_mask = cv2.threshold(v_channel, 150, 255, cv2.THRESH_BINARY)
     
-    # 최종 갭 채우기
+    # 마스크를 약간 확장 (그림자 영역 포함)
+    kernel_expand = cv2.getStructuringElement(cv2.MORPH_RECT, (10, 10))
+    best_mask = cv2.dilate(best_mask, kernel_expand, iterations=1)
+    
+    # 갭 채우기
     kernel_large = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
     best_mask = cv2.morphologyEx(best_mask, cv2.MORPH_CLOSE, kernel_large, iterations=2)
     
