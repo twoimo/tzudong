@@ -60,48 +60,218 @@ def four_point_transform(image, pts):
     return warped
 
 
+def auto_rotate_receipt(image):
+    """
+    영수증을 올바른 방향으로 회전
+    
+    방법:
+    1. 4가지 회전 (0°, 90°, 180°, 270°) 모두 시도
+    2. 각 방향에서 "텍스트 정방향" 점수 계산
+    3. 가장 높은 점수의 방향 선택
+    
+    텍스트 정방향 판단:
+    - 영수증 상단에는 가게명 (큰 텍스트, 밀도 높음)
+    - 텍스트는 위에서 아래로, 좌에서 우로 읽음
+    """
+    
+    def calculate_orientation_score(img):
+        """
+        이미지가 올바른 방향인지 점수 계산
+        높을수록 정방향
+        """
+        h, w = img.shape[:2]
+        
+        # 세로가 가로보다 길어야 함 (영수증 특성)
+        if w > h:
+            return -1000  # 가로 방향은 큰 페널티
+        
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+        
+        # 방법 1: 상단 vs 하단 텍스트 밀도 비교
+        # 영수증 상단에는 보통 가게명이 있어서 텍스트가 더 진하고 밀집
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        
+        top_region = binary[:h//4, :]
+        bottom_region = binary[3*h//4:, :]
+        
+        # 텍스트 픽셀 밀도
+        top_density = np.sum(top_region) / (255 * top_region.size) if top_region.size > 0 else 0
+        bottom_density = np.sum(bottom_region) / (255 * bottom_region.size) if bottom_region.size > 0 else 0
+        
+        # 방법 2: 상단의 가장 큰 연속 텍스트 블록 크기 (가게명은 크게 쓰여있음)
+        top_contours, _ = cv2.findContours(top_region, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        bottom_contours, _ = cv2.findContours(bottom_region, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        top_max_area = max([cv2.contourArea(c) for c in top_contours]) if top_contours else 0
+        bottom_max_area = max([cv2.contourArea(c) for c in bottom_contours]) if bottom_contours else 0
+        
+        # 점수 계산
+        # 상단에 더 큰 텍스트 블록이 있으면 정방향
+        block_score = (top_max_area - bottom_max_area) / max(top_max_area, bottom_max_area, 1)
+        
+        # 상단이 더 밀집되어 있으면 정방향
+        density_score = (top_density - bottom_density) * 10
+        
+        # 종합 점수
+        total_score = block_score * 0.6 + density_score * 0.4
+        
+        return total_score
+    
+    # 4가지 회전 시도
+    rotations = [
+        (image, 0),
+        (cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE), 90),
+        (cv2.rotate(image, cv2.ROTATE_180), 180),
+        (cv2.rotate(image, cv2.ROTATE_90_COUNTERCLOCKWISE), 270),
+    ]
+    
+    best_image = image
+    best_score = float('-inf')
+    best_rotation = 0
+    
+    for rotated_img, rotation in rotations:
+        score = calculate_orientation_score(rotated_img)
+        if score > best_score:
+            best_score = score
+            best_image = rotated_img
+            best_rotation = rotation
+    
+    return best_image
+
+
 def get_white_paper_mask(image):
     """
-    진짜 흰색 종이 영역만 검출
-    - 높은 밝기 (L > 150)
-    - 낮은 채도 (S < 60) - 무채색
-    - 회색 책상과 구분
+    영수증 영역 마스크 생성 (브루트포스 다중 임계값)
+    
+    전략:
+    1. 여러 밝기 임계값을 시도
+    2. 각 임계값에서 찾은 윤곽선에 "영수증 점수" 계산
+    3. 가장 높은 점수의 임계값 + 윤곽선 선택
+    4. 질감 분석으로 배경 제외
     """
-    # LAB 색공간 (밝기)
+    h, w = image.shape[:2]
+    image_area = h * w
+    
+    # 색공간 변환
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
+    
+    v_channel = hsv[:, :, 2]
+    s_channel = hsv[:, :, 1]
     l_channel = lab[:, :, 0]
     
-    # HSV 색공간 (채도)
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    s_channel = hsv[:, :, 1]
-    v_channel = hsv[:, :, 2]
+    # 질감 분석: 로컬 표준편차 계산 (질감이 많으면 높음)
+    # 영수증은 부드럽고 균일, 배경은 질감이 있음
+    blur_for_std = cv2.GaussianBlur(gray, (15, 15), 0)
+    local_std = np.abs(gray.astype(float) - blur_for_std.astype(float))
+    texture_mask = (local_std < 20).astype(np.uint8) * 255  # 부드러운 영역만
     
-    # 흰색 조건: 밝고 (V > 180) + 무채색 (S < 50)
-    # 더 엄격한 조건으로 회색 책상 제외
-    bright_mask = v_channel > 170  # 밝기
-    low_saturation = s_channel < 50  # 무채색
+    best_mask = None
+    best_score = -1
+    best_threshold = None
     
-    # LAB L 채널도 체크 (밝기 이중 확인)
-    lab_bright = l_channel > 180
+    # 브루트포스: 여러 임계값 시도
+    thresholds = [
+        (100, 90, 100),  # V, S, L (매우 낮음 - 그림자 포함)
+        (120, 80, 120),
+        (130, 70, 130),
+        (140, 70, 140),
+        (150, 60, 150),
+        (160, 50, 160),
+        (170, 40, 170),
+        (180, 30, 180),
+    ]
     
-    # 세 조건 모두 만족
-    white_mask = (bright_mask & low_saturation & lab_bright).astype(np.uint8) * 255
+    for v_thresh, s_thresh, l_thresh in thresholds:
+        # 밝기 마스크 생성
+        bright = (v_channel > v_thresh).astype(np.uint8) * 255
+        low_sat = (s_channel < s_thresh).astype(np.uint8) * 255
+        lab_bright = (l_channel > l_thresh).astype(np.uint8) * 255
+        
+        # 흰색 조건
+        white_mask = cv2.bitwise_and(bright, low_sat)
+        white_mask = cv2.bitwise_and(white_mask, lab_bright)
+        
+        # 색상 스티커도 포함
+        colored = ((v_channel > v_thresh + 20) & (s_channel > 80)).astype(np.uint8) * 255
+        combined = cv2.bitwise_or(white_mask, colored)
+        
+        # 질감 마스크와 AND (부드러운 영역만)
+        if v_thresh < 140:  # 낮은 임계값에서만 질감 필터 적용
+            combined = cv2.bitwise_and(combined, texture_mask)
+        
+        # 모폴로지 처리
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+        combined = cv2.morphologyEx(combined, cv2.MORPH_OPEN, kernel, iterations=1)
+        combined = cv2.morphologyEx(combined, cv2.MORPH_CLOSE, kernel, iterations=3)
+        
+        # 윤곽선 찾기
+        contours, _ = cv2.findContours(combined, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        if not contours:
+            continue
+        
+        # 각 윤곽선에 점수 부여
+        for contour in contours:
+            area = cv2.contourArea(contour)
+            area_ratio = area / image_area
+            
+            # 면적 필터: 5% ~ 80%
+            if area_ratio < 0.05 or area_ratio > 0.8:
+                continue
+            
+            # 볼록 껍질
+            hull = cv2.convexHull(contour)
+            hull_area = cv2.contourArea(hull)
+            convexity = area / hull_area if hull_area > 0 else 0
+            
+            # 직사각형성 (minAreaRect와 비교)
+            rect = cv2.minAreaRect(contour)
+            rect_area = rect[1][0] * rect[1][1]
+            rectangularity = area / rect_area if rect_area > 0 else 0
+            
+            # 가로세로 비율 (영수증은 세로가 김)
+            x, y, cw, ch = cv2.boundingRect(contour)
+            aspect = max(cw, ch) / min(cw, ch) if min(cw, ch) > 0 else 0
+            vertical_bonus = 1.0
+            if ch > cw * 1.3:  # 세로로 긴 형태
+                vertical_bonus = 1.3
+            elif cw > ch * 1.3:  # 가로로 긴 형태
+                vertical_bonus = 1.1
+            
+            # 종합 점수 계산
+            score = (
+                area_ratio * 2.0 +          # 면적 점수 (최대 ~1.6)
+                convexity * 0.5 +           # 볼록성 (0~0.5)
+                rectangularity * 0.5 +      # 직사각형성 (0~0.5)
+                vertical_bonus * 0.3        # 세로 보너스
+            )
+            
+            if score > best_score:
+                best_score = score
+                best_threshold = (v_thresh, s_thresh, l_thresh)
+                
+                # 최적 마스크 생성
+                best_mask = np.zeros((h, w), dtype=np.uint8)
+                cv2.drawContours(best_mask, [contour], -1, 255, -1)
     
-    # 모폴로지 연산
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
-    white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_CLOSE, kernel, iterations=2)
-    white_mask = cv2.morphologyEx(white_mask, cv2.MORPH_OPEN, kernel, iterations=1)
+    if best_mask is None:
+        # fallback: 가장 밝은 영역
+        _, best_mask = cv2.threshold(v_channel, 150, 255, cv2.THRESH_BINARY)
     
-    # 작은 노이즈 제거 (연결된 컴포넌트 분석)
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(white_mask, connectivity=8)
+    # 최종 갭 채우기
+    kernel_large = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+    best_mask = cv2.morphologyEx(best_mask, cv2.MORPH_CLOSE, kernel_large, iterations=2)
     
-    # 너무 작은 영역 제거 (이미지의 1% 미만)
-    min_area = image.shape[0] * image.shape[1] * 0.01
-    for i in range(1, num_labels):
-        if stats[i, cv2.CC_STAT_AREA] < min_area:
-            white_mask[labels == i] = 0
+    # 구멍 채우기
+    flood_filled = best_mask.copy()
+    mask = np.zeros((h + 2, w + 2), np.uint8)
+    cv2.floodFill(flood_filled, mask, (0, 0), 255)
+    flood_filled_inv = cv2.bitwise_not(flood_filled)
+    best_mask = cv2.bitwise_or(best_mask, flood_filled_inv)
     
-    return white_mask
+    return best_mask
 
 
 def score_receipt_contour(contour, image_shape):
@@ -233,6 +403,103 @@ def contour_to_4points(contour):
     return box.astype(np.float32), "min_area_rect"
 
 
+def clip_corners_to_bounds(corners, image_shape):
+    """
+    코너 좌표를 이미지 경계 내로 클리핑
+    
+    Returns:
+        clipped_corners: 경계 내로 클리핑된 코너
+        is_clipped: 클리핑이 발생했는지 여부
+        clip_ratio: 얼마나 많이 클리핑되었는지 (0=없음, 1=많이)
+    """
+    h, w = image_shape[:2]
+    clipped = corners.copy()
+    
+    original_area = cv2.contourArea(corners)
+    
+    # 각 코너를 이미지 경계 내로 클리핑
+    clipped[:, 0] = np.clip(clipped[:, 0], 0, w - 1)  # x
+    clipped[:, 1] = np.clip(clipped[:, 1], 0, h - 1)  # y
+    
+    clipped_area = cv2.contourArea(clipped)
+    
+    # 클리핑으로 얼마나 면적이 줄었는지 계산
+    if original_area > 0:
+        clip_ratio = 1 - (clipped_area / original_area)
+    else:
+        clip_ratio = 0
+    
+    is_clipped = clip_ratio > 0.01  # 1% 이상 변화
+    
+    return clipped.astype(np.float32), is_clipped, clip_ratio
+
+
+def is_valid_perspective_corners(corners, image_shape):
+    """
+    투시 변환에 적합한 코너인지 검증
+    
+    Returns:
+        is_valid: 유효 여부
+        reason: 이유
+    """
+    h, w = image_shape[:2]
+    margin = 5  # 경계 여유
+    
+    # 1. 모든 코너가 이미지 내에 있는지 (여유 포함)
+    boundary_corners = 0
+    for i, corner in enumerate(corners):
+        # 완전히 밖에 있는 경우
+        if corner[0] < 0 or corner[0] >= w or corner[1] < 0 or corner[1] >= h:
+            return False, f"corner_{i}_outside"
+        
+        # 경계에 너무 가까운 경우 (5픽셀 이내)
+        if corner[0] < margin or corner[0] >= w - margin:
+            boundary_corners += 1
+        if corner[1] < margin or corner[1] >= h - margin:
+            boundary_corners += 1
+    
+    # 2개 이상의 코너가 경계에 있으면 영수증이 잘린 것
+    if boundary_corners >= 2:
+        return False, f"corners_at_boundary_{boundary_corners}"
+    
+    # 2. 면적이 충분한지
+    area = cv2.contourArea(corners)
+    image_area = h * w
+    if area < image_area * 0.05:  # 5% 미만
+        return False, "area_too_small"
+    
+    # 3. 사각형이 너무 왜곡되지 않았는지
+    ordered = order_points(corners)
+    
+    # 4개 코너가 모두 다른 위치인지 확인 (중복 방지)
+    for i in range(4):
+        for j in range(i + 1, 4):
+            dist = np.linalg.norm(ordered[i] - ordered[j])
+            if dist < 10:  # 10픽셀 미만 거리면 거의 같은 점
+                return False, "duplicate_corners"
+    
+    # 상단/하단 폭
+    top_width = np.linalg.norm(ordered[1] - ordered[0])
+    bottom_width = np.linalg.norm(ordered[2] - ordered[3])
+    
+    # 좌/우 높이
+    left_height = np.linalg.norm(ordered[3] - ordered[0])
+    right_height = np.linalg.norm(ordered[2] - ordered[1])
+    
+    # 너비/높이 비율 차이 확인 (너무 심하면 왜곡됨)
+    if top_width > 0 and bottom_width > 0:
+        width_ratio = min(top_width, bottom_width) / max(top_width, bottom_width)
+        if width_ratio < 0.3:  # 30% 미만
+            return False, "width_distorted"
+    
+    if left_height > 0 and right_height > 0:
+        height_ratio = min(left_height, right_height) / max(left_height, right_height)
+        if height_ratio < 0.3:
+            return False, "height_distorted"
+    
+    return True, "valid"
+
+
 def binarize_image(image):
     """이미지 이진화"""
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
@@ -307,19 +574,54 @@ def preprocess_receipt(input_path, output_dir):
     cv2.imwrite(contour_path, contour_image)
     results["contour"] = contour_path
     
-    # Step 4: 투시 변환
+    # Step 4: 투시 변환 (코너 검증 포함)
+    warped = None
+    warp_method = "none"
+    
     if corners is not None and score >= 0.3:
         # 원본 비율로 스케일업
         scaled_corners = corners / ratio
         
-        try:
-            warped = four_point_transform(orig, scaled_corners)
-            warp_method = "perspective"
-        except Exception as e:
-            warped = orig.copy()
-            warp_method = f"error: {str(e)}"
-    else:
-        # Fallback: 바운딩 박스 크롭
+        # 코너 유효성 검사
+        is_valid, validity_reason = is_valid_perspective_corners(scaled_corners, orig.shape)
+        
+        if not is_valid:
+            # 클리핑 시도
+            clipped_corners, was_clipped, clip_ratio = clip_corners_to_bounds(scaled_corners, orig.shape)
+            
+            if clip_ratio < 0.3:  # 30% 미만 클리핑이면 사용
+                is_valid, validity_reason = is_valid_perspective_corners(clipped_corners, orig.shape)
+                if is_valid:
+                    scaled_corners = clipped_corners
+                    results["corners_clipped"] = True
+                    results["clip_ratio"] = float(clip_ratio)
+        
+        if is_valid:
+            try:
+                warped = four_point_transform(orig, scaled_corners)
+                warp_method = "perspective"
+                
+                # 결과 검증: 너무 작거나 검은 이미지인지 확인
+                if warped is not None:
+                    h_w, w_w = warped.shape[:2]
+                    if h_w < 50 or w_w < 50:
+                        warped = None
+                        warp_method = "perspective_too_small"
+                    else:
+                        # 이미지가 대부분 검은색/흰색인지 확인
+                        gray_w = cv2.cvtColor(warped, cv2.COLOR_BGR2GRAY)
+                        mean_val = np.mean(gray_w)
+                        if mean_val < 10 or mean_val > 245:  # 거의 검/흰
+                            warped = None
+                            warp_method = f"perspective_invalid_mean_{mean_val:.0f}"
+            except Exception as e:
+                warped = None
+                warp_method = f"perspective_error: {str(e)}"
+        else:
+            results["corner_invalid_reason"] = validity_reason
+    
+    # Fallback: 바운딩 박스 크롭
+    if warped is None:
         if best_contour is not None:
             x, y, cw, ch = cv2.boundingRect(best_contour)
             x, y = int(x / ratio), int(y / ratio)
@@ -338,6 +640,9 @@ def preprocess_receipt(input_path, output_dir):
             warp_method = "original"
     
     results["warp_method"] = warp_method
+    
+    # Step 4.5: 자동 회전 (텍스트가 똑바로 보이도록)
+    warped = auto_rotate_receipt(warped)
     
     warped_path = os.path.join(output_dir, "warped.jpg")
     cv2.imwrite(warped_path, warped)
