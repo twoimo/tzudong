@@ -231,45 +231,25 @@ def auto_rotate_receipt(image):
         """점수 계산 - 높을수록 정방향"""
         h, w = img.shape[:2]
         
+        # 세로가 가로보다 길어야 함
+        if w > h:
+            return -1000
+        
         score = 0.0
         
-        # --- 2.0: 텍스트 라인 방향 분석 (가장 강력한 신호) ---
-        # 영수증은 수평 텍스트 라인으로 구성됨 → 정방향이면 수평 라인이 많아야 함
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Sobel 필터로 수평/수직 엣지 강도 계산
-        sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)  # 수직 엣지 (수평 라인 검출)
-        sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)  # 수평 엣지 (수직 라인 검출)
-        
-        # 엣지 강도 합계
-        horizontal_edge_sum = np.sum(np.abs(sobely))  # 수평 라인 = 수평 엣지
-        vertical_edge_sum = np.sum(np.abs(sobelx))    # 수직 라인 = 수직 엣지
-        
-        total_edge = horizontal_edge_sum + vertical_edge_sum
-        if total_edge > 0:
-            # 수평 라인이 많으면 정방향 (텍스트가 가로로 배열)
-            line_ratio = (horizontal_edge_sum - vertical_edge_sum) / total_edge
-            score += line_ratio * 15.0  # 강한 가중치
-        
-        # 세로 이미지 보너스 (약한 가중치)
-        if h > w * 1.2:
-            score += 2.0
-        elif w > h * 1.2:
-            score -= 2.0
-        
-        # --- 2.1: 바코드 위치 분석 ---
+        # --- 2.1: 바코드 위치 분석 (가장 강력한 신호) ---
         barcode_pos, barcode_conf = detect_barcode_position(img)
         if barcode_pos == 'bottom':
-            score += barcode_conf * 5.0
+            score += barcode_conf * 8.0  # 바코드가 하단에 있으면 정방향
         elif barcode_pos == 'top':
-            score -= barcode_conf * 5.0
+            score -= barcode_conf * 8.0  # 바코드가 상단에 있으면 뒤집힘
         
         # --- 2.2: 텍스트 밀도 분포 ---
         is_upright, density_conf = analyze_text_density_distribution(img)
         if is_upright:
-            score += density_conf * 2.0
+            score += density_conf * 3.0
         else:
-            score -= density_conf * 2.0
+            score -= density_conf * 3.0
         
         # --- 2.3: 노란색/색상 블록 위치 (점포 스티커/테이프) ---
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
@@ -295,9 +275,10 @@ def auto_rotate_receipt(image):
         
         if total_color > 100:
             color_score = (top_sum - bottom_sum) / max(total_color, 1)
-            score += color_score * 1.5
+            score += color_score * 2.0
         
         # --- 2.4: 큰 텍스트 블록 (로고/점포명은 상단) ---
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
         # 상단 1/5 vs 하단 1/5
@@ -313,7 +294,7 @@ def auto_rotate_receipt(image):
         
         if top_max + bottom_max > 0:
             block_score = (top_max - bottom_max) / max(top_max + bottom_max, 1)
-            score += block_score * 1.0
+            score += block_score * 1.5
         
         return score
     
