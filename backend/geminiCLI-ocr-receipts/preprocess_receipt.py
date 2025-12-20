@@ -64,60 +64,72 @@ def auto_rotate_receipt(image):
     """
     영수증을 올바른 방향으로 회전
     
-    방법:
-    1. 4가지 회전 (0°, 90°, 180°, 270°) 모두 시도
-    2. 각 방향에서 "텍스트 정방향" 점수 계산
-    3. 가장 높은 점수의 방향 선택
-    
-    텍스트 정방향 판단:
-    - 영수증 상단에는 가게명 (큰 텍스트, 밀도 높음)
-    - 텍스트는 위에서 아래로, 좌에서 우로 읽음
+    핵심 신호: 노란 테이프 위치 (상단에 있어야 정방향)
     """
     
     def calculate_orientation_score(img):
-        """
-        이미지가 올바른 방향인지 점수 계산
-        높을수록 정방향
-        """
+        """점수 계산 - 높을수록 정방향"""
         h, w = img.shape[:2]
         
-        # 세로가 가로보다 길어야 함 (영수증 특성)
+        # 세로가 가로보다 길어야 함
         if w > h:
-            return -1000  # 가로 방향은 큰 페널티
+            return -1000
         
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) if len(img.shape) == 3 else img
+        score = 0.0
         
-        # 방법 1: 상단 vs 하단 텍스트 밀도 비교
-        # 영수증 상단에는 보통 가게명이 있어서 텍스트가 더 진하고 밀집
+        # === 방법 1: 노란색/색상 블록 위치 (가장 강력한 신호) ===
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        h_channel = hsv[:, :, 0]
+        s_channel = hsv[:, :, 1]
+        v_channel = hsv[:, :, 2]
+        
+        # 노란색 감지 (Hue: 20-40, 높은 채도, 높은 밝기)
+        yellow_mask = ((h_channel >= 15) & (h_channel <= 45) & 
+                       (s_channel > 80) & (v_channel > 150)).astype(np.uint8)
+        
+        # 일반 색상 영역
+        colored = ((s_channel > 100) & (v_channel > 150)).astype(np.uint8)
+        
+        # 노란색 + 일반 색상
+        color_mask = cv2.bitwise_or(yellow_mask, colored)
+        
+        # 상단 1/4 vs 하단 1/4
+        top_quarter = color_mask[:h//4, :]
+        bottom_quarter = color_mask[3*h//4:, :]
+        
+        top_sum = int(np.sum(top_quarter))  # int로 변환하여 오버플로우 방지
+        bottom_sum = int(np.sum(bottom_quarter))
+        total_color = top_sum + bottom_sum
+        
+        if total_color > 100:  # 색상이 충분히 있을 때만
+            color_score = (top_sum - bottom_sum) / max(total_color, 1)
+            score += color_score * 5.0  # 강한 가중치
+        
+        # === 방법 2: 텍스트 블록 크기 분석 ===
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
+        # 상단 1/4 vs 하단 1/4
         top_region = binary[:h//4, :]
         bottom_region = binary[3*h//4:, :]
         
-        # 텍스트 픽셀 밀도
-        top_density = np.sum(top_region) / (255 * top_region.size) if top_region.size > 0 else 0
-        bottom_density = np.sum(bottom_region) / (255 * bottom_region.size) if bottom_region.size > 0 else 0
-        
-        # 방법 2: 상단의 가장 큰 연속 텍스트 블록 크기 (가게명은 크게 쓰여있음)
         top_contours, _ = cv2.findContours(top_region, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         bottom_contours, _ = cv2.findContours(bottom_region, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        top_max_area = max([cv2.contourArea(c) for c in top_contours]) if top_contours else 0
-        bottom_max_area = max([cv2.contourArea(c) for c in bottom_contours]) if bottom_contours else 0
+        # 가장 큰 3개 블록의 평균 면적
+        top_areas = sorted([cv2.contourArea(c) for c in top_contours], reverse=True)[:3]
+        bottom_areas = sorted([cv2.contourArea(c) for c in bottom_contours], reverse=True)[:3]
         
-        # 점수 계산
-        # 상단에 더 큰 텍스트 블록이 있으면 정방향
-        block_score = (top_max_area - bottom_max_area) / max(top_max_area, bottom_max_area, 1)
+        top_avg = sum(top_areas) / len(top_areas) if top_areas else 0
+        bottom_avg = sum(bottom_areas) / len(bottom_areas) if bottom_areas else 0
         
-        # 상단이 더 밀집되어 있으면 정방향
-        density_score = (top_density - bottom_density) * 10
+        if top_avg + bottom_avg > 0:
+            block_score = (top_avg - bottom_avg) / max(top_avg + bottom_avg, 1)
+            score += block_score * 1.0
         
-        # 종합 점수
-        total_score = block_score * 0.6 + density_score * 0.4
-        
-        return total_score
+        return score
     
-    # 4가지 회전 시도
+    # 0°와 180° 비교 (90°/270°는 가로이므로 큰 패널티)
     rotations = [
         (image, 0),
         (cv2.rotate(image, cv2.ROTATE_90_CLOCKWISE), 90),
@@ -127,14 +139,12 @@ def auto_rotate_receipt(image):
     
     best_image = image
     best_score = float('-inf')
-    best_rotation = 0
     
     for rotated_img, rotation in rotations:
         score = calculate_orientation_score(rotated_img)
         if score > best_score:
             best_score = score
             best_image = rotated_img
-            best_rotation = rotation
     
     return best_image
 
