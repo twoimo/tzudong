@@ -255,12 +255,12 @@ export async function POST(request: Request) {
             preprocessResult = await runPythonPreprocess(tempInputPath, preprocessOutputDir);
         } catch (preprocessError) {
             console.warn('전처리 실패, 원본 사용:', preprocessError);
-            preprocessResult = { binarized: tempInputPath, original: tempInputPath };
+            preprocessResult = { warped: tempInputPath };
         }
 
         // 4. 중간 단계 이미지 업로드
         const stages: Record<string, string> = {};
-        const stageNames = ['original', 'contour', 'warped', 'binarized'];
+        const stageNames = ['warped'];  // 최종 이미지만 저장 (스토리지 최적화)
 
         for (const stageName of stageNames) {
             const localPath = preprocessResult[stageName];
@@ -277,7 +277,7 @@ export async function POST(request: Request) {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
-        const finalImagePath = preprocessResult.binarized || tempInputPath;
+        const finalImagePath = preprocessResult.warped || tempInputPath;
         const finalImageBuffer = fs.readFileSync(finalImagePath);
         const imageBase64 = finalImageBuffer.toString('base64');
 
