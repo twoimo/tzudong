@@ -11,6 +11,10 @@
 const { createClient } = require('@supabase/supabase-js');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const crypto = require('crypto');
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 
 // =====================================================
 // 환경 변수 검증
@@ -146,6 +150,82 @@ function parseOCRResponse(responseText) {
     }
 }
 
+/**
+ * Python 전처리 스크립트 실행
+ */
+function runPythonPreprocess(inputPath, outputDir) {
+    return new Promise((resolve, reject) => {
+        const scriptPath = path.join(__dirname, 'preprocess_receipt.py');
+        const python = process.platform === 'win32' ? 'python' : 'python3';
+
+        const proc = spawn(python, [scriptPath, inputPath, outputDir]);
+        let stdout = '';
+        let stderr = '';
+
+        proc.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        proc.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        proc.on('close', (code) => {
+            if (code !== 0) {
+                reject(new Error(`Python 스크립트 실패 (code ${code}): ${stderr}`));
+                return;
+            }
+            try {
+                const result = JSON.parse(stdout.trim());
+                resolve(result);
+            } catch (e) {
+                reject(new Error(`Python 출력 파싱 실패: ${stdout}`));
+            }
+        });
+    });
+}
+
+/**
+ * 로컬 파일을 Supabase Storage에 업로드
+ */
+async function uploadToStorage(localPath, storagePath) {
+    if (!localPath || !fs.existsSync(localPath)) {
+        return null;
+    }
+
+    const fileBuffer = fs.readFileSync(localPath);
+    const { error } = await supabase.storage
+        .from('review-photos')
+        .upload(storagePath, fileBuffer, {
+            contentType: 'image/jpeg',
+            upsert: true,
+        });
+
+    if (error) {
+        console.error(`  ⚠️ 업로드 실패 (${storagePath}):`, error.message);
+        return null;
+    }
+
+    const { data: urlData } = supabase.storage
+        .from('review-photos')
+        .getPublicUrl(storagePath);
+
+    return urlData?.publicUrl || null;
+}
+
+/**
+ * 임시 디렉토리 정리
+ */
+function cleanupTempDir(dirPath) {
+    try {
+        if (fs.existsSync(dirPath)) {
+            fs.rmSync(dirPath, { recursive: true, force: true });
+        }
+    } catch (e) {
+        console.error(`  ⚠️ 임시 디렉토리 정리 실패: ${e.message}`);
+    }
+}
+
 // =====================================================
 // 메인 처리 로직
 // =====================================================
@@ -153,6 +233,11 @@ function parseOCRResponse(responseText) {
 async function processReview(review) {
     const reviewId = review.id;
     console.log(`[처리중] 리뷰 ID: ${reviewId}`);
+
+    // 임시 디렉토리 생성
+    const tempDir = path.join(os.tmpdir(), `ocr-${reviewId}`);
+    const tempInputPath = path.join(tempDir, 'input.jpg');
+    const preprocessOutputDir = path.join(tempDir, 'stages');
 
     try {
         // 1. 인증 사진 URL 생성
@@ -164,15 +249,53 @@ async function processReview(review) {
             throw new Error('이미지 URL 생성 실패');
         }
 
-        // 2. 이미지 다운로드 및 Base64 변환
-        const imageBase64 = await fetchImageAsBase64(urlData.publicUrl);
+        // 2. 이미지 다운로드 및 임시 파일로 저장
+        fs.mkdirSync(tempDir, { recursive: true });
+        const response = await fetch(urlData.publicUrl);
+        if (!response.ok) {
+            throw new Error(`이미지 다운로드 실패: ${response.status}`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        fs.writeFileSync(tempInputPath, Buffer.from(arrayBuffer));
 
-        // 3. Gemini Vision API 호출
+        // 3. Python 전처리 실행
+        console.log('  🔄 Python 전처리 실행 중...');
+        let preprocessResult;
+        try {
+            preprocessResult = await runPythonPreprocess(tempInputPath, preprocessOutputDir);
+            console.log('  ✅ 전처리 완료');
+        } catch (preprocessError) {
+            console.warn('  ⚠️ 전처리 실패, 원본 사용:', preprocessError.message);
+            preprocessResult = { binarized: tempInputPath, original: tempInputPath };
+        }
+
+        // 4. 중간 단계 이미지를 Supabase Storage에 업로드
+        const stages = {};
+        const stageNames = ['original', 'contour', 'warped', 'binarized'];
+
+        for (const stageName of stageNames) {
+            const localPath = preprocessResult[stageName];
+            if (localPath) {
+                const storagePath = `ocr-debug/${reviewId}/${stageName}.jpg`;
+                const publicUrl = await uploadToStorage(localPath, storagePath);
+                if (publicUrl) {
+                    stages[stageName] = publicUrl;
+                }
+            }
+        }
+        console.log('  📤 스테이지 이미지 업로드 완료:', Object.keys(stages).length, '개');
+
+        // 5. 최종 이미지(binarized 또는 원본) Base64 변환
+        const finalImagePath = preprocessResult.binarized || tempInputPath;
+        const finalImageBuffer = fs.readFileSync(finalImagePath);
+        const imageBase64 = finalImageBuffer.toString('base64');
+
+        // 6. Gemini Vision API 호출
         const result = await model.generateContent([
             OCR_PROMPT,
             {
                 inlineData: {
-                    mimeType: 'image/webp',
+                    mimeType: 'image/jpeg',
                     data: imageBase64,
                 },
             },
@@ -181,12 +304,16 @@ async function processReview(review) {
         const responseText = result.response.text();
         const ocrData = parseOCRResponse(responseText);
 
-        // 4. OCR 실패 처리
+        // 7. OCR 실패 처리
         if (ocrData.error || ocrData.confidence < 0.5) {
             await supabase
                 .from('reviews')
                 .update({
-                    receipt_data: { error: ocrData.error || 'low_confidence', raw: ocrData },
+                    receipt_data: {
+                        error: ocrData.error || 'low_confidence',
+                        raw: ocrData,
+                        stages: Object.keys(stages).length > 0 ? stages : undefined
+                    },
                     ocr_processed_at: new Date().toISOString(),
                 })
                 .eq('id', reviewId);
@@ -207,13 +334,13 @@ async function processReview(review) {
         const isDuplicate = existingReviews && existingReviews.length > 0;
         const duplicateOfId = isDuplicate ? existingReviews[0].id : null;
 
-        // 7. DB 업데이트
+        // 10. DB 업데이트
         // 중복인 경우 receipt_hash를 저장하지 않음 (UNIQUE INDEX 제약 회피)
         const updateData = {
             receipt_hash: isDuplicate ? null : receiptHash,
             receipt_data: isDuplicate
-                ? { ...ocrData, duplicate_of: duplicateOfId }
-                : ocrData,
+                ? { ...ocrData, duplicate_of: duplicateOfId, stages }
+                : { ...ocrData, stages },
             is_duplicate: isDuplicate,
             ocr_processed_at: new Date().toISOString(),
         };
@@ -250,6 +377,9 @@ async function processReview(review) {
             .eq('id', reviewId);
 
         return { status: 'error', reason: error.message };
+    } finally {
+        // 임시 디렉토리 정리
+        cleanupTempDir(tempDir);
     }
 }
 

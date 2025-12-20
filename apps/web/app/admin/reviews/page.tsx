@@ -22,6 +22,7 @@ import {
     Calendar,
     MapPin,
     Star,
+    Image,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,25 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+interface ReceiptStages {
+    original?: string;
+    contour?: string;
+    warped?: string;
+    binarized?: string;
+}
+
+interface ReceiptData {
+    store_name?: string;
+    date?: string;
+    time?: string;
+    total_amount?: number;
+    items?: { name: string; price: number | null }[];
+    confidence?: number;
+    error?: string;
+    stages?: ReceiptStages;
+    duplicate_of?: string;
+}
 
 interface Review {
     id: string;
@@ -46,6 +66,8 @@ interface Review {
     is_edited_by_admin: boolean;
     created_at: string;
     updated_at: string;
+    receipt_data?: ReceiptData;
+    ocr_processed_at?: string;
     // Join 데이터
     profiles: {
         nickname: string;
@@ -888,41 +910,185 @@ export default function AdminReviewsPage() {
 
                     {selectedReview && (
                         <div className="space-y-4">
-                            <Card className="p-4">
-                                <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="font-semibold">{selectedReview.title}</h3>
-                                        {getStatusBadge(selectedReview.is_verified)}
-                                    </div>
+                            {/* 탭 기반 모달 내용 */}
+                            <Tabs defaultValue="info" className="w-full">
+                                <TabsList className="grid w-full grid-cols-3">
+                                    <TabsTrigger value="info">리뷰 정보</TabsTrigger>
+                                    <TabsTrigger value="ocr-stages" disabled={!selectedReview.receipt_data?.stages}>
+                                        <Image className="h-4 w-4 mr-1" />
+                                        전처리 단계
+                                    </TabsTrigger>
+                                    <TabsTrigger value="ocr-result" disabled={!selectedReview.ocr_processed_at}>
+                                        OCR 결과
+                                    </TabsTrigger>
+                                </TabsList>
 
-                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                        <span className="flex items-center gap-1">
-                                            <Avatar className="h-6 w-6">
-                                                <AvatarFallback className="text-xs">
-                                                    {selectedReview.profiles?.nickname?.[0] || '익'}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            {selectedReview.profiles?.nickname || '익명'}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <MapPin className="h-4 w-4" />
-                                            {selectedReview.restaurants?.name}
-                                        </span>
-                                        <span className="flex items-center gap-1">
-                                            <Calendar className="h-4 w-4" />
-                                            {new Date(selectedReview.visited_at).toLocaleDateString('ko-KR')}
-                                        </span>
-                                    </div>
+                                {/* 탭 1: 리뷰 정보 */}
+                                <TabsContent value="info" className="mt-4">
+                                    <Card className="p-4">
+                                        <div className="space-y-3">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="font-semibold">{selectedReview.title}</h3>
+                                                {getStatusBadge(selectedReview.is_verified)}
+                                            </div>
 
-                                    <p className="text-sm">{selectedReview.content}</p>
+                                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                <span className="flex items-center gap-1">
+                                                    <Avatar className="h-6 w-6">
+                                                        <AvatarFallback className="text-xs">
+                                                            {selectedReview.profiles?.nickname?.[0] || '익'}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    {selectedReview.profiles?.nickname || '익명'}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <MapPin className="h-4 w-4" />
+                                                    {selectedReview.restaurants?.name}
+                                                </span>
+                                                <span className="flex items-center gap-1">
+                                                    <Calendar className="h-4 w-4" />
+                                                    {new Date(selectedReview.visited_at).toLocaleDateString('ko-KR')}
+                                                </span>
+                                            </div>
 
-                                    <div className="flex gap-2 text-sm">
-                                        <Badge variant="outline">📸 인증 사진</Badge>
-                                        <Badge variant="outline">🍽️ 음식 사진 ({selectedReview.food_photos?.length || 0}장)</Badge>
-                                        <Badge variant="outline">{selectedReview.category}</Badge>
-                                    </div>
-                                </div>
-                            </Card>
+                                            <p className="text-sm">{selectedReview.content}</p>
+
+                                            <div className="flex gap-2 text-sm">
+                                                <Badge variant="outline">📸 인증 사진</Badge>
+                                                <Badge variant="outline">🍽️ 음식 사진 ({selectedReview.food_photos?.length || 0}장)</Badge>
+                                                <Badge variant="outline">{selectedReview.category}</Badge>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                </TabsContent>
+
+                                {/* 탭 2: OCR 전처리 단계 */}
+                                <TabsContent value="ocr-stages" className="mt-4">
+                                    {selectedReview.receipt_data?.stages ? (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            {/* Original */}
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground">1. 원본 이미지</Label>
+                                                {selectedReview.receipt_data.stages.original ? (
+                                                    <img
+                                                        src={selectedReview.receipt_data.stages.original}
+                                                        alt="Original"
+                                                        className="w-full rounded border"
+                                                    />
+                                                ) : (
+                                                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">없음</div>
+                                                )}
+                                            </div>
+                                            {/* Contour */}
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground">2. 윤곽선 검출</Label>
+                                                {selectedReview.receipt_data.stages.contour ? (
+                                                    <img
+                                                        src={selectedReview.receipt_data.stages.contour}
+                                                        alt="Contour"
+                                                        className="w-full rounded border"
+                                                    />
+                                                ) : (
+                                                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">윤곽선 미검출</div>
+                                                )}
+                                            </div>
+                                            {/* Warped */}
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground">3. 투시 변환 / 크롭</Label>
+                                                {selectedReview.receipt_data.stages.warped ? (
+                                                    <img
+                                                        src={selectedReview.receipt_data.stages.warped}
+                                                        alt="Warped"
+                                                        className="w-full rounded border"
+                                                    />
+                                                ) : (
+                                                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">없음</div>
+                                                )}
+                                            </div>
+                                            {/* Binarized */}
+                                            <div className="space-y-2">
+                                                <Label className="text-xs text-muted-foreground">4. 이진화 (최종)</Label>
+                                                {selectedReview.receipt_data.stages.binarized ? (
+                                                    <img
+                                                        src={selectedReview.receipt_data.stages.binarized}
+                                                        alt="Binarized"
+                                                        className="w-full rounded border"
+                                                    />
+                                                ) : (
+                                                    <div className="h-32 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">없음</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <Card className="p-8 text-center">
+                                            <div className="text-4xl mb-2">🔍</div>
+                                            <p className="text-muted-foreground">OCR 전처리 단계 이미지가 없습니다.</p>
+                                            <p className="text-xs text-muted-foreground mt-1">OCR이 아직 처리되지 않았거나 이전 버전에서 처리되었습니다.</p>
+                                        </Card>
+                                    )}
+                                </TabsContent>
+
+                                {/* 탭 3: OCR 결과 */}
+                                <TabsContent value="ocr-result" className="mt-4">
+                                    {selectedReview.receipt_data && !selectedReview.receipt_data.error ? (
+                                        <Card className="p-4 space-y-3">
+                                            <div className="grid grid-cols-2 gap-4 text-sm">
+                                                <div>
+                                                    <Label className="text-xs text-muted-foreground">가게명</Label>
+                                                    <p className="font-medium">{selectedReview.receipt_data.store_name || '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs text-muted-foreground">결제 금액</Label>
+                                                    <p className="font-medium">{selectedReview.receipt_data.total_amount?.toLocaleString() || '-'}원</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs text-muted-foreground">날짜</Label>
+                                                    <p className="font-medium">{selectedReview.receipt_data.date || '-'}</p>
+                                                </div>
+                                                <div>
+                                                    <Label className="text-xs text-muted-foreground">시간</Label>
+                                                    <p className="font-medium">{selectedReview.receipt_data.time || '-'}</p>
+                                                </div>
+                                            </div>
+
+                                            {selectedReview.receipt_data.items && selectedReview.receipt_data.items.length > 0 && (
+                                                <div>
+                                                    <Label className="text-xs text-muted-foreground">주문 항목</Label>
+                                                    <ul className="mt-1 space-y-1 text-sm">
+                                                        {selectedReview.receipt_data.items.map((item, idx) => (
+                                                            <li key={idx} className="flex justify-between">
+                                                                <span>{item.name}</span>
+                                                                <span className="text-muted-foreground">{item.price?.toLocaleString() ?? '-'}원</span>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-center gap-2">
+                                                <Label className="text-xs text-muted-foreground">신뢰도:</Label>
+                                                <Badge variant={selectedReview.receipt_data.confidence && selectedReview.receipt_data.confidence >= 0.8 ? "default" : "secondary"}>
+                                                    {((selectedReview.receipt_data.confidence || 0) * 100).toFixed(0)}%
+                                                </Badge>
+                                                {selectedReview.receipt_data.duplicate_of && (
+                                                    <Badge variant="destructive">중복 의심</Badge>
+                                                )}
+                                            </div>
+                                        </Card>
+                                    ) : selectedReview.receipt_data?.error ? (
+                                        <Card className="p-8 text-center">
+                                            <div className="text-4xl mb-2">⚠️</div>
+                                            <p className="text-destructive font-medium">OCR 처리 실패</p>
+                                            <p className="text-sm text-muted-foreground">{selectedReview.receipt_data.error}</p>
+                                        </Card>
+                                    ) : (
+                                        <Card className="p-8 text-center">
+                                            <div className="text-4xl mb-2">⏳</div>
+                                            <p className="text-muted-foreground">OCR이 아직 처리되지 않았습니다.</p>
+                                        </Card>
+                                    )}
+                                </TabsContent>
+                            </Tabs>
 
                             <div className="space-y-2">
                                 <Label htmlFor="adminNote">관리자 메모</Label>
