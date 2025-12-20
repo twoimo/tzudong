@@ -304,31 +304,38 @@ export function SubmissionListView({
         }
     }, [activeTab, fetchOcrStatus]);
 
-    // 단일 리뷰 OCR 재실행
+    // 단일 리뷰 OCR 재실행 (직접 처리 - 전처리 포함)
     const handleRerunOcr = useCallback(async (reviewId: string) => {
         // 해당 리뷰 ID를 재실행 중 상태로 추가
         setOcrRerunningIds(prev => new Set(prev).add(reviewId));
         try {
-            const response = await fetch('/api/admin/ocr-receipts/rerun', {
+            // 새로운 직접 처리 API 호출 (Python 전처리 + Gemini OCR)
+            const response = await fetch('/api/admin/ocr-receipts/process', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reviewId }),
             });
             const data = await response.json();
             if (response.ok && data.success) {
-                toast.success(data.message || 'OCR 재실행이 시작되었습니다.');
+                toast.success(data.message || 'OCR 처리가 완료되었습니다.');
 
-                // 선택된 리뷰 OCR 상태 초기화 (UI 즉시 반영)
+                // 선택된 리뷰 OCR 결과 즉시 반영
                 if (selectedReview && selectedReview.id === reviewId) {
                     setSelectedReview(prev => prev ? {
                         ...prev,
-                        ocr_processed_at: null,
-                        receipt_data: null,
-                        is_duplicate: false,
+                        ocr_processed_at: new Date().toISOString(),
+                        receipt_data: { ...data.data, stages: data.stages },
+                        is_duplicate: data.isDuplicate || false,
                     } : null);
                 }
+                // 완료된 리뷰 ID를 재실행 중 상태에서 제거
+                setOcrRerunningIds(prev => {
+                    const next = new Set(prev);
+                    next.delete(reviewId);
+                    return next;
+                });
             } else {
-                toast.error(`OCR 재실행 실패: ${data.error || '알 수 없는 오류'}`);
+                toast.error(`OCR 처리 실패: ${data.error || '알 수 없는 오류'}`);
                 // 실패 시 해당 ID 제거
                 setOcrRerunningIds(prev => {
                     const next = new Set(prev);
@@ -337,7 +344,7 @@ export function SubmissionListView({
                 });
             }
         } catch (error) {
-            toast.error('OCR 재실행 중 오류가 발생했습니다.');
+            toast.error('OCR 처리 중 오류가 발생했습니다.');
             setOcrRerunningIds(prev => {
                 const next = new Set(prev);
                 next.delete(reviewId);
