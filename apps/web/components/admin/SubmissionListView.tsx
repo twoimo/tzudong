@@ -276,7 +276,7 @@ export function SubmissionListView({
         }
     }, []);
 
-    // OCR 실행
+    // OCR 실행 (미처리 리뷰만)
     const handleRunOcr = useCallback(async () => {
         setIsOcrRunning(true);
         try {
@@ -291,6 +291,29 @@ export function SubmissionListView({
             }
         } catch (error) {
             toast.error('OCR 처리 중 오류가 발생했습니다.');
+        } finally {
+            setIsOcrRunning(false);
+        }
+    }, [fetchOcrStatus]);
+
+    // OCR 전체 리셋 및 재실행
+    const handleResetAllOcr = useCallback(async () => {
+        if (!confirm('모든 리뷰의 OCR을 초기화하고 다시 실행합니다. 계속하시겠습니까?')) {
+            return;
+        }
+
+        setIsOcrRunning(true);
+        try {
+            const response = await fetch('/api/admin/ocr-receipts/reset-all', { method: 'POST' });
+            const data = await response.json();
+            if (response.ok && data.success) {
+                toast.success(data.message || 'OCR 전체 재실행이 시작되었습니다.');
+                setTimeout(() => fetchOcrStatus(), 3000);
+            } else {
+                toast.error(`OCR 전체 재실행 실패: ${data.error || '알 수 없는 오류'}`);
+            }
+        } catch (error) {
+            toast.error('OCR 전체 재실행 중 오류가 발생했습니다.');
         } finally {
             setIsOcrRunning(false);
         }
@@ -1026,6 +1049,16 @@ export function SubmissionListView({
                                             <ScanSearch className="h-3 w-3" />
                                         )}
                                         {isOcrRunning ? '처리중...' : 'OCR 실행'}
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={handleResetAllOcr}
+                                        disabled={isOcrRunning}
+                                        className="gap-1 h-7 text-xs text-orange-600 border-orange-300 hover:bg-orange-50 dark:text-orange-400 dark:border-orange-700 dark:hover:bg-orange-950/30"
+                                    >
+                                        <RefreshCw className="h-3 w-3" />
+                                        전체 다시 실행
                                     </Button>
                                 </>
                             )}
