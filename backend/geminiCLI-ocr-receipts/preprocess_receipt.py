@@ -172,10 +172,6 @@ def auto_rotate_receipt(image):
         upright_score = sum(conf for vote, conf in votes if vote == "upright")
         flipped_score = sum(conf for vote, conf in votes if vote == "flipped")
         
-        # 디버그: 각 투표 출력
-        import sys
-        print(f"    Votes: {votes}", file=sys.stderr)
-        
         # 최종 점수 = 정방향 점수 - 뒤집힘 점수
         final_score = upright_score - flipped_score
         
@@ -193,16 +189,13 @@ def auto_rotate_receipt(image):
     best_score = float('-inf')
     best_rotation = 0
     
-    import sys
     for rotated_img, rotation in rotations:
         score = calculate_orientation_score(rotated_img)
-        print(f"  Rotation {rotation}°: score = {score:.4f}", file=sys.stderr)
         if score > best_score:
             best_score = score
             best_image = rotated_img
             best_rotation = rotation
     
-    print(f"  -> Selected: {best_rotation}° (score: {best_score:.4f})", file=sys.stderr)
     return best_image
 
 

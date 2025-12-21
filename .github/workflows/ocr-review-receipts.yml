@@ -6,6 +6,11 @@ on:
     - cron: '0 19 * * *'
   workflow_dispatch:
     # 수동 트리거 허용 (관리자 페이지 버튼 또는 GitHub Actions 탭에서)
+    inputs:
+      reviewId:
+        description: '특정 리뷰 ID (비워두면 전체 처리)'
+        required: false
+        default: ''
 
 jobs:
   ocr:
@@ -45,3 +50,4 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          REVIEW_ID: ${{ github.event.inputs.reviewId }}

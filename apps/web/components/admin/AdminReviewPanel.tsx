@@ -26,7 +26,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 interface Review {
     id: string;
@@ -410,96 +410,43 @@ export default function AdminReviewPanel({ isOpen, onClose, onToggleCollapse, is
                 </div>
             </div>
 
-            {/* 탭 및 목록 */}
-            <div className="flex-1 overflow-auto p-3">
-                <Tabs defaultValue="pending" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 mb-3">
-                        <TabsTrigger value="pending" className="text-xs">
-                            대기 ({pendingReviews.length})
-                        </TabsTrigger>
-                        <TabsTrigger value="approved" className="text-xs">
-                            승인 ({approvedReviews.length})
-                        </TabsTrigger>
-                        <TabsTrigger value="rejected" className="text-xs">
-                            거부 ({rejectedReviews.length})
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="pending" className="space-y-2">
-                        {isLoading ? (
-                            <div className="space-y-2">
-                                {[1, 2, 3].map(i => (
-                                    <Card key={i} className="p-3">
-                                        <div className="h-4 bg-muted rounded animate-pulse w-32 mb-2" />
-                                        <div className="h-3 bg-muted rounded animate-pulse w-48" />
-                                    </Card>
-                                ))}
+            {/* 대기 중인 리뷰 목록 */}
+            <div className="flex-1 overflow-auto p-3 space-y-2">
+                {isLoading ? (
+                    <div className="space-y-2">
+                        {[1, 2, 3].map(i => (
+                            <Card key={i} className="p-3">
+                                <div className="h-4 bg-muted rounded animate-pulse w-32 mb-2" />
+                                <div className="h-3 bg-muted rounded animate-pulse w-48" />
+                            </Card>
+                        ))}
+                    </div>
+                ) : pendingReviews.length === 0 ? (
+                    <Card className="p-6 text-center">
+                        <div className="text-3xl mb-2">✅</div>
+                        <p className="text-sm text-muted-foreground">대기 중인 리뷰가 없습니다</p>
+                    </Card>
+                ) : (
+                    <>
+                        {pendingReviews.map((review, index) => (
+                            <ReviewCard
+                                key={review.id}
+                                ref={index === pendingReviews.length - 1 ? loadMoreRef : null}
+                                review={review}
+                                onApprove={() => handleReviewAction('approve', review)}
+                                onReject={() => handleReviewAction('reject', review)}
+                                onDelete={() => handleDelete(review.id)}
+                            />
+                        ))}
+                        {isFetchingNextPage && (
+                            <div className="text-center py-4">
+                                <Loader2 className="h-5 w-5 animate-spin mx-auto" />
                             </div>
-                        ) : pendingReviews.length === 0 ? (
-                            <Card className="p-6 text-center">
-                                <div className="text-3xl mb-2">✅</div>
-                                <p className="text-sm text-muted-foreground">대기 중인 리뷰가 없습니다</p>
-                            </Card>
-                        ) : (
-                            <>
-                                {pendingReviews.map((review, index) => (
-                                    <ReviewCard
-                                        key={review.id}
-                                        ref={index === pendingReviews.length - 1 ? loadMoreRef : null}
-                                        review={review}
-                                        onApprove={() => handleReviewAction('approve', review)}
-                                        onReject={() => handleReviewAction('reject', review)}
-                                        onDelete={() => handleDelete(review.id)}
-                                    />
-                                ))}
-                                {isFetchingNextPage && (
-                                    <div className="text-center py-4">
-                                        <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                                    </div>
-                                )}
-                            </>
                         )}
-                    </TabsContent>
-
-                    <TabsContent value="approved" className="space-y-2">
-                        {approvedReviews.length === 0 ? (
-                            <Card className="p-6 text-center">
-                                <div className="text-3xl mb-2">📋</div>
-                                <p className="text-sm text-muted-foreground">승인된 리뷰가 없습니다</p>
-                            </Card>
-                        ) : (
-                            approvedReviews.map((review) => (
-                                <ReviewCard
-                                    key={review.id}
-                                    review={review}
-                                    onReject={() => handleReviewAction('reject', review)}
-                                    onDelete={() => handleDelete(review.id)}
-                                    showRejectButton
-                                />
-                            ))
-                        )}
-                    </TabsContent>
-
-                    <TabsContent value="rejected" className="space-y-2">
-                        {rejectedReviews.length === 0 ? (
-                            <Card className="p-6 text-center">
-                                <div className="text-3xl mb-2">📋</div>
-                                <p className="text-sm text-muted-foreground">거부된 리뷰가 없습니다</p>
-                            </Card>
-                        ) : (
-                            rejectedReviews.map((review) => (
-                                <ReviewCard
-                                    key={review.id}
-                                    review={review}
-                                    onApprove={() => handleReviewAction('approve', review)}
-                                    onDelete={() => handleDelete(review.id)}
-                                    showApproveButton
-                                />
-                            ))
-                        )}
-                    </TabsContent>
-                </Tabs>
+                    </>
+                )}
             </div>
+
 
             {/* 리뷰 검토 모달 */}
             <Dialog open={isReviewModalOpen} onOpenChange={setIsReviewModalOpen}>

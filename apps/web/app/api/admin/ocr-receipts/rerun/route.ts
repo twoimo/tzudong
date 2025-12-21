@@ -85,7 +85,12 @@ export async function POST(request: Request) {
                     'Accept': 'application/vnd.github.v3+json',
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ ref: 'main' }),
+                body: JSON.stringify({
+                    ref: 'main',
+                    inputs: {
+                        reviewId: reviewId,  // 특정 리뷰 ID 전달
+                    },
+                }),
             }
         );
 
