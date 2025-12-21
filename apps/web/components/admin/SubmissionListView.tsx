@@ -255,8 +255,10 @@ export function SubmissionListView({
     const [ocrStatus, setOcrStatus] = useState<{ pending: number; duplicate: number; processed: number } | null>(null);
     const [isOcrRunning, setIsOcrRunning] = useState(false);
     const [ocrRerunningIds, setOcrRerunningIds] = useState<Set<string>>(new Set());
+    const [ocrCountdowns, setOcrCountdowns] = useState<Record<string, number>>({});  // 리뷰 ID별 카운트다운 (초)
     const ocrPollingRef = useRef<NodeJS.Timeout | null>(null);
     const ocrRealtimeChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+    const ocrCountdownRef = useRef<NodeJS.Timeout | null>(null);
 
     // 이미지 확대 모달 상태
     const [previewImage, setPreviewImage] = useState<{ url: string; alt: string } | null>(null);
@@ -304,10 +306,46 @@ export function SubmissionListView({
         }
     }, [activeTab, fetchOcrStatus]);
 
+    // OCR 카운트다운 타이머 관리
+    useEffect(() => {
+        // 카운트다운이 있는 리뷰가 있으면 1초마다 감소
+        const hasCountdowns = Object.keys(ocrCountdowns).length > 0;
+        if (!hasCountdowns) {
+            if (ocrCountdownRef.current) {
+                clearInterval(ocrCountdownRef.current);
+                ocrCountdownRef.current = null;
+            }
+            return;
+        }
+
+        ocrCountdownRef.current = setInterval(() => {
+            setOcrCountdowns(prev => {
+                const next: Record<string, number> = {};
+                for (const [id, seconds] of Object.entries(prev)) {
+                    if (seconds > 1) {
+                        next[id] = seconds - 1;
+                    }
+                    // 0이 되면 제거
+                }
+                return next;
+            });
+        }, 1000);
+
+        return () => {
+            if (ocrCountdownRef.current) {
+                clearInterval(ocrCountdownRef.current);
+                ocrCountdownRef.current = null;
+            }
+        };
+    }, [Object.keys(ocrCountdowns).length]);
+
     // 단일 리뷰 OCR 재실행 (GitHub Actions 트리거)
     const handleRerunOcr = useCallback(async (reviewId: string) => {
         // 해당 리뷰 ID를 재실행 중 상태로 추가
         setOcrRerunningIds(prev => new Set(prev).add(reviewId));
+        // 40초 카운트다운 시작
+        setOcrCountdowns(prev => ({ ...prev, [reviewId]: 40 }));
+
         try {
             // GitHub Actions 워크플로우 트리거
             const response = await fetch('/api/admin/ocr-receipts/rerun', {
@@ -317,7 +355,7 @@ export function SubmissionListView({
             });
             const data = await response.json();
             if (response.ok && data.success) {
-                toast.success(data.message || 'OCR 재실행이 시작되었습니다. 약 30~40초 후 결과가 반영됩니다.');
+                toast.success('OCR 처리가 시작되었습니다.');
 
                 // 선택된 리뷰 OCR 상태 초기화 (UI 즉시 반영)
                 if (selectedReview && selectedReview.id === reviewId) {
@@ -330,10 +368,15 @@ export function SubmissionListView({
                 }
             } else {
                 toast.error(`OCR 재실행 실패: ${data.error || '알 수 없는 오류'}`);
-                // 실패 시 해당 ID 제거
+                // 실패 시 해당 ID 제거 및 카운트다운 중지
                 setOcrRerunningIds(prev => {
                     const next = new Set(prev);
                     next.delete(reviewId);
+                    return next;
+                });
+                setOcrCountdowns(prev => {
+                    const next = { ...prev };
+                    delete next[reviewId];
                     return next;
                 });
             }
@@ -342,6 +385,11 @@ export function SubmissionListView({
             setOcrRerunningIds(prev => {
                 const next = new Set(prev);
                 next.delete(reviewId);
+                return next;
+            });
+            setOcrCountdowns(prev => {
+                const next = { ...prev };
+                delete next[reviewId];
                 return next;
             });
         }
@@ -390,6 +438,12 @@ export function SubmissionListView({
                         setOcrRerunningIds(prev => {
                             const next = new Set(prev);
                             next.delete(reviewId);
+                            return next;
+                        });
+                        // 카운트다운 제거
+                        setOcrCountdowns(prev => {
+                            const next = { ...prev };
+                            delete next[reviewId];
                             return next;
                         });
                         toast.success('OCR 처리가 완료되었습니다.');
@@ -446,6 +500,12 @@ export function SubmissionListView({
                     setOcrRerunningIds(prev => {
                         const next = new Set(prev);
                         next.delete(reviewId);
+                        return next;
+                    });
+                    // 카운트다운 제거
+                    setOcrCountdowns(prev => {
+                        const next = { ...prev };
+                        delete next[reviewId];
                         return next;
                     });
                     toast.success('OCR 처리가 완료되었습니다.');
@@ -1083,7 +1143,7 @@ export function SubmissionListView({
                                                     className={cn(
                                                         "group hover:bg-muted/50 transition-colors cursor-pointer",
                                                         review.is_duplicate && "bg-red-100/70 dark:bg-red-950/40 hover:bg-red-200/70 dark:hover:bg-red-900/40",
-                                                        !review.is_duplicate && isApproved && "bg-green-50/50 dark:bg-green-950/20",
+                                                        !review.is_duplicate && isApproved && "bg-green-100/70 dark:bg-green-950/40 hover:bg-green-200/70 dark:hover:bg-green-900/40",
                                                         !review.is_duplicate && isRejected && "bg-red-50/50 dark:bg-red-950/20"
                                                     )}
                                                     onClick={() => handleReviewAction('approve', review)}
@@ -1733,7 +1793,9 @@ export function SubmissionListView({
                                                 ) : (
                                                     <RefreshCw className="h-3 w-3" />
                                                 )}
-                                                {ocrRerunningIds.has(selectedReview.id) ? '처리중...' : 'OCR 다시 실행'}
+                                                {ocrRerunningIds.has(selectedReview.id)
+                                                    ? `처리중... ${ocrCountdowns[selectedReview.id] || 0}초`
+                                                    : 'OCR 다시 실행'}
                                             </Button>
                                         </Label>
 
@@ -1742,7 +1804,13 @@ export function SubmissionListView({
                                             <Card className="p-3 bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800">
                                                 <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 text-sm">
                                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                                    <span>OCR 처리 중입니다. 약 30~40초 후 결과가 자동으로 반영됩니다.</span>
+                                                    <span>
+                                                        OCR 처리 중...
+                                                        <span className="font-semibold ml-1">
+                                                            {ocrCountdowns[selectedReview.id] || 0}초
+                                                        </span>
+                                                        후 완료 예정
+                                                    </span>
                                                 </div>
                                             </Card>
                                         )}

@@ -186,34 +186,6 @@ function runPythonPreprocess(inputPath, outputDir) {
 }
 
 /**
- * 로컬 파일을 Supabase Storage에 업로드
- */
-async function uploadToStorage(localPath, storagePath) {
-    if (!localPath || !fs.existsSync(localPath)) {
-        return null;
-    }
-
-    const fileBuffer = fs.readFileSync(localPath);
-    const { error } = await supabase.storage
-        .from('review-photos')
-        .upload(storagePath, fileBuffer, {
-            contentType: 'image/jpeg',
-            upsert: true,
-        });
-
-    if (error) {
-        console.error(`  ⚠️ 업로드 실패 (${storagePath}):`, error.message);
-        return null;
-    }
-
-    const { data: urlData } = supabase.storage
-        .from('review-photos')
-        .getPublicUrl(storagePath);
-
-    return urlData?.publicUrl || null;
-}
-
-/**
  * 임시 디렉토리 정리
  */
 function cleanupTempDir(dirPath) {
@@ -269,21 +241,27 @@ async function processReview(review) {
             preprocessResult = { warped: tempInputPath };
         }
 
-        // 4. 중간 단계 이미지를 Supabase Storage에 업로드
-        const stages = {};
-        const stageNames = ['warped'];  // 최종 이미지만 저장 (스토리지 최적화)
+        // 4. warped 이미지를 원본 verification_photo 위치에 덮어쓰기
+        const warpedLocalPath = preprocessResult.warped;
+        if (warpedLocalPath && warpedLocalPath !== tempInputPath) {
+            // 원본과 다른 경우에만 덮어쓰기 (전처리가 성공한 경우)
+            const originalStoragePath = review.verification_photo;
+            console.log('  🔄 원본 영수증을 전처리 이미지로 교체 중...');
 
-        for (const stageName of stageNames) {
-            const localPath = preprocessResult[stageName];
-            if (localPath) {
-                const storagePath = `ocr-debug/${reviewId}/${stageName}.jpg`;
-                const publicUrl = await uploadToStorage(localPath, storagePath);
-                if (publicUrl) {
-                    stages[stageName] = publicUrl;
-                }
+            const fileBuffer = fs.readFileSync(warpedLocalPath);
+            const { error: uploadError } = await supabase.storage
+                .from('review-photos')
+                .upload(originalStoragePath, fileBuffer, {
+                    contentType: 'image/jpeg',
+                    upsert: true,  // 기존 파일 덮어쓰기
+                });
+
+            if (uploadError) {
+                console.error(`  ⚠️ 이미지 교체 실패: ${uploadError.message}`);
+            } else {
+                console.log('  ✅ 원본 영수증을 전처리 이미지로 교체 완료');
             }
         }
-        console.log('  📤 스테이지 이미지 업로드 완료:', Object.keys(stages).length, '개');
 
         // 5. 최종 이미지(warped 또는 원본) Base64 변환
         const finalImagePath = preprocessResult.warped || tempInputPath;
@@ -312,7 +290,6 @@ async function processReview(review) {
                     receipt_data: {
                         error: ocrData.error || 'low_confidence',
                         raw: ocrData,
-                        stages: Object.keys(stages).length > 0 ? stages : undefined
                     },
                     ocr_processed_at: new Date().toISOString(),
                 })
@@ -339,8 +316,8 @@ async function processReview(review) {
         const updateData = {
             receipt_hash: isDuplicate ? null : receiptHash,
             receipt_data: isDuplicate
-                ? { ...ocrData, duplicate_of: duplicateOfId, stages }
-                : { ...ocrData, stages },
+                ? { ...ocrData, duplicate_of: duplicateOfId }
+                : ocrData,
             is_duplicate: isDuplicate,
             ocr_processed_at: new Date().toISOString(),
         };
@@ -389,31 +366,62 @@ async function main() {
     console.log(`시간: ${new Date().toISOString()}`);
     console.log('========================================\n');
 
-    // 1. OCR 미처리 리뷰 조회
-    const { data: pendingReviews, error } = await supabase
-        .from('reviews')
-        .select('id, verification_photo')
-        .is('ocr_processed_at', null)
-        .not('verification_photo', 'is', null)
-        .order('created_at', { ascending: true })
-        .limit(MAX_REQUESTS_PER_RUN);
+    // 특정 리뷰 ID가 지정된 경우 (단일 리뷰 재처리)
+    const singleReviewId = process.env.REVIEW_ID?.trim();
 
-    if (error) {
-        console.error('리뷰 조회 실패:', error.message);
-        process.exit(1);
+    let reviews;
+
+    if (singleReviewId) {
+        console.log(`🎯 단일 리뷰 재처리 모드: ${singleReviewId}\n`);
+
+        // 특정 리뷰만 조회
+        const { data, error } = await supabase
+            .from('reviews')
+            .select('id, verification_photo')
+            .eq('id', singleReviewId)
+            .not('verification_photo', 'is', null)
+            .single();
+
+        if (error) {
+            console.error('리뷰 조회 실패:', error.message);
+            process.exit(1);
+        }
+
+        if (!data) {
+            console.log('해당 리뷰를 찾을 수 없거나 영수증 사진이 없습니다.');
+            return;
+        }
+
+        reviews = [data];
+    } else {
+        // 전체 미처리 리뷰 조회
+        const { data: pendingReviews, error } = await supabase
+            .from('reviews')
+            .select('id, verification_photo')
+            .is('ocr_processed_at', null)
+            .not('verification_photo', 'is', null)
+            .order('created_at', { ascending: true })
+            .limit(MAX_REQUESTS_PER_RUN);
+
+        if (error) {
+            console.error('리뷰 조회 실패:', error.message);
+            process.exit(1);
+        }
+
+        reviews = pendingReviews || [];
     }
 
-    console.log(`미처리 리뷰 수: ${pendingReviews?.length || 0}개\n`);
+    console.log(`처리 대상 리뷰 수: ${reviews.length}개\n`);
 
-    if (!pendingReviews || pendingReviews.length === 0) {
+    if (reviews.length === 0) {
         console.log('처리할 리뷰가 없습니다.');
         return;
     }
 
-    // 2. 순차 처리 (API 레이트 리밋 고려)
+    // 순차 처리 (API 레이트 리밋 고려)
     const stats = { total: 0, success: 0, failed: 0, duplicate: 0, error: 0 };
 
-    for (const review of pendingReviews) {
+    for (const review of reviews) {
         stats.total++;
         const result = await processReview(review);
 
@@ -423,7 +431,7 @@ async function main() {
         await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    // 3. 결과 출력
+    // 결과 출력
     console.log('\n========================================');
     console.log('처리 완료');
     console.log(`총: ${stats.total}, 성공: ${stats.success}, 실패: ${stats.failed}, 중복: ${stats.duplicate}, 오류: ${stats.error}`);
