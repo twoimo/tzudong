@@ -17,14 +17,7 @@ const FOOD_PHOTO_OPTIONS = {
     useWebWorker: true,
 };
 
-// 영수증 인증 사진용 압축 옵션 (OCR 정확도를 위해 고품질 유지)
-const RECEIPT_PHOTO_OPTIONS = {
-    maxSizeMB: 1.0,           // 최대 1MB (OCR 정확도 확보)
-    maxWidthOrHeight: 2000,   // 더 높은 해상도 유지
-    fileType: "image/jpeg" as const,  // JPEG 사용 (OpenCV 호환성 향상)
-    initialQuality: 0.92,     // 높은 품질 유지
-    useWebWorker: true,
-};
+
 
 // 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
 const generateSafeFilename = (extension: string = ".webp"): string => {
@@ -33,16 +26,14 @@ const generateSafeFilename = (extension: string = ".webp"): string => {
     return `${timestamp}_${randomString}${extension}`;
 };
 
-// 영수증 이미지 압축 (고품질 JPEG - OCR 정확도 우선)
-const compressReceiptImage = async (file: File): Promise<File> => {
-    try {
-        const compressedBlob = await imageCompression(file, RECEIPT_PHOTO_OPTIONS);
-        const safeFileName = generateSafeFilename(".jpg");
-        return new File([compressedBlob], safeFileName, { type: "image/jpeg" });
-    } catch (error) {
-        console.warn("영수증 이미지 압축 실패, 원본 사용:", error);
-        return file;
-    }
+// 영수증 이미지 준비 (압축 없이 원본 유지, 파일명만 안전하게 변경)
+// OCR 후 서버에서 WebP로 압축됨
+const prepareReceiptImage = async (file: File): Promise<File> => {
+    // 원본 확장자 추출
+    const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
+    const safeFileName = generateSafeFilename(`.${ext}`);
+    // 원본 그대로 새 파일명으로 반환 (압축 없음)
+    return new File([file], safeFileName, { type: file.type });
 };
 
 // 음식 사진 압축 (WebP - 스토리지 최적화)
@@ -271,17 +262,17 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         setIsSubmitting(true);
 
         try {
-            // 1. 이미지 압축 (영수증은 고품질 JPEG, 음식 사진은 WebP)
-            const [compressedVerificationPhoto, ...compressedFoodPhotos] = await Promise.all([
-                compressReceiptImage(verificationPhoto),  // OCR 정확도를 위해 고품질 JPEG
+            // 1. 이미지 준비 (영수증은 원본 유지, 음식 사진은 WebP 압축)
+            const [preparedVerificationPhoto, ...compressedFoodPhotos] = await Promise.all([
+                prepareReceiptImage(verificationPhoto),  // 원본 유지 (OCR 후 서버에서 압축)
                 ...foodPhotos.map((photo: File) => compressFoodImage(photo))  // 스토리지 최적화 WebP
             ]);
 
             // 2. 인증 사진 업로드
-            const verificationPhotoPath = `${user.id}/${Date.now()}_verification_${compressedVerificationPhoto.name}`;
+            const verificationPhotoPath = `${user.id}/${Date.now()}_verification_${preparedVerificationPhoto.name}`;
             const { error: verificationUploadError } = await supabase.storage
                 .from('review-photos')
-                .upload(verificationPhotoPath, compressedVerificationPhoto, {
+                .upload(verificationPhotoPath, preparedVerificationPhoto, {
                     cacheControl: '3600',
                     upsert: false
                 });
