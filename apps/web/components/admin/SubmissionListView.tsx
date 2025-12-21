@@ -58,13 +58,23 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 
 // Supabase Storage에서 리뷰 사진 public URL 생성
-function getReviewPhotoUrl(path: string): string {
+function getReviewPhotoUrl(path: string, cacheBuster?: string | null): string {
     // 이미 full URL인 경우 그대로 반환
     if (path.startsWith('http://') || path.startsWith('https://')) {
+        // 캐시 버스터 추가
+        if (cacheBuster) {
+            const separator = path.includes('?') ? '&' : '?';
+            return `${path}${separator}t=${new Date(cacheBuster).getTime()}`;
+        }
         return path;
     }
     // 상대 경로인 경우 Supabase Storage에서 public URL 생성
-    return supabase.storage.from('review-photos').getPublicUrl(path).data.publicUrl;
+    let url = supabase.storage.from('review-photos').getPublicUrl(path).data.publicUrl;
+    // 캐시 버스터 추가 (OCR 재처리 후 새 이미지 로드)
+    if (cacheBuster) {
+        url += `?t=${new Date(cacheBuster).getTime()}`;
+    }
+    return url;
 }
 
 // YouTube 비디오 ID 추출
@@ -1782,11 +1792,11 @@ export function SubmissionListView({
                                             {/* 영수증 사진 */}
                                             {selectedReview.verification_photo && (
                                                 <ReviewPhotoItem
-                                                    src={getReviewPhotoUrl(selectedReview.verification_photo)}
+                                                    src={getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at)}
                                                     alt="영수증"
                                                     label="🧾 영수증"
                                                     labelVariant="receipt"
-                                                    onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo), alt: '영수증' })}
+                                                    onClick={() => setPreviewImage({ url: getReviewPhotoUrl(selectedReview.verification_photo, selectedReview.ocr_processed_at), alt: '영수증' })}
                                                 />
                                             )}
                                             {/* 음식 사진들 */}
