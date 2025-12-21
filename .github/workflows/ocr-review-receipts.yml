@@ -26,11 +26,8 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Tesseract OCR
-        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr
-
       - name: Install Python dependencies
-        run: pip install opencv-python-headless numpy pytesseract
+        run: pip install opencv-python-headless numpy
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
