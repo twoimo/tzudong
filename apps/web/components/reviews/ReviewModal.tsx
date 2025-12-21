@@ -26,13 +26,29 @@ const generateSafeFilename = (extension: string = ".webp"): string => {
     return `${timestamp}_${randomString}${extension}`;
 };
 
-// 영수증 이미지 준비 (압축 없이 원본 유지, 파일명만 안전하게 변경)
+// 영수증 이미지 준비 (OCR 정확도 유지, 너무 큰 파일만 리사이즈)
 // OCR 후 서버에서 WebP로 압축됨
 const prepareReceiptImage = async (file: File): Promise<File> => {
-    // 원본 확장자 추출
     const ext = file.name.split('.').pop()?.toLowerCase() || 'jpg';
     const safeFileName = generateSafeFilename(`.${ext}`);
-    // 원본 그대로 새 파일명으로 반환 (압축 없음)
+
+    // 5MB 초과 시에만 리사이즈 (품질 손실 최소화)
+    if (file.size > 5 * 1024 * 1024) {
+        try {
+            const resizedBlob = await imageCompression(file, {
+                maxSizeMB: 5,
+                maxWidthOrHeight: 3000,  // 고해상도 유지
+                fileType: file.type as "image/jpeg" | "image/png" | "image/webp",
+                initialQuality: 1.0,     // 품질 손실 없음
+                useWebWorker: true,
+            });
+            return new File([resizedBlob], safeFileName, { type: file.type });
+        } catch (error) {
+            console.warn("영수증 리사이즈 실패, 원본 사용:", error);
+        }
+    }
+
+    // 5MB 이하는 원본 그대로
     return new File([file], safeFileName, { type: file.type });
 };
 
