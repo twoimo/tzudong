@@ -33,20 +33,35 @@ def order_points(pts):
 
 
 def four_point_transform(image, pts):
-    """투시 변환 수행"""
+    """
+    투시 변환 수행
+    
+    영수증은 세로로 긴 형태이므로, 결과물이 항상 세로 > 가로가 되도록 조정.
+    만약 가로가 더 길게 나오면 좌표를 회전시켜 세로로 긴 결과물 생성.
+    """
     rect = order_points(pts)
     (tl, tr, br, bl) = rect
     
+    # 상단/하단 변의 길이 (가로)
     widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
     widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
     maxWidth = max(int(widthA), int(widthB))
     
+    # 좌측/우측 변의 길이 (세로)
     heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
     heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
     maxHeight = max(int(heightA), int(heightB))
     
     maxWidth = max(maxWidth, 100)
     maxHeight = max(maxHeight, 100)
+    
+    # 영수증은 세로가 가로보다 길어야 함
+    # 만약 가로가 더 길면 좌표를 시계방향 90도 회전 (tl->tr, tr->br, br->bl, bl->tl)
+    if maxWidth > maxHeight:
+        # 좌표 회전: [tl, tr, br, bl] -> [bl, tl, tr, br]
+        rect = np.array([bl, tl, tr, br], dtype="float32")
+        # 가로/세로 스왑
+        maxWidth, maxHeight = maxHeight, maxWidth
     
     dst = np.array([
         [0, 0],
@@ -635,21 +650,59 @@ def preprocess_receipt(input_path, output_dir):
         else:
             results["corner_invalid_reason"] = validity_reason
     
-    # Fallback: 바운딩 박스 크롭
+    # Fallback: minAreaRect 기반 회전 크롭
     if warped is None:
         if best_contour is not None:
-            x, y, cw, ch = cv2.boundingRect(best_contour)
-            x, y = int(x / ratio), int(y / ratio)
-            cw, ch = int(cw / ratio), int(ch / ratio)
+            # minAreaRect로 영수증 각도 분석
+            scaled_contour = (best_contour / ratio).astype(np.int32)
+            rect = cv2.minAreaRect(scaled_contour)
+            center, (rect_w, rect_h), angle = rect
             
-            margin = int(min(cw, ch) * 0.05)
-            x1 = max(0, x - margin)
-            y1 = max(0, y - margin)
-            x2 = min(orig.shape[1], x + cw + margin)
-            y2 = min(orig.shape[0], y + ch + margin)
+            # OpenCV minAreaRect 각도 보정
+            # angle은 -90 ~ 0 범위, 가로가 더 길면 -90에 가까움
+            if rect_w < rect_h:
+                # 세로가 이미 더 김 - 각도만 보정
+                rotation_angle = angle
+            else:
+                # 가로가 더 김 - 90도 추가 회전 필요
+                rotation_angle = angle + 90
+                rect_w, rect_h = rect_h, rect_w
             
-            warped = orig[y1:y2, x1:x2]
-            warp_method = "bounding_box"
+            # 회전 행렬 생성
+            h_orig, w_orig = orig.shape[:2]
+            rotation_matrix = cv2.getRotationMatrix2D(center, rotation_angle, 1.0)
+            
+            # 회전 후 이미지 크기 계산 (잘리지 않도록)
+            cos_val = np.abs(rotation_matrix[0, 0])
+            sin_val = np.abs(rotation_matrix[0, 1])
+            new_w = int(h_orig * sin_val + w_orig * cos_val)
+            new_h = int(h_orig * cos_val + w_orig * sin_val)
+            
+            # 회전 중심 조정
+            rotation_matrix[0, 2] += (new_w - w_orig) / 2
+            rotation_matrix[1, 2] += (new_h - h_orig) / 2
+            
+            # 이미지 회전
+            rotated = cv2.warpAffine(orig, rotation_matrix, (new_w, new_h), 
+                                      borderMode=cv2.BORDER_REPLICATE)
+            
+            # 회전된 이미지에서 영수증 영역 크롭
+            # 새 중심점 계산
+            new_center = np.dot(rotation_matrix[:, :2], np.array(center)) + rotation_matrix[:, 2]
+            
+            # 크롭 영역 계산 (마진 포함)
+            margin_ratio = 0.05
+            crop_w = int(rect_w * (1 + margin_ratio))
+            crop_h = int(rect_h * (1 + margin_ratio))
+            
+            x1 = max(0, int(new_center[0] - crop_w / 2))
+            y1 = max(0, int(new_center[1] - crop_h / 2))
+            x2 = min(rotated.shape[1], int(new_center[0] + crop_w / 2))
+            y2 = min(rotated.shape[0], int(new_center[1] + crop_h / 2))
+            
+            warped = rotated[y1:y2, x1:x2]
+            warp_method = f"rotated_crop_{rotation_angle:.1f}deg"
+            results["rotation_angle"] = float(rotation_angle)
         else:
             warped = orig.copy()
             warp_method = "original"
