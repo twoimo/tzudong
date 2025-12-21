@@ -101,40 +101,65 @@ def auto_rotate_receipt(image):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
-        # === 신호 1: 가장 큰 연속 텍스트 블록 위치 ===
+        # === 신호 1: 가장 큰 단일 블록의 위치 (가장 신뢰할 수 있는 신호) ===
         # 가게명은 보통 상단에 있고, 가장 큰 단일 블록
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if contours:
-            # 상위 5개 큰 블록의 y 중심점 평균
-            top_contours = sorted(contours, key=cv2.contourArea, reverse=True)[:5]
-            if top_contours:
-                y_centers = []
-                for c in top_contours:
-                    M = cv2.moments(c)
-                    if M["m00"] > 0:
-                        cy = int(M["m01"] / M["m00"])
-                        y_centers.append(cy)
-                if y_centers:
-                    avg_y = sum(y_centers) / len(y_centers)
-                    # 큰 블록이 상단(h/2 위)에 있으면 정방향
-                    if avg_y < h * 0.4:
-                        votes.append(("upright", 0.8))
-                    elif avg_y > h * 0.6:
-                        votes.append(("flipped", 0.8))
+            # 가장 큰 블록의 y 중심점
+            largest_contour = max(contours, key=cv2.contourArea)
+            area = cv2.contourArea(largest_contour)
+            if area > h * w * 0.001:  # 최소 면적 임계값
+                M = cv2.moments(largest_contour)
+                if M["m00"] > 0:
+                    cy = int(M["m01"] / M["m00"])
+                    # 가장 큰 블록이 상단(h/2 위)에 있으면 정방향
+                    if cy < h * 0.45:
+                        votes.append(("upright", 1.0))  # 높은 가중치
+                    elif cy > h * 0.55:
+                        votes.append(("flipped", 1.0))
         
-        # === 신호 2: 텍스트 밀도 프로필 ===
-        # 영수증 상단에는 가게명/헤더 (밀집), 하단에는 여백이 더 많음
+        # === 신호 2: 첫 번째 텍스트 영역의 위치 ===
+        # 영수증에서 첫 번째 텍스트(가게명)는 상단에 있음
+        # Projection profile로 첫 번째 텍스트 영역 찾기
+        row_projection = np.sum(binary, axis=1)
+        threshold = np.max(row_projection) * 0.1
+        
+        # 첫 번째 텍스트 시작점
+        first_text_row = None
+        for i, val in enumerate(row_projection):
+            if val > threshold:
+                first_text_row = i
+                break
+        
+        # 마지막 텍스트 끝점
+        last_text_row = None
+        for i in range(len(row_projection) - 1, -1, -1):
+            if row_projection[i] > threshold:
+                last_text_row = i
+                break
+        
+        if first_text_row is not None and last_text_row is not None:
+            # 첫 번째 텍스트가 상단 1/4 내에 있으면 정방향
+            if first_text_row < h * 0.15 and last_text_row > h * 0.85:
+                # 양쪽 끝에 텍스트가 있으면 중립
+                pass
+            elif first_text_row < h * 0.2:
+                votes.append(("upright", 0.7))
+            elif last_text_row > h * 0.8 and first_text_row > h * 0.3:
+                votes.append(("flipped", 0.7))
+        
+        # === 신호 3: 텍스트 밀도 프로필 (가중치 낮춤) ===
         top_third = binary[:h//3, :]
         bottom_third = binary[2*h//3:, :]
         
         top_density = np.sum(top_third) / (top_third.size * 255)
         bottom_density = np.sum(bottom_third) / (bottom_third.size * 255)
         
-        if abs(top_density - bottom_density) > 0.02:  # 유의미한 차이
-            if top_density > bottom_density:
-                votes.append(("upright", 0.6))
-            else:
-                votes.append(("flipped", 0.6))
+        if abs(top_density - bottom_density) > 0.03:  # 더 높은 임계값
+            if top_density > bottom_density * 1.2:
+                votes.append(("upright", 0.3))  # 낮은 가중치
+            elif bottom_density > top_density * 1.2:
+                votes.append(("flipped", 0.3))
         
         # === 신호 3: 바코드/줄무늬 패턴 (하단에 있어야 정방향) ===
         sobel_x = np.abs(cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3))
@@ -191,6 +216,10 @@ def auto_rotate_receipt(image):
         upright_score = sum(conf for vote, conf in votes if vote == "upright")
         flipped_score = sum(conf for vote, conf in votes if vote == "flipped")
         
+        # 디버그: 각 투표 출력
+        import sys
+        print(f"    Votes: {votes}", file=sys.stderr)
+        
         # 최종 점수 = 정방향 점수 - 뒤집힘 점수
         final_score = upright_score - flipped_score
         
@@ -223,19 +252,24 @@ def auto_rotate_receipt(image):
 
 def get_white_paper_mask(image):
     """
-    영수증 영역 마스크 생성 (브루트포스 다중 임계값)
+    영수증 영역 마스크 생성 (그림자 영역 포함)
     
     전략:
-    1. 여러 밝기 임계값을 시도
-    2. 각 임계값에서 찾은 윤곽선에 "영수증 점수" 계산
-    3. 가장 높은 점수의 임계값 + 윤곽선 선택
-    4. 질감 분석으로 배경 제외
+    1. CLAHE로 그림자 영역 밝기 보정
+    2. 여러 밝기 임계값을 시도 (더 낮은 값 포함)
+    3. 각 임계값에서 찾은 윤곽선에 "영수증 점수" 계산
+    4. 가장 높은 점수의 임계값 + 윤곽선 선택
     """
     h, w = image.shape[:2]
     image_area = h * w
     
     # 색공간 변환
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # CLAHE 적용 - 그림자 영역 밝기 보정
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    gray_clahe = clahe.apply(gray)
+    
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
     
@@ -243,19 +277,22 @@ def get_white_paper_mask(image):
     s_channel = hsv[:, :, 1]
     l_channel = lab[:, :, 0]
     
+    # CLAHE 적용된 밝기 채널도 준비
+    v_clahe = clahe.apply(v_channel)
+    
     # 질감 분석: 로컬 표준편차 계산 (질감이 많으면 높음)
-    # 영수증은 부드럽고 균일, 배경은 질감이 있음
     blur_for_std = cv2.GaussianBlur(gray, (15, 15), 0)
     local_std = np.abs(gray.astype(float) - blur_for_std.astype(float))
-    texture_mask = (local_std < 20).astype(np.uint8) * 255  # 부드러운 영역만
+    texture_mask = (local_std < 25).astype(np.uint8) * 255  # 부드러운 영역만 (임계값 높임)
     
     best_mask = None
     best_score = -1
     best_threshold = None
     
-    # 브루트포스: 여러 임계값 시도
+    # 브루트포스: 여러 임계값 시도 (균형잡힌 범위)
     thresholds = [
-        (100, 90, 100),  # V, S, L (매우 낮음 - 그림자 포함)
+        (90, 90, 90),    # 그림자 포함 (가장 낮은 값)
+        (100, 90, 100),
         (120, 80, 120),
         (130, 70, 130),
         (140, 70, 140),
@@ -266,21 +303,27 @@ def get_white_paper_mask(image):
     ]
     
     for v_thresh, s_thresh, l_thresh in thresholds:
-        # 밝기 마스크 생성
+        # 원본 밝기 마스크 생성
         bright = (v_channel > v_thresh).astype(np.uint8) * 255
         low_sat = (s_channel < s_thresh).astype(np.uint8) * 255
         lab_bright = (l_channel > l_thresh).astype(np.uint8) * 255
         
+        # CLAHE 보정된 채널로도 마스크 생성 (그림자 영역 포함)
+        bright_clahe = (v_clahe > v_thresh).astype(np.uint8) * 255
+        
+        # 두 마스크 OR 결합 (그림자 영역도 포함)
+        bright_combined = cv2.bitwise_or(bright, bright_clahe)
+        
         # 흰색 조건
-        white_mask = cv2.bitwise_and(bright, low_sat)
+        white_mask = cv2.bitwise_and(bright_combined, low_sat)
         white_mask = cv2.bitwise_and(white_mask, lab_bright)
         
         # 색상 스티커도 포함
         colored = ((v_channel > v_thresh + 20) & (s_channel > 80)).astype(np.uint8) * 255
         combined = cv2.bitwise_or(white_mask, colored)
         
-        # 질감 마스크와 AND (부드러운 영역만)
-        if v_thresh < 140:  # 낮은 임계값에서만 질감 필터 적용
+        # 질감 마스크와 AND (부드러운 영역만) - 더 낮은 임계값에서만
+        if v_thresh < 100:  # 매우 낮은 임계값에서만 질감 필터 적용
             combined = cv2.bitwise_and(combined, texture_mask)
         
         # 모폴로지 처리
@@ -685,7 +728,20 @@ def preprocess_receipt(input_path, output_dir):
         
         if is_valid:
             try:
-                warped = four_point_transform(orig, scaled_corners)
+                # 코너를 약간 바깥쪽으로 확장 (가장자리 잘림 방지)
+                center = np.mean(scaled_corners, axis=0)
+                expanded_corners = scaled_corners.copy()
+                for i in range(4):
+                    # 중심에서 바깥쪽으로 3% 확장
+                    direction = scaled_corners[i] - center
+                    expanded_corners[i] = scaled_corners[i] + direction * 0.03
+                
+                # 확장된 코너가 이미지 경계를 벗어나면 클리핑
+                h_orig, w_orig = orig.shape[:2]
+                expanded_corners[:, 0] = np.clip(expanded_corners[:, 0], 0, w_orig - 1)
+                expanded_corners[:, 1] = np.clip(expanded_corners[:, 1], 0, h_orig - 1)
+                
+                warped = four_point_transform(orig, expanded_corners)
                 warp_method = "perspective"
                 
                 # 결과 검증: 너무 작거나 검은 이미지인지 확인
