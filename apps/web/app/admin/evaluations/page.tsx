@@ -1418,14 +1418,52 @@ function AdminEvaluationPage() {
     },
   });
 
-  // 리뷰 삭제 mutation
+  // 리뷰 삭제 mutation (이미지도 함께 삭제)
   const deleteReviewMutation = useMutation({
     mutationFn: async (reviewId: string) => {
+      // 1. 리뷰 정보 조회 (이미지 경로 확인)
+      const { data: reviewData, error: fetchError } = await supabase
+        .from('reviews')
+        .select('verification_photo, food_photos')
+        .eq('id', reviewId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const review = reviewData as { verification_photo: string | null; food_photos: string[] | null } | null;
+
+      // 2. Storage에서 이미지 삭제
+      const photosToDelete: string[] = [];
+
+      if (review?.verification_photo) {
+        photosToDelete.push(review.verification_photo);
+      }
+
+      if (review?.food_photos && Array.isArray(review.food_photos)) {
+        photosToDelete.push(...review.food_photos);
+      }
+
+      if (photosToDelete.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from('review-photos')
+          .remove(photosToDelete);
+
+        if (storageError) {
+          console.warn('이미지 삭제 실패 (리뷰는 삭제됨):', storageError.message);
+        }
+      }
+
+      // 3. DB에서 리뷰 삭제
       const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
       if (error) throw error;
+
+      return { deletedPhotos: photosToDelete.length };
     },
-    onSuccess: () => {
-      toast({ title: '리뷰 삭제됨', description: '리뷰가 삭제되었습니다.' });
+    onSuccess: ({ deletedPhotos }) => {
+      toast({
+        title: '리뷰 삭제됨',
+        description: `리뷰가 삭제되었습니다. (이미지 ${deletedPhotos}개 삭제)`
+      });
       queryClient.invalidateQueries({ queryKey: ['admin-reviews-inline'] });
     },
     onError: (error: any) => {
