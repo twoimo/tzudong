@@ -147,9 +147,15 @@ function ReviewPhotoItem({
 }) {
     const [isLoading, setIsLoading] = useState(true);
 
+    // 영수증은 세로로 길게, 음식 사진은 정사각형에 가깝게
+    const isReceipt = labelVariant === 'receipt';
+
     return (
         <div
-            className="flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all h-32 min-w-24"
+            className={cn(
+                "flex-shrink-0 border rounded-lg overflow-hidden relative cursor-pointer hover:ring-2 hover:ring-primary transition-all",
+                isReceipt ? "h-48 min-w-28" : "h-32 min-w-24"  // 영수증은 더 크게
+            )}
             onClick={onClick}
         >
             {isLoading && (
@@ -161,7 +167,8 @@ function ReviewPhotoItem({
                 src={src}
                 alt={alt}
                 className={cn(
-                    "h-32 w-auto max-w-48 object-cover transition-opacity",
+                    "w-auto object-contain transition-opacity",  // object-cover -> object-contain으로 변경
+                    isReceipt ? "h-48 max-w-64" : "h-32 max-w-48",
                     isLoading ? "opacity-0" : "opacity-100"
                 )}
                 onLoad={() => setIsLoading(false)}
