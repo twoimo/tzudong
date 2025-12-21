@@ -87,8 +87,10 @@ def auto_rotate_receipt(image):
     
     def calculate_orientation_score(img):
         """
-        다수결 기반 방향 점수 계산
-        여러 독립적 신호가 각각 투표하고, 다수결로 최종 방향 결정
+        영수증 방향 점수 계산 (안정적인 신호 우선)
+        
+        가장 신뢰할 수 있는 신호: 바코드 위치, 가장 큰 블록 위치
+        보조 신호: 블록 분포 연속성
         """
         h, w = img.shape[:2]
         
@@ -96,120 +98,74 @@ def auto_rotate_receipt(image):
         if w > h:
             return -1000
         
-        votes = []  # (방향 preference, 신뢰도) - 양수면 현재 방향, 음수면 180도 회전 필요
+        votes = []
         
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
         
-        # === 신호 1: 가장 큰 단일 블록의 위치 (가장 신뢰할 수 있는 신호) ===
-        # 가게명은 보통 상단에 있고, 가장 큰 단일 블록
+        # 전체 컨투어 분석
         contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if contours:
-            # 가장 큰 블록의 y 중심점
-            largest_contour = max(contours, key=cv2.contourArea)
-            area = cv2.contourArea(largest_contour)
-            if area > h * w * 0.001:  # 최소 면적 임계값
-                M = cv2.moments(largest_contour)
-                if M["m00"] > 0:
-                    cy = int(M["m01"] / M["m00"])
-                    # 가장 큰 블록이 상단(h/2 위)에 있으면 정방향
-                    if cy < h * 0.45:
-                        votes.append(("upright", 1.0))  # 높은 가중치
-                    elif cy > h * 0.55:
-                        votes.append(("flipped", 1.0))
+        if not contours:
+            return 0
         
-        # === 신호 2: 첫 번째 텍스트 영역의 위치 ===
-        # 영수증에서 첫 번째 텍스트(가게명)는 상단에 있음
-        # Projection profile로 첫 번째 텍스트 영역 찾기
-        row_projection = np.sum(binary, axis=1)
-        threshold = np.max(row_projection) * 0.1
-        
-        # 첫 번째 텍스트 시작점
-        first_text_row = None
-        for i, val in enumerate(row_projection):
-            if val > threshold:
-                first_text_row = i
-                break
-        
-        # 마지막 텍스트 끝점
-        last_text_row = None
-        for i in range(len(row_projection) - 1, -1, -1):
-            if row_projection[i] > threshold:
-                last_text_row = i
-                break
-        
-        if first_text_row is not None and last_text_row is not None:
-            # 첫 번째 텍스트가 상단 1/4 내에 있으면 정방향
-            if first_text_row < h * 0.15 and last_text_row > h * 0.85:
-                # 양쪽 끝에 텍스트가 있으면 중립
-                pass
-            elif first_text_row < h * 0.2:
-                votes.append(("upright", 0.7))
-            elif last_text_row > h * 0.8 and first_text_row > h * 0.3:
-                votes.append(("flipped", 0.7))
-        
-        # === 신호 3: 텍스트 밀도 프로필 (가중치 낮춤) ===
-        top_third = binary[:h//3, :]
-        bottom_third = binary[2*h//3:, :]
-        
-        top_density = np.sum(top_third) / (top_third.size * 255)
-        bottom_density = np.sum(bottom_third) / (bottom_third.size * 255)
-        
-        if abs(top_density - bottom_density) > 0.03:  # 더 높은 임계값
-            if top_density > bottom_density * 1.2:
-                votes.append(("upright", 0.3))  # 낮은 가중치
-            elif bottom_density > top_density * 1.2:
-                votes.append(("flipped", 0.3))
-        
-        # === 신호 3: 바코드/줄무늬 패턴 (하단에 있어야 정방향) ===
+        # === 신호 1: 바코드/줄무늬 패턴 (가장 신뢰할 수 있는 신호) ===
+        # 바코드는 대부분 영수증 하단에 있음
         sobel_x = np.abs(cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3))
         
-        bottom_region = sobel_x[4*h//5:, :]
-        top_region = sobel_x[:h//5, :]
+        bottom_stripe_region = sobel_x[4*h//5:, :]
+        top_stripe_region = sobel_x[:h//5, :]
         
-        bottom_stripe = np.mean(bottom_region)
-        top_stripe = np.mean(top_region)
+        bottom_stripe = np.mean(bottom_stripe_region)
+        top_stripe = np.mean(top_stripe_region)
         
-        if abs(bottom_stripe - top_stripe) > 3:  # 유의미한 차이
-            if bottom_stripe > top_stripe * 1.3:  # 하단에 더 많은 세로 줄무늬
-                votes.append(("upright", 0.9))  # 바코드 하단 = 정방향
-            elif top_stripe > bottom_stripe * 1.3:
-                votes.append(("flipped", 0.9))
+        if abs(bottom_stripe - top_stripe) > 2:
+            if bottom_stripe > top_stripe * 1.2:
+                votes.append(("upright", 1.5))  # 바코드 하단 = 정방향 (최고 가중치)
+            elif top_stripe > bottom_stripe * 1.2:
+                votes.append(("flipped", 1.5))
         
-        # === 신호 4: 수직 그라디언트 분석 (텍스트 하강 방향) ===
-        # 한글/숫자는 위에서 아래로 그려지므로 특정 그라디언트 패턴이 있음
-        sobel_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+        # === 신호 2: 가장 큰 블록의 y 위치 ===
+        # 가게명/브랜드명은 보통 상단에 있고 가장 큼
+        largest = max(contours, key=cv2.contourArea)
+        M = cv2.moments(largest)
+        if M["m00"] > 0:
+            cy = int(M["m01"] / M["m00"])
+            if cy < h * 0.4:
+                votes.append(("upright", 1.0))
+            elif cy > h * 0.6:
+                votes.append(("flipped", 1.0))
         
-        # 중간 영역에서 분석 (헤더/푸터 제외)
-        mid_region = sobel_y[h//4:3*h//4, :]
+        # === 신호 3: 상단 vs 하단 블록 수 ===
+        # 상단에 블록이 적으면 (가게명만) 정방향
+        top_quarter = binary[:h//4, :]
+        bottom_quarter = binary[3*h//4:, :]
         
-        # 양수(아래로 밝아짐) vs 음수(위로 밝아짐) 비율
-        positive_gradient = np.sum(mid_region > 10)
-        negative_gradient = np.sum(mid_region < -10)
+        top_contours, _ = cv2.findContours(top_quarter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        bottom_contours, _ = cv2.findContours(bottom_quarter, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        if positive_gradient + negative_gradient > 1000:
-            ratio = positive_gradient / max(negative_gradient, 1)
-            if ratio > 1.2:
-                votes.append(("upright", 0.5))
-            elif ratio < 0.8:
-                votes.append(("flipped", 0.5))
-        
-        # === 신호 5: 상단 vs 하단 텍스트 블록 크기 분포 ===
-        top_region_bin = binary[:h//4, :]
-        bottom_region_bin = binary[3*h//4:, :]
-        
-        top_contours, _ = cv2.findContours(top_region_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        bottom_contours, _ = cv2.findContours(bottom_region_bin, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # 상단/하단 블록 수 비교 - 상단에 더 적은 큰 블록(가게명)
         top_count = len([c for c in top_contours if cv2.contourArea(c) > 50])
         bottom_count = len([c for c in bottom_contours if cv2.contourArea(c) > 50])
         
-        if top_count + bottom_count > 5:
-            # 상단에 블록이 적으면 (가게명만 있으면) 정방향
-            if top_count < bottom_count * 0.7:
+        if top_count + bottom_count > 3:
+            if top_count < bottom_count * 0.5:
+                votes.append(("upright", 0.6))
+            elif bottom_count < top_count * 0.5:
+                votes.append(("flipped", 0.6))
+        
+        # === 신호 4: Row Projection 여백 분석 ===
+        row_projection = np.sum(binary, axis=1)
+        
+        top_rows = row_projection[:h//4]
+        bottom_rows = row_projection[3*h//4:]
+        
+        # 상단의 "빈 줄 후 텍스트" 패턴 (마진 후 가게명)
+        top_empty = np.sum(top_rows < np.max(row_projection) * 0.05)
+        bottom_empty = np.sum(bottom_rows < np.max(row_projection) * 0.05)
+        
+        if abs(top_empty - bottom_empty) > h * 0.05:
+            if top_empty > bottom_empty:
                 votes.append(("upright", 0.4))
-            elif bottom_count < top_count * 0.7:
+            else:
                 votes.append(("flipped", 0.4))
         
         # === 다수결 집계 ===
