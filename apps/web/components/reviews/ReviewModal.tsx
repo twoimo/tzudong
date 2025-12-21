@@ -9,30 +9,50 @@ import { toast } from "@/hooks/use-toast";
 import imageCompression from "browser-image-compression";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/reviewDraftDB";
 
-// 이미지 압축 옵션 (컴포넌트 외부에서 상수로 정의)
-const COMPRESSION_OPTIONS = {
+// 음식 사진용 압축 옵션 (스토리지 최적화)
+const FOOD_PHOTO_OPTIONS = {
     maxSizeMB: 0.3,           // 최대 300KB
     maxWidthOrHeight: 1200,   // 최대 1200px
     fileType: "image/webp" as const,
     useWebWorker: true,
 };
 
-// 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
-const generateSafeFilename = (): string => {
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const timestamp = Date.now();
-    return `${timestamp}_${randomString}.webp`;
+// 영수증 인증 사진용 압축 옵션 (OCR 정확도를 위해 고품질 유지)
+const RECEIPT_PHOTO_OPTIONS = {
+    maxSizeMB: 1.0,           // 최대 1MB (OCR 정확도 확보)
+    maxWidthOrHeight: 2000,   // 더 높은 해상도 유지
+    fileType: "image/jpeg" as const,  // JPEG 사용 (OpenCV 호환성 향상)
+    initialQuality: 0.92,     // 높은 품질 유지
+    useWebWorker: true,
 };
 
-// 이미지 압축 유틸리티 함수 (WebP 변환, 최대 300KB)
-const compressImage = async (file: File): Promise<File> => {
+// 안전한 랜덤 파일명 생성 유틸리티 (한글 파일명 문제 해결)
+const generateSafeFilename = (extension: string = ".webp"): string => {
+    const randomString = Math.random().toString(36).substring(2, 15);
+    const timestamp = Date.now();
+    return `${timestamp}_${randomString}${extension}`;
+};
+
+// 영수증 이미지 압축 (고품질 JPEG - OCR 정확도 우선)
+const compressReceiptImage = async (file: File): Promise<File> => {
     try {
-        const compressedBlob = await imageCompression(file, COMPRESSION_OPTIONS);
-        // 안전한 파일명 생성 (한글 파일명 문제 방지)
-        const safeFileName = generateSafeFilename();
+        const compressedBlob = await imageCompression(file, RECEIPT_PHOTO_OPTIONS);
+        const safeFileName = generateSafeFilename(".jpg");
+        return new File([compressedBlob], safeFileName, { type: "image/jpeg" });
+    } catch (error) {
+        console.warn("영수증 이미지 압축 실패, 원본 사용:", error);
+        return file;
+    }
+};
+
+// 음식 사진 압축 (WebP - 스토리지 최적화)
+const compressFoodImage = async (file: File): Promise<File> => {
+    try {
+        const compressedBlob = await imageCompression(file, FOOD_PHOTO_OPTIONS);
+        const safeFileName = generateSafeFilename(".webp");
         return new File([compressedBlob], safeFileName, { type: "image/webp" });
     } catch (error) {
-        console.warn("이미지 압축 실패, 원본 사용:", error);
+        console.warn("음식 사진 압축 실패, 원본 사용:", error);
         return file;
     }
 };
@@ -251,10 +271,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         setIsSubmitting(true);
 
         try {
-            // 1. 모든 이미지를 병렬로 압축 (성능 최적화)
+            // 1. 이미지 압축 (영수증은 고품질 JPEG, 음식 사진은 WebP)
             const [compressedVerificationPhoto, ...compressedFoodPhotos] = await Promise.all([
-                compressImage(verificationPhoto),
-                ...foodPhotos.map(photo => compressImage(photo))
+                compressReceiptImage(verificationPhoto),  // OCR 정확도를 위해 고품질 JPEG
+                ...foodPhotos.map((photo: File) => compressFoodImage(photo))  // 스토리지 최적화 WebP
             ]);
 
             // 2. 인증 사진 업로드
