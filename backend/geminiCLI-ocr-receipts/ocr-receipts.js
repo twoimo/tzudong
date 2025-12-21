@@ -15,6 +15,7 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const sharp = require('sharp');
 
 // =====================================================
 // 환경 변수 검증
@@ -338,6 +339,55 @@ async function processReview(review) {
             console.log(`  ✅ 중복 정보 저장 완료`);
         } else {
             console.log(`  ✅ OCR 성공`);
+        }
+
+        // OCR 성공 후: 이미지를 WebP로 압축하여 스토리지 용량 절약
+        try {
+            const originalStoragePath = review.verification_photo;
+            const warpedPath = preprocessResult.warped || tempInputPath;
+
+            console.log('  🗜️ 스토리지 최적화: WebP 압축 중...');
+
+            // sharp로 WebP 변환 (품질 85%, 최대 1200px)
+            const compressedBuffer = await sharp(warpedPath)
+                .resize(1200, null, { withoutEnlargement: true })
+                .webp({ quality: 85 })
+                .toBuffer();
+
+            // 새 파일명 생성 (확장자 변경: .jpg -> .webp)
+            const webpStoragePath = originalStoragePath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+
+            // WebP 이미지 업로드 (먼저 업로드, 성공 후 기존 파일 삭제)
+            const { error: webpUploadError } = await supabase.storage
+                .from('review-photos')
+                .upload(webpStoragePath, compressedBuffer, {
+                    contentType: 'image/webp',
+                    upsert: true,
+                });
+
+            if (webpUploadError) {
+                console.warn(`  ⚠️ WebP 업로드 실패 (원본 유지): ${webpUploadError.message}`);
+            } else {
+                // 업로드 성공 후 기존 파일 삭제 (이미지 손실 방지)
+                if (originalStoragePath !== webpStoragePath) {
+                    await supabase.storage
+                        .from('review-photos')
+                        .remove([originalStoragePath]);
+                }
+
+                // DB에 새 파일 경로 업데이트
+                await supabase
+                    .from('reviews')
+                    .update({ verification_photo: webpStoragePath })
+                    .eq('id', reviewId);
+
+                const originalSize = fs.statSync(warpedPath).size;
+                const compressedSize = compressedBuffer.length;
+                const savings = ((1 - compressedSize / originalSize) * 100).toFixed(1);
+                console.log(`  ✅ WebP 압축 완료 (${savings}% 절약, ${Math.round(compressedSize / 1024)}KB)`);
+            }
+        } catch (compressError) {
+            console.warn(`  ⚠️ WebP 압축 실패 (원본 유지): ${compressError.message}`);
         }
 
         return { status: isDuplicate ? 'duplicate' : 'success' };

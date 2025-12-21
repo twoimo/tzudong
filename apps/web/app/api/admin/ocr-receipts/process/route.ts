@@ -16,6 +16,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
+import sharp from 'sharp';
 
 // 환경 변수
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -347,12 +348,57 @@ export async function POST(request: Request) {
             throw new Error(`DB 업데이트 실패: ${updateError.message}`);
         }
 
+        // 9. OCR 성공 후: 이미지를 WebP로 압축하여 스토리지 용량 절약
+        let compressionResult = '원본 유지';
+        try {
+            const originalStoragePath = review.verification_photo;
+            const warpedPath = preprocessResult.warped || tempInputPath;
+
+            // sharp로 WebP 변환 (품질 85%, 최대 1200px)
+            const compressedBuffer = await sharp(warpedPath)
+                .resize(1200, undefined, { withoutEnlargement: true })
+                .webp({ quality: 85 })
+                .toBuffer();
+
+            // 새 파일명 생성 (확장자 변경: .jpg -> .webp)
+            const webpStoragePath = originalStoragePath.replace(/\.(jpg|jpeg|png)$/i, '.webp');
+
+            // 기존 파일 삭제
+            await supabase.storage
+                .from('review-photos')
+                .remove([originalStoragePath]);
+
+            // WebP 이미지 업로드
+            const { error: webpUploadError } = await supabase.storage
+                .from('review-photos')
+                .upload(webpStoragePath, compressedBuffer, {
+                    contentType: 'image/webp',
+                    upsert: true,
+                });
+
+            if (!webpUploadError) {
+                // DB에 새 파일 경로 업데이트
+                await supabase
+                    .from('reviews')
+                    .update({ verification_photo: webpStoragePath })
+                    .eq('id', reviewId);
+
+                const originalSize = fs.statSync(warpedPath).size;
+                const compressedSize = compressedBuffer.length;
+                const savings = ((1 - compressedSize / originalSize) * 100).toFixed(1);
+                compressionResult = `WebP 압축 완료 (${savings}% 절약, ${Math.round(compressedSize / 1024)}KB)`;
+            }
+        } catch (compressError) {
+            console.warn('WebP 압축 실패 (원본 유지):', compressError);
+        }
+
         return NextResponse.json({
             success: true,
             message: isDuplicate ? 'OCR 처리 완료 (중복 의심)' : 'OCR 처리 완료',
             data: ocrData,
             stages,
             isDuplicate,
+            compression: compressionResult,
         });
 
     } catch (err) {
