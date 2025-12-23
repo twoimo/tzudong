@@ -1,0 +1,80 @@
+[
+    {
+        "테이블": "restaurants",
+        "설명": "맛집 정보 (v3.4 통합 테이블)",
+        "주요 컬럼": "name, lat, lng, categories, status, unique_id, source_type",
+        "인덱스": "lat_lng, status, unique_id, name_trgm, road_address_trgm"
+    },
+    {
+        "테이블": "profiles",
+        "설명": "사용자 프로필",
+        "주요 컬럼": "user_id, nickname, email, profile_picture",
+        "인덱스": "user_id, nickname (unique)"
+    },
+    {
+        "테이블": "user_roles",
+        "설명": "사용자 역할 (admin/user)",
+        "주요 컬럼": "user_id, role",
+        "인덱스": "user_id + role (unique)"
+    },
+    {
+        "테이블": "reviews",
+        "설명": "사용자 리뷰 (v3.4 OCR 중복검사 추가)",
+        "주요 컬럼": "user_id, restaurant_id, content, receipt_hash, is_duplicate",
+        "인덱스": "restaurant_id, user_id, receipt_hash (unique), status"
+    },
+    {
+        "테이블": "review_likes",
+        "설명": "리뷰 좋아요",
+        "주요 컬럼": "review_id, user_id",
+        "인덱스": "review_id + user_id (unique)"
+    },
+    {
+        "테이블": "restaurant_submissions",
+        "설명": "사용자 맛집 제보 (v3.4)",
+        "주요 컬럼": "user_id, youtube_link, restaurant_name, status, review_result",
+        "인덱스": "user_id, status, youtube_link_hash"
+    },
+    {
+        "테이블": "user_stats",
+        "설명": "사용자 활동 통계",
+        "주요 컬럼": "review_count, verified_review_count, trust_score",
+        "인덱스": "trust_score, review_count, leaderboard"
+    },
+    {
+        "테이블": "notifications",
+        "설명": "사용자 알림",
+        "주요 컬럼": "user_id, type, title, message, is_read",
+        "인덱스": "user_id, created_at, is_read"
+    },
+    {
+        "테이블": "announcements",
+        "설명": "관리자 공지사항",
+        "주요 컬럼": "admin_id, title, message, is_active",
+        "인덱스": "created_at"
+    },
+    {
+        "테이블": "server_costs",
+        "설명": "서버 운영 비용",
+        "주요 컬럼": "item_name, monthly_cost, description",
+        "인덱스": "updated_at"
+    },
+    {
+        "테이블": "mv_restaurant_stats",
+        "설명": "맛집 통계 Materialized View",
+        "주요 컬럼": "id, name, review_count, verified_review_count",
+        "인덱스": "id (unique), review_count"
+    },
+    {
+        "테이블": "mv_user_leaderboard",
+        "설명": "사용자 리더보드 Materialized View",
+        "주요 컬럼": "user_id, nickname, rank, trust_score",
+        "인덱스": "user_id (unique), rank"
+    },
+    {
+        "테이블": "mv_popular_reviews",
+        "설명": "인기 리뷰 Materialized View",
+        "주요 컬럼": "id, title, like_count, restaurant_name",
+        "인덱스": "id (unique), like_count"
+    }
+]

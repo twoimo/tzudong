@@ -1,0 +1,50 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart LR
+    subgraph TRIGGER["Triggers"]
+        T1[Push to main]
+        T2[Push to develop]
+        T3[Pull Request]
+        T4[Schedule - Daily]
+    end
+
+    subgraph CI["CI"]
+        C1[Install deps]
+        C2[ESLint]
+        C3[TypeScript Check]
+        C4[Build]
+    end
+
+    subgraph CD["CD"]
+        D1[Vercel Build]
+        D2[Deploy Preview/Prod]
+    end
+
+    subgraph ENV["Environments"]
+        E1[Production - main]
+        E2[Preview - develop]
+    end
+
+    subgraph CRAWL["Crawling Pipeline"]
+        P1[YouTube Transcript]
+        P2[Gemini CLI Extract]
+        P3[AI Evaluation]
+        P4[Insert to DB]
+    end
+
+    subgraph OCR["OCR Pipeline"]
+        O1[Receipt Upload]
+        O2[Gemini Vision OCR]
+        O3[Duplicate Check]
+        O4[Admin Review]
+    end
+
+    T1 & T2 & T3 --> CI
+    C1 --> C2 --> C3 --> C4
+    C4 --> CD
+    D1 --> D2 --> ENV
+    
+    T4 --> CRAWL
+    P1 --> P2 --> P3 --> P4
+    
+    O1 --> O2 --> O3 --> O4

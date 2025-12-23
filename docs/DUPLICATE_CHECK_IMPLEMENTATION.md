@@ -3,7 +3,7 @@
 ## 구현 내용
 
 ### 1. Levenshtein Distance 기반 중복 검사
-- **파일**: `src/lib/db-conflict-checker.ts`
+- **파일**: `apps/web/lib/db-conflict-checker.ts`
 - **함수**: `checkRestaurantDuplicate()`
 - **로직**:
   1. 지번주소 앞 20자로 같은 지역 필터링 (성능 최적화)
@@ -18,26 +18,26 @@
 - **인덱스**: `idx_restaurants_jibun_address_pattern` (성능 향상)
 
 ### 3. 타입 정의 업데이트
-- **파일**: `src/types/evaluation.ts`
+- **파일**: `apps/web/types/evaluation.ts`
 - `EvaluationRecord` 인터페이스에 에러 필드 추가
 - `DuplicateCheckResult` 인터페이스 추가
 
 ### 4. 승인 로직에 중복 검사 통합
 
 #### EditRestaurantModal (관리자 수정 모달)
-- **파일**: `src/components/admin/EditRestaurantModal.tsx`
+- **파일**: `apps/web/components/admin/EditRestaurantModal.tsx`
 - 승인 버튼 클릭 시:
   1. 중복 검사 실행
   2. 중복 발견 → status 유지, 에러 메시지 저장
   3. 중복 없음 → status를 'approved'로 변경
 
-#### AdminEvaluationPage (평가 관리 페이지)
-- **파일**: `src/pages/AdminEvaluationPage.tsx`
+#### evaluations/page.tsx (평가 관리 페이지)
+- **파일**: `apps/web/app/admin/evaluations/page.tsx`
 - `handleApprove()` 함수에 중복 검사 추가
 - 동일한 로직 적용
 
 ### 5. 에러 알림 UI 컴포넌트
-- **파일**: `src/components/admin/RestaurantErrorAlert.tsx`
+- **파일**: `apps/web/components/admin/RestaurantErrorAlert.tsx`
 - 기능:
   - 중복 에러 메시지 표시
   - 기존 맛집 정보 (이름, 주소, 유사도) 표시
@@ -45,7 +45,7 @@
   - [기존 맛집 보기] 버튼 → 새 탭으로 열기
 
 ### 6. EvaluationRowDetails 통합
-- **파일**: `src/components/admin/EvaluationRowDetails.tsx`
+- **파일**: `apps/web/components/admin/EvaluationRowDetails.tsx`
 - 레코드 확장 시 에러 알림을 최상단에 표시
 - `onEdit` prop을 통해 수정 모드 진입 가능
 
@@ -114,13 +114,13 @@ db_error_message: null (초기화)
 ## 파일 변경 사항
 
 ```
-✅ src/lib/db-conflict-checker.ts (업데이트)
-✅ src/components/admin/EditRestaurantModal.tsx (업데이트)
-✅ src/pages/AdminEvaluationPage.tsx (업데이트)
-✅ src/types/evaluation.ts (업데이트)
-✅ src/components/admin/RestaurantErrorAlert.tsx (신규)
-✅ src/components/admin/EvaluationRowDetails.tsx (업데이트)
-✅ src/components/admin/EvaluationTableNew.tsx (업데이트)
+✅ apps/web/lib/db-conflict-checker.ts (업데이트)
+✅ apps/web/components/admin/EditRestaurantModal.tsx (업데이트)
+✅ apps/web/app/admin/evaluations/page.tsx (업데이트)
+✅ apps/web/types/evaluation.ts (업데이트)
+✅ apps/web/components/admin/RestaurantErrorAlert.tsx (신규)
+✅ apps/web/components/admin/EvaluationRowDetails.tsx (업데이트)
+✅ apps/web/components/admin/EvaluationTableNew.tsx (업데이트)
 ✅ supabase/migrations/20251114_add_duplicate_error_fields.sql (신규)
 ```
 

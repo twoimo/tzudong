@@ -1,0 +1,46 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart TB
+    subgraph FE["Frontend"]
+        F1[Next.js 16]
+        F2[TypeScript]
+        F3[Tailwind CSS]
+        F4[React Query]
+        F5[Zustand]
+        F6[Radix UI]
+    end
+
+    subgraph MAP["Maps"]
+        M1[Naver Maps API]
+        M2[Google Maps API]
+        M3[Naver Geocoding]
+    end
+
+    subgraph BE["Backend"]
+        B1[Supabase]
+        B2[PostgreSQL 15]
+        B3[Row Level Security]
+        B4[Edge Functions]
+        B5[Storage Buckets]
+    end
+
+    subgraph AI["AI Pipeline"]
+        A1[Gemini CLI]
+        A2[Gemini Vision OCR]
+        A3[YouTube Transcript API]
+        A4[Perplexity API]
+    end
+
+    subgraph DEV["DevOps"]
+        D1[GitHub Actions]
+        D2[Vercel]
+        D3[pnpm Monorepo]
+        D4[Turborepo]
+    end
+
+    FE --> MAP
+    FE --> BE
+    AI --> BE
+    DEV --> FE
+    DEV --> AI
+    B5 --> A2

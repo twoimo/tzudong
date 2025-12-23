@@ -1,0 +1,50 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart TB
+    subgraph DASH["Admin Dashboard"]
+        D1[Submissions]
+        D2[Restaurants]
+        D3[Evaluations]
+        D4[Receipt OCR]
+    end
+
+    subgraph REVIEW["Review Process"]
+        R1[View Details]
+        R2[Watch YouTube]
+        R3[Geocode Address]
+        R4{Duplicate Check}
+        R5{Decision}
+    end
+
+    subgraph APPROVE["Approve Flow"]
+        A1[Verify Restaurant Info]
+        A2[Check Status Field]
+        A3[Insert Restaurant]
+        A4[Update Submission Status]
+        A5[Send Notification]
+    end
+
+    subgraph REJECT["Reject Flow"]
+        J1[Select Reason]
+        J2[Custom Message]
+        J3[Update Status]
+    end
+
+    subgraph OCR["Receipt OCR Flow"]
+        O1[View Receipt Image]
+        O2[Check OCR Result]
+        O3[Verify Duplicate]
+        O4{Approve/Reject}
+        O5[Award Stamp]
+    end
+
+    D1 --> R1 --> R2 --> R3 --> R4
+    R4 -->|New| R5
+    R4 -->|Duplicate| J1
+    R5 -->|Approve| A1 --> A2 --> A3 --> A4 --> A5
+    R5 -->|Reject| J1 --> J2 --> J3
+    
+    D2 --> EDIT[Edit/Delete/Status]
+    D3 --> VIEW[View AI Results]
+    D4 --> O1 --> O2 --> O3 --> O4
+    O4 -->|Approve| O5

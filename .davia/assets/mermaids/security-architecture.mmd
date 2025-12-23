@@ -1,0 +1,41 @@
+%%{init: {'theme': 'default'}}%%
+
+flowchart TB
+    subgraph AUTH["Authentication"]
+        A1[Email/Password Login]
+        A2[Supabase Auth]
+        A3[JWT Token]
+        A4[Session Storage]
+    end
+
+    subgraph ROLES["Authorization"]
+        R1[User Role]
+        R2[Admin Role]
+    end
+
+    subgraph RLS["Row Level Security"]
+        L1[restaurants: approved only]
+        L2[reviews: own records]
+        L3[submissions: own or admin]
+        L4[receipts: own or admin]
+        L5[stamps: own records]
+    end
+
+    subgraph STORAGE["Storage Security"]
+        S1[receipt-images bucket]
+        S2[Authenticated upload only]
+        S3[Public read for approved]
+    end
+
+    subgraph KEYS["API Keys"]
+        K1[anon key - public]
+        K2[service_role - secret]
+        K3[Gemini API key - server]
+        K4[Naver API keys - server]
+    end
+
+    A1 --> A2 --> A3 --> A4
+    A4 --> ROLES
+    ROLES --> RLS
+    ROLES --> STORAGE
+    KEYS --> RLS

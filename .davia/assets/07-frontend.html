@@ -1,0 +1,329 @@
+﻿<h1>프론트엔드 애플리케이션</h1>
+
+<p>사용자가 보는 <strong>웹사이트 화면</strong>을 담당하는 부분입니다. Next.js라는 도구로 만들었어요.</p>
+
+<hr />
+
+<h2>사용자 인터랙션 흐름</h2>
+
+<p>사용자가 웹사이트를 이용하는 전체 과정을 다이어그램으로 확인하세요:</p>
+
+<excalidraw data-path="data/frontend-user-flow.json"></excalidraw>
+
+<h3>👤 다이어그램 상세 설명</h3>
+
+<h4>👉 User Actions (사용자 행동 흐름)</h4>
+<p>사용자가 웹사이트에서 수행할 수 있는 주요 행동들입니다.</p>
+<ul>
+    <li><strong>Visit</strong> - 사이트 접속: 맞춤형 지도 화면으로 시작</li>
+    <li><strong>Browse</strong> - 맛집 탐색: 지도 이동/줌, 마커 클릭으로 맛집 확인</li>
+    <li><strong>Filter</strong> - 필터 적용: 지역, 카테고리, 영상 방송일 기준 필터링</li>
+    <li><strong>Login</strong> - 로그인: Google/Kakao OAuth로 간편 인증</li>
+    <li><strong>Review</strong> - 리뷰 작성: 별점 + 코멘트로 맛집 평가 (로그인 필수)</li>
+</ul>
+
+<h4>🧱 Components (화면 컴포넌트)</h4>
+<p>웹사이트를 구성하는 주요 React 컴포넌트들입니다.</p>
+<ul>
+    <li><strong>Map</strong> - 네이버 지도 컴포넌트. 맛집 위치 마커, 클러스터링, 지도 이동 이벤트 처리</li>
+    <li><strong>Sidebar</strong> - 맛집 목록 사이드바. 검색 결과, 필터, 정렬 옵션 표시</li>
+    <li><strong>Detail</strong> - 맛집 상세 모달. 유튜브 임베드, 메뉴, 주소, 리뷰 표시</li>
+    <li><strong>MyPage</strong> - 마이페이지. 내 리뷰, 즐겨찾기, 프로필 관리</li>
+</ul>
+
+<h4>🛠️ Supabase (백엔드 서비스)</h4>
+<p>프론트엔드와 연동되는 Supabase 기능들입니다.</p>
+<ul>
+    <li><strong>Auth</strong> - 인증 서비스: OAuth 로그인, 세션 관리, 토큰 갱신</li>
+    <li><strong>Storage</strong> - 파일 저장소: 사용자 프로필 이미지, 리뷰 첨부 이미지</li>
+    <li><strong>PostgreSQL</strong> - 데이터베이스 직접 연결 (Supabase Client 사용)</li>
+</ul>
+
+<h4>🗃️ DB Tables (데이터베이스 테이블)</h4>
+<p>프론트엔드에서 조회/수정하는 주요 테이블들입니다.</p>
+<ul>
+    <li><strong>restaurants</strong> - 맛집 정보 (name, address, lat, lng, category, youtube_url, menu 등)</li>
+    <li><strong>reviews</strong> - 사용자 리뷰 (rating, comment, user_id, restaurant_id, created_at)</li>
+    <li><strong>profiles</strong> - 사용자 프로필 (display_name, avatar_url, favorite_restaurants)</li>
+</ul>
+
+<hr />
+
+<h2>프론트엔드란?</h2>
+
+<p><strong>프론트엔드(Frontend)</strong>는 사용자가 직접 보고 클릭하는 화면을 말해요.</p>
+<ul>
+    <li>웹사이트의 <strong>디자인</strong> (색상, 글꼴, 레이아웃)</li>
+    <li><strong>버튼</strong>을 클릭하면 반응하는 것</li>
+    <li><strong>지도</strong>에 마커가 표시되는 것</li>
+    <li><strong>검색창</strong>에 글자를 입력하는 것</li>
+</ul>
+
+<p>반대로 <strong>백엔드(Backend)</strong>는 사용자 눈에 보이지 않는 뒷단 작업이에요:</p>
+<ul>
+    <li>데이터베이스에서 데이터 가져오기</li>
+    <li>사용자 로그인 처리하기</li>
+    <li>AI로 데이터 분석하기</li>
+</ul>
+
+<hr />
+
+<h2>화면 구성 요소</h2>
+
+<p>쯔동여지도의 메인 화면은 크게 4가지 영역으로 나뉘어요:</p>
+
+<pre><code>
+
+   헤더 (검색바, 로그인 버튼)                          
+
+                                                     
+   사이드바               메인 지도                
+                                                     
+  - 필터                (맛집 마커들)                  
+  - 맛집 목록                                         
+  - 랭킹                                             
+                                                     
+
+   상세 패널 (맛집 클릭 시 나타남)                      
+  - 맛집 정보, 쯔양 리뷰, 사용자 리뷰들                   
+
+</code></pre>
+
+<h3>메인 지도</h3>
+<p>화면의 가장 큰 영역이에요:</p>
+<ul>
+    <li><strong>네이버 지도</strong> - 국내 맛집을 보여줘요 (한국에서 더 정확)</li>
+    <li><strong>구글 지도</strong> - 해외 맛집을 보여줘요</li>
+    <li><strong>마커</strong> - 각 맛집의 위치에 핀이 찍혀있어요</li>
+</ul>
+
+<h3>사이드바</h3>
+<p>왼쪽에 있는 패널이에요:</p>
+<ul>
+    <li><strong>필터</strong> - 한식, 중식, 양식 등 원하는 종류만 선택</li>
+    <li><strong>맛집 목록</strong> - 현재 지도에 보이는 맛집들의 리스트</li>
+    <li><strong>검색</strong> - 맛집 이름이나 지역으로 검색</li>
+    <li><strong>랭킹</strong> - 인기 맛집, 최신 맛집 순위</li>
+</ul>
+
+<h3>상세 패널</h3>
+<p>맛집을 클릭하면 아래에서 올라오는 패널이에요:</p>
+<ul>
+    <li><strong>맛집 기본 정보</strong> - 이름, 주소, 전화번호</li>
+    <li><strong>쿠양 리뷰</strong> - 영상에서 쿠양님이 한 말</li>
+    <li><strong>유튜브 영상</strong> - 관련 영상 썸네일과 링크</li>
+    <li><strong>사용자 리뷰</strong> - 다른 사람들이 남긴 후기</li>
+    <li><strong>길찾기</strong> - 네이버/카카오맵으로 바로 길찾기</li>
+</ul>
+
+<h3>마이페이지</h3>
+<p>로그인한 사용자의 개인 페이지:</p>
+<ul>
+    <li><strong>프로필</strong> - 닉네임, 프로필 사진</li>
+    <li><strong>내 리뷰</strong> - 내가 작성한 리뷰들</li>
+    <li><strong>즐겨찾기</strong> - 찜한 맛집들</li>
+    <li><strong>스탬프</strong> - 방문한 맛집에서 모은 스탬프</li>
+</ul>
+
+<hr />
+
+<h2>사용된 기술들</h2>
+
+<h3>Next.js 16 (웹 프레임워크)</h3>
+<p><strong>Next.js</strong>는 React를 기반으로 웹사이트를 쉽게 만들 수 있게 해주는 도구예요.</p>
+<ul>
+    <li><strong>App Router</strong> - 페이지 간 이동을 관리 (예: /mypage로 가면 마이페이지가 나옴)</li>
+    <li><strong>Turbopack</strong> - 개발할 때 변경사항을 빠르게 반영 (기다리는 시간 줄임)</li>
+    <li><strong>서버 컴포넌트</strong> - 일부 화면은 서버에서 미리 그려서 보내줌 (더 빠름)</li>
+</ul>
+
+<h3>TypeScript (프로그래밍 언어)</h3>
+<p>자바스크립트에 <strong>타입</strong>을 추가한 언어예요:</p>
+<pre><code>// 자바스크립트: 이름이 숫자여도 에러 안 남
+const name = 123;  
+
+// 타입스크립트: 이름은 문자열이어야 한다고 미리 정해둠
+const name: string = "쯔양";  // OK
+const name: string = 123;     // 에러! 문자열이 아님</code></pre>
+<p>이렇게 하면 실수로 잘못된 값을 넣는 버그를 미리 잡을 수 있어요.</p>
+
+<h3>Tailwind CSS (스타일링 도구)</h3>
+<p>CSS를 클래스 이름으로 빠르게 적용할 수 있어요:</p>
+<pre><code>&lt;!-- 전통적인 CSS --&gt;
+&lt;button class="my-button"&gt;클릭&lt;/button&gt;
+&lt;style&gt;
+.my-button {
+  background-color: blue;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+}
+&lt;/style&gt;
+
+&lt;!-- Tailwind CSS --&gt;
+&lt;button class="bg-blue-500 text-white px-5 py-2.5 rounded-lg"&gt;클릭&lt;/button&gt;</code></pre>
+<p>한 줄로 스타일링 끝!</p>
+
+<h3>Radix UI (UI 컴포넌트)</h3>
+<p>미리 만들어진 버튼, 모달, 드롭다운 등을 제공해요:</p>
+<ul>
+    <li><strong>접근성</strong> - 키보드로도 조작 가능, 스크린리더 지원</li>
+    <li><strong>커스터마이징</strong> - 스타일은 마음대로 바꿀 수 있음</li>
+</ul>
+
+<h3>React Query (데이터 관리)</h3>
+<p>서버에서 데이터를 가져오고 관리하는 도구예요:</p>
+<pre><code>// 맛집 목록 가져오기
+const { data, isLoading, error } = useQuery({
+  queryKey: ['restaurants'],
+  queryFn: fetchRestaurants,
+  staleTime: 60000,  // 1분 동안은 캐시된 데이터 사용
+});
+
+// 로딩 중일 때
+if (isLoading) return &lt;div&gt;로딩 중...&lt;/div&gt;;
+
+// 에러 발생 시
+if (error) return &lt;div&gt;에러 발생!&lt;/div&gt;;
+
+// 데이터 표시
+return &lt;RestaurantList data={data} /&gt;;</code></pre>
+
+<h3>Zustand (상태 관리)</h3>
+<p>화면에서 사용하는 임시 데이터를 관리해요:</p>
+<pre><code>// 상태 정의
+const useFilterStore = create((set) =&gt; ({
+  category: null,           // 선택된 카테고리
+  minRating: 0,            // 최소 별점
+  
+  setCategory: (cat) =&gt; set({ category: cat }),
+  setMinRating: (rating) =&gt; set({ minRating: rating }),
+}));
+
+// 컴포넌트에서 사용
+function FilterPanel() {
+  const { category, setCategory } = useFilterStore();
+  
+  return (
+    &lt;select value={category} onChange={(e) =&gt; setCategory(e.target.value)}&gt;
+      &lt;option value="korean"&gt;한식&lt;/option&gt;
+      &lt;option value="chinese"&gt;중식&lt;/option&gt;
+    &lt;/select&gt;
+  );
+}</code></pre>
+
+<hr />
+
+<h2>폴더 구조</h2>
+
+<p>프론트엔드 폴더 구조에 대한 자세한 설명은 <a href="02-for-developers.html">개발자 가이드</a>를 참조하세요.</p>
+
+<hr />
+
+<h2>주요 기능 상세 설명</h2>
+
+<h3>지도 기능</h3>
+
+<p><strong>듀얼 지도 시스템:</strong></p>
+<ul>
+    <li>사용자 위치가 <strong>한국</strong>이면 네이버 지도 표시</li>
+    <li>사용자 위치가 <strong>해외</strong>면 구글 지도 표시</li>
+    <li>수동으로 전환도 가능</li>
+</ul>
+
+<p><strong>필터링:</strong></p>
+<ul>
+    <li><strong>카테고리</strong> - 한식, 중식, 양식, 일식, 카페, 디저트 등</li>
+    <li><strong>방문 여부</strong> - 쿠양님이 실제 방문 확인된 곳만</li>
+</ul>
+
+<h3>사이드바 기능</h3>
+
+<p><strong>검색:</strong></p>
+<ul>
+    <li>맛집 이름으로 검색 (예: "삼겹살")</li>
+    <li>지역으로 검색 (예: "강남")</li>
+    <li>실시간 자동완성</li>
+</ul>
+
+<p><strong>정렬:</strong></p>
+<ul>
+    <li>최신순 - 최근에 추가된 맛집</li>
+    <li>리뷰순 - 사용자 리뷰가 많은 순</li>
+</ul>
+
+<h3>리뷰 작성</h3>
+
+<ol>
+    <li><strong>로그인</strong> - 이메일/비밀번호로 로그인</li>
+    <li><strong>맛집 선택</strong> - 리뷰 쓸 맛집 클릭</li>
+    <li><strong>사진 업로드</strong> - 방문 인증 사진 필수</li>
+    <li><strong>별점 선택</strong> - 1-5점 별점</li>
+    <li><strong>내용 작성</strong> - 후기 텍스트 입력</li>
+    <li><strong>제출</strong> - 리뷰 등록 완료!</li>
+</ol>
+
+<hr />
+
+<h2>성능 최적화</h2>
+
+<p>사이트가 빠르게 로딩되도록 여러 최적화를 적용했어요:</p>
+
+<h3>개선 결과</h3>
+<ul>
+    <li><strong>Lighthouse 점수</strong>: 24점 → 85점 이상 (+61점 향상!)</li>
+    <li><strong>첫 화면 로딩</strong>: 3.5초 → 2초 이하</li>
+</ul>
+
+<h3>적용한 주요 기법</h3>
+
+<table>
+    <thead>
+        <tr>
+            <th>기법</th>
+            <th>효과</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td><strong>코드 스플리팅</strong></td>
+            <td>초기 번들 200KB 감소, TBT 200ms 개선</td>
+        </tr>
+        <tr>
+            <td><strong>이미지 최적화</strong></td>
+            <td>AVIF/WebP로 전송량 60% 감소</td>
+        </tr>
+        <tr>
+            <td><strong>React Query 캐싱</strong></td>
+            <td>네트워크 요청 70% 감소</td>
+        </tr>
+        <tr>
+            <td><strong>컴포넌트 메모이제이션</strong></td>
+            <td>불필요한 리렌더링 방지</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>상세한 최적화 과정과 코드 예시는 <a href="13-performance.html"><strong>성능 최적화 가이드</strong></a>를 참조하세요.</p>
+
+<hr />
+
+<h2>인증 시스템</h2>
+
+<p><strong>이메일/비밀번호 로그인:</strong></p>
+<ol>
+    <li>사용자가 이메일과 비밀번호 입력</li>
+    <li>회원가입 시 닉네임 설정 필수</li>
+    <li>Supabase Auth가 인증 처리</li>
+    <li>세션 생성 후 로그인 완료!</li>
+</ol>
+
+<p><strong>역할 구분:</strong></p>
+<ul>
+    <li><strong>일반 사용자 (user)</strong> - 맛집 보기, 리뷰 쓰기, 제보하기</li>
+    <li><strong>관리자 (admin)</strong> - 제보 승인/거부, 데이터 수정, 사용자 관리</li>
+</ul>
+
+<hr />
+
+<p>개발 환경 설정 및 실행 방법은 <a href="02-for-developers.html">개발자 가이드</a>를 참조하세요.</p>

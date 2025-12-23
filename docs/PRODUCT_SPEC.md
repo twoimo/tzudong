@@ -13,7 +13,6 @@
 ### 핵심 가치 제안
 - 쯔양이 방문한 맛집을 지도에서 한눈에 확인
 - 팬들의 실제 방문 리뷰로 검증된 정보
-- AI 기반 별점과 신뢰도 시스템
 - 투명한 커뮤니티 운영 (서버 비용 공개)
 
 ### 품질 요구사항
@@ -29,8 +28,7 @@
 
 #### ✅ 필수 기능
 - [x] 구글맵 기반 메인 화면
-- [x] 맛집 마커 표시 (🔥 별점 ≥4, ⭐ 그 외)
-- [x] 줌 레벨별 클러스터링
+- [x] 맛집 마커 표시
 - [x] 상단 헤더
   - 좌측: 사이드바 토글 버튼 (☰)
   - 우측: 사용자 메뉴, 다크모드 전환, 알림, 전체화면, 로그인/로그아웃
@@ -48,7 +46,6 @@
   - 회원가입: 아이디, 비밀번호, 비밀번호 확인, 이메일, 닉네임
   - 회원가입 시 캡챠 인증
 - [x] 맛집 상세 정보 패널
-  - AI 별점 표시 (1-10개 별)
   - 쯔양 방문횟수, 사용자 방문횟수, 리뷰수
   - 매장 정보 (주소, 전화번호, 등록일)
   - 쯔양 유튜브 영상 링크
@@ -63,7 +60,6 @@
   - 유튜브 영상 링크
   - 쯔양 리뷰 내용
   - 쯔양 방문횟수
-  - AI 별점 (1-10)
 
 #### 🎯 중요 기능
 - [x] 필터링 시스템 (행렬 테이블 구조)
@@ -71,7 +67,6 @@
   - 사용자 방문횟수 (사용자들이 여러번 다녀온 맛집)
   - 리뷰 수 (리뷰가 많은 맛집)
   - 카테고리 (치킨, 중식, 돈까스·회, 피자, 패스트푸드, 찜·탕, 족발·보쌈, 분식, 카페·디저트, 한식, 고기, 양식, 아시안, 야식, 도시락)
-  - AI 기반 별점 (1-10개, 1개=맛집X, 10개=맛집O)
   - 테이블 정렬/필터 기능
   - 맛집명 검색
   - 선택된 필터 태그 표시
@@ -112,7 +107,7 @@
     - 제보 승인 시 자동으로 레스토랑 테이블에 추가
     - 제보 거부 시 거부 사유 입력
     - 주소로 좌표 자동 검색 기능
-    - AI 별점 및 쯔양 방문횟수 설정
+    - 쯔양 방문횟수 설정
     - 제보 통계 (대기/승인/거부 개수)
 
 ### Phase 2: 고도화 (3-6개월)
@@ -122,7 +117,6 @@
 - [ ] 실시간 알림 시스템
 - [ ] 리뷰 좋아요/댓글
 - [ ] 맛집 즐겨찾기
-- [ ] AI 기반 맛집 점수 실시간 반영
 - [ ] 서버 운영 비용 실시간 표시
 
 ### Phase 3: 확장 (6-12개월)
@@ -171,13 +165,10 @@ CREATE TABLE restaurants (
   updated_by_admin_id UUID REFERENCES users(id), -- 수정한 관리자
   lat DECIMAL(10, 8) NOT NULL,
   lng DECIMAL(11, 8) NOT NULL,
-  rating_ai DECIMAL(3, 1), -- 1.0 ~ 10.0 (AI 기반 별점)
   review_count INT DEFAULT 0,
   visit_count INT DEFAULT 0, -- 사용자 방문횟수
   jjyang_visit_count INT DEFAULT 0, -- 쯔양 방문횟수
-  cluster_id VARCHAR(50), -- 클러스터링용
   INDEX idx_location (lat, lng),
-  INDEX idx_rating (rating_ai),
   INDEX idx_category (category),
   INDEX idx_jjyang_visits (jjyang_visit_count DESC),
   INDEX idx_user_visits (visit_count DESC)
@@ -287,8 +278,6 @@ GET /api/restaurants?bbox={south,west,north,east}&zoom={level}&filters={json}
   "zoom": 12,
   "filters": {
     "category": ["치킨", "중식", "한식"],
-    "minRating": 4.0,
-    "maxRating": 10.0,
     "minReviews": 10,
     "minJjyangVisits": 0,
     "minUserVisits": 0
@@ -306,17 +295,7 @@ GET /api/restaurants?bbox={south,west,north,east}&zoom={level}&filters={json}
       "lat": 37.5563,
       "lng": 126.9236,
       "category": "분식",
-      "rating_ai": 4.5,
-      "review_count": 128,
-      "marker_type": "fire" // "fire" or "star"
-    }
-  ],
-  "clusters": [
-    {
-      "lat": 37.5,
-      "lng": 127.0,
-      "count": 15,
-      "avg_rating": 4.2
+      "review_count": 128
     }
   ]
 }
@@ -500,28 +479,7 @@ POST /api/auth/register
 
 ### 최적화 전략
 
-#### 1. 맵 클러스터링
-```javascript
-// 서버 측 클러스터링 (zoom level < 10)
-function clusterRestaurants(restaurants, zoomLevel) {
-  const precision = 10 - zoomLevel; // Geohash precision
-  const clusters = new Map();
-  
-  restaurants.forEach(r => {
-    const hash = geohash.encode(r.lat, r.lng, precision);
-    if (!clusters.has(hash)) {
-      clusters.set(hash, { count: 0, avgRating: 0, restaurants: [] });
-    }
-    const cluster = clusters.get(hash);
-    cluster.count++;
-    cluster.restaurants.push(r);
-  });
-  
-  return Array.from(clusters.values());
-}
-```
-
-#### 2. 캐싱 전략
+#### 1. 캐싱 전략
 - **CDN**: 정적 파일 (CloudFlare)
 - **Redis**: 
   - 맛집 목록 (TTL: 5분)
@@ -531,7 +489,7 @@ function clusterRestaurants(restaurants, zoomLevel) {
   - 이미지: 1개월
   - JS/CSS: 1주일 (버전닝)
 
-#### 3. DB 인덱싱
+#### 2. DB 인덱싱
 ```sql
 -- 필수 인덱스
 CREATE INDEX idx_restaurants_location ON restaurants USING GIST(ll_to_earth(lat, lng));
@@ -539,7 +497,7 @@ CREATE INDEX idx_reviews_restaurant_verified ON reviews(restaurant_id, is_verifi
 CREATE INDEX idx_leaderboard_score ON leaderboard(trust_score DESC, review_count DESC);
 ```
 
-#### 4. 이미지 최적화
+#### 3. 이미지 최적화
 - WebP 포맷 사용
 - Lazy loading
 - Thumbnail 생성 (150x150, 300x300, 600x600)
@@ -580,7 +538,7 @@ CREATE INDEX idx_leaderboard_score ON leaderboard(trust_score DESC, review_count
 │  필터 🔍  │           Google Map                 │ 상세   │
 │  리더보드 │                                      │       │
 │  리뷰 ✍️  │        🔥 🔥 ⭐                     │ ━━━  │
-│  서버비 💰│      ⭐   (클러스터 15)              │ 사진   │
+│  서버비 💰│      ⭐                          │ 사진   │
 │          │                                      │ ━━━  │
 │          │   🔥 ⭐ ⭐                           │ 정보   │
 │          │                                      │ ━━━  │
@@ -599,7 +557,6 @@ CREATE INDEX idx_leaderboard_score ON leaderboard(trust_score DESC, review_count
 | 쯔양 방문횟수   | ▲▼   | 범위 (쯔양이 여러번 다녀온 맛집)                                                                                                |
 | 사용자 방문횟수 | ▲▼   | 범위 (사용자들이 여러번 다녀온 맛집)                                                                                            |
 | 리뷰수          | ▲▼   | 범위 (리뷰가 많은 맛집)                                                                                                         |
-| AI 별점         | ▲▼   | 슬라이더 (1-10개, 1개=맛집X, 10개=맛집O)                                                                                        |
 
 ### 리뷰 작성 모달
 
@@ -793,8 +750,6 @@ class ReviewVerifier:
 - [ ] 관리자만 맛집 등록 가능
 - [ ] 등록 시 지도에 즉시 반영
 - [ ] 마커 클릭 시 상세 패널 표시
-- [ ] 줌 레벨별 클러스터링 동작
-- [ ] 별점 ≥4인 경우 🔥 마커 표시
 
 #### ✅ 리뷰 (게시판)
 - [ ] 인증사진 미업로드 시 등록 차단
@@ -813,7 +768,6 @@ class ReviewVerifier:
 
 #### ✅ 필터링 (행렬 테이블)
 - [ ] 카테고리 필터 적용 (15개 카테고리)
-- [ ] AI 별점 슬라이더 동작 (1-10개)
 - [ ] 쯔양 방문횟수 필터
 - [ ] 사용자 방문횟수 필터
 - [ ] 리뷰수 범위 필터
@@ -940,20 +894,18 @@ class ReviewVerifier:
 
 ```
 users (1) ──────< (N) reviews (N) >────── (1) restaurants
-  │                                              │
-  │                                              │
-  └─> (1:1) leaderboard                         │
-                                                 │
-server_costs (N) >────── (1) users (admin)      │
-                                                 │
-                              cluster_id ────────┘
+  │                                              
+  │                                              
+  └─> (1:1) leaderboard                         
+                                                 
+server_costs (N) >────── (1) users (admin)
 ```
 
 ---
 
 ## 예시 요청/응답
 
-### 맛집 목록 조회 (클러스터링)
+### 맛집 목록 조회
 ```bash
 curl -X GET "https://api.jjdong-map.com/api/restaurants?bbox=37.4,126.8,37.6,127.0&zoom=10" \
   -H "Authorization: Bearer eyJhbGc..."
@@ -962,13 +914,14 @@ curl -X GET "https://api.jjdong-map.com/api/restaurants?bbox=37.4,126.8,37.6,127
 **Response:**
 ```json
 {
-  "type": "cluster",
   "data": [
     {
-      "lat": 37.5,
-      "lng": 127.0,
-      "count": 15,
-      "avg_rating": 4.2,
+      "id": "uuid",
+      "name": "홍대 떡볶이",
+      "lat": 37.5563,
+      "lng": 126.9236,
+      "category": "분식",
+      "review_count": 128,
       "categories": ["한식", "중식", "분식", "치킨"]
     }
   ]
@@ -1058,8 +1011,8 @@ curl -X GET "https://api.jjdong-map.com/api/restaurants?bbox=37.4,126.8,37.6,127
 
 ---
 
-**문서 버전**: 2.2  
-**최종 수정**: 2025-10-21  
+**문서 버전**: 2.3  
+**최종 수정**: 2025-12-11  
 **작성자**: 제품팀
 
 ## 주요 변경 이력
