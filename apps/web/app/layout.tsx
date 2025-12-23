@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Serif_KR } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { QueryProvider } from "./providers";
 import { AppProviders } from "./app-providers";
 import { MainLayout } from "@/components/layout/MainLayout";
@@ -10,6 +11,7 @@ import "./globals.css";
 const notoSerifKR = Noto_Serif_KR({
     weight: ['400', '700'],
     display: 'swap',
+    subsets: ['latin'],
     variable: '--font-noto-serif',
 });
 
@@ -74,6 +76,9 @@ export default function RootLayout({
                 <link rel="preconnect" href="https://oapi.map.naver.com" crossOrigin="anonymous" />
                 <link rel="dns-prefetch" href="https://nrbe.pstatic.net" />
                 <link rel="dns-prefetch" href="https://kr-col-ext.nelo.navercorp.com" />
+                {/* [OPTIMIZATION] YouTube 썸네일 도메인 - LCP 개선 */}
+                <link rel="preconnect" href="https://img.youtube.com" crossOrigin="anonymous" />
+                <link rel="dns-prefetch" href="https://i.ytimg.com" />
             </head>
             <body className={notoSerifKR.className}>
                 <QueryProvider>
@@ -81,6 +86,7 @@ export default function RootLayout({
                         <MainLayout>{children}</MainLayout>
                     </AppProviders>
                 </QueryProvider>
+                <SpeedInsights />
             </body>
         </html>
     );

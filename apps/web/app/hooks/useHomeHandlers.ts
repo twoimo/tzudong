@@ -12,7 +12,7 @@ interface UseHomeHandlersProps {
         address: string;
         phone: string;
         category: string[];
-        youtube_reviews: { youtube_link: string; tzuyang_review: string; unique_id?: string }[];
+        youtube_reviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[];
     }>>;
     setIsEditModalOpen: React.Dispatch<React.SetStateAction<boolean>>;
     setSelectedRegion: React.Dispatch<React.SetStateAction<Region | null>>;
@@ -62,7 +62,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
     const handleRequestEditRestaurant = (restaurant: Restaurant) => {
         setRestaurantToEdit(restaurant);
 
-        const youtubeReviews: { youtube_link: string; tzuyang_review: string; unique_id?: string }[] = [];
+        const youtubeReviews: { youtube_link: string; tzuyang_review: string; restaurant_id: string }[] = [];
 
         if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
             restaurant.mergedRestaurants.forEach(record => {
@@ -70,7 +70,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
                     youtubeReviews.push({
                         youtube_link: record.youtube_link,
                         tzuyang_review: record.tzuyang_review,
-                        unique_id: record.unique_id || undefined
+                        restaurant_id: record.id // 각 레코드의 restaurants.id 저장
                     });
                 }
             });
@@ -79,7 +79,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
                 youtubeReviews.push({
                     youtube_link: restaurant.youtube_link,
                     tzuyang_review: restaurant.tzuyang_review,
-                    unique_id: restaurant.unique_id || undefined
+                    restaurant_id: restaurant.id // 해당 레코드의 restaurants.id 저장
                 });
             }
         }
@@ -132,6 +132,8 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
     const handleRestaurantSearch = (restaurant: Restaurant) => {
         setSearchedRestaurant(restaurant);
         setSelectedRestaurant(restaurant);
+        setPanelRestaurant(restaurant);
+        setIsPanelOpen(true);
     };
 
 

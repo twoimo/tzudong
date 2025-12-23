@@ -58,6 +58,27 @@ function levenshteinDistance(str1: string, str2: string): number {
 }
 
 /**
+ * 주소 정규화 함수
+ * - 층/호수 제거 (같은 건물 다른 층은 같은 주소로 취급)
+ * - 공백 및 특수문자 제거
+ * - 소문자 변환
+ * 
+ * 주의: use-restaurants.tsx의 normalizeAddress()와 동일하게 유지해야 함
+ */
+function normalizeAddress(address: string): string {
+  return address
+    // 층/호수 정보 제거 (같은 건물 다른 층은 같은 주소로 취급)
+    .replace(/지하\s*\d+\s*층/g, '')
+    .replace(/지상\s*\d+\s*층/g, '')
+    .replace(/\d+\s*층/g, '')
+    .replace(/\d+\s*호/g, '')
+    // 공백 및 특수문자 제거
+    .replace(/\s+/g, '')
+    .replace(/[^\w가-힣]/g, '')
+    .toLowerCase();
+}
+
+/**
  * 문자열 유사도 계산 (0-1 사이 값)
  */
 function calculateSimilarity(str1: string, str2: string): number {
@@ -77,7 +98,8 @@ function calculateSimilarity(str1: string, str2: string): number {
  * 
  * 검사 로직:
  * 1. status가 'approved'인 레스토랑 중에서만 검사
- * 2. 같은 지번주소 조회 (정확히 일치)
+ * 2. 정규화된 지번주소가 일치하는 레스토랑 필터링
+ *    - 정규화: 공백 제거, 층/호수 제거 (지하n층, 지상n층, n층, n호)
  * 3. 이름 유사도 85% 이상이면 중복으로 판정
  * 4. YouTube 링크는 중복 판단에 사용하지 않음 (상위에서 별도 처리)
  */
@@ -90,18 +112,20 @@ export async function checkRestaurantDuplicate(
   const NAME_SIMILARITY_THRESHOLD = 0.85; // 이름 유사도 85% 이상
 
   try {
+    const normalizedInputAddress = normalizeAddress(jibunAddress);
+    
     console.log('🔍 중복 검사 시작:', {
       name,
       jibunAddress,
+      normalizedAddress: normalizedInputAddress,
       restaurantId,
       youtubeLink,
     });
 
-    // 같은 지번주소의 승인된 맛집들 조회 (status = 'approved'만 대상)
+    // 모든 승인된 맛집들 조회 후 정규화된 주소로 필터링
     let query = supabase
       .from('restaurants')
       .select('id, name, jibun_address, road_address, status, youtube_link')
-      .eq('jibun_address', jibunAddress) // 정확히 같은 지번주소만
       .eq('status', 'approved'); // ✅ approved 상태만 검사
 
     // 수정 시 자기 자신 제외
@@ -109,22 +133,39 @@ export async function checkRestaurantDuplicate(
       query = query.neq('id', restaurantId);
     }
 
-    const { data: existingRestaurants, error } = await query;
+    const { data: allRestaurants, error } = await query;
 
     if (error) {
       console.error('❌ DB 조회 에러:', error);
       throw error;
     }
 
-    console.log('📊 같은 지번주소 approved 레스토랑:', existingRestaurants?.length || 0, '개');
+    // 타입 명시
+    type RestaurantRecord = {
+      id: string;
+      name: string;
+      jibun_address: string | null;
+      road_address: string | null;
+      status: string;
+      youtube_link: string | null;
+    };
 
-    if (!existingRestaurants || existingRestaurants.length === 0) {
-      console.log('✅ 중복 없음 (같은 지번주소에 approved 레스토랑 없음)');
+    const typedRestaurants = (allRestaurants || []) as RestaurantRecord[];
+
+    // 정규화된 주소가 일치하는 레스토랑만 필터링
+    const existingRestaurants = typedRestaurants.filter(r => 
+      r.jibun_address && normalizeAddress(r.jibun_address) === normalizedInputAddress
+    );
+
+    console.log('📊 정규화된 주소 일치 approved 레스토랑:', existingRestaurants.length, '개');
+
+    if (existingRestaurants.length === 0) {
+      console.log('✅ 중복 없음 (정규화된 주소 일치하는 approved 레스토랑 없음)');
       return { isDuplicate: false, similarityScore: 0 };
     }
 
     // 각 맛집과 유사도 비교
-    for (const restaurant of existingRestaurants as Array<{ id: string; name: string; jibun_address: string | null; road_address: string | null; status: string; youtube_link: string | null }>) {
+    for (const restaurant of existingRestaurants) {
       if (!restaurant.name) continue;
 
       const similarity = calculateSimilarity(name, restaurant.name);
@@ -166,8 +207,8 @@ export async function checkRestaurantDuplicate(
  * 오류 체크 함수
  * 
  * 충돌 조건:
- * 1. 같은 지번주소 + 같은 youtube_link + 다른 음식점명 → 오류 (name_mismatch)
- * 2. 같은 지번주소 + 같은 음식점명 + 다른 youtube_link → 병합 필요 (merge_needed)
+ * 1. 같은 정규화된 지번주소 + 같은 youtube_link + 다른 음식점명 → 오류 (name_mismatch)
+ * 2. 같은 정규화된 지번주소 + 같은 음식점명 + 다른 youtube_link → 병합 필요 (merge_needed)
  */
 export async function checkDbConflict(params: {
   jibunAddress: string;
@@ -181,13 +222,15 @@ export async function checkDbConflict(params: {
   const trimmedJibunAddress = jibunAddress.trim();
   const trimmedRestaurantName = restaurantName.trim();
   const trimmedYoutubeLink = youtubeLink.trim();
+  
+  // 주소 정규화 (층/호수 제거)
+  const normalizedInputAddress = normalizeAddress(trimmedJibunAddress);
 
   try {
-    // 같은 지번주소의 승인된 음식점만 검색 (status = 'approved')
+    // 모든 승인된 음식점 검색 후 정규화된 주소로 필터링
     let query = supabase
       .from('restaurants')
       .select('*')
-      .eq('jibun_address', trimmedJibunAddress)
       .eq('status', 'approved'); // 승인된 것만 검사
 
     // 수정 시 본인 제외
@@ -195,13 +238,10 @@ export async function checkDbConflict(params: {
       query = query.neq('id', excludeRestaurantId);
     }
 
-    const { data: existingRestaurants, error } = await query;
+    const { data: allRestaurants, error } = await query;
 
     if (error) throw error;
-    if (!existingRestaurants || existingRestaurants.length === 0) {
-      return { hasConflict: false };
-    }
-
+    
     // 타입 단언으로 Supabase 타입 문제 해결
     type RestaurantRecord = {
       id: string;
@@ -210,10 +250,19 @@ export async function checkDbConflict(params: {
       youtube_link: string | null;
     };
 
-    const typedRestaurants = existingRestaurants as RestaurantRecord[];
+    const typedAllRestaurants = (allRestaurants || []) as RestaurantRecord[];
+
+    // 정규화된 주소가 일치하는 레스토랑만 필터링
+    const existingRestaurants = typedAllRestaurants.filter(r =>
+      r.jibun_address && normalizeAddress(r.jibun_address) === normalizedInputAddress
+    );
+
+    if (existingRestaurants.length === 0) {
+      return { hasConflict: false };
+    }
 
     // 충돌 타입 1: 같은 주소 + 같은 youtube_link + 다른 음식점명
-    const nameMismatchConflicts = typedRestaurants.filter(restaurant =>
+    const nameMismatchConflicts = existingRestaurants.filter(restaurant =>
       restaurant.youtube_link === trimmedYoutubeLink &&
       restaurant.name.trim() !== trimmedRestaurantName
     );
@@ -228,7 +277,7 @@ export async function checkDbConflict(params: {
     }
 
     // 충돌 타입 2: 같은 주소 + 같은 음식점명 + 다른 youtube_link (병합 필요)
-    const mergeNeededRestaurants = typedRestaurants.filter(restaurant =>
+    const mergeNeededRestaurants = existingRestaurants.filter(restaurant =>
       restaurant.name.trim() === trimmedRestaurantName &&
       restaurant.youtube_link !== trimmedYoutubeLink
     );

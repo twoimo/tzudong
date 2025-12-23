@@ -15,7 +15,7 @@ export const useLeaderboard = () => {
         queryKey: ['leaderboard-all-users'],
         queryFn: async () => {
             try {
-                // Get all profiles (모든 사용자)
+                // [1단계] 모든 프로필 조회
                 const { data: profilesData, error: profilesError } = await (supabase
                     .from('profiles') as any)
                     .select('user_id, nickname')
@@ -31,7 +31,7 @@ export const useLeaderboard = () => {
                     return [];
                 }
 
-                // Get all reviews for these users
+                // [2단계] 해당 사용자들의 모든 리뷰 조회
                 const userIds = profilesData.map((profile: any) => profile.user_id);
                 const { data: allReviewsData, error: allReviewsError } = await (supabase
                     .from('reviews') as any)
@@ -42,7 +42,7 @@ export const useLeaderboard = () => {
                     console.warn('전체 리뷰 데이터 조회 실패:', allReviewsError.message);
                 }
 
-                // Get likes data for all reviews
+                // [3단계] 모든 리뷰의 좋아요 데이터 조회
                 let reviewIds: string[] = [];
                 if (allReviewsData) {
                     reviewIds = allReviewsData.map((review: any) => review.id);
@@ -57,12 +57,12 @@ export const useLeaderboard = () => {
                     console.warn('좋아요 데이터 조회 실패:', likesError.message);
                 }
 
-                // Create review stats maps
+                // 통계용 Map 생성
                 const reviewCountMap = new Map<string, number>();
                 const verifiedReviewCountMap = new Map<string, number>();
                 const totalLikesMap = new Map<string, number>();
 
-                // Create likes count map for each review
+                // 각 리뷰별 좋아요 수 Map 생성
                 const reviewLikesMap = new Map<string, number>();
                 if (likesData) {
                     likesData.forEach((like: any) => {
@@ -90,7 +90,7 @@ export const useLeaderboard = () => {
                     });
                 }
 
-                // Calculate user stats for all profiles
+                // [4단계] 각 사용자별 통계 계산
                 const users = profilesData.map((profile: any) => {
                     const reviewCount = reviewCountMap.get(profile.user_id) || 0;
                     const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
@@ -105,9 +105,9 @@ export const useLeaderboard = () => {
                     };
                 });
 
-                // Sort by review count and assign rank
+                // 승인된 리뷰 수 기준 내림차순 정렬 및 순위 부여
                 return users
-                    .sort((a: any, b: any) => b.reviewCount - a.reviewCount)
+                    .sort((a: any, b: any) => b.verifiedReviewCount - a.verifiedReviewCount)
                     .map((user: any, index: number) => ({
                         ...user,
                         rank: index + 1,

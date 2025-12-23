@@ -7,7 +7,7 @@
 set -e  # 에러 발생 시 즉시 종료
 
 # Gemini 모델 설정 (gemini-2.5-pro 사용)
-export GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-pro}"
+export GEMINI_MODEL="${GEMINI_MODEL:-gemini-1.5-pro}"
 
 # 한국 시간대 설정 (KST, UTC+9)
 export TZ="Asia/Seoul"

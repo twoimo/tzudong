@@ -14,10 +14,12 @@ declare global {
 interface UseNaverMapsOptions {
     /** true면 즉시 로드, false면 수동 로드 (기본값: false - 지연 로딩) */
     autoLoad?: boolean;
+    /** 로딩 전략: 'afterInteractive' (즉시 비동기) | 'lazyOnload' (지연 로드) */
+    strategy?: 'afterInteractive' | 'lazyOnload';
 }
 
 export function useNaverMaps(options: UseNaverMapsOptions = {}) {
-    const { autoLoad = false } = options;
+    const { autoLoad = false, strategy = 'afterInteractive' } = options;
 
     // 초기 상태를 스크립트 로드 여부로 설정 (페이지 전환 시 즉시 감지)
     const [isLoaded, setIsLoaded] = useState(() => {
@@ -38,7 +40,7 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
             return;
         }
 
-        // 이미 로드되었는지 확인
+        // 이미 로드되었는지 확인 - window 객체 재확인
         if (window.naver && window.naver.maps) {
             setIsLoaded(true);
             return;
@@ -67,38 +69,54 @@ export function useNaverMaps(options: UseNaverMapsOptions = {}) {
             return;
         }
 
-        // 스크립트 로드 시작
-        setIsLoading(true);
-        const script = document.createElement("script");
-        script.type = "text/javascript";
-        script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAPS_CONFIG.clientId}`;
-        script.async = true;
+        // 스크립트 로드 실행 함수
+        const injectScript = () => {
+            setIsLoading(true);
+            const script = document.createElement("script");
+            script.type = "text/javascript";
+            script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${NAVER_MAPS_CONFIG.clientId}`;
+            script.async = true;
 
-        script.onload = () => {
-            if (window.naver && window.naver.maps) {
-                setIsLoaded(true);
+            script.onload = () => {
+                if (window.naver && window.naver.maps) {
+                    setIsLoaded(true);
+                    setIsLoading(false);
+                } else {
+                    console.error("❌ 네이버 지도 API 초기화 실패");
+                    setLoadError(new Error("네이버 지도 API 초기화 실패"));
+                    setIsLoading(false);
+                }
+            };
+
+            script.onerror = (error) => {
+                console.error("❌ 네이버 지도 API 스크립트 로드 실패:", error);
+                setLoadError(
+                    new Error(
+                        "네이버 지도 API 스크립트 로드 실패 - Client ID 또는 웹 서비스 URL을 확인해주세요."
+                    )
+                );
                 setIsLoading(false);
+            };
+
+            document.head.appendChild(script);
+        };
+
+        // 전략에 따른 로드 실행
+        if (strategy === 'lazyOnload') {
+            // 브라우저 유휴 상태일 때 로드하거나 2초 후 로드
+            if ('requestIdleCallback' in window) {
+                (window as any).requestIdleCallback(() => injectScript(), { timeout: 2000 });
             } else {
-                console.error("❌ 네이버 지도 API 초기화 실패");
-                setLoadError(new Error("네이버 지도 API 초기화 실패"));
-                setIsLoading(false);
+                setTimeout(injectScript, 2000);
             }
-        };
+        } else {
+            // afterInteractive: 즉시 비동기 로드
+            injectScript();
+        }
 
-        script.onerror = (error) => {
-            console.error("❌ 네이버 지도 API 스크립트 로드 실패:", error);
-            setLoadError(
-                new Error(
-                    "네이버 지도 API 스크립트 로드 실패 - Client ID 또는 웹 서비스 URL을 확인해주세요."
-                )
-            );
-            setIsLoading(false);
-        };
+    }, [isLoaded, isLoading, strategy]);
 
-        document.head.appendChild(script);
-    }, [isLoaded, isLoading]);
-
-    // autoLoad가 true면 즉시 로드 (기존 동작)
+    // autoLoad가 true면 로드 시도
     useEffect(() => {
         if (autoLoad) {
             load();

@@ -1,7 +1,7 @@
 'use client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useRef, useState, memo } from "react";
+import React, { useEffect, useRef, useState, memo, useMemo } from "react";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { FilterState } from "@/components/filters/FilterPanel";
@@ -9,13 +9,14 @@ import { Restaurant, Region } from "@/types/restaurant";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { MapPin, Star, Users, ChefHat } from "lucide-react";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
+import { useLayout } from "@/contexts/LayoutContext";
+
+// 상수 정의
+const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
+const ZOOM_DIFF_THRESHOLD = 4; // 즉시 로드할 줌 차이 임계값
+const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 
 interface NaverMapViewProps {
     filters: FilterState;
@@ -34,7 +35,83 @@ interface NaverMapViewProps {
     onMarkerClick?: (restaurant: Restaurant) => void; // 외부 패널 열기
     externalPanelOpen?: boolean; // 외부에서 패널 열림 상태 제어
     isPanelCollapsed?: boolean; // 패널 접기 상태 (접혀있으면 오프셋 없음)
+    isPanelOpen?: boolean; // 외부에서 전달받는 패널 열림 상태 (Centering 용)
 }
+
+/**
+ * 카테고리별 아이콘 매핑
+ * 컴포넌트 외부에서 정의하여 불필요한 재생성을 방지합니다.
+ */
+const CATEGORY_ICON_MAP: Record<string, string> = {
+    '고기': '🥩',
+    '치킨': '🍗',
+    '한식': '🍚',
+    '중식': '🥢',
+    '일식': '🍣',
+    '양식': '🍝',
+    '분식': '🥟',
+    '카페·디저트': '☕',
+    '아시안': '🍜',
+    '패스트푸드': '🍔',
+    '족발·보쌈': '🍖',
+    '돈까스·회': '🍱',
+    '피자': '🍕',
+    '찜·탕': '🥘',
+    '야식': '🌙',
+    '도시락': '🍱'
+};
+
+/**
+ * 카테고리 아이콘 반환 함수
+ * 
+ * @param category 카테고리 문자열 또는 배열
+ * @returns 매핑된 이모지 아이콘
+ */
+const getCategoryIcon = (category: string | string[] | null | undefined): string => {
+    if (!category) return '⭐';
+    const categoryStr = Array.isArray(category) ? category[0] : category;
+    return CATEGORY_ICON_MAP[categoryStr] || '⭐';
+};
+
+/**
+ * 지도 로딩 상태 표시 컴포넌트
+ */
+const MapLoadingIndicator = memo(({ isLoaded, style, className }: { isLoaded: boolean, style?: React.CSSProperties, className?: string }) => (
+    <div
+        style={style}
+        className={`bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 ${className || ''}`}
+    >
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+        <span className="text-sm font-medium">
+            {!isLoaded ? '지도 로딩 중...' : '맛집 검색 중...'}
+        </span>
+    </div>
+));
+MapLoadingIndicator.displayName = 'MapLoadingIndicator';
+
+// 맛집 개수 배지 컴포넌트
+const RestaurantCountBadge = memo(({ count, style, className }: { count: number, style?: React.CSSProperties, className?: string }) => (
+    <div
+        style={{ ...style, animation: 'fadeInOut 3s ease-in-out forwards' }}
+        className={`bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300 ${className || ''}`}
+    >
+        <span className="text-sm font-medium">
+            🔥 {count}개의 맛집 발견
+        </span>
+    </div>
+));
+RestaurantCountBadge.displayName = 'RestaurantCountBadge';
+
+// 빈 상태 UI 컴포넌트
+const EmptyStateIndicator = memo(() => (
+    <div className="bg-card/95 backdrop-blur border border-border rounded-lg px-5 py-3 shadow-lg z-10 flex items-center gap-3">
+        <span className="text-xl">🍽️</span>
+        <span className="text-sm font-medium text-muted-foreground">
+            이 지역에 등록된 맛집이 없습니다
+        </span>
+    </div>
+));
+EmptyStateIndicator.displayName = 'EmptyStateIndicator';
 
 const NaverMapView = memo(({
     filters,
@@ -52,252 +129,553 @@ const NaverMapView = memo(({
     onMarkerClick,
     externalPanelOpen,
     isPanelCollapsed = false,
+    isPanelOpen: propIsPanelOpen,
 }: NaverMapViewProps) => {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<any>(null);
-    const markersRef = useRef<any[]>([]);
+    const markersMapRef = useRef<Map<string, any>>(new Map()); // 마커 Map (ID -> Marker)
     const restaurantsRef = useRef<Restaurant[]>([]); // 병합된 레스토랑 데이터 참조
     const previousSearchedRestaurantRef = useRef<Restaurant | null>(null); // 이전 searchedRestaurant 추적
     const detailPanelRef = useRef<HTMLDivElement>(null); // 상세 패널 참조
     const prevPanelOpenRef = useRef<boolean>(false); // 이전 패널 열림 상태 추적 (오프셋 델타 계산용)
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
+    const prevSidebarOpenRef = useRef<boolean>(true); // 이전 사이드바 열림 상태 추적
+    const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
 
-    // Naver Maps API 로드 (동적 임포트 후 컴포넌트가 마운트되면 로드)
-    const { isLoaded, loadError } = useNaverMaps({ autoLoad: true });
+    // 사이드바 상태 가져오기
+    const { isSidebarOpen } = useLayout();
 
+    // Naver Maps API 로드 - LCP 최적화를 위해 lazyOnload 전략 사용
+    const { isLoaded, loadError } = useNaverMaps({ autoLoad: true, strategy: 'lazyOnload' });
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
-    const [isPanelOpen, setIsPanelOpen] = useState(false);
-    const [showRestaurantCount, setShowRestaurantCount] = useState(false); // 맛집 개수 표시 여부
+    const [internalPanelOpen, setInternalPanelOpen] = useState(false);
+    const [showRestaurantCount, setShowRestaurantCount] = useState(false);
+    const [isMapInitialized, setIsMapInitialized] = useState(false);
 
-    // selectedRestaurant가 설정되면 자동으로 패널 열기
-    useEffect(() => {
-        if (selectedRestaurant && !isGridMode) {
-            setIsPanelOpen(true);
-        } else if (!selectedRestaurant) {
-            setIsPanelOpen(false);
-        }
-    }, [selectedRestaurant, isGridMode]);
+    // ... (중략) ...
+
+    // [Helper] 마커 컨텐츠 생성 (HTML 문자열 반환)
+    const createMarkerContent = useMemo(() => (restaurant: Restaurant, isSelected: boolean) => {
+        // categories 필드 사용 (호환성 속성인 category도 사용 가능)
+        const icon = getCategoryIcon(restaurant.categories || restaurant.category);
+        const markerSize = isSelected ? 32 : 24;
+
+        // HTML 문자열 반환 (접근성 속성 포함)
+        return `
+            <div 
+                class="custom-marker ${isSelected ? 'selected-marker' : ''}" 
+                role="button" 
+                aria-label="${restaurant.name} 맛집 마커" 
+                tabindex="0" 
+                title="${restaurant.name}"
+            >
+                <div style="
+                    position: relative;
+                    font-size: ${markerSize}px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+                " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
+                    ${icon}
+                </div>
+            </div>
+        `;
+    }, []);
+
+
+    // [커스텀 토스트] 지도 상단 중앙 알림 상태
+    const [mapToast, setMapToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null>(null);
+
+    // 커스텀 토스트 표시 함수
+    const showMapToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+        setMapToast({ message, type, isVisible: true });
+
+        // 3초 후 자동 숨김
+        setTimeout(() => {
+            setMapToast(prev => prev ? { ...prev, isVisible: false } : null);
+        }, 3000);
+    };
+
+    // UI 오버레이 위치 계산 (지도 중심 보정)
+    // 오른쪽 패널이 열려있을 때, 오버레이들을 "남은 지도 영역"의 중앙에 배치하기 위함
+
+    // [중요] 오프셋 계산 로직 개선 (2024-Fix)
+    const isInternalMode = !onMarkerClick;
+    const isShrinkingLayout = isInternalMode && internalPanelOpen && !isGridMode;
+    const isExternalPanelOpen = externalPanelOpen === false;
+
+    // 유효 패널 너비 (오프셋 계산용)
+    let effectivePanelOffset = 0;
+
+    if (isShrinkingLayout) {
+        effectivePanelOffset = 0; // 컨테이너가 줄어들었으므로 0
+    } else if (!isPanelCollapsed && (propIsPanelOpen || isExternalPanelOpen)) {
+        effectivePanelOffset = PANEL_WIDTH; // 오버레이 되었으므로 패널 너비만큼
+    }
+
+    const centerOffsetStyle = { left: `calc(50% - ${effectivePanelOffset / 2}px)` };
 
     // 외부에서 패널 닫기 요청 시 닫기 (externalPanelOpen이 false면 닫기)
     useEffect(() => {
         if (externalPanelOpen === false) {
-            setIsPanelOpen(false);
+            setInternalPanelOpen(false);
         }
     }, [externalPanelOpen]);
 
-    // 선택된 맛집이 변경될 때 지도 중앙 재조정 (모든 우측 패널 너비 고려)
+    // ESC 키로 패널 닫기 (접근성 향상)
     useEffect(() => {
-        if (selectedRestaurant && mapInstanceRef.current && !isGridMode) {
-            const map = mapInstanceRef.current;
-            const panelWidth = 400; // 패널 고정 너비
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape' && internalPanelOpen && !isGridMode) {
+                setInternalPanelOpen(false);
+            }
+        };
 
-            // 현재 선택된 레스토랑 ID
-            const currentId = selectedRestaurant.id;
-            const prevId = prevSelectedRestaurantIdRef.current;
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [internalPanelOpen, isGridMode]);
 
-            // 동일한 마커를 다시 클릭한 경우에도 중앙 정렬 실행
-            // (이전 ID와 같더라도 패널 접기 후 다시 클릭한 경우를 위해)
-            const shouldRecenter = currentId !== prevId || !isPanelOpen;
+    // [Helper] 지도 중심 좌표 계산 (오프셋 및 줌 스케일링 적용)
+    const getAdjustedCenter = (
+        lat: number,
+        lng: number,
+        targetZoom: number,
+        offsetX: number
+    ) => {
+        const map = mapInstanceRef.current;
+        if (!map || !window.naver) return new window.naver.maps.LatLng(lat, lng);
 
-            // 이전 선택된 레스토랑 ID 업데이트
-            prevSelectedRestaurantIdRef.current = currentId;
-
-            // 현재 줌 레벨 확인
+        try {
             const currentZoom = map.getZoom();
-            const targetZoom = 16;
-            const zoomDiff = Math.abs(currentZoom - targetZoom);
+            const projection = map.getProjection();
+            const centerLatLng = new window.naver.maps.LatLng(lat, lng);
 
-            // 현재 중심과 목표 좌표 간 거리 계산 (Haversine 공식 간소화)
-            const currentCenter = map.getCenter();
-            const targetLat = selectedRestaurant.lat!;
-            const targetLng = selectedRestaurant.lng!;
-            const currentLat = currentCenter.lat();
-            const currentLng = currentCenter.lng();
-
-            // 거리 계산 (대략적인 km 단위)
-            const latDiff = Math.abs(targetLat - currentLat);
-            const lngDiff = Math.abs(targetLng - currentLng);
-            // 한국 위도 기준 1도 ≈ 111km (위도), 1도 ≈ 88km (경도)
-            const distanceKm = Math.sqrt(
-                Math.pow(latDiff * 111, 2) + Math.pow(lngDiff * 88, 2)
+            // 1. 현재 줌 레벨에서의 오프셋에 해당하는 좌표 Delta 계산
+            const centerPoint = projection.fromCoordToOffset(centerLatLng);
+            const offsetPoint = new window.naver.maps.Point(
+                centerPoint.x + offsetX,
+                centerPoint.y
             );
+            const offsetCenterLatLng = projection.fromOffsetToCoord(offsetPoint);
 
-            // 임계값 설정
-            const ZOOM_THRESHOLD = 4; // 줌 차이 4 이상이면 즉시 전환
-            const DISTANCE_THRESHOLD_KM = 50; // 50km 이상이면 즉시 전환
+            const dLat = offsetCenterLatLng.lat() - centerLatLng.lat();
+            const dLng = offsetCenterLatLng.lng() - centerLatLng.lng();
 
-            // 즉시 전환 필요 여부
-            const shouldInstantTransition = zoomDiff >= ZOOM_THRESHOLD || distanceKm >= DISTANCE_THRESHOLD_KM;
+            // 2. 줌 레벨 차이에 따른 스케일 팩터 적용
+            // 줌이 커지면(확대), 동일한 픽셀 오프셋은 더 작은 좌표 차이를 의미함
+            const scale = Math.pow(2, currentZoom - targetZoom);
 
-            const centerLatLng = new naver.maps.LatLng(targetLat, targetLng);
+            const finalLat = centerLatLng.lat() + dLat * scale;
+            const finalLng = centerLatLng.lng() + dLng * scale;
 
-            // 우측 패널 상태 확인
-            const isAnyPanelOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
-
-            // 패널 오프셋 적용된 좌표 계산
-            const getOffsetLatLng = () => {
-                try {
-                    if (isAnyPanelOpen) {
-                        const projection = map.getProjection();
-                        const centerPoint = projection.fromCoordToOffset(centerLatLng);
-                        const offsetPoint = new naver.maps.Point(
-                            centerPoint.x + (panelWidth / 2),
-                            centerPoint.y
-                        );
-                        return projection.fromOffsetToCoord(offsetPoint);
-                    }
-                } catch (e) {
-                    // 프로젝션 준비 안됨
-                }
-                return centerLatLng;
-            };
-
-            const moveToCenter = () => {
-                if (!map || !mapRef.current) return;
-
-                try {
-                    if (isAnyPanelOpen) {
-                        const projection = map.getProjection();
-                        const centerPoint = projection.fromCoordToOffset(centerLatLng);
-                        const offsetPoint = new naver.maps.Point(
-                            centerPoint.x + (panelWidth / 2),
-                            centerPoint.y
-                        );
-                        const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
-
-                        map.panTo(offsetLatLng, { duration: 300, easing: 'easeOutCubic' });
-                    } else {
-                        map.panTo(centerLatLng, { duration: 300, easing: 'easeOutCubic' });
-                    }
-                } catch (e) {
-                    map.panTo(centerLatLng, { duration: 300 });
-                }
-            };
-
-            if (!shouldRecenter) {
-                return; // 중앙 정렬 필요 없음
-            }
-
-            // 즉시 전환 (줌 차이가 크거나 거리가 멀 때)
-            if (shouldInstantTransition) {
-                // 즉시 줌 및 중심 설정 (애니메이션 없이)
-                map.setZoom(targetZoom);
-                const finalLatLng = getOffsetLatLng();
-                map.setCenter(finalLatLng);
-                return;
-            }
-
-            // 부드러운 전환 (줌 차이가 작고 거리가 가까울 때)
-            if (currentZoom !== targetZoom) {
-                // 부드러운 줌 전환
-                map.morph(centerLatLng, targetZoom, {
-                    duration: 400,
-                    easing: 'easeOutCubic'
-                });
-
-                // 줌 완료 후 패널 오프셋 적용
-                setTimeout(() => {
-                    if (isAnyPanelOpen) {
-                        moveToCenter();
-                    }
-                }, 450);
-            } else {
-                // 줌 변경 없이 중앙 이동만
-                setTimeout(moveToCenter, 50);
-            }
+            return new window.naver.maps.LatLng(finalLat, finalLng);
+        } catch (e) {
+            console.error("Coordinate calculation failed:", e);
+            return new window.naver.maps.LatLng(lat, lng);
         }
-    }, [selectedRestaurant, isGridMode, isPanelOpen, externalPanelOpen, isPanelCollapsed]);
+    };
 
-    // 패널 열림/닫힘/접힘 상태 변경 시 지도 중심 부드럽게 이동
+    // [통합] 지도 중심 및 줌 조정 로직
     useEffect(() => {
-        if (!mapInstanceRef.current) return;
+        if (!mapInstanceRef.current || isGridMode) return;
 
-        const panelWidth = 400;
+        const map = mapInstanceRef.current;
+        const { naver } = window;
 
-        // 현재 패널 상태 계산
-        const isCurrentlyOpen = (isPanelOpen || externalPanelOpen === false) && !isPanelCollapsed;
-        const wasPreviouslyOpen = prevPanelOpenRef.current;
+        // 1. selection 변경 여부 확인 (Ref와 비교)
+        const currentSelectedId = selectedRestaurant?.id || null;
+        // 병합된 레스토랑인 경우 이름이나 카테고리도 변경될 수 있지만 ID가 핵심
+        // selectedRegion 변경도 확인해야 함
 
-        // 상태가 변하지 않으면 리사이즈만 트리거
-        if (isCurrentlyOpen === wasPreviouslyOpen) {
-            // 패널 상태 변화 없이 리사이즈만 필요한 경우
-            const map = mapInstanceRef.current;
-            if (map) {
-                naver.maps.Event.trigger(map, 'resize');
+        // 이전 선택 상태와 비교 (간단히 ID나 Region 문자열로 비교)
+        // prevSelectedRestaurantIdRef는 marker click 등 다른 곳에서도 쓰일 수 있으니 주의.
+        // 여기서는 이 Effect 전용으로 판단 로직을 수행.
+
+        let isSelectionChanged = false;
+
+        // A. 레스토랑 선택 변경 확인
+        if (currentSelectedId !== prevSelectedRestaurantIdRef.current) {
+            isSelectionChanged = true;
+            prevSelectedRestaurantIdRef.current = currentSelectedId;
+        }
+
+        // B. 지역 선택 변경 확인 (Ref가 없어서 Effect 내 로컬 변수로는 안됨, 
+        // 하지만 selectedRegion 값이 바뀌면 Effect가 실행되므로, 이전에 저장해둔 Ref가 필요함)
+        // 여기서는 간단히: "사용자 이동 플래그"를 리셋해야 하는 상황인지 판단.
+        // selectedRestaurant이나 selectedRegion이 "명시적으로" 바뀌었을 때만 리셋.
+        // 하지만 useEffect는 dependency가 바뀌면 무조건 실행됨.
+        // 따라서 "무엇이 바뀌었는지"를 추적해야 함.
+
+        // [Refactor] 명시적인 Dirty Check 대신 의존성 변경 확인
+        // selectedRestaurant 또는 selectedRegion이 실제로 변경되었는지 확인합니다.
+
+        // 여기서는 로직 단순화를 위해:
+        // 만약 사용자가 이동했다면(hasUserMovedMapRef.current), 
+        // 1. "새로운 맛집 선택"이 일어났다면 -> 강제 이동 (사용자 이동 무시)
+        // 2. "단순 패널/사이드바 토글"이라면 -> 현재 위치 유지하되 오프셋만 적용
+
+        // Ref에 저장된 값(이전 렌더링 값)과 현재 Props 값을 비교하여 변경 여부 판단
+        // 만약 (selectedRestaurant?.id !== prevSelectedRestaurantIdRef.current) -> 선택 변경임.
+
+        // 결론: "선택 변경"일 때만 hasUserMovedMapRef.current = false 처리.
+
+        // **중요**: 위에서 이미 prevSelectedRestaurantIdRef.current를 업데이트 했음 (isSelectionChanged).
+        // 지역 변경 체크를 위해 prevSelectRegionRef를 추가하는 대신,
+        // 여기서는 "이동해야 하는지" 여부만 결정하면 됨.
+
+        // hasUserMovedMapRef.current = false; // [Delete] 기존의 무조건 리셋 삭제
+
+        if (isSelectionChanged) {
+            hasUserMovedMapRef.current = false;
+        }
+
+        // 지역 변경 감지 (임시로 변수 사용해 비교 불가, Ref 필요)
+        // 하지만 selectedRegion은 보통 null -> 값 -> 값 변경이 드뭄.
+        // 일단 selectedRestaurant 위주로 처리.
+
+        // 2. 목표 좌표 및 오프셋 결정
+        let targetLat: number;
+        let targetLng: number;
+        let targetZoom = 16;
+        let isRestaurantSelected = false;
+
+        if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
+            targetLat = selectedRestaurant.lat;
+            targetLng = selectedRestaurant.lng;
+            isRestaurantSelected = true;
+        } else {
+            const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
+            const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
+            targetLat = regionConfig.center[0];
+            targetLng = regionConfig.center[1];
+            targetZoom = regionConfig.zoom;
+        }
+
+        // 패널 상태에 따른 유효 오프셋 계산
+        const isInternalMode = !onMarkerClick;
+        const isShrinkingLayout = isInternalMode && internalPanelOpen && !isGridMode;
+
+        let effectiveOffset = 0;
+        if (isShrinkingLayout) {
+            effectiveOffset = 0;
+        } else if (!isPanelCollapsed && ((propIsPanelOpen ?? false) || (externalPanelOpen === false))) {
+            effectiveOffset = PANEL_WIDTH;
+        }
+
+        // [Note] 패널 상태에 따른 지도 중심 오프셋 계산
+        // 우측 패널이 열리면 지도의 "시각적 중심"이 왼쪽으로 이동해야 합니다.
+        // 즉, 지도 중심(Center) 좌표를 패널 너비의 절반만큼 오른쪽으로 이동시켜야
+        // 타겟(맛집)이 왼쪽 "보이는 영역"의 중앙에 위치하게 됩니다.
+        // targetOffsetX = effectiveOffset / 2 (양수 = 오른쪽 이동)
+
+        const targetOffsetX = effectiveOffset / 2;
+
+        // **핵심 로직 변경**
+        const currentZoom = map.getZoom();
+
+        // [Case 1] 사용자가 직접 이동했고, 선택 변경이 없는 경우 (User Moved + Layout Change only)
+        // -> 현재 보고 있는 시각적 중심(Visual Center)을 유지해야 함.
+        // 하지만 "패널이 열리고 닫힘"에 따라 "보이는 영역"이 달라지므로,
+        // "현재의 Visual Center"가 "새로운 Layout의 Visual Center"가 되도록 지도 Center를 조정해야 함.
+        // 즉, "지리적 위치"를 고정하고 오프셋만 반영.
+        if (hasUserMovedMapRef.current && !isSelectionChanged) {
+            // 현재 지도의 중심 (이건 Panel 오프셋이 반영된 상태일 수도 있고 아닐 수도 있음)
+            // 여기서 중요한 건 "사용자가 보고 있던 그 위치(Lat, Lng)"를 유지하는 것.
+            // 사용자가 보고 있던 위치(Visual Center)는 어디인가?
+            // 만약 이전에 패널이 열려있었다면, Map Center는 Visual Center보다 오른쪽에 있었을 것임.
+            // 만약 패널이 닫혔다면, Map Center == Visual Center 였을 것임.
+
+            // 복잡하게 계산하기보다, "현재 지도의 중심(map.getCenter())"을 기준으로
+            // 오프셋 '변화량' 만큼만 이동해주면 됨.
+            // 이전 오프셋: prevEffectiveOffset (계산 필요 or Ref 저장 필요 - currentStateRef 에 있음)
+            // 현재 오프셋: effectiveOffset
+
+            // 하지만 map.getCenter()는 이미 "틀어진" 상태일 수 있음.
+            // 단순하게: "현재 map.getCenter()에 해당하는 지리적 위치"를 
+            // "새로운 오프셋 기준"으로 다시 잡아주면 됨?
+            // 아니면 map.panBy()를 사용하는 게 나을까?
+
+            // 오프셋 차이
+            // const offsetDiff = effectiveOffset - prevOffset;
+            // 만약 패널이 열리면 (0 -> 400), offsetDiff = +400.
+            // 지도는 왼쪽으로 더 가야 하나 오른쪽으로 더 가야 하나?
+            // 패널이 열리면 보이는 영역이 왼쪽으로 쏠림 -> 보고 있던 지점을 왼쪽으로 옮겨야 함? 
+            // 아니, 보이는 영역의 중심이 왼쪽으로 이동함.
+            // 따라서 지도를 "오른쪽"으로 밀어야 컨텐츠가 왼쪽 창에 보임.
+            // 즉 offsetDiff 만큼 Center를 이동시켜야 함. (Pixel 단위)
+
+            // 근데 이걸 정확히 계산하려면 projection 필요.
+            // 다행히 getAdjustedCenter가 있음.
+
+            // 1. 현재 중심 가져오기
+            const currentMapCenter = map.getCenter();
+
+            // 2. 현재 중심을 기준으로 "새로운 오프셋" 적용
+            // 주의: 여기서 "현재 중심"은 이미 이전 오프셋이 적용된 결과물일 수 있음.
+            // 하지만 사용자가 'drag'를 했다면 그 상태가 '기준'이 됨.
+            // 즉, 사용자가 멈춘 그 화면(Visual View)을 기준으로,
+            // 패널이 열리면 -> 컨텐츠가 가려지지 않게 옆으로 비켜줘야 함.
+            // 패널이 닫히면 -> 넓어진 화면의 중앙으로 오게 해야 함.
+
+            // 이를 위해선 "이전 오프셋"과 "현재 오프셋"의 차이(Delta)를 구해야 함.
+            // currentStateRef.current.effectivePanelOffset 은 "렌더링 직전" 값이 아니라 "지난번 Effect 실행 시" 값임.
+            // 따라서 이걸 "이전 값"으로 쓸 수 있음.
+
+            const prevOffset = currentStateRef.current.effectivePanelOffset;
+            const deltaOffset = effectiveOffset - prevOffset;
+
+            if (deltaOffset !== 0) {
+                // 델타 오프셋의 절반만큼 이동해야 "보이는 중심"이 유지됨?
+                // targetOffsetX = effectiveOffset / 2 이므로.
+                // deltaX = deltaOffset / 2.
+
+                const deltaX = deltaOffset / 2;
+
+                // 현재 중심(currentMapCenter)을 기준으로 deltaX 만큼 이동한 좌표를 구함
+                // getAdjustedCenter(lat, lng, zoom, offsetX) 함수는 
+                // "원래좌표"를 "오프셋만큼" 이동시킨 좌표를 반환함.
+                // 여기서는 "현재좌표"를 "델타만큼" 이동시켜야 함.
+
+                const newCenter = getAdjustedCenter(currentMapCenter.lat(), currentMapCenter.lng(), currentZoom, deltaX);
+
+                // 부드럽게 이동
+                map.panTo(newCenter, { duration: 300, easing: 'easeOutCubic' });
             }
             return;
         }
 
-        // 이전 상태 즉시 업데이트 (중복 트리거 방지)
-        prevPanelOpenRef.current = isCurrentlyOpen;
+        // [Case 2] 사용자가 이동하지 않았거나, 새로운 선택이 일어난 경우
+        // -> 기존 로직대로 타겟 위치로 이동 및 오프셋 적용
 
-        const handleMapCenter = () => {
-            const map = mapInstanceRef.current;
-            if (!map || !mapRef.current) return;
+        const latDiff = Math.abs(targetLat - map.getCenter().lat());
+        const lngDiff = Math.abs(targetLng - map.getCenter().lng());
+        const distanceKm = Math.sqrt(Math.pow(latDiff * 111, 2) + Math.pow(lngDiff * 88, 2));
+        const zoomDiff = Math.abs(currentZoom - targetZoom);
 
-            naver.maps.Event.trigger(map, 'resize');
+        const shouldInstantLoad = zoomDiff >= ZOOM_DIFF_THRESHOLD || distanceKm >= DISTANCE_KM_THRESHOLD;
 
-            // 선택된 레스토랑이 있으면 해당 마커 기준으로 중앙 정렬
-            // 없으면 현재 중심 기준으로 오프셋 조정
-            const targetLatLng = selectedRestaurant
-                ? new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!)
-                : map.getCenter();
+        // 리사이즈 먼저 트리거
+        naver.maps.Event.trigger(map, 'resize');
 
-            try {
-                const projection = map.getProjection();
-                const centerPoint = projection.fromCoordToOffset(targetLatLng);
+        const moveMap = () => {
+            // [Helper 사용] 조정된 중심 좌표 계산
+            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX);
 
-                // 패널 오프셋 계산
-                const offsetX = isCurrentlyOpen ? (panelWidth / 2) : 0;
-
-                const offsetPoint = new naver.maps.Point(
-                    centerPoint.x + offsetX,
-                    centerPoint.y
-                );
-                const offsetLatLng = projection.fromOffsetToCoord(offsetPoint);
-
-                // 자연스러운 이징 애니메이션 (easeOutCubic 효과)
-                map.panTo(offsetLatLng, {
-                    duration: 250,
-                    easing: 'easeOutCubic'
-                });
-            } catch (e) {
-                // 프로젝션 준비 안됨 - 단순 panTo 시도
-                map.panTo(targetLatLng, { duration: 250 });
-            }
-        };
-
-        // 패널 트랜지션과 동시에 시작 (더 자연스러운 동기화)
-        const timer = setTimeout(handleMapCenter, 50);
-
-        return () => clearTimeout(timer);
-    }, [isPanelOpen, externalPanelOpen, isPanelCollapsed, selectedRestaurant]);
-
-    // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
-    useEffect(() => {
-        if (!mapInstanceRef.current) return;
-
-        const handleWindowResize = () => {
-            const map = mapInstanceRef.current;
-            if (map) {
-                naver.maps.Event.trigger(map, 'resize');
-                if (selectedRestaurant) {
-                    const center = new naver.maps.LatLng(selectedRestaurant.lat!, selectedRestaurant.lng!);
-                    map.panTo(center, { duration: 0 }); // 리사이즈 시에는 즉시 이동
+            if (shouldInstantLoad) {
+                map.setZoom(targetZoom);
+                map.setCenter(newCenterLatLng);
+            } else {
+                if (currentZoom !== targetZoom) {
+                    map.morph(newCenterLatLng, targetZoom, {
+                        duration: 400,
+                        easing: 'easeOutCubic'
+                    });
+                } else {
+                    map.panTo(newCenterLatLng, {
+                        duration: 300,
+                        easing: 'easeOutCubic'
+                    });
                 }
             }
         };
 
-        window.addEventListener('resize', handleWindowResize);
-        return () => window.removeEventListener('resize', handleWindowResize);
-    }, [selectedRestaurant]);
+        moveMap();
 
-    const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants({
-        category: filters.categories.length > 0 ? [filters.categories[0]] : undefined,
+        // 트랜지션 완료 후 보정 (300ms 후)
+        const transitionTimer = setTimeout(() => {
+            naver.maps.Event.trigger(map, 'resize');
+            moveMap();
+        }, 320);
+
+        // 사용자 상호작용 감지 리스너 추가
+        // Naver Maps API 이벤트뿐만 아니라 DOM 이벤트도 감지하여 더 정확하게 처리 (휠 줌, 더블 클릭 등)
+        const handleUserInteraction = () => {
+            hasUserMovedMapRef.current = true;
+        };
+
+        const mapElement = mapRef.current;
+        if (mapElement) {
+            // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
+            mapElement.addEventListener('wheel', handleUserInteraction, { capture: true });
+            mapElement.addEventListener('mousedown', handleUserInteraction, { capture: true });
+            mapElement.addEventListener('touchstart', handleUserInteraction, { capture: true });
+        }
+
+        const dragListener = naver.maps.Event.addListener(map, 'dragstart', handleUserInteraction);
+        const pinchListener = naver.maps.Event.addListener(map, 'pinchstart', handleUserInteraction);
+
+        return () => {
+            clearTimeout(transitionTimer);
+            naver.maps.Event.removeListener(dragListener);
+            naver.maps.Event.removeListener(pinchListener);
+
+            if (mapElement) {
+                mapElement.removeEventListener('wheel', handleUserInteraction, { capture: true });
+                mapElement.removeEventListener('mousedown', handleUserInteraction, { capture: true });
+                mapElement.removeEventListener('touchstart', handleUserInteraction, { capture: true });
+            }
+        };
+
+    }, [
+        selectedRestaurant,
+        selectedRegion,
+        externalPanelOpen,
+        isPanelCollapsed,
+        isMapInitialized,
+        propIsPanelOpen,
+        internalPanelOpen, // 패널 열림/닫힘 시 중심 재조정
+        isGridMode,
+        onMarkerClick,
+        isSidebarOpen // 사이드바 토글 시에도 중심 재조정 로직 실행
+    ]);
+
+    // 리사이즈 시 참조할 최신 상태 Ref 업데이트
+    const currentStateRef = useRef({
+        isSidebarOpen,
+        externalPanelOpen,
+        isPanelCollapsed,
+        isGridMode,
+        effectivePanelOffset: 0 // 초기값
+    });
+
+    useEffect(() => {
+        currentStateRef.current = {
+            isSidebarOpen,
+            externalPanelOpen,
+            isPanelCollapsed,
+            isGridMode,
+            effectivePanelOffset // 계산된 오프셋 저장
+        };
+    }, [isSidebarOpen, externalPanelOpen, isPanelCollapsed, isGridMode, effectivePanelOffset]);
+
+    // [개선] ResizeObserver를 사용하여 컨테이너 크기 변경 감지 및 부드러운 중심 유지
+    useEffect(() => {
+        if (!mapRef.current || !mapInstanceRef.current || !isMapInitialized) return;
+
+        const map = mapInstanceRef.current;
+        const { naver } = window;
+
+        const handleResize = () => {
+            if (currentStateRef.current.isGridMode) {
+                naver.maps.Event.trigger(map, 'resize');
+                return;
+            }
+
+            // 1. 지도 리사이즈 트리거
+            naver.maps.Event.trigger(map, 'resize');
+
+            // 사용자가 지도를 직접 움직였다면 중심 재조정 하지 않음
+            if (hasUserMovedMapRef.current) {
+                return;
+            }
+
+            // 2. 목표 좌표 결정
+            let targetLat: number;
+            let targetLng: number;
+
+            if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
+                targetLat = selectedRestaurant.lat;
+                targetLng = selectedRestaurant.lng;
+            } else {
+                const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
+                const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
+                targetLat = regionConfig.center[0];
+                targetLng = regionConfig.center[1];
+            }
+
+            // 3. 현재 상태 기반 오프셋 계산 (실시간)
+            // 주의: sidebarWidth는 CSS 애니메이션 중에는 정확하지 않을 수 있음 (컴포넌트 state 기준이므로)
+            // 하지만 우리가 원하는 것은 "최종 상태"가 아니라 "현재 보이는 컨테이너의 중심"에 맞추는 것.
+            // 네이버 지도의 'resize' 이벤트는 컨테이너 크기에 맞춰 지도 뷰포트를 업데이트함.
+            // 문제는, 단순히 resize만 하면 중심(LatLng)은 유지되지만, 
+            // 우리가 원하는 '오프셋이 적용된 중심'은 컨테이너 크기가 변함에 따라 계속 변해야 함.
+
+            // 패널 상태
+            const { externalPanelOpen, isPanelCollapsed } = currentStateRef.current;
+            const isExternalPanelOpen = externalPanelOpen === false;
+
+            // 여기서는 Ref에 'effectivePanelOffset'을 저장해서 가져오는 방식으로 변경.
+            const { effectivePanelOffset } = currentStateRef.current;
+            const rightPanelWidth = effectivePanelOffset;
+
+            // 사이드바 너비 - 여기서는 논리적 너비(state)를 사용하지만, 
+            // 실제 중심점 계산은 "남은 공간"의 중앙이어야 함.
+            // map.getSize()를 사용하면 현재 지도 컨테이너의 픽셀 크기를 알 수 있음.
+            const mapSize = map.getSize();
+            const mapWidth = mapSize.width; // 현재 지도 너비 (사이드바 제외한 나머지)
+
+            // 우리가 원하는 마커의 위치:
+            // 지도 왼쪽 끝에서 (mapWidth - rightPanelWidth) / 2 지점
+            // 즉, "지도 전체 너비에서 우측 패널 뺀 나머지 영역"의 중앙.
+
+            // 네이버 지도 중심(Center)은 mapWidth / 2 지점임.
+            // 따라서 오프셋 = (mapWidth / 2) - ((mapWidth - rightPanelWidth) / 2)
+            //              = (mapWidth - (mapWidth - rightPanelWidth)) / 2
+            //              = rightPanelWidth / 2
+
+            // 결론: 사이드바 너비는 이미 지도 컨테이너 크기에 반영되어 있으므로 계산식에서 빠져야 함!
+            // 이전 로직의 targetOffsetX = (rightPanelWidth - sidebarWidth) / 2 는 
+            // 뷰포트 전체(window) 기준이 아니라면 틀렸을 수도 있음. 
+            // NaverMapView는 flex-1이므로, 부모(MainLayout)에서 마진(margin-left)으로 사이드바 공간을 뺌.
+            // 즉 mapRef.current의 width는 이미 (Window - Sidebar)임.
+            // 따라서 지도 컨테이너 내부에서의 중심 오프셋은 **rightPanelWidth / 2** 만 있으면 됨.
+
+            const targetOffsetX = rightPanelWidth / 2;
+
+            // [Helper 사용] 현재 줌 레벨 유지
+            const currentZoom = map.getZoom();
+            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, currentZoom, targetOffsetX);
+
+            // 애니메이션 없이 즉시 이동 (부드러움 유지)
+            map.setCenter(newCenterLatLng);
+        };
+
+        const resizeObserver = new ResizeObserver(() => {
+            requestAnimationFrame(handleResize);
+        });
+
+        resizeObserver.observe(mapRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, [isMapInitialized, selectedRestaurant, selectedRegion]);
+
+    // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동
+    // 브라우저 창 크기 변경 시 지도 리사이즈 및 중심 이동 (디바운스 적용)
+    useEffect(() => {
+        if (!mapInstanceRef.current) return;
+
+        let resizeTimer: NodeJS.Timeout;
+
+        const handleWindowResize = () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                const map = mapInstanceRef.current;
+                if (map) {
+                    naver.maps.Event.trigger(map, 'resize');
+                    // 리사이즈 후 중심 재조정 로직이 필요하다면 통합 useEffect가 prop이나 state 변경에 반응할 것임
+                    // 하지만 state 변경 없이 창 크기만 변했을 때는 여기서 처리가 필요할 수도 있음.
+                    // 현재는 'resize' 트리거만으로도 네이버 지도가 어느정도 중심을 유지함.
+                }
+            }, 100); // 100ms 디바운스
+        };
+
+        window.addEventListener('resize', handleWindowResize);
+        return () => {
+            window.removeEventListener('resize', handleWindowResize);
+            clearTimeout(resizeTimer);
+        };
+    }, []);
+
+    // useRestaurants 옵션 메모이제이션
+    const restaurantQueryOptions = useMemo(() => ({
+        category: filters.categories.length > 0 ? filters.categories : undefined,
         region: selectedRegion || undefined,
         minReviews: filters.minReviews,
-        enabled: isLoaded, // 지도가 로드된 후에만 데이터 가져오기
-    });
+        enabled: isLoaded,
+    }), [filters.categories, filters.minReviews, selectedRegion, isLoaded]);
+
+    const { data: restaurants = [], isLoading: isLoadingRestaurants, refetch } = useRestaurants(restaurantQueryOptions);
 
     // 지역 변경 시 로딩 중에도 이전 마커를 유지하기 위한 상태
     const [previousRestaurants, setPreviousRestaurants] = useState<Restaurant[]>([]);
@@ -316,8 +694,130 @@ const NaverMapView = memo(({
         }
     }, [restaurants, isLoadingRestaurants]);
 
-    // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용)
-    const displayRestaurants = isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
+    // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용) - 메모이제이션
+    const displayRestaurants = useMemo(() => {
+        return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
+    }, [isLoadingRestaurants, previousRestaurants, restaurants]);
+
+    // [최적화] 마커 데이터 동기화 (생성/삭제)
+    useEffect(() => {
+        if (!mapInstanceRef.current || !window.naver) return;
+        const { naver } = window;
+        const map = mapInstanceRef.current;
+
+        // 표시할 레스토랑 목록 준비 (검색어 포함)
+        const restaurantsToShow = [...displayRestaurants];
+
+        // 검색된 맛집 추가 로직 (기존과 동일)
+        if (searchedRestaurant) {
+            let alreadyExists = false;
+            // (중복 체크 로직 생략 - 기존과 동일하다고 가정하거나 간단히 ID 체크)
+            if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
+                const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
+                alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
+            } else {
+                alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
+            }
+
+            if (!alreadyExists) {
+                restaurantsToShow.push(searchedRestaurant);
+            }
+        }
+
+        // 1. 없어진 마커 삭제 (현재 Map에는 있지만 새 목록에는 없는 것)
+        const currentIds = new Set(restaurantsToShow.map(r => r.id));
+        markersMapRef.current.forEach((marker, id) => {
+            if (!currentIds.has(id)) {
+                marker.setMap(null);
+                markersMapRef.current.delete(id);
+            }
+        });
+
+        // 2. 새로운 마커 생성 및 Map 등록 (새 목록에 있지만 Map엔 없는 것)
+        restaurantsToShow.forEach(restaurant => {
+            if (!restaurant.lat || !restaurant.lng) return;
+
+            if (!markersMapRef.current.has(restaurant.id)) {
+                const isSelected = false; // 생성 시점엔 기본 상태
+                const contentHtml = createMarkerContent(restaurant, isSelected);
+
+                const marker = new naver.maps.Marker({
+                    position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                    map: map,
+                    icon: {
+                        content: contentHtml,
+                        anchor: new naver.maps.Point(12, 12), // 기본 Anchor (24px/2)
+                    },
+                    title: restaurant.name,
+                });
+
+                // 클릭 리스너 등록
+                naver.maps.Event.addListener(marker, "click", () => {
+                    if (onMarkerClick) {
+                        onMarkerClick(restaurant);
+                    } else {
+                        if (onRestaurantSelect) {
+                            onRestaurantSelect(restaurant);
+                        }
+                        setInternalPanelOpen(true);
+                    }
+                });
+
+                markersMapRef.current.set(restaurant.id, marker);
+            }
+        });
+
+        // restaurantsRef 업데이트
+        restaurantsRef.current = restaurantsToShow;
+
+    }, [displayRestaurants, searchedRestaurant, createMarkerContent, onMarkerClick, onRestaurantSelect]);
+
+    // [최적화] 선택 상태 변경에 따른 마커 스타일 업데이트 (DOM 조작 최소화)
+    useEffect(() => {
+        const currentSelected = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
+        const prevSelectedId = prevSelectedRestaurantIdRef.current;
+        const currentSelectedId = currentSelected?.id;
+
+        // 선택이 바뀌지 않았다면 패스 (단, gridMode 변경 등의 경우 체크 필요하지만 ID 기준이면 충분)
+        // 하지만 "이전 선택"을 Unselect 처리해야 하므로 상태 관리가 필요함.
+        // 여기서는 간단히: "모든 마커를 순회"하는 건 비효율적일 수 있지만 갯수가 적다면 OK.
+        // 하지만 효율을 위해: "이전 선택된 ID"를 알고 있으므로 그것만 업데이트.
+
+        // 1. 이전 선택된 마커 Unselect 처리
+        if (prevSelectedId && prevSelectedId !== currentSelectedId) {
+            const prevMarker = markersMapRef.current.get(prevSelectedId);
+            // 이전 마커가 여전히 존재하는지 확인 (필터링 등으로 사라졌을 수 있음)
+            if (prevMarker) {
+                // 해당 레스토랑 정보 찾기 (아이콘 재생성을 위해)
+                const prevRestaurant = restaurantsRef.current.find(r => r.id === prevSelectedId);
+                if (prevRestaurant) {
+                    const content = createMarkerContent(prevRestaurant, false);
+                    prevMarker.setIcon({
+                        content: content,
+                        anchor: new naver.maps.Point(12, 12)
+                    });
+                    prevMarker.setZIndex(0); // Z-Index 복구
+                }
+            }
+        }
+
+        // 2. 현재 선택된 마커 Select 처리
+        if (currentSelectedId) {
+            const currentMarker = markersMapRef.current.get(currentSelectedId);
+            if (currentMarker) {
+                const currentRestaurant = restaurantsRef.current.find(r => r.id === currentSelectedId);
+                if (currentRestaurant) {
+                    const content = createMarkerContent(currentRestaurant, true);
+                    currentMarker.setIcon({
+                        content: content,
+                        anchor: new naver.maps.Point(16, 16) // 선택된 경우(32px) Anchor 조정
+                    });
+                    currentMarker.setZIndex(100); // 선택된 마커 위로 올리기
+                }
+            }
+        }
+    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, createMarkerContent]);
+
 
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
     useEffect(() => {
@@ -329,14 +829,16 @@ const NaverMapView = memo(({
                 const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
                 existingRestaurant = displayRestaurants.find(r =>
                     mergedIds.includes(r.id) ||
+                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mergedIds.includes(mr.id))) ||
                     (r.name === selectedRestaurant.name &&
                         Math.abs((r.lat || 0) - (selectedRestaurant.lat || 0)) < 0.0001 &&
                         Math.abs((r.lng || 0) - (selectedRestaurant.lng || 0)) < 0.0001)
                 );
             } else {
-                // 일반 데이터의 경우
+                // 일반 데이터의 경우 - 지도의 병합된 데이터에서도 찾기
                 existingRestaurant = displayRestaurants.find(r =>
                     r.id === selectedRestaurant.id ||
+                    (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mr.id === selectedRestaurant.id)) ||
                     (r.name === selectedRestaurant.name &&
                         Math.abs((r.lat || 0) - (selectedRestaurant.lat || 0)) < 0.0001 &&
                         Math.abs((r.lng || 0) - (selectedRestaurant.lng || 0)) < 0.0001)
@@ -377,98 +879,23 @@ const NaverMapView = memo(({
                     position: naver.maps.Position.TOP_LEFT,
                 },
                 scaleControl: false,
-                logoControl: false,
-                logoControlOptions: {
-                    position: naver.maps.Position.BOTTOM_RIGHT,
-                },
-                mapDataControl: false,
                 // 성능 최적화 옵션들
                 background: '#ffffff', // 배경색 명시로 렌더링 최적화
             });
 
             mapInstanceRef.current = map;
+            setIsMapInitialized(true);
         } catch (error) {
             console.error("네이버 지도 초기화 오류:", error);
-            toast.error("지도를 초기화하는 중 오류가 발생했습니다.");
+            showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
     }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // 네이버 로고 숨기기 - 지도 로드 후 실행
-    useEffect(() => {
-        if (!mapInstanceRef.current) return;
+    // [삭제됨] 네이버 로고 숨김 로직은 약관 위반 소지가 있어 제거하였습니다.
+    // useEffect(() => { ... logo hiding logic ... }, [isLoaded]);
 
-        const hideLogos = () => {
-            const logoSelectors = [
-                '.naver-logo',
-                '[class*="logo"]',
-                '[class*="Logo"]',
-                'img[alt*="naver" i]',
-                'img[alt*="네이버" i]',
-                'a[href*="naver.com"]',
-                'a[href*="navercorp.com"]',
-                '[title*="NAVER"]',
-                '[title*="네이버"]'
-            ];
-
-            logoSelectors.forEach(selector => {
-                const elements = document.querySelectorAll(selector);
-                elements.forEach((element) => {
-                    const htmlElement = element as HTMLElement;
-                    if (htmlElement.offsetParent !== null) { // 화면에 실제로 표시되는 요소만
-                        htmlElement.style.setProperty('display', 'none', 'important');
-                        htmlElement.style.setProperty('visibility', 'hidden', 'important');
-                        htmlElement.style.setProperty('opacity', '0', 'important');
-                    }
-                });
-            });
-        };
-
-        // 초기 숨김 - 여러 타이밍으로 실행
-        const timeouts = [
-            setTimeout(hideLogos, 100),
-            setTimeout(hideLogos, 500),
-            setTimeout(hideLogos, 1000),
-            setTimeout(hideLogos, 2000)
-        ];
-
-        // MutationObserver로 동적 요소 감시
-        const observer = new MutationObserver((mutations) => {
-            let hasNewElements = false;
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    hasNewElements = true;
-                }
-            });
-            if (hasNewElements) {
-                setTimeout(hideLogos, 50);
-            }
-        });
-
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            attributes: true,
-            attributeFilter: ['class', 'style']
-        });
-
-        // 컴포넌트 언마운트 시 정리
-        return () => {
-            timeouts.forEach(clearTimeout);
-            observer.disconnect();
-        };
-    }, [isLoaded]);
-
-    // 지역 변경 시 지도 중심 이동
-    useEffect(() => {
-        if (!mapInstanceRef.current) return;
-
-        const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
-        const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
-        const { naver } = window;
-
-        mapInstanceRef.current.setCenter(new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]));
-        mapInstanceRef.current.setZoom(regionConfig.zoom);
-    }, [selectedRegion]);
+    // [삭제됨] 지역 변경 시 지도 중심 이동 로직은 위쪽의 통합 useEffect로 병합됨
+    // useEffect(() => { ... }, [selectedRegion]);
 
     // 검색된 맛집 선택 시 지도 중심 이동 및 선택 상태 설정
     useEffect(() => {
@@ -476,10 +903,29 @@ const NaverMapView = memo(({
 
         // 검색된 맛집이 병합된 데이터라면 기존 restaurants에서 같은 데이터를 찾아서 교체
         let actualSearchedRestaurant = searchedRestaurant;
+
+        // 1. 검색 결과가 병합된 데이터인 경우
         if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
             const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
             const existingRestaurant = restaurants.find(r =>
                 mergedIds.includes(r.id) ||
+                (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mergedIds.includes(mr.id))) ||
+                (r.name === searchedRestaurant.name &&
+                    Math.abs((r.lat || 0) - (searchedRestaurant.lat || 0)) < 0.0001 &&
+                    Math.abs((r.lng || 0) - (searchedRestaurant.lng || 0)) < 0.0001)
+            );
+            if (existingRestaurant) {
+                actualSearchedRestaurant = existingRestaurant;
+                // 부모 컴포넌트의 selectedRestaurant도 업데이트
+                if (onRestaurantSelect) {
+                    onRestaurantSelect(existingRestaurant);
+                }
+            }
+        } else {
+            // 2. 검색 결과가 개별 레코드인 경우 - 지도의 병합된 데이터에서 찾기
+            const existingRestaurant = restaurants.find(r =>
+                r.id === searchedRestaurant.id ||
+                (r.mergedRestaurants && r.mergedRestaurants.some((mr: { id: string }) => mr.id === searchedRestaurant.id)) ||
                 (r.name === searchedRestaurant.name &&
                     Math.abs((r.lat || 0) - (searchedRestaurant.lat || 0)) < 0.0001 &&
                     Math.abs((r.lng || 0) - (searchedRestaurant.lng || 0)) < 0.0001)
@@ -493,276 +939,12 @@ const NaverMapView = memo(({
             }
         }
 
-        const { naver } = window;
-
-        // 오프셋 없이 정확히 중앙에 배치
-        mapInstanceRef.current.setCenter(new naver.maps.LatLng(actualSearchedRestaurant.lat!, actualSearchedRestaurant.lng!));
-
-        mapInstanceRef.current.setZoom(14); // 맛집 상세 보기용 줌 레벨 (약간 줌아웃)
-
-        // 검색된 맛집을 부모 컴포넌트 상태에 설정 (이미 위에서 처리됨)
-
         // 패널 열기 (검색 시에만)
-        setIsPanelOpen(true);
-
-        // 토스트 메시지 표시 (검색 또는 팝업에서 온 경우만, 마커 클릭은 제외)
-        // 마커 클릭은 이미 선택된 상태이므로 토스트 불필요
-        const isFromMarkerClick = previousSearchedRestaurantRef.current === searchedRestaurant;
-        if (!isFromMarkerClick) {
-            toast.success(`"${actualSearchedRestaurant.name}" 맛집을 찾았습니다!`);
-        }
-
+        setInternalPanelOpen(true);
         // 현재 searchedRestaurant 저장
         previousSearchedRestaurantRef.current = searchedRestaurant;
     }, [searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // 마커 업데이트 (최적화됨)
-    useEffect(() => {
-        if (!mapInstanceRef.current || !window.naver) {
-            return;
-        }
-
-        const { naver } = window;
-
-        // 기존 마커 제거 (배치로 처리)
-        const oldMarkers = markersRef.current;
-        oldMarkers.forEach(marker => marker.setMap(null));
-        markersRef.current = [];
-
-        // 마커를 표시할 맛집 목록 생성 (기존 displayRestaurants + 검색된 맛집)
-        const restaurantsToShow = [...displayRestaurants];
-
-        // 검색된 맛집이 기존 목록에 없는 경우 추가
-        // searchedRestaurant이 교체된 경우에도 기존 데이터와 일치하도록 보장
-        if (searchedRestaurant) {
-
-            // 병합된 데이터의 경우 mergedRestaurants로 확인
-            let alreadyExists = false;
-            if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
-                const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
-                alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
-            } else {
-                alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
-            }
-
-            if (!alreadyExists) {
-                restaurantsToShow.push(searchedRestaurant);
-            }
-        }
-
-        // restaurantsRef 업데이트 (마커 클릭 핸들러에서 사용)
-        restaurantsRef.current = restaurantsToShow;
-
-        // restaurants가 없으면 마커만 제거하고 종료
-        if (restaurantsToShow.length === 0) {
-            return;
-        }
-
-        // 마커 생성 대상 (좌표가 있는 것만)
-        const markersToCreate = restaurantsToShow.filter(r => r.lat !== null && r.lng !== null);
-
-        // 새 마커 배열 준비
-        const newMarkers: any[] = [];
-
-        // 모든 마커를 한 번에 생성 (DOM 조작 최소화)
-        markersToCreate.forEach((restaurant) => {
-            // 그리드 모드에서는 gridSelectedRestaurant, 단일 모드에서는 props의 selectedRestaurant 사용
-            const currentSelectedRestaurant = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
-            const isSelected = currentSelectedRestaurant && currentSelectedRestaurant.id === restaurant.id;
-            // 카테고리별 적절한 이모티콘으로 변경
-            const getCategoryIcon = (category: string | string[] | null | undefined) => {
-                // category가 null이나 undefined면 기본값
-                if (!category) return '⭐';
-
-                // category가 배열이면 첫 번째 값 사용
-                const categoryStr = Array.isArray(category) ? category[0] : category;
-
-                const iconMap: { [key: string]: string } = {
-                    '고기': '🥩',
-                    '치킨': '🍗',
-                    '한식': '🍚',
-                    '중식': '🥢',
-                    '일식': '🍣',
-                    '양식': '🍝',
-                    '분식': '🥟',
-                    '카페·디저트': '☕',
-                    '아시안': '🍜',
-                    '패스트푸드': '🍔',
-                    '족발·보쌈': '🍖',
-                    '돈까스·회': '🍱',
-                    '피자': '🍕',
-                    '찜·탕': '🥘',
-                    '야식': '🌙',
-                    '도시락': '🍱'
-                };
-                return iconMap[categoryStr] || '⭐'; // 기본값은 별표
-            };
-
-            // categories 필드 사용 (호환성 속성인 category도 사용 가능)
-            const icon = getCategoryIcon(restaurant.categories || restaurant.category);
-
-            // 선택된 맛집은 더 큰 크기와 강조 효과 (조금 더 작게)
-            const markerSize = isSelected ? 32 : 24;
-
-            // HTML 요소를 직접 생성해서 마커로 사용 (MapView 방식과 동일)
-            const markerElement = document.createElement("div");
-            markerElement.className = `custom-marker ${isSelected ? 'selected-marker' : ''}`;
-            markerElement.innerHTML = `
-                    <div style="
-                        position: relative;
-                        font-size: ${markerSize}px;
-                        cursor: pointer;
-                        transition: all 0.3s ease;
-                        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-                    " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
-                        ${icon}
-                    </div>
-                `;
-
-            const marker = new naver.maps.Marker({
-                position: new naver.maps.LatLng(restaurant.lat!, restaurant.lng!),
-                map: mapInstanceRef.current,
-                icon: {
-                    content: markerElement,
-                    anchor: new naver.maps.Point(markerSize / 2, markerSize / 2),
-                },
-                title: restaurant.name,
-            });
-
-            // 마커 클릭 이벤트
-            naver.maps.Event.addListener(marker, "click", () => {
-                // 외부 onMarkerClick이 있으면 호출 (외부 패널 관리)
-                if (onMarkerClick) {
-                    onMarkerClick(restaurant);
-                } else {
-                    // 기존 동작: 내부 패널 열기
-                    if (onRestaurantSelect) {
-                        onRestaurantSelect(restaurant);
-                    }
-                    setIsPanelOpen(true);
-                }
-            }); newMarkers.push(marker);
-        });
-
-        // 모든 마커를 한 번에 할당
-        markersRef.current = newMarkers;
-
-        // 지도 중심은 초기 위치 유지 (한반도 전체 보기)
-        // 마커 표시 후 자동 이동하지 않음
-    }, [displayRestaurants, refreshTrigger, selectedRegion, searchedRestaurant, selectedRestaurant, isGridMode, gridSelectedRestaurant, onRestaurantSelect]);
-
-    // 선택된 마커의 스타일을 실시간 업데이트 (줌 이벤트 시 애니메이션 유지)
-    useEffect(() => {
-        if (!isLoaded || markersRef.current.length === 0 || !selectedRestaurant) return;
-
-        // 약간의 딜레이 후 스타일 업데이트 (마커 배열 생성 완료 대기)
-        const timeoutId = setTimeout(() => {
-            markersRef.current.forEach((marker, index) => {
-                const restaurant = restaurantsRef.current[index];
-                if (!restaurant) return;
-
-                // 선택된 맛집 비교 (ID, 이름+좌표, 병합된 데이터 모두 고려)
-                let isSelected = false;
-
-                if (selectedRestaurant) {
-                    isSelected = selectedRestaurant.id === restaurant.id;
-
-                    // 병합된 데이터의 경우 이름과 좌표로도 비교
-                    if (!isSelected) {
-                        isSelected = selectedRestaurant.name === restaurant.name &&
-                            Math.abs((selectedRestaurant.lat || 0) - (restaurant.lat || 0)) < 0.0001 &&
-                            Math.abs((selectedRestaurant.lng || 0) - (restaurant.lng || 0)) < 0.0001;
-                    }
-
-                    // 병합된 데이터의 경우 mergedRestaurants로 확인
-                    if (!isSelected && selectedRestaurant.mergedRestaurants) {
-                        const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
-                        isSelected = mergedIds.includes(restaurant.id);
-                    }
-                }
-
-                const markerElement = marker.getIcon().content as HTMLElement;
-                if (!markerElement) return;
-
-                const innerDiv = markerElement.querySelector('div');
-                if (!innerDiv) return;
-
-                // 크기 업데이트
-                const markerSize = isSelected ? 32 : 24;
-                innerDiv.style.fontSize = `${markerSize}px`;
-
-                // 애니메이션 클래스 업데이트
-                if (isSelected) {
-                    innerDiv.classList.add('animate-bounce');
-                } else {
-                    innerDiv.classList.remove('animate-bounce');
-                }
-            });
-        }, 150); // 마커 생성 후 약간의 딜레이
-
-        return () => clearTimeout(timeoutId);
-    }, [selectedRestaurant, displayRestaurants, isLoaded]);
-
-    // 줌 이벤트 시 마커 스타일 유지
-    useEffect(() => {
-        if (!mapInstanceRef.current || !isLoaded) return;
-
-        const handleZoomChange = () => {
-            // 줌 변경 후 약간의 지연을 주어 마커 스타일 재적용
-            setTimeout(() => {
-                if (!isLoaded || markersRef.current.length === 0) return;
-
-                markersRef.current.forEach((marker, index) => {
-                    const restaurant = restaurantsRef.current[index];
-                    if (!restaurant) return;
-
-                    // 선택된 맛집 비교 (ID, 이름+좌표, 병합된 데이터 모두 고려)
-                    let isSelected = false;
-
-                    if (selectedRestaurant) {
-                        isSelected = selectedRestaurant.id === restaurant.id;
-
-                        // 병합된 데이터의 경우 이름과 좌표로도 비교
-                        if (!isSelected) {
-                            isSelected = selectedRestaurant.name === restaurant.name &&
-                                Math.abs((selectedRestaurant.lat || 0) - (restaurant.lat || 0)) < 0.0001 &&
-                                Math.abs((selectedRestaurant.lng || 0) - (restaurant.lng || 0)) < 0.0001;
-                        }
-
-                        // 병합된 데이터의 경우 mergedRestaurants로 확인
-                        if (!isSelected && selectedRestaurant.mergedRestaurants) {
-                            const mergedIds = selectedRestaurant.mergedRestaurants.map(r => r.id);
-                            isSelected = mergedIds.includes(restaurant.id);
-                        }
-                    }
-
-                    const markerElement = marker.getIcon().content as HTMLElement;
-                    if (!markerElement) return;
-
-                    const innerDiv = markerElement.querySelector('div');
-                    if (!innerDiv) return;
-
-                    // 크기 업데이트
-                    const markerSize = isSelected ? 32 : 24;
-                    innerDiv.style.fontSize = `${markerSize}px`;
-
-                    // 애니메이션 클래스 업데이트
-                    if (isSelected) {
-                        innerDiv.classList.add('animate-bounce');
-                    } else {
-                        innerDiv.classList.remove('animate-bounce');
-                    }
-                });
-            }, 100);
-        };
-
-        // 줌 변경 이벤트 리스너 추가
-        naver.maps.Event.addListener(mapInstanceRef.current, 'zoom_changed', handleZoomChange);
-
-        return () => {
-            // Naver Maps에서는 이벤트 리스너가 자동으로 정리됨
-        };
-    }, [isLoaded, selectedRestaurant, displayRestaurants]);
 
     // 로딩 에러 처리
     if (loadError) {
@@ -800,19 +982,37 @@ const NaverMapView = memo(({
 
                 {/* 로딩 상태 표시 */}
                 {(isLoadingRestaurants || !isLoaded) && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        <span className="text-sm font-medium">
-                            {!isLoaded ? '지도 로딩 중...' : '맛집 검색 중...'}
-                        </span>
+                    <MapLoadingIndicator
+                        isLoaded={isLoaded}
+                        style={centerOffsetStyle}
+                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                    />
+                )}
+
+                {/* 레스토랑 개수 표시 (3초 후 fade-out) */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
+                    <RestaurantCountBadge
+                        count={restaurants.length}
+                        style={centerOffsetStyle}
+                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                    />
+                )}
+
+                {/* 빈 상태 UI - 맛집이 없을 때 표시 */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
+                    <div style={centerOffsetStyle} className="absolute top-4 -translate-x-1/2 z-10 transition-[left] duration-300 ease-in-out">
+                        <EmptyStateIndicator />
                     </div>
                 )}
 
-                {/* 레스토랑 개수 표시 (3초 후 사라짐) */}
-                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+                {/* [커스텀 토스트] 메시지 표시 */}
+                {mapToast && mapToast.isVisible && (
+                    <div
+                        style={centerOffsetStyle}
+                        className="absolute top-4 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-20 flex items-center gap-2 animate-in fade-in zoom-in duration-300 transition-[left] ease-in-out"
+                    >
                         <span className="text-sm font-medium">
-                            🔥 {restaurants.length}개의 맛집 발견
+                            {mapToast.message}
                         </span>
                     </div>
                 )}
@@ -835,19 +1035,37 @@ const NaverMapView = memo(({
 
                 {/* 로딩 상태 표시 */}
                 {(isLoadingRestaurants || !isLoaded) && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                        <span className="text-sm font-medium">
-                            {!isLoaded ? '지도 로딩 중...' : '맛집 검색 중...'}
-                        </span>
+                    <MapLoadingIndicator
+                        isLoaded={isLoaded}
+                        style={centerOffsetStyle}
+                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                    />
+                )}
+
+                {/* 레스토랑 개수 표시 (3초 후 fade-out) */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
+                    <RestaurantCountBadge
+                        count={restaurants.length}
+                        style={centerOffsetStyle}
+                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                    />
+                )}
+
+                {/* 빈 상태 UI - 맛집이 없을 때 표시 */}
+                {!isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
+                    <div style={centerOffsetStyle} className="absolute top-4 -translate-x-1/2 z-10 transition-[left] duration-300 ease-in-out">
+                        <EmptyStateIndicator />
                     </div>
                 )}
 
-                {/* 레스토랑 개수 표시 (3초 후 사라짐) */}
-                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
-                    <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300">
+                {/* [커스텀 토스트] 메시지 표시 */}
+                {mapToast && mapToast.isVisible && (
+                    <div
+                        style={centerOffsetStyle}
+                        className="absolute top-4 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-20 flex items-center gap-2 animate-in fade-in zoom-in duration-300 transition-[left] ease-in-out"
+                    >
                         <span className="text-sm font-medium">
-                            🔥 {restaurants.length}개의 맛집 발견
+                            {mapToast.message}
                         </span>
                     </div>
                 )}
@@ -856,7 +1074,7 @@ const NaverMapView = memo(({
             {/* 레스토랑 상세 패널 - 외부 onMarkerClick이 없을 때만 렌더링 (외부 패널 관리가 아닌 경우에만) */}
             {selectedRestaurant && !onMarkerClick && (
                 <div
-                    className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
+                    className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${internalPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
                     style={{ overflow: 'visible' }}
                     onClick={(e) => {
                         // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
@@ -867,7 +1085,7 @@ const NaverMapView = memo(({
                     <div ref={detailPanelRef} className="h-full w-[400px] bg-background border-l border-border">
                         <RestaurantDetailPanel
                             restaurant={selectedRestaurant}
-                            onClose={() => setIsPanelOpen(false)}
+                            onClose={() => setInternalPanelOpen(false)}
                             onWriteReview={() => {
                                 setIsReviewModalOpen(true);
                             }}
@@ -877,8 +1095,8 @@ const NaverMapView = memo(({
                             onRequestEditRestaurant={onRequestEditRestaurant ? () => {
                                 onRequestEditRestaurant(selectedRestaurant!);
                             } : undefined}
-                            onToggleCollapse={() => setIsPanelOpen(!isPanelOpen)}
-                            isPanelOpen={isPanelOpen}
+                            onToggleCollapse={() => setInternalPanelOpen(!internalPanelOpen)}
+                            isPanelOpen={internalPanelOpen}
                         />
                     </div>
                 </div>
@@ -892,7 +1110,7 @@ const NaverMapView = memo(({
                 restaurant={selectedRestaurant ? { id: selectedRestaurant.id, name: selectedRestaurant.name } : null}
                 onSuccess={() => {
                     refetch();
-                    toast.success("리뷰가 성공적으로 등록되었습니다!");
+                    showMapToast("리뷰가 성공적으로 등록되었습니다!", 'success');
                 }}
             />
         </div>

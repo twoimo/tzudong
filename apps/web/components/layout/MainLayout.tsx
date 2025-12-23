@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
 import AuthModal from '@/components/auth/AuthModal';
@@ -14,12 +15,18 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLayout } from '@/contexts/LayoutContext';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
-import { supabase } from '@/integrations/supabase/client';
+import { Announcement } from '@/types/announcement';
+
+// [OPTIMIZATION] Lazy load Supabase prefetcher to reduce initial bundle size
+const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPrefetcher'), {
+    ssr: false,
+});
 
 export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
     const queryClient = useQueryClient();
     const pathname = usePathname();
+    const router = useRouter(); // 추가
     const { isSidebarOpen, setIsSidebarOpen } = useLayout();
     const [isCenteredLayout, setIsCenteredLayout] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -30,6 +37,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
     const prevPathnameRef = useRef(pathname);
 
+    // 마이페이지 여부 확인
+    const isMyPage = pathname?.startsWith('/mypage');
+
     // 페이지 이동 감지
     useEffect(() => {
         if (prevPathnameRef.current !== pathname) {
@@ -38,41 +48,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
         }
     }, [pathname]);
 
-    // 사용자 데이터 prefetch
-    useEffect(() => {
-        if (user?.id) {
-            queryClient.prefetchQuery({
-                queryKey: ['user-reviews', user.id],
-                queryFn: async () => {
-                    const { data, error } = await supabase
-                        .from('reviews')
-                        .select('restaurant_id, is_verified')
-                        .eq('user_id', user.id)
-                        .eq('is_verified', true);
-                    if (error) throw error;
-                    return data;
-                },
-                staleTime: 5 * 60 * 1000,
-            });
-
-            queryClient.prefetchQuery({
-                queryKey: ['unvisited-restaurants-all'],
-                queryFn: async () => {
-                    const { data, error } = await supabase
-                        .from('restaurants')
-                        .select('id, name, youtube_link, review_count, categories, road_address, jibun_address, lat, lng, tzuyang_review, created_at')
-                        .eq('status', 'approved')
-                        .not('youtube_link', 'is', null)
-                        .order('created_at', { ascending: false });
-                    if (error) throw error;
-                    return data;
-                },
-                staleTime: 5 * 60 * 1000,
-            });
-        }
-    }, [user?.id, queryClient]);
-
-    const shouldShowCenteredLayoutButton = pathname !== '/';
+    const shouldShowCenteredLayoutButton = pathname !== '/' && !isMyPage;
 
     const handleLogout = async () => {
         try {
@@ -98,7 +74,11 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="h-screen flex overflow-hidden">
-            <Sidebar isOpen={isSidebarOpen} />
+            {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
+            {user && <UserDataPrefetcher />}
+
+            {/* 사이드바 - 마이페이지일 때는 마이페이지 모드로 표시 */}
+            <Sidebar isOpen={isSidebarOpen} isMyPageMode={isMyPage} />
 
             <div className={cn(
                 "flex-1 flex flex-col overflow-hidden transition-all duration-300",
@@ -113,6 +93,16 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     isCenteredLayout={isCenteredLayout}
                     onToggleCenteredLayout={shouldShowCenteredLayoutButton ? () => setIsCenteredLayout(!isCenteredLayout) : undefined}
                     isAdmin={isAdmin}
+                    onAnnouncementClick={(announcement: Announcement) => {
+                        // 홈 페이지에서 공지사항 패널 열기
+                        if (pathname === '/') {
+                            window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: announcement }));
+                        } else {
+                            // 다른 페이지에서는 홈으로 이동 후 패널 열기
+                            router.push(`/?panel=announcement&announcementId=${announcement.id}`);
+                        }
+                    }}
+                    hideToggleSidebar={false}
                 />
 
                 <main className={cn(

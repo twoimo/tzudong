@@ -29,7 +29,7 @@ export default function LeaderboardPage() {
     // Apply sorting
     const sortedLeaderboard = [...leaderboardData].sort((a, b) => {
         if (sortBy === "reviews") {
-            return b.reviewCount - a.reviewCount;
+            return b.verifiedReviewCount - a.verifiedReviewCount;
         }
         return 0;
     });
@@ -187,7 +187,7 @@ export default function LeaderboardPage() {
                                                     </span>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <span className="font-semibold">{user.reviewCount}</span>
+                                                    <span className="font-semibold">{user.verifiedReviewCount}</span>
                                                     <span className="text-muted-foreground text-xs ml-1">개</span>
                                                 </TableCell>
                                                 <TableCell className="text-center">
@@ -197,8 +197,8 @@ export default function LeaderboardPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="text-center">
-                                                    <Badge variant="outline" className={`${getUserTier(user.reviewCount).bgColor} ${getUserTier(user.reviewCount).color} border-current`}>
-                                                        {getUserTier(user.reviewCount).name}
+                                                    <Badge variant="outline" className={`${getUserTier(user.verifiedReviewCount).bgColor} ${getUserTier(user.verifiedReviewCount).color} border-current`}>
+                                                        {getUserTier(user.verifiedReviewCount).name}
                                                     </Badge>
                                                 </TableCell>
 

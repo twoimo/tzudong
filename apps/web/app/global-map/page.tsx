@@ -354,28 +354,36 @@ export default function GlobalMapPage() {
                 return;
             }
 
-            // 수정된 항목들을 user_restaurants_submission 형식으로 변환
-            const submissionData = editFormData.youtube_reviews.map(review => ({
-                unique_id: review.unique_id || null,
-                name: editFormData.name,
-                categories: editFormData.category,
-                address: editFormData.address,
-                phone: editFormData.phone,
-                youtube_link: review.youtube_link,
-                tzuyang_review: review.tzuyang_review
-            }));
-
             // 새로운 restaurant_submissions 테이블 구조에 맞춰 저장
-            const { error } = await supabase
+            const { data: submissionData, error: submissionError } = await supabase
                 .from('restaurant_submissions')
                 .insert({
                     user_id: user.id,
                     submission_type: 'edit',
                     status: 'pending',
-                    user_restaurants_submission: submissionData
-                } as any);
+                    restaurant_name: editFormData.name,
+                    restaurant_address: editFormData.address,
+                } as any)
+                .select('id')
+                .single();
 
-            if (error) throw error;
+            if (submissionError) throw submissionError;
+            
+            const submission = submissionData as { id: string };
+
+            // restaurant_submission_items 테이블에 각 youtube_review 저장
+            const items = editFormData.youtube_reviews.map(review => ({
+                submission_id: submission.id,
+                youtube_link: review.youtube_link,
+                tzuyang_review: review.tzuyang_review,
+                item_status: 'pending',
+            }));
+
+            const { error: itemsError } = await supabase
+                .from('restaurant_submission_items')
+                .insert(items as any);
+
+            if (itemsError) throw itemsError;
 
             toast.success("맛집 수정 요청이 성공적으로 제출되었습니다!");
             setIsEditModalOpen(false);

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
 import { toast } from "sonner";
@@ -10,15 +11,21 @@ import { Restaurant } from "@/types/restaurant";
 import HomeModeToggle from "../components/home/home-mode-toggle";
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
-// 동적 임포트 - 큰 컴포넌트는 필요할 때만 로드
+// [OPTIMIZATION] 동적 임포트 - loading placeholder로 CLS 방지
 const HomeControlPanel = dynamic(
     () => import('../components/home/home-control-panel'),
-    { ssr: false }
+    {
+        ssr: false,
+        loading: () => <div className="h-12" aria-hidden="true" />
+    }
 );
 
 const HomeMapContainer = dynamic(
     () => import('../components/home/home-map-container'),
-    { ssr: false }
+    {
+        ssr: false,
+        loading: () => <div className="flex-1 bg-muted/50 animate-pulse" aria-hidden="true" />
+    }
 );
 import { useHomeState } from "./hooks/useHomeState";
 import { useHomeHandlers } from "./hooks/useHomeHandlers";
@@ -45,15 +52,22 @@ const MyPagePanel = dynamic(
     { ssr: false }
 );
 
-const AdminSubmissionPanel = dynamic(
-    () => import('@/components/admin/AdminSubmissionPanel'),
-    { ssr: false }
-);
-
 const AdminReviewPanel = dynamic(
     () => import('@/components/admin/AdminReviewPanel'),
     { ssr: false }
 );
+
+const AnnouncementPanel = dynamic(
+    () => import('@/components/announcement/AnnouncementPanel'),
+    { ssr: false }
+);
+
+const ReviewModal = dynamic(
+    () => import('@/components/reviews/ReviewModal').then(mod => ({ default: mod.ReviewModal })),
+    { ssr: false }
+);
+
+import { Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
 
@@ -66,9 +80,33 @@ export default function HomeClient() {
 
     // 통합 패널 상태 관리
     // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
-    type PanelType = 'mypage' | 'adminSubmissions' | 'adminReviews' | null;
+    type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
+    const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
+
+    // URL 쿼리 파라미터 처리
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    useEffect(() => {
+        const panelParam = searchParams.get('panel');
+        const announcementId = searchParams.get('announcementId');
+
+        if (panelParam === 'announcement' && announcementId) {
+            const announcement = DUMMY_ANNOUNCEMENTS.find(a => a.id === announcementId);
+            if (announcement) {
+                // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
+                setTimeout(() => {
+                    setSelectedAnnouncement(announcement);
+                    openPanel('announcement');
+
+                    // URL 정리 (선택사항 - 새로고침 시 다시 열리지 않게 하려면)
+                    router.replace('/', { scroll: false });
+                }, 500);
+            }
+        }
+    }, [searchParams, router]);
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
@@ -170,7 +208,8 @@ export default function HomeClient() {
 
         const handleAdminSubmissionsOpen = () => {
             if (isAdmin) {
-                openPanel('adminSubmissions');
+                // 제보관리 패널 대신 관리자 데이터 검수 페이지로 이동
+                router.push('/admin/evaluations?view=submissions');
             }
         };
 
@@ -180,16 +219,41 @@ export default function HomeClient() {
             }
         };
 
+        const handleAdminAnnouncementsOpen = () => {
+            if (isAdmin) {
+                setSelectedAnnouncement(null); // 목록부터 시작
+                openPanel('announcement');
+            }
+        };
+
+        const handleAnnouncementDetailOpen = (e: Event) => {
+            const customEvent = e as CustomEvent<Announcement>;
+            const announcement = customEvent.detail;
+
+            // 이미 공지사항 패널이 열려있고, 동일한 공지사항을 클릭한 경우 토글 (접기/펼치기)
+            if (activeRightPanel === 'announcement' && selectedAnnouncement?.id === announcement.id) {
+                togglePanelCollapse();
+            } else {
+                // 다른 공지사항이거나 패널이 닫혀있는 경우 펼쳐서 열기
+                setSelectedAnnouncement(announcement);
+                openPanel('announcement');
+            }
+        };
+
         window.addEventListener('openMyPage', handleMyPageOpen);
         window.addEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
         window.addEventListener('openAdminReviews', handleAdminReviewsOpen);
+        window.addEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
+        window.addEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
 
         return () => {
             window.removeEventListener('openMyPage', handleMyPageOpen);
             window.removeEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
             window.removeEventListener('openAdminReviews', handleAdminReviewsOpen);
+            window.removeEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
+            window.removeEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
         };
-    }, [isAdmin]);
+    }, [isAdmin, activeRightPanel, selectedAnnouncement]);
 
     return (
         <>
@@ -207,6 +271,7 @@ export default function HomeClient() {
                     state.setSearchedRestaurant(null);
                     setMapMode(mode);
                 }}
+                isAdmin={isAdmin}
             />
 
             <HomeControlPanel
@@ -241,7 +306,7 @@ export default function HomeClient() {
                 onAdminEditRestaurant={onAdminEditRestaurant}
                 onRequestEditRestaurant={handlers.handleRequestEditRestaurant}
                 onRestaurantSelect={state.setSelectedRestaurant}
-                onSwitchToSingleMap={handlers.switchToSingleMap}
+
                 onMapReady={handlers.handleMapReady}
                 onMarkerClick={openDetailPanel}
                 onPanelClose={closeAllPanels}
@@ -253,17 +318,20 @@ export default function HomeClient() {
                 isPanelCollapsed={isPanelCollapsed}
             />
 
-            <EditRestaurantModal
-                isOpen={state.isEditModalOpen}
-                onClose={() => {
-                    state.setIsEditModalOpen(false);
-                    state.setRestaurantToEdit(null);
-                }}
-                restaurant={state.restaurantToEdit}
-                initialFormData={state.editFormData}
-            />
+            {/* [OPTIMIZATION] 조건부 렌더링으로 불필요한 모달 마운트 방지 - TBT 개선 */}
+            {state.isEditModalOpen && (
+                <EditRestaurantModal
+                    isOpen={state.isEditModalOpen}
+                    onClose={() => {
+                        state.setIsEditModalOpen(false);
+                        state.setRestaurantToEdit(null);
+                    }}
+                    restaurant={state.restaurantToEdit}
+                    initialFormData={state.editFormData}
+                />
+            )}
 
-            {isAdmin && (
+            {isAdmin && state.isAdminEditModalOpen && (
                 <AdminRestaurantModal
                     isOpen={state.isAdminEditModalOpen}
                     onClose={() => {
@@ -289,6 +357,18 @@ export default function HomeClient() {
                 onClose={() => setIsSubmissionModalOpen(false)}
             />
 
+            {/* 리뷰 작성 모달 */}
+            {state.isReviewModalOpen && (
+                <ReviewModal
+                    isOpen={state.isReviewModalOpen}
+                    onClose={() => state.setIsReviewModalOpen(false)}
+                    restaurant={state.panelRestaurant ? { id: state.panelRestaurant.id, name: state.panelRestaurant.name } : null}
+                    onSuccess={() => {
+                        state.setRefreshTrigger(prev => prev + 1);
+                    }}
+                />
+            )}
+
             {/* 마이페이지 패널 */}
             <RightPanelWrapper
                 isOpen={activeRightPanel === 'mypage'}
@@ -301,21 +381,6 @@ export default function HomeClient() {
                     isCollapsed={isPanelCollapsed}
                 />
             </RightPanelWrapper>
-
-            {/* 관리자 제보관리 패널 */}
-            {isAdmin && (
-                <RightPanelWrapper
-                    isOpen={activeRightPanel === 'adminSubmissions'}
-                    isCollapsed={isPanelCollapsed}
-                >
-                    <AdminSubmissionPanel
-                        isOpen={!isPanelCollapsed}
-                        onClose={closeAllPanels}
-                        onToggleCollapse={togglePanelCollapse}
-                        isCollapsed={isPanelCollapsed}
-                    />
-                </RightPanelWrapper>
-            )}
 
             {/* 관리자 리뷰관리 패널 */}
             {isAdmin && (
@@ -331,6 +396,21 @@ export default function HomeClient() {
                     />
                 </RightPanelWrapper>
             )}
+
+            {/* 공지사항 패널 (관리자/사용자 통합) */}
+            <RightPanelWrapper
+                isOpen={activeRightPanel === 'announcement'}
+                isCollapsed={isPanelCollapsed}
+            >
+                <AnnouncementPanel
+                    isOpen={!isPanelCollapsed}
+                    onClose={closeAllPanels}
+                    onToggleCollapse={togglePanelCollapse}
+                    isCollapsed={isPanelCollapsed}
+                    isAdmin={isAdmin}
+                    initialAnnouncement={selectedAnnouncement}
+                />
+            </RightPanelWrapper>
         </>
     );
 }

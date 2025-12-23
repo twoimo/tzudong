@@ -23,7 +23,7 @@ interface HomeMapContainerProps {
     onAdminEditRestaurant?: (restaurant: Restaurant) => void;
     onRequestEditRestaurant: (restaurant: Restaurant) => void;
     onRestaurantSelect: (restaurant: Restaurant | null) => void;
-    onSwitchToSingleMap: (region?: Region | null) => void;
+
     onMapReady: (moveFunction: (restaurant: Restaurant) => void) => void;
     onMarkerClick: (restaurant: Restaurant) => void;
     onPanelClose: () => void;
@@ -49,7 +49,7 @@ export default function HomeMapContainer({
     onAdminEditRestaurant,
     onRequestEditRestaurant,
     onRestaurantSelect,
-    onSwitchToSingleMap,
+
     onMapReady,
     onMarkerClick,
     onPanelClose,
@@ -78,6 +78,7 @@ export default function HomeMapContainer({
                     onMarkerClick={onMarkerClick}
                     externalPanelOpen={externalPanelOpen}
                     isPanelCollapsed={isPanelCollapsed}
+                    isPanelOpen={isPanelOpen}
                 />
             ) : (
                 <Suspense fallback={<MapSkeleton />}>

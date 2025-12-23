@@ -1,7 +1,7 @@
 'use client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { X, Send } from "lucide-react";
+import { X, Send, CheckCircle2 } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
+import { saveDraft, getDraft, deleteDraft } from "@/lib/submissionDraftDB";
 
 interface RestaurantSubmissionModalProps {
     isOpen: boolean;
@@ -34,8 +35,10 @@ export default function RestaurantSubmissionModal({
         phone: "",
         categories: [] as string[],
         youtube_link: "",
-        description: "",
+        description: "", // new: 쯔양 리뷰, request: 추천 이유
     });
+    const [isSaving, setIsSaving] = useState(false);
+    const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
 
     // 모달 열릴 때 초기화
     useEffect(() => {
@@ -44,41 +47,85 @@ export default function RestaurantSubmissionModal({
         }
     }, [isOpen, submissionMode]);
 
-    // 제보 제출
-    const submitMutation = useMutation({
+    // 신규 제보 (new) - restaurant_submissions + restaurant_submission_items
+    const submitNewMutation = useMutation({
         mutationFn: async (data: typeof formData) => {
             if (!user) throw new Error('로그인이 필요합니다');
 
-            const submissionData: any = {
-                user_id: user.id,
-                user_submitted_name: data.restaurant_name.trim(),
-                user_submitted_categories: data.categories,
-                user_submitted_phone: data.phone.trim() || null,
-                user_raw_address: data.address.trim(),
-                youtube_link: data.youtube_link.trim() || null,
-                description: submissionMode === 'request'
-                    ? `[쯔양 방문 요청] ${data.description.trim() || '이 맛집에 쯔양님이 방문해주셨으면 좋겠습니다!'}`
-                    : data.description.trim() || null,
-                status: 'pending',
-                submission_type: 'new',
-            };
-
-            const { error } = await supabase
+            // 1. restaurant_submissions 테이블에 INSERT
+            const { data: submission, error: submissionError } = await supabase
                 .from('restaurant_submissions')
-                .insert(submissionData);
+                .insert({
+                    user_id: user.id,
+                    submission_type: 'new',
+                    status: 'pending',
+                    restaurant_name: data.restaurant_name.trim(),
+                    restaurant_address: data.address.trim(),
+                    restaurant_phone: data.phone.trim() || null,
+                    restaurant_categories: data.categories.length > 0 ? data.categories : null,
+                } as any)
+                .select('id')
+                .single();
 
-            if (error) throw error;
+            if (submissionError) throw submissionError;
+
+            const submissionId = (submission as { id: string }).id;
+
+            // 2. restaurant_submission_items 테이블에 INSERT
+            const { error: itemError } = await supabase
+                .from('restaurant_submission_items')
+                .insert({
+                    submission_id: submissionId,
+                    youtube_link: data.youtube_link.trim(),
+                    tzuyang_review: data.description.trim() || null,
+                } as any);
+
+            if (itemError) {
+                // 롤백: submission 삭제
+                await supabase.from('restaurant_submissions').delete().eq('id', submissionId);
+                throw itemError;
+            }
         },
-        onSuccess: () => {
-            const modeText = submissionMode === 'new' ? '맛집 제보' : '방문 요청';
-            toast.success(`${modeText}가 성공적으로 제출되었습니다!`);
+        onSuccess: async () => {
+            await clearDraft();
+            toast.success('맛집 제보가 성공적으로 제출되었습니다!');
             queryClient.invalidateQueries({ queryKey: ['my-submissions'] });
             onClose();
             resetForm();
         },
         onError: (error: any) => {
-            const modeText = submissionMode === 'new' ? '제보' : '방문 요청';
-            toast.error(error.message || `${modeText} 제출에 실패했습니다`);
+            toast.error(error.message || '제보 제출에 실패했습니다');
+        },
+    });
+
+    // 쯔양에게 맛집 제보 (request) - restaurant_requests
+    const submitRequestMutation = useMutation({
+        mutationFn: async (data: typeof formData) => {
+            if (!user) throw new Error('로그인이 필요합니다');
+
+            const { error } = await supabase
+                .from('restaurant_requests')
+                .insert({
+                    user_id: user.id,
+                    restaurant_name: data.restaurant_name.trim(),
+                    origin_address: data.address.trim(),
+                    phone: data.phone.trim() || null,
+                    categories: data.categories.length > 0 ? data.categories : null,
+                    recommendation_reason: data.description.trim(),
+                    youtube_link: data.youtube_link.trim() || null,
+                } as any);
+
+            if (error) throw error;
+        },
+        onSuccess: async () => {
+            await clearDraft();
+            toast.success('맛집 추천이 성공적으로 제출되었습니다!');
+            queryClient.invalidateQueries({ queryKey: ['my-requests'] });
+            onClose();
+            resetForm();
+        },
+        onError: (error: any) => {
+            toast.error(error.message || '추천 제출에 실패했습니다');
         },
     });
 
@@ -92,7 +139,93 @@ export default function RestaurantSubmissionModal({
             description: "",
         });
         setCategoryInput("");
+        setLastSavedAt(null);
     };
+
+    // 임시 저장된 데이터 불러오기
+    const loadDraft = useCallback(async () => {
+        if (!user?.id) return;
+
+        try {
+            const draft = await getDraft(user.id, submissionMode);
+            if (draft) {
+                setFormData({
+                    restaurant_name: draft.restaurant_name,
+                    address: draft.address,
+                    phone: draft.phone,
+                    categories: draft.categories,
+                    youtube_link: draft.youtube_link,
+                    description: draft.description,
+                });
+                setLastSavedAt(new Date(draft.savedAt));
+
+                toast.success("임시 저장된 내용을 불러왔습니다", {
+                    description: `저장 시간: ${new Date(draft.savedAt).toLocaleString('ko-KR')}`,
+                });
+            }
+        } catch (error) {
+            console.error('임시 저장 데이터 로드 실패:', error);
+        }
+    }, [user?.id, submissionMode]);
+
+    // 자동 저장
+    const autoSave = useCallback(async () => {
+        if (!user?.id) return;
+
+        // 내용이 하나라도 있을 때만 저장
+        if (!formData.restaurant_name && !formData.address && !formData.phone && formData.categories.length === 0 && !formData.youtube_link && !formData.description) {
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            await saveDraft({
+                userId: user.id,
+                submissionMode,
+                restaurant_name: formData.restaurant_name,
+                address: formData.address,
+                phone: formData.phone,
+                categories: formData.categories,
+                youtube_link: formData.youtube_link,
+                description: formData.description,
+            });
+            setLastSavedAt(new Date());
+        } catch (error) {
+            console.error('자동 저장 실패:', error);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [user?.id, submissionMode, formData]);
+
+    // 임시 저장 데이터 삭제
+    const clearDraft = useCallback(async () => {
+        if (!user?.id) return;
+
+        try {
+            await deleteDraft(user.id, submissionMode);
+            setLastSavedAt(null);
+        } catch (error) {
+            console.error('임시 저장 데이터 삭제 실패:', error);
+        }
+    }, [user?.id, submissionMode]);
+
+    // 디바운스된 자동 저장 (500ms)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const timer = setTimeout(() => {
+            autoSave();
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [isOpen, formData, autoSave]);
+
+    // 모달이 열릴 때 임시 저장된 데이터 확인
+    useEffect(() => {
+        if (isOpen && user?.id) {
+            loadDraft();
+        }
+    }, [isOpen, user?.id, submissionMode, loadDraft]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -104,32 +237,70 @@ export default function RestaurantSubmissionModal({
 
         // 기본 필수 항목 검증
         if (!formData.restaurant_name.trim() || !formData.address.trim() || formData.categories.length === 0) {
-            toast.error('필수 항목을 모두 입력해주세요');
+            toast.error('맛집 이름, 주소, 카테고리는 필수입니다');
             return;
         }
 
-        // new 모드일 때만 유튜브 링크 필수
-        if (submissionMode === 'new' && !formData.youtube_link.trim()) {
-            toast.error('유튜브 영상 링크를 입력해주세요');
-            return;
+        if (submissionMode === 'new') {
+            // new 모드: 유튜브 링크 필수
+            if (!formData.youtube_link.trim()) {
+                toast.error('유튜브 영상 링크를 입력해주세요');
+                return;
+            }
+            // URL 형식 검증
+            if (!formData.youtube_link.trim().match(/^https?:\/\//)) {
+                toast.error('유효한 유튜브 링크를 입력해주세요');
+                return;
+            }
+            submitNewMutation.mutate(formData);
+        } else {
+            // request 모드: 추천 이유 필수 (10자 이상)
+            if (!formData.description.trim() || formData.description.trim().length < 10) {
+                toast.error('추천 이유를 10자 이상 입력해주세요');
+                return;
+            }
+            submitRequestMutation.mutate(formData);
         }
-
-        submitMutation.mutate(formData);
     };
+
+    const isPending = submitNewMutation.isPending || submitRequestMutation.isPending;
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
-                        {submissionMode === 'new' ? '쯔동여지도 제보하기' : '쯔양에게 맛집 제보하기'}
-                    </DialogTitle>
-                    <DialogDescription>
-                        {submissionMode === 'new'
-                            ? '쯔양이 이미 다녀간 맛집 정보와 유튜브 영상 링크를 알려주세요'
-                            : '쯔양에게 방문을 추천하고 싶은 맛집 정보를 알려주세요'
-                        }
-                    </DialogDescription>
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                            <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                                {submissionMode === 'new' ? '쯔동여지도 제보하기' : '쯔양에게 맛집 제보하기'}
+                            </DialogTitle>
+                            <DialogDescription>
+                                {submissionMode === 'new'
+                                    ? '쯔양이 이미 다녀간 맛집 정보와 유튜브 영상 링크를 알려주세요'
+                                    : '쯔양에게 방문을 추천하고 싶은 맛집 정보를 알려주세요'
+                                }
+                            </DialogDescription>
+                        </div>
+
+                        {/* 자동 저장 상태 표시 */}
+                        {lastSavedAt && (
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+                                {isSaving ? (
+                                    <>
+                                        <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
+                                        <span>저장 중...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                        <span className="text-green-600">
+                                            저장됨 ({lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })})
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </DialogHeader>
 
                 {/* 모드 선택 */}
@@ -289,21 +460,22 @@ export default function RestaurantSubmissionModal({
                             유튜브 영상 링크 {submissionMode === 'new' && <span className="text-red-500">*</span>}
                             {submissionMode === 'request' && <span className="text-muted-foreground text-xs">(선택사항)</span>}
                         </Label>
-                        <Textarea
+                        <Input
                             id="youtube_link"
                             value={formData.youtube_link}
                             onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
                             placeholder={submissionMode === 'new'
                                 ? "https://youtube.com/watch?v=... (필수)"
-                                : "추천하는 이유가 담긴 영상 링크 (선택)"
+                                : "관련 영상 링크 (선택)"
                             }
-                            className="min-h-[60px]"
                         />
                     </div>
 
                     <div className="space-y-2">
                         <Label htmlFor="description">
-                            {submissionMode === 'new' ? '쯔양의 리뷰' : '추천 사유'}
+                            {submissionMode === 'new' ? '쯔양의 리뷰' : '추천 이유'}
+                            {submissionMode === 'request' && <span className="text-red-500">*</span>}
+                            {submissionMode === 'request' && <span className="text-muted-foreground text-xs ml-1">(10자 이상)</span>}
                         </Label>
                         <Textarea
                             id="description"
@@ -311,7 +483,7 @@ export default function RestaurantSubmissionModal({
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             placeholder={submissionMode === 'new'
                                 ? "쯔양이 이 맛집에 대해 한 리뷰 내용을 입력해주세요..."
-                                : "이 맛집을 쯔양에게 추천하는 이유를 입력해주세요..."
+                                : "이 맛집을 쯔양에게 추천하는 이유를 10자 이상 입력해주세요..."
                             }
                             className="min-h-[80px]"
                         />
@@ -328,11 +500,11 @@ export default function RestaurantSubmissionModal({
                         </Button>
                         <Button
                             type="submit"
-                            disabled={submitMutation.isPending}
+                            disabled={isPending}
                             className="flex-1 bg-red-800 hover:bg-red-900"
                         >
                             <Send className="h-4 w-4 mr-2" />
-                            {submitMutation.isPending ? '제출 중...' : '제보하기'}
+                            {isPending ? '제출 중...' : submissionMode === 'new' ? '제보하기' : '추천하기'}
                         </Button>
                     </div>
                 </form>

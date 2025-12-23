@@ -5,7 +5,14 @@ import { Tables } from "@/integrations/supabase/types";
 
 type DBRestaurant = Tables<"restaurants">;
 
-// 레벤슈타인 거리 계산 (문자열 유사도)
+/**
+ * 레벤슈타인 거리 계산 (문자열 유사도 측정용)
+ * 두 문자열 사이의 편집 거리를 계산합니다.
+ * 
+ * @param str1 기준 문자열
+ * @param str2 비교 대상 문자열
+ * @returns 편집 거리 (숫자)
+ */
 function levenshteinDistance(str1: string, str2: string): number {
     const len1 = str1.length;
     const len2 = str2.length;
@@ -31,7 +38,14 @@ function levenshteinDistance(str1: string, str2: string): number {
     return dp[len1][len2];
 }
 
-// 문자열 유사도 계산 (0~1, 1에 가까울수록 유사)
+/**
+ * 문자열 유사도 계산 함수
+ * 0-1 사이의 값으로 반환하며, 1에 가까울수록 두 문자열이 유사합니다.
+ * 
+ * @param str1 기준 문자열
+ * @param str2 비교 대상 문자열
+ * @returns 유사도 (0.0 ~ 1.0)
+ */
 function calculateSimilarity(str1: string, str2: string): number {
     const maxLen = Math.max(str1.length, str2.length);
     if (maxLen === 0) return 1.0;
@@ -39,11 +53,23 @@ function calculateSimilarity(str1: string, str2: string): number {
     return 1 - distance / maxLen;
 }
 
-// 정규화된 주소 비교 (공백, 특수문자 제거)
+/**
+ * 주소 정규화 함수
+ * 층/호수 정보를 제거하고, 공백과 특수문자를 제거하여 비교 용이성을 높입니다.
+ * 
+ * @param address 원본 주소 문자열
+ * @returns 정규화된 주소 문자열
+ */
 function normalizeAddress(address: string): string {
     return address
-        .replace(/\s+/g, '') // 공백 제거
-        .replace(/[^\w가-힣]/g, '') // 특수문자 제거
+        // 층/호수 정보 제거 (같은 건물 다른 층은 같은 주소로 취급)
+        .replace(/지하\s*\d+\s*층/g, '')
+        .replace(/지상\s*\d+\s*층/g, '')
+        .replace(/\d+\s*층/g, '')
+        .replace(/\d+\s*호/g, '')
+        // 공백 및 특수문자 제거
+        .replace(/\s+/g, '')
+        .replace(/[^\w가-힣]/g, '')
         .toLowerCase();
 }
 
@@ -54,7 +80,13 @@ type IntermediateRestaurant = DBRestaurant & {
     mergedYoutubeMetas?: YoutubeMeta[];
 };
 
-// 레스토랑 병합 함수 (재사용 가능)
+/**
+ * 레스토랑 데이터 병합 함수
+ * 이름과 주소가 유사한 중복 데이터들을 하나로 병합합니다.
+ * 
+ * @param restaurants DB에서 조회된 레스토랑 목록
+ * @returns 병합된 레스토랑 목록
+ */
 export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
     const restaurantMap = new Map<string, IntermediateRestaurant>();
 
@@ -108,11 +140,11 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
                     publishedAt: (r.youtube_meta as YoutubeMeta | null)?.publishedAt || ''
                 }));
 
-                // publishedAt 날짜 기준 오름차순 정렬 (오래된 영상이 먼저)
+                // publishedAt 날짜 기준 내림차순 정렬 (최신 영상이 먼저)
                 restaurantPairs.sort((a, b) => {
                     if (!a.publishedAt) return 1;
                     if (!b.publishedAt) return -1;
-                    return a.publishedAt.localeCompare(b.publishedAt);
+                    return b.publishedAt.localeCompare(a.publishedAt);
                 });
 
                 const sortedRestaurants = restaurantPairs.map(p => p.restaurant);
@@ -158,7 +190,12 @@ export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
             }
         }
 
-        // 병합되지 않았으면 새로운 항목으로 추가
+        // [리팩토링] 명시적인 더티 체크 대신 의존성 체크 접근 방식
+        // 선택된 맛집이나 지역이 실제로 변경되었는지 확인해야 합니다.
+        // 이전 props를 추적하기 위해 ref를 사용하는 것은 표준 패턴입니다.
+
+        // 여기서는 로직 단순화를 위해:
+        // 만약 사용자가 이동했다면(hasUserMovedMapRef.current), 새로운 항목으로 추가
         if (!merged) {
             const key = `${currentName}_${currentAddress}_${restaurantMap.size}`;
             restaurantMap.set(key, restaurant);
@@ -209,7 +246,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 .eq("status", "approved") // status가 approved인 것만 조회
                 .order("name"); // 이름순으로 정렬
 
-            // Apply bounds filter if provided
+            // 경계(Bounds) 필터 적용 (제공된 경우)
             if (bounds) {
                 query = query
                     .gte("lat", bounds.south)
@@ -218,13 +255,13 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                     .lte("lng", bounds.east);
             }
 
-            // Apply category filter (categories는 배열 타입)
+            // 카테고리 필터 적용 (categories는 배열 타입)
             if (category && category.length > 0) {
                 // categories는 TEXT[] 타입으로 저장됨
                 query = query.overlaps("categories", category);
             }
 
-            // Apply region filter
+            // 지역(Region) 필터 적용
             if (region) {
                 if (region === "울릉도") {
                     // 울릉도는 주소에 '울릉'이 포함된 데이터 필터링
@@ -239,7 +276,7 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 }
             }
 
-            // Apply review count filter
+            // 리뷰 수 필터 적용
             if (minReviews && minReviews > 0) {
                 query = query.gte("review_count", minReviews);
             }
