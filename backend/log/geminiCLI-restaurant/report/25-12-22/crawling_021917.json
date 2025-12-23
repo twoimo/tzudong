@@ -1,0 +1,47 @@
+{
+  "stage": "crawling",
+  "started_at": "2025-12-22 02:19:17",
+  "ended_at": "2025-12-22 02:20:32",
+  "duration_seconds": 75,
+  "duration_formatted": "1m 15s",
+  "gemini_model": "gemini-2.5-pro",
+  "statistics": {
+    "total_urls": 998,
+    "success": 1,
+    "failed": 0,
+    "skipped_already_processed": 997,
+    "skipped_no_transcript": 0,
+    "success_rate": "50.00%"
+  },
+  "gemini_stats": {
+    "total_calls": 1,
+    "total_time_seconds": 64,
+    "total_time_formatted": "1m 4s",
+    "average_time_seconds": 64
+  },
+  "transcript_stats": {
+    "found": 1,
+    "not_found": 0,
+    "no_transcript_log": "/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-22/tzuyang_no_transcript.log"
+  },
+  "parser_stats": {
+    "total_time_seconds": 0,
+    "total_time_formatted": "0s"
+  },
+  "meta_stats": {
+    "success": 1,
+    "duration_seconds": 1,
+    "duration_formatted": "1s"
+  },
+  "enrich_stats": {
+    "success": 1,
+    "enriched_count": 0,
+    "duration_seconds": 1,
+    "duration_formatted": "1s"
+  },
+  "files": {
+    "url_file": "/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/temp/all_urls.txt",
+    "output_file": "/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-22/tzuyang_restaurant_results.jsonl",
+    "error_log": "/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-22/tzuyang_restaurant_errors.log"
+  }
+}
