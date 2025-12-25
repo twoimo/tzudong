@@ -1,0 +1,49 @@
+{
+  "phase": "youtube-meta",
+  "started_at": "2025-12-10 02:24:06",
+  "ended_at": "2025-12-10 02:24:08",
+  "duration_seconds": 2.07,
+  "duration_formatted": "2.1초",
+  "statistics": {
+    "total_records": 1,
+    "success_count": 1,
+    "error_count": 0,
+    "reused_meta_count": 0,
+    "youtube_api_calls": 1,
+    "openai_api_calls": 1,
+    "youtube_api_errors": 0,
+    "openai_api_errors": 0,
+    "ads_detected": 1,
+    "shorts_count": 0,
+    "success_rate": "100.0%"
+  },
+  "timers": {
+    "youtube_api_call": {
+      "count": 1,
+      "total_seconds": 0.15,
+      "avg_seconds": 0.153,
+      "formatted": "0.2초"
+    },
+    "openai_api_call": {
+      "count": 1,
+      "total_seconds": 1.87,
+      "avg_seconds": 1.866,
+      "formatted": "1.9초"
+    },
+    "get_video_info_1": {
+      "count": 1,
+      "total_seconds": 2.02,
+      "avg_seconds": 2.019,
+      "formatted": "2.0초"
+    },
+    "process_all_records": {
+      "count": 1,
+      "total_seconds": 2.02,
+      "avg_seconds": 2.02,
+      "formatted": "2.0초"
+    }
+  },
+  "success_count": 1,
+  "error_count": 0,
+  "skip_count": 0
+}

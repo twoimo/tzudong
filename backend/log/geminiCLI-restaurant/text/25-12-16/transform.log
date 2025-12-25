@@ -1,0 +1,48 @@
+[2025-12-16T02:29:21.887226+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.887401+09:00] [INFO] 🚀 [TRANSFORM] 파이프라인 시작
+[2025-12-16T02:29:21.887488+09:00] [INFO] ⏰ 시작 시간: 2025-12-16 02:29:21
+[2025-12-16T02:29:21.887564+09:00] [INFO] 📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant
+[2025-12-16T02:29:21.887636+09:00] [INFO]    📄 text: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/text/25-12-16
+[2025-12-16T02:29:21.887701+09:00] [INFO]    📊 structured: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-16
+[2025-12-16T02:29:21.887764+09:00] [INFO]    📋 report: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-16
+[2025-12-16T02:29:21.887828+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.888091+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.888176+09:00] [INFO] 🚀 [TRANSFORM] 파이프라인 시작
+[2025-12-16T02:29:21.888246+09:00] [INFO] ⏰ 시작 시간: 2025-12-16 02:29:21
+[2025-12-16T02:29:21.888305+09:00] [INFO] 📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-16
+[2025-12-16T02:29:21.888365+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.888422+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.888477+09:00] [INFO]   평가 결과 변환 시작
+[2025-12-16T02:29:21.888533+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.888592+09:00] [INFO] 입력 파일 (results): /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-16/tzuyang_restaurant_evaluation_results.jsonl
+[2025-12-16T02:29:21.888658+09:00] [INFO] 입력 파일 (notSelection): /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-16/tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl
+[2025-12-16T02:29:21.888727+09:00] [INFO] 출력 파일: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-16/tzuyang_restaurant_transforms.jsonl
+[2025-12-16T02:29:21.888790+09:00] [INFO] 기존 파일 확인 중 (전체 이력)...
+[2025-12-16T02:29:21.921246+09:00] [INFO] 기존 파일에서 1184개의 unique_id 로드됨 (전체 이력)
+[2025-12-16T02:29:21.921390+09:00] [INFO] '/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-16/tzuyang_restaurant_evaluation_results.jsonl' 파일 처리 시작...
+[2025-12-16T02:29:21.921677+09:00] [INFO] '/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-16/tzuyang_restaurant_evaluation_notSelection_with_addressNull.jsonl' 파일 처리 시작...
+[2025-12-16T02:29:21.921911+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.922008+09:00] [INFO] 🏁 [TRANSFORM] 파이프라인 종료
+[2025-12-16T02:29:21.922076+09:00] [INFO] ⏰ 종료 시간: 2025-12-16 02:29:21
+[2025-12-16T02:29:21.922133+09:00] [INFO] ⏱️ 소요 시간: 0.0초
+[2025-12-16T02:29:21.922194+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.922271+09:00] [INFO] 
+[2025-12-16T02:29:21.922328+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.922382+09:00] [SUCCESS] 작업 완료: 처리 통계
+[2025-12-16T02:29:21.922437+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.922493+09:00] [INFO]   시작 시간: 2025-12-16 02:29:21
+[2025-12-16T02:29:21.922549+09:00] [INFO]   종료 시간: 2025-12-16 02:29:21
+[2025-12-16T02:29:21.922609+09:00] [INFO]   총 소요 시간: 0.0초
+[2025-12-16T02:29:21.922663+09:00] [INFO] 
+[2025-12-16T02:29:21.922715+09:00] [INFO]   'results' 파일 처리 라인: 1개
+[2025-12-16T02:29:21.922767+09:00] [INFO]   'notSelection' 파일 처리 라인: 1개
+[2025-12-16T02:29:21.922828+09:00] [INFO] ------------------------------
+[2025-12-16T02:29:21.922882+09:00] [INFO]   기존에 있던 항목: 1184개
+[2025-12-16T02:29:21.922967+09:00] [INFO]   총 변환 시도 항목: 2개
+[2025-12-16T02:29:21.923026+09:00] [SUCCESS]   새로 추가된 항목: 2개
+[2025-12-16T02:29:21.923081+09:00] [WARNING]   중복으로 건너뛴 항목: 0개
+[2025-12-16T02:29:21.923139+09:00] [INFO] 
+[2025-12-16T02:29:21.923193+09:00] [INFO] 결과가 '/home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-evaluation/data/25-12-16/tzuyang_restaurant_transforms.jsonl' 파일에 저장되었습니다.
+[2025-12-16T02:29:21.923248+09:00] [SUCCESS] 총 항목 수: 1186개
+[2025-12-16T02:29:21.923302+09:00] [INFO] ============================================================
+[2025-12-16T02:29:21.923515+09:00] [INFO] 📝 JSON 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-16/transform_022921.json
