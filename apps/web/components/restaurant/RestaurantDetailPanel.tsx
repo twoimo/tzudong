@@ -483,8 +483,8 @@ export function RestaurantDetailPanel({
                 )}
 
                 {/* Header */}
-                <div className="p-4 border-b border-border min-h-[80px]">
-                    <div className="flex items-center justify-between gap-2 h-full">
+                <div className="p-4 border-b border-border h-[80px] flex flex-col justify-center">
+                    <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1">
                             {viewMode === 'review-detail' && selectedReview && (
                                 <>
@@ -492,14 +492,19 @@ export function RestaurantDetailPanel({
                                         variant="ghost"
                                         size="icon"
                                         onClick={handleBackToDetail}
-                                        className="mr-2"
+                                        className="mr-2 shrink-0"
                                     >
                                         <ArrowLeft className="h-4 w-4" />
                                     </Button>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-xl font-bold">
-                                            리뷰 상세
-                                        </h3>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-xl font-bold truncate">
+                                                {restaurant.name}
+                                            </h3>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground truncate">
+                                            {selectedReview.userName}님의 리뷰
+                                        </p>
                                     </div>
                                 </>
                             )}

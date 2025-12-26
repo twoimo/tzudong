@@ -1075,7 +1075,7 @@ export default function StampPage() {
                                             /* 리뷰 상세 뷰 */
                                             <div className="space-y-4">
                                                 {/* 뒤로가기 헤더 */}
-                                                <div className="flex items-center gap-2 mb-4">
+                                                <div className="flex items-center gap-2 mb-4 min-h-[48px]">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
