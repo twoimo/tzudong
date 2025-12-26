@@ -1,4 +1,4 @@
-import { Home, Trophy, Stamp, DollarSign, ClipboardCheck, User, FileText, MessageSquare, PlusCircle, Edit3, Heart, ChevronDown, BarChart2 } from "lucide-react";
+import { Home, Trophy, Stamp, DollarSign, ClipboardCheck, User, FileText, MessageSquare, PlusCircle, Edit3, Heart, ChevronDown, BarChart2, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRouter, usePathname } from "next/navigation";
@@ -73,6 +73,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
       ]
     },
     { icon: MessageSquare, label: "나의 리뷰 내역", path: "/mypage/reviews", onClick: () => router.push("/mypage/reviews") },
+    { icon: Bookmark, label: "나의 북마크 내역", path: "/mypage/bookmarks", onClick: () => router.push("/mypage/bookmarks") },
   ], [router]);
 
   // 마이페이지 메뉴 렌더링

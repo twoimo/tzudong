@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Image from "next/image";
 import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
+import { BookmarkButton } from "@/components/ui/bookmark-button";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -587,6 +588,10 @@ export function RestaurantDetailPanel({
                             )}
                         </div>
                         <div className="flex gap-1">
+                            {/* 북마크 버튼 */}
+                            {user && viewMode === 'detail' && (
+                                <BookmarkButton restaurantId={restaurant.id} />
+                            )}
                             {isAdmin && onEditRestaurant && viewMode === 'detail' && (
                                 <Button
                                     variant="outline"
