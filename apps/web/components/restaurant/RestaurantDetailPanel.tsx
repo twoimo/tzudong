@@ -483,8 +483,8 @@ export function RestaurantDetailPanel({
                 )}
 
                 {/* Header */}
-                <div className="p-4 border-b border-border min-h-[60px]">
-                    <div className="flex items-center justify-between gap-2 h-7">
+                <div className="p-4 border-b border-border min-h-[80px]">
+                    <div className="flex items-center justify-between gap-2 h-full">
                         <div className="flex items-center gap-2 flex-1">
                             {viewMode === 'review-detail' && selectedReview && (
                                 <>
