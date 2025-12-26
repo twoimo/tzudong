@@ -979,8 +979,16 @@ const NaverMapView = memo(({
     if (isGridMode) {
         return (
             <div className="relative h-full">
-                {/* 지도 컨테이너 */}
-                <div ref={mapRef} className="w-full h-full" />
+                {/* 지도 컨테이너 - 모바일 터치 성능 최적화 */}
+                <div
+                    ref={mapRef}
+                    className="w-full h-full touch-pan-y touch-pan-x transform-gpu"
+                    style={{
+                        willChange: 'transform',
+                        touchAction: 'pan-x pan-y',
+                        WebkitOverflowScrolling: 'touch' as any
+                    }}
+                />
 
                 {/* 로딩 상태 표시 */}
                 {(isLoadingRestaurants || !isLoaded) && (
@@ -1032,8 +1040,16 @@ const NaverMapView = memo(({
                     onPanelClick?.('map');
                 }}
             >
-                {/* 지도 컨테이너 */}
-                <div ref={mapRef} className="w-full h-full" />
+                {/* 지도 컨테이너 - 모바일 터치 성능 최적화 */}
+                <div
+                    ref={mapRef}
+                    className="w-full h-full touch-pan-y touch-pan-x transform-gpu"
+                    style={{
+                        willChange: 'transform',
+                        touchAction: 'pan-x pan-y',
+                        WebkitOverflowScrolling: 'touch' as any
+                    }}
+                />
 
                 {/* 로딩 상태 표시 */}
                 {(isLoadingRestaurants || !isLoaded) && (
