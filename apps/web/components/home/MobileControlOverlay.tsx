@@ -78,8 +78,8 @@ function MobileControlOverlayComponent({
 
     return (
         <>
-            {/* 우측 하단: 지역/카테고리 버튼 */}
-            <div className="fixed bottom-20 right-4 z-40 flex flex-col gap-2">
+            {/* 좌측 하단: 지역/카테고리 버튼 */}
+            <div className="fixed bottom-20 left-4 z-40 flex flex-col gap-2">
                 {/* 지역/국가 선택 버튼 */}
                 <Button
                     variant="secondary"
@@ -112,8 +112,8 @@ function MobileControlOverlayComponent({
                 </Button>
             </div>
 
-            {/* 좌측 하단: 검색 버튼 */}
-            <div className="fixed bottom-20 left-4 z-40">
+            {/* 우측 하단: 검색 버튼 */}
+            <div className="fixed bottom-20 right-4 z-40">
                 <Button
                     variant="secondary"
                     size="icon"
