@@ -64,6 +64,7 @@ export function RestaurantDetailPanel({
     const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
+    const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
 
     // [카테고리 처리] categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -917,20 +918,55 @@ export function RestaurantDetailPanel({
                                                     {review.photos.length > 0 && (
                                                         <div className="relative w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
                                                             <Image
-                                                                src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
+                                                                src={supabase.storage.from('review-photos').getPublicUrl(review.photos[cardPhotoIndexes[review.id] || 0].url).data.publicUrl}
                                                                 alt={`음식 사진`}
                                                                 fill
                                                                 className="object-cover"
                                                                 sizes="(max-width: 400px) 100vw, 200px"
                                                                 onError={(e) => {
-                                                                    console.error('이미지 로딩 실패:', review.photos[0].url);
+                                                                    console.error('이미지 로딩 실패:', review.photos[cardPhotoIndexes[review.id] || 0].url);
                                                                     (e.target as HTMLImageElement).style.display = 'none';
                                                                 }}
                                                             />
-                                                            {/* Photo count overlay */}
+                                                            {/* Navigation Arrows */}
                                                             {review.photos.length > 1 && (
-                                                                <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-                                                                    +{review.photos.length - 1}
+                                                                <>
+                                                                    <button
+                                                                        className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const currentIndex = cardPhotoIndexes[review.id] || 0;
+                                                                            const newIndex = currentIndex === 0 ? review.photos.length - 1 : currentIndex - 1;
+                                                                            setCardPhotoIndexes(prev => ({ ...prev, [review.id]: newIndex }));
+                                                                        }}
+                                                                    >
+                                                                        <ChevronLeft className="h-4 w-4" />
+                                                                    </button>
+                                                                    <button
+                                                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            const currentIndex = cardPhotoIndexes[review.id] || 0;
+                                                                            const newIndex = currentIndex === review.photos.length - 1 ? 0 : currentIndex + 1;
+                                                                            setCardPhotoIndexes(prev => ({ ...prev, [review.id]: newIndex }));
+                                                                        }}
+                                                                    >
+                                                                        <ChevronRight className="h-4 w-4" />
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                            {/* Dot Indicators */}
+                                                            {review.photos.length > 1 && (
+                                                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                                                    {review.photos.map((_, index) => (
+                                                                        <div
+                                                                            key={index}
+                                                                            className={`w-1.5 h-1.5 rounded-full ${index === (cardPhotoIndexes[review.id] || 0)
+                                                                                ? 'bg-white'
+                                                                                : 'bg-white/40'
+                                                                                }`}
+                                                                        />
+                                                                    ))}
                                                                 </div>
                                                             )}
                                                         </div>
