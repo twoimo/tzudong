@@ -879,8 +879,10 @@ const NaverMapView = memo(({
                     position: naver.maps.Position.TOP_LEFT,
                 },
                 scaleControl: false,
-                // 성능 최적화 옵션들
-                background: '#ffffff', // 배경색 명시로 렌더링 최적화
+                // 성능 최적화 및 UX 개선 옵션
+                background: '#ffffff',
+                tileSpare: 5, // [UX] 화면 밖 타일 미리 로딩 (흰색 배경 방지), 기본값보다 높게 설정
+                tileTransition: true, // [UX] 타일 로딩 시 페이드 효과
             });
 
             mapInstanceRef.current = map;
