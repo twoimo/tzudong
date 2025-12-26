@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo } from "react";
 import {
@@ -21,6 +21,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { getBannerAnnouncements, Announcement } from "@/types/announcement";
 import { useHydration } from "@/hooks/useHydration";
 import { supabase } from "@/integrations/supabase/client";
+import { useBookmarks } from "@/hooks/use-bookmarks";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -55,6 +56,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
   // 미처리 리뷰 건수 상태
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
+
+  // 북마크 데이터
+  const { data: bookmarksData = [] } = useBookmarks();
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
@@ -423,19 +427,75 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
           </DropdownMenu>
         )}
 
-        {/* Centered Layout 버튼 */}
-        {onToggleCenteredLayout && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "hover:bg-stone-200/50 text-stone-700 transition-colors",
-              isCenteredLayout && "bg-stone-200/50"
-            )}
-            onClick={onToggleCenteredLayout}
-          >
-            <AlignCenter className="h-5 w-5" />
-          </Button>
+        {/* 북마크 - 드롭다운 */}
+        {isHydrated && isLoggedIn && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
+                <Bookmark className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="w-72 bg-[#fdfbf7] border-stone-800/10 font-serif"
+            >
+              <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
+                <span>북마크</span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.push('/mypage/bookmarks')}
+                  className="h-6 w-6 hover:bg-stone-200/50 text-stone-600"
+                >
+                  <Settings className="h-3 w-3" />
+                </Button>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className="bg-stone-800/10" />
+              <ScrollArea className="h-64">
+                {bookmarksData.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-stone-500">
+                    북마크한 맛집이 없습니다
+                  </div>
+                ) : (
+                  <DropdownMenuGroup>
+                    {bookmarksData.slice(0, 5).map((bookmark) => (
+                      <DropdownMenuItem
+                        key={bookmark.id}
+                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-stone-100"
+                        onClick={() => {
+                          // 이미 홈페이지면 커스텀 이벤트 발생, 아니면 URL로 이동
+                          if (pathname === '/') {
+                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', { detail: bookmark.restaurant_id }));
+                          } else {
+                            router.push(`/?r=${bookmark.restaurant_id}`);
+                          }
+                        }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-stone-900 truncate">
+                            {bookmark.restaurant.name}
+                          </p>
+                          <p className="text-xs text-stone-500 truncate">
+                            {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
+                          </p>
+                        </div>
+                        {bookmark.restaurant.category?.[0] && (
+                          <Badge variant="secondary" className="text-[10px] shrink-0">
+                            {bookmark.restaurant.category[0]}
+                          </Badge>
+                        )}
+                      </DropdownMenuItem>
+                    ))}
+                    {bookmarksData.length > 5 && (
+                      <div className="p-2 text-center text-xs text-stone-500">
+                        +{bookmarksData.length - 5}개 더
+                      </div>
+                    )}
+                  </DropdownMenuGroup>
+                )}
+              </ScrollArea>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
 
         {/* 전체화면 */}

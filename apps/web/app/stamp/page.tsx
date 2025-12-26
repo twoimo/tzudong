@@ -198,7 +198,7 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: Resta
                         )}
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                        리뷰 {restaurant.review_count || 0}
+                        리뷰 {(restaurant as any).verified_review_count ?? restaurant.review_count ?? 0}
                     </span>
                 </div>
             </div>
@@ -283,6 +283,7 @@ export default function StampPage() {
     // Review Detail State
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+    const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
 
     // User Stamp Data
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
@@ -333,7 +334,27 @@ export default function StampPage() {
                     max_results: 100
                 });
                 if (error) throw error;
-                return restaurants || [];
+                if (!restaurants || restaurants.length === 0) return [];
+
+                // 승인된 리뷰 수 조회
+                const restaurantIds = restaurants.map((r: any) => r.id);
+                const { data: reviewCounts } = await supabase
+                    .from('reviews')
+                    .select('restaurant_id')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('is_verified', true);
+
+                // 승인된 리뷰 수 카운트
+                const verifiedCountMap = new Map<string, number>();
+                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                });
+
+                // 맛집에 승인된 리뷰 수 추가
+                return restaurants.map((r: any) => ({
+                    ...r,
+                    verified_review_count: verifiedCountMap.get(r.id) || 0
+                }));
             } catch (error) {
                 console.error('맛집 검색 중 오류:', error);
                 return [];
@@ -363,8 +384,28 @@ export default function StampPage() {
                 if (error) throw error;
                 if (!restaurants || restaurants.length === 0) return { restaurants: [], nextCursor: null };
 
+                // 승인된 리뷰 수 조회
+                const restaurantIds = (restaurants as any[]).map(r => r.id);
+                const { data: reviewCounts } = await supabase
+                    .from('reviews')
+                    .select('restaurant_id')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('is_verified', true);
+
+                // 승인된 리뷰 수 카운트
+                const verifiedCountMap = new Map<string, number>();
+                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                });
+
+                // 맛집에 승인된 리뷰 수 추가
+                const restaurantsWithCount = (restaurants as any[]).map(r => ({
+                    ...r,
+                    verified_review_count: verifiedCountMap.get(r.id) || 0
+                }));
+
                 const nextCursor = restaurants.length === 50 ? pageParam + 50 : null;
-                return { restaurants, nextCursor };
+                return { restaurants: restaurantsWithCount, nextCursor };
             } catch (error) {
                 console.error('맛집 데이터 조회 중 오류:', error);
                 return { restaurants: [], nextCursor: null };
@@ -1075,32 +1116,30 @@ export default function StampPage() {
                                             /* 리뷰 상세 뷰 */
                                             <div className="space-y-4">
                                                 {/* 뒤로가기 헤더 */}
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={handleBackFromReviewDetail}
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <ArrowLeft className="h-4 w-4" />
-                                                    </Button>
-                                                    <h3 className="font-semibold">리뷰 상세</h3>
-                                                </div>
-
-                                                {/* 사용자 정보 */}
+                                                {/* 통합 헤더 - 뒤로가기 + 사용자 정보 */}
                                                 <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold">{selectedReview.userName}</span>
+                                                    <div className="flex items-center gap-2 text-sm">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={handleBackFromReviewDetail}
+                                                            className="h-7 w-7 shrink-0"
+                                                        >
+                                                            <ArrowLeft className="h-4 w-4" />
+                                                        </Button>
+                                                        <span className="font-medium">{selectedReview.userName}</span>
                                                         {selectedReview.isVerified && (
-                                                            <Badge variant="outline" className="text-[10px] border-green-500 text-green-500 px-1 py-0 h-4">
-                                                                인증됨
+                                                            <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
+                                                                인증
                                                             </Badge>
                                                         )}
+                                                        <span className="text-muted-foreground">·</span>
+                                                        <span className="text-muted-foreground text-xs">
+                                                            {new Date(selectedReview.visitedAt).toLocaleDateString('ko-KR')}
+                                                        </span>
                                                     </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 px-2 bg-muted hover:bg-muted/80 rounded-full flex items-center gap-1"
+                                                    <button
+                                                        className="flex items-center gap-1 text-sm"
                                                         onClick={() => toggleLike(selectedReview.id, selectedReview.isLikedByUser)}
                                                     >
                                                         <Heart
@@ -1109,16 +1148,10 @@ export default function StampPage() {
                                                                 : 'text-muted-foreground'
                                                                 }`}
                                                         />
-                                                        <span className="text-xs font-medium">
+                                                        <span className="text-muted-foreground text-xs">
                                                             {selectedReview.likeCount >= 100 ? '99+' : selectedReview.likeCount}
                                                         </span>
-                                                    </Button>
-                                                </div>
-
-                                                {/* 방문일 */}
-                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                    <Clock className="h-3 w-3" />
-                                                    <span>방문일: {new Date(selectedReview.visitedAt).toLocaleDateString()}</span>
+                                                    </button>
                                                 </div>
 
                                                 {/* 인스타그램 스타일 캐러셀 */}
@@ -1162,23 +1195,23 @@ export default function StampPage() {
                                                                     {currentPhotoIndex + 1} / {selectedReview.photos.length}
                                                                 </div>
                                                             )}
-                                                        </div>
 
-                                                        {/* 점 인디케이터 */}
-                                                        {selectedReview.photos.length > 1 && (
-                                                            <div className="flex justify-center gap-1.5 mt-3">
-                                                                {selectedReview.photos.map((_, index) => (
-                                                                    <button
-                                                                        key={index}
-                                                                        className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
-                                                                            ? 'bg-primary'
-                                                                            : 'bg-muted-foreground/30'
-                                                                            }`}
-                                                                        onClick={() => setCurrentPhotoIndex(index)}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        )}
+                                                            {/* 점 인디케이터 - 이미지 내부 */}
+                                                            {selectedReview.photos.length > 1 && (
+                                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                                                                    {selectedReview.photos.map((_, index) => (
+                                                                        <button
+                                                                            key={index}
+                                                                            className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
+                                                                                ? 'bg-white'
+                                                                                : 'bg-white/40'
+                                                                                }`}
+                                                                            onClick={() => setCurrentPhotoIndex(index)}
+                                                                        />
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 )}
 
@@ -1223,17 +1256,52 @@ export default function StampPage() {
                                                         {review.photos && review.photos.length > 0 && (
                                                             <div className="relative w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
                                                                 <img
-                                                                    src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
+                                                                    src={supabase.storage.from('review-photos').getPublicUrl(review.photos[cardPhotoIndexes[review.id] || 0].url).data.publicUrl}
                                                                     alt="리뷰 사진"
                                                                     className="w-full h-full object-cover"
                                                                     onError={(e) => {
                                                                         (e.target as HTMLImageElement).style.display = 'none';
                                                                     }}
                                                                 />
-                                                                {/* 추가 사진 수 표시 */}
+                                                                {/* Navigation Arrows */}
                                                                 {review.photos.length > 1 && (
-                                                                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-                                                                        +{review.photos.length - 1}
+                                                                    <>
+                                                                        <button
+                                                                            className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                const currentIndex = cardPhotoIndexes[review.id] || 0;
+                                                                                const newIndex = currentIndex === 0 ? review.photos.length - 1 : currentIndex - 1;
+                                                                                setCardPhotoIndexes(prev => ({ ...prev, [review.id]: newIndex }));
+                                                                            }}
+                                                                        >
+                                                                            <ChevronLeft className="h-4 w-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
+                                                                            onClick={(e) => {
+                                                                                e.stopPropagation();
+                                                                                const currentIndex = cardPhotoIndexes[review.id] || 0;
+                                                                                const newIndex = currentIndex === review.photos.length - 1 ? 0 : currentIndex + 1;
+                                                                                setCardPhotoIndexes(prev => ({ ...prev, [review.id]: newIndex }));
+                                                                            }}
+                                                                        >
+                                                                            <ChevronRight className="h-4 w-4" />
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                                {/* Dot Indicators */}
+                                                                {review.photos.length > 1 && (
+                                                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                                                        {review.photos.map((_, index) => (
+                                                                            <div
+                                                                                key={index}
+                                                                                className={`w-1.5 h-1.5 rounded-full ${index === (cardPhotoIndexes[review.id] || 0)
+                                                                                    ? 'bg-white'
+                                                                                    : 'bg-white/40'
+                                                                                    }`}
+                                                                            />
+                                                                        ))}
                                                                     </div>
                                                                 )}
                                                             </div>

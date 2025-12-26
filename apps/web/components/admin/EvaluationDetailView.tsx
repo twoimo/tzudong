@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,7 +31,7 @@ interface EvaluationDetailViewProps {
     autoHeight?: boolean; // true일 경우 내부 스크롤 없이 콘텐츠 높이에 맞춰 늘어남
 }
 
-export function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
+export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
     const [embedError, setEmbedError] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const iframeRef = React.useRef<HTMLIFrameElement>(null);
@@ -398,4 +398,4 @@ export function EvaluationDetailView({ record, className, autoHeight = false }: 
             )}
         </div>
     );
-}
+});

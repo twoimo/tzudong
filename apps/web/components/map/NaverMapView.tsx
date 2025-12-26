@@ -1,7 +1,7 @@
 'use client';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useEffect, useRef, useState, memo, useMemo } from "react";
+import React, { useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { FilterState } from "@/components/filters/FilterPanel";
@@ -74,6 +74,38 @@ const getCategoryIcon = (category: string | string[] | null | undefined): string
 };
 
 /**
+ * [OPTIMIZATION] 마커 컨텐츠 생성 함수 - 컴포넌트 외부에 정의하여 재생성 방지
+ * 
+ * @param restaurant 레스토랑 정보
+ * @param isSelected 선택 여부
+ * @returns HTML 문자열
+ */
+const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): string => {
+    const icon = getCategoryIcon(restaurant.categories || restaurant.category);
+    const markerSize = isSelected ? 32 : 24;
+
+    return `
+        <div 
+            class="custom-marker ${isSelected ? 'selected-marker' : ''}" 
+            role="button" 
+            aria-label="${restaurant.name} 맛집 마커" 
+            tabindex="0" 
+            title="${restaurant.name}"
+        >
+            <div style="
+                position: relative;
+                font-size: ${markerSize}px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
+                ${icon}
+            </div>
+        </div>
+    `;
+};
+
+/**
  * 지도 로딩 상태 표시 컴포넌트
  */
 const MapLoadingIndicator = memo(({ isLoaded, style, className }: { isLoaded: boolean, style?: React.CSSProperties, className?: string }) => (
@@ -105,7 +137,6 @@ RestaurantCountBadge.displayName = 'RestaurantCountBadge';
 // 빈 상태 UI 컴포넌트
 const EmptyStateIndicator = memo(() => (
     <div className="bg-card/95 backdrop-blur border border-border rounded-lg px-5 py-3 shadow-lg z-10 flex items-center gap-3">
-        <span className="text-xl">🍽️</span>
         <span className="text-sm font-medium text-muted-foreground">
             이 지역에 등록된 맛집이 없습니다
         </span>
@@ -154,33 +185,8 @@ const NaverMapView = memo(({
 
     // ... (중략) ...
 
-    // [Helper] 마커 컨텐츠 생성 (HTML 문자열 반환)
-    const createMarkerContent = useMemo(() => (restaurant: Restaurant, isSelected: boolean) => {
-        // categories 필드 사용 (호환성 속성인 category도 사용 가능)
-        const icon = getCategoryIcon(restaurant.categories || restaurant.category);
-        const markerSize = isSelected ? 32 : 24;
-
-        // HTML 문자열 반환 (접근성 속성 포함)
-        return `
-            <div 
-                class="custom-marker ${isSelected ? 'selected-marker' : ''}" 
-                role="button" 
-                aria-label="${restaurant.name} 맛집 마커" 
-                tabindex="0" 
-                title="${restaurant.name}"
-            >
-                <div style="
-                    position: relative;
-                    font-size: ${markerSize}px;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-                " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
-                    ${icon}
-                </div>
-            </div>
-        `;
-    }, []);
+    // [OPTIMIZATION] 외부에 정의된 함수 참조 사용 - useMemo 오버헤드 제거
+    const createMarkerContent = createMarkerContentFn;
 
 
     // [커스텀 토스트] 지도 상단 중앙 알림 상태
@@ -751,6 +757,10 @@ const NaverMapView = memo(({
                     title: restaurant.name,
                 });
 
+                // [최적화] 마커 객체에 메타데이터 저장 (상태 관리용)
+                (marker as any).__restaurant = restaurant;
+                (marker as any).__isSelected = isSelected;
+
                 // 클릭 리스너 등록
                 naver.maps.Event.addListener(marker, "click", () => {
                     if (onMarkerClick) {
@@ -772,50 +782,40 @@ const NaverMapView = memo(({
 
     }, [displayRestaurants, searchedRestaurant, createMarkerContent, onMarkerClick, onRestaurantSelect]);
 
-    // [최적화] 선택 상태 변경에 따른 마커 스타일 업데이트 (DOM 조작 최소화)
+    // [최적화] 선택 상태 변경에 따른 마커 스타일 업데이트 (안전한 전체 순회 방식)
     useEffect(() => {
         const currentSelected = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
-        const prevSelectedId = prevSelectedRestaurantIdRef.current;
         const currentSelectedId = currentSelected?.id;
 
-        // 선택이 바뀌지 않았다면 패스 (단, gridMode 변경 등의 경우 체크 필요하지만 ID 기준이면 충분)
-        // 하지만 "이전 선택"을 Unselect 처리해야 하므로 상태 관리가 필요함.
-        // 여기서는 간단히: "모든 마커를 순회"하는 건 비효율적일 수 있지만 갯수가 적다면 OK.
-        // 하지만 효율을 위해: "이전 선택된 ID"를 알고 있으므로 그것만 업데이트.
+        // 모든 마커를 순회하며 상태 동기화
+        // 성능: 마커 수백 개 수준에서는 순회 비용이 매우 적음 (O(N))
+        // 장점: 이전 상태 추적 불필요, 데이터 불일치 문제 해결
+        markersMapRef.current.forEach((marker: any, id) => {
+            const isTarget = id === currentSelectedId;
 
-        // 1. 이전 선택된 마커 Unselect 처리
-        if (prevSelectedId && prevSelectedId !== currentSelectedId) {
-            const prevMarker = markersMapRef.current.get(prevSelectedId);
-            // 이전 마커가 여전히 존재하는지 확인 (필터링 등으로 사라졌을 수 있음)
-            if (prevMarker) {
-                // 해당 레스토랑 정보 찾기 (아이콘 재생성을 위해)
-                const prevRestaurant = restaurantsRef.current.find(r => r.id === prevSelectedId);
-                if (prevRestaurant) {
-                    const content = createMarkerContent(prevRestaurant, false);
-                    prevMarker.setIcon({
+            // 상태가 변경된 경우에만 DOM/Icon 업데이트 (비용 절감)
+            if (marker.__isSelected !== isTarget) {
+                const restaurant = marker.__restaurant; // 마커에 저장된 데이터 사용
+
+                if (restaurant) {
+                    const content = createMarkerContent(restaurant, isTarget);
+
+                    marker.setIcon({
                         content: content,
-                        anchor: new naver.maps.Point(12, 12)
+                        anchor: isTarget
+                            ? new naver.maps.Point(16, 16) // 선택됨 (32px)
+                            : new naver.maps.Point(12, 12) // 기본 (24px)
                     });
-                    prevMarker.setZIndex(0); // Z-Index 복구
+
+                    marker.setZIndex(isTarget ? 100 : 0);
+                    marker.__isSelected = isTarget;
                 }
             }
-        }
+        });
 
-        // 2. 현재 선택된 마커 Select 처리
-        if (currentSelectedId) {
-            const currentMarker = markersMapRef.current.get(currentSelectedId);
-            if (currentMarker) {
-                const currentRestaurant = restaurantsRef.current.find(r => r.id === currentSelectedId);
-                if (currentRestaurant) {
-                    const content = createMarkerContent(currentRestaurant, true);
-                    currentMarker.setIcon({
-                        content: content,
-                        anchor: new naver.maps.Point(16, 16) // 선택된 경우(32px) Anchor 조정
-                    });
-                    currentMarker.setZIndex(100); // 선택된 마커 위로 올리기
-                }
-            }
-        }
+        // ref 업데이트는 더 이상 필요 없지만 호환성을 위해 유지
+        prevSelectedRestaurantIdRef.current = currentSelectedId || null;
+
     }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, createMarkerContent]);
 
 
@@ -879,8 +879,10 @@ const NaverMapView = memo(({
                     position: naver.maps.Position.TOP_LEFT,
                 },
                 scaleControl: false,
-                // 성능 최적화 옵션들
-                background: '#ffffff', // 배경색 명시로 렌더링 최적화
+                // 성능 최적화 및 UX 개선 옵션
+                background: '#ffffff',
+                tileSpare: 5, // [UX] 화면 밖 타일 미리 로딩 (흰색 배경 방지), 기본값보다 높게 설정
+                tileTransition: true, // [UX] 타일 로딩 시 페이드 효과
             });
 
             mapInstanceRef.current = map;

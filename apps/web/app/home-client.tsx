@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -11,12 +11,13 @@ import { Restaurant } from "@/types/restaurant";
 import HomeModeToggle from "../components/home/home-mode-toggle";
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
-// [OPTIMIZATION] 동적 임포트 - loading placeholder로 CLS 방지
+// [OPTIMIZATION] 동적 임포트
 const HomeControlPanel = dynamic(
     () => import('../components/home/home-control-panel'),
     {
         ssr: false,
-        loading: () => <div className="h-12" aria-hidden="true" />
+        // 사용자 피드백 반영: 스켈레톤 UI 제거 (로딩 중에는 표시하지 않음)
+        loading: () => null
     }
 );
 
@@ -92,6 +93,7 @@ export default function HomeClient() {
     useEffect(() => {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
+        const restaurantId = searchParams.get('r');
 
         if (panelParam === 'announcement' && announcementId) {
             const announcement = DUMMY_ANNOUNCEMENTS.find(a => a.id === announcementId);
@@ -106,32 +108,79 @@ export default function HomeClient() {
                 }, 500);
             }
         }
+
+        // 북마크에서 맛집 클릭 시 처리
+        if (restaurantId) {
+            // 맛집 조회하여 상세 패널 열기 (병합된 맛집 지원)
+            (async () => {
+                try {
+                    const { supabase } = await import('@/integrations/supabase/client');
+                    const { mergeRestaurants } = await import('@/hooks/use-restaurants');
+
+                    // 먼저 해당 맛집 조회
+                    const { data: targetRestaurant, error } = await supabase
+                        .from('restaurants')
+                        .select('*')
+                        .eq('id', restaurantId)
+                        .single();
+
+                    if (error || !targetRestaurant) {
+                        console.error('맛집 조회 실패:', error);
+                        return;
+                    }
+
+                    // 동일 이름의 맛집들 조회 (병합을 위해)
+                    const { data: sameNameRestaurants } = await supabase
+                        .from('restaurants')
+                        .select('*')
+                        .eq('name', (targetRestaurant as any).name)
+                        .eq('status', 'approved');
+
+                    // 병합 로직 적용
+                    const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
+                    const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
+
+                    if (mergedRestaurant) {
+                        setTimeout(() => {
+                            openDetailPanel(mergedRestaurant);
+                            // URL 정리
+                            router.replace('/', { scroll: false });
+                        }, 300);
+                    }
+                } catch (err) {
+                    console.error('맛집 조회 실패:', err);
+                }
+            })();
+        }
     }, [searchParams, router]);
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
 
     // 패널 열기 (상호 배타적) - 마이페이지, 제보관리, 리뷰관리용
-    const openPanel = (panel: PanelType) => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
+    const openPanel = useCallback((panel: PanelType) => {
         // 맛집 상세 패널 닫기
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
-    };
+    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
 
     // 모든 패널 닫기
-    const closeAllPanels = () => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const closeAllPanels = useCallback(() => {
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
-    };
+    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
 
     // 패널 접기/펼치기
-    const togglePanelCollapse = () => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const togglePanelCollapse = useCallback(() => {
         setIsPanelCollapsed(prev => !prev);
-    };
+    }, []);
 
     // 맛집 상세 패널이 열릴 때 다른 패널 닫기
     useEffect(() => {
@@ -167,7 +216,8 @@ export default function HomeClient() {
     });
 
     // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
-    const openDetailPanel = (restaurant: Restaurant) => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const openDetailPanel = useCallback((restaurant: Restaurant) => {
         // 먼저 다른 패널들 닫기
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
@@ -178,7 +228,7 @@ export default function HomeClient() {
         // searchedRestaurant가 설정되면 setCenter/setZoom이 즉시 호출되어 화면 깜빡임 발생
         // 대신 selectedRestaurant 변경으로 애니메이션 있는 panTo가 호출됨
         state.setIsPanelOpen(true);
-    };
+    }, [state.setPanelRestaurant, state.setSelectedRestaurant, state.setIsPanelOpen]);
 
     // 팝업 이벤트 리스너
     useRestaurantPopupListener({
@@ -190,15 +240,19 @@ export default function HomeClient() {
         openDetailPanel, // 팝업 클릭 시 상세 패널 열기
     });
 
-    const onAdminEditRestaurant = isAdmin ? handlers.handleAdminEditRestaurant : undefined;
+    // [OPTIMIZATION] useMemo로 메모이제이션
+    const onAdminEditRestaurant = useMemo(() =>
+        isAdmin ? handlers.handleAdminEditRestaurant : undefined
+        , [isAdmin, handlers.handleAdminEditRestaurant]);
 
-    const handleSubmissionButtonClick = () => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const handleSubmissionButtonClick = useCallback(() => {
         if (!user) {
             toast.error('맛집 제보는 로그인 후 이용 가능합니다');
             return;
         }
         setIsSubmissionModalOpen(true);
-    };
+    }, [user]);
 
     // 헤더에서 패널 열기 이벤트 리스너
     useEffect(() => {
@@ -240,11 +294,46 @@ export default function HomeClient() {
             }
         };
 
+        // 북마크에서 맛집 선택 시 처리 (홈페이지에서 깜빡임 방지)
+        const handleSelectBookmarkRestaurant = async (e: Event) => {
+            const customEvent = e as CustomEvent<string>;
+            const restaurantId = customEvent.detail;
+
+            try {
+                const { supabase } = await import('@/integrations/supabase/client');
+                const { mergeRestaurants } = await import('@/hooks/use-restaurants');
+
+                const { data: targetRestaurant, error } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .eq('id', restaurantId)
+                    .single();
+
+                if (error || !targetRestaurant) return;
+
+                const { data: sameNameRestaurants } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .eq('name', (targetRestaurant as any).name)
+                    .eq('status', 'approved');
+
+                const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
+                const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
+
+                if (mergedRestaurant) {
+                    openDetailPanel(mergedRestaurant);
+                }
+            } catch (err) {
+                console.error('맛집 조회 실패:', err);
+            }
+        };
+
         window.addEventListener('openMyPage', handleMyPageOpen);
         window.addEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
         window.addEventListener('openAdminReviews', handleAdminReviewsOpen);
         window.addEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
         window.addEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
+        window.addEventListener('selectBookmarkRestaurant', handleSelectBookmarkRestaurant);
 
         return () => {
             window.removeEventListener('openMyPage', handleMyPageOpen);
@@ -252,8 +341,9 @@ export default function HomeClient() {
             window.removeEventListener('openAdminReviews', handleAdminReviewsOpen);
             window.removeEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
             window.removeEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
+            window.removeEventListener('selectBookmarkRestaurant', handleSelectBookmarkRestaurant);
         };
-    }, [isAdmin, activeRightPanel, selectedAnnouncement]);
+    }, [isAdmin, activeRightPanel, selectedAnnouncement, openPanel, togglePanelCollapse, openDetailPanel, router]);
 
     return (
         <>

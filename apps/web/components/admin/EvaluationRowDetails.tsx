@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -10,7 +11,7 @@ interface EvaluationRowDetailsProps {
   onEdit?: () => void;
 }
 
-export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
+export const EvaluationRowDetails = memo(function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsProps) {
   const { youtube_meta, evaluation_results, restaurant_info, missing_message } = record;
 
   // 디버깅: 데이터 구조 확인
@@ -186,5 +187,5 @@ export function EvaluationRowDetails({ record, onEdit }: EvaluationRowDetailsPro
       <EvaluationDetailView record={record} className="flex-1" autoHeight={true} />
     </div>
   );
-}
+});
 

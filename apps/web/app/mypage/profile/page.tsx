@@ -35,7 +35,11 @@ import {
   Eye,
   EyeOff,
   Loader2,
+  Bookmark,
+  ChevronRight,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useBookmarks } from "@/hooks/use-bookmarks";
 
 interface Profile {
   nickname: string;
@@ -44,6 +48,8 @@ interface Profile {
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
+  const { data: bookmarks = [] } = useBookmarks();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -388,6 +394,24 @@ export default function ProfilePage() {
               "비밀번호 변경"
             )}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* 북마크 */}
+      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/bookmarks')}>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Bookmark className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">나의 북마크 내역</p>
+                <p className="text-sm text-muted-foreground">
+                  저장한 맛집 {bookmarks.length}개
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </div>
         </CardContent>
       </Card>
 
