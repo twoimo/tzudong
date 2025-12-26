@@ -374,7 +374,7 @@ export function EvaluationTable({
         <div className="border rounded-lg">
           <Table>
             <TableHeader className="sticky top-0 bg-background z-20">
-              <TableRow>
+              <TableRow className="hover:bg-transparent">
                 <TableHead className="w-12 sticky left-0 bg-background z-10">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -565,7 +565,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
       <div className="border rounded-lg">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-20">
-            <TableRow>
+            <TableRow className="hover:bg-transparent">
               <TableHead className="w-12 sticky left-0 bg-background z-10">
                 <Tooltip>
                   <TooltipTrigger asChild>
