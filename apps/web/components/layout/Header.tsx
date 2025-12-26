@@ -441,24 +441,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
             >
               <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
                 <span>북마크</span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => router.push('/mypage/bookmarks')}
-                    className="h-6 px-2 text-xs hover:bg-stone-200/50 text-stone-600"
-                  >
-                    전체 보기
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => router.push('/mypage/bookmarks')}
-                    className="h-6 w-6 hover:bg-stone-200/50 text-stone-600"
-                  >
-                    <Settings className="h-3 w-3" />
-                  </Button>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => router.push('/mypage/bookmarks')}
+                  className="h-6 w-6 hover:bg-stone-200/50 text-stone-600"
+                >
+                  <Settings className="h-3 w-3" />
+                </Button>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-stone-800/10" />
               <ScrollArea className="h-64">
@@ -472,7 +462,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                       <DropdownMenuItem
                         key={bookmark.id}
                         className="flex items-center gap-2 p-3 cursor-pointer hover:bg-stone-100"
-                        onClick={() => router.push('/')}
+                        onClick={() => router.push(`/?r=${bookmark.restaurant_id}`)}
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-stone-900 truncate">

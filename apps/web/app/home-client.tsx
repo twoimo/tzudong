@@ -92,6 +92,7 @@ export default function HomeClient() {
     useEffect(() => {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
+        const restaurantId = searchParams.get('r');
 
         if (panelParam === 'announcement' && announcementId) {
             const announcement = DUMMY_ANNOUNCEMENTS.find(a => a.id === announcementId);
@@ -105,6 +106,50 @@ export default function HomeClient() {
                     router.replace('/', { scroll: false });
                 }, 500);
             }
+        }
+
+        // 북마크에서 맛집 클릭 시 처리
+        if (restaurantId) {
+            // 맛집 조회하여 상세 패널 열기 (병합된 맛집 지원)
+            (async () => {
+                try {
+                    const { supabase } = await import('@/integrations/supabase/client');
+                    const { mergeRestaurants } = await import('@/hooks/use-restaurants');
+
+                    // 먼저 해당 맛집 조회
+                    const { data: targetRestaurant, error } = await supabase
+                        .from('restaurants')
+                        .select('*')
+                        .eq('id', restaurantId)
+                        .single();
+
+                    if (error || !targetRestaurant) {
+                        console.error('맛집 조회 실패:', error);
+                        return;
+                    }
+
+                    // 동일 이름의 맛집들 조회 (병합을 위해)
+                    const { data: sameNameRestaurants } = await supabase
+                        .from('restaurants')
+                        .select('*')
+                        .eq('name', (targetRestaurant as any).name)
+                        .eq('status', 'approved');
+
+                    // 병합 로직 적용
+                    const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
+                    const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
+
+                    if (mergedRestaurant) {
+                        setTimeout(() => {
+                            openDetailPanel(mergedRestaurant);
+                            // URL 정리
+                            router.replace('/', { scroll: false });
+                        }, 300);
+                    }
+                } catch (err) {
+                    console.error('맛집 조회 실패:', err);
+                }
+            })();
         }
     }, [searchParams, router]);
 
