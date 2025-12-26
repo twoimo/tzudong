@@ -514,14 +514,19 @@ export function RestaurantDetailPanel({
                                         variant="ghost"
                                         size="icon"
                                         onClick={handleBackToDetail}
-                                        className="mr-2"
+                                        className="mr-2 shrink-0"
                                     >
                                         <ArrowLeft className="h-4 w-4" />
                                     </Button>
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-xl font-bold">
-                                            전체 리뷰 ({safeReviewsData.length})
-                                        </h3>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-xl font-bold truncate">
+                                                {restaurant.name}
+                                            </h3>
+                                        </div>
+                                        <p className="text-sm text-muted-foreground truncate">
+                                            전체 리뷰 {safeReviewsData.length}개
+                                        </p>
                                     </div>
                                 </>
                             )}
