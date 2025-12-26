@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { X, Send, CheckCircle2 } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/submissionDraftDB";
+import { cn } from "@/lib/utils";
 
 interface RestaurantSubmissionModalProps {
     isOpen: boolean;
@@ -267,7 +268,14 @@ export default function RestaurantSubmissionModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className={cn(
+                // 모바일: 전체 화면, 둥근 모서리 없음
+                "max-lg:max-w-full max-lg:w-full max-lg:h-full max-lg:rounded-none max-lg:m-0",
+                // 데스크탑: 기존 스타일
+                "lg:max-w-2xl",
+                // 공통: overflow 및 높이
+                "max-h-[90vh] overflow-y-auto"
+            )}>
                 <DialogHeader>
                     <div className="flex items-start justify-between gap-4">
                         <div className="flex-1">

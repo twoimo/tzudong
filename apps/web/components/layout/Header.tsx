@@ -287,11 +287,15 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         </div>
       )}
 
-      {/* 중앙: 공지 배너 (최대 너비) */}
+      {/* 중앙: 공지 배너 - 모바일에서는 최대 너비 제한 */}
       {currentBanner && (
         <div
           className={cn(
-            "flex-1 flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
+            "flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
+            // 모바일: 최대 너비 제한하되 flex-1로 여유 공간 활용
+            "max-lg:flex-1 max-lg:max-w-[280px]",
+            // 데스크탑: 남은 공간 모두 차지
+            "lg:flex-1",
             isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
           )}
           onClick={handleBannerClick}
@@ -309,7 +313,11 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
             </Button>
           )}
           <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
-          <span className="text-sm text-stone-700 font-medium truncate group-hover:text-red-800 transition-colors">
+          <span className={cn(
+            "font-medium truncate group-hover:text-red-800 transition-colors text-stone-700",
+            // 모바일: 텍스트 크기 축소
+            "text-xs lg:text-sm"
+          )}>
             {currentBanner.title}
           </span>
           {bannerAnnouncements.length > 1 && (
