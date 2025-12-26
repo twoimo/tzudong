@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, AlignCenter, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo } from "react";
 import {
@@ -421,21 +421,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
               </ScrollArea>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
-
-        {/* Centered Layout 버튼 */}
-        {onToggleCenteredLayout && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "hover:bg-stone-200/50 text-stone-700 transition-colors",
-              isCenteredLayout && "bg-stone-200/50"
-            )}
-            onClick={onToggleCenteredLayout}
-          >
-            <AlignCenter className="h-5 w-5" />
-          </Button>
         )}
 
         {/* 전체화면 */}
