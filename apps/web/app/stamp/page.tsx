@@ -1076,21 +1076,17 @@ export default function StampPage() {
                                             /* 리뷰 상세 뷰 */
                                             <div className="space-y-4">
                                                 {/* 뒤로가기 헤더 */}
-                                                <div className="flex items-center gap-2 mb-4 min-h-[48px]">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={handleBackFromReviewDetail}
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <ArrowLeft className="h-4 w-4" />
-                                                    </Button>
-                                                    <h3 className="font-semibold">리뷰 상세</h3>
-                                                </div>
-
-                                                {/* 사용자 정보 - Simplified */}
+                                                {/* 통합 헤더 - 뒤로가기 + 사용자 정보 */}
                                                 <div className="flex items-center justify-between">
                                                     <div className="flex items-center gap-2 text-sm">
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={handleBackFromReviewDetail}
+                                                            className="h-7 w-7 shrink-0"
+                                                        >
+                                                            <ArrowLeft className="h-4 w-4" />
+                                                        </Button>
                                                         <span className="font-medium">{selectedReview.userName}</span>
                                                         {selectedReview.isVerified && (
                                                             <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
@@ -1098,7 +1094,7 @@ export default function StampPage() {
                                                             </Badge>
                                                         )}
                                                         <span className="text-muted-foreground">·</span>
-                                                        <span className="text-muted-foreground">
+                                                        <span className="text-muted-foreground text-xs">
                                                             {new Date(selectedReview.visitedAt).toLocaleDateString('ko-KR')}
                                                         </span>
                                                     </div>
