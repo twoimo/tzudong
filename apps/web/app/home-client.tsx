@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
@@ -157,26 +157,29 @@ export default function HomeClient() {
     const state = useHomeState(mapMode);
 
     // 패널 열기 (상호 배타적) - 마이페이지, 제보관리, 리뷰관리용
-    const openPanel = (panel: PanelType) => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
+    const openPanel = useCallback((panel: PanelType) => {
         // 맛집 상세 패널 닫기
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
-    };
+    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
 
     // 모든 패널 닫기
-    const closeAllPanels = () => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const closeAllPanels = useCallback(() => {
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
-    };
+    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
 
     // 패널 접기/펼치기
-    const togglePanelCollapse = () => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const togglePanelCollapse = useCallback(() => {
         setIsPanelCollapsed(prev => !prev);
-    };
+    }, []);
 
     // 맛집 상세 패널이 열릴 때 다른 패널 닫기
     useEffect(() => {
@@ -212,7 +215,8 @@ export default function HomeClient() {
     });
 
     // 맛집 상세 패널 열기 (다른 패널 닫기 포함)
-    const openDetailPanel = (restaurant: Restaurant) => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const openDetailPanel = useCallback((restaurant: Restaurant) => {
         // 먼저 다른 패널들 닫기
         setActiveRightPanel(null);
         setIsPanelCollapsed(false);
@@ -223,7 +227,7 @@ export default function HomeClient() {
         // searchedRestaurant가 설정되면 setCenter/setZoom이 즉시 호출되어 화면 깜빡임 발생
         // 대신 selectedRestaurant 변경으로 애니메이션 있는 panTo가 호출됨
         state.setIsPanelOpen(true);
-    };
+    }, [state.setPanelRestaurant, state.setSelectedRestaurant, state.setIsPanelOpen]);
 
     // 팝업 이벤트 리스너
     useRestaurantPopupListener({
@@ -235,15 +239,19 @@ export default function HomeClient() {
         openDetailPanel, // 팝업 클릭 시 상세 패널 열기
     });
 
-    const onAdminEditRestaurant = isAdmin ? handlers.handleAdminEditRestaurant : undefined;
+    // [OPTIMIZATION] useMemo로 메모이제이션
+    const onAdminEditRestaurant = useMemo(() =>
+        isAdmin ? handlers.handleAdminEditRestaurant : undefined
+        , [isAdmin, handlers.handleAdminEditRestaurant]);
 
-    const handleSubmissionButtonClick = () => {
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const handleSubmissionButtonClick = useCallback(() => {
         if (!user) {
             toast.error('맛집 제보는 로그인 후 이용 가능합니다');
             return;
         }
         setIsSubmissionModalOpen(true);
-    };
+    }, [user]);
 
     // 헤더에서 패널 열기 이벤트 리스너
     useEffect(() => {
@@ -334,7 +342,7 @@ export default function HomeClient() {
             window.removeEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
             window.removeEventListener('selectBookmarkRestaurant', handleSelectBookmarkRestaurant);
         };
-    }, [isAdmin, activeRightPanel, selectedAnnouncement]);
+    }, [isAdmin, activeRightPanel, selectedAnnouncement, openPanel, togglePanelCollapse, openDetailPanel, router]);
 
     return (
         <>

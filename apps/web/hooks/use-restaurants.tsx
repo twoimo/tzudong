@@ -240,9 +240,10 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         staleTime: 5 * 60 * 1000, // 5분 동안 fresh 상태 유지
         gcTime: 10 * 60 * 1000, // 10분 동안 캐시 유지
         queryFn: async () => {
+            // [OPTIMIZATION] 필요한 필드만 선택하여 네트워크 전송량 및 파싱 시간 감소
             let query = supabase
                 .from("restaurants")
-                .select("*")
+                .select("id, name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
                 .eq("status", "approved") // status가 approved인 것만 조회
                 .order("name"); // 이름순으로 정렬
 
