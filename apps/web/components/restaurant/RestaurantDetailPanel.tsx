@@ -487,7 +487,7 @@ export function RestaurantDetailPanel({
                 {/* Header */}
                 <div className="p-4 border-b border-border h-[80px] flex flex-col justify-center">
                     <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-1">
+                        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
                             {viewMode === 'review-detail' && selectedReview && (
                                 <>
                                     <Button
@@ -533,8 +533,8 @@ export function RestaurantDetailPanel({
                                 </>
                             )}
                             {viewMode === 'detail' && (
-                                <div className="flex-1">
-                                    <ScrollableTagContainer className="mb-1" maxWidth="320px">
+                                <div className="flex-1 min-w-0">
+                                    <ScrollableTagContainer className="mb-1" maxWidth="100%">
                                         {categories.map((cat, index) => (
                                             <Badge
                                                 key={index}
@@ -547,9 +547,7 @@ export function RestaurantDetailPanel({
 
                                         {/* 광고 태그 - 모든 병합된 영상에서 수집 */}
                                         {(() => {
-                                            // mergedYoutubeMetas에서 모든 광고 태그 수집
                                             const allAds: string[] = [];
-
                                             const metas = restaurant.mergedYoutubeMetas ||
                                                 (restaurant.youtube_meta ? [restaurant.youtube_meta] : []);
 
@@ -560,7 +558,6 @@ export function RestaurantDetailPanel({
                                                 }
                                             });
 
-                                            // 중복 제거
                                             const uniqueAds = Array.from(new Set(allAds));
 
                                             return uniqueAds.length > 0 ? (
@@ -579,15 +576,18 @@ export function RestaurantDetailPanel({
                                         })()}
                                     </ScrollableTagContainer>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-2xl">{getCategoryEmoji(categories[0] || '')}</span>
-                                        <h2 className="text-xl font-bold line-clamp-2">
+                                        <span className="text-2xl shrink-0">{getCategoryEmoji(categories[0] || '')}</span>
+                                        <h2
+                                            className="text-xl font-bold truncate"
+                                            title={restaurant.name}
+                                        >
                                             {restaurant.name}
                                         </h2>
                                     </div>
                                 </div>
                             )}
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 shrink-0">
                             {/* 북마크 버튼 */}
                             {user && viewMode === 'detail' && (
                                 <BookmarkButton restaurantId={restaurant.id} />
