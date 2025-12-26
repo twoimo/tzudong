@@ -24,6 +24,7 @@ interface RestaurantDetailPanelProps {
     onRequestEditRestaurant?: (restaurant: Restaurant) => void;
     onToggleCollapse?: () => void;
     isPanelOpen?: boolean;
+    isMobile?: boolean;
 }
 
 interface Review {
@@ -53,6 +54,7 @@ export function RestaurantDetailPanel({
     onRequestEditRestaurant,
     onToggleCollapse,
     isPanelOpen = true,
+    isMobile = false,
 }: RestaurantDetailPanelProps) {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
@@ -468,8 +470,8 @@ export function RestaurantDetailPanel({
     return (
         <>
             <div className="h-full flex flex-col bg-background border-l border-border relative">
-                {/* 플로팅 접기/펼치기 버튼 - 패널 좌측 가장자리 */}
-                {onToggleCollapse && (
+                {/* 플로팅 접기/펼치기 버튼 - 패널 좌측 가장자리, 모바일에서는 숨김 */}
+                {onToggleCollapse && !isMobile && (
                     <button
                         onClick={onToggleCollapse}
                         className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex items-center justify-center w-6 h-12 bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group"

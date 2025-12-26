@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
 import Sidebar from '@/components/layout/Sidebar';
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import AuthModal from '@/components/auth/AuthModal';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
@@ -13,6 +14,7 @@ import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
 import { DailyRecommendationPopup } from '@/components/recommendation/DailyRecommendationPopup';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLayout } from '@/contexts/LayoutContext';
+import { useDeviceType } from '@/hooks/useDeviceType';
 import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
@@ -26,8 +28,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
     const queryClient = useQueryClient();
     const pathname = usePathname();
-    const router = useRouter(); // 추가
+    const router = useRouter();
     const { isSidebarOpen, setIsSidebarOpen } = useLayout();
+    const { isMobileOrTablet, isDesktop } = useDeviceType();
     const [isCenteredLayout, setIsCenteredLayout] = useState(false);
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -77,12 +80,15 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
             {user && <UserDataPrefetcher />}
 
-            {/* 사이드바 - 마이페이지일 때는 마이페이지 모드로 표시 */}
-            <Sidebar isOpen={isSidebarOpen} isMyPageMode={isMyPage} />
+            {/* 사이드바 - 데스크탑에서만 표시 */}
+            {isDesktop && <Sidebar isOpen={isSidebarOpen} isMyPageMode={isMyPage} />}
 
             <div className={cn(
                 "flex-1 flex flex-col overflow-hidden transition-all duration-300",
-                isSidebarOpen ? "ml-64" : "ml-16"
+                // 데스크탑에서만 사이드바 마진 적용
+                isDesktop && (isSidebarOpen ? "ml-64" : "ml-16"),
+                // 모바일/태블릿에서 하단 네비게이션 공간 확보
+                isMobileOrTablet && "pb-14"
             )}>
                 <Header
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -102,7 +108,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                             router.push(`/?panel=announcement&announcementId=${announcement.id}`);
                         }
                     }}
-                    hideToggleSidebar={false}
+                    // 모바일/태블릿에서 사이드바 토글 버튼 숨김
+                    hideToggleSidebar={isMobileOrTablet}
+                    isMobileOrTablet={isMobileOrTablet}
                 />
 
                 <main className={cn(
@@ -117,6 +125,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     </div>
                 </main>
             </div>
+
+            {/* 모바일/태블릿용 하단 네비게이션바 */}
+            {isMobileOrTablet && <MobileBottomNav />}
 
             <AuthModal
                 isOpen={isAuthModalOpen}
