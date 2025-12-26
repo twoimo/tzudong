@@ -1009,7 +1009,10 @@ export function RestaurantDetailPanel({
                                         )}
                                         <span className="font-medium">{selectedReview.userName}</span>
                                         {selectedReview.isVerified && (
-                                            <BadgeCheck className="h-4 w-4 text-green-500" />
+                                            <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
+                                                <CheckCircle className="h-2 w-2 mr-0.5" />
+                                                인증
+                                            </Badge>
                                         )}
                                         <span className="text-muted-foreground">·</span>
                                         <span className="text-muted-foreground">
