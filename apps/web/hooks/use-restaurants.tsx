@@ -288,10 +288,30 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 throw error;
             }
 
+            // 승인된 리뷰 수 조회
+            const restaurantIds = ((data || []) as any[]).map(r => r.id);
+            let verifiedCountMap = new Map<string, number>();
+
+            if (restaurantIds.length > 0) {
+                const { data: reviewCounts } = await supabase
+                    .from('reviews')
+                    .select('restaurant_id')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('is_verified', true);
+
+                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                });
+            }
+
             // 병합 로직 적용
             const restaurants = mergeRestaurants(data || []);
 
-            return restaurants;
+            // 승인된 리뷰 수 추가
+            return restaurants.map(r => ({
+                ...r,
+                verified_review_count: verifiedCountMap.get(r.id) || 0
+            })) as Restaurant[];
         },
         enabled,
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함

@@ -198,7 +198,7 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: Resta
                         )}
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                        리뷰 {restaurant.review_count || 0}
+                        리뷰 {(restaurant as any).verified_review_count ?? restaurant.review_count ?? 0}
                     </span>
                 </div>
             </div>
@@ -334,7 +334,27 @@ export default function StampPage() {
                     max_results: 100
                 });
                 if (error) throw error;
-                return restaurants || [];
+                if (!restaurants || restaurants.length === 0) return [];
+
+                // 승인된 리뷰 수 조회
+                const restaurantIds = restaurants.map((r: any) => r.id);
+                const { data: reviewCounts } = await supabase
+                    .from('reviews')
+                    .select('restaurant_id')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('is_verified', true);
+
+                // 승인된 리뷰 수 카운트
+                const verifiedCountMap = new Map<string, number>();
+                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                });
+
+                // 맛집에 승인된 리뷰 수 추가
+                return restaurants.map((r: any) => ({
+                    ...r,
+                    verified_review_count: verifiedCountMap.get(r.id) || 0
+                }));
             } catch (error) {
                 console.error('맛집 검색 중 오류:', error);
                 return [];
@@ -364,8 +384,28 @@ export default function StampPage() {
                 if (error) throw error;
                 if (!restaurants || restaurants.length === 0) return { restaurants: [], nextCursor: null };
 
+                // 승인된 리뷰 수 조회
+                const restaurantIds = (restaurants as any[]).map(r => r.id);
+                const { data: reviewCounts } = await supabase
+                    .from('reviews')
+                    .select('restaurant_id')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('is_verified', true);
+
+                // 승인된 리뷰 수 카운트
+                const verifiedCountMap = new Map<string, number>();
+                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                });
+
+                // 맛집에 승인된 리뷰 수 추가
+                const restaurantsWithCount = (restaurants as any[]).map(r => ({
+                    ...r,
+                    verified_review_count: verifiedCountMap.get(r.id) || 0
+                }));
+
                 const nextCursor = restaurants.length === 50 ? pageParam + 50 : null;
-                return { restaurants, nextCursor };
+                return { restaurants: restaurantsWithCount, nextCursor };
             } catch (error) {
                 console.error('맛집 데이터 조회 중 오류:', error);
                 return { restaurants: [], nextCursor: null };
