@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -965,24 +965,29 @@ export function RestaurantDetailPanel({
                         ) : viewMode === 'review-detail' && selectedReview ? (
                             /* Review Detail View - 리뷰 상세 + 캐러셀 */
                             <div className="space-y-4">
-                                {/* User Info */}
+                                {/* User Info - Simplified */}
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center gap-2 text-sm">
                                         {selectedReview.isPinned && (
-                                            <Pin className="h-4 w-4 text-primary fill-primary" />
+                                            <Pin className="h-3.5 w-3.5 text-primary fill-primary" />
                                         )}
-                                        <span className="font-semibold">{selectedReview.userName}</span>
+                                        <span className="font-medium">{selectedReview.userName}</span>
                                         {selectedReview.isVerified && (
-                                            <Badge variant="default" className="h-5 px-1.5 text-xs bg-green-600">
-                                                <CheckCircle className="h-3 w-3 mr-0.5" />
-                                                인증
-                                            </Badge>
+                                            <BadgeCheck className="h-4 w-4 text-green-500" />
+                                        )}
+                                        <span className="text-muted-foreground">·</span>
+                                        <span className="text-muted-foreground">
+                                            {new Date(selectedReview.submittedAt).toLocaleDateString('ko-KR')}
+                                        </span>
+                                        {selectedReview.isEditedByAdmin && (
+                                            <>
+                                                <span className="text-muted-foreground">·</span>
+                                                <span className="text-orange-500 text-xs">수정됨</span>
+                                            </>
                                         )}
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 px-2 bg-muted hover:bg-muted/80 rounded-full flex items-center gap-1"
+                                    <button
+                                        className="flex items-center gap-1 text-sm"
                                         onClick={() => handleLikeReview(selectedReview.id)}
                                     >
                                         <Heart
@@ -991,23 +996,11 @@ export function RestaurantDetailPanel({
                                                 : 'text-muted-foreground'
                                                 }`}
                                         />
-                                        <span className="text-xs font-medium">
+                                        <span className="text-muted-foreground text-xs">
                                             {getRealtimeLikeCount(selectedReview) >= 100 ? '99+' : getRealtimeLikeCount(selectedReview)}
                                         </span>
-                                    </Button>
+                                    </button>
                                 </div>
-
-                                {/* Date */}
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{formatDateTime(selectedReview.submittedAt)}</span>
-                                </div>
-
-                                {selectedReview.isEditedByAdmin && (
-                                    <Badge variant="outline" className="border-orange-500 text-orange-500 text-xs">
-                                        ⚠️ 관리자가 수정함
-                                    </Badge>
-                                )}
 
                                 {/* Photo Carousel - Instagram Style */}
                                 {selectedReview.photos.length > 0 && (
@@ -1053,23 +1046,23 @@ export function RestaurantDetailPanel({
                                                     {currentPhotoIndex + 1} / {selectedReview.photos.length}
                                                 </div>
                                             )}
-                                        </div>
 
-                                        {/* Dot Indicators */}
-                                        {selectedReview.photos.length > 1 && (
-                                            <div className="flex justify-center gap-1.5 mt-3">
-                                                {selectedReview.photos.map((_, index) => (
-                                                    <button
-                                                        key={index}
-                                                        className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
-                                                            ? 'bg-primary'
-                                                            : 'bg-muted-foreground/30'
-                                                            }`}
-                                                        onClick={() => setCurrentPhotoIndex(index)}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
+                                            {/* Dot Indicators - Inside Image */}
+                                            {selectedReview.photos.length > 1 && (
+                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                                                    {selectedReview.photos.map((_, index) => (
+                                                        <button
+                                                            key={index}
+                                                            className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
+                                                                ? 'bg-white'
+                                                                : 'bg-white/40'
+                                                                }`}
+                                                            onClick={() => setCurrentPhotoIndex(index)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
 
