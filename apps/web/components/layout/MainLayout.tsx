@@ -80,15 +80,23 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
             {user && <UserDataPrefetcher />}
 
-            {/* 사이드바 - 데스크탑에서만 표시 */}
-            {isDesktop && <Sidebar isOpen={isSidebarOpen} isMyPageMode={isMyPage} />}
+            {/* 사이드바 - 데스크탑에서만 표시 (CSS 미디어 쿼리로 SSR 깜빡임 방지) */}
+            <div className={cn(
+                // CSS 미디어 쿼리: 1024px 이하에서 숨김
+                "max-lg:hidden",
+                // JS 기반 조건: isDesktop이 false면 숨김 (hydration 후)
+                !isDesktop && "hidden"
+            )}>
+                <Sidebar isOpen={isSidebarOpen} isMyPageMode={isMyPage} />
+            </div>
 
             <div className={cn(
                 "flex-1 flex flex-col overflow-hidden transition-all duration-300",
-                // 데스크탑에서만 사이드바 마진 적용
-                isDesktop && (isSidebarOpen ? "ml-64" : "ml-16"),
-                // 모바일/태블릿에서 하단 네비게이션 공간 확보
-                isMobileOrTablet && "pb-14"
+                // 데스크탑에서만 사이드바 마진 적용 (CSS 미디어 쿼리)
+                "lg:ml-16",
+                isSidebarOpen && "lg:ml-64",
+                // 모바일/태블릿에서 하단 네비게이션 공간 확보 (CSS 미디어 쿼리)
+                "max-lg:pb-14"
             )}>
                 <Header
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -126,8 +134,15 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 </main>
             </div>
 
-            {/* 모바일/태블릿용 하단 네비게이션바 */}
-            {isMobileOrTablet && <MobileBottomNav />}
+            {/* 모바일/태블릿용 하단 네비게이션바 (CSS 미디어 쿼리로 SSR 깜빡임 방지) */}
+            <div className={cn(
+                // CSS 미디어 쿼리: 1024px 이상에서 숨김
+                "lg:hidden",
+                // JS 기반 조건: isDesktop이 true면 숨김 (hydration 후)
+                isDesktop && "hidden"
+            )}>
+                <MobileBottomNav />
+            </div>
 
             <AuthModal
                 isOpen={isAuthModalOpen}
