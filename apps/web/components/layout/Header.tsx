@@ -462,7 +462,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                       <DropdownMenuItem
                         key={bookmark.id}
                         className="flex items-center gap-2 p-3 cursor-pointer hover:bg-stone-100"
-                        onClick={() => router.push(`/?r=${bookmark.restaurant_id}`)}
+                        onClick={() => {
+                          // 이미 홈페이지면 커스텀 이벤트 발생, 아니면 URL로 이동
+                          if (pathname === '/') {
+                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', { detail: bookmark.restaurant_id }));
+                          } else {
+                            router.push(`/?r=${bookmark.restaurant_id}`);
+                          }
+                        }}
                       >
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-stone-900 truncate">

@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Bookmark } from "lucide-react";
 import { useBookmarkIds, useToggleBookmark } from "@/hooks/use-bookmarks";
@@ -12,19 +13,21 @@ interface BookmarkButtonProps {
     className?: string;
 }
 
-export function BookmarkButton({ restaurantId, variant = 'icon', className }: BookmarkButtonProps) {
+// [성능 최적화] memo로 불필요한 리렌더링 방지
+const BookmarkButtonComponent = ({ restaurantId, variant = 'icon', className }: BookmarkButtonProps) => {
     const { user } = useAuth();
     const { data: bookmarkIds = new Set() } = useBookmarkIds();
     const { toggleBookmark, isLoading } = useToggleBookmark();
 
     const isBookmarked = bookmarkIds.has(restaurantId);
 
-    if (!user) return null;
-
-    const handleClick = (e: React.MouseEvent) => {
+    // [성능 최적화] useCallback으로 이벤트 핸들러 메모이제이션
+    const handleClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
         toggleBookmark(restaurantId, isBookmarked);
-    };
+    }, [restaurantId, isBookmarked, toggleBookmark]);
+
+    if (!user) return null;
 
     if (variant === 'icon') {
         return (
@@ -56,4 +59,8 @@ export function BookmarkButton({ restaurantId, variant = 'icon', className }: Bo
             {isBookmarked ? "북마크됨" : "북마크"}
         </Button>
     );
-}
+};
+
+// [성능 최적화] React.memo로 감싸서 props가 변경되지 않으면 리렌더링 방지
+export const BookmarkButton = memo(BookmarkButtonComponent);
+BookmarkButton.displayName = "BookmarkButton";

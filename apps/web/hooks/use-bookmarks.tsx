@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 interface Bookmark {
     id: string;
@@ -21,6 +21,10 @@ interface BookmarkWithRestaurant extends Bookmark {
         review_count: number;
     };
 }
+
+// [성능 최적화] 북마크 데이터 캐싱 시간 설정
+const BOOKMARK_STALE_TIME = 2 * 60 * 1000; // 2분간 stale 상태가 되지 않음
+const BOOKMARK_GC_TIME = 10 * 60 * 1000; // 10분간 캐시 유지
 
 export function useBookmarks() {
     const { user } = useAuth();
@@ -61,16 +65,18 @@ export function useBookmarks() {
             })) as BookmarkWithRestaurant[];
         },
         enabled: !!user?.id,
+        staleTime: BOOKMARK_STALE_TIME,
+        gcTime: BOOKMARK_GC_TIME,
     });
 }
 
 export function useBookmarkIds() {
     const { user } = useAuth();
 
-    return useQuery({
+    const query = useQuery({
         queryKey: ['bookmark-ids', user?.id],
         queryFn: async () => {
-            if (!user?.id) return new Set<string>();
+            if (!user?.id) return [] as string[];
 
             const { data, error } = await (supabase as any)
                 .from('user_bookmarks')
@@ -79,10 +85,20 @@ export function useBookmarkIds() {
 
             if (error) throw error;
 
-            return new Set((data || []).map((item: any) => item.restaurant_id));
+            return (data || []).map((item: any) => item.restaurant_id) as string[];
         },
         enabled: !!user?.id,
+        staleTime: BOOKMARK_STALE_TIME,
+        gcTime: BOOKMARK_GC_TIME,
     });
+
+    // [성능 최적화] Set 객체를 useMemo로 메모이제이션하여 불필요한 재생성 방지
+    const bookmarkIdsSet = useMemo(() => new Set(query.data || []), [query.data]);
+
+    return {
+        ...query,
+        data: bookmarkIdsSet,
+    };
 }
 
 export function useToggleBookmark() {
@@ -102,7 +118,19 @@ export function useToggleBookmark() {
 
             if (error) throw error;
         },
-        onSuccess: () => {
+        // [성능 최적화] Optimistic Update 적용
+        onMutate: async (restaurantId) => {
+            await queryClient.cancelQueries({ queryKey: ['bookmark-ids', user?.id] });
+            const previousIds = queryClient.getQueryData(['bookmark-ids', user?.id]) as string[] | undefined;
+            queryClient.setQueryData(['bookmark-ids', user?.id], [...(previousIds || []), restaurantId]);
+            return { previousIds };
+        },
+        onError: (err, restaurantId, context) => {
+            if (context?.previousIds) {
+                queryClient.setQueryData(['bookmark-ids', user?.id], context.previousIds);
+            }
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
             queryClient.invalidateQueries({ queryKey: ['bookmark-ids'] });
         },
@@ -120,7 +148,22 @@ export function useToggleBookmark() {
 
             if (error) throw error;
         },
-        onSuccess: () => {
+        // [성능 최적화] Optimistic Update 적용
+        onMutate: async (restaurantId) => {
+            await queryClient.cancelQueries({ queryKey: ['bookmark-ids', user?.id] });
+            const previousIds = queryClient.getQueryData(['bookmark-ids', user?.id]) as string[] | undefined;
+            queryClient.setQueryData(
+                ['bookmark-ids', user?.id],
+                (previousIds || []).filter(id => id !== restaurantId)
+            );
+            return { previousIds };
+        },
+        onError: (err, restaurantId, context) => {
+            if (context?.previousIds) {
+                queryClient.setQueryData(['bookmark-ids', user?.id], context.previousIds);
+            }
+        },
+        onSettled: () => {
             queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
             queryClient.invalidateQueries({ queryKey: ['bookmark-ids'] });
         },

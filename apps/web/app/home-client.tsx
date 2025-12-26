@@ -285,11 +285,46 @@ export default function HomeClient() {
             }
         };
 
+        // 북마크에서 맛집 선택 시 처리 (홈페이지에서 깜빡임 방지)
+        const handleSelectBookmarkRestaurant = async (e: Event) => {
+            const customEvent = e as CustomEvent<string>;
+            const restaurantId = customEvent.detail;
+
+            try {
+                const { supabase } = await import('@/integrations/supabase/client');
+                const { mergeRestaurants } = await import('@/hooks/use-restaurants');
+
+                const { data: targetRestaurant, error } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .eq('id', restaurantId)
+                    .single();
+
+                if (error || !targetRestaurant) return;
+
+                const { data: sameNameRestaurants } = await supabase
+                    .from('restaurants')
+                    .select('*')
+                    .eq('name', (targetRestaurant as any).name)
+                    .eq('status', 'approved');
+
+                const merged = mergeRestaurants((sameNameRestaurants || [targetRestaurant]) as any);
+                const mergedRestaurant = merged.find(r => r.id === restaurantId) || merged[0];
+
+                if (mergedRestaurant) {
+                    openDetailPanel(mergedRestaurant);
+                }
+            } catch (err) {
+                console.error('맛집 조회 실패:', err);
+            }
+        };
+
         window.addEventListener('openMyPage', handleMyPageOpen);
         window.addEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
         window.addEventListener('openAdminReviews', handleAdminReviewsOpen);
         window.addEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
         window.addEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
+        window.addEventListener('selectBookmarkRestaurant', handleSelectBookmarkRestaurant);
 
         return () => {
             window.removeEventListener('openMyPage', handleMyPageOpen);
@@ -297,6 +332,7 @@ export default function HomeClient() {
             window.removeEventListener('openAdminReviews', handleAdminReviewsOpen);
             window.removeEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
             window.removeEventListener('openAnnouncementDetail', handleAnnouncementDetailOpen);
+            window.removeEventListener('selectBookmarkRestaurant', handleSelectBookmarkRestaurant);
         };
     }, [isAdmin, activeRightPanel, selectedAnnouncement]);
 
