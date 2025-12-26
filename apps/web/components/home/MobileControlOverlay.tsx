@@ -1,17 +1,25 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Filter, Search, X, MapPin } from 'lucide-react';
+import { Filter, Search, X, MapPin, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Region } from '@/types/restaurant';
+import { Region, REGIONS } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { mergeRestaurants } from '@/hooks/use-restaurants';
 
-// [OPTIMIZATION] 바텀시트 내 컴포넌트 lazy loading
-const RegionSelector = lazy(() => import('@/components/region/RegionSelector'));
+// 카테고리 상수
+const CATEGORIES = [
+    "한식", "중식", "양식", "분식", "치킨", "피자", "고기",
+    "족발·보쌈", "돈까스·회", "아시안", "패스트푸드",
+    "카페·디저트", "찜·탕", "야식", "도시락"
+];
+
+// [OPTIMIZATION] RestaurantSearch만 lazy loading
 const RestaurantSearch = lazy(() => import('@/components/search/RestaurantSearch'));
-const CategoryFilter = lazy(() => import('@/components/filters/CategoryFilter'));
 
 // [OPTIMIZATION] 로딩 스켈레톤
 const SheetLoading = () => (
@@ -39,7 +47,7 @@ type ActiveSheet = 'none' | 'region' | 'category' | 'search';
 
 /**
  * 모바일용 컨트롤 오버레이 컴포넌트
- * [OPTIMIZATION] useMemo로 레이블 캐싱, lazy loading으로 번들 최적화
+ * [OPTIMIZATION] 직접 버튼 그리드 UI로 구현하여 빠른 선택 가능
  */
 function MobileControlOverlayComponent({
     mapMode,
@@ -57,6 +65,20 @@ function MobileControlOverlayComponent({
 }: MobileControlOverlayProps) {
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
 
+    // 맛집 데이터 조회 (지역/카테고리 카운트용)
+    const { data: restaurants = [] } = useQuery({
+        queryKey: ['mobile-control-restaurants', mapMode],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('restaurants')
+                .select('*')
+                .eq('status', 'approved');
+
+            if (error) return [];
+            return mergeRestaurants(data || []);
+        },
+    });
+
     const handleClose = useCallback(() => {
         setActiveSheet('none');
     }, []);
@@ -65,7 +87,37 @@ function MobileControlOverlayComponent({
         setActiveSheet(prev => prev === sheet ? 'none' : sheet);
     }, []);
 
-    // [OPTIMIZATION] useMemo로 레이블 캐싱
+    // [OPTIMIZATION] 지역별 맛집 수 계산
+    const regionCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        restaurants.forEach((restaurant) => {
+            const address = restaurant.road_address || restaurant.jibun_address || '';
+            REGIONS.forEach((region) => {
+                if (region === "울릉도" && address.includes('울릉')) {
+                    counts[region] = (counts[region] || 0) + 1;
+                } else if (region === "욕지도" && address.includes('욕지')) {
+                    counts[region] = (counts[region] || 0) + 1;
+                } else if (address.includes(region)) {
+                    counts[region] = (counts[region] || 0) + 1;
+                }
+            });
+        });
+        return counts;
+    }, [restaurants]);
+
+    // [OPTIMIZATION] 카테고리별 맛집 수 계산
+    const categoryCounts = useMemo(() => {
+        const counts: Record<string, number> = {};
+        restaurants.forEach((restaurant) => {
+            const categories = restaurant.categories || [];
+            categories.forEach((category: string) => {
+                counts[category] = (counts[category] || 0) + 1;
+            });
+        });
+        return counts;
+    }, [restaurants]);
+
+    // [OPTIMIZATION] useMemo로 버튼 레이블 캐싱
     const regionLabel = useMemo(() =>
         mapMode === 'domestic' ? (selectedRegion || '전체') : (selectedCountry || '국가'),
         [mapMode, selectedRegion, selectedCountry]);
@@ -164,70 +216,128 @@ function MobileControlOverlayComponent({
                             </Button>
                         </div>
 
-                        {/* 컨텐츠 - lazy loading 컴포넌트 Suspense 적용 */}
+                        {/* 컨텐츠 - 직접 선택 가능한 버튼 UI */}
                         <div className="p-4">
-                            <Suspense fallback={<SheetLoading />}>
-                                {activeSheet === 'region' && (
-                                    <div className="space-y-4">
-                                        {mapMode === 'domestic' ? (
-                                            <RegionSelector
-                                                selectedRegion={selectedRegion}
-                                                onRegionChange={(region) => {
-                                                    onRegionChange(region);
-                                                    handleClose();
-                                                }}
-                                                onRegionSelect={() => {
+                            {activeSheet === 'region' && (
+                                <div className="space-y-3">
+                                    {mapMode === 'domestic' ? (
+                                        // 국내 지역 버튼 그리드
+                                        <>
+                                            {/* 전국 버튼 */}
+                                            <Button
+                                                variant={selectedRegion === null ? "default" : "outline"}
+                                                className="w-full justify-between h-auto py-3"
+                                                onClick={() => {
+                                                    onRegionChange(null);
                                                     onSearchExecute();
                                                     handleClose();
                                                 }}
-                                            />
-                                        ) : (
-                                            <Select
-                                                value={selectedCountry || undefined}
-                                                onValueChange={(value) => {
-                                                    onCountryChange(value);
-                                                    handleClose();
-                                                }}
                                             >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="국가 선택" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="미국">미국 ({countryCounts["미국"] || 0}개)</SelectItem>
-                                                    <SelectItem value="일본">일본 ({countryCounts["일본"] || 0}개)</SelectItem>
-                                                    <SelectItem value="대만">대만 ({countryCounts["대만"] || 0}개)</SelectItem>
-                                                    <SelectItem value="태국">태국 ({countryCounts["태국"] || 0}개)</SelectItem>
-                                                    <SelectItem value="인도네시아">인도네시아 ({countryCounts["인도네시아"] || 0}개)</SelectItem>
-                                                    <SelectItem value="튀르키예">튀르키예 ({countryCounts["튀르키예"] || 0}개)</SelectItem>
-                                                    <SelectItem value="헝가리">헝가리 ({countryCounts["헝가리"] || 0}개)</SelectItem>
-                                                    <SelectItem value="오스트레일리아">오스트레일리아 ({countryCounts["오스트레일리아"] || 0}개)</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        )}
-                                    </div>
-                                )}
+                                                <span className="font-medium">전국</span>
+                                                <span className="text-sm opacity-75">({restaurants.length}개)</span>
+                                            </Button>
 
-                                {activeSheet === 'category' && (
-                                    <div className="space-y-4">
-                                        <CategoryFilter
-                                            selectedCategories={selectedCategories}
-                                            onCategoryChange={(categories) => {
-                                                onCategoryChange(categories);
-                                            }}
-                                            selectedRegion={mapMode === 'domestic' ? selectedRegion : null}
-                                            selectedCountry={mapMode === 'overseas' ? selectedCountry : null}
-                                            className="w-full"
-                                        />
+                                            {/* 지역 버튼 그리드 */}
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {REGIONS.map((region) => {
+                                                    const count = regionCounts[region] || 0;
+                                                    const isSelected = selectedRegion === region;
+                                                    return (
+                                                        <Button
+                                                            key={region}
+                                                            variant={isSelected ? "default" : "outline"}
+                                                            className="justify-between h-auto py-3"
+                                                            onClick={() => {
+                                                                onRegionChange(region);
+                                                                onSearchExecute();
+                                                                handleClose();
+                                                            }}
+                                                        >
+                                                            <span className="font-medium">{region}</span>
+                                                            <span className="text-xs opacity-75">({count})</span>
+                                                        </Button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        // 해외 국가 버튼 그리드
+                                        <div className="grid grid-cols-2 gap-2">
+                                            {Object.keys(countryCounts).map((country) => {
+                                                const count = countryCounts[country] || 0;
+                                                const isSelected = selectedCountry === country;
+                                                return (
+                                                    <Button
+                                                        key={country}
+                                                        variant={isSelected ? "default" : "outline"}
+                                                        className="justify-between h-auto py-3"
+                                                        onClick={() => {
+                                                            onCountryChange(country);
+                                                            handleClose();
+                                                        }}
+                                                    >
+                                                        <span className="font-medium">{country}</span>
+                                                        <span className="text-xs opacity-75">({count})</span>
+                                                    </Button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeSheet === 'category' && (
+                                <div className="space-y-3">
+                                    {/* 초기화 버튼 */}
+                                    {selectedCategories.length > 0 && (
                                         <Button
+                                            variant="outline"
                                             className="w-full"
-                                            onClick={handleClose}
+                                            onClick={() => onCategoryChange([])}
                                         >
-                                            적용하기
+                                            초기화 ({selectedCategories.length}개 선택됨)
                                         </Button>
-                                    </div>
-                                )}
+                                    )}
 
-                                {activeSheet === 'search' && (
+                                    {/* 카테고리 버튼 그리드 */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {CATEGORIES.map((category) => {
+                                            const count = categoryCounts[category] || 0;
+                                            const isSelected = selectedCategories.includes(category);
+                                            return (
+                                                <Button
+                                                    key={category}
+                                                    variant={isSelected ? "default" : "outline"}
+                                                    className="justify-between h-auto py-3"
+                                                    onClick={() => {
+                                                        const newCategories = isSelected
+                                                            ? selectedCategories.filter(cat => cat !== category)
+                                                            : [...selectedCategories, category];
+                                                        onCategoryChange(newCategories);
+                                                    }}
+                                                >
+                                                    <span className="font-medium flex items-center gap-1.5">
+                                                        {isSelected && <Check className="h-4 w-4" />}
+                                                        {category}
+                                                    </span>
+                                                    <span className="text-xs opacity-75">({count})</span>
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* 적용 버튼 */}
+                                    <Button
+                                        className="w-full"
+                                        onClick={handleClose}
+                                    >
+                                        적용하기
+                                    </Button>
+                                </div>
+                            )}
+
+                            {activeSheet === 'search' && (
+                                <Suspense fallback={<SheetLoading />}>
                                     <div className="space-y-4">
                                         <RestaurantSearch
                                             onRestaurantSelect={(restaurant) => {
@@ -247,8 +357,8 @@ function MobileControlOverlayComponent({
                                             isKoreanOnly={mapMode === 'domestic'}
                                         />
                                     </div>
-                                )}
-                            </Suspense>
+                                </Suspense>
+                            )}
                         </div>
                     </div>
                 </div>
