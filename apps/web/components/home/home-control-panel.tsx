@@ -1,17 +1,16 @@
 'use client'; // [CSR] 사용자 입력 및 상호작용 처리
 
-import { Suspense, lazy, useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Globe, Filter, Search } from "lucide-react";
-import { SearchSkeleton } from "@/components/skeletons/SearchSkeleton";
 
-// [CSR] 코드 스플리팅으로 성능 최적화
-const RegionSelector = lazy(() => import("@/components/region/RegionSelector"));
-const RestaurantSearch = lazy(() => import("@/components/search/RestaurantSearch"));
-const CategoryFilter = lazy(() => import("@/components/filters/CategoryFilter"));
+// [OPTIMIZATION] 사용자 요청으로 동시 로딩을 위해 lazy 제거 (번들 크기는 조금 커지지만 UX 개선)
+import RegionSelector from "@/components/region/RegionSelector";
+import RestaurantSearch from "@/components/search/RestaurantSearch";
+import CategoryFilter from "@/components/filters/CategoryFilter";
 
 // 펼쳤을 때 패널의 최소 너비 (850px)
 const EXPANDED_PANEL_WIDTH = 850;
@@ -147,6 +146,7 @@ export default function HomeControlPanel({
             >
                 {isExpanded ? (
                     // 확장된 상태: 전체 컨트롤 패널 표시
+                    // 확장된 상태: 전체 컨트롤 패널 표시
                     <>
                         {/* [CSR] 지역/국가 선택 - 드롭다운 인터랙션 */}
                         {mapMode === 'domestic' ? (
@@ -174,28 +174,23 @@ export default function HomeControlPanel({
                         )}
 
                         {/* [CSR] 카테고리 필터 - 선택 인터랙션 */}
-                        <Suspense fallback={<div className="w-48 h-10 bg-muted/50 rounded-md animate-pulse" />}>
-                            <CategoryFilter
-                                selectedCategories={selectedCategories}
-                                onCategoryChange={onCategoryChange}
-                                selectedRegion={mapMode === 'domestic' ? selectedRegion : null}
-                                selectedCountry={mapMode === 'overseas' ? selectedCountry : null}
-                                className="w-48"
-                            />
-                        </Suspense>
+                        <CategoryFilter
+                            selectedCategories={selectedCategories}
+                            onCategoryChange={onCategoryChange}
+                            selectedRegion={mapMode === 'domestic' ? selectedRegion : null}
+                            selectedCountry={mapMode === 'overseas' ? selectedCountry : null}
+                            className="w-48"
+                        />
 
                         {/* [CSR] 검색 - 텍스트 입력 및 자동완성 */}
-                        <Suspense fallback={<SearchSkeleton />}>
-                            <RestaurantSearch
-                                onRestaurantSelect={onRestaurantSelect}
-                                onRestaurantSearch={onRestaurantSearch}
-                                onSearchExecute={onSearchExecute}
-                                filters={filters}
-                                selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
-                                isKoreanOnly={mapMode === 'domestic'}
-                            />
-                        </Suspense>
-
+                        <RestaurantSearch
+                            onRestaurantSelect={onRestaurantSelect}
+                            onRestaurantSearch={onRestaurantSearch}
+                            onSearchExecute={onSearchExecute}
+                            filters={filters}
+                            selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
+                            isKoreanOnly={mapMode === 'domestic'}
+                        />
                     </>
                 ) : (
                     // 축소된 상태: 아이콘만 표시 (텍스트 제거하여 너비 최소화)

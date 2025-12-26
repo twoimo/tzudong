@@ -11,12 +11,13 @@ import { Restaurant } from "@/types/restaurant";
 import HomeModeToggle from "../components/home/home-mode-toggle";
 import SubmissionFloatingButton from "../components/home/SubmissionFloatingButton";
 
-// [OPTIMIZATION] 동적 임포트 - loading placeholder로 CLS 방지
+// [OPTIMIZATION] 동적 임포트
 const HomeControlPanel = dynamic(
     () => import('../components/home/home-control-panel'),
     {
         ssr: false,
-        loading: () => <div className="h-12" aria-hidden="true" />
+        // 사용자 피드백 반영: 스켈레톤 UI 제거 (로딩 중에는 표시하지 않음)
+        loading: () => null
     }
 );
 
