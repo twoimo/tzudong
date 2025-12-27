@@ -436,6 +436,38 @@ const NaverMapView = memo(({
         }
     };
 
+    // [Helper] 실시간 뷰포트 오프셋 계산
+    // 패널의 실제 너비를 측정하여 정확한 오프셋 반환
+    const getViewportOffset = useCallback((): number => {
+        // 모바일/태블릿은 항상 0 (바텀시트가 오버레이)
+        if (isMobileOrTablet) return 0;
+
+        // 내부 모드에서 패널이 shrink 모드면 0
+        const isIntMode = !onMarkerClick;
+        const isShrink = isIntMode && internalPanelOpen && !isGridMode;
+        if (isShrink) return 0;
+
+        // 패널이 닫혀있으면 0
+        if (isPanelCollapsed) return 0;
+        if (!(propIsPanelOpen ?? false) && externalPanelOpen !== false) return 0;
+
+        // 패널 요소 찾기 (우선순위: data-* > id > class)
+        const panelElement =
+            document.querySelector('[data-panel-type="restaurant-detail"]') ||
+            document.getElementById('restaurant-detail-panel') ||
+            document.querySelector('.restaurant-detail-panel');
+
+        if (!panelElement) {
+            // 패널을 찾지 못한 경우 기본값 사용
+            console.warn('[NaverMapView] Panel element not found, using default width');
+            return PANEL_WIDTH; // fallback to 400px
+        }
+
+        // 실제 너비 측정 (getBoundingClientRect는 정확한 픽셀 값 반환)
+        const width = panelElement.getBoundingClientRect().width;
+        return width;
+    }, [isMobileOrTablet, onMarkerClick, internalPanelOpen, isGridMode, isPanelCollapsed, propIsPanelOpen, externalPanelOpen]);
+
     // [통합] 지도 중심 및 줌 조정 로직
     useEffect(() => {
         if (!mapInstanceRef.current || isGridMode) return;
@@ -514,19 +546,9 @@ const NaverMapView = memo(({
             targetZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
         }
 
-        // 패널 상태에 따른 유효 오프셋 계산
-        const isInternalMode = !onMarkerClick;
-        const isShrinkingLayout = isInternalMode && internalPanelOpen && !isGridMode;
-
-        let effectiveOffset = 0;
-        // 모바일/태블릿에서는 바텀시트가 오버레이되므로 오프셋 없음
-        if (isMobileOrTablet) {
-            effectiveOffset = 0;
-        } else if (isShrinkingLayout) {
-            effectiveOffset = 0;
-        } else if (!isPanelCollapsed && ((propIsPanelOpen ?? false) || (externalPanelOpen === false))) {
-            effectiveOffset = PANEL_WIDTH;
-        }
+        // [OPTIMIZATION] 실시간 뷰포트 오프셋 계산
+        // DOM 요소의 실제 너비를 측정하여 정확한 중앙 배치
+        const effectiveOffset = getViewportOffset();
 
         // [Note] 패널 상태에 따른 지도 중심 오프셋 계산
         // 우측 패널이 열리면 지도의 "시각적 중심"이 왼쪽으로 이동해야 합니다.

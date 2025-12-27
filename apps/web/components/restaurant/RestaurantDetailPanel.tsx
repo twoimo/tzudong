@@ -469,7 +469,10 @@ export function RestaurantDetailPanel({
 
     return (
         <>
-            <div className="h-full flex flex-col bg-background border-l border-border relative">
+            <div
+                data-panel-type="restaurant-detail"
+                className="h-full flex flex-col bg-background border-l border-border relative"
+            >
                 {/* 플로팅 접기/펼치기 버튼 - 패널 좌측 가장자리, 모바일에서는 숨김 */}
                 {onToggleCollapse && !isMobile && (
                     <button
