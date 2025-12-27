@@ -127,19 +127,18 @@ export default function LeaderboardPage() {
                             <Table>
                                 <TableHeader className="sticky top-0 bg-muted z-10">
                                     <TableRow>
-                                        <TableHead className="w-20">순위</TableHead>
-                                        <TableHead>사용자</TableHead>
-                                        <TableHead className="text-center">
+                                        <TableHead className="w-16 md:w-20 text-left whitespace-nowrap">순위</TableHead>
+                                        <TableHead className="min-w-[100px] text-left whitespace-nowrap">사용자</TableHead>
+                                        <TableHead className="w-20 md:w-28 text-center whitespace-nowrap">
                                             <button
                                                 onClick={() => setSortBy("reviews")}
-                                                className="flex items-center gap-1 mx-auto hover:text-primary"
-                                            >
+                                                className="flex items-center gap-1 mx-auto hover:text-primary whitespace-nowrap">
                                                 도장 개수
                                                 {sortBy === "reviews" && <TrendingUp className="h-3 w-3" />}
                                             </button>
                                         </TableHead>
-                                        <TableHead className="text-center">받은 좋아요</TableHead>
-                                        <TableHead className="text-center">티어</TableHead>
+                                        <TableHead className="w-20 md:w-28 text-center whitespace-nowrap">받은 좋아요</TableHead>
+                                        <TableHead className="w-24 md:w-32 text-center whitespace-nowrap">티어</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -175,29 +174,29 @@ export default function LeaderboardPage() {
                                                 ref={isCurrentUser ? userRowRef : null}
                                                 className={`hover:bg-muted/50 ${isCurrentUser ? "bg-primary/10 hover:bg-primary/20 border-l-4 border-l-primary" : ""}`}
                                             >
-                                                <TableCell>
+                                                <TableCell className="text-center whitespace-nowrap">
                                                     <div className="flex items-center justify-center">
                                                         {getRankIcon(user.rank, true)}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="whitespace-nowrap">
                                                     <span className={`font-medium ${isCurrentUser ? "text-primary font-bold" : ""}`}>
                                                         {user.username}
                                                         {isCurrentUser && " (나)"}
                                                     </span>
                                                 </TableCell>
-                                                <TableCell className="text-center">
+                                                <TableCell className="text-center whitespace-nowrap">
                                                     <span className="font-semibold">{user.verifiedReviewCount}</span>
                                                     <span className="text-muted-foreground text-xs ml-1">개</span>
                                                 </TableCell>
-                                                <TableCell className="text-center">
+                                                <TableCell className="text-center whitespace-nowrap">
                                                     <div className="flex items-center justify-center gap-1">
                                                         <span className="font-semibold text-red-600">{user.totalLikes}</span>
                                                         <span className="text-muted-foreground text-xs">❤️</span>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="text-center">
-                                                    <Badge variant="outline" className={`${getUserTier(user.verifiedReviewCount).bgColor} ${getUserTier(user.verifiedReviewCount).color} border-current`}>
+                                                <TableCell className="text-center whitespace-nowrap">
+                                                    <Badge variant="outline" className={`${getUserTier(user.verifiedReviewCount).bgColor} ${getUserTier(user.verifiedReviewCount).color} border-current text-xs px-2`}>
                                                         {getUserTier(user.verifiedReviewCount).name}
                                                     </Badge>
                                                 </TableCell>
