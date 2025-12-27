@@ -573,13 +573,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
-                <Megaphone className="mr-2 h-4 w-4" />
-                공지사항
-              </DropdownMenuItem>
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-stone-800/10" />
+                  <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
+                    <Megaphone className="mr-2 h-4 w-4" />
+                    공지사항
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
@@ -646,12 +646,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                   <ChevronLeft className="h-5 w-5 text-stone-700" />
                 </Button>
               )}
-              <div className="flex-1">
+              <div className="flex-1 min-w-0">
                 <SheetTitle className="text-stone-900 flex items-center gap-2">
-                  <Megaphone className="h-5 w-5 text-red-700" />
-                  <span>{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</span>
+                  <Megaphone className="h-5 w-5 text-red-700 flex-shrink-0" />
+                  <span className="truncate">{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</span>
                   {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
-                    <span className="text-xs text-stone-500 font-normal">
+                    <span className="text-xs text-stone-500 font-normal whitespace-nowrap flex-shrink-0">
                       · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
                         addSuffix: true,
                         locale: ko
