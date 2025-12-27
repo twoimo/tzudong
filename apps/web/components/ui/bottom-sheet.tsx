@@ -108,9 +108,7 @@ export function BottomSheet({
                     'bg-background rounded-t-2xl shadow-xl',
                     'transition-all duration-150',
                     isDragging ? '' : 'ease-out',
-                    'overflow-hidden flex flex-col',
-                    // iOS safe area 지원
-                    'pb-[env(safe-area-inset-bottom)]',
+                    'flex flex-col',
                     className
                 )}
                 style={{ height: `${height}vh` }}
@@ -119,7 +117,7 @@ export function BottomSheet({
                 {/* 핸들 바 - 드래그 가능 */}
                 {showHandle && (
                     <div
-                        className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                        className="flex-shrink-0 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
                         onTouchStart={handleDragStart}
                         onTouchMove={handleDragMove}
                         onTouchEnd={handleDragEnd}
@@ -141,7 +139,23 @@ export function BottomSheet({
                 )}
 
                 {/* 콘텐츠 영역 */}
-                <div className="flex-1 overflow-y-auto">
+                <div
+                    className="flex-1 overflow-y-auto overscroll-contain min-h-0"
+                    style={{
+                        WebkitOverflowScrolling: 'touch',
+                        paddingBottom: 'env(safe-area-inset-bottom)'
+                    }}
+                    onTouchStart={(e) => {
+                        const target = e.target as HTMLElement;
+                        const scrollContainer = e.currentTarget;
+                        // 스크롤이 가능한 경우에만 이벤트 전파 방지
+                        if (scrollContainer.scrollHeight > scrollContainer.clientHeight) {
+                            e.stopPropagation();
+                        }
+                    }}
+                    onTouchMove={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                >
                     {children}
                 </div>
             </div>

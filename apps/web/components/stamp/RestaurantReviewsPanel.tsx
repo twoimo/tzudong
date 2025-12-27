@@ -2,7 +2,6 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trophy, PenSquare, ArrowLeft, Heart, ChevronLeft, ChevronRight, Plus, MapPin, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Restaurant } from '@/types/restaurant';
@@ -43,6 +42,7 @@ interface RestaurantReviewsPanelProps {
     onClose?: () => void;
     showHeader?: boolean;
     loadMoreRef?: React.RefObject<HTMLDivElement>;
+    isLoading?: boolean;
 }
 
 const parseCategory = (categoryData: any): string | null => {
@@ -76,6 +76,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
     onClose,
     showHeader = true,
     loadMoreRef,
+    isLoading = false,
 }: RestaurantReviewsPanelProps) {
     if (!restaurant) {
         return (
@@ -119,7 +120,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
             )}
 
             {/* 콘텐츠 영역 */}
-            <ScrollArea className="flex-1 p-4">
+            <div className="flex-1 p-4 pb-24 overflow-y-auto">
                 {/* 리뷰 섹션 헤더 */}
                 {!selectedReview && (
                     <div className="flex items-center justify-between gap-2 mb-4">
@@ -357,6 +358,21 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                             </Card>
                         ))}
                     </div>
+                ) : isLoading ? (
+                    /* 로딩 중 스켈레톤 */
+                    <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                            <Card key={i} className="p-0 overflow-hidden">
+                                <div className="animate-pulse">
+                                    <div className="w-full aspect-square bg-muted" />
+                                    <div className="p-3 space-y-2">
+                                        <div className="h-3 bg-muted rounded w-1/4" />
+                                        <div className="h-3 bg-muted rounded w-3/4" />
+                                    </div>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
                 ) : (
                     /* 빈 상태 */
                     <div className="flex flex-col items-center justify-center px-4 text-center" style={{ minHeight: 'calc(100vh - 400px)' }}>
@@ -374,7 +390,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                         </Button>
                     </div>
                 )}
-            </ScrollArea>
+            </div>
         </div>
     );
 });

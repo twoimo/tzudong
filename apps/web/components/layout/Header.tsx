@@ -1,7 +1,7 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +25,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
-import { getBannerAnnouncements, Announcement } from "@/types/announcement";
+import { getBannerAnnouncements, getActiveAnnouncements, Announcement } from "@/types/announcement";
 import { useHydration } from "@/hooks/useHydration";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmarks } from "@/hooks/use-bookmarks";
@@ -63,6 +63,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   // 공지사항 바텀시트 상태
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [announcementViewMode, setAnnouncementViewMode] = useState<'list' | 'detail'>('list');
+  const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
+  const [announcementPage, setAnnouncementPage] = useState(1);
+  const ANNOUNCEMENTS_PER_PAGE = 3;
 
   // 미처리 제보 건수 상태
   const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
@@ -149,45 +153,97 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     setCurrentBannerIndex(prev => (prev + 1) % bannerAnnouncements.length);
   }, [bannerAnnouncements.length]);
 
-  const handleBannerDismiss = (e: React.MouseEvent) => {
+  const handleBannerDismiss = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setIsBannerDismissed(true);
     sessionStorage.setItem('announcementBannerDismissed', 'true');
-  };
+  }, []);
 
-  const handleBannerClick = () => {
+  const handleBannerClick = useCallback(() => {
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
     if (currentAnnouncement) {
-      setSelectedAnnouncement(currentAnnouncement);
-      setIsAnnouncementSheetOpen(true);
+      if (isMobileOrTablet) {
+        // 모바일/태블릿: 바텀시트로 상세 뷰 표시
+        setSelectedAnnouncement(currentAnnouncement);
+        setAnnouncementViewMode('detail');
+        setIsAnnouncementSheetOpen(true);
+      } else {
+        // 데스크탑: 우측 패널로 공지사항 열기
+        if (onAnnouncementClick) {
+          onAnnouncementClick(currentAnnouncement);
+        }
+      }
     }
-  };
+  }, [bannerAnnouncements, currentBannerIndex, isMobileOrTablet, onAnnouncementClick]);
 
-  const handleMyPageClick = () => {
+  const handleAnnouncementListClick = useCallback(() => {
+    if (isMobileOrTablet) {
+      // 모바일/태블릿: 바텀시트로 공지사항 리스트 표시
+      const announcements = getActiveAnnouncements();
+      console.log('Loaded announcements:', announcements);
+      setAllAnnouncements(announcements);
+      setAnnouncementPage(1);
+      setAnnouncementViewMode('list');
+      setIsAnnouncementSheetOpen(true);
+    } else {
+      // 데스크탑: 기존 우측 패널로 공지사항 열기
+      handleAdminAnnouncementsClick();
+    }
+  }, [isMobileOrTablet]);
+
+  const handleDeleteAnnouncement = useCallback((id: string) => {
+    if (confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
+      setAllAnnouncements(prev => prev.filter(a => a.id !== id));
+      setAnnouncementViewMode('list');
+      // TODO: 실제 삭제 API 호출
+    }
+  }, []);
+
+  const handleToggleAnnouncementActive = useCallback((id: string) => {
+    setAllAnnouncements(prev =>
+      prev.map(a =>
+        a.id === id ? { ...a, isActive: !a.isActive } : a
+      )
+    );
+    setSelectedAnnouncement(prev => prev?.id === id ? { ...prev, isActive: !prev.isActive } : prev);
+    // TODO: 실제 상태 변경 API 호출
+  }, []);
+
+  const handleToggleAnnouncementBanner = useCallback((id: string) => {
+    setAllAnnouncements(prev =>
+      prev.map(a =>
+        a.id === id ? { ...a, showOnBanner: !a.showOnBanner } : a
+      )
+    );
+    setSelectedAnnouncement(prev => prev?.id === id ? { ...prev, showOnBanner: !prev.showOnBanner } : prev);
+    // TODO: 실제 배너 상태 변경 API 호출
+  }, []);
+
+  const handleMyPageClick = useCallback(() => {
     // 마이페이지 프로필 페이지로 이동
     router.push('/mypage/profile');
-  };
+  }, [router]);
 
-  const handleAdminSubmissionsClick = () => {
-    // /admin/evaluations 페이지로 이동하며 제보 관리 탭 활성화
+  const handleAdminSubmissionsClick = useCallback(() => {
+    // /admin/evaluations 페이지로 이동하며 <제보 관리 탭 활성화
     router.push('/admin/evaluations?view=submissions');
-  };
+  }, [router]);
 
-  const handleAdminReviewsClick = () => {
+  const handleAdminReviewsClick = useCallback(() => {
     // /admin/evaluations 페이지로 이동하며 리뷰 검수 탭 활성화
     router.push('/admin/evaluations?view=submissions&tab=reviews');
-  };
+  }, [router]);
 
-  const handleAdminAnnouncementsClick = () => {
+  const handleAdminAnnouncementsClick = useCallback(() => {
     if (pathname === '/') {
       window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
     } else {
       // 홈으로 이동 후 패널 열기
       window.location.href = '/';
     }
-  };
+  }, [pathname]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
     const root = document.documentElement;
 
@@ -203,15 +259,15 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     requestAnimationFrame(() => {
       document.head.removeChild(style);
     });
-  };
+  }, [isHanjiMode]);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
     } else {
       document.exitFullscreen();
     }
-  };
+  }, []);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -267,7 +323,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     }
   };
 
-  const currentBanner = bannerAnnouncements[currentBannerIndex];
+  const currentBanner = useMemo(() => bannerAnnouncements[currentBannerIndex], [bannerAnnouncements, currentBannerIndex]);
 
   return (
     <header
@@ -548,7 +604,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-stone-800/10" />
-                  <DropdownMenuItem onClick={handleAdminAnnouncementsClick} className="text-stone-900 hover:bg-stone-200/50">
+                  <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
                     <Megaphone className="mr-2 h-4 w-4" />
                     공지사항
                   </DropdownMenuItem>
@@ -605,24 +661,172 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
       {/* 공지사항 바텀시트 */}
       <Sheet open={isAnnouncementSheetOpen} onOpenChange={setIsAnnouncementSheetOpen}>
-        <SheetContent side="bottom" className="bg-[#fdfbf7] border-stone-800/10 font-serif max-h-[80vh]">
-          <SheetHeader>
-            <SheetTitle className="text-stone-900 flex items-center gap-2">
-              <Megaphone className="h-5 w-5 text-red-700" />
-              {selectedAnnouncement?.title}
-            </SheetTitle>
-            <SheetDescription className="text-stone-600 text-xs">
-              {selectedAnnouncement?.createdAt && formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
-                addSuffix: true,
-                locale: ko
-              })}
-            </SheetDescription>
-          </SheetHeader>
-          <ScrollArea className="h-full mt-4 pr-4">
-            <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
-              {selectedAnnouncement?.content}
+        <SheetContent side="bottom" className="bg-[#fdfbf7] border-stone-800/10 font-serif max-h-[80vh] flex flex-col">
+          <SheetHeader className="flex-shrink-0">
+            <div className="flex items-center gap-2">
+              {announcementViewMode === 'detail' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAnnouncementViewMode('list')}
+                  className="p-0 h-auto hover:bg-transparent"
+                >
+                  <ChevronLeft className="h-5 w-5 text-stone-700" />
+                </Button>
+              )}
+              <div className="flex-1 min-w-0">
+                <SheetTitle className="text-stone-900 flex items-center gap-2">
+                  <Megaphone className="h-5 w-5 text-red-700 flex-shrink-0" />
+                  <span className="truncate">{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</span>
+                  {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
+                    <span className="text-xs text-stone-500 font-normal whitespace-nowrap flex-shrink-0">
+                      · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
+                        addSuffix: true,
+                        locale: ko
+                      })}
+                    </span>
+                  )}
+                </SheetTitle>
+              </div>
             </div>
-          </ScrollArea>
+          </SheetHeader>
+          <div className="flex-1 overflow-hidden mt-4">
+            {announcementViewMode === 'list' ? (
+              <div className="h-full flex flex-col">
+                <ScrollArea className="flex-1 pr-4">
+                  <div className="space-y-3">
+                    {(() => {
+                      const startIdx = (announcementPage - 1) * ANNOUNCEMENTS_PER_PAGE;
+                      const endIdx = startIdx + ANNOUNCEMENTS_PER_PAGE;
+                      const paginatedAnnouncements = allAnnouncements.slice(startIdx, endIdx);
+                      const totalPages = Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE);
+
+                      if (allAnnouncements.length === 0) {
+                        return (
+                          <div className="text-center py-12 text-stone-500">
+                            <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                            <p>현재 공지사항이 없습니다</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <>
+                          {paginatedAnnouncements.map((announcement) => (
+                            <div
+                              key={announcement.id}
+                              className="p-4 rounded-lg border border-stone-200 hover:bg-stone-100 cursor-pointer transition-colors"
+                              onClick={() => {
+                                setSelectedAnnouncement(announcement);
+                                setAnnouncementViewMode('detail');
+                              }}
+                            >
+                              <h4 className="font-semibold text-stone-900 mb-1">{announcement.title}</h4>
+                              <p className="text-sm text-stone-600 line-clamp-2 mb-2">{announcement.content}</p>
+                              <div className="text-xs text-stone-500">
+                                {formatDistanceToNow(new Date(announcement.createdAt), {
+                                  addSuffix: true,
+                                  locale: ko
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </ScrollArea>
+
+                {/* 페이지네이션 */}
+                {allAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
+                  <div className="flex items-center justify-center gap-2 pt-3 border-t border-stone-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAnnouncementPage(p => Math.max(1, p - 1))}
+                      disabled={announcementPage === 1}
+                      className="h-8"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-stone-600 px-2">
+                      {announcementPage} / {Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
+                      disabled={announcementPage === Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                      className="h-8"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="h-full flex flex-col">
+                <ScrollArea className="flex-1 pr-4">
+                  <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
+                    {selectedAnnouncement?.content}
+                  </div>
+                </ScrollArea>
+
+                {/* 관리자 제어 버튼 */}
+                {isAdmin && selectedAnnouncement && (
+                  <div className="flex-shrink-0 pt-4 border-t border-stone-200 mt-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleAnnouncementActive(selectedAnnouncement.id)}
+                        className="gap-1 text-xs"
+                      >
+                        {selectedAnnouncement.isActive ? (
+                          <>
+                            <EyeOff className="h-3 w-3" />
+                            비활성화
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3 w-3" />
+                            활성화
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleAnnouncementBanner(selectedAnnouncement.id)}
+                        className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
+                      >
+                        {selectedAnnouncement.showOnBanner ? (
+                          <>
+                            <BellOff className="h-3 w-3" />
+                            배너해제
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="h-3 w-3" />
+                            배너노출
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
+                        className="gap-1 text-xs text-destructive hover:text-destructive col-span-2"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        삭제
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     </header>

@@ -98,16 +98,26 @@ export default function BookmarksPage() {
                 <ScrollArea className="h-[calc(100vh-250px)]">
                     <div className="space-y-4">
                         {bookmarks.map((bookmark) => {
-                            const thumbnailUrl = bookmark.restaurant.youtube_link
-                                ? getYouTubeThumbnailUrl(bookmark.restaurant.youtube_link)
-                                : null;
+                            // 병합된 YouTube 링크 배열 처리
+                            const youtubeLinks = (bookmark.restaurant as any).mergedYoutubeLinks ||
+                                (bookmark.restaurant.youtube_link ? [bookmark.restaurant.youtube_link] : []);
+
+                            // 첫 번째 유효한 썸네일 찾기
+                            let thumbnailUrl = null;
+                            for (const link of youtubeLinks) {
+                                const url = getYouTubeThumbnailUrl(link);
+                                if (url) {
+                                    thumbnailUrl = url;
+                                    break;
+                                }
+                            }
 
                             return (
                                 <Card key={bookmark.id} className="overflow-hidden">
                                     <CardContent className="p-3 md:p-4">
                                         <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                                             {/* 썸네일 */}
-                                            <div className="w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 bg-muted rounded overflow-hidden shrink-0">
+                                            <div className="w-full sm:w-32 md:w-40 aspect-video bg-muted rounded overflow-hidden shrink-0">
                                                 {thumbnailUrl ? (
                                                     <img
                                                         src={thumbnailUrl}

@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -147,12 +147,33 @@ interface RestaurantCardProps {
     restaurant: Restaurant;
     visited: boolean;
     isSelected: boolean;
+    currentThumbnailIndex: number;
+    onThumbnailChange: (index: number) => void;
     onClick: (restaurant: Restaurant) => void;
 }
 
-const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: RestaurantCardProps) => {
-    const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnailIndex, onThumbnailChange, onClick }: RestaurantCardProps) => {
+    // 병합된 YouTube 링크 배열 가져오기
+    const youtubeLinks = (restaurant as any).mergedYoutubeLinks ||
+        (restaurant.youtube_link ? [restaurant.youtube_link] : []);
+
+    // 현재 인덱스의 썸네일 URL 생성
+    const currentIndex = currentThumbnailIndex % youtubeLinks.length;
+    const thumbnailUrl = youtubeLinks[currentIndex] ? getYouTubeThumbnailUrl(youtubeLinks[currentIndex]) : null;
     const category = parseCategory(restaurant.category || (restaurant as any).categories);
+
+    // 다음/이전 썸네일로 이동
+    const handlePrevThumbnail = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newIndex = currentIndex === 0 ? youtubeLinks.length - 1 : currentIndex - 1;
+        onThumbnailChange(newIndex);
+    };
+
+    const handleNextThumbnail = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newIndex = currentIndex === youtubeLinks.length - 1 ? 0 : currentIndex + 1;
+        onThumbnailChange(newIndex);
+    };
 
     return (
         <Card
@@ -173,10 +194,45 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: Resta
                                 "w-full h-full object-cover transition-all duration-300",
                                 visited ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
+                            loading="lazy"
                         />
+
+                        {/* 화살표 버튼 - 2개 이상의 썸네일이 있을 때만 표시 */}
+                        {youtubeLinks.length > 1 && (
+                            <>
+                                <button
+                                    onClick={handlePrevThumbnail}
+                                    className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="이전 썸네일"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={handleNextThumbnail}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="다음 썸네일"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+
+                                {/* 점 인디케이터 */}
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                    {youtubeLinks.map((_: string, index: number) => (
+                                        <div
+                                            key={index}
+                                            className={cn(
+                                                "w-1.5 h-1.5 rounded-full transition-colors",
+                                                index === currentIndex ? "bg-white" : "bg-white/40"
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
                         {visited && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-red-500 font-bold text-4xl sm:text-5xl transform -rotate-12 border-4 border-red-500 rounded-lg p-2 opacity-90">
+                                <div className="text-red-500 font-bold text-5xl sm:text-6xl transform -rotate-12 border-4 border-red-500 rounded-lg px-3 py-2 opacity-90">
                                     CLEAR
                                 </div>
                             </div>
@@ -220,6 +276,7 @@ interface RestaurantRowProps {
 const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: RestaurantRowProps) => {
     const category = parseCategory(restaurant.category || (restaurant as any).categories);
     const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+    const reviewCount = (restaurant as any).verified_review_count ?? restaurant.review_count ?? 0;
 
     return (
         <TableRow
@@ -255,7 +312,7 @@ const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: Restau
             <TableCell className="text-muted-foreground text-sm truncate max-w-[400px]">
                 {restaurant.road_address || restaurant.jibun_address}
             </TableCell>
-            <TableCell className="text-center">{restaurant.review_count || 0}</TableCell>
+            <TableCell className="text-center">{reviewCount}</TableCell>
         </TableRow>
     );
 });
@@ -279,6 +336,9 @@ export default function StampPage() {
     const [sortColumn, setSortColumn] = useState<SortColumn>("fanVisits");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+    // 모바일/태블릿 필터 확장 상태
+    const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+
     // Right Panel State
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRightPanelVisible, setIsRightPanelVisible] = useState(false);
@@ -293,6 +353,9 @@ export default function StampPage() {
 
     // User Stamp Data
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
+
+    // 카드별 썸네일 인덱스 상태 (병합된 맛집의 여러 썸네일 중 현재 표시 중인 인덱스)
+    const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
 
     // --- Data Fetching: User Stamps ---
     const { data: userReviewData = [] } = useQuery({
@@ -514,12 +577,12 @@ export default function StampPage() {
         return result;
     }, [restaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
-    // --- 클라이언트 측 페이지네이션: 50개씩 표시 ---
-    const [displayLimit, setDisplayLimit] = useState(50);
+    // --- 클라이언트 측 페이지네이션: 20개씩 표시 (성능 최적화) ---
+    const [displayLimit, setDisplayLimit] = useState(20);
 
     // 필터 변경 시 표시 개수 리셋
     useEffect(() => {
-        setDisplayLimit(50);
+        setDisplayLimit(20);
     }, [filters, sortColumn, sortDirection, searchQuery]);
 
     // 현재 표시할 맛집 목록 (displayLimit까지만)
@@ -536,7 +599,7 @@ export default function StampPage() {
 
     const loadMoreRestaurants = useCallback(() => {
         if (hasMoreToDisplay) {
-            setDisplayLimit(prev => prev + 50);
+            setDisplayLimit(prev => prev + 20);
         }
     }, [hasMoreToDisplay]);
 
@@ -659,10 +722,83 @@ export default function StampPage() {
 
 
     // --- Handlers ---
-    const handleRestaurantClick = useCallback((restaurant: Restaurant) => {
+    const handleRestaurantClick = useCallback(async (restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
+
+        // 리뷰 데이터 prefetch로 바텀 시트 열리기 전에 미리 로드
+        await queryClient.prefetchInfiniteQuery({
+            queryKey: ['restaurant-reviews', restaurant.id],
+            queryFn: async ({ pageParam = 0 }) => {
+                try {
+                    const { data: reviewsData, error } = await supabase
+                        .from('reviews')
+                        .select('*')
+                        .eq('restaurant_id', restaurant.id)
+                        .eq('is_verified', true)
+                        .order('is_pinned', { ascending: false })
+                        .order('created_at', { ascending: false })
+                        .range(pageParam, pageParam + 19) as any;
+
+                    if (error) throw error;
+                    if (!reviewsData || reviewsData.length === 0) return { reviews: [], nextCursor: null };
+
+                    // User Profiles
+                    const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
+                    const { data: profilesData } = await supabase
+                        .from('profiles')
+                        .select('user_id, nickname')
+                        .in('user_id', userIds);
+                    const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, p.nickname]));
+
+                    // Likes
+                    const reviewIds = reviewsData.map((r: any) => r.id);
+                    const { data: likesData } = await supabase
+                        .from('review_likes')
+                        .select('review_id, user_id')
+                        .in('review_id', reviewIds) as any;
+
+                    const likesMap = new Map<string, { count: number; isLiked: boolean }>();
+                    reviewIds.forEach((reviewId: string) => {
+                        const likesForReview = likesData?.filter((like: any) => like.review_id === reviewId) || [];
+                        const isLiked = user ? likesForReview.some((like: any) => like.user_id === user.id) : false;
+                        likesMap.set(reviewId, { count: likesForReview.length, isLiked });
+                    });
+
+                    const reviews = reviewsData.map((review: any) => {
+                        const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
+                        return {
+                            id: review.id,
+                            userId: review.user_id,
+                            restaurantName: restaurant.name || '알 수 없음',
+                            restaurantCategories: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category || '기타'],
+                            userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                            visitedAt: review.visited_at,
+                            submittedAt: review.created_at || '',
+                            content: review.content,
+                            isVerified: review.is_verified || false,
+                            isPinned: review.is_pinned || false,
+                            isEditedByAdmin: review.is_edited_by_admin || false,
+                            admin_note: review.admin_note || null,
+                            photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+                            category: review.categories?.[0] || review.category,
+                            likeCount: likesInfo.count,
+                            isLikedByUser: likesInfo.isLiked,
+                        };
+                    }) as Review[];
+
+                    const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
+                    return { reviews, nextCursor };
+                } catch (error) {
+                    console.error('리뷰 데이터 조회 중 오류:', error);
+                    return { reviews: [], nextCursor: null };
+                }
+            },
+            initialPageParam: 0,
+        });
+
+        // prefetch 완료 후 바텀 시트 열기
         setIsRightPanelVisible(true);
-    }, []);
+    }, [queryClient, user]);
 
     const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
@@ -829,20 +965,43 @@ export default function StampPage() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* View Toggle */}
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                                    title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
-                                >
-                                    {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
-                                </Button>
+                                {/* View Toggle - 데스크톱에서만 표시 */}
+                                {!isMobileOrTablet && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                                        title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
+                                    >
+                                        {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
                         {/* Filter Controls */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                        {/* 모바일/태블릿: 필터 토글 버튼 */}
+                        {isMobileOrTablet && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                                className="w-full mb-3 justify-between"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Filter className="h-4 w-4" />
+                                    필터 {activeFilterCount > 0 && `(${activeFilterCount}개 선택됨)`}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    {isFilterExpanded ? '접기' : '펼치기'}
+                                </span>
+                            </Button>
+                        )}
+
+                        {/* 필터 컨트롤 그리드 - 데스크톱에서는 항상 표시, 모바일/태블릿에서는 확장시에만 표시 */}
+                        <div className={cn(
+                            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 transition-all duration-300 overflow-hidden",
+                            isMobileOrTablet && !isFilterExpanded && "hidden"
+                        )}>
                             {/* 검색 */}
                             <div className="lg:col-span-2">
                                 <div className="relative">
@@ -999,6 +1158,10 @@ export default function StampPage() {
                                         restaurant={restaurant}
                                         visited={isVisited(restaurant.id)}
                                         isSelected={selectedRestaurant?.id === restaurant.id}
+                                        currentThumbnailIndex={cardThumbnailIndexes[restaurant.id] || 0}
+                                        onThumbnailChange={(newIndex) =>
+                                            setCardThumbnailIndexes(prev => ({ ...prev, [restaurant.id]: newIndex }))
+                                        }
                                         onClick={handleRestaurantClick}
                                     />
                                 ))}
@@ -1086,6 +1249,7 @@ export default function StampPage() {
                                 onCardPhotoChange={(reviewId, index) => setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }))}
                                 onClose={handleCloseRightPanel}
                                 showHeader={true}
+                                isLoading={reviewsLoading}
                             />
                         </Panel>
                     </>
@@ -1117,6 +1281,7 @@ export default function StampPage() {
                         onPhotoIndexChange={setCurrentPhotoIndex}
                         onCardPhotoChange={(reviewId, index) => setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }))}
                         showHeader={true}
+                        isLoading={reviewsLoading}
                     />
                 </BottomSheet>
             )}
