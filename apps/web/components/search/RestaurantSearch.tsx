@@ -321,13 +321,20 @@ const RestaurantSearch = ({
                     <button
                       key={item.id}
                       onClick={async () => {
-                        // ID로 레스토랑 조회
+                        // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
                         const { data } = await supabase
                           .from('restaurants')
                           .select('*')
-                          .eq('id', item.id)
-                          .single();
-                        if (data) handleSelect(data as Restaurant);
+                          .eq('name', item.name)
+                          .eq('status', 'approved');
+
+                        if (data && data.length > 0) {
+                          // 병합 로직 적용
+                          const merged = mergeRestaurants(data as Restaurant[]);
+                          // 원래 선택한 레스토랑을 우선적으로 사용
+                          const selectedRestaurant = merged.find(r => r.id === item.id) || merged[0];
+                          handleSelect(selectedRestaurant);
+                        }
                       }}
                       className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2 group"
                     >
@@ -362,7 +369,22 @@ const RestaurantSearch = ({
                   {popularRestaurants.map((restaurant, index) => (
                     <button
                       key={restaurant.id}
-                      onClick={() => handleSelect(restaurant)}
+                      onClick={async () => {
+                        // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
+                        const { data } = await supabase
+                          .from('restaurants')
+                          .select('*')
+                          .eq('name', restaurant.name)
+                          .eq('status', 'approved');
+
+                        if (data && data.length > 0) {
+                          // 병합 로직 적용
+                          const merged = mergeRestaurants(data as Restaurant[]);
+                          // 원래 선택한 레스토랑을 우선적으로 사용
+                          const selectedRestaurant = merged.find(r => r.id === restaurant.id) || merged[0];
+                          handleSelect(selectedRestaurant);
+                        }
+                      }}
                       className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
                     >
                       <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex-shrink-0">
