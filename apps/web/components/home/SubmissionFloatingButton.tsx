@@ -4,14 +4,14 @@ import { memo } from 'react';
 import { Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useDeviceType } from "@/hooks/useDeviceType";
+import { useHydration } from "@/hooks/useHydration";
 
 interface SubmissionFloatingButtonProps {
     onClick: () => void;
     isSidebarOpen: boolean;
     className?: string;
 }
-
-import { useDeviceType } from "@/hooks/useDeviceType";
 
 // [OPTIMIZATION] React.memo로 불필요한 리렌더링 방지
 const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
@@ -20,6 +20,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
     className
 }: SubmissionFloatingButtonProps) {
     const { isMobileOrTablet } = useDeviceType();
+    const isHydrated = useHydration();
 
     // 사이드바 너비에 따라 left 위치 조정 (데스크탑)
     // 열려있을 때: 256px(w-64) + 16px(여백) = 272px
@@ -43,6 +44,8 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                 "hover:scale-110 active:scale-95",
                 "flex items-center justify-center",
                 "border-2 border-stone-200/20",
+                // Hydration 깜빡임 방지
+                isHydrated ? "opacity-100" : "opacity-0",
                 className
             )}
             title="맛집 제보하기"
