@@ -46,20 +46,19 @@ export function useDeviceType(): DeviceType {
         const height = window.innerHeight;
         const isLandscape = width > height;
 
-        // 터치 지원 여부 감지
-        const isTouchDevice = 'ontouchstart' in window ||
-            navigator.maxTouchPoints > 0 ||
-            (navigator as any).msMaxTouchPoints > 0;
+        // 터치 지원 여부 감지 (더 엄격한 검증)
+        // maxTouchPoints > 1로 실제 터치를 지원하는 디바이스만 감지
+        const isTouchDevice = navigator.maxTouchPoints > 1;
 
         // 모바일: 480px 이하 또는 가로모드에서 667x480 이하
         const isMobile = width <= BREAKPOINTS.mobilePortrait ||
             (isLandscape && width <= BREAKPOINTS.mobileLandscape && height <= BREAKPOINTS.mobilePortrait);
 
-        // 태블릿: 모바일이 아니면서 터치 지원 또는 1920px 미만
-        // 터치 디바이스이고 1920px 미만이면 태블릿으로 간주
+        // 태블릿: 모바일이 아니면서 1366px 이하
+        // 터치 디바이스는 더 넓은 범위(1600px)까지 허용
         const isTablet = !isMobile && (
-            (isTouchDevice && width < 1920) ||  // 터치 디바이스 + 1920px 미만
-            (!isTouchDevice && width <= 1366)    // 비터치 디바이스는 기존 로직
+            (isTouchDevice && width < 1600) ||  // 터치 디바이스 + 1600px 미만
+            (!isTouchDevice && width <= 1366)    // 비터치 디바이스는 1366px 이하
         );
 
         const isDesktop = !isMobile && !isTablet;
