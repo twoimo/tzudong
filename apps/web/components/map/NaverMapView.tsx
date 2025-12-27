@@ -19,6 +19,12 @@ const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
 const ZOOM_DIFF_THRESHOLD = 4; // 즉시 로드할 줌 차이 임계값
 const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 
+// [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
+const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
+const VIEWPORT_PADDING = 0.05; // 가시영역 여백 (5% 확장)
+const MAP_UPDATE_DEBOUNCE_MS = 300; // 지도 업데이트 디바운스 시간 (ms)
+const PERFORMANCE_LOG_ENABLED = false; // 성능 로깅 활성화 (개발용)
+
 interface NaverMapViewProps {
     filters: FilterState;
     selectedRegion: Region | null;
@@ -144,6 +150,61 @@ const EmptyStateIndicator = memo(() => (
     </div>
 ));
 EmptyStateIndicator.displayName = 'EmptyStateIndicator';
+
+/**
+ * 디바운스 함수
+ * @param func 실행할 함수
+ * @param delay 지연 시간 (ms)
+ * @returns 디바운스된 함수
+ */
+const debounce = <T extends (...args: any[]) => any>(func: T, delay: number): ((...args: Parameters<T>) => void) => {
+    let timeout: NodeJS.Timeout | null = null;
+    return (...args: Parameters<T>) => {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
+        timeout = setTimeout(() => {
+            func(...args);
+            timeout = null;
+        }, delay);
+    };
+};
+
+/**
+ * 주어진 레스토랑이 현재 지도의 가시 영역 내에 있는지 확인합니다.
+ * @param restaurant 확인할 레스토랑 객체
+ * @param map 현재 Naver Map 인스턴스
+ * @param padding 가시 영역을 확장할 비율 (예: 0.05는 5% 확장)
+ * @returns 가시 영역 내에 있으면 true, 아니면 false
+ */
+const isRestaurantInViewport = (restaurant: Restaurant, map: any, padding: number = VIEWPORT_PADDING): boolean => {
+    if (!map || !restaurant.lat || !restaurant.lng) return false;
+
+    const bounds = map.getBounds();
+    if (!bounds) return false;
+
+    const latLng = new window.naver.maps.LatLng(restaurant.lat, restaurant.lng);
+
+    // 가시 영역을 확장하여 마커가 가장자리에 있을 때도 포함되도록 합니다.
+    const southWest = bounds.getSW();
+    const northEast = bounds.getNE();
+
+    const latDiff = northEast.lat() - southWest.lat();
+    const lngDiff = northEast.lng() - southWest.lng();
+
+    const paddedSouthWest = new window.naver.maps.LatLng(
+        southWest.lat() - latDiff * padding,
+        southWest.lng() - lngDiff * padding
+    );
+    const paddedNorthEast = new window.naver.maps.LatLng(
+        northEast.lat() + latDiff * padding,
+        northEast.lng() + lngDiff * padding
+    );
+
+    const paddedBounds = new window.naver.maps.LatLngBounds(paddedSouthWest, paddedNorthEast);
+
+    return paddedBounds.hasLatLng(latLng);
+};
 
 const NaverMapView = memo(({
     filters,
@@ -716,11 +777,13 @@ const NaverMapView = memo(({
         return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
     }, [isLoadingRestaurants, previousRestaurants, restaurants]);
 
-    // [최적화] 마커 데이터 동기화 (생성/삭제)
+    // [최적화] 마커 데이터 동기화 (생성/삭제) with 가시영역 필터링
     useEffect(() => {
         if (!mapInstanceRef.current || !window.naver) return;
         const { naver } = window;
         const map = mapInstanceRef.current;
+
+        const perfStart = PERFORMANCE_LOG_ENABLED ? performance.now() : 0;
 
         // 표시할 레스토랑 목록 준비 (검색어 포함)
         const restaurantsToShow = [...displayRestaurants];
@@ -741,20 +804,43 @@ const NaverMapView = memo(({
             }
         }
 
-        // 1. 없어진 마커 삭제 (현재 Map에는 있지만 새 목록에는 없는 것)
-        const currentIds = new Set(restaurantsToShow.map(r => r.id));
+        // [성능 최적화] 가시영역 필터링 적용
+        const visibleRestaurants = VIEWPORT_FILTER_ENABLED
+            ? restaurantsToShow.filter(r => {
+                // 선택된 레스토랑이나 검색된 레스토랑은 항상 표시
+                if (r.id === selectedRestaurant?.id || r.id === searchedRestaurant?.id) {
+                    return true;
+                }
+                return isRestaurantInViewport(r, map);
+            })
+            : restaurantsToShow;
+
+        if (PERFORMANCE_LOG_ENABLED) {
+            console.log(`[Performance] Viewport filtering: ${restaurantsToShow.length} -> ${visibleRestaurants.length} markers`);
+        }
+
+        // 1. 가시영역 밖의 마커 숨기기 또는 삭제
+        const visibleIds = new Set(visibleRestaurants.map(r => r.id));
         markersMapRef.current.forEach((marker, id) => {
-            if (!currentIds.has(id)) {
+            if (!visibleIds.has(id)) {
+                // 가시영역 밖이면 지도에서 제거
                 marker.setMap(null);
-                markersMapRef.current.delete(id);
             }
         });
 
-        // 2. 새로운 마커 생성 및 Map 등록 (새 목록에 있지만 Map엔 없는 것)
-        restaurantsToShow.forEach(restaurant => {
+        // 2. 가시영역 내의 마커 생성 또는 재표시
+        visibleRestaurants.forEach(restaurant => {
             if (!restaurant.lat || !restaurant.lng) return;
 
-            if (!markersMapRef.current.has(restaurant.id)) {
+            const existingMarker = markersMapRef.current.get(restaurant.id);
+
+            if (existingMarker) {
+                // 기존 마커가 있으면 다시 지도에 표시
+                if (existingMarker.getMap() !== map) {
+                    existingMarker.setMap(map);
+                }
+            } else {
+                // 새로운 마커 생성
                 const isSelected = false; // 생성 시점엔 기본 상태
                 const contentHtml = createMarkerContent(restaurant, isSelected);
 
@@ -791,7 +877,12 @@ const NaverMapView = memo(({
         // restaurantsRef 업데이트
         restaurantsRef.current = restaurantsToShow;
 
-    }, [displayRestaurants, searchedRestaurant, createMarkerContent, onMarkerClick, onRestaurantSelect]);
+        if (PERFORMANCE_LOG_ENABLED) {
+            const perfEnd = performance.now();
+            console.log(`[Performance] Marker update took ${(perfEnd - perfStart).toFixed(2)}ms`);
+        }
+
+    }, [displayRestaurants, searchedRestaurant, selectedRestaurant, createMarkerContent, onMarkerClick, onRestaurantSelect]);
 
     // [최적화] 선택 상태 변경에 따른 마커 스타일 업데이트 (안전한 전체 순회 방식)
     useEffect(() => {
@@ -903,6 +994,82 @@ const NaverMapView = memo(({
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
         }
     }, [isLoaded]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // [성능 최적화] 지도 이동/줌 이벤트 리스너 - 가시영역 변경 시 마커 업데이트
+    useEffect(() => {
+        if (!mapInstanceRef.current || !VIEWPORT_FILTER_ENABLED) return;
+
+        const map = mapInstanceRef.current;
+        const { naver } = window;
+
+        // 강제로 마커 업데이트를 트리거하는 함수
+        const triggerMarkerUpdate = () => {
+            // displayRestaurants dependency를 통해 마커 동기화 useEffect가 재실행되도록 유도
+            // 실제로는 dependency가 변경되지 않으므로, 직접 업데이트 로직을 실행
+            const restaurantsToShow = [...displayRestaurants];
+
+            if (searchedRestaurant) {
+                let alreadyExists = false;
+                if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
+                    const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
+                    alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
+                } else {
+                    alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
+                }
+                if (!alreadyExists) {
+                    restaurantsToShow.push(searchedRestaurant);
+                }
+            }
+
+            const perfStart = PERFORMANCE_LOG_ENABLED ? performance.now() : 0;
+
+            const visibleRestaurants = restaurantsToShow.filter(r => {
+                if (r.id === selectedRestaurant?.id || r.id === searchedRestaurant?.id) {
+                    return true;
+                }
+                return isRestaurantInViewport(r, map);
+            });
+
+            if (PERFORMANCE_LOG_ENABLED) {
+                console.log(`[Performance] After map move: ${restaurantsToShow.length} -> ${visibleRestaurants.length} markers`);
+            }
+
+            const visibleIds = new Set(visibleRestaurants.map(r => r.id));
+
+            // 가시영역 밖의 마커 숨기기
+            markersMapRef.current.forEach((marker, id) => {
+                if (!visibleIds.has(id)) {
+                    marker.setMap(null);
+                }
+            });
+
+            // 가시영역 내의 마커 표시
+            visibleRestaurants.forEach(restaurant => {
+                if (!restaurant.lat || !restaurant.lng) return;
+                const existingMarker = markersMapRef.current.get(restaurant.id);
+                if (existingMarker && existingMarker.getMap() !== map) {
+                    existingMarker.setMap(map);
+                }
+            });
+
+            if (PERFORMANCE_LOG_ENABLED) {
+                const perfEnd = performance.now();
+                console.log(`[Performance] Map event update took ${(perfEnd - perfStart).toFixed(2)}ms`);
+            }
+        };
+
+        // 디바운스된 업데이트 함수
+        const debouncedUpdate = debounce(triggerMarkerUpdate, MAP_UPDATE_DEBOUNCE_MS);
+
+        // 이벤트 리스너 등록
+        const dragEndListener = naver.maps.Event.addListener(map, 'dragend', debouncedUpdate);
+        const zoomChangedListener = naver.maps.Event.addListener(map, 'zoom_changed', debouncedUpdate);
+
+        return () => {
+            naver.maps.Event.removeListener(dragEndListener);
+            naver.maps.Event.removeListener(zoomChangedListener);
+        };
+    }, [displayRestaurants, searchedRestaurant, selectedRestaurant]);
 
     // [삭제됨] 네이버 로고 숨김 로직은 약관 위반 소지가 있어 제거하였습니다.
     // useEffect(() => { ... logo hiding logic ... }, [isLoaded]);
