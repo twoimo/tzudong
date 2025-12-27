@@ -91,7 +91,8 @@ function MobileControlOverlayComponent({
         setActiveSheet(prev => prev === sheet ? 'none' : sheet);
         // 새 시트 열 때 기본 높이로 초기화
         if (activeSheet !== sheet) {
-            setSheetHeight(75);
+            // 검색 시트는 50%, 나머지는 75%
+            setSheetHeight(sheet === 'search' ? 25 : 50);
         }
     }, [activeSheet]);
 
