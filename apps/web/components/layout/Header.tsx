@@ -299,15 +299,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         </div>
       )}
 
-      {/* 중앙: 공지 배너 - 고정 너비로 아이콘 영역 보호 */}
+      {/* 중앙: 공지 배너 - 남은 공간 최대 활용, 내용 길이와 무관하게 고정 */}
       {currentBanner && (
         <div
           className={cn(
             "flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
-            // 모바일: 고정 너비로 우측 아이콘 영역 보호
-            "max-lg:w-[240px]",
-            // 데스크탑: 남은 공간 모두 차지
-            "lg:flex-1",
+            // 모바일/데스크탑 모두 flex-1로 남은 공간 활용
+            "flex-1 min-w-0",
             isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
           )}
           onClick={handleBannerClick}
@@ -326,11 +324,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
           )}
           <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
           <span className={cn(
-            "font-medium truncate group-hover:text-red-800 transition-colors text-stone-700",
-            // 모바일: 텍스트 크기 축소 및 최대 너비 제한
-            "text-xs lg:text-sm",
-            // 텍스트 영역 최대 너비 고정 (화살표 + 아이콘 제외)
-            "max-w-[140px] lg:max-w-none"
+            "font-medium truncate group-hover:text-red-800 transition-colors text-stone-700 flex-1 min-w-0",
+            // 모바일: 텍스트 크기 축소
+            "text-xs lg:text-sm"
           )}>
             {currentBanner.title}
           </span>
@@ -339,7 +335,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
               variant="ghost"
               size="icon"
               onClick={handleBannerNext}
-              className="h-5 w-5 p-0 hover:bg-secondary text-muted-foreground flex-shrink-0 ml-auto"
+              className="h-5 w-5 p-0 hover:bg-secondary text-muted-foreground flex-shrink-0"
             >
               <ChevronRight className="h-3 w-3" />
             </Button>
