@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, YoutubeMeta } from "@/types/restaurant";
@@ -67,12 +67,19 @@ const RestaurantSearch = ({
         return [];
       }
     },
-    staleTime: 1000 * 60 * 5, // 5분간 캐시 (더 자주 업데이트)
+    staleTime: 1000 * 60 * 10, // 10분간 캐시 (인기 검색어는 자주 변하지 않음)
+    gcTime: 1000 * 60 * 30, // 30분간 메모리 보존
   });
+
+  // 메모이제이션된 쿼리 키
+  const queryKey = useMemo(
+    () => ["restaurant-search", searchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly],
+    [searchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly]
+  );
 
   // 맛집 검색 쿼리
   const { data: restaurants = [], isLoading } = useQuery({
-    queryKey: ["restaurant-search", searchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly],
+    queryKey,
     queryFn: async () => {
       if (!searchQuery.trim()) return [];
 
@@ -138,6 +145,8 @@ const RestaurantSearch = ({
       }
     },
     enabled: searchQuery.length > 0,
+    staleTime: 1000 * 60 * 5, // 5분간 캐시
+    gcTime: 1000 * 60 * 10, // 10분간 메모리 보존
   });
 
   // 외부 클릭 시 검색 결과 숨김
@@ -152,7 +161,7 @@ const RestaurantSearch = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleSelect = (restaurant: Restaurant) => {
+  const handleSelect = useCallback((restaurant: Restaurant) => {
     // 검색 카운트 증가 (비동기, 에러 무시)
     incrementSearchCount(restaurant.id).catch(() => { });
 
@@ -173,20 +182,20 @@ const RestaurantSearch = ({
     onSearchExecute?.();
     setSearchQuery("");
     setIsFocused(false);
-  };
+  }, [addToHistory, onRestaurantSearch, onRestaurantSelect, onSearchExecute]);
 
-  const clearSearch = () => {
+  const clearSearch = useCallback(() => {
     setSearchQuery("");
     setIsFocused(false);
-  };
+  }, []);
 
-  const toggleSearchType = () => {
+  const toggleSearchType = useCallback(() => {
     setSearchType(prev => prev === 'name' ? 'youtube' : 'name');
     // 검색어가 있으면 검색 타입 변경 시 재검색
     if (searchQuery.trim()) {
       setIsFocused(true);
     }
-  };
+  }, [searchQuery]);
 
   const showResults = isFocused && (searchQuery.length > 0 || restaurants.length > 0);
   const showHistoryAndPopular = isFocused && !searchQuery.trim();
