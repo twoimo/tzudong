@@ -1,7 +1,7 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -189,6 +189,38 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
       // 데스크탑: 기존 우측 패널로 공지사항 열기
       handleAdminAnnouncementsClick();
     }
+  };
+
+  const handleDeleteAnnouncement = (id: string) => {
+    if (confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
+      setAllAnnouncements(prev => prev.filter(a => a.id !== id));
+      setAnnouncementViewMode('list');
+      // TODO: 실제 삭제 API 호출
+    }
+  };
+
+  const handleToggleAnnouncementActive = (id: string) => {
+    setAllAnnouncements(prev =>
+      prev.map(a =>
+        a.id === id ? { ...a, isActive: !a.isActive } : a
+      )
+    );
+    if (selectedAnnouncement?.id === id) {
+      setSelectedAnnouncement(prev => prev ? { ...prev, isActive: !prev.isActive } : null);
+    }
+    // TODO: 실제 상태 변경 API 호출
+  };
+
+  const handleToggleAnnouncementBanner = (id: string) => {
+    setAllAnnouncements(prev =>
+      prev.map(a =>
+        a.id === id ? { ...a, showOnBanner: !a.showOnBanner } : a
+      )
+    );
+    if (selectedAnnouncement?.id === id) {
+      setSelectedAnnouncement(prev => prev ? { ...prev, showOnBanner: !prev.showOnBanner } : null);
+    }
+    // TODO: 실제 배너 상태 변경 API 호출
   };
 
   const handleMyPageClick = () => {
@@ -737,11 +769,66 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                 )}
               </div>
             ) : (
-              <ScrollArea className="h-full pr-4">
-                <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
-                  {selectedAnnouncement?.content}
-                </div>
-              </ScrollArea>
+              <div className="h-full flex flex-col">
+                <ScrollArea className="flex-1 pr-4">
+                  <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
+                    {selectedAnnouncement?.content}
+                  </div>
+                </ScrollArea>
+
+                {/* 관리자 제어 버튼 */}
+                {isAdmin && selectedAnnouncement && (
+                  <div className="flex-shrink-0 pt-4 border-t border-stone-200 mt-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleAnnouncementActive(selectedAnnouncement.id)}
+                        className="gap-1 text-xs"
+                      >
+                        {selectedAnnouncement.isActive ? (
+                          <>
+                            <EyeOff className="h-3 w-3" />
+                            비활성화
+                          </>
+                        ) : (
+                          <>
+                            <Eye className="h-3 w-3" />
+                            활성화
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleToggleAnnouncementBanner(selectedAnnouncement.id)}
+                        className={`gap-1 text-xs ${selectedAnnouncement.showOnBanner ? 'text-orange-600' : ''}`}
+                      >
+                        {selectedAnnouncement.showOnBanner ? (
+                          <>
+                            <BellOff className="h-3 w-3" />
+                            배너해제
+                          </>
+                        ) : (
+                          <>
+                            <Bell className="h-3 w-3" />
+                            배너노출
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDeleteAnnouncement(selectedAnnouncement.id)}
+                        className="gap-1 text-xs text-destructive hover:text-destructive col-span-2"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        삭제
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </SheetContent>
