@@ -20,7 +20,7 @@ const HomeModeToggle = memo(function HomeModeToggle({ mode, onModeChange, isAdmi
     return (
         <>
             {/* 모바일: 좌측 하단 세그먼트 컨트롤 */}
-            <div className="lg:hidden fixed bottom-44 left-4 z-40">
+            <div className="max-[1599px]:block min-[1600px]:hidden fixed bottom-44 left-4 z-40">
                 <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[105px]">
                     <Button
                         variant="ghost"
@@ -48,7 +48,7 @@ const HomeModeToggle = memo(function HomeModeToggle({ mode, onModeChange, isAdmi
             </div>
 
             {/* 데스크탑: 기존 스타일 */}
-            <div className="hidden lg:block absolute top-6 left-4 z-10">
+            <div className="hidden min-[1600px]:block absolute top-6 left-4 z-10">
                 <div className="flex items-center p-1 bg-white/90 backdrop-blur-md rounded-xl shadow-sm border border-gray-200/50">
                     <Button
                         variant="ghost"
