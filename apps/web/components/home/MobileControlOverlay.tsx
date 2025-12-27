@@ -118,38 +118,52 @@ function MobileControlOverlayComponent({
         startHeightRef.current = currentHeightRef.current;
     }, []);
 
-    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작, React 리렌더링 없음
+    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음)
     const handleDragMove = useCallback((e: TouchEvent) => {
-        const deltaY = startYRef.current - e.touches[0].clientY;
-        const viewportHeight = window.innerHeight;
-        const deltaPercent = (deltaY / viewportHeight) * 100;
+        if (!sheetRef.current || !isDragging) return;
 
-        let newHeight = startHeightRef.current + deltaPercent;
-        // 최소 30%, 최대 85%로 제한
-        newHeight = Math.max(30, Math.min(85, newHeight));
+        const currentY = e.touches[0].clientY;
+        const deltaY = startYRef.current - currentY;
+        const viewportHeight = window.innerHeight;
+        const deltaVh = (deltaY / viewportHeight) * 100;
+
+        let newHeight = startHeightRef.current + deltaVh;
+        newHeight = Math.max(10, Math.min(85, newHeight));
 
         currentHeightRef.current = newHeight;
 
-        // [CRITICAL OPTIMIZATION] setState 대신 transform 직접 수정 → 리렌더링 0
-        if (sheetRef.current) {
-            // translateY로 위치만 조정 (GPU 합성 레이어에서 처리)
-            sheetRef.current.style.transform = `translateY(${100 - newHeight}%)`;
-        }
-    }, []);
-
+        // [OPTIMIZATION] ref로 DOM 직접 조작 (리렌더링 제거)
+        requestAnimationFrame(() => {
+            if (sheetRef.current) {
+                sheetRef.current.style.transform = `translateY(calc(85vh - ${newHeight}vh))`;
+            }
+        });
+    }, [isDragging]);
     // [OPTIMIZATION] 드래그 종료 - 스냅 포인트로 이동
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
 
-        // 스냅 포인트: 30%, 50%, 75%, 85%
-        const snapPoints = [30, 50, 75, 85];
-        const closest = snapPoints.reduce((prev, curr) =>
-            Math.abs(curr - currentHeightRef.current) < Math.abs(prev - currentHeightRef.current) ? curr : prev
+        const currentHeight = currentHeightRef.current;
+        const snapPoints = activeSheet === 'search' ? [10, 25, 50] : [10, 30, 50, 75, 85];
+
+        // 가장 가까운 스냅 포인트 찾기
+        const snapHeight = snapPoints.reduce((prev, curr) =>
+            Math.abs(curr - currentHeight) < Math.abs(prev - currentHeight) ? curr : prev
         );
 
-        currentHeightRef.current = closest;
-        setSheetHeight(closest); // 스냅 시에만 setState (1회)
-    }, []);
+        // 닫기 임계값 (10vh 이하시 닫기)
+        if (snapHeight <= 10) {
+            handleClose();
+            return;
+        }
+
+        // 스냅 포인트로 이동 (transition 포함)
+        setSheetHeight(snapHeight);
+        currentHeightRef.current = snapHeight;
+        if (sheetRef.current) {
+            sheetRef.current.style.transform = `translateY(calc(85vh - ${snapHeight}vh))`;
+        }
+    }, [activeSheet, handleClose]);
 
     // [OPTIMIZATION] 지역별 맛집 수 계산
     const regionCounts = useMemo(() => {
@@ -212,6 +226,18 @@ function MobileControlOverlayComponent({
             handleEl.removeEventListener('touchend', handleDragEnd as any);
         };
     }, [activeSheet, handleDragStart, handleDragMove, handleDragEnd]);
+
+    // [CRITICAL] activeSheet 변경 시 초기 높이 설정
+    useEffect(() => {
+        if (activeSheet === 'none' || !sheetRef.current) return;
+
+        const initialHeight = activeSheet === 'search' ? 25 : 50;
+        currentHeightRef.current = initialHeight;
+        setSheetHeight(initialHeight);
+
+        // DOM에 즉시 반영 (애니메이션과 함께)
+        sheetRef.current.style.transform = `translateY(calc(85vh - ${initialHeight}vh))`;
+    }, [activeSheet]);
 
     // [OPTIMIZATION] useMemo로 버튼 레이블 캐싱
     const regionLabel = useMemo(() =>
@@ -361,7 +387,7 @@ function MobileControlOverlayComponent({
                         style={{
                             // [OPTIMIZATION] 고정 높이 + transform으로 위치 조정 (GPU 합성)
                             height: '85vh',
-                            transform: `translateY(${100 - sheetHeight}%)`,
+                            transform: `translateY(calc(85vh - ${sheetHeight}vh))`,
                             willChange: isDragging ? 'transform' : 'auto', // 드래그 중 GPU 레이어 유지
                         }}
                         onClick={(e) => e.stopPropagation()}
