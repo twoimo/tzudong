@@ -207,7 +207,7 @@ export function DailyRecommendationPopup() {
             />
 
             {/* 광고 팝업 스타일 */}
-            <div className="absolute bottom-6 right-6 pointer-events-auto animate-in slide-in-from-bottom-4 duration-500">
+            <div className="absolute max-md:top-1/2 max-md:left-1/2 max-md:-translate-x-1/2 max-md:-translate-y-1/2 md:bottom-6 md:right-6 pointer-events-auto animate-in slide-in-from-bottom-4 duration-500">
                 <Card
                     className="w-[320px] overflow-hidden shadow-2xl border-2 border-primary/30 cursor-pointer hover:shadow-primary/20 transition-all hover:scale-[1.02] bg-white font-serif"
                     onClick={handleCardClick}
