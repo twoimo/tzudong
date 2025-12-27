@@ -11,6 +11,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -52,6 +59,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
+
+  // 공지사항 바텀시트 상태
+  const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   // 미처리 제보 건수 상태
   const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
@@ -146,8 +157,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
   const handleBannerClick = () => {
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
-    if (currentAnnouncement && onAnnouncementClick) {
-      onAnnouncementClick(currentAnnouncement);
+    if (currentAnnouncement) {
+      setSelectedAnnouncement(currentAnnouncement);
+      setIsAnnouncementSheetOpen(true);
     }
   };
 
@@ -287,15 +299,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         </div>
       )}
 
-      {/* 중앙: 공지 배너 - 모바일에서는 최대 너비 제한 */}
+      {/* 중앙: 공지 배너 - 남은 공간 최대 활용, 내용 길이와 무관하게 고정 */}
       {currentBanner && (
         <div
           className={cn(
             "flex items-center gap-2 px-3 py-1 rounded-md bg-secondary/50 hover:bg-secondary cursor-pointer transition-all duration-300 group relative z-10",
-            // 모바일: 최대 너비 제한하되 flex-1로 여유 공간 활용
-            "max-lg:flex-1 max-lg:max-w-[280px]",
-            // 데스크탑: 남은 공간 모두 차지
-            "lg:flex-1",
+            // 모바일/데스크탑 모두 flex-1로 남은 공간 활용
+            "flex-1 min-w-0",
             isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
           )}
           onClick={handleBannerClick}
@@ -314,7 +324,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
           )}
           <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
           <span className={cn(
-            "font-medium truncate group-hover:text-red-800 transition-colors text-stone-700",
+            "font-medium truncate group-hover:text-red-800 transition-colors text-stone-700 flex-1 min-w-0",
             // 모바일: 텍스트 크기 축소
             "text-xs lg:text-sm"
           )}>
@@ -325,7 +335,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
               variant="ghost"
               size="icon"
               onClick={handleBannerNext}
-              className="h-5 w-5 p-0 hover:bg-secondary text-muted-foreground flex-shrink-0 ml-auto"
+              className="h-5 w-5 p-0 hover:bg-secondary text-muted-foreground flex-shrink-0"
             >
               <ChevronRight className="h-3 w-3" />
             </Button>
@@ -581,12 +591,40 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         {isHydrated && !isLoggedIn && (
           <Button
             onClick={onOpenAuth}
-            className="ml-2 bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md"
+            size={isMobileOrTablet ? "sm" : "default"}
+            className={cn(
+              "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
+              // 모바일: 여백 축소 및 텍스트 크기 조정
+              isMobileOrTablet ? "ml-1 px-5 text-xs" : "ml-2"
+            )}
           >
             로그인
           </Button>
         )}
       </div>
+
+      {/* 공지사항 바텀시트 */}
+      <Sheet open={isAnnouncementSheetOpen} onOpenChange={setIsAnnouncementSheetOpen}>
+        <SheetContent side="bottom" className="bg-[#fdfbf7] border-stone-800/10 font-serif max-h-[80vh]">
+          <SheetHeader>
+            <SheetTitle className="text-stone-900 flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-red-700" />
+              {selectedAnnouncement?.title}
+            </SheetTitle>
+            <SheetDescription className="text-stone-600 text-xs">
+              {selectedAnnouncement?.createdAt && formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
+                addSuffix: true,
+                locale: ko
+              })}
+            </SheetDescription>
+          </SheetHeader>
+          <ScrollArea className="h-full mt-4 pr-4">
+            <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
+              {selectedAnnouncement?.content}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </header>
   );
 };
