@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useState, useCallback } from 'react';
+import { Suspense, lazy, useState, useCallback, memo } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -40,7 +40,7 @@ interface HomeMapContainerProps {
 }
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
-export default function HomeMapContainer({
+function HomeMapContainerComponent({
     mapMode,
     filters,
     selectedRegion,
@@ -79,19 +79,21 @@ export default function HomeMapContainer({
         setStartHeight(sheetHeight);
     }, [sheetHeight]);
 
-    // 드래그 중
+    // 드래그 중 - requestAnimationFrame으로 최적화
     const handleDragMove = useCallback((e: React.TouchEvent) => {
         if (!isDragging) return;
 
-        const deltaY = startY - e.touches[0].clientY;
-        const viewportHeight = window.innerHeight;
-        const deltaPercent = (deltaY / viewportHeight) * 100;
+        requestAnimationFrame(() => {
+            const deltaY = startY - e.touches[0].clientY;
+            const viewportHeight = window.innerHeight;
+            const deltaPercent = (deltaY / viewportHeight) * 100;
 
-        let newHeight = startHeight + deltaPercent;
-        // 최소 30%, 최대 85%로 제한
-        newHeight = Math.max(30, Math.min(85, newHeight));
+            let newHeight = startHeight + deltaPercent;
+            // 최소 30%, 최대 85%로 제한
+            newHeight = Math.max(30, Math.min(85, newHeight));
 
-        setSheetHeight(newHeight);
+            setSheetHeight(newHeight);
+        });
     }, [isDragging, startY, startHeight]);
 
     // 드래그 종료
@@ -232,3 +234,9 @@ export default function HomeMapContainer({
         </div>
     );
 }
+
+// React.memo로 래핑하여 성능 최적화
+const HomeMapContainer = memo(HomeMapContainerComponent);
+HomeMapContainer.displayName = 'HomeMapContainer';
+
+export default HomeMapContainer;

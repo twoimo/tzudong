@@ -103,19 +103,21 @@ function MobileControlOverlayComponent({
         setStartHeight(sheetHeight);
     }, [sheetHeight]);
 
-    // 드래그 중
+    // 드래그 중 - requestAnimationFrame으로 최적화
     const handleDragMove = useCallback((e: React.TouchEvent) => {
         if (!isDragging) return;
 
-        const deltaY = startY - e.touches[0].clientY;
-        const viewportHeight = window.innerHeight;
-        const deltaPercent = (deltaY / viewportHeight) * 100;
+        requestAnimationFrame(() => {
+            const deltaY = startY - e.touches[0].clientY;
+            const viewportHeight = window.innerHeight;
+            const deltaPercent = (deltaY / viewportHeight) * 100;
 
-        let newHeight = startHeight + deltaPercent;
-        // 최소 30%, 최대 85%로 제한
-        newHeight = Math.max(30, Math.min(85, newHeight));
+            let newHeight = startHeight + deltaPercent;
+            // 최소 30%, 최대 85%로 제한
+            newHeight = Math.max(30, Math.min(85, newHeight));
 
-        setSheetHeight(newHeight);
+            setSheetHeight(newHeight);
+        });
     }, [isDragging, startY, startHeight]);
 
     // 드래그 종료
