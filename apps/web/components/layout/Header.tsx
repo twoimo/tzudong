@@ -25,7 +25,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { usePathname, useRouter } from "next/navigation";
-import { getBannerAnnouncements, Announcement } from "@/types/announcement";
+import { getBannerAnnouncements, getActiveAnnouncements, Announcement } from "@/types/announcement";
 import { useHydration } from "@/hooks/useHydration";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmarks } from "@/hooks/use-bookmarks";
@@ -63,6 +63,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   // 공지사항 바텀시트 상태
   const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+  const [announcementViewMode, setAnnouncementViewMode] = useState<'list' | 'detail'>('list');
+  const [allAnnouncements, setAllAnnouncements] = useState<Announcement[]>([]);
+  const [announcementPage, setAnnouncementPage] = useState(1);
+  const ANNOUNCEMENTS_PER_PAGE = 3;
 
   // 미처리 제보 건수 상태
   const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
@@ -158,8 +162,32 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   const handleBannerClick = () => {
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
     if (currentAnnouncement) {
-      setSelectedAnnouncement(currentAnnouncement);
+      if (isMobileOrTablet) {
+        // 모바일/태블릿: 바텀시트로 상세 뷰 표시
+        setSelectedAnnouncement(currentAnnouncement);
+        setAnnouncementViewMode('detail');
+        setIsAnnouncementSheetOpen(true);
+      } else {
+        // 데스크탑: 우측 패널로 공지사항 열기
+        if (onAnnouncementClick) {
+          onAnnouncementClick(currentAnnouncement);
+        }
+      }
+    }
+  };
+
+  const handleAnnouncementListClick = () => {
+    if (isMobileOrTablet) {
+      // 모바일/태블릿: 바텀시트로 공지사항 리스트 표시
+      const announcements = getActiveAnnouncements();
+      console.log('Loaded announcements:', announcements);
+      setAllAnnouncements(announcements);
+      setAnnouncementPage(1);
+      setAnnouncementViewMode('list');
       setIsAnnouncementSheetOpen(true);
+    } else {
+      // 데스크탑: 기존 우측 패널로 공지사항 열기
+      handleAdminAnnouncementsClick();
     }
   };
 
@@ -545,13 +573,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
+                <Megaphone className="mr-2 h-4 w-4" />
+                공지사항
+              </DropdownMenuItem>
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-stone-800/10" />
-                  <DropdownMenuItem onClick={handleAdminAnnouncementsClick} className="text-stone-900 hover:bg-stone-200/50">
-                    <Megaphone className="mr-2 h-4 w-4" />
-                    공지사항
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
@@ -605,24 +633,117 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
       {/* 공지사항 바텀시트 */}
       <Sheet open={isAnnouncementSheetOpen} onOpenChange={setIsAnnouncementSheetOpen}>
-        <SheetContent side="bottom" className="bg-[#fdfbf7] border-stone-800/10 font-serif max-h-[80vh]">
-          <SheetHeader>
-            <SheetTitle className="text-stone-900 flex items-center gap-2">
-              <Megaphone className="h-5 w-5 text-red-700" />
-              {selectedAnnouncement?.title}
-            </SheetTitle>
-            <SheetDescription className="text-stone-600 text-xs">
-              {selectedAnnouncement?.createdAt && formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
-                addSuffix: true,
-                locale: ko
-              })}
-            </SheetDescription>
-          </SheetHeader>
-          <ScrollArea className="h-full mt-4 pr-4">
-            <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
-              {selectedAnnouncement?.content}
+        <SheetContent side="bottom" className="bg-[#fdfbf7] border-stone-800/10 font-serif max-h-[80vh] flex flex-col">
+          <SheetHeader className="flex-shrink-0">
+            <div className="flex items-center gap-2">
+              {announcementViewMode === 'detail' && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setAnnouncementViewMode('list')}
+                  className="p-0 h-auto hover:bg-transparent"
+                >
+                  <ChevronLeft className="h-5 w-5 text-stone-700" />
+                </Button>
+              )}
+              <div className="flex-1">
+                <SheetTitle className="text-stone-900 flex items-center gap-2">
+                  <Megaphone className="h-5 w-5 text-red-700" />
+                  <span>{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</span>
+                  {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
+                    <span className="text-xs text-stone-500 font-normal">
+                      · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
+                        addSuffix: true,
+                        locale: ko
+                      })}
+                    </span>
+                  )}
+                </SheetTitle>
+              </div>
             </div>
-          </ScrollArea>
+          </SheetHeader>
+          <div className="flex-1 overflow-hidden mt-4">
+            {announcementViewMode === 'list' ? (
+              <div className="h-full flex flex-col">
+                <ScrollArea className="flex-1 pr-4">
+                  <div className="space-y-3">
+                    {(() => {
+                      const startIdx = (announcementPage - 1) * ANNOUNCEMENTS_PER_PAGE;
+                      const endIdx = startIdx + ANNOUNCEMENTS_PER_PAGE;
+                      const paginatedAnnouncements = allAnnouncements.slice(startIdx, endIdx);
+                      const totalPages = Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE);
+
+                      if (allAnnouncements.length === 0) {
+                        return (
+                          <div className="text-center py-12 text-stone-500">
+                            <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
+                            <p>현재 공지사항이 없습니다</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <>
+                          {paginatedAnnouncements.map((announcement) => (
+                            <div
+                              key={announcement.id}
+                              className="p-4 rounded-lg border border-stone-200 hover:bg-stone-100 cursor-pointer transition-colors"
+                              onClick={() => {
+                                setSelectedAnnouncement(announcement);
+                                setAnnouncementViewMode('detail');
+                              }}
+                            >
+                              <h4 className="font-semibold text-stone-900 mb-1">{announcement.title}</h4>
+                              <p className="text-sm text-stone-600 line-clamp-2 mb-2">{announcement.content}</p>
+                              <div className="text-xs text-stone-500">
+                                {formatDistanceToNow(new Date(announcement.createdAt), {
+                                  addSuffix: true,
+                                  locale: ko
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </ScrollArea>
+
+                {/* 페이지네이션 */}
+                {allAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
+                  <div className="flex items-center justify-center gap-2 pt-3 border-t border-stone-200">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAnnouncementPage(p => Math.max(1, p - 1))}
+                      disabled={announcementPage === 1}
+                      className="h-8"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-sm text-stone-600 px-2">
+                      {announcementPage} / {Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setAnnouncementPage(p => Math.min(Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE), p + 1))}
+                      disabled={announcementPage === Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
+                      className="h-8"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <ScrollArea className="h-full pr-4">
+                <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
+                  {selectedAnnouncement?.content}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
     </header>
