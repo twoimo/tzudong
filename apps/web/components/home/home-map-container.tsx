@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState, useCallback, memo } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -40,7 +40,7 @@ interface HomeMapContainerProps {
 }
 
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
-export default function HomeMapContainer({
+function HomeMapContainerComponent({
     mapMode,
     filters,
     selectedRegion,
@@ -65,6 +65,49 @@ export default function HomeMapContainer({
     isPanelCollapsed,
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
+
+    // 바텀시트 드래그 상태
+    const [sheetHeight, setSheetHeight] = useState(75);
+    const [isDragging, setIsDragging] = useState(false);
+    const [startY, setStartY] = useState(0);
+    const [startHeight, setStartHeight] = useState(75);
+
+    // 드래그 시작
+    const handleDragStart = useCallback((e: React.TouchEvent) => {
+        setIsDragging(true);
+        setStartY(e.touches[0].clientY);
+        setStartHeight(sheetHeight);
+    }, [sheetHeight]);
+
+    // 드래그 중 - requestAnimationFrame으로 최적화
+    const handleDragMove = useCallback((e: React.TouchEvent) => {
+        if (!isDragging) return;
+
+        requestAnimationFrame(() => {
+            const deltaY = startY - e.touches[0].clientY;
+            const viewportHeight = window.innerHeight;
+            const deltaPercent = (deltaY / viewportHeight) * 100;
+
+            let newHeight = startHeight + deltaPercent;
+            // 최소 30%, 최대 85%로 제한
+            newHeight = Math.max(30, Math.min(85, newHeight));
+
+            setSheetHeight(newHeight);
+        });
+    }, [isDragging, startY, startHeight]);
+
+    // 드래그 종료
+    const handleDragEnd = useCallback(() => {
+        setIsDragging(false);
+
+        // 스냅 포인트: 30%, 50%, 75%, 85%
+        const snapPoints = [30, 50, 75, 85];
+        const closest = snapPoints.reduce((prev, curr) =>
+            Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight) ? curr : prev
+        );
+
+        setSheetHeight(closest);
+    }, [sheetHeight]);
 
     return (
         <div className="relative w-full h-full">
@@ -139,27 +182,32 @@ export default function HomeMapContainer({
                                 className={cn(
                                     'fixed bottom-0 left-0 right-0 z-50',
                                     'bg-background rounded-t-2xl shadow-xl',
-                                    'animate-in slide-in-from-bottom duration-300',
-                                    'max-h-[85vh] overflow-hidden flex flex-col',
+                                    'transition-all duration-150',
+                                    isDragging ? '' : 'ease-out',
+                                    'overflow-hidden flex flex-col',
                                     // iOS safe area 지원 + 하단 네비게이션바 공간
                                     'pb-[calc(env(safe-area-inset-bottom)+56px)]'
                                 )}
+                                style={{ height: `${sheetHeight}vh` }}
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {/* 핸들 바 및 닫기 버튼 */}
-                                <div className="flex items-center justify-between px-4 py-2 border-b border-border flex-shrink-0">
-                                    <div className="flex-1 flex justify-center">
-                                        <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={onPanelClose}
-                                        className="absolute right-2 top-2"
-                                    >
-                                        <X className="h-5 w-5" />
-                                    </Button>
+                                {/* 핸들 바 - 드래그 가능, 항상 상단 고정 */}
+                                <div
+                                    className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                                    onTouchStart={handleDragStart}
+                                    onTouchMove={handleDragMove}
+                                    onTouchEnd={handleDragEnd}
+                                >
+                                    <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
                                 </div>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={onPanelClose}
+                                    className="absolute right-2 top-2 z-30"
+                                >
+                                    <X className="h-5 w-5" />
+                                </Button>
 
                                 {/* 상세 패널 콘텐츠 */}
                                 <div className="flex-1 overflow-y-auto">
@@ -186,3 +234,9 @@ export default function HomeMapContainer({
         </div>
     );
 }
+
+// React.memo로 래핑하여 성능 최적화
+const HomeMapContainer = memo(HomeMapContainerComponent);
+HomeMapContainer.displayName = 'HomeMapContainer';
+
+export default HomeMapContainer;
