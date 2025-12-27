@@ -29,6 +29,8 @@ interface HomeControlPanelProps {
     onPanelClick?: (panel: 'map' | 'detail' | 'control') => void;
     leftSidebarWidth?: number;
     rightPanelWidth?: number;
+    isAdmin?: boolean;
+    onModeChange?: (mode: 'domestic' | 'overseas') => void;
 }
 
 // [CSR] 지역/국가 선택, 카테고리 필터, 검색 통합 패널 - 모든 사용자 입력 처리
@@ -49,6 +51,8 @@ export default function HomeControlPanel({
     onPanelClick,
     leftSidebarWidth = 64,
     rightPanelWidth = 0,
+    isAdmin = false,
+    onModeChange,
 }: HomeControlPanelProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
     const [leftPosition, setLeftPosition] = useState<string>('50%');
@@ -86,6 +90,8 @@ export default function HomeControlPanel({
                 onRestaurantSelect={onRestaurantSelect}
                 onRestaurantSearch={onRestaurantSearch}
                 onSearchExecute={onSearchExecute}
+                isAdmin={isAdmin}
+                onModeChange={onModeChange}
             />
         );
     }
