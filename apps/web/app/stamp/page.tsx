@@ -276,6 +276,7 @@ interface RestaurantRowProps {
 const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: RestaurantRowProps) => {
     const category = parseCategory(restaurant.category || (restaurant as any).categories);
     const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+    const reviewCount = (restaurant as any).verified_review_count ?? restaurant.review_count ?? 0;
 
     return (
         <TableRow
@@ -311,7 +312,7 @@ const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: Restau
             <TableCell className="text-muted-foreground text-sm truncate max-w-[400px]">
                 {restaurant.road_address || restaurant.jibun_address}
             </TableCell>
-            <TableCell className="text-center">{restaurant.review_count || 0}</TableCell>
+            <TableCell className="text-center">{reviewCount}</TableCell>
         </TableRow>
     );
 });
