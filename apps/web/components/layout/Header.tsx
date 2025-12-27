@@ -11,6 +11,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { useNotifications } from "@/contexts/NotificationContext";
@@ -52,6 +59,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
   const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
   const [isBannerDismissed, setIsBannerDismissed] = useState(false);
   const [isBannerPaused, setIsBannerPaused] = useState(false);
+
+  // 공지사항 바텀시트 상태
+  const [isAnnouncementSheetOpen, setIsAnnouncementSheetOpen] = useState(false);
+  const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
 
   // 미처리 제보 건수 상태
   const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
@@ -146,8 +157,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
   const handleBannerClick = () => {
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
-    if (currentAnnouncement && onAnnouncementClick) {
-      onAnnouncementClick(currentAnnouncement);
+    if (currentAnnouncement) {
+      setSelectedAnnouncement(currentAnnouncement);
+      setIsAnnouncementSheetOpen(true);
     }
   };
 
@@ -594,6 +606,29 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
           </Button>
         )}
       </div>
+
+      {/* 공지사항 바텀시트 */}
+      <Sheet open={isAnnouncementSheetOpen} onOpenChange={setIsAnnouncementSheetOpen}>
+        <SheetContent side="bottom" className="bg-[#fdfbf7] border-stone-800/10 font-serif max-h-[80vh]">
+          <SheetHeader>
+            <SheetTitle className="text-stone-900 flex items-center gap-2">
+              <Megaphone className="h-5 w-5 text-red-700" />
+              {selectedAnnouncement?.title}
+            </SheetTitle>
+            <SheetDescription className="text-stone-600 text-xs">
+              {selectedAnnouncement?.createdAt && formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
+                addSuffix: true,
+                locale: ko
+              })}
+            </SheetDescription>
+          </SheetHeader>
+          <ScrollArea className="h-full mt-4 pr-4">
+            <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
+              {selectedAnnouncement?.content}
+            </div>
+          </ScrollArea>
+        </SheetContent>
+      </Sheet>
     </header>
   );
 };
