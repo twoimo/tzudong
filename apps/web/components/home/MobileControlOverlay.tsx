@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useState, useCallback, useMemo, lazy, Suspense } from 'react';
+import { memo, useState, useCallback, useMemo, useRef, useEffect, lazy, Suspense } from 'react';
 import { Filter, Search, X, MapPin, Check, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -73,10 +73,15 @@ function MobileControlOverlayComponent({
     onSubmissionClick,
 }: MobileControlOverlayProps) {
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
-    const [sheetHeight, setSheetHeight] = useState(75); // 바텀시트 높이 (vh 단위, 기본 75%)
+    const [sheetHeight, setSheetHeight] = useState(50); // 최종 높이 (스냅 시에만 업데이트)
     const [isDragging, setIsDragging] = useState(false);
-    const [startY, setStartY] = useState(0);
-    const [startHeight, setStartHeight] = useState(75);
+
+    // [OPTIMIZATION] ref로 실시간 드래그 상태 추적 (리렌더링 없이)
+    const sheetRef = useRef<HTMLDivElement>(null);
+    const handleRef = useRef<HTMLDivElement>(null);
+    const currentHeightRef = useRef(50); // 현재 드래그 중인 높이
+    const startYRef = useRef(0);
+    const startHeightRef = useRef(50);
 
     // 맛집 데이터 조회 (지역/카테고리 카운트용)
     const { data: restaurants = [] } = useQuery({
@@ -100,47 +105,51 @@ function MobileControlOverlayComponent({
         setActiveSheet(prev => prev === sheet ? 'none' : sheet);
         // 새 시트 열 때 기본 높이로 초기화
         if (activeSheet !== sheet) {
-            // 검색 시트는 50%, 나머지는 75%
-            setSheetHeight(sheet === 'search' ? 25 : 50);
+            const initialHeight = sheet === 'search' ? 25 : 50;
+            setSheetHeight(initialHeight);
+            currentHeightRef.current = initialHeight;
         }
     }, [activeSheet]);
 
-    // 드래그 시작
-    const handleDragStart = useCallback((e: React.TouchEvent) => {
+    // [OPTIMIZATION] 드래그 시작 - passive 이벤트 방지를 위해 별도 처리
+    const handleDragStart = useCallback((e: TouchEvent) => {
         setIsDragging(true);
-        setStartY(e.touches[0].clientY);
-        setStartHeight(sheetHeight);
-    }, [sheetHeight]);
+        startYRef.current = e.touches[0].clientY;
+        startHeightRef.current = currentHeightRef.current;
+    }, []);
 
-    // 드래그 중 - requestAnimationFrame으로 최적화
-    const handleDragMove = useCallback((e: React.TouchEvent) => {
-        if (!isDragging) return;
+    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작, React 리렌더링 없음
+    const handleDragMove = useCallback((e: TouchEvent) => {
+        const deltaY = startYRef.current - e.touches[0].clientY;
+        const viewportHeight = window.innerHeight;
+        const deltaPercent = (deltaY / viewportHeight) * 100;
 
-        requestAnimationFrame(() => {
-            const deltaY = startY - e.touches[0].clientY;
-            const viewportHeight = window.innerHeight;
-            const deltaPercent = (deltaY / viewportHeight) * 100;
+        let newHeight = startHeightRef.current + deltaPercent;
+        // 최소 30%, 최대 85%로 제한
+        newHeight = Math.max(30, Math.min(85, newHeight));
 
-            let newHeight = startHeight + deltaPercent;
-            // 최소 30%, 최대 85%로 제한
-            newHeight = Math.max(30, Math.min(85, newHeight));
+        currentHeightRef.current = newHeight;
 
-            setSheetHeight(newHeight);
-        });
-    }, [isDragging, startY, startHeight]);
+        // [CRITICAL OPTIMIZATION] setState 대신 transform 직접 수정 → 리렌더링 0
+        if (sheetRef.current) {
+            // translateY로 위치만 조정 (GPU 합성 레이어에서 처리)
+            sheetRef.current.style.transform = `translateY(${100 - newHeight}%)`;
+        }
+    }, []);
 
-    // 드래그 종료
+    // [OPTIMIZATION] 드래그 종료 - 스냅 포인트로 이동
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
 
         // 스냅 포인트: 30%, 50%, 75%, 85%
         const snapPoints = [30, 50, 75, 85];
         const closest = snapPoints.reduce((prev, curr) =>
-            Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight) ? curr : prev
+            Math.abs(curr - currentHeightRef.current) < Math.abs(prev - currentHeightRef.current) ? curr : prev
         );
 
-        setSheetHeight(closest);
-    }, [sheetHeight]);
+        currentHeightRef.current = closest;
+        setSheetHeight(closest); // 스냅 시에만 setState (1회)
+    }, []);
 
     // [OPTIMIZATION] 지역별 맛집 수 계산
     const regionCounts = useMemo(() => {
@@ -186,6 +195,23 @@ function MobileControlOverlayComponent({
         });
         return counts;
     }, [restaurants, selectedRegion]);
+
+    // [OPTIMIZATION] Passive 이벤트 리스너 등록
+    useEffect(() => {
+        const handleEl = handleRef.current;
+        if (!handleEl || activeSheet === 'none') return;
+
+        // Passive: true로 스크롤 성능 최적화
+        handleEl.addEventListener('touchstart', handleDragStart as any, { passive: true });
+        handleEl.addEventListener('touchmove', handleDragMove as any, { passive: true });
+        handleEl.addEventListener('touchend', handleDragEnd as any, { passive: true });
+
+        return () => {
+            handleEl.removeEventListener('touchstart', handleDragStart as any);
+            handleEl.removeEventListener('touchmove', handleDragMove as any);
+            handleEl.removeEventListener('touchend', handleDragEnd as any);
+        };
+    }, [activeSheet, handleDragStart, handleDragMove, handleDragEnd]);
 
     // [OPTIMIZATION] useMemo로 버튼 레이블 캐싱
     const regionLabel = useMemo(() =>
@@ -321,25 +347,29 @@ function MobileControlOverlayComponent({
                 >
                     {/* 바텀시트 컨테이너 */}
                     <div
+                        ref={sheetRef}
                         className={cn(
                             'fixed bottom-0 left-0 right-0 z-50',
                             'bg-background rounded-t-2xl shadow-xl',
-                            'transition-all duration-150',
-                            isDragging ? '' : 'ease-out',
+                            // [OPTIMIZATION] transition은 드래그 종료 시에만
+                            isDragging ? '' : 'transition-transform duration-150 ease-out',
                             // 검색 시트일 때는 드롭다운이 위로 나오도록 overflow visible
                             activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto',
                             // 하단 네비게이션바 공간 + iOS safe area + 여유 공간
                             'pb-[calc(env(safe-area-inset-bottom)+80px)]'
                         )}
-                        style={{ height: `${sheetHeight}vh` }}
+                        style={{
+                            // [OPTIMIZATION] 고정 높이 + transform으로 위치 조정 (GPU 합성)
+                            height: '85vh',
+                            transform: `translateY(${100 - sheetHeight}%)`,
+                            willChange: isDragging ? 'transform' : 'auto', // 드래그 중 GPU 레이어 유지
+                        }}
                         onClick={(e) => e.stopPropagation()}
                     >
                         {/* 핸들 바 - 드래그 가능, 항상 상단 고정 */}
                         <div
+                            ref={handleRef}
                             className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
-                            onTouchStart={handleDragStart}
-                            onTouchMove={handleDragMove}
-                            onTouchEnd={handleDragEnd}
                         >
                             <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
                         </div>
