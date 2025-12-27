@@ -81,34 +81,52 @@ const getCategoryIcon = (category: string | string[] | null | undefined): string
 };
 
 /**
- * [OPTIMIZATION] 마커 컨텐츠 생성 함수 - 컴포넌트 외부에 정의하여 재생성 방지
+ * [OPTIMIZATION] 마커 컨텐츠 생성 함수 - DOM 단순화 버전
  * 
  * @param restaurant 레스토랑 정보
  * @param isSelected 선택 여부
- * @returns HTML 문자열
+ * @returns HTML 문자열 (단일 div, inline 스타일)
  */
 const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): string => {
     const icon = getCategoryIcon(restaurant.categories || restaurant.category);
-    const markerSize = isSelected ? 32 : 24;
+    const size = isSelected ? 36 : 28;
+    const fontSize = isSelected ? 28 : 22;
+    const dropShadow = isSelected
+        ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 0 rgba(239, 68, 68, 0.5))'
+        : 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25))';
+    const transform = isSelected ? 'scale(1.15)' : 'scale(1)';
+    const animation = isSelected ? 'bounce 1s ease-in-out infinite' : 'none';
+    const zIndex = isSelected ? '100' : '1';
 
     return `
+        <style>
+            @keyframes bounce {
+                0%, 100% { transform: scale(1.15) translateY(0); }
+                50% { transform: scale(1.15) translateY(-4px); }
+            }
+        </style>
         <div 
-            class="custom-marker ${isSelected ? 'selected-marker' : ''}" 
-            role="button" 
-            aria-label="${restaurant.name} 맛집 마커" 
-            tabindex="0" 
-            title="${restaurant.name}"
-        >
-            <div style="
-                position: relative;
-                font-size: ${markerSize}px;
+            style="
+                width: ${size}px;
+                height: ${size}px;
+                font-size: ${fontSize}px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
                 cursor: pointer;
-                transition: all 0.3s ease;
-                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
-            " class="${isSelected ? 'animate-bounce' : ''} hover:scale-125">
-                ${icon}
-            </div>
-        </div>
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                transform: ${transform};
+                filter: ${dropShadow};
+                animation: ${animation};
+                position: relative;
+                z-index: ${zIndex};
+                user-select: none;
+                -webkit-tap-highlight-color: transparent;
+            "
+            role="button"
+            aria-label="${restaurant.name}"
+            title="${restaurant.name}"
+        >${icon}</div>
     `;
 };
 
@@ -849,7 +867,7 @@ const NaverMapView = memo(({
                     map: map,
                     icon: {
                         content: contentHtml,
-                        anchor: new naver.maps.Point(12, 12), // 기본 Anchor (24px/2)
+                        anchor: new naver.maps.Point(14, 14), // 기본 Anchor (28px/2)
                     },
                     title: restaurant.name,
                 });
@@ -905,8 +923,8 @@ const NaverMapView = memo(({
                     marker.setIcon({
                         content: content,
                         anchor: isTarget
-                            ? new naver.maps.Point(16, 16) // 선택됨 (32px)
-                            : new naver.maps.Point(12, 12) // 기본 (24px)
+                            ? new naver.maps.Point(18, 18) // 선택됨 (36px/2)
+                            : new naver.maps.Point(14, 14) // 기본 (28px/2)
                     });
 
                     marker.setZIndex(isTarget ? 100 : 0);
