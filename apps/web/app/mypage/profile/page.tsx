@@ -37,6 +37,10 @@ import {
   Loader2,
   Bookmark,
   ChevronRight,
+  MessageSquare,
+  MapPin,
+  Edit,
+  Youtube,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useBookmarks } from "@/hooks/use-bookmarks";
@@ -225,10 +229,6 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">프로필</h1>
-      </div>
-
       {/* 기본 정보 */}
       <Card>
         <CardHeader>
@@ -236,24 +236,6 @@ export default function ProfilePage() {
           <CardDescription>계정 정보를 확인하고 수정할 수 있습니다</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* 프로필 사진 및 이름 */}
-          <div className="flex items-center gap-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={avatarUrl} alt={displayName} />
-              <AvatarFallback className="text-2xl">{displayName.charAt(0).toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div>
-              <h2 className="text-xl font-semibold">{displayName}</h2>
-              {isAdmin && (
-                <Badge className="mt-1 gap-1" variant="secondary">
-                  <Shield className="h-3 w-3" />
-                  관리자
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          <Separator />
 
           {/* 이메일 */}
           <div className="space-y-2">
@@ -407,6 +389,78 @@ export default function ProfilePage() {
                 <p className="font-medium">나의 북마크 내역</p>
                 <p className="text-sm text-muted-foreground">
                   저장한 맛집 {bookmarks.length}개
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 리뷰 내역 */}
+      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/reviews')}>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MessageSquare className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">나의 리뷰 내역</p>
+                <p className="text-sm text-muted-foreground">
+                  작성한 리뷰 확인
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 제보 내역 */}
+      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/submissions/new')}>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MapPin className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">신규 맛집 제보</p>
+                <p className="text-sm text-muted-foreground">
+                  새로운 맛집 알려주기
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 맛집 수정 요청 */}
+      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/submissions/edit')}>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Edit className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">맛집 수정 요청</p>
+                <p className="text-sm text-muted-foreground">
+                  기존 맛집 정보 수정
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 쯔양 맛집 제보 */}
+      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/submissions/recommend')}>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Youtube className="h-5 w-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium">쯔양 맛집 제보</p>
+                <p className="text-sm text-muted-foreground">
+                  쯔양이 방문한 맛집 제보
                 </p>
               </div>
             </div>
