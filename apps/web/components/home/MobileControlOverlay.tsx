@@ -64,6 +64,10 @@ function MobileControlOverlayComponent({
     onSearchExecute,
 }: MobileControlOverlayProps) {
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
+    const [sheetHeight, setSheetHeight] = useState(75); // 바텀시트 높이 (vh 단위, 기본 75%)
+    const [isDragging, setIsDragging] = useState(false);
+    const [startY, setStartY] = useState(0);
+    const [startHeight, setStartHeight] = useState(75);
 
     // 맛집 데이터 조회 (지역/카테고리 카운트용)
     const { data: restaurants = [] } = useQuery({
@@ -85,7 +89,46 @@ function MobileControlOverlayComponent({
 
     const toggleSheet = useCallback((sheet: ActiveSheet) => {
         setActiveSheet(prev => prev === sheet ? 'none' : sheet);
-    }, []);
+        // 새 시트 열 때 기본 높이로 초기화
+        if (activeSheet !== sheet) {
+            setSheetHeight(75);
+        }
+    }, [activeSheet]);
+
+    // 드래그 시작
+    const handleDragStart = useCallback((e: React.TouchEvent) => {
+        setIsDragging(true);
+        setStartY(e.touches[0].clientY);
+        setStartHeight(sheetHeight);
+    }, [sheetHeight]);
+
+    // 드래그 중
+    const handleDragMove = useCallback((e: React.TouchEvent) => {
+        if (!isDragging) return;
+
+        const deltaY = startY - e.touches[0].clientY;
+        const viewportHeight = window.innerHeight;
+        const deltaPercent = (deltaY / viewportHeight) * 100;
+
+        let newHeight = startHeight + deltaPercent;
+        // 최소 30%, 최대 85%로 제한
+        newHeight = Math.max(30, Math.min(85, newHeight));
+
+        setSheetHeight(newHeight);
+    }, [isDragging, startY, startHeight]);
+
+    // 드래그 종료
+    const handleDragEnd = useCallback(() => {
+        setIsDragging(false);
+
+        // 스냅 포인트: 30%, 50%, 75%, 85%
+        const snapPoints = [30, 50, 75, 85];
+        const closest = snapPoints.reduce((prev, curr) =>
+            Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight) ? curr : prev
+        );
+
+        setSheetHeight(closest);
+    }, [sheetHeight]);
 
     // [OPTIMIZATION] 지역별 맛집 수 계산
     const regionCounts = useMemo(() => {
@@ -191,16 +234,23 @@ function MobileControlOverlayComponent({
                         className={cn(
                             'fixed bottom-0 left-0 right-0 z-50',
                             'bg-background rounded-t-2xl shadow-xl',
-                            'animate-in slide-in-from-bottom duration-300',
+                            'transition-all duration-150',
+                            isDragging ? '' : 'ease-out',
                             // 검색 시트일 때는 드롭다운이 위로 나오도록 overflow visible
-                            activeSheet === 'search' ? 'max-h-[85vh] overflow-visible' : 'max-h-[75vh] overflow-y-auto',
+                            activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto',
                             // 하단 네비게이션바 공간 + iOS safe area + 여유 공간
                             'pb-[calc(env(safe-area-inset-bottom)+80px)]'
                         )}
+                        style={{ height: `${sheetHeight}vh` }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* 핸들 바 */}
-                        <div className="flex justify-center py-2">
+                        {/* 핸들 바 - 드래그 가능, 항상 상단 고정 */}
+                        <div
+                            className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                            onTouchStart={handleDragStart}
+                            onTouchMove={handleDragMove}
+                            onTouchEnd={handleDragEnd}
+                        >
                             <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
                         </div>
 
