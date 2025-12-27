@@ -281,6 +281,9 @@ const NaverMapView = memo(({
     // 디바이스 타입 감지 (모바일/태블릿에서는 오프셋 제거)
     const { isMobileOrTablet } = useDeviceType();
 
+    // [OPTIMIZATION] 패널 너비 state - ResizeObserver로 자동 업데이트
+    const [panelWidth, setPanelWidth] = useState(PANEL_WIDTH);
+
     // 디바이스별 줌 레벨 조정 함수 (모바일/태블릿은 -2 줌으로 더 넓게, 전국은 기본값 유지)
     const getDeviceAdjustedZoom = useCallback((baseZoom: number, isNational: boolean = false) => {
         // 전국 뷰는 기본값 유지 (이미 적절한 줌 레벨)
@@ -308,6 +311,57 @@ const NaverMapView = memo(({
             window.removeEventListener('resetUserMapMovement', handleResetUserMapMovement);
         };
     }, []);
+
+    // [OPTIMIZATION] ResizeObserver로 패널 너비 자동 감지
+    useEffect(() => {
+        const panelElement =
+            document.querySelector('[data-panel-type="restaurant-detail"]') ||
+            document.getElementById('restaurant-detail-panel') ||
+            document.querySelector('.restaurant-detail-panel');
+
+        if (!panelElement) {
+            console.warn('[NaverMapView] Panel element not found for ResizeObserver');
+            return;
+        }
+
+        // RAF ID를 저장하여 cleanup 시 취소
+        let rafId: number | null = null;
+
+        // ResizeObserver 생성
+        const observer = new ResizeObserver((entries) => {
+            // 이전 RAF 취소
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+
+            // RAF로 배치 처리 (리플로우 최소화)
+            rafId = requestAnimationFrame(() => {
+                for (const entry of entries) {
+                    const newWidth = entry.contentRect.width;
+                    setPanelWidth(newWidth);
+                }
+                rafId = null;
+            });
+        });
+
+        // Observer 연결
+        observer.observe(panelElement);
+
+        // 초기값 설정 (RAF로)
+        rafId = requestAnimationFrame(() => {
+            const initialWidth = panelElement.getBoundingClientRect().width;
+            setPanelWidth(initialWidth);
+            rafId = null;
+        });
+
+        // Cleanup
+        return () => {
+            observer.disconnect();
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId);
+            }
+        };
+    }, []); // 1회만 실행
 
     // [OPTIMIZATION] 마커 애니메이션 스타일을 document head에 1회 삽입
     useEffect(() => {
@@ -436,8 +490,8 @@ const NaverMapView = memo(({
         }
     };
 
-    // [Helper] 실시간 뷰포트 오프셋 계산
-    // 패널의 실제 너비를 측정하여 정확한 오프셋 반환
+    // [Helper] 실시간 뷰포트 오프셋 계산 (ResizeObserver 기반)
+    // 패널의 실제 너비를 state로 관리하여 정확한 오프셋 반환
     const getViewportOffset = useCallback((): number => {
         // 모바일/태블릿은 항상 0 (바텀시트가 오버레이)
         if (isMobileOrTablet) return 0;
@@ -451,22 +505,9 @@ const NaverMapView = memo(({
         if (isPanelCollapsed) return 0;
         if (!(propIsPanelOpen ?? false) && externalPanelOpen !== false) return 0;
 
-        // 패널 요소 찾기 (우선순위: data-* > id > class)
-        const panelElement =
-            document.querySelector('[data-panel-type="restaurant-detail"]') ||
-            document.getElementById('restaurant-detail-panel') ||
-            document.querySelector('.restaurant-detail-panel');
-
-        if (!panelElement) {
-            // 패널을 찾지 못한 경우 기본값 사용
-            console.warn('[NaverMapView] Panel element not found, using default width');
-            return PANEL_WIDTH; // fallback to 400px
-        }
-
-        // 실제 너비 측정 (getBoundingClientRect는 정확한 픽셀 값 반환)
-        const width = panelElement.getBoundingClientRect().width;
-        return width;
-    }, [isMobileOrTablet, onMarkerClick, internalPanelOpen, isGridMode, isPanelCollapsed, propIsPanelOpen, externalPanelOpen]);
+        // [OPTIMIZATION] ResizeObserver로 관리되는 state 반환 (DOM 측정 없음)
+        return panelWidth;
+    }, [isMobileOrTablet, onMarkerClick, internalPanelOpen, isGridMode, isPanelCollapsed, propIsPanelOpen, externalPanelOpen, panelWidth]);
 
     // [통합] 지도 중심 및 줌 조정 로직
     useEffect(() => {
