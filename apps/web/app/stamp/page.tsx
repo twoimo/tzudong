@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -147,12 +147,33 @@ interface RestaurantCardProps {
     restaurant: Restaurant;
     visited: boolean;
     isSelected: boolean;
+    currentThumbnailIndex: number;
+    onThumbnailChange: (index: number) => void;
     onClick: (restaurant: Restaurant) => void;
 }
 
-const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: RestaurantCardProps) => {
-    const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnailIndex, onThumbnailChange, onClick }: RestaurantCardProps) => {
+    // 병합된 YouTube 링크 배열 가져오기
+    const youtubeLinks = (restaurant as any).mergedYoutubeLinks ||
+        (restaurant.youtube_link ? [restaurant.youtube_link] : []);
+
+    // 현재 인덱스의 썸네일 URL 생성
+    const currentIndex = currentThumbnailIndex % youtubeLinks.length;
+    const thumbnailUrl = youtubeLinks[currentIndex] ? getYouTubeThumbnailUrl(youtubeLinks[currentIndex]) : null;
     const category = parseCategory(restaurant.category || (restaurant as any).categories);
+
+    // 다음/이전 썸네일로 이동
+    const handlePrevThumbnail = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newIndex = currentIndex === 0 ? youtubeLinks.length - 1 : currentIndex - 1;
+        onThumbnailChange(newIndex);
+    };
+
+    const handleNextThumbnail = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newIndex = currentIndex === youtubeLinks.length - 1 ? 0 : currentIndex + 1;
+        onThumbnailChange(newIndex);
+    };
 
     return (
         <Card
@@ -173,7 +194,42 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: Resta
                                 "w-full h-full object-cover transition-all duration-300",
                                 visited ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
+                            loading="lazy"
                         />
+
+                        {/* 화살표 버튼 - 2개 이상의 썸네일이 있을 때만 표시 */}
+                        {youtubeLinks.length > 1 && (
+                            <>
+                                <button
+                                    onClick={handlePrevThumbnail}
+                                    className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="이전 썸네일"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={handleNextThumbnail}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="다음 썸네일"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+
+                                {/* 점 인디케이터 */}
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                    {youtubeLinks.map((_: string, index: number) => (
+                                        <div
+                                            key={index}
+                                            className={cn(
+                                                "w-1.5 h-1.5 rounded-full transition-colors",
+                                                index === currentIndex ? "bg-white" : "bg-white/40"
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
                         {visited && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-red-500 font-bold text-4xl sm:text-5xl transform -rotate-12 border-4 border-red-500 rounded-lg p-2 opacity-90">
@@ -296,6 +352,9 @@ export default function StampPage() {
 
     // User Stamp Data
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
+
+    // 카드별 썸네일 인덱스 상태 (병합된 맛집의 여러 썸네일 중 현재 표시 중인 인덱스)
+    const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
 
     // --- Data Fetching: User Stamps ---
     const { data: userReviewData = [] } = useQuery({
@@ -517,12 +576,12 @@ export default function StampPage() {
         return result;
     }, [restaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
-    // --- 클라이언트 측 페이지네이션: 50개씩 표시 ---
-    const [displayLimit, setDisplayLimit] = useState(50);
+    // --- 클라이언트 측 페이지네이션: 20개씩 표시 (성능 최적화) ---
+    const [displayLimit, setDisplayLimit] = useState(20);
 
     // 필터 변경 시 표시 개수 리셋
     useEffect(() => {
-        setDisplayLimit(50);
+        setDisplayLimit(20);
     }, [filters, sortColumn, sortDirection, searchQuery]);
 
     // 현재 표시할 맛집 목록 (displayLimit까지만)
@@ -539,7 +598,7 @@ export default function StampPage() {
 
     const loadMoreRestaurants = useCallback(() => {
         if (hasMoreToDisplay) {
-            setDisplayLimit(prev => prev + 50);
+            setDisplayLimit(prev => prev + 20);
         }
     }, [hasMoreToDisplay]);
 
@@ -1096,6 +1155,10 @@ export default function StampPage() {
                                         restaurant={restaurant}
                                         visited={isVisited(restaurant.id)}
                                         isSelected={selectedRestaurant?.id === restaurant.id}
+                                        currentThumbnailIndex={cardThumbnailIndexes[restaurant.id] || 0}
+                                        onThumbnailChange={(newIndex) =>
+                                            setCardThumbnailIndexes(prev => ({ ...prev, [restaurant.id]: newIndex }))
+                                        }
                                         onClick={handleRestaurantClick}
                                     />
                                 ))}
