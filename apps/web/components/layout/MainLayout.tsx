@@ -80,10 +80,10 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
             {user && <UserDataPrefetcher />}
 
-            {/* 사이드바 - 데스크탑에서만 표시 (1920px 이상) */}
+            {/* 사이드바 (데스크탑 1600px 이상에서만 표시) */}
             <div className={cn(
-                // CSS 미디어 쿼리: 1920px 미만에서 숨김 (태블릿/모바일)
-                "max-[1919px]:hidden",
+                // CSS 미디어 쿼리: 1599px 이하에서 숨김
+                "max-[1599px]:hidden",
                 // JS 기반 조건: isDesktop이 false면 숨김 (hydration 후)
                 !isDesktop && "hidden"
             )}>
@@ -92,11 +92,11 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
             <div className={cn(
                 "flex-1 flex flex-col overflow-hidden transition-all duration-300",
-                // 데스크탑(1920px 이상)에서만 사이드바 마진 적용
-                "min-[1920px]:ml-16",
-                isSidebarOpen && "min-[1920px]:ml-64",
-                // 모바일/태블릿(1919px 이하)에서 하단 네비게이션 공간 확보
-                "max-[1919px]:pb-14"
+                // 데스크탑(1600px 이상)에서만 사이드바 마진 적용
+                "min-[1600px]:ml-16",
+                isSidebarOpen && "min-[1600px]:ml-64",
+                // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
+                "max-[1599px]:pb-14"
             )}>
                 <Header
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -134,10 +134,10 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 </main>
             </div>
 
-            {/* 모바일/태블릿용 하단 네비게이션바 (1919px 이하) */}
+            {/* 모바일/태블릿용 하단 네비게이션바 (1599px 이하) */}
             <div className={cn(
-                // CSS 미디어 쿼리: 1920px 이상에서 숨김 (데스크탑)
-                "min-[1920px]:hidden",
+                // CSS 미디어 쿼리: 1600px 이상에서 숨김 (데스크탑)
+                "min-[1600px]:hidden",
                 // JS 기반 조건: isDesktop이 true면 숨김 (hydration 후)
                 isDesktop && "hidden"
             )}>
