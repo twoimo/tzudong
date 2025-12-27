@@ -59,7 +59,7 @@ const parseCategory = (categoryData: any): string | null => {
     return null;
 };
 
-export function RestaurantReviewsPanel({
+export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel({
     restaurant,
     reviews,
     selectedReview,
@@ -75,6 +75,7 @@ export function RestaurantReviewsPanel({
     onCardPhotoChange,
     onClose,
     showHeader = true,
+    loadMoreRef,
 }: RestaurantReviewsPanelProps) {
     if (!restaurant) {
         return (
@@ -376,4 +377,4 @@ export function RestaurantReviewsPanel({
             </ScrollArea>
         </div>
     );
-}
+});

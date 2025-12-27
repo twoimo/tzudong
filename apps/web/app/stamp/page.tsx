@@ -237,6 +237,8 @@ const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: Restau
                                 src={thumbnailUrl}
                                 alt={`${restaurant.name} 썸네일`}
                                 className="w-full h-full object-cover"
+                                loading="lazy"
+                                decoding="async"
                             />
                         </div>
                     )}
