@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useDeviceType } from "@/hooks/useDeviceType";
 import { toast } from "sonner";
 import { Restaurant } from "@/types/restaurant";
 
@@ -75,6 +76,7 @@ import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
+    const { isDesktop } = useDeviceType();
     const [mapMode, setMapMode] = useState<'domestic' | 'overseas'>('domestic');
     const [activePanel, setActivePanel] = useState<'map' | 'detail' | 'control'>('map');
     const [isSubmissionModalOpen, setIsSubmissionModalOpen] = useState(false);
@@ -347,11 +349,13 @@ export default function HomeClient() {
 
     return (
         <>
-            {/* 맛집 제보 플로팅 버튼 */}
-            <SubmissionFloatingButton
-                onClick={handleSubmissionButtonClick}
-                isSidebarOpen={isSidebarOpen}
-            />
+            {/* 맛집 제보 플로팅 버튼 - 데스크탑에서만 표시 */}
+            {isDesktop && (
+                <SubmissionFloatingButton
+                    onClick={handleSubmissionButtonClick}
+                    isSidebarOpen={isSidebarOpen}
+                />
+            )}
             <HomeModeToggle
                 mode={mapMode}
                 onModeChange={(mode) => {
@@ -389,6 +393,8 @@ export default function HomeClient() {
                     state.setSearchedRestaurant(null);
                     setMapMode(mode);
                 }}
+                user={user}
+                onSubmissionClick={handleSubmissionButtonClick}
             />
 
             <HomeMapContainer

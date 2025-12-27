@@ -31,6 +31,8 @@ interface HomeControlPanelProps {
     rightPanelWidth?: number;
     isAdmin?: boolean;
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
+    user?: any;
+    onSubmissionClick?: () => void;
 }
 
 // [CSR] 지역/국가 선택, 카테고리 필터, 검색 통합 패널 - 모든 사용자 입력 처리
@@ -53,6 +55,8 @@ export default function HomeControlPanel({
     rightPanelWidth = 0,
     isAdmin = false,
     onModeChange,
+    user,
+    onSubmissionClick,
 }: HomeControlPanelProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
     const [leftPosition, setLeftPosition] = useState<string>('50%');
@@ -92,6 +96,8 @@ export default function HomeControlPanel({
                 onSearchExecute={onSearchExecute}
                 isAdmin={isAdmin}
                 onModeChange={onModeChange}
+                user={user}
+                onSubmissionClick={onSubmissionClick}
             />
         );
     }
