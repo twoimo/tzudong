@@ -183,12 +183,18 @@ function MobileControlOverlayComponent({
                     onClick={() => toggleSheet('region')}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80',
+                        'hover:bg-secondary/80 w-[105px] px-2',
                         activeSheet === 'region' && 'ring-2 ring-primary'
                     )}
                 >
-                    <MapPin className="h-4 w-4 mr-1.5" />
-                    <span className="text-sm truncate max-w-[80px]">{regionLabel}</span>
+                    <div className="flex items-center w-full">
+                        <div className="flex items-center justify-center w-4">
+                            <MapPin className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 flex items-center justify-center">
+                            <span className="text-sm">{regionLabel}</span>
+                        </div>
+                    </div>
                 </Button>
 
                 {/* 카테고리 필터 버튼 */}
@@ -198,13 +204,19 @@ function MobileControlOverlayComponent({
                     onClick={() => toggleSheet('category')}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80',
+                        'hover:bg-secondary/80 w-[105px] px-2',
                         activeSheet === 'category' && 'ring-2 ring-primary',
                         selectedCategories.length > 0 && 'bg-primary/10'
                     )}
                 >
-                    <Filter className="h-4 w-4 mr-1.5" />
-                    <span className="text-sm truncate max-w-[80px]">{categoryLabel}</span>
+                    <div className="flex items-center w-full">
+                        <div className="flex items-center justify-center w-4">
+                            <Filter className="h-4 w-4" />
+                        </div>
+                        <div className="flex-1 flex items-center justify-center">
+                            <span className="text-sm">{categoryLabel}</span>
+                        </div>
+                    </div>
                 </Button>
             </div>
 
