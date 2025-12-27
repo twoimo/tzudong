@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useState, useCallback, useMemo, lazy, Suspense } from 'react';
-import { Filter, Search, X, MapPin, Check } from 'lucide-react';
+import { Filter, Search, X, MapPin, Check, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Region, REGIONS } from '@/types/restaurant';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
+import { toast } from 'sonner';
 
 // 카테고리 상수
 const CATEGORIES = [
@@ -43,6 +44,8 @@ interface MobileControlOverlayProps {
     onSearchExecute: (region?: Region | null) => void;
     isAdmin?: boolean;
     onModeChange?: (mode: 'domestic' | 'overseas') => void;
+    user?: any;
+    onSubmissionClick?: () => void;
 }
 
 type ActiveSheet = 'none' | 'region' | 'category' | 'search';
@@ -66,6 +69,8 @@ function MobileControlOverlayComponent({
     onSearchExecute,
     isAdmin = false,
     onModeChange,
+    user,
+    onSubmissionClick,
 }: MobileControlOverlayProps) {
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
     const [sheetHeight, setSheetHeight] = useState(75); // 바텀시트 높이 (vh 단위, 기본 75%)
@@ -254,8 +259,31 @@ function MobileControlOverlayComponent({
                 </Button>
             </div>
 
-            {/* 우측 하단: 검색 버튼 */}
-            <div className="fixed bottom-20 right-4 z-40">
+            {/* 우측 하단: 제보, 검색 버튼 */}
+            <div className="fixed bottom-20 right-4 z-40 flex flex-col gap-2">
+                {/* 제보 버튼 */}
+                <Button
+                    onClick={() => {
+                        if (!user) {
+                            toast.error('맛집 제보는 로그인 후 이용 가능합니다');
+                            return;
+                        }
+                        onSubmissionClick?.();
+                    }}
+                    className={cn(
+                        'h-12 w-12 rounded-full shadow-lg',
+                        'bg-red-800 hover:bg-red-900 text-white',
+                        'transition-all duration-300 ease-in-out',
+                        'hover:scale-110 active:scale-95',
+                        'flex items-center justify-center',
+                        'border-2 border-stone-200/20'
+                    )}
+                    title="맛집 제보하기"
+                >
+                    <Send className="h-5 w-5" />
+                </Button>
+
+                {/* 검색 버튼 */}
                 <Button
                     variant="secondary"
                     size="icon"
