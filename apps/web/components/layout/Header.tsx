@@ -153,13 +153,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     setCurrentBannerIndex(prev => (prev + 1) % bannerAnnouncements.length);
   }, [bannerAnnouncements.length]);
 
-  const handleBannerDismiss = (e: React.MouseEvent) => {
+  const handleBannerDismiss = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setIsBannerDismissed(true);
     sessionStorage.setItem('announcementBannerDismissed', 'true');
-  };
+  }, []);
 
-  const handleBannerClick = () => {
+  const handleBannerClick = useCallback(() => {
     const currentAnnouncement = bannerAnnouncements[currentBannerIndex];
     if (currentAnnouncement) {
       if (isMobileOrTablet) {
@@ -174,9 +174,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         }
       }
     }
-  };
+  }, [bannerAnnouncements, currentBannerIndex, isMobileOrTablet, onAnnouncementClick]);
 
-  const handleAnnouncementListClick = () => {
+  const handleAnnouncementListClick = useCallback(() => {
     if (isMobileOrTablet) {
       // 모바일/태블릿: 바텀시트로 공지사항 리스트 표시
       const announcements = getActiveAnnouncements();
@@ -189,65 +189,61 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
       // 데스크탑: 기존 우측 패널로 공지사항 열기
       handleAdminAnnouncementsClick();
     }
-  };
+  }, [isMobileOrTablet]);
 
-  const handleDeleteAnnouncement = (id: string) => {
+  const handleDeleteAnnouncement = useCallback((id: string) => {
     if (confirm('정말 이 공지사항을 삭제하시겠습니까?')) {
       setAllAnnouncements(prev => prev.filter(a => a.id !== id));
       setAnnouncementViewMode('list');
       // TODO: 실제 삭제 API 호출
     }
-  };
+  }, []);
 
-  const handleToggleAnnouncementActive = (id: string) => {
+  const handleToggleAnnouncementActive = useCallback((id: string) => {
     setAllAnnouncements(prev =>
       prev.map(a =>
         a.id === id ? { ...a, isActive: !a.isActive } : a
       )
     );
-    if (selectedAnnouncement?.id === id) {
-      setSelectedAnnouncement(prev => prev ? { ...prev, isActive: !prev.isActive } : null);
-    }
+    setSelectedAnnouncement(prev => prev?.id === id ? { ...prev, isActive: !prev.isActive } : prev);
     // TODO: 실제 상태 변경 API 호출
-  };
+  }, []);
 
-  const handleToggleAnnouncementBanner = (id: string) => {
+  const handleToggleAnnouncementBanner = useCallback((id: string) => {
     setAllAnnouncements(prev =>
       prev.map(a =>
         a.id === id ? { ...a, showOnBanner: !a.showOnBanner } : a
       )
     );
-    if (selectedAnnouncement?.id === id) {
-      setSelectedAnnouncement(prev => prev ? { ...prev, showOnBanner: !prev.showOnBanner } : null);
-    }
+    setSelectedAnnouncement(prev => prev?.id === id ? { ...prev, showOnBanner: !prev.showOnBanner } : prev);
     // TODO: 실제 배너 상태 변경 API 호출
-  };
+  }, []);
 
-  const handleMyPageClick = () => {
+  const handleMyPageClick = useCallback(() => {
     // 마이페이지 프로필 페이지로 이동
     router.push('/mypage/profile');
-  };
+  }, [router]);
 
-  const handleAdminSubmissionsClick = () => {
-    // /admin/evaluations 페이지로 이동하며 제보 관리 탭 활성화
+  const handleAdminSubmissionsClick = useCallback(() => {
+    // /admin/evaluations 페이지로 이동하며 <제보 관리 탭 활성화
     router.push('/admin/evaluations?view=submissions');
-  };
+  }, [router]);
 
-  const handleAdminReviewsClick = () => {
+  const handleAdminReviewsClick = useCallback(() => {
     // /admin/evaluations 페이지로 이동하며 리뷰 검수 탭 활성화
     router.push('/admin/evaluations?view=submissions&tab=reviews');
-  };
+  }, [router]);
 
-  const handleAdminAnnouncementsClick = () => {
+  const handleAdminAnnouncementsClick = useCallback(() => {
     if (pathname === '/') {
       window.dispatchEvent(new CustomEvent('openAdminAnnouncements'));
     } else {
       // 홈으로 이동 후 패널 열기
       window.location.href = '/';
     }
-  };
+  }, [pathname]);
 
-  const toggleTheme = () => {
+  const toggleTheme = useCallback(() => {
     // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
     const root = document.documentElement;
 
@@ -263,15 +259,15 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     requestAnimationFrame(() => {
       document.head.removeChild(style);
     });
-  };
+  }, [isHanjiMode]);
 
-  const toggleFullscreen = () => {
+  const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
     } else {
       document.exitFullscreen();
     }
-  };
+  }, []);
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -327,7 +323,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     }
   };
 
-  const currentBanner = bannerAnnouncements[currentBannerIndex];
+  const currentBanner = useMemo(() => bannerAnnouncements[currentBannerIndex], [bannerAnnouncements, currentBannerIndex]);
 
   return (
     <header
