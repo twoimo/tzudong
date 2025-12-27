@@ -12,6 +12,7 @@ import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { toast } from "sonner";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useLayout } from "@/contexts/LayoutContext";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 // 상수 정의
 const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
@@ -176,6 +177,9 @@ const NaverMapView = memo(({
     // 사이드바 상태 가져오기
     const { isSidebarOpen } = useLayout();
 
+    // 디바이스 타입 감지 (모바일/태블릿에서는 오프셋 제거)
+    const { isMobileOrTablet } = useDeviceType();
+
     // Naver Maps API 로드 - LCP 최적화를 위해 lazyOnload 전략 사용
     const { isLoaded, loadError } = useNaverMaps({ autoLoad: true, strategy: 'lazyOnload' });
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -211,12 +215,15 @@ const NaverMapView = memo(({
     const isExternalPanelOpen = externalPanelOpen === false;
 
     // 유효 패널 너비 (오프셋 계산용)
+    // 모바일/태블릿에서는 바텀시트가 오버레이되므로 오프셋이 필요 없음
     let effectivePanelOffset = 0;
 
-    if (isShrinkingLayout) {
+    if (isMobileOrTablet) {
+        effectivePanelOffset = 0; // 모바일/태블릿: 바텀시트 오버레이 방식, 오프셋 없음
+    } else if (isShrinkingLayout) {
         effectivePanelOffset = 0; // 컨테이너가 줄어들었으므로 0
     } else if (!isPanelCollapsed && (propIsPanelOpen || isExternalPanelOpen)) {
-        effectivePanelOffset = PANEL_WIDTH; // 오버레이 되었으므로 패널 너비만큼
+        effectivePanelOffset = PANEL_WIDTH; // 데스크탑: 오버레이 되었으므로 패널 너비만큼
     }
 
     const centerOffsetStyle = { left: `calc(50% - ${effectivePanelOffset / 2}px)` };
@@ -361,7 +368,10 @@ const NaverMapView = memo(({
         const isShrinkingLayout = isInternalMode && internalPanelOpen && !isGridMode;
 
         let effectiveOffset = 0;
-        if (isShrinkingLayout) {
+        // 모바일/태블릿에서는 바텀시트가 오버레이되므로 오프셋 없음
+        if (isMobileOrTablet) {
+            effectiveOffset = 0;
+        } else if (isShrinkingLayout) {
             effectiveOffset = 0;
         } else if (!isPanelCollapsed && ((propIsPanelOpen ?? false) || (externalPanelOpen === false))) {
             effectiveOffset = PANEL_WIDTH;
@@ -372,6 +382,7 @@ const NaverMapView = memo(({
         // 즉, 지도 중심(Center) 좌표를 패널 너비의 절반만큼 오른쪽으로 이동시켜야
         // 타겟(맛집)이 왼쪽 "보이는 영역"의 중앙에 위치하게 됩니다.
         // targetOffsetX = effectiveOffset / 2 (양수 = 오른쪽 이동)
+        // 모바일/태블릿에서는 항상 0
 
         const targetOffsetX = effectiveOffset / 2;
 
