@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, YoutubeMeta } from "@/types/restaurant";
 import { mergeRestaurants } from "@/hooks/use-restaurants";
@@ -37,6 +37,7 @@ const RestaurantSearch = ({
   const [searchType, setSearchType] = useState<SearchType>('name');
   const searchRef = useRef<HTMLDivElement>(null);
   const { history, addToHistory, removeFromHistory, clearHistory } = useSearchHistory();
+  const queryClient = useQueryClient();
 
   // 한국 지역 목록 (홈페이지 필터링용)
   const KOREAN_REGIONS = [
@@ -55,7 +56,7 @@ const RestaurantSearch = ({
           .from('restaurants')
           .select('id, name, road_address, jibun_address, english_address, status, search_count')
           .eq('status', 'approved')
-          .not('search_count', 'is', null)
+          .gt('search_count', 0)  // search_count가 0보다 큰 것만
           .order('search_count', { ascending: false })
           .limit(5);
 
@@ -171,6 +172,9 @@ const RestaurantSearch = ({
       address: restaurant.road_address || restaurant.jibun_address || restaurant.english_address || '주소 없음',
     });
 
+    // 인기 검색어 쿼리 무효화하여 즉시 업데이트
+    queryClient.invalidateQueries({ queryKey: ["popular-searches"] });
+
     // 검색 시에는 별도 콜백 호출 (지도 재조정용)
     if (onRestaurantSearch) {
       onRestaurantSearch(restaurant);
@@ -181,7 +185,7 @@ const RestaurantSearch = ({
     onSearchExecute?.();
     setSearchQuery("");
     setIsFocused(false);
-  }, [addToHistory, onRestaurantSearch, onRestaurantSelect, onSearchExecute]);
+  }, [addToHistory, onRestaurantSearch, onRestaurantSelect, onSearchExecute, queryClient]);
 
   const clearSearch = useCallback(() => {
     setSearchQuery("");
