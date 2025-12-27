@@ -81,31 +81,42 @@ const getCategoryIcon = (category: string | string[] | null | undefined): string
 };
 
 /**
- * [OPTIMIZATION] 마커 컨텐츠 생성 함수 - DOM 단순화 버전
+ * [OPTIMIZATION] HTML 마커 콘텐츠 캐시 (메모리 최적화)
+ * 각 레스토랑의 선택/비선택 상태별로 HTML을 캐싱하여 재사용
+ */
+const markerContentCache = new Map<string, string>();
+
+/**
+ * [OPTIMIZATION] 마커 콘텐츠 생성 함수 - 캐싱 + 스타일 외부화 버전
  * 
  * @param restaurant 레스토랑 정보
  * @param isSelected 선택 여부
- * @returns HTML 문자열 (단일 div, inline 스타일)
+ * @returns HTML 문자열 (캐시된 콘텐츠 또는 새로 생성)
  */
 const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): string => {
+    // 캐시 키: "restaurantId-categoryIcon_selected" 또는 "restaurantId-categoryIcon_normal"
     const icon = getCategoryIcon(restaurant.categories || restaurant.category);
+    const cacheKey = `${restaurant.id}-${icon}_${isSelected ? 'sel' : 'nor'}`;
+
+    // 캐시에서 조회
+    if (markerContentCache.has(cacheKey)) {
+        return markerContentCache.get(cacheKey)!;
+    }
+
+    // 캐시 미스: 새로 생성
     const size = isSelected ? 36 : 28;
     const fontSize = isSelected ? 28 : 22;
     const dropShadow = isSelected
         ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 0 rgba(239, 68, 68, 0.5))'
         : 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25))';
     const transform = isSelected ? 'scale(1.15)' : 'scale(1)';
-    const animation = isSelected ? 'bounce 1s ease-in-out infinite' : 'none';
+    // [OPTIMIZATION] 스타일 외부화: animation은 CSS 클래스명만 참조
+    const animationClass = isSelected ? 'marker-bounce' : '';
     const zIndex = isSelected ? '100' : '1';
 
-    return `
-        <style>
-            @keyframes bounce {
-                0%, 100% { transform: scale(1.15) translateY(0); }
-                50% { transform: scale(1.15) translateY(-4px); }
-            }
-        </style>
+    const content = `
         <div 
+            class="${animationClass}"
             style="
                 width: ${size}px;
                 height: ${size}px;
@@ -117,7 +128,6 @@ const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): str
                 transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
                 transform: ${transform};
                 filter: ${dropShadow};
-                animation: ${animation};
                 position: relative;
                 z-index: ${zIndex};
                 user-select: none;
@@ -128,6 +138,18 @@ const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): str
             title="${restaurant.name}"
         >${icon}</div>
     `;
+
+    // 캐시에 저장 (LRU 방지: 최대 1000개로 제한)
+    if (markerContentCache.size > 1000) {
+        // 가장 오래된 항목 삭제
+        const firstKey = markerContentCache.keys().next().value;
+        if (firstKey) {
+            markerContentCache.delete(firstKey);
+        }
+    }
+    markerContentCache.set(cacheKey, content);
+
+    return content;
 };
 
 /**
@@ -284,6 +306,33 @@ const NaverMapView = memo(({
         window.addEventListener('resetUserMapMovement', handleResetUserMapMovement);
         return () => {
             window.removeEventListener('resetUserMapMovement', handleResetUserMapMovement);
+        };
+    }, []);
+
+    // [OPTIMIZATION] 마커 애니메이션 스타일을 document head에 1회 삽입
+    useEffect(() => {
+        if (!document.getElementById('naver-map-marker-styles')) {
+            const style = document.createElement('style');
+            style.id = 'naver-map-marker-styles';
+            style.textContent = `
+                @keyframes marker-bounce {
+                    0%, 100% { transform: scale(1.15) translateY(0); }
+                    50% { transform: scale(1.15) translateY(-4px); }
+                }
+                .marker-bounce {
+                    animation: marker-bounce 1s ease-in-out infinite;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // Cleanup: 컴포넌트 언마운트 시 캐시 및 스타일 정리
+        return () => {
+            markerContentCache.clear();
+            const styleEl = document.getElementById('naver-map-marker-styles');
+            if (styleEl) {
+                styleEl.remove();
+            }
         };
     }, []);
 
@@ -925,39 +974,59 @@ const NaverMapView = memo(({
 
     }, [displayRestaurants, searchedRestaurant, selectedRestaurant, createMarkerContent, onMarkerClick, onRestaurantSelect]);
 
-    // [최적화] 선택 상태 변경에 따른 마커 스타일 업데이트 (안전한 전체 순회 방식)
+    // [OPTIMIZATION] 선택 상태 변경에 따른 마커 스타일 업데이트 (O(N) → O(1) 최적화)
+    // 이전 선택 마커 ID 추적
+    const prevSelectedMarkerIdRef = useRef<string | null>(null);
+
     useEffect(() => {
         const currentSelected = isGridMode ? gridSelectedRestaurant : selectedRestaurant;
-        const currentSelectedId = currentSelected?.id;
+        const currentSelectedId = currentSelected?.id || null;
+        const prevSelectedId = prevSelectedMarkerIdRef.current;
 
-        // 모든 마커를 순회하며 상태 동기화
-        // 성능: 마커 수백 개 수준에서는 순회 비용이 매우 적음 (O(N))
-        // 장점: 이전 상태 추적 불필요, 데이터 불일치 문제 해결
-        markersMapRef.current.forEach((marker: any, id) => {
-            const isTarget = id === currentSelectedId;
+        // 동일한 마커 재선택 시 스킵
+        if (currentSelectedId === prevSelectedId) {
+            return;
+        }
 
-            // 상태가 변경된 경우에만 DOM/Icon 업데이트 (비용 절감)
-            if (marker.__isSelected !== isTarget) {
-                const restaurant = marker.__restaurant; // 마커에 저장된 데이터 사용
+        // [CRITICAL OPTIMIZATION] 전체 순회(O(N)) 대신 2개 마커만 업데이트(O(1))
 
+        // 1. 이전 선택 마커 비활성화
+        if (prevSelectedId && prevSelectedId !== currentSelectedId) {
+            const prevMarker = markersMapRef.current.get(prevSelectedId);
+            if (prevMarker && prevMarker.__isSelected) {
+                const restaurant = prevMarker.__restaurant;
                 if (restaurant) {
-                    const content = createMarkerContent(restaurant, isTarget);
-
-                    marker.setIcon({
+                    const content = createMarkerContent(restaurant, false);
+                    prevMarker.setIcon({
                         content: content,
-                        anchor: isTarget
-                            ? new naver.maps.Point(18, 18) // 선택됨 (36px/2)
-                            : new naver.maps.Point(14, 14) // 기본 (28px/2)
+                        anchor: new naver.maps.Point(14, 14) // 기본 (28px/2)
                     });
-
-                    marker.setZIndex(isTarget ? 100 : 0);
-                    marker.__isSelected = isTarget;
+                    prevMarker.setZIndex(0);
+                    prevMarker.__isSelected = false;
                 }
             }
-        });
+        }
 
-        // ref 업데이트는 더 이상 필요 없지만 호환성을 위해 유지
-        prevSelectedRestaurantIdRef.current = currentSelectedId || null;
+        // 2. 현재 선택 마커 활성화
+        if (currentSelectedId) {
+            const currentMarker = markersMapRef.current.get(currentSelectedId);
+            if (currentMarker && !currentMarker.__isSelected) {
+                const restaurant = currentMarker.__restaurant;
+                if (restaurant) {
+                    const content = createMarkerContent(restaurant, true);
+                    currentMarker.setIcon({
+                        content: content,
+                        anchor: new naver.maps.Point(18, 18) // 선택됨 (36px/2)
+                    });
+                    currentMarker.setZIndex(100);
+                    currentMarker.__isSelected = true;
+                }
+            }
+        }
+
+        // ref 업데이트
+        prevSelectedMarkerIdRef.current = currentSelectedId;
+        prevSelectedRestaurantIdRef.current = currentSelectedId;
 
     }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, createMarkerContent]);
 
