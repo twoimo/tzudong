@@ -232,7 +232,7 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnail
 
                         {visited && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-red-500 font-bold text-4xl sm:text-5xl transform -rotate-12 border-4 border-red-500 rounded-lg p-2 opacity-90">
+                                <div className="text-red-500 font-bold text-5xl sm:text-6xl transform -rotate-12 border-4 border-red-500 rounded-lg px-3 py-2 opacity-90">
                                     CLEAR
                                 </div>
                             </div>
