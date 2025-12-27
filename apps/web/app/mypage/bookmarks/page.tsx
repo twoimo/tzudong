@@ -104,10 +104,10 @@ export default function BookmarksPage() {
 
                             return (
                                 <Card key={bookmark.id} className="overflow-hidden">
-                                    <CardContent className="p-4">
-                                        <div className="flex gap-4">
+                                    <CardContent className="p-3 md:p-4">
+                                        <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
                                             {/* 썸네일 */}
-                                            <div className="w-24 h-24 bg-muted rounded overflow-hidden shrink-0">
+                                            <div className="w-full sm:w-20 md:w-24 h-32 sm:h-20 md:h-24 bg-muted rounded overflow-hidden shrink-0">
                                                 {thumbnailUrl ? (
                                                     <img
                                                         src={thumbnailUrl}

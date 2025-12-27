@@ -41,6 +41,8 @@ interface MobileControlOverlayProps {
     onRestaurantSelect: (restaurant: any) => void;
     onRestaurantSearch: (restaurant: any) => void;
     onSearchExecute: (region?: Region | null) => void;
+    isAdmin?: boolean;
+    onModeChange?: (mode: 'domestic' | 'overseas') => void;
 }
 
 type ActiveSheet = 'none' | 'region' | 'category' | 'search';
@@ -62,6 +64,8 @@ function MobileControlOverlayComponent({
     onRestaurantSelect,
     onRestaurantSearch,
     onSearchExecute,
+    isAdmin = false,
+    onModeChange,
 }: MobileControlOverlayProps) {
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
     const [sheetHeight, setSheetHeight] = useState(75); // 바텀시트 높이 (vh 단위, 기본 75%)
@@ -176,8 +180,36 @@ function MobileControlOverlayComponent({
 
     return (
         <>
-            {/* 좌측 하단: 지역/카테고리 버튼 */}
+            {/* 좌측 하단: 국내/해외, 지역/카테고리 버튼 */}
             <div className="fixed bottom-20 left-4 z-40 flex flex-col gap-2">
+                {/* 국내/해외 토글 버튼 - 관리자만 표시 */}
+                {isAdmin && onModeChange && (
+                    <div className="flex items-center gap-0.5 p-0.5 bg-background/95 backdrop-blur-sm rounded-full shadow-lg border border-border w-[105px]">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onModeChange('domestic')}
+                            className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'domestic'
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
+                                }`}
+                        >
+                            국내
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onModeChange('overseas')}
+                            className={`rounded-full h-8 px-2 text-xs font-medium transition-all flex-1 ${mapMode === 'overseas'
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-transparent'
+                                }`}
+                        >
+                            해외
+                        </Button>
+                    </div>
+                )}
+
                 {/* 지역/국가 선택 버튼 */}
                 <Button
                     variant="secondary"

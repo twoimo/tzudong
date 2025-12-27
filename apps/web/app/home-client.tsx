@@ -381,6 +381,14 @@ export default function HomeClient() {
                 onPanelClick={setActivePanel}
                 leftSidebarWidth={leftSidebarWidth}
                 rightPanelWidth={rightPanelWidth}
+                isAdmin={isAdmin}
+                onModeChange={(mode) => {
+                    state.setIsPanelOpen(false);
+                    state.setPanelRestaurant(null);
+                    state.setSelectedRestaurant(null);
+                    state.setSearchedRestaurant(null);
+                    setMapMode(mode);
+                }}
             />
 
             <HomeMapContainer
