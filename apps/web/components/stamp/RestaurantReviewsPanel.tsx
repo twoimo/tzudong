@@ -43,6 +43,7 @@ interface RestaurantReviewsPanelProps {
     onClose?: () => void;
     showHeader?: boolean;
     loadMoreRef?: React.RefObject<HTMLDivElement>;
+    isLoading?: boolean;
 }
 
 const parseCategory = (categoryData: any): string | null => {
@@ -76,6 +77,7 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
     onClose,
     showHeader = true,
     loadMoreRef,
+    isLoading = false,
 }: RestaurantReviewsPanelProps) {
     if (!restaurant) {
         return (
@@ -353,6 +355,21 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                                     <p className="text-xs text-muted-foreground line-clamp-2">
                                         {review.content}
                                     </p>
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                ) : isLoading ? (
+                    /* 로딩 중 스켈레톤 */
+                    <div className="space-y-4">
+                        {[1, 2, 3].map((i) => (
+                            <Card key={i} className="p-0 overflow-hidden">
+                                <div className="animate-pulse">
+                                    <div className="w-full aspect-square bg-muted" />
+                                    <div className="p-3 space-y-2">
+                                        <div className="h-3 bg-muted rounded w-1/4" />
+                                        <div className="h-3 bg-muted rounded w-3/4" />
+                                    </div>
                                 </div>
                             </Card>
                         ))}

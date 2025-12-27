@@ -279,6 +279,9 @@ export default function StampPage() {
     const [sortColumn, setSortColumn] = useState<SortColumn>("fanVisits");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+    // 모바일/태블릿 필터 확장 상태
+    const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+
     // Right Panel State
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRightPanelVisible, setIsRightPanelVisible] = useState(false);
@@ -659,10 +662,83 @@ export default function StampPage() {
 
 
     // --- Handlers ---
-    const handleRestaurantClick = useCallback((restaurant: Restaurant) => {
+    const handleRestaurantClick = useCallback(async (restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
+
+        // 리뷰 데이터 prefetch로 바텀 시트 열리기 전에 미리 로드
+        await queryClient.prefetchInfiniteQuery({
+            queryKey: ['restaurant-reviews', restaurant.id],
+            queryFn: async ({ pageParam = 0 }) => {
+                try {
+                    const { data: reviewsData, error } = await supabase
+                        .from('reviews')
+                        .select('*')
+                        .eq('restaurant_id', restaurant.id)
+                        .eq('is_verified', true)
+                        .order('is_pinned', { ascending: false })
+                        .order('created_at', { ascending: false })
+                        .range(pageParam, pageParam + 19) as any;
+
+                    if (error) throw error;
+                    if (!reviewsData || reviewsData.length === 0) return { reviews: [], nextCursor: null };
+
+                    // User Profiles
+                    const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
+                    const { data: profilesData } = await supabase
+                        .from('profiles')
+                        .select('user_id, nickname')
+                        .in('user_id', userIds);
+                    const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, p.nickname]));
+
+                    // Likes
+                    const reviewIds = reviewsData.map((r: any) => r.id);
+                    const { data: likesData } = await supabase
+                        .from('review_likes')
+                        .select('review_id, user_id')
+                        .in('review_id', reviewIds) as any;
+
+                    const likesMap = new Map<string, { count: number; isLiked: boolean }>();
+                    reviewIds.forEach((reviewId: string) => {
+                        const likesForReview = likesData?.filter((like: any) => like.review_id === reviewId) || [];
+                        const isLiked = user ? likesForReview.some((like: any) => like.user_id === user.id) : false;
+                        likesMap.set(reviewId, { count: likesForReview.length, isLiked });
+                    });
+
+                    const reviews = reviewsData.map((review: any) => {
+                        const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
+                        return {
+                            id: review.id,
+                            userId: review.user_id,
+                            restaurantName: restaurant.name || '알 수 없음',
+                            restaurantCategories: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category || '기타'],
+                            userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                            visitedAt: review.visited_at,
+                            submittedAt: review.created_at || '',
+                            content: review.content,
+                            isVerified: review.is_verified || false,
+                            isPinned: review.is_pinned || false,
+                            isEditedByAdmin: review.is_edited_by_admin || false,
+                            admin_note: review.admin_note || null,
+                            photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+                            category: review.categories?.[0] || review.category,
+                            likeCount: likesInfo.count,
+                            isLikedByUser: likesInfo.isLiked,
+                        };
+                    }) as Review[];
+
+                    const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
+                    return { reviews, nextCursor };
+                } catch (error) {
+                    console.error('리뷰 데이터 조회 중 오류:', error);
+                    return { reviews: [], nextCursor: null };
+                }
+            },
+            initialPageParam: 0,
+        });
+
+        // prefetch 완료 후 바텀 시트 열기
         setIsRightPanelVisible(true);
-    }, []);
+    }, [queryClient, user]);
 
     const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
@@ -842,7 +918,28 @@ export default function StampPage() {
                         </div>
 
                         {/* Filter Controls */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                        {/* 모바일/태블릿: 필터 토글 버튼 */}
+                        {isMobileOrTablet && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                                className="w-full mb-3 justify-between"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Filter className="h-4 w-4" />
+                                    필터 {activeFilterCount > 0 && `(${activeFilterCount}개 선택됨)`}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    {isFilterExpanded ? '접기' : '펼치기'}
+                                </span>
+                            </Button>
+                        )}
+
+                        {/* 필터 컨트롤 그리드 - 데스크톱에서는 항상 표시, 모바일/태블릿에서는 확장시에만 표시 */}
+                        <div className={cn(
+                            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 transition-all duration-300 overflow-hidden",
+                            isMobileOrTablet && !isFilterExpanded && "hidden"
+                        )}>
                             {/* 검색 */}
                             <div className="lg:col-span-2">
                                 <div className="relative">
@@ -1086,6 +1183,7 @@ export default function StampPage() {
                                 onCardPhotoChange={(reviewId, index) => setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }))}
                                 onClose={handleCloseRightPanel}
                                 showHeader={true}
+                                isLoading={reviewsLoading}
                             />
                         </Panel>
                     </>
@@ -1117,6 +1215,7 @@ export default function StampPage() {
                         onPhotoIndexChange={setCurrentPhotoIndex}
                         onCardPhotoChange={(reviewId, index) => setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }))}
                         showHeader={true}
+                        isLoading={reviewsLoading}
                     />
                 </BottomSheet>
             )}
