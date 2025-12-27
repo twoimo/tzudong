@@ -259,12 +259,33 @@ const NaverMapView = memo(({
     // 디바이스 타입 감지 (모바일/태블릿에서는 오프셋 제거)
     const { isMobileOrTablet } = useDeviceType();
 
+    // 디바이스별 줌 레벨 조정 함수 (모바일/태블릿은 -2 줌으로 더 넓게, 전국은 기본값 유지)
+    const getDeviceAdjustedZoom = useCallback((baseZoom: number, isNational: boolean = false) => {
+        // 전국 뷰는 기본값 유지 (이미 적절한 줌 레벨)
+        if (isNational) return baseZoom;
+        // 모바일/태블릿에서는 화면이 작으므로 -2 줌을 적용하여 더 넓은 뷰 제공
+        // 단, 최소 줌 레벨(6)보다 낮아지지 않도록 제한
+        return isMobileOrTablet ? Math.max(baseZoom - 2, 6) : baseZoom;
+    }, [isMobileOrTablet]);
+
     // Naver Maps API 로드 - LCP 최적화를 위해 lazyOnload 전략 사용
     const { isLoaded, loadError } = useNaverMaps({ autoLoad: true, strategy: 'lazyOnload' });
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
+
+    // 지역 변경 시 사용자 지도 이동 플래그 리셋 (지역 재선택 시에도 지도 이동 가능하도록)
+    useEffect(() => {
+        const handleResetUserMapMovement = () => {
+            hasUserMovedMapRef.current = false;
+        };
+
+        window.addEventListener('resetUserMapMovement', handleResetUserMapMovement);
+        return () => {
+            window.removeEventListener('resetUserMapMovement', handleResetUserMapMovement);
+        };
+    }, []);
 
     // ... (중략) ...
 
@@ -439,7 +460,9 @@ const NaverMapView = memo(({
             const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
             targetLat = regionConfig.center[0];
             targetLng = regionConfig.center[1];
-            targetZoom = regionConfig.zoom;
+            // 디바이스별 줌 레벨 조정 (모바일/태블릿은 -2, 전국은 기본값 유지)
+            const isNational = regionKey === "전국";
+            targetZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
         }
 
         // 패널 상태에 따른 유효 오프셋 계산
@@ -985,9 +1008,12 @@ const NaverMapView = memo(({
             // 선택된 지역에 따라 지도 중심과 줌 레벨 설정
             const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
             const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
+            // 디바이스별 줌 레벨 조정 (전국은 기본값 유지)
+            const isNational = regionKey === "전국";
+            const initialZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
             const map = new naver.maps.Map(mapRef.current, {
                 center: new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]),
-                zoom: regionConfig.zoom,
+                zoom: initialZoom,
                 minZoom: 6,
                 maxZoom: 18,
                 zoomControl: false,

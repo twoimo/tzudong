@@ -143,6 +143,9 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
             setSelectedRegion(region);
             setSelectedRestaurant(null);
             setSearchedRestaurant(null);
+
+            // 지역 변경 시 사용자 지도 이동 플래그 리셋 (지도가 새 지역으로 이동할 수 있도록)
+            window.dispatchEvent(new CustomEvent('resetUserMapMovement'));
         }
     };
 

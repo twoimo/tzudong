@@ -160,17 +160,32 @@ function MobileControlOverlayComponent({
         return counts;
     }, [restaurants]);
 
-    // [OPTIMIZATION] 카테고리별 맛집 수 계산
+    // [OPTIMIZATION] 카테고리별 맛집 수 계산 (선택된 지역 고려)
     const categoryCounts = useMemo(() => {
         const counts: Record<string, number> = {};
-        restaurants.forEach((restaurant) => {
+
+        // 지역이 선택된 경우 해당 지역의 맛집만 필터링
+        const filteredRestaurants = selectedRegion
+            ? restaurants.filter((restaurant) => {
+                const address = restaurant.road_address || restaurant.jibun_address || '';
+                if (selectedRegion === "울릉도") {
+                    return address.includes('울릉');
+                } else if (selectedRegion === "욕지도") {
+                    return address.includes('욕지');
+                } else {
+                    return address.includes(selectedRegion);
+                }
+            })
+            : restaurants;
+
+        filteredRestaurants.forEach((restaurant) => {
             const categories = restaurant.categories || [];
             categories.forEach((category: string) => {
                 counts[category] = (counts[category] || 0) + 1;
             });
         });
         return counts;
-    }, [restaurants]);
+    }, [restaurants, selectedRegion]);
 
     // [OPTIMIZATION] useMemo로 버튼 레이블 캐싱
     const regionLabel = useMemo(() =>
@@ -222,16 +237,16 @@ function MobileControlOverlayComponent({
                     onClick={() => toggleSheet('region')}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[105px] px-2',
+                        'hover:bg-secondary/80 min-w-[105px] max-w-[140px] px-2',
                         activeSheet === 'region' && 'ring-2 ring-primary'
                     )}
                 >
-                    <div className="flex items-center w-full">
-                        <div className="flex items-center justify-center w-4">
+                    <div className="flex items-center w-full gap-1">
+                        <div className="flex items-center justify-center w-4 shrink-0">
                             <MapPin className="h-4 w-4" />
                         </div>
-                        <div className="flex-1 flex items-center justify-center">
-                            <span className="text-sm">{regionLabel}</span>
+                        <div className="flex-1 flex items-center justify-center min-w-0">
+                            <span className="text-sm truncate">{regionLabel}</span>
                         </div>
                     </div>
                 </Button>
@@ -243,17 +258,17 @@ function MobileControlOverlayComponent({
                     onClick={() => toggleSheet('category')}
                     className={cn(
                         'rounded-full shadow-lg bg-background/95 backdrop-blur-sm border border-border',
-                        'hover:bg-secondary/80 w-[105px] px-2',
+                        'hover:bg-secondary/80 min-w-[105px] max-w-[140px] px-2',
                         activeSheet === 'category' && 'ring-2 ring-primary',
                         selectedCategories.length > 0 && 'bg-primary/10'
                     )}
                 >
-                    <div className="flex items-center w-full">
-                        <div className="flex items-center justify-center w-4">
+                    <div className="flex items-center w-full gap-1">
+                        <div className="flex items-center justify-center w-4 shrink-0">
                             <Filter className="h-4 w-4" />
                         </div>
-                        <div className="flex-1 flex items-center justify-center">
-                            <span className="text-sm">{categoryLabel}</span>
+                        <div className="flex-1 flex items-center justify-center min-w-0">
+                            <span className="text-sm truncate">{categoryLabel}</span>
                         </div>
                     </div>
                 </Button>
@@ -354,7 +369,7 @@ function MobileControlOverlayComponent({
                                                 className="w-full justify-between h-auto py-3"
                                                 onClick={() => {
                                                     onRegionChange(null);
-                                                    onSearchExecute();
+                                                    onSearchExecute(null);
                                                     handleClose();
                                                 }}
                                             >
@@ -374,7 +389,7 @@ function MobileControlOverlayComponent({
                                                             className="justify-between h-auto py-3"
                                                             onClick={() => {
                                                                 onRegionChange(region);
-                                                                onSearchExecute();
+                                                                onSearchExecute(region);
                                                                 handleClose();
                                                             }}
                                                         >
