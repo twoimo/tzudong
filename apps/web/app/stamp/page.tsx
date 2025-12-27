@@ -964,15 +964,17 @@ export default function StampPage() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* View Toggle */}
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                                    title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
-                                >
-                                    {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
-                                </Button>
+                                {/* View Toggle - 데스크톱에서만 표시 */}
+                                {!isMobileOrTablet && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                                        title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
+                                    >
+                                        {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
