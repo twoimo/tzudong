@@ -48,17 +48,17 @@ const RestaurantSearch = ({
     "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"
   ];
 
-  // 인기 검색어 쿼리 (검색 횟수 기준 상위 5개) - [OPTIMIZATION] 병합 로직 적용
+  // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 5개) - [OPTIMIZATION] 병합 로직 적용
   const { data: popularRestaurants = [] } = useQuery({
-    queryKey: ["popular-searches"],
+    queryKey: ["popular-searches-weekly"],
     queryFn: async () => {
       try {
         const { data, error } = await supabase
           .from('restaurants')
-          .select('id, name, road_address, jibun_address, english_address, status, search_count, categories, youtube_meta')
+          .select('id, name, road_address, jibun_address, english_address, status, weekly_search_count, categories, youtube_meta')
           .eq('status', 'approved')
-          .gt('search_count', 0)  // search_count가 0보다 큰 것만
-          .order('search_count', { ascending: false })
+          .gt('weekly_search_count', 0)  // weekly_search_count가 0보다 큰 것만
+          .order('weekly_search_count', { ascending: false })
           .limit(20); // 병합 전에 더 많이 가져오기
 
         if (error) throw error;
@@ -66,12 +66,12 @@ const RestaurantSearch = ({
         // 병합 로직 적용
         const merged = mergeRestaurants((data || []) as Restaurant[]);
 
-        // 병합 후 search_count 기준으로 정렬하여 상위 5개 선택
+        // 병합 후 weekly_search_count 기준으로 정렬하여 상위 5개 선택
         return merged
-          .sort((a, b) => (b.search_count || 0) - (a.search_count || 0))
+          .sort((a, b) => (b.weekly_search_count || 0) - (a.weekly_search_count || 0))
           .slice(0, 5);
       } catch (error) {
-        console.error('인기 검색어 조회 실패:', error);
+        console.error('주간 인기 검색어 조회 실패:', error);
         return [];
       }
     },
