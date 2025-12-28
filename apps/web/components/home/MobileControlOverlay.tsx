@@ -377,10 +377,11 @@ function MobileControlOverlayComponent({
                         className={cn(
                             'fixed bottom-0 left-0 right-0 z-50',
                             'bg-background rounded-t-2xl shadow-xl',
+                            'flex flex-col', // flexbox로 변경하여 컨텐츠 영역 제어
                             // [OPTIMIZATION] transition은 드래그 종료 시에만
                             isDragging ? '' : 'transition-transform duration-150 ease-out',
                             // 검색 시트일 때는 드롭다운이 위로 나오도록 overflow visible
-                            activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto',
+                            activeSheet === 'search' ? 'overflow-visible' : 'overflow-hidden',
                             // 하단 네비게이션바 공간 + iOS safe area + 여유 공간
                             'pb-[calc(env(safe-area-inset-bottom)+80px)]'
                         )}
@@ -412,149 +413,160 @@ function MobileControlOverlayComponent({
                             </Button>
                         </div>
 
-                        {/* 컨텐츠 - 직접 선택 가능한 버튼 UI */}
-                        <div className="p-4">
-                            {activeSheet === 'region' && (
-                                <div className="space-y-3">
-                                    {mapMode === 'domestic' ? (
-                                        // 국내 지역 버튼 그리드
-                                        <>
-                                            {/* 전국 버튼 */}
-                                            <Button
-                                                variant={selectedRegion === null ? "default" : "outline"}
-                                                className="w-full justify-between h-auto py-3"
-                                                onClick={() => {
-                                                    onRegionChange(null);
-                                                    onSearchExecute(null);
-                                                    handleClose();
-                                                }}
-                                            >
-                                                <span className="font-medium">전국</span>
-                                                <span className="text-sm opacity-75">({restaurants.length}개)</span>
-                                            </Button>
+                        {/* 컨텐츠 - 별도의 스크롤 컨테이너 */}
+                        <div
+                            className={cn(
+                                "flex-1",
+                                // 검색 시트일 때는 드롭다운이 보이도록 overflow visible
+                                activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto'
+                            )}
+                            style={{
+                                maxHeight: `calc(${sheetHeight}vh - 120px)`, // 핸들바(52px) + 헤더(68px) 제외
+                            }}
+                        >
+                            <div className="p-4 pb-8">{/* 하단 패딩으로 스크롤 끝까지 가능 */}
+                                {activeSheet === 'region' && (
+                                    <div className="space-y-3">
+                                        {mapMode === 'domestic' ? (
+                                            // 국내 지역 버튼 그리드
+                                            <>
+                                                {/* 전국 버튼 */}
+                                                <Button
+                                                    variant={selectedRegion === null ? "default" : "outline"}
+                                                    className="w-full justify-between h-auto py-3"
+                                                    onClick={() => {
+                                                        onRegionChange(null);
+                                                        onSearchExecute(null);
+                                                        handleClose();
+                                                    }}
+                                                >
+                                                    <span className="font-medium">전국</span>
+                                                    <span className="text-sm opacity-75">({restaurants.length}개)</span>
+                                                </Button>
 
-                                            {/* 지역 버튼 그리드 */}
+                                                {/* 지역 버튼 그리드 */}
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {REGIONS.map((region) => {
+                                                        const count = regionCounts[region] || 0;
+                                                        const isSelected = selectedRegion === region;
+                                                        return (
+                                                            <Button
+                                                                key={region}
+                                                                variant={isSelected ? "default" : "outline"}
+                                                                className="justify-between h-auto py-3"
+                                                                onClick={() => {
+                                                                    onRegionChange(region);
+                                                                    onSearchExecute(region);
+                                                                    handleClose();
+                                                                }}
+                                                            >
+                                                                <span className="font-medium">{region}</span>
+                                                                <span className="text-xs opacity-75">({count})</span>
+                                                            </Button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            // 해외 국가 버튼 그리드
                                             <div className="grid grid-cols-2 gap-2">
-                                                {REGIONS.map((region) => {
-                                                    const count = regionCounts[region] || 0;
-                                                    const isSelected = selectedRegion === region;
+                                                {Object.keys(countryCounts).map((country) => {
+                                                    const count = countryCounts[country] || 0;
+                                                    const isSelected = selectedCountry === country;
                                                     return (
                                                         <Button
-                                                            key={region}
+                                                            key={country}
                                                             variant={isSelected ? "default" : "outline"}
                                                             className="justify-between h-auto py-3"
                                                             onClick={() => {
-                                                                onRegionChange(region);
-                                                                onSearchExecute(region);
+                                                                onCountryChange(country);
                                                                 handleClose();
                                                             }}
                                                         >
-                                                            <span className="font-medium">{region}</span>
+                                                            <span className="font-medium">{country}</span>
                                                             <span className="text-xs opacity-75">({count})</span>
                                                         </Button>
                                                     );
                                                 })}
                                             </div>
-                                        </>
-                                    ) : (
-                                        // 해외 국가 버튼 그리드
+                                        )}
+                                    </div>
+                                )}
+
+                                {activeSheet === 'category' && (
+                                    <div className="space-y-3">
+                                        {/* 초기화 버튼 */}
+                                        {selectedCategories.length > 0 && (
+                                            <Button
+                                                variant="outline"
+                                                className="w-full"
+                                                onClick={() => onCategoryChange([])}
+                                            >
+                                                초기화 ({selectedCategories.length}개 선택됨)
+                                            </Button>
+                                        )}
+
+                                        {/* 카테고리 버튼 그리드 */}
                                         <div className="grid grid-cols-2 gap-2">
-                                            {Object.keys(countryCounts).map((country) => {
-                                                const count = countryCounts[country] || 0;
-                                                const isSelected = selectedCountry === country;
+                                            {CATEGORIES.map((category) => {
+                                                const count = categoryCounts[category] || 0;
+                                                const isSelected = selectedCategories.includes(category);
                                                 return (
                                                     <Button
-                                                        key={country}
+                                                        key={category}
                                                         variant={isSelected ? "default" : "outline"}
                                                         className="justify-between h-auto py-3"
                                                         onClick={() => {
-                                                            onCountryChange(country);
-                                                            handleClose();
+                                                            const newCategories = isSelected
+                                                                ? selectedCategories.filter(cat => cat !== category)
+                                                                : [...selectedCategories, category];
+                                                            onCategoryChange(newCategories);
                                                         }}
                                                     >
-                                                        <span className="font-medium">{country}</span>
+                                                        <span className="font-medium flex items-center gap-1.5">
+                                                            {isSelected && <Check className="h-4 w-4" />}
+                                                            {category}
+                                                        </span>
                                                         <span className="text-xs opacity-75">({count})</span>
                                                     </Button>
                                                 );
                                             })}
                                         </div>
-                                    )}
-                                </div>
-                            )}
 
-                            {activeSheet === 'category' && (
-                                <div className="space-y-3">
-                                    {/* 초기화 버튼 */}
-                                    {selectedCategories.length > 0 && (
+                                        {/* 적용 버튼 */}
                                         <Button
-                                            variant="outline"
                                             className="w-full"
-                                            onClick={() => onCategoryChange([])}
+                                            onClick={handleClose}
                                         >
-                                            초기화 ({selectedCategories.length}개 선택됨)
+                                            적용하기
                                         </Button>
-                                    )}
-
-                                    {/* 카테고리 버튼 그리드 */}
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {CATEGORIES.map((category) => {
-                                            const count = categoryCounts[category] || 0;
-                                            const isSelected = selectedCategories.includes(category);
-                                            return (
-                                                <Button
-                                                    key={category}
-                                                    variant={isSelected ? "default" : "outline"}
-                                                    className="justify-between h-auto py-3"
-                                                    onClick={() => {
-                                                        const newCategories = isSelected
-                                                            ? selectedCategories.filter(cat => cat !== category)
-                                                            : [...selectedCategories, category];
-                                                        onCategoryChange(newCategories);
-                                                    }}
-                                                >
-                                                    <span className="font-medium flex items-center gap-1.5">
-                                                        {isSelected && <Check className="h-4 w-4" />}
-                                                        {category}
-                                                    </span>
-                                                    <span className="text-xs opacity-75">({count})</span>
-                                                </Button>
-                                            );
-                                        })}
                                     </div>
+                                )}
 
-                                    {/* 적용 버튼 */}
-                                    <Button
-                                        className="w-full"
-                                        onClick={handleClose}
-                                    >
-                                        적용하기
-                                    </Button>
-                                </div>
-                            )}
-
-                            {activeSheet === 'search' && (
-                                <Suspense fallback={<SheetLoading />}>
-                                    <div className="space-y-4">
-                                        <RestaurantSearch
-                                            onRestaurantSelect={(restaurant) => {
-                                                onRestaurantSelect(restaurant);
-                                                handleClose();
-                                            }}
-                                            onRestaurantSearch={(restaurant) => {
-                                                onRestaurantSearch(restaurant);
-                                                handleClose();
-                                            }}
-                                            onSearchExecute={() => {
-                                                onSearchExecute();
-                                                handleClose();
-                                            }}
-                                            filters={filters}
-                                            selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
-                                            isKoreanOnly={mapMode === 'domestic'}
-                                        />
-                                    </div>
-                                </Suspense>
-                            )}
+                                {activeSheet === 'search' && (
+                                    <Suspense fallback={<SheetLoading />}>
+                                        <div className="space-y-4">
+                                            <RestaurantSearch
+                                                onRestaurantSelect={(restaurant) => {
+                                                    onRestaurantSelect(restaurant);
+                                                    handleClose();
+                                                }}
+                                                onRestaurantSearch={(restaurant) => {
+                                                    onRestaurantSearch(restaurant);
+                                                    handleClose();
+                                                }}
+                                                onSearchExecute={() => {
+                                                    onSearchExecute();
+                                                    handleClose();
+                                                }}
+                                                filters={filters}
+                                                selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
+                                                isKoreanOnly={mapMode === 'domestic'}
+                                            />
+                                        </div>
+                                    </Suspense>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
