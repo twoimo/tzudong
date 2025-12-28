@@ -39,6 +39,26 @@ jobs:
         with:
           python-version: '3.11'
       
+      - name: Install Chromium dependencies for Puppeteer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2t64 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libatspi2.0-0
+      
       - name: Install Node.js dependencies
         working-directory: backend/youtube-heatmapMarkers
         run: npm install

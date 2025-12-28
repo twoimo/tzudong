@@ -17,7 +17,7 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 puppeteer.use(StealthPlugin());
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const HEATMAPS_DIR = path.join(__dirname, '..', 'data', 'heatmapMarkers');
+const HEATMAPS_DIR = path.join(__dirname, '..', 'data', 'heatMaps');
 const BRANCH = 'feat/crawling-youtube-heat-map';
 const COMMIT_INTERVAL = 10;
 const MAX_URLS_PER_RUN = parseInt(process.env.MAX_URLS_PER_RUN) || 50;
