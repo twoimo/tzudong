@@ -11,7 +11,7 @@ youtube-heat-map/
 │   └── urls/
 │       └── youtube-urls.txt   # 수집 대상 URL 목록
 ├── scripts/
-│   ├── collect_urls.py        # Python: YouTube API로 URL 수집
+│   ├── collect_urls.py        # Python: 쯔양 채널 URL 수집
 │   ├── heatmap.js             # Node.js: Puppeteer 히트맵 수집 로직
 │   └── collect.js             # Node.js: CLI 히트맵 수집 실행
 ├── package.json
@@ -25,38 +25,29 @@ youtube-heat-map/
 ```bash
 cd backend/youtube-heat-map
 
-# Node.js 의존성 (히트맵 수집)
+# Node.js 의존성
 npm install
 
-# Python 의존성 (URL 수집)
+# Python 의존성
 pip install -r requirements.txt
 ```
 
-### 환경변수 설정
+### 환경변수
 
 ```bash
-export YOUTUBE_API_KEY="your_api_key_here"
+export YOUTUBE_API_KEY_BYEON="your_api_key"
 ```
 
 ## ⚙️ 사용법
 
-### 1. URL 수집 (Python)
+### 1. URL 수집
 
 ```bash
-# 채널 영상 수집
-python scripts/collect_urls.py --channel-id UCxxxxxx --max-results 50
-
-# 검색어로 수집
-python scripts/collect_urls.py --search "키워드" --max-results 20
-
-# 재생목록에서 수집
-python scripts/collect_urls.py --playlist-id PLxxxxxx
-
-# 단일 영상 추가
-python scripts/collect_urls.py --video-id dQw4w9WgXcQ
+python scripts/collect_urls.py        # 기본 50개
+python scripts/collect_urls.py 100    # 100개 수집
 ```
 
-### 2. 히트맵 수집 (Node.js)
+### 2. 히트맵 수집
 
 ```bash
 npm run collect
@@ -64,26 +55,17 @@ npm run collect
 
 ## 📊 데이터 형식
 
-### youtube-urls.txt
-```
-https://www.youtube.com/watch?v=VIDEO_ID_1
-https://www.youtube.com/watch?v=VIDEO_ID_2
-```
-
 ### {video_id}.jsonl
 ```json
 {
   "videoId": "xxx",
-  "collectedAt": "2025-12-27T16:00:00.000Z",
+  "collectedAt": "2025. 12. 28. 오후 4:30:00",
   "meta": {
     "title": "영상 제목",
-    "channelId": "UCxxxxxx",
-    "channelName": "채널명",
     "description": "영상 설명",
     "keywords": ["태그1", "태그2"],
     "category": "Entertainment",
-    "publishDate": "2025-01-01",
-    "uploadDate": "2025-01-01"
+    "publishDate": "2025-01-01"
   },
   "stats": {
     "viewCount": 100000,
@@ -91,18 +73,41 @@ https://www.youtube.com/watch?v=VIDEO_ID_2
     "commentCount": 300
   },
   "videoDurationMs": 600000,
-  "heatmapMarkers": [
-    {"startMillis": 0, "endMillis": 10000, "intensityScoreNormalized": 0.5}
-  ],
+  "heatmapMarkers": [...],
   "svgPathData": "M 0.0,100.0 C 1.0,91.4 ..."
 }
 ```
 
-## ⚠️ 주의사항
+## 📅 점진적 스케줄링
 
-- **조회수 5만 이상** 영상에서만 히트맵 데이터가 존재합니다.
-- 수동으로 챕터가 설정된 영상은 히트맵이 없을 수 있습니다.
+수집 간격이 점진적으로 늘어납니다:
+
+| 수집 횟수 | 다음 수집 간격 |
+|----------|---------------|
+| 0회 (신규) | 즉시 |
+| 1회 | 1주 후 |
+| 2회 | 2주 후 |
+| ... | ... |
+| 12회+ | 12주 후 (최대) |
 
 ## 🔄 GitHub Actions
 
-주간 자동 수집: `.github/workflows/youtube-heatmap.yml`
+**실행 시간 (한국 시간, 매일):**
+- 09:00, 15:00, 21:00
+
+**설정:**
+- 회당 최대 50개 URL 처리
+- 10개마다 자동 커밋/푸시
+
+### Rate Limiting
+
+| 조건 | 대기 시간 |
+|------|----------|
+| 매 영상 | 2~5초 |
+| 5개마다 | 10~15초 |
+| 10개마다 | 30~40초 |
+
+## ⚠️ 주의사항
+
+- **조회수 5만 이상** 영상에서만 히트맵 존재
+- 수동 챕터 설정된 영상은 히트맵 없음
