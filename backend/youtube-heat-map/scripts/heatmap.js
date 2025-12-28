@@ -71,9 +71,23 @@ export async function collectHeatmap(browser, videoId) {
     // 페이지 완전 로드 대기
     await new Promise(r => setTimeout(r, 5000));
     
-    // 키보드로 재생 시도 (headless에서 더 잘 작동)
+    // 재생 시도 (여러 방법 시도)
     try {
-      await page.keyboard.press('k'); // 'k'는 YouTube 재생/일시정지 단축키
+      // 1. 플레이어 클릭하여 포커스
+      await page.click('.html5-video-player');
+      await new Promise(r => setTimeout(r, 500));
+      
+      // 2. 키보드 'k' 입력 (YouTube 재생 단축키)
+      await page.keyboard.press('k');
+      await new Promise(r => setTimeout(r, 1000));
+      
+      // 3. JavaScript로 직접 video.play() 호출
+      await page.evaluate(() => {
+        const video = document.querySelector('video');
+        if (video && video.paused) {
+          video.play().catch(() => {});
+        }
+      });
       await new Promise(r => setTimeout(r, 2000));
     } catch (e) {}
     
