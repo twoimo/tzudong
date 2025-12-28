@@ -81,12 +81,12 @@ export function useDeviceType(): DeviceType {
             setDeviceType(calculateDeviceType());
         }, 50);
 
-        window.addEventListener('resize', debouncedUpdate);
-        window.addEventListener('orientationchange', debouncedUpdate);
+        window.addEventListener('resize', debouncedUpdate, { passive: true });
+        window.addEventListener('orientationchange', debouncedUpdate, { passive: true });
 
         return () => {
-            window.removeEventListener('resize', debouncedUpdate);
-            window.removeEventListener('orientationchange', debouncedUpdate);
+            window.removeEventListener('resize', debouncedUpdate, { passive: true } as any);
+            window.removeEventListener('orientationchange', debouncedUpdate, { passive: true } as any);
         };
     }, [calculateDeviceType]);
 
