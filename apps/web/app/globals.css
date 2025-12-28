@@ -77,9 +77,6 @@ All colors MUST be HSL.
     /* 모바일 하단 네비게이션 높이 (동적 업데이트) */
     --mobile-bottom-nav-height: 60px;
 
-    /* Header 높이 (동적 업데이트) */
-    --header-height: 56px;
-
     --sidebar-background: 38 30% 98%;
     --sidebar-foreground: 24 10% 10%;
     --sidebar-primary: 0 74% 42%;
