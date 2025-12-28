@@ -52,8 +52,15 @@ export async function collectHeatmap(browser, videoId) {
     // Viewport 설정
     await page.setViewport({ width: 1280, height: 720 });
     
-    // YouTube 페이지 접속
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    // 한국어 로캘 설정 쿠키
+    await page.setCookie({
+      name: 'PREF',
+      value: 'hl=ko&gl=KR',
+      domain: '.youtube.com'
+    });
+    
+    // YouTube 페이지 접속 (autoplay=1 추가)
+    const url = `https://www.youtube.com/watch?v=${videoId}&autoplay=1`;
     console.log(`📺 수집 시작: ${videoId}`);
     
     await page.goto(url, { 
@@ -64,70 +71,197 @@ export async function collectHeatmap(browser, videoId) {
     // 페이지 완전 로드 대기
     await new Promise(r => setTimeout(r, 5000));
     
+    // 재생 시도 (여러 방법 시도)
+    try {
+      // 1. 플레이어 클릭하여 포커스
+      await page.click('.html5-video-player');
+      await new Promise(r => setTimeout(r, 500));
+      
+      // 2. 키보드 'k' 입력 (YouTube 재생 단축키)
+      await page.keyboard.press('k');
+      await new Promise(r => setTimeout(r, 1000));
+      
+      // 3. JavaScript로 직접 video.play() 호출
+      await page.evaluate(() => {
+        const video = document.querySelector('video');
+        if (video && video.paused) {
+          video.play().catch(() => {});
+        }
+      });
+      await new Promise(r => setTimeout(r, 2000));
+    } catch (e) {}
+    
+    // 디버깅: 페이지 상태 확인
+    const pageState = await page.evaluate(() => {
+      const player = document.querySelector('.html5-video-player');
+      const video = document.querySelector('video');
+      const progressBarContainer = document.querySelector('.ytp-progress-bar-container');
+      return {
+        hasPlayer: !!player,
+        hasVideo: !!video,
+        playerClass: player?.className || 'none',
+        // 플레이어 클래스에서 직접 ad-showing 확인
+        isAdShowing: player?.classList.contains('ad-showing') || false,
+        hasProgressBar: document.querySelector('.ytp-progress-bar') !== null,
+        progressBarDisabled: progressBarContainer?.getAttribute('aria-disabled') === 'true'
+      };
+    });
+    console.log(`  🔍 페이지 상태: player=${pageState.hasPlayer}, video=${pageState.hasVideo}, ad=${pageState.isAdShowing}, progressBar=${pageState.hasProgressBar}, disabled=${pageState.progressBarDisabled}`);
+    
+    // 플레이어가 없으면 종료
+    if (!pageState.hasPlayer) {
+      console.log(`  ⚠️ 비디오 플레이어 없음 (비공개/삭제된 영상)`);
+      return null;
+    }
+    
     // 쿠키 동의 팝업 처리 (있으면)
     try {
       const acceptButton = await page.$('button[aria-label*="Accept"], button[aria-label*="동의"], .ytd-consent-bump-v2-lightbox button');
       if (acceptButton) {
+        console.log(`  📋 쿠키 동의 클릭`);
         await acceptButton.click();
         await new Promise(r => setTimeout(r, 2000));
       }
     } catch (e) {}
     
+    // ======== 재생 버튼 클릭 (버튼 라벨로 판단) ========
+    const playButtonLabel = await page.evaluate(() => {
+      const btn = document.querySelector('.ytp-play-button');
+      return btn?.getAttribute('aria-label') || '';
+    });
+    
+    // 버튼 라벨이 "재생" 또는 "Play"를 포함하면 일시정지 상태 → 클릭
+    if (playButtonLabel.includes('재생') || playButtonLabel.toLowerCase().includes('play')) {
+      console.log(`  ▶️ 영상이 일시정지 상태 - 재생 버튼 클릭`);
+      try {
+        await page.click('.ytp-play-button');
+        await new Promise(r => setTimeout(r, 2000));
+      } catch (e) {
+        console.log(`  ⚠️ 재생 버튼 클릭 실패`);
+      }
+    }
+    
     // ======== 광고 처리 ========
-    // 1단계: 광고가 재생 중인지 확인
-    const isAdPlaying = await page.$('.ad-showing');
+    // 광고가 재생 중인지 플레이어 클래스에서 직접 확인
+    let isAdPlaying = await page.evaluate(() => {
+      const player = document.querySelector('.html5-video-player');
+      return player?.classList.contains('ad-showing') || false;
+    });
     
     if (isAdPlaying) {
       console.log(`  📢 광고 재생 중 - 건너뛰기 버튼 대기...`);
       
-      // 2단계: 광고 건너뛰기 버튼이 나올 때까지 대기 (최대 30초)
-      const maxWait = 30000;
+      const maxWait = 60000; // 60초 대기 (긴 광고도 처리)
       const startTime = Date.now();
-      let skipClicked = false;
       
       while (Date.now() - startTime < maxWait) {
-        // 광고가 끝났는지 확인
-        const stillPlaying = await page.$('.ad-showing');
-        if (!stillPlaying) {
-          console.log(`  ✅ 광고 자동 종료됨`);
+        // 광고가 끝났는지 확인 (플레이어 클래스에서)
+        isAdPlaying = await page.evaluate(() => {
+          const player = document.querySelector('.html5-video-player');
+          return player?.classList.contains('ad-showing') || false;
+        });
+        
+        if (!isAdPlaying) {
+          console.log(`  ✅ 광고 종료됨`);
           break;
         }
         
-        // 건너뛰기 버튼 확인
-        const skipButton = await page.$('.ytp-skip-ad-button, .ytp-ad-skip-button, button[id^="skip-button"]');
-        if (skipButton) {
-          // 버튼이 클릭 가능한지 확인
-          const isVisible = await skipButton.isIntersectingViewport();
-          if (isVisible) {
-            await new Promise(r => setTimeout(r, 500));
-            try {
-              await skipButton.click();
-              console.log(`  ✅ 광고 건너뛰기 클릭 완료`);
-              skipClicked = true;
-              await new Promise(r => setTimeout(r, 2000));
-              break;
-            } catch (e) {
-              // 클릭 실패하면 계속 시도
+        // 건너뛰기 버튼 찾기
+        const skipInfo = await page.evaluate(() => {
+          const selectors = [
+            '.ytp-skip-ad-button',
+            '.ytp-ad-skip-button', 
+            'button[id^="skip-button"]',
+            '.ytp-ad-skip-button-modern',
+            '.ytp-skip-ad'
+          ];
+          
+          for (const selector of selectors) {
+            const btn = document.querySelector(selector);
+            if (btn) {
+              const style = window.getComputedStyle(btn);
+              return {
+                found: true,
+                selector,
+                visible: style.display !== 'none' && parseFloat(style.opacity) >= 0.5
+              };
             }
           }
+          return { found: false };
+        });
+        
+        if (skipInfo.found && skipInfo.visible) {
+          try {
+            await page.click(skipInfo.selector);
+            console.log(`  ✅ 광고 건너뛰기 클릭`);
+            await new Promise(r => setTimeout(r, 3000));
+            
+            // 광고가 실제로 종료되었는지 확인
+            const stillAd = await page.evaluate(() => {
+              const player = document.querySelector('.html5-video-player');
+              return player?.classList.contains('ad-showing') || false;
+            });
+            
+            if (!stillAd) {
+              break;
+            }
+          } catch (e) {}
         }
         
         // 1초 대기 후 다시 확인
         await new Promise(r => setTimeout(r, 1000));
       }
+    } else {
+      console.log(`  ✅ 광고 없음`);
     }
     
-    // 본 영상 로드 대기
+    // 광고 종료 후 본 영상 로드 대기
     await new Promise(r => setTimeout(r, 3000));
+    
+    // ======== 프로그레스 바 활성화 대기 ========
+    // 광고 후에 프로그레스 바가 활성화될 때까지 대기
+    const maxProgressWait = 10000;
+    const progressStart = Date.now();
+    let progressBarEnabled = false;
+    
+    while (Date.now() - progressStart < maxProgressWait) {
+      const state = await page.evaluate(() => {
+        const container = document.querySelector('.ytp-progress-bar-container');
+        const player = document.querySelector('.html5-video-player');
+        return {
+          disabled: container?.getAttribute('aria-disabled') === 'true',
+          adPlaying: player?.classList.contains('ad-showing') || false
+        };
+      });
+      
+      if (!state.disabled && !state.adPlaying) {
+        progressBarEnabled = true;
+        break;
+      }
+      
+      await new Promise(r => setTimeout(r, 500));
+    }
+    
+    if (!progressBarEnabled) {
+      console.log(`  ⚠️ 프로그레스 바가 활성화되지 않음 (광고가 계속 재생 중일 수 있음)`);
+      return null;
+    }
     
     // ======== 프로그레스 바 호버 (히트맵 표시) ========
     try {
+      // 플레이어 영역을 먼저 클릭하여 활성화
+      await page.click('.html5-video-player');
+      await new Promise(r => setTimeout(r, 500));
+      
+      // 프로그레스 바 호버
       await page.hover('.ytp-progress-bar');
       await new Promise(r => setTimeout(r, 1500));
+      console.log(`  ✅ 프로그레스 바 호버 완료`);
     } catch (e) {
-      console.log(`  ⚠️ 프로그레스 바 호버 실패`);
-      return null; // 호버 실패하면 수집 불가
+      console.log(`  ⚠️ 프로그레스 바 호버 실패: ${e.message}`);
+      return null;
     }
+
     
     // 히트맵 데이터 추출
     const heatmapData = await page.evaluate(() => {
@@ -319,7 +453,7 @@ export async function collectHeatmap(browser, videoId) {
     
     return {
       videoId,
-      collectedAt: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
+      collectedAt: new Date().toISOString().replace('Z', '+09:00'),
       meta: heatmapData.meta,
       stats: heatmapData.stats,
       videoDurationMs: heatmapData.videoDurationMs,
