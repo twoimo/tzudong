@@ -320,7 +320,7 @@ const NaverMapView = memo(({
             document.querySelector('.restaurant-detail-panel');
 
         if (!panelElement) {
-            console.warn('[NaverMapView] Panel element not found for ResizeObserver');
+            // 패널이 아직 로드되지 않았을 수 있으므로 경고 없이 종료
             return;
         }
 
@@ -726,9 +726,9 @@ const NaverMapView = memo(({
         const mapElement = mapRef.current;
         if (mapElement) {
             // 캡처링 단계에서 이벤트 감지 (지도 내부 로직보다 먼저 실행)
-            mapElement.addEventListener('wheel', handleUserInteraction, { capture: true });
-            mapElement.addEventListener('mousedown', handleUserInteraction, { capture: true });
-            mapElement.addEventListener('touchstart', handleUserInteraction, { capture: true });
+            mapElement.addEventListener('wheel', handleUserInteraction, { capture: true, passive: true });
+            mapElement.addEventListener('mousedown', handleUserInteraction, { capture: true, passive: true });
+            mapElement.addEventListener('touchstart', handleUserInteraction, { capture: true, passive: true });
         }
 
         const dragListener = naver.maps.Event.addListener(map, 'dragstart', handleUserInteraction);
@@ -740,9 +740,9 @@ const NaverMapView = memo(({
             naver.maps.Event.removeListener(pinchListener);
 
             if (mapElement) {
-                mapElement.removeEventListener('wheel', handleUserInteraction, { capture: true });
-                mapElement.removeEventListener('mousedown', handleUserInteraction, { capture: true });
-                mapElement.removeEventListener('touchstart', handleUserInteraction, { capture: true });
+                mapElement.removeEventListener('wheel', handleUserInteraction, { capture: true, passive: true } as any);
+                mapElement.removeEventListener('mousedown', handleUserInteraction, { capture: true, passive: true } as any);
+                mapElement.removeEventListener('touchstart', handleUserInteraction, { capture: true, passive: true } as any);
             }
         };
 
@@ -891,9 +891,9 @@ const NaverMapView = memo(({
             }, 100); // 100ms 디바운스
         };
 
-        window.addEventListener('resize', handleWindowResize);
+        window.addEventListener('resize', handleWindowResize, { passive: true });
         return () => {
-            window.removeEventListener('resize', handleWindowResize);
+            window.removeEventListener('resize', handleWindowResize, { passive: true } as any);
             clearTimeout(resizeTimer);
         };
     }, []);

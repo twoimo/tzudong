@@ -475,8 +475,8 @@ function AdminEvaluationPage() {
       }
     };
 
-    scrollContainer.addEventListener('scroll', handleScroll);
-    return () => scrollContainer.removeEventListener('scroll', handleScroll);
+    scrollContainer.addEventListener('scroll', handleScroll, { passive: true });
+    return () => scrollContainer.removeEventListener('scroll', handleScroll, { passive: true } as any);
   }, [hasMore, loadingMore, loadMoreRecords, displayedRecords.length, filteredRecords.length]);
 
   // 슬라이드 뷰에서 끝에 도달하면 추가 데이터 로드

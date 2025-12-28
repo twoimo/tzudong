@@ -74,8 +74,8 @@ export default function HomeControlPanel({
         };
 
         updateLayout();
-        window.addEventListener('resize', updateLayout);
-        return () => window.removeEventListener('resize', updateLayout);
+        window.addEventListener('resize', updateLayout, { passive: true });
+        return () => window.removeEventListener('resize', updateLayout, { passive: true } as any);
     }, [leftSidebarWidth, rightPanelWidth, isDesktop]);
 
     // 모바일/태블릿에서는 MobileControlOverlay 사용
