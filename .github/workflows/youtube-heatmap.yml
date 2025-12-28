@@ -49,6 +49,26 @@ jobs:
         working-directory: backend/youtube-heat-map
         run: pip install -r requirements.txt
       
+      - name: Install Chromium dependencies for Puppeteer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libatspi2.0-0
+      
       - name: Collect YouTube URLs
         working-directory: backend/youtube-heat-map
         env:

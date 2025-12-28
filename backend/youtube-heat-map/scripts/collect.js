@@ -150,12 +150,15 @@ async function main() {
   }
   
   const browser = await puppeteer.launch({
-    headless: true,
+    headless: 'new',  // 새 headless 모드 사용
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
       '--disable-dev-shm-usage',
-      '--disable-gpu'
+      '--disable-gpu',
+      '--autoplay-policy=no-user-gesture-required',  // 자동 재생 허용
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process'
     ]
   });
   
