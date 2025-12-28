@@ -90,15 +90,19 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 <Sidebar isOpen={isSidebarOpen} isMyPageMode={isMyPage} />
             </div>
 
-            <div className={cn(
-                "flex-1 flex flex-col overflow-hidden transition-all duration-300",
-                // 데스크탑(1600px 이상)에서만 사이드바 마진 적용
-                "min-[1600px]:ml-16",
-                isSidebarOpen && "min-[1600px]:ml-64",
-                // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
-                // CSS 변수로 동적 높이 반영 (60px + safe-area-inset-bottom)
-                "max-[1599px]:pb-[var(--mobile-bottom-nav-height)]"
-            )}>
+            <div
+                className={cn(
+                    "flex-1 flex flex-col overflow-hidden transition-all duration-300",
+                    // 데스크탑(1600px 이상)에서만 사이드바 마진 적용
+                    "min-[1600px]:ml-16",
+                    isSidebarOpen && "min-[1600px]:ml-64"
+                )}
+                style={{
+                    // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
+                    // Tailwind arbitrary value가 동적 CSS 변수를 인식하지 못하므로 인라인 스타일 사용
+                    paddingBottom: isMobileOrTablet ? 'var(--mobile-bottom-nav-height)' : undefined
+                }}
+            >
                 <Header
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                     isLoggedIn={!!user}

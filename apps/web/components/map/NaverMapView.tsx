@@ -326,7 +326,10 @@ const NaverMapView = memo(({
 
         const handleVisualViewportResize = () => {
             if (window.visualViewport) {
-                setVisualViewportHeight(window.visualViewport.height);
+                const newHeight = window.visualViewport.height;
+                setVisualViewportHeight(newHeight);
+                // 디버깅 로그
+                console.log('[NaverMap] visualViewport height changed:', newHeight);
             }
         };
 
@@ -1389,10 +1392,12 @@ const NaverMapView = memo(({
             <div className="relative h-full w-full overflow-hidden">
                 <div
                     ref={mapRef}
-                    className={`map-container w-full h-full ${isMobileOrTablet ? 'pb-[var(--mobile-bottom-nav-height)]' : ''}`}
+                    className="map-container w-full h-full"
                     style={{
                         background: '#f5f5f5',
-                        WebkitOverflowScrolling: 'touch' as any
+                        WebkitOverflowScrolling: 'touch' as any,
+                        // 모바일/태블릿에서 하단 패딩 추가 (네이버 지도 UI 보호)
+                        paddingBottom: isMobileOrTablet ? 'var(--mobile-bottom-nav-height)' : undefined
                     }}
                 />
 
@@ -1449,11 +1454,13 @@ const NaverMapView = memo(({
                 {/* 지도 컨테이너 - 모바일 터치 성능 최적화 */}
                 <div
                     ref={mapRef}
-                    className={`w-full h-full touch-pan-y touch-pan-x transform-gpu ${isMobileOrTablet ? 'pb-[var(--mobile-bottom-nav-height)]' : ''}`}
+                    className="w-full h-full touch-pan-y touch-pan-x transform-gpu"
                     style={{
                         willChange: 'transform',
                         touchAction: 'pan-x pan-y',
-                        WebkitOverflowScrolling: 'touch' as any
+                        WebkitOverflowScrolling: 'touch' as any,
+                        // 모바일/태블릿에서 하단 패딩 추가 (네이버 지도 UI 보호)
+                        paddingBottom: isMobileOrTablet ? 'var(--mobile-bottom-nav-height)' : undefined
                     }}
                 />
 
