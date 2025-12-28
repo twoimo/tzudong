@@ -33,8 +33,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: backend/youtube-heatmapMarkers/package-lock.json
       
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -43,7 +41,7 @@ jobs:
       
       - name: Install Node.js dependencies
         working-directory: backend/youtube-heatmapMarkers
-        run: npm ci
+        run: npm install
       
       - name: Install Python dependencies
         working-directory: backend/youtube-heatmapMarkers
