@@ -96,9 +96,8 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 "min-[1600px]:ml-16",
                 isSidebarOpen && "min-[1600px]:ml-64",
                 // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
-                // MobileBottomNav 높이: 60px(min-h) + env(safe-area-inset-bottom)
-                // 여기서는 최소 60px를 확보하고, safe-area는 MobileBottomNav에서 처리
-                "max-[1599px]:pb-[60px]"
+                // CSS 변수로 동적 높이 반영 (60px + safe-area-inset-bottom)
+                "max-[1599px]:pb-[var(--mobile-bottom-nav-height)]"
             )}>
                 <Header
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}

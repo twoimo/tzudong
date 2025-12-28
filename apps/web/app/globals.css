@@ -4,11 +4,15 @@
 
 /* 스크롤바 숨김 유틸리티 */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
@@ -69,6 +73,9 @@ All colors MUST be HSL.
     --ring: 0 74% 42%;
 
     --radius: 0.5rem;
+
+    /* 모바일 하단 네비게이션 높이 (동적 업데이트) */
+    --mobile-bottom-nav-height: 60px;
 
     --sidebar-background: 38 30% 98%;
     --sidebar-foreground: 24 10% 10%;
@@ -221,6 +228,7 @@ div[style*="z-index"]>div>.custom-marker {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }

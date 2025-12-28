@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, Stamp, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,7 @@ interface MobileBottomNavProps {
 function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
     const pathname = usePathname();
     const router = useRouter();
+    const navRef = useRef<HTMLElement>(null);
 
     // [OPTIMIZATION] useCallback으로 핸들러 메모이제이션
     const handleNavClick = useCallback((path: string) => {
@@ -45,8 +46,32 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
         }));
     }, [pathname]);
 
+    // [브라우저 호환성] ResizeObserver로 실제 높이 측정 및 CSS 변수 설정
+    useEffect(() => {
+        if (!navRef.current) return;
+
+        const updateNavHeight = () => {
+            if (navRef.current) {
+                const height = navRef.current.offsetHeight;
+                document.documentElement.style.setProperty('--mobile-bottom-nav-height', `${height}px`);
+            }
+        };
+
+        // 초기 높이 설정
+        updateNavHeight();
+
+        // ResizeObserver로 safe-area 변화 감지 (브라우저 주소창 숨김/표시 등)
+        const resizeObserver = new ResizeObserver(updateNavHeight);
+        resizeObserver.observe(navRef.current);
+
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
+
     return (
         <nav
+            ref={navRef}
             className={cn(
                 // 기본 스타일 및 고정 위치
                 'fixed bottom-0 left-0 right-0 z-50',

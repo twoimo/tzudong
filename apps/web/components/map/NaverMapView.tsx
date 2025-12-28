@@ -455,7 +455,8 @@ const NaverMapView = memo(({
         lat: number,
         lng: number,
         targetZoom: number,
-        offsetX: number
+        offsetX: number,
+        offsetY: number = 0 // [모바일/태블릿] Y축 오프셋 (하단 네비게이션 대응)
     ) => {
         const map = mapInstanceRef.current;
         if (!map || !window.naver) return new window.naver.maps.LatLng(lat, lng);
@@ -469,7 +470,7 @@ const NaverMapView = memo(({
             const centerPoint = projection.fromCoordToOffset(centerLatLng);
             const offsetPoint = new window.naver.maps.Point(
                 centerPoint.x + offsetX,
-                centerPoint.y
+                centerPoint.y + offsetY // Y축 오프셋 추가
             );
             const offsetCenterLatLng = projection.fromOffsetToCoord(offsetPoint);
 
@@ -600,6 +601,22 @@ const NaverMapView = memo(({
 
         const targetOffsetX = effectiveOffset / 2;
 
+        // [모바일/태블릿] Y축 오프셋 계산 (하단 네비게이션 대응)
+        // 하단 네비게이션이 지도 영역을 가리므로, 마커가 "보이는 영역"의 중앙에 위치하도록
+        // 지도 중심을 위로 이동시켜야 합니다. (양수 = 위로 이동)
+        let targetOffsetY = 0;
+        if (isMobileOrTablet) {
+            // CSS 변수에서 하단 네비게이션 높이 읽기
+            const navHeight = parseFloat(
+                getComputedStyle(document.documentElement)
+                    .getPropertyValue('--mobile-bottom-nav-height')
+            ) || 60; // 기본값 60px
+
+            // 하단 네비게이션 높이의 절반만큼 위로 이동
+            // 음수로 설정하여 지도 중심이 위로 이동 (화면 하단의 네비게이션을 피함)
+            targetOffsetY = -navHeight / 2;
+        }
+
         // **핵심 로직 변경**
         const currentZoom = map.getZoom();
 
@@ -688,8 +705,8 @@ const NaverMapView = memo(({
         naver.maps.Event.trigger(map, 'resize');
 
         const moveMap = () => {
-            // [Helper 사용] 조정된 중심 좌표 계산
-            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX);
+            // [Helper 사용] 조정된 중심 좌표 계산 (X축, Y축 오프셋 모두 적용)
+            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, targetZoom, targetOffsetX, targetOffsetY);
 
             if (shouldInstantLoad) {
                 map.setZoom(targetZoom);
@@ -852,9 +869,19 @@ const NaverMapView = memo(({
 
             const targetOffsetX = rightPanelWidth / 2;
 
+            // [모바일/태블릿] Y축 오프셋 계산 (ResizeObserver에서도 동일하게 적용)
+            let targetOffsetY = 0;
+            if (isMobileOrTablet) {
+                const navHeight = parseFloat(
+                    getComputedStyle(document.documentElement)
+                        .getPropertyValue('--mobile-bottom-nav-height')
+                ) || 60;
+                targetOffsetY = -navHeight / 2;
+            }
+
             // [Helper 사용] 현재 줌 레벨 유지
             const currentZoom = map.getZoom();
-            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, currentZoom, targetOffsetX);
+            const newCenterLatLng = getAdjustedCenter(targetLat, targetLng, currentZoom, targetOffsetX, targetOffsetY);
 
             // 애니메이션 없이 즉시 이동 (부드러움 유지)
             map.setCenter(newCenterLatLng);

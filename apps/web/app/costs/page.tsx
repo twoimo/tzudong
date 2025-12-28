@@ -236,50 +236,7 @@ export default function ServerCostsPage() {
     };
 
     if (isLoading) {
-        return (
-            <div className="flex flex-col h-full bg-background">
-                {/* Header Skeleton */}
-                <div className="border-b border-border bg-card p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <div className="h-7 bg-muted rounded animate-pulse w-48"></div>
-                                <div className="h-5 bg-muted rounded animate-pulse w-20"></div>
-                            </div>
-                            <div className="h-4 bg-muted rounded animate-pulse w-32 mt-1"></div>
-                        </div>
-                        <div className="h-9 bg-muted rounded animate-pulse w-32"></div>
-                    </div>
-                    <div className="p-6 bg-muted rounded-lg">
-                        <div className="text-center">
-                            <div className="h-4 bg-muted-foreground/20 rounded animate-pulse w-24 mx-auto mb-2"></div>
-                            <div className="h-10 bg-muted-foreground/20 rounded animate-pulse w-40 mx-auto"></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Content Skeleton */}
-                <div className="flex-1 p-6">
-                    <div className="space-y-4">
-                        {Array.from({ length: 4 }).map((_, index) => (
-                            <div key={index} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-muted rounded-lg animate-pulse"></div>
-                                    <div className="space-y-2">
-                                        <div className="h-5 bg-muted rounded animate-pulse w-32"></div>
-                                        <div className="h-4 bg-muted rounded animate-pulse w-48"></div>
-                                    </div>
-                                </div>
-                                <div className="text-right space-y-2">
-                                    <div className="h-5 bg-muted rounded animate-pulse w-24"></div>
-                                    <div className="h-4 bg-muted rounded animate-pulse w-20"></div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
+        return null;
     }
 
     return (

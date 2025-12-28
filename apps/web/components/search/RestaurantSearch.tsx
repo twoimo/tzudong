@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, YoutubeMeta } from "@/types/restaurant";
@@ -33,6 +33,7 @@ const RestaurantSearch = ({
   isKoreanOnly = false
 }: RestaurantSearchProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDeferredValue(searchQuery); // [OPTIMIZATION] 디바운싱
   const [isFocused, setIsFocused] = useState(false);
   const [searchType, setSearchType] = useState<SearchType>('name');
   const searchRef = useRef<HTMLDivElement>(null);
@@ -47,23 +48,30 @@ const RestaurantSearch = ({
     "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"
   ];
 
-  // 인기 검색어 쿼리 (검색 횟수 기준 상위 5개)
+  // 주간 인기 검색어 쿼리 (weekly_search_count 기준 상위 5개) - [OPTIMIZATION] 병합 로직 적용
   const { data: popularRestaurants = [] } = useQuery({
-    queryKey: ["popular-searches"],
+    queryKey: ["popular-searches-weekly"],
     queryFn: async () => {
       try {
         const { data, error } = await supabase
           .from('restaurants')
-          .select('id, name, road_address, jibun_address, english_address, status, search_count')
+          .select('id, name, road_address, jibun_address, english_address, status, weekly_search_count, categories, youtube_meta')
           .eq('status', 'approved')
-          .gt('search_count', 0)  // search_count가 0보다 큰 것만
-          .order('search_count', { ascending: false })
-          .limit(5);
+          .gt('weekly_search_count', 0)  // weekly_search_count가 0보다 큰 것만
+          .order('weekly_search_count', { ascending: false })
+          .limit(20); // 병합 전에 더 많이 가져오기
 
         if (error) throw error;
-        return (data || []) as Restaurant[];
+
+        // 병합 로직 적용
+        const merged = mergeRestaurants((data || []) as Restaurant[]);
+
+        // 병합 후 weekly_search_count 기준으로 정렬하여 상위 5개 선택
+        return merged
+          .sort((a, b) => (b.weekly_search_count || 0) - (a.weekly_search_count || 0))
+          .slice(0, 5);
       } catch (error) {
-        console.error('인기 검색어 조회 실패:', error);
+        console.error('주간 인기 검색어 조회 실패:', error);
         return [];
       }
     },
@@ -71,19 +79,22 @@ const RestaurantSearch = ({
     gcTime: 1000 * 60 * 30, // 30분간 메모리 보존
   });
 
-  // 메모이제이션된 쿼리 키
+  // 메모이제이션된 쿼리 키 (debouncedSearchQuery 사용)
   const queryKey = useMemo(
-    () => ["restaurant-search", searchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly],
-    [searchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly]
+    () => ["restaurant-search", debouncedSearchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly],
+    [debouncedSearchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly]
   );
 
   // 맛집 검색 쿼리
   const { data: restaurants = [], isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
-      if (!searchQuery.trim()) return [];
+      // [OPTIMIZATION] 최소 2자 이상부터 검색
+      if (!debouncedSearchQuery.trim() || debouncedSearchQuery.trim().length < 2) return [];
 
-      const trimmedQuery = searchQuery.trim();
+      const trimmedQuery = debouncedSearchQuery.trim();
+
+
       let results: Restaurant[] = [];
 
       try {
@@ -144,22 +155,22 @@ const RestaurantSearch = ({
         return [];
       }
     },
-    enabled: searchQuery.length > 0,
+    enabled: debouncedSearchQuery.trim().length >= 2, // [OPTIMIZATION] 2자 이상부터 쿼리 실행
     staleTime: 1000 * 60 * 5, // 5분간 캐시
     gcTime: 1000 * 60 * 10, // 10분간 메모리 보존
   });
 
-  // 외부 클릭 시 검색 결과 숨김
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsFocused(false);
-      }
-    };
+  // [OPTIMIZATION] 외부 클릭 핸들러 안정화
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      setIsFocused(false);
+    }
+  }, []);
 
+  useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [handleClickOutside]);
 
   const handleSelect = useCallback((restaurant: Restaurant) => {
     // 검색 카운트 증가 (비동기, 에러 무시)

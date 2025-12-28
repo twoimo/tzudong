@@ -128,7 +128,7 @@ export default function LeaderboardPage() {
                                 <TableHeader className="sticky top-0 bg-muted z-10">
                                     <TableRow>
                                         <TableHead className="w-16 md:w-20 text-left whitespace-nowrap">순위</TableHead>
-                                        <TableHead className="min-w-[100px] text-left whitespace-nowrap">사용자</TableHead>
+                                        <TableHead className="w-32 md:w-40 text-left whitespace-nowrap">사용자</TableHead>
                                         <TableHead className="w-20 md:w-28 text-center whitespace-nowrap">
                                             <button
                                                 onClick={() => setSortBy("reviews")}
@@ -179,8 +179,8 @@ export default function LeaderboardPage() {
                                                         {getRankIcon(user.rank, true)}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="whitespace-nowrap">
-                                                    <span className={`font-medium ${isCurrentUser ? "text-primary font-bold" : ""}`}>
+                                                <TableCell className="max-w-40">
+                                                    <span className={`font-medium block truncate ${isCurrentUser ? "text-primary font-bold" : ""}`}>
                                                         {user.username}
                                                         {isCurrentUser && " (나)"}
                                                     </span>
