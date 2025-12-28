@@ -30,10 +30,24 @@ export async function fetchHeatmapMarkers(videoId) {
     
     const html = await response.text();
     
+    // 디버깅: HTML 정보 출력
+    const htmlLength = html.length;
+    const hasYtInitial = html.includes('ytInitialPlayerResponse');
+    const hasConsent = html.includes('consent') || html.includes('CONSENT');
+    console.log(`  📄 HTML: ${htmlLength}자, ytInitial=${hasYtInitial}, consent=${hasConsent}`);
+    
+    if (!hasYtInitial) {
+      // 동의 페이지 등 확인
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/);
+      console.log(`  📄 페이지 타이틀: ${titleMatch ? titleMatch[1] : '없음'}`);
+      console.log(`  ⚠️ ytInitialPlayerResponse를 찾을 수 없음`);
+      return null;
+    }
+    
     // ytInitialPlayerResponse 추출
     const playerResponseMatch = html.match(/var ytInitialPlayerResponse\s*=\s*(\{.+?\});(?:<\/script>|var)/s);
     if (!playerResponseMatch) {
-      console.log(`  ⚠️ ytInitialPlayerResponse를 찾을 수 없음`);
+      console.log(`  ⚠️ ytInitialPlayerResponse 정규식 매칭 실패`);
       return null;
     }
     
