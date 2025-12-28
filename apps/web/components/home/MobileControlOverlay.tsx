@@ -415,7 +415,11 @@ function MobileControlOverlayComponent({
 
                         {/* 컨텐츠 - 별도의 스크롤 컨테이너 */}
                         <div
-                            className="flex-1 overflow-y-auto"
+                            className={cn(
+                                "flex-1",
+                                // 검색 시트일 때는 드롭다운이 보이도록 overflow visible
+                                activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto'
+                            )}
                             style={{
                                 maxHeight: `calc(${sheetHeight}vh - 120px)`, // 핸들바(52px) + 헤더(68px) 제외
                             }}
