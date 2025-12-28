@@ -69,6 +69,15 @@ export async function fetchHeatmapMarkers(videoId) {
     const lengthSeconds = parseInt(videoDetails.lengthSeconds) || 0;
     const viewCount = parseInt(videoDetails.viewCount) || 0;
     
+    // 디버깅: videoDetails 내용
+    console.log(`  📊 videoDetails: title="${title?.substring(0,30)}", views=${viewCount}, keys=${Object.keys(videoDetails).join(',')}`);
+    
+    // playabilityStatus 확인 (차단/제한 확인)
+    const playabilityStatus = ytData?.playabilityStatus?.status;
+    if (playabilityStatus && playabilityStatus !== 'OK') {
+      console.log(`  ⚠️ playabilityStatus: ${playabilityStatus}`);
+    }
+    
     // 조회수 5만 미만이면 히트맵 없음
     if (viewCount < 50000) {
       console.log(`  ⚠️ 조회수 ${viewCount.toLocaleString()} (5만 미만 - 히트맵 없음)`);
