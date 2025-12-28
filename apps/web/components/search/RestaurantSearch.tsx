@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, YoutubeMeta } from "@/types/restaurant";
@@ -33,6 +33,7 @@ const RestaurantSearch = ({
   isKoreanOnly = false
 }: RestaurantSearchProps) => {
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDeferredValue(searchQuery); // [OPTIMIZATION] 디바운싱
   const [isFocused, setIsFocused] = useState(false);
   const [searchType, setSearchType] = useState<SearchType>('name');
   const searchRef = useRef<HTMLDivElement>(null);
@@ -71,19 +72,22 @@ const RestaurantSearch = ({
     gcTime: 1000 * 60 * 30, // 30분간 메모리 보존
   });
 
-  // 메모이제이션된 쿼리 키
+  // 메모이제이션된 쿼리 키 (debouncedSearchQuery 사용)
   const queryKey = useMemo(
-    () => ["restaurant-search", searchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly],
-    [searchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly]
+    () => ["restaurant-search", debouncedSearchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly],
+    [debouncedSearchQuery, searchType, filters?.categories, selectedRegion, isKoreanOnly]
   );
 
   // 맛집 검색 쿼리
   const { data: restaurants = [], isLoading } = useQuery({
     queryKey,
     queryFn: async () => {
-      if (!searchQuery.trim()) return [];
+      // [OPTIMIZATION] 최소 2자 이상부터 검색
+      if (!debouncedSearchQuery.trim() || debouncedSearchQuery.trim().length < 2) return [];
 
-      const trimmedQuery = searchQuery.trim();
+      const trimmedQuery = debouncedSearchQuery.trim();
+
+
       let results: Restaurant[] = [];
 
       try {
@@ -144,22 +148,22 @@ const RestaurantSearch = ({
         return [];
       }
     },
-    enabled: searchQuery.length > 0,
+    enabled: debouncedSearchQuery.trim().length >= 2, // [OPTIMIZATION] 2자 이상부터 쿼리 실행
     staleTime: 1000 * 60 * 5, // 5분간 캐시
     gcTime: 1000 * 60 * 10, // 10분간 메모리 보존
   });
 
-  // 외부 클릭 시 검색 결과 숨김
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
-        setIsFocused(false);
-      }
-    };
+  // [OPTIMIZATION] 외부 클릭 핸들러 안정화
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+      setIsFocused(false);
+    }
+  }, []);
 
+  useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [handleClickOutside]);
 
   const handleSelect = useCallback((restaurant: Restaurant) => {
     // 검색 카운트 증가 (비동기, 에러 무시)

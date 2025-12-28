@@ -83,7 +83,7 @@ function MobileControlOverlayComponent({
     const startYRef = useRef(0);
     const startHeightRef = useRef(50);
 
-    // 맛집 데이터 조회 (지역/카테고리 카운트용)
+    // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 캐싱 전략 추가
     const { data: restaurants = [] } = useQuery({
         queryKey: ['mobile-control-restaurants', mapMode],
         queryFn: async () => {
@@ -95,6 +95,9 @@ function MobileControlOverlayComponent({
             if (error) return [];
             return mergeRestaurants(data || []);
         },
+        staleTime: 1000 * 60 * 5, // 5분간 fresh
+        gcTime: 1000 * 60 * 15, // 15분간 캐시 유지
+        refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 방지
     });
 
     const handleClose = useCallback(() => {
@@ -118,9 +121,9 @@ function MobileControlOverlayComponent({
         startHeightRef.current = currentHeightRef.current;
     }, []);
 
-    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음)
+    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음, sheetRef 체크 제거)
     const handleDragMove = useCallback((e: TouchEvent) => {
-        if (!sheetRef.current || !isDragging) return;
+        if (!isDragging) return;
 
         const currentY = e.touches[0].clientY;
         const deltaY = startYRef.current - currentY;

@@ -11,10 +11,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { user } = useAuth();
+    const userId = user?.id; // [OPTIMIZATION] user 객체 대신 id만 추출
 
-    // 알림 로드 함수
+    // 알림 로드 함수 - [OPTIMIZATION] userId 의존성
     const loadNotifications = useCallback(async () => {
-        if (!user) {
+        if (!userId) {
             setNotifications([]);
             setIsLoading(false);
             return;
@@ -24,7 +25,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             const { data, error } = await (supabase
                 .from('notifications') as any)
                 .select('*')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .order('created_at', { ascending: false })
                 .limit(50); // 최근 50개만 로드
 
@@ -57,16 +58,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [userId]); // [OPTIMIZATION] user → userId
 
     // 초기 알림 로드
     useEffect(() => {
         loadNotifications();
     }, [loadNotifications]);
 
-    // 실시간 알림 구독
+    // 실시간 알림 구독 - [OPTIMIZATION] userId 의존성
     useEffect(() => {
-        if (!user) return;
+        if (!userId) return;
 
         const channel = supabase
             .channel('notifications')
@@ -76,7 +77,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     event: 'INSERT',
                     schema: 'public',
                     table: 'notifications',
-                    filter: `user_id=eq.${user.id}`
+                    filter: `user_id=eq.${userId}`
                 },
                 (payload) => {
                     const newNotification: Notification = {
@@ -101,7 +102,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user]);
+    }, [userId]); // [OPTIMIZATION] user → userId
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
