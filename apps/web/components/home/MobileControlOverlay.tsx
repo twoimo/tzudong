@@ -424,7 +424,7 @@ function MobileControlOverlayComponent({
                                 maxHeight: `calc(${sheetHeight}vh - 120px)`, // 핸들바(52px) + 헤더(68px) 제외
                             }}
                         >
-                            <div className="p-4">
+                            <div className="p-4 pb-8">{/* 하단 패딩으로 스크롤 끝까지 가능 */}
                                 {activeSheet === 'region' && (
                                     <div className="space-y-3">
                                         {mapMode === 'domestic' ? (
