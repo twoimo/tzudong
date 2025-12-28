@@ -46,60 +46,87 @@ export async function collectHeatmap(browser, videoId) {
   const page = await browser.newPage();
   
   try {
+    // User-Agent 설정 (봇 감지 우회)
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    
+    // Viewport 설정
+    await page.setViewport({ width: 1280, height: 720 });
+    
     // YouTube 페이지 접속
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     console.log(`📺 수집 시작: ${videoId}`);
     
     await page.goto(url, { 
-      waitUntil: 'domcontentloaded',
+      waitUntil: 'networkidle2',
       timeout: 60000 
     });
     
-    // 페이지 로드 대기
-    await new Promise(r => setTimeout(r, 3000));
+    // 페이지 완전 로드 대기
+    await new Promise(r => setTimeout(r, 5000));
     
-    // 광고 처리 - 광고가 있으면 건너뛰기 버튼이 나올 때까지 대기 후 클릭
-    const maxAdWait = 60000; // 최대 60초 대기
-    const startTime = Date.now();
-    
-    while (Date.now() - startTime < maxAdWait) {
-      // 광고가 재생 중인지 확인
-      const isAdPlaying = await page.$('.ad-showing');
-      
-      if (!isAdPlaying) {
-        // 광고가 없으면 바로 진행
-        break;
+    // 쿠키 동의 팝업 처리 (있으면)
+    try {
+      const acceptButton = await page.$('button[aria-label*="Accept"], button[aria-label*="동의"], .ytd-consent-bump-v2-lightbox button');
+      if (acceptButton) {
+        await acceptButton.click();
+        await new Promise(r => setTimeout(r, 2000));
       }
+    } catch (e) {}
+    
+    // ======== 광고 처리 ========
+    // 1단계: 광고가 재생 중인지 확인
+    const isAdPlaying = await page.$('.ad-showing');
+    
+    if (isAdPlaying) {
+      console.log(`  📢 광고 재생 중 - 건너뛰기 버튼 대기...`);
       
-      // 광고가 재생 중이면 건너뛰기 버튼 확인
-      const skipButton = await page.$('.ytp-skip-ad-button, .ytp-ad-skip-button, button[id^="skip-button"]');
-      if (skipButton) {
-        // 버튼이 보이면 잠시 대기 후 클릭 (버튼이 활성화될 때까지)
-        await new Promise(r => setTimeout(r, 500));
-        try {
-          console.log(`  📢 광고 건너뛰기 버튼 클릭`);
-          await skipButton.click();
-          await new Promise(r => setTimeout(r, 1000));
+      // 2단계: 광고 건너뛰기 버튼이 나올 때까지 대기 (최대 30초)
+      const maxWait = 30000;
+      const startTime = Date.now();
+      let skipClicked = false;
+      
+      while (Date.now() - startTime < maxWait) {
+        // 광고가 끝났는지 확인
+        const stillPlaying = await page.$('.ad-showing');
+        if (!stillPlaying) {
+          console.log(`  ✅ 광고 자동 종료됨`);
           break;
-        } catch (clickErr) {
-          // 클릭 실패하면 다시 시도
-          await new Promise(r => setTimeout(r, 500));
         }
+        
+        // 건너뛰기 버튼 확인
+        const skipButton = await page.$('.ytp-skip-ad-button, .ytp-ad-skip-button, button[id^="skip-button"]');
+        if (skipButton) {
+          // 버튼이 클릭 가능한지 확인
+          const isVisible = await skipButton.isIntersectingViewport();
+          if (isVisible) {
+            await new Promise(r => setTimeout(r, 500));
+            try {
+              await skipButton.click();
+              console.log(`  ✅ 광고 건너뛰기 클릭 완료`);
+              skipClicked = true;
+              await new Promise(r => setTimeout(r, 2000));
+              break;
+            } catch (e) {
+              // 클릭 실패하면 계속 시도
+            }
+          }
+        }
+        
+        // 1초 대기 후 다시 확인
+        await new Promise(r => setTimeout(r, 1000));
       }
-      
-      // 1초 대기 후 다시 확인
-      await new Promise(r => setTimeout(r, 1000));
     }
     
-    // 광고 종료 후 추가 대기 (본 영상 로드)
+    // 본 영상 로드 대기
     await new Promise(r => setTimeout(r, 3000));
     
-    // 동영상 플레이어에 호버하여 히트맵이 표시되도록 함
+    // ======== 프로그레스 바 호버 (히트맵 표시) ========
     try {
       await page.hover('.ytp-progress-bar');
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(r => setTimeout(r, 1500));
     } catch (e) {
-      console.log(`  ⚠️ 프로그레스 바 호버 실패 (영상이 없거나 비공개일 수 있음)`);
+      console.log(`  ⚠️ 프로그레스 바 호버 실패`);
+      return null; // 호버 실패하면 수집 불가
     }
     
     // 히트맵 데이터 추출
@@ -272,11 +299,23 @@ export async function collectHeatmap(browser, videoId) {
     });
     
     if (!heatmapData.hasHeatmap) {
-      console.log(`  ⚠️ 히트맵 없음 (조회수 5만 미만이거나 짧은 영상일 수 있음)`);
+      console.log(`  ⚠️ 히트맵 없음 (조회수 5만 미만이거나 짧은 영상)`);
       return null;
     }
     
-    console.log(`  ✅ 수집 완료: ${heatmapData.heatmapMarkers.length}개 마커, 조회수: ${heatmapData.stats.viewCount}, 좋아요: ${heatmapData.stats.likeCount || 'N/A'}`);
+    // viewCount가 0이면 페이지 로드 실패
+    if (heatmapData.stats.viewCount === 0) {
+      console.log(`  ⚠️ 데이터 로드 실패 (viewCount: 0)`);
+      return null;
+    }
+    
+    // svgPathData가 없거나 너무 짧으면 실패
+    if (!heatmapData.svgPathData || heatmapData.svgPathData.length < 50) {
+      console.log(`  ⚠️ 히트맵 SVG 데이터 없음`);
+      return null;
+    }
+    
+    console.log(`  ✅ 수집 완료: 조회수 ${heatmapData.stats.viewCount.toLocaleString()}, 좋아요: ${heatmapData.stats.likeCount?.toLocaleString() || 'N/A'}`);
     
     return {
       videoId,

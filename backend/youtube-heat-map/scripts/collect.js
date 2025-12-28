@@ -86,18 +86,30 @@ function parseKoreanDate(dateStr) {
 
 function gitCommitAndPush(message) {
   try {
-    execSync(`git fetch origin ${BRANCH}`, { stdio: 'inherit' });
-    execSync(`git pull origin ${BRANCH} --rebase`, { stdio: 'inherit' });
+    // 먼저 변경사항 add 및 commit
     execSync('git add -A', { stdio: 'inherit' });
     const status = execSync('git status --porcelain').toString();
     
-    if (status.trim()) {
-      execSync(`git commit -m "${message}"`, { stdio: 'inherit' });
-      execSync(`git push origin ${BRANCH}`, { stdio: 'inherit' });
-      console.log(`✅ Git 커밋/푸시 완료: ${message}`);
-      return true;
+    if (!status.trim()) {
+      console.log('ℹ️ 커밋할 변경사항 없음');
+      return false;
     }
-    return false;
+    
+    execSync(`git commit -m "${message}"`, { stdio: 'inherit' });
+    
+    // 원격에서 변경사항 가져와서 rebase
+    try {
+      execSync(`git fetch origin ${BRANCH}`, { stdio: 'inherit' });
+      execSync(`git rebase origin/${BRANCH}`, { stdio: 'inherit' });
+    } catch (rebaseErr) {
+      console.log('⚠️ Rebase 충돌 - 계속 진행');
+      try { execSync('git rebase --abort', { stdio: 'pipe' }); } catch (e) {}
+    }
+    
+    // 푸시
+    execSync(`git push origin ${BRANCH}`, { stdio: 'inherit' });
+    console.log(`✅ Git 커밋/푸시 완료: ${message}`);
+    return true;
   } catch (error) {
     console.error(`⚠️ Git 작업 실패: ${error.message}`);
     return false;
