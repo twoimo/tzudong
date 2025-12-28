@@ -29,9 +29,12 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 .limit(50); // 최근 50개만 로드
 
             if (error) {
-                // 알림 테이블이 존재하지 않는 경우 조용히 무시
-                if (error.code === 'PGRST205' || error.message?.includes('notifications')) {
-                    console.warn('알림 시스템이 아직 설정되지 않았습니다. 관리자에게 문의하세요.');
+                // 테이블이 없는 경우 조용히 무시
+                if (error.code === 'PGRST116' || error.code === 'PGRST204' || error.message?.includes('relation') || error.message?.includes('notifications')) {
+                    // 개발 환경에서만 정보 표시
+                    if (process.env.NODE_ENV === 'development') {
+                        console.info('[NotificationContext] 알림 테이블이 존재하지 않음 (정상, 무시됨)');
+                    }
                 } else {
                     console.error('알림 로드 실패:', error);
                 }
@@ -89,9 +92,9 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 }
             )
             .subscribe((status) => {
-                // 알림 테이블이 존재하지 않는 경우 경고 로그만 출력
-                if (status === 'CHANNEL_ERROR') {
-                    console.warn('알림 실시간 구독 실패 - 테이블이 존재하지 않을 수 있습니다.');
+                // 개발 환경에서만 한 번만 경고 표시
+                if (status === 'CHANNEL_ERROR' && process.env.NODE_ENV === 'development') {
+                    console.info('[NotificationContext] 알림 실시간 구독 실패 (notifications 테이블이 없을 수 있음, 무시됨)');
                 }
             });
 
