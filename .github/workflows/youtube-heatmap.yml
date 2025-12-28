@@ -1,12 +1,12 @@
-name: YouTube Heatmap Collection
+name: YouTube Heatmap Collection (DISABLED)
 
 on:
-  schedule:
-    # 하루 3번 실행 - 한국 시간 기준 같은 날
-    - cron: '0 0 * * *'   # 00:00 UTC = 한국 09:00
-    - cron: '0 6 * * *'   # 06:00 UTC = 한국 15:00
-    - cron: '0 12 * * *'  # 12:00 UTC = 한국 21:00
-  workflow_dispatch:  # 수동 실행 가능
+  # 비활성화: GitHub Actions에서 YouTube 비디오 재생 불가 (데이터센터 IP 차단)
+  # schedule:
+  #   - cron: '0 0 * * *'   # 00:00 UTC = 한국 09:00
+  #   - cron: '0 6 * * *'   # 06:00 UTC = 한국 15:00
+  #   - cron: '0 12 * * *'  # 12:00 UTC = 한국 21:00
+  workflow_dispatch:  # 수동 실행만 가능
 
 jobs:
   collect-heatmaps:

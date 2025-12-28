@@ -69,44 +69,136 @@ export async function collectHeatmap(browser, videoId) {
     });
     
     // 페이지 완전 로드 대기
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 3000));
     
-    // 재생 시도 (여러 방법 시도)
+    // ======== 팝업/차단 요소 닫기 ========
+    // 로그인 요청, 동의 팝업 등을 먼저 닫아야 영상이 재생됨
     try {
-      // 1. 플레이어 클릭하여 포커스
-      await page.click('.html5-video-player');
-      await new Promise(r => setTimeout(r, 500));
-      
-      // 2. 키보드 'k' 입력 (YouTube 재생 단축키)
-      await page.keyboard.press('k');
-      await new Promise(r => setTimeout(r, 1000));
-      
-      // 3. JavaScript로 직접 video.play() 호출
       await page.evaluate(() => {
-        const video = document.querySelector('video');
-        if (video && video.paused) {
-          video.play().catch(() => {});
+        // 1. 로그인 팝업 닫기 (No thanks / 괜찮습니다 버튼)
+        const dismissButtons = document.querySelectorAll(
+          'button[aria-label*="No thanks"], button[aria-label*="괜찮습니다"], ' +
+          'button[aria-label*="Dismiss"], button[aria-label*="닫기"], ' +
+          'tp-yt-paper-button#dismiss-button, ' +
+          '.style-scope.yt-button-renderer #button'
+        );
+        for (const btn of dismissButtons) {
+          if (btn.textContent?.includes('No thanks') || 
+              btn.textContent?.includes('괜찮습니다') ||
+              btn.textContent?.includes('나중에') ||
+              btn.textContent?.includes('Not now')) {
+            btn.click();
+            break;
+          }
         }
+        
+        // 2. 모달/오버레이 닫기
+        const modals = document.querySelectorAll(
+          'ytd-popup-container tp-yt-iron-overlay-backdrop, ' +
+          'ytd-enforcement-message-view-model button'
+        );
+        modals.forEach(m => {
+          if (m.click) m.click();
+        });
+        
+        // 3. ESC 키로 모달 닫기 시도
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27 }));
       });
+      
       await new Promise(r => setTimeout(r, 2000));
     } catch (e) {}
     
-    // 디버깅: 페이지 상태 확인
+    
+    // 재생 시도 (여러 방법 시도)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        // 1. 플레이어 클릭하여 포커스
+        await page.click('.html5-video-player');
+        await new Promise(r => setTimeout(r, 500));
+        
+        // 2. 키보드 'k' 입력 (YouTube 재생 단축키)
+        await page.keyboard.press('k');
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // 3. JavaScript로 직접 video.play() 호출
+        await page.evaluate(() => {
+          const video = document.querySelector('video');
+          if (video && video.paused) {
+            video.muted = true; // 음소거로 autoplay 제한 우회
+            video.play().catch(() => {});
+          }
+        });
+        await new Promise(r => setTimeout(r, 1000));
+        
+        // 재생 상태 확인
+        const isPlaying = await page.evaluate(() => {
+          const container = document.querySelector('.ytp-progress-bar-container');
+          return container?.getAttribute('aria-disabled') !== 'true';
+        });
+        
+        if (isPlaying) break;
+      } catch (e) {}
+    }
+    
+    // 디버깅: 페이지 상태 확인 (근본 원인 파악용)
     const pageState = await page.evaluate(() => {
       const player = document.querySelector('.html5-video-player');
       const video = document.querySelector('video');
       const progressBarContainer = document.querySelector('.ytp-progress-bar-container');
+      
+      // 페이지 상태
+      const pageUrl = window.location.href;
+      const pageTitle = document.title;
+      
+      // 에러/차단 메시지 확인
+      const errorMessage = document.querySelector('.ytp-error-content-wrap')?.textContent?.trim() || null;
+      const unavailableMessage = document.querySelector('.style-scope.ytd-watch-flexy #unavailable-message')?.textContent?.trim() || null;
+      
+      // 동의/팝업 확인
+      const consentDialog = document.querySelector('ytd-consent-bump-v2-lightbox, [aria-label*="consent"], [aria-label*="동의"]') !== null;
+      const signInPrompt = document.querySelector('[aria-label*="Sign in"], [aria-label*="로그인"]') !== null;
+      
+      // 재생 상태
+      const isPlayable = document.querySelector('.ytp-large-play-button') !== null;
+      
       return {
         hasPlayer: !!player,
         hasVideo: !!video,
-        playerClass: player?.className || 'none',
-        // 플레이어 클래스에서 직접 ad-showing 확인
         isAdShowing: player?.classList.contains('ad-showing') || false,
-        hasProgressBar: document.querySelector('.ytp-progress-bar') !== null,
-        progressBarDisabled: progressBarContainer?.getAttribute('aria-disabled') === 'true'
+        progressBarDisabled: progressBarContainer?.getAttribute('aria-disabled') === 'true',
+        videoPaused: video?.paused ?? true,
+        videoCurrentTime: video?.currentTime || 0,
+        videoReadyState: video?.readyState || 0,
+        // 추가 디버깅 정보
+        pageUrl: pageUrl.substring(0, 60),
+        pageTitle: pageTitle.substring(0, 50),
+        errorMessage,
+        unavailableMessage,
+        consentDialog,
+        signInPrompt,
+        isPlayable
       };
     });
-    console.log(`  🔍 페이지 상태: player=${pageState.hasPlayer}, video=${pageState.hasVideo}, ad=${pageState.isAdShowing}, progressBar=${pageState.hasProgressBar}, disabled=${pageState.progressBarDisabled}`);
+    
+    console.log(`  🔍 페이지: ${pageState.pageTitle}`);
+    console.log(`  🔍 상태: player=${pageState.hasPlayer}, video=${pageState.hasVideo}, ad=${pageState.isAdShowing}, disabled=${pageState.progressBarDisabled}`);
+    console.log(`  📹 비디오: paused=${pageState.videoPaused}, time=${pageState.videoCurrentTime}, readyState=${pageState.videoReadyState}`);
+    
+    if (pageState.errorMessage) {
+      console.log(`  ❌ 에러: ${pageState.errorMessage}`);
+      return null;
+    }
+    if (pageState.unavailableMessage) {
+      console.log(`  ❌ 사용 불가: ${pageState.unavailableMessage}`);
+      return null;
+    }
+    if (pageState.consentDialog) {
+      console.log(`  ⚠️ 동의 팝업 감지 - 처리 시도`);
+    }
+    if (pageState.signInPrompt) {
+      console.log(`  ⚠️ 로그인 요청 감지`);
+    }
+
     
     // 플레이어가 없으면 종료
     if (!pageState.hasPlayer) {
@@ -243,7 +335,7 @@ export async function collectHeatmap(browser, videoId) {
     }
     
     if (!progressBarEnabled) {
-      console.log(`  ⚠️ 프로그레스 바가 활성화되지 않음 (광고가 계속 재생 중일 수 있음)`);
+      console.log(`  ⚠️ 프로그레스 바가 활성화되지 않음 - 영상이 재생되지 않음`);
       return null;
     }
     
