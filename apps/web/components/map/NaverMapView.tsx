@@ -601,20 +601,48 @@ const NaverMapView = memo(({
 
         const targetOffsetX = effectiveOffset / 2;
 
-        // [모바일/태블릿] Y축 오프셋 계산 (하단 네비게이션 대응)
-        // 하단 네비게이션이 지도 영역을 가리므로, 마커가 "보이는 영역"의 중앙에 위치하도록
-        // 지도 중심을 위로 이동시켜야 합니다. (양수 = 위로 이동)
+        // [모바일/태블릿] Y축 오프셋 계산 (하단 네비게이션 + 브라우저 UI 대응)
+        // 브라우저 UI(주소창, 삼성 브라우저 하단 네비게이션)를 제외한 실제 보이는 영역 고려
         let targetOffsetY = 0;
         if (isMobileOrTablet) {
-            // CSS 변수에서 하단 네비게이션 높이 읽기
-            const navHeight = parseFloat(
-                getComputedStyle(document.documentElement)
-                    .getPropertyValue('--mobile-bottom-nav-height')
-            ) || 60; // 기본값 60px
+            // visualViewport를 사용하여 브라우저 UI를 제외한 실제 뷰포트 높이 확인
+            const visualViewport = window.visualViewport;
+            const windowHeight = window.innerHeight;
 
-            // 하단 네비게이션 높이의 절반만큼 위로 이동
-            // 음수로 설정하여 지도 중심이 위로 이동 (화면 하단의 네비게이션을 피함)
-            targetOffsetY = -navHeight / 2;
+            if (visualViewport) {
+                // 브라우저 UI(주소창, 하단 바)에 의해 가려진 영역 계산
+                const viewportHeight = visualViewport.height;
+                const browserUIHeight = windowHeight - viewportHeight;
+
+                // CSS 변수에서 Header와 앱 하단 네비게이션 높이 읽기
+                const headerHeight = parseFloat(
+                    getComputedStyle(document.documentElement)
+                        .getPropertyValue('--header-height')
+                ) || 56; // 기본값 56px
+
+                const navHeight = parseFloat(
+                    getComputedStyle(document.documentElement)
+                        .getPropertyValue('--mobile-bottom-nav-height')
+                ) || 60; // 기본값 60px
+
+                // Y축 오프셋 = (Header 높이 - 앱 하단 네비게이션 높이 - 브라우저 UI 높이) / 2
+                // 음수면 위로, 양수면 아래로 이동
+                targetOffsetY = (headerHeight - navHeight - browserUIHeight) / 2;
+            } else {
+                // visualViewport를 지원하지 않는 브라우저의 경우 기본 로직 사용
+                const headerHeight = parseFloat(
+                    getComputedStyle(document.documentElement)
+                        .getPropertyValue('--header-height')
+                ) || 56;
+
+                const navHeight = parseFloat(
+                    getComputedStyle(document.documentElement)
+                        .getPropertyValue('--mobile-bottom-nav-height')
+                ) || 60;
+
+                // Header와 하단 네비게이션 높이 차이의 절반만큼 조정
+                targetOffsetY = (headerHeight - navHeight) / 2;
+            }
         }
 
         // **핵심 로직 변경**
@@ -869,14 +897,40 @@ const NaverMapView = memo(({
 
             const targetOffsetX = rightPanelWidth / 2;
 
-            // [모바일/태블릿] Y축 오프셋 계산 (ResizeObserver에서도 동일하게 적용)
+            // [모바일/태블릿] Y축 오프셋 계산 (ResizeObserver에서도 visualViewport 활용)
             let targetOffsetY = 0;
             if (isMobileOrTablet) {
-                const navHeight = parseFloat(
-                    getComputedStyle(document.documentElement)
-                        .getPropertyValue('--mobile-bottom-nav-height')
-                ) || 60;
-                targetOffsetY = -navHeight / 2;
+                const visualViewport = window.visualViewport;
+                const windowHeight = window.innerHeight;
+
+                if (visualViewport) {
+                    const viewportHeight = visualViewport.height;
+                    const browserUIHeight = windowHeight - viewportHeight;
+
+                    const headerHeight = parseFloat(
+                        getComputedStyle(document.documentElement)
+                            .getPropertyValue('--header-height')
+                    ) || 56;
+
+                    const navHeight = parseFloat(
+                        getComputedStyle(document.documentElement)
+                            .getPropertyValue('--mobile-bottom-nav-height')
+                    ) || 60;
+
+                    targetOffsetY = (headerHeight - navHeight - browserUIHeight) / 2;
+                } else {
+                    const headerHeight = parseFloat(
+                        getComputedStyle(document.documentElement)
+                            .getPropertyValue('--header-height')
+                    ) || 56;
+
+                    const navHeight = parseFloat(
+                        getComputedStyle(document.documentElement)
+                            .getPropertyValue('--mobile-bottom-nav-height')
+                    ) || 60;
+
+                    targetOffsetY = (headerHeight - navHeight) / 2;
+                }
             }
 
             // [Helper 사용] 현재 줌 레벨 유지
@@ -924,6 +978,44 @@ const NaverMapView = memo(({
             clearTimeout(resizeTimer);
         };
     }, []);
+
+    // [모바일/태블릿] visualViewport 변화 감지 (브라우저 UI 숨김/표시)
+    // 삼성 브라우저, 크롬, 사파리 등의 주소창/하단 네비게이션 동적 변화 실시간 대응
+    useEffect(() => {
+        if (!mapInstanceRef.current || !isMobileOrTablet || !isMapInitialized) return;
+
+        const visualViewport = window.visualViewport;
+        if (!visualViewport) return;
+
+        const map = mapInstanceRef.current;
+        const { naver } = window;
+        let updateTimer: NodeJS.Timeout;
+
+        const handleViewportChange = () => {
+            // Debounce to prevent excessive updates
+            clearTimeout(updateTimer);
+            updateTimer = setTimeout(() => {
+                // 사용자가 직접 지도를 움직인 경우 자동 조정 안 함
+                if (hasUserMovedMapRef.current) return;
+
+                // Trigger map resize
+                naver.maps.Event.trigger(map, 'resize');
+            }, 100);
+        };
+
+        // visualViewport resize: 브라우저 UI(주소창, 하단 네비게이션) 변화
+        // visualViewport scroll: iOS Safari의 경우 스크롤 시 주소창 숨김/표시
+        visualViewport.addEventListener('resize', handleViewportChange);
+        visualViewport.addEventListener('scroll', handleViewportChange);
+
+        return () => {
+            clearTimeout(updateTimer);
+            if (visualViewport) {
+                visualViewport.removeEventListener('resize', handleViewportChange);
+                visualViewport.removeEventListener('scroll', handleViewportChange);
+            }
+        };
+    }, [isMobileOrTablet, isMapInitialized]);
 
     // useRestaurants 옵션 메모이제이션
     const restaurantQueryOptions = useMemo(() => ({
