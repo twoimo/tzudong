@@ -59,8 +59,8 @@ export async function collectHeatmap(browser, videoId) {
       domain: '.youtube.com'
     });
     
-    // YouTube 페이지 접속
-    const url = `https://www.youtube.com/watch?v=${videoId}`;
+    // YouTube 페이지 접속 (autoplay=1 추가)
+    const url = `https://www.youtube.com/watch?v=${videoId}&autoplay=1`;
     console.log(`📺 수집 시작: ${videoId}`);
     
     await page.goto(url, { 
@@ -70,6 +70,12 @@ export async function collectHeatmap(browser, videoId) {
     
     // 페이지 완전 로드 대기
     await new Promise(r => setTimeout(r, 5000));
+    
+    // 키보드로 재생 시도 (headless에서 더 잘 작동)
+    try {
+      await page.keyboard.press('k'); // 'k'는 YouTube 재생/일시정지 단축키
+      await new Promise(r => setTimeout(r, 2000));
+    } catch (e) {}
     
     // 디버깅: 페이지 상태 확인
     const pageState = await page.evaluate(() => {
@@ -433,7 +439,7 @@ export async function collectHeatmap(browser, videoId) {
     
     return {
       videoId,
-      collectedAt: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
+      collectedAt: new Date().toISOString().replace('Z', '+09:00'),
       meta: heatmapData.meta,
       stats: heatmapData.stats,
       videoDurationMs: heatmapData.videoDurationMs,
