@@ -69,7 +69,45 @@ export async function collectHeatmap(browser, videoId) {
     });
     
     // 페이지 완전 로드 대기
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 3000));
+    
+    // ======== 팝업/차단 요소 닫기 ========
+    // 로그인 요청, 동의 팝업 등을 먼저 닫아야 영상이 재생됨
+    try {
+      await page.evaluate(() => {
+        // 1. 로그인 팝업 닫기 (No thanks / 괜찮습니다 버튼)
+        const dismissButtons = document.querySelectorAll(
+          'button[aria-label*="No thanks"], button[aria-label*="괜찮습니다"], ' +
+          'button[aria-label*="Dismiss"], button[aria-label*="닫기"], ' +
+          'tp-yt-paper-button#dismiss-button, ' +
+          '.style-scope.yt-button-renderer #button'
+        );
+        for (const btn of dismissButtons) {
+          if (btn.textContent?.includes('No thanks') || 
+              btn.textContent?.includes('괜찮습니다') ||
+              btn.textContent?.includes('나중에') ||
+              btn.textContent?.includes('Not now')) {
+            btn.click();
+            break;
+          }
+        }
+        
+        // 2. 모달/오버레이 닫기
+        const modals = document.querySelectorAll(
+          'ytd-popup-container tp-yt-iron-overlay-backdrop, ' +
+          'ytd-enforcement-message-view-model button'
+        );
+        modals.forEach(m => {
+          if (m.click) m.click();
+        });
+        
+        // 3. ESC 키로 모달 닫기 시도
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27 }));
+      });
+      
+      await new Promise(r => setTimeout(r, 2000));
+    } catch (e) {}
+    
     
     // 재생 시도 (여러 방법 시도)
     for (let attempt = 0; attempt < 3; attempt++) {
