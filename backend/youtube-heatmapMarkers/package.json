@@ -1,0 +1,16 @@
+{
+  "name": "youtube-heatmap-markers",
+  "version": "1.0.0",
+  "description": "YouTube HeatmapMarkers Collection (Fetch 기반)",
+  "type": "module",
+  "scripts": {
+    "collect": "node scripts/collect.js"
+  },
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
