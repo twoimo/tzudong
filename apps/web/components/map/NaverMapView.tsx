@@ -300,15 +300,7 @@ const NaverMapView = memo(({
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
 
-    // [커스텀 토스트] 지도 상단 중앙 알림 상태
-    const [mapToast, setMapToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null>(null);
-
-    // [변경] visualViewport 상태 추가 (브라우저 동적 UI 감지)
-    const [visualViewportHeight, setVisualViewportHeight] = useState<number>(
-        typeof window !== 'undefined' && window.visualViewport
-            ? window.visualViewport.height
-            : (typeof window !== 'undefined' ? window.innerHeight : 0)
-    ); // 지역 변경 시 사용자 지도 이동 플래그 리셋 (지역 재선택 시에도 지도 이동 가능하도록)
+    // 지역 변경 시 사용자 지도 이동 플래그 리셋 (지역 재선택 시에도 지도 이동 가능하도록)
     useEffect(() => {
         const handleResetUserMapMovement = () => {
             hasUserMovedMapRef.current = false;
@@ -317,30 +309,6 @@ const NaverMapView = memo(({
         window.addEventListener('resetUserMapMovement', handleResetUserMapMovement);
         return () => {
             window.removeEventListener('resetUserMapMovement', handleResetUserMapMovement);
-        };
-    }, []);
-
-    // [브라우저 호환성] visualViewport resize 이벤트 리스너 (삼성 브라우저 등 동적 UI 대응)
-    useEffect(() => {
-        if (typeof window === 'undefined' || !window.visualViewport) return;
-
-        const handleVisualViewportResize = () => {
-            if (window.visualViewport) {
-                const newHeight = window.visualViewport.height;
-                setVisualViewportHeight(newHeight);
-                // 디버깅 로그
-                console.log('[NaverMap] visualViewport height changed:', newHeight);
-            }
-        };
-
-        window.visualViewport.addEventListener('resize', handleVisualViewportResize);
-        window.visualViewport.addEventListener('scroll', handleVisualViewportResize);
-
-        return () => {
-            if (window.visualViewport) {
-                window.visualViewport.removeEventListener('resize', handleVisualViewportResize);
-                window.visualViewport.removeEventListener('scroll', handleVisualViewportResize);
-            }
         };
     }, []);
 
@@ -427,6 +395,9 @@ const NaverMapView = memo(({
     // [OPTIMIZATION] 외부에 정의된 함수 참조 사용 - useMemo 오버헤드 제거
     const createMarkerContent = createMarkerContentFn;
 
+
+    // [커스텀 토스트] 지도 상단 중앙 알림 상태
+    const [mapToast, setMapToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean } | null>(null);
 
     // 커스텀 토스트 표시 함수
     const showMapToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
@@ -802,8 +773,7 @@ const NaverMapView = memo(({
         internalPanelOpen, // 패널 열림/닫힘 시 중심 재조정
         isGridMode,
         onMarkerClick,
-        isSidebarOpen, // 사이드바 토글 시에도 중심 재조정 로직 실행
-        visualViewportHeight // 브라우저 동적 UI 변화 시 (주소창/네비게이션 숨김/표시) 중심 재조정
+        isSidebarOpen // 사이드바 토글 시에도 중심 재조정 로직 실행
     ]);
 
     // 리사이즈 시 참조할 최신 상태 Ref 업데이트
@@ -1389,15 +1359,15 @@ const NaverMapView = memo(({
     // 그리드 모드에서는 기존 레이아웃 유지
     if (isGridMode) {
         return (
-            <div className="relative h-full w-full overflow-hidden">
+            <div className="relative h-full">
+                {/* 지도 컨테이너 - 모바일 터치 성능 최적화 */}
                 <div
                     ref={mapRef}
-                    className="map-container w-full h-full"
+                    className="w-full h-full touch-pan-y touch-pan-x transform-gpu"
                     style={{
-                        background: '#f5f5f5',
-                        WebkitOverflowScrolling: 'touch' as any,
-                        // 모바일/태블릿에서 하단 패딩 추가 (네이버 지도 UI 보호)
-                        paddingBottom: isMobileOrTablet ? 'var(--mobile-bottom-nav-height)' : undefined
+                        willChange: 'transform',
+                        touchAction: 'pan-x pan-y',
+                        WebkitOverflowScrolling: 'touch' as any
                     }}
                 />
 
@@ -1458,9 +1428,7 @@ const NaverMapView = memo(({
                     style={{
                         willChange: 'transform',
                         touchAction: 'pan-x pan-y',
-                        WebkitOverflowScrolling: 'touch' as any,
-                        // 모바일/태블릿에서 하단 패딩 추가 (네이버 지도 UI 보호)
-                        paddingBottom: isMobileOrTablet ? 'var(--mobile-bottom-nav-height)' : undefined
+                        WebkitOverflowScrolling: 'touch' as any
                     }}
                 />
 

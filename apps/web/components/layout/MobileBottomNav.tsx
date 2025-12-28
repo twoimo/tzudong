@@ -54,8 +54,6 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
             if (navRef.current) {
                 const height = navRef.current.offsetHeight;
                 document.documentElement.style.setProperty('--mobile-bottom-nav-height', `${height}px`);
-                // 디버깅 로그
-                console.log('[MobileBottomNav] Height updated:', height);
             }
         };
 
