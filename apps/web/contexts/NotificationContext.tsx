@@ -331,7 +331,7 @@ export const createReviewApprovedNotification = async (
     restaurantName: string,
     customData?: Record<string, unknown>
 ) => {
-    const title = '리뷰가 승인되었습니다 ✅';
+    const title = '리뷰 승인 완료';
     const message = `"${restaurantName}" 리뷰가 관리자에 의해 승인되었습니다!`;
 
     try {
