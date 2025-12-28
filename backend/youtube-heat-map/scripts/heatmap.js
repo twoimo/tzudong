@@ -52,6 +52,13 @@ export async function collectHeatmap(browser, videoId) {
     // Viewport 설정
     await page.setViewport({ width: 1280, height: 720 });
     
+    // 한국어 로캘 설정 쿠키
+    await page.setCookie({
+      name: 'PREF',
+      value: 'hl=ko&gl=KR',
+      domain: '.youtube.com'
+    });
+    
     // YouTube 페이지 접속
     const url = `https://www.youtube.com/watch?v=${videoId}`;
     console.log(`📺 수집 시작: ${videoId}`);
@@ -97,6 +104,23 @@ export async function collectHeatmap(browser, videoId) {
       }
     } catch (e) {}
     
+    // ======== 재생 버튼 클릭 (버튼 라벨로 판단) ========
+    const playButtonLabel = await page.evaluate(() => {
+      const btn = document.querySelector('.ytp-play-button');
+      return btn?.getAttribute('aria-label') || '';
+    });
+    
+    // 버튼 라벨이 "재생" 또는 "Play"를 포함하면 일시정지 상태 → 클릭
+    if (playButtonLabel.includes('재생') || playButtonLabel.toLowerCase().includes('play')) {
+      console.log(`  ▶️ 영상이 일시정지 상태 - 재생 버튼 클릭`);
+      try {
+        await page.click('.ytp-play-button');
+        await new Promise(r => setTimeout(r, 2000));
+      } catch (e) {
+        console.log(`  ⚠️ 재생 버튼 클릭 실패`);
+      }
+    }
+    
     // ======== 광고 처리 ========
     // 광고가 재생 중인지 플레이어 클래스에서 직접 확인
     let isAdPlaying = await page.evaluate(() => {
@@ -122,38 +146,46 @@ export async function collectHeatmap(browser, videoId) {
           break;
         }
         
-        // 건너뛰기 버튼 확인 및 클릭
-        const skipClicked = await page.evaluate(() => {
-          // 여러 가지 건너뛰기 버튼 셀렉터 시도
+        // 건너뛰기 버튼 찾기
+        const skipInfo = await page.evaluate(() => {
           const selectors = [
             '.ytp-skip-ad-button',
             '.ytp-ad-skip-button', 
             'button[id^="skip-button"]',
             '.ytp-ad-skip-button-modern',
-            'button.ytp-skip-ad-button'
+            '.ytp-skip-ad'
           ];
           
           for (const selector of selectors) {
             const btn = document.querySelector(selector);
             if (btn) {
-              // 버튼이 보이고 클릭 가능한지 확인
               const style = window.getComputedStyle(btn);
-              const isVisible = style.display !== 'none' && style.visibility !== 'hidden';
-              const isClickable = parseFloat(style.opacity) >= 1;
-              
-              if (isVisible && isClickable) {
-                btn.click();
-                return true;
-              }
+              return {
+                found: true,
+                selector,
+                visible: style.display !== 'none' && parseFloat(style.opacity) >= 0.5
+              };
             }
           }
-          return false;
+          return { found: false };
         });
         
-        if (skipClicked) {
-          console.log(`  ✅ 광고 건너뛰기 클릭`);
-          await new Promise(r => setTimeout(r, 2000));
-          break;
+        if (skipInfo.found && skipInfo.visible) {
+          try {
+            await page.click(skipInfo.selector);
+            console.log(`  ✅ 광고 건너뛰기 클릭`);
+            await new Promise(r => setTimeout(r, 3000));
+            
+            // 광고가 실제로 종료되었는지 확인
+            const stillAd = await page.evaluate(() => {
+              const player = document.querySelector('.html5-video-player');
+              return player?.classList.contains('ad-showing') || false;
+            });
+            
+            if (!stillAd) {
+              break;
+            }
+          } catch (e) {}
         }
         
         // 1초 대기 후 다시 확인
