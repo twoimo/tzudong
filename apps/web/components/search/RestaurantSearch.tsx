@@ -48,21 +48,28 @@ const RestaurantSearch = ({
     "전북특별자치도", "전라남도", "경상북도", "경상남도", "제주특별자치도"
   ];
 
-  // 인기 검색어 쿼리 (검색 횟수 기준 상위 5개)
+  // 인기 검색어 쿼리 (검색 횟수 기준 상위 5개) - [OPTIMIZATION] 병합 로직 적용
   const { data: popularRestaurants = [] } = useQuery({
     queryKey: ["popular-searches"],
     queryFn: async () => {
       try {
         const { data, error } = await supabase
           .from('restaurants')
-          .select('id, name, road_address, jibun_address, english_address, status, search_count')
+          .select('id, name, road_address, jibun_address, english_address, status, search_count, categories, youtube_meta')
           .eq('status', 'approved')
           .gt('search_count', 0)  // search_count가 0보다 큰 것만
           .order('search_count', { ascending: false })
-          .limit(5);
+          .limit(20); // 병합 전에 더 많이 가져오기
 
         if (error) throw error;
-        return (data || []) as Restaurant[];
+
+        // 병합 로직 적용
+        const merged = mergeRestaurants((data || []) as Restaurant[]);
+
+        // 병합 후 search_count 기준으로 정렬하여 상위 5개 선택
+        return merged
+          .sort((a, b) => (b.search_count || 0) - (a.search_count || 0))
+          .slice(0, 5);
       } catch (error) {
         console.error('인기 검색어 조회 실패:', error);
         return [];
