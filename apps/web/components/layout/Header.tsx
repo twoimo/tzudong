@@ -471,7 +471,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-stone-800/10" />
-              <ScrollArea className="h-96">
+              <ScrollArea className="h-64">
                 {notifications.length === 0 ? (
                   <div className="p-4 text-center text-sm text-stone-500">
                     새로운 알림이 없습니다

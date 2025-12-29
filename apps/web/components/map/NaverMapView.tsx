@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useEffect, useRef, useState, memo, useMemo, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { useNaverMaps } from "@/hooks/use-naver-maps";
 import { useRestaurants } from "@/hooks/use-restaurants";
 import { FilterState } from "@/components/filters/FilterPanel";
@@ -395,6 +396,26 @@ const NaverMapView = memo(({
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
+
+    // [Fix] 라우트 변경 감지 - 다른 페이지 갔다가 돌아왔을 때 지도 재초기화
+    const pathname = usePathname();
+    const prevPathnameRef = useRef(pathname);
+
+    useEffect(() => {
+        // 라우트가 변경되었고, 현재 라우트가 홈('/')이면 지도 리셋
+        if (prevPathnameRef.current !== pathname && pathname === '/') {
+            console.log('[NaverMapView] 라우트 변경 감지 - 지도 재초기화:', prevPathnameRef.current, '->', pathname);
+
+            // 지도 인스턴스 및 마커 정리
+            if (mapInstanceRef.current) {
+                markerPool.clear();
+                clusterAnimationManager.clear();
+                mapInstanceRef.current = null;
+                setIsMapInitialized(false);
+            }
+        }
+        prevPathnameRef.current = pathname;
+    }, [pathname]);
 
     // 지역 변경 시 사용자 지도 이동 플래그 리셋 (지역 재선택 시에도 지도 이동 가능하도록)
     useEffect(() => {
@@ -1540,13 +1561,26 @@ const NaverMapView = memo(({
             if (!mapInstanceRef.current) return false;
 
             try {
-                // 지도의 컨테이너 엘리먼트 확인
-                const mapContainer = mapInstanceRef.current.getElement?.();
-                if (!mapContainer) return false;
+                // 1. 지도 API 메서드가 정상 동작하는지 확인
+                const center = mapInstanceRef.current.getCenter?.();
+                if (!center) return false;
 
-                // 컨테이너가 현재 DOM에 연결되어 있고, mapRef와 일치하는지 확인
-                return document.body.contains(mapContainer) &&
-                    (mapContainer === mapRef.current || mapRef.current?.contains(mapContainer));
+                // 2. 지도 컨테이너가 현재 mapRef와 연결되어 있는지 확인
+                // 네이버 지도는 컨테이너 내부에 naver-map-* 클래스의 요소들을 생성함
+                const mapElement = mapRef.current;
+                if (!mapElement) return false;
+
+                // 지도 컨테이너 내부에 실제 지도가 렌더링되었는지 확인
+                const hasMapContent = mapElement.querySelector('[class*="naver"]') !== null ||
+                    mapElement.children.length > 0;
+
+                if (!hasMapContent) return false;
+
+                // 3. 컨테이너의 크기가 유효한지 확인
+                const rect = mapElement.getBoundingClientRect();
+                if (rect.width === 0 || rect.height === 0) return false;
+
+                return true;
             } catch {
                 return false;
             }
