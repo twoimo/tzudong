@@ -165,6 +165,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     if (currentAnnouncement) {
       if (isMobileOrTablet) {
         // 모바일/태블릿: 바텀시트로 상세 뷰 표시
+        // 뒤로가기를 위해 전체 공지사항 리스트도 로드
+        const announcements = getActiveAnnouncements();
+        setAllAnnouncements(announcements);
+        setAnnouncementPage(1);
         setSelectedAnnouncement(currentAnnouncement);
         setAnnouncementViewMode('detail');
         setIsAnnouncementSheetOpen(true);
