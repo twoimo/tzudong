@@ -14,7 +14,6 @@ import {
 } from '@/hooks/use-ad-banners';
 import { AdBanner, AdBannerFormData, DisplayTarget } from '@/types/ad-banner';
 import imageCompression from 'browser-image-compression';
-import { compressVideo } from '@/lib/video-compression';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -280,11 +279,10 @@ function BannerManagementPage() {
         }
     };
 
-    // 영상 선택 처리
+    // 영상 선택 처리 (압축 없이 원본 업로드)
     const handleVideoSelect = async (file: File) => {
         try {
             setIsUploading(true);
-            setCompressionProgress(0);
 
             // 기존 이미지 제거
             if (imagePreview) {
@@ -293,16 +291,12 @@ function BannerManagementPage() {
             setImageFile(null);
             setImagePreview(null);
 
-            // 영상 압축
-            const compressedFile = await compressVideo(file, (progress) => {
-                setCompressionProgress(progress);
-            });
-
-            setVideoFile(compressedFile);
-            setVideoPreview(URL.createObjectURL(compressedFile));
+            // 원본 파일 그대로 사용 (압축 없음)
+            setVideoFile(file);
+            setVideoPreview(URL.createObjectURL(file));
             setFormData(prev => ({ ...prev, media_type: 'video', image_url: null, video_url: null }));
         } catch (error) {
-            console.error('영상 압축 실패:', error);
+            console.error('영상 처리 실패:', error);
             toast({
                 title: '영상 처리 실패',
                 description: '영상을 처리하는 중 오류가 발생했습니다.',
@@ -310,7 +304,6 @@ function BannerManagementPage() {
             });
         } finally {
             setIsUploading(false);
-            setCompressionProgress(0);
         }
     };
 
