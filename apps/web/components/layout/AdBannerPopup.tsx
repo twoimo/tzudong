@@ -156,7 +156,26 @@ const AdBannerPopupComponent = () => {
                     {banners.map((banner, index) => {
                         const isActive = index === currentSlide;
 
-                        if (banner.image_url) {
+                        // 영상 배너
+                        if (banner.media_type === 'video' && banner.video_url) {
+                            return (
+                                <video
+                                    key={banner.id}
+                                    src={banner.video_url}
+                                    className={cn(
+                                        "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+                                        isActive ? "opacity-100" : "opacity-0"
+                                    )}
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                />
+                            );
+                        }
+
+                        // 이미지 배너
+                        if (banner.media_type === 'image' && banner.image_url) {
                             return (
                                 <img
                                     key={banner.id}

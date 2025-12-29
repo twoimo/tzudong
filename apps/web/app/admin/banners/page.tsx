@@ -14,6 +14,7 @@ import {
 } from '@/hooks/use-ad-banners';
 import { AdBanner, AdBannerFormData, DisplayTarget } from '@/types/ad-banner';
 import imageCompression from 'browser-image-compression';
+import { compressVideo } from '@/lib/video-compression';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -105,16 +106,21 @@ function BannerManagementPage() {
         title: '',
         description: '',
         image_url: null,
+        video_url: null,
+        media_type: 'none',
         link_url: '',
         is_active: true,
         priority: 0,
         display_target: ['sidebar', 'mobile_popup'],
     });
 
-    // 이미지 업로드 상태
+    // 미디어 업로드 상태
     const [imageFile, setImageFile] = useState<File | null>(null);
+    const [videoFile, setVideoFile] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [videoPreview, setVideoPreview] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [compressionProgress, setCompressionProgress] = useState(0);
     const [isDragging, setIsDragging] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -147,13 +153,18 @@ function BannerManagementPage() {
             title: '',
             description: '',
             image_url: null,
+            video_url: null,
+            media_type: 'none',
             link_url: '',
             is_active: true,
             priority: 0,
             display_target: ['sidebar', 'mobile_popup'],
         });
         setImageFile(null);
+        setVideoFile(null);
         setImagePreview(null);
+        setVideoPreview(null);
+        setCompressionProgress(0);
         setEditingBanner(null);
     };
 
@@ -170,6 +181,8 @@ function BannerManagementPage() {
             title: banner.title,
             description: banner.description || '',
             image_url: banner.image_url,
+            video_url: banner.video_url,
+            media_type: banner.media_type,
             link_url: banner.link_url || '',
             is_active: banner.is_active,
             priority: banner.priority,
@@ -177,6 +190,9 @@ function BannerManagementPage() {
         });
         if (banner.image_url) {
             setImagePreview(banner.image_url);
+        }
+        if (banner.video_url) {
+            setVideoPreview(banner.video_url);
         }
         setIsDialogOpen(true);
     };
@@ -211,10 +227,23 @@ function BannerManagementPage() {
         setIsDragging(false);
 
         const files = Array.from(e.dataTransfer.files);
-        const imageFiles = files.filter(file => file.type.startsWith('image/'));
+        const mediaFile = files.find(file =>
+            file.type.startsWith('image/') || file.type.startsWith('video/')
+        );
 
-        if (imageFiles.length > 0) {
-            await handleImageSelect(imageFiles[0]);
+        if (mediaFile) {
+            await handleMediaSelect(mediaFile);
+        }
+    };
+
+    // 미디어 선택 처리 (이미지 또는 영상)
+    const handleMediaSelect = async (file: File) => {
+        const isVideo = file.type.startsWith('video/');
+
+        if (isVideo) {
+            await handleVideoSelect(file);
+        } else {
+            await handleImageSelect(file);
         }
     };
 
@@ -222,6 +251,14 @@ function BannerManagementPage() {
     const handleImageSelect = async (file: File) => {
         try {
             setIsUploading(true);
+            setCompressionProgress(0);
+
+            // 기존 영상 제거
+            if (videoPreview) {
+                URL.revokeObjectURL(videoPreview);
+            }
+            setVideoFile(null);
+            setVideoPreview(null);
 
             // 이미지 압축
             const compressedFile = await imageCompression(file, IMAGE_COMPRESSION_OPTIONS);
@@ -229,6 +266,7 @@ function BannerManagementPage() {
 
             setImageFile(webpFile);
             setImagePreview(URL.createObjectURL(webpFile));
+            setFormData(prev => ({ ...prev, media_type: 'image', image_url: null, video_url: null }));
         } catch (error) {
             console.error('이미지 압축 실패:', error);
             toast({
@@ -238,24 +276,64 @@ function BannerManagementPage() {
             });
         } finally {
             setIsUploading(false);
+            setCompressionProgress(0);
         }
     };
 
-    // 이미지 삭제
-    const handleImageRemove = () => {
+    // 영상 선택 처리
+    const handleVideoSelect = async (file: File) => {
+        try {
+            setIsUploading(true);
+            setCompressionProgress(0);
+
+            // 기존 이미지 제거
+            if (imagePreview) {
+                URL.revokeObjectURL(imagePreview);
+            }
+            setImageFile(null);
+            setImagePreview(null);
+
+            // 영상 압축
+            const compressedFile = await compressVideo(file, (progress) => {
+                setCompressionProgress(progress);
+            });
+
+            setVideoFile(compressedFile);
+            setVideoPreview(URL.createObjectURL(compressedFile));
+            setFormData(prev => ({ ...prev, media_type: 'video', image_url: null, video_url: null }));
+        } catch (error) {
+            console.error('영상 압축 실패:', error);
+            toast({
+                title: '영상 처리 실패',
+                description: '영상을 처리하는 중 오류가 발생했습니다.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsUploading(false);
+            setCompressionProgress(0);
+        }
+    };
+
+    // 미디어 삭제
+    const handleMediaRemove = () => {
         if (imagePreview) {
             URL.revokeObjectURL(imagePreview);
         }
+        if (videoPreview) {
+            URL.revokeObjectURL(videoPreview);
+        }
         setImageFile(null);
+        setVideoFile(null);
         setImagePreview(null);
-        setFormData(prev => ({ ...prev, image_url: null }));
+        setVideoPreview(null);
+        setFormData(prev => ({ ...prev, image_url: null, video_url: null, media_type: 'none' }));
     };
 
     // 파일 입력 변경
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            handleImageSelect(file);
+            handleMediaSelect(file);
         }
     };
 
@@ -285,16 +363,26 @@ function BannerManagementPage() {
             setIsUploading(true);
 
             let imageUrl = formData.image_url;
+            let videoUrl = formData.video_url;
 
             // 새 이미지가 있으면 업로드
             if (imageFile) {
                 const uploadResult = await uploadImage.mutateAsync(imageFile);
                 imageUrl = uploadResult.url;
+                videoUrl = null; // 이미지 업로드 시 영상 제거
+            }
+
+            // 새 영상이 있으면 업로드
+            if (videoFile) {
+                const uploadResult = await uploadImage.mutateAsync(videoFile); // 동일한 업로드 훅 사용
+                videoUrl = uploadResult.url;
+                imageUrl = null; // 영상 업로드 시 이미지 제거
             }
 
             const dataToSubmit = {
                 ...formData,
                 image_url: imageUrl,
+                video_url: videoUrl,
                 link_url: formData.link_url?.trim() || null,
             };
 
@@ -633,7 +721,7 @@ function BannerManagementPage() {
                                     className={cn(
                                         "p-6 border-dashed transition-colors cursor-pointer",
                                         isDragging ? "border-primary bg-primary/5" : "border-stone-300 hover:border-primary/50",
-                                        imagePreview && "border-solid border-green-300 bg-green-50/50"
+                                        (imagePreview || videoPreview) && "border-solid border-green-300 bg-green-50/50"
                                     )}
                                     onDragOver={handleDragOver}
                                     onDragEnter={handleDragEnter}
@@ -644,7 +732,35 @@ function BannerManagementPage() {
                                     {isUploading ? (
                                         <div className="flex flex-col items-center gap-2 py-4">
                                             <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
-                                            <p className="text-sm text-stone-500">이미지 처리 중...</p>
+                                            <p className="text-sm text-stone-500">
+                                                {compressionProgress > 0
+                                                    ? `압축 중... ${compressionProgress}%`
+                                                    : '미디어 처리 중...'}
+                                            </p>
+                                        </div>
+                                    ) : videoPreview ? (
+                                        <div className="space-y-3">
+                                            <div className="relative aspect-video w-full max-w-md mx-auto rounded overflow-hidden border">
+                                                <video
+                                                    src={videoPreview}
+                                                    controls
+                                                    className="w-full h-full object-cover"
+                                                />
+                                                <Button
+                                                    variant="destructive"
+                                                    size="icon"
+                                                    className="absolute top-2 right-2 h-8 w-8"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleMediaRemove();
+                                                    }}
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            <p className="text-center text-sm text-stone-500">
+                                                클릭하거나 드래그하여 영상 변경
+                                            </p>
                                         </div>
                                     ) : imagePreview ? (
                                         <div className="space-y-3">
@@ -660,14 +776,14 @@ function BannerManagementPage() {
                                                     className="absolute top-2 right-2 h-8 w-8"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        handleImageRemove();
+                                                        handleMediaRemove();
                                                     }}
                                                 >
                                                     <X className="h-4 w-4" />
                                                 </Button>
                                             </div>
                                             <p className="text-center text-sm text-stone-500">
-                                                클릭하거나 드래그하여 이미지 변경
+                                                클릭하거나 드래그하여 미디어 변경
                                             </p>
                                         </div>
                                     ) : (
@@ -683,10 +799,10 @@ function BannerManagementPage() {
                                             </div>
                                             <div className="text-center">
                                                 <p className="font-medium">
-                                                    {isDragging ? '여기에 이미지를 놓으세요' : '이미지를 업로드해주세요'}
+                                                    {isDragging ? '여기에 파일을 놓으세요' : '이미지 또는 영상을 업로드해주세요'}
                                                 </p>
                                                 <p className="text-sm text-stone-500">
-                                                    드래그하거나 클릭해서 선택 (자동 WebP 변환, 최대 1MB)
+                                                    드래그하거나 클릭해서 선택 (영상은 WebM으로 자동 변환, 최대 10MB)
                                                 </p>
                                             </div>
                                         </div>
@@ -694,7 +810,7 @@ function BannerManagementPage() {
                                     <input
                                         ref={fileInputRef}
                                         type="file"
-                                        accept="image/*"
+                                        accept="image/*,video/*"
                                         onChange={handleFileInputChange}
                                         className="hidden"
                                     />
