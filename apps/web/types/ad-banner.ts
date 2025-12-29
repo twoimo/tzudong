@@ -40,45 +40,5 @@ export interface ImageUploadResponse {
     path: string;
 }
 
-// 기본 더미 데이터 (Supabase 연결 전 폴백용)
-export const FALLBACK_AD_BANNERS: AdBanner[] = [
-    {
-        id: 'fallback-1',
-        title: '광고주 모집',
-        description: '귀하의 맛집을\n천하에 널리 알리옵소서',
-        image_url: null,
-        link_url: null,
-        is_active: true,
-        priority: 100,
-        display_target: ['sidebar', 'mobile_popup'],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        created_by: null,
-    },
-    {
-        id: 'fallback-2',
-        title: '명당 자리',
-        description: '수많은 미식가들이\n오가는 길목이옵니다',
-        image_url: null,
-        link_url: null,
-        is_active: true,
-        priority: 90,
-        display_target: ['sidebar', 'mobile_popup'],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        created_by: null,
-    },
-    {
-        id: 'fallback-3',
-        title: '동반 성장',
-        description: '쯔동여지도와 더불어\n큰 뜻을 펼치시옵소서',
-        image_url: null,
-        link_url: null,
-        is_active: true,
-        priority: 80,
-        display_target: ['sidebar', 'mobile_popup'],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        created_by: null,
-    },
-];
+// 기본 폴백용 (빈 배열 - 더미 데이터 제거됨)
+export const FALLBACK_AD_BANNERS: AdBanner[] = [];
