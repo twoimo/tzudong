@@ -78,6 +78,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   // 북마크 데이터
   const { data: bookmarksData = [] } = useBookmarks();
 
+  // 성능 최적화: 조건부 렌더링 로직 메모이제이션
+  const shouldShowAuthUI = useMemo(() => isHydrated && !isAuthLoading, [isHydrated, isAuthLoading]);
+
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
     if (dismissed) {
@@ -427,7 +430,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
         {/* 알림 */}
         <div className={cn(
-          isHydrated && !isAuthLoading ? "opacity-100" : "opacity-0 pointer-events-none"
+          shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
         )}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -517,7 +520,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         {/* 북마크 - 드롭다운 */}
         {isLoggedIn && (
           <div className={cn(
-            isHydrated && !isAuthLoading ? "opacity-100" : "opacity-0 pointer-events-none"
+            shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
           )}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -602,7 +605,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         {/* 로그인 상태 */}
         {isLoggedIn && (
           <div className={cn(
-            isHydrated && !isAuthLoading ? "opacity-100" : "opacity-0 pointer-events-none"
+            shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
           )}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -665,7 +668,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             className={cn(
               "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
               "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2",
-              isHydrated && !isAuthLoading ? "opacity-100" : "opacity-0 pointer-events-none"
+              shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
           >
             로그인

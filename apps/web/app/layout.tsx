@@ -104,19 +104,13 @@ export default function RootLayout({
                     __html: `
                         (function() {
                             var removed = false;
-                            
-                            // 지도 로딩 완료 시 로딩 화면 제거
-                            function removeLoading() {
+                            function hide() {
                                 if (removed) return;
                                 removed = true;
                                 document.body.classList.add('loading-complete');
                             }
-                            
-                            // 지도 로딩 완료 이벤트 리스닝
-                            window.addEventListener('mapLoadingComplete', removeLoading);
-                            
-                            // 즉시 fallback 타이머 시작 (1초)
-                            setTimeout(removeLoading, 1000);
+                            window.addEventListener('mapLoadingComplete', hide, { once: true });
+                            setTimeout(hide, 1000);
                         })();
                     `
                 }} />

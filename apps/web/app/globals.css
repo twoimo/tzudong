@@ -146,6 +146,7 @@ All colors MUST be HSL.
   }
 
   /* 초기 로딩 화면 - CSS로만 구현하여 hydration 충돌 방지 */
+  /* GPU 가속 및 성능 최적화 적용 */
   body::before {
     content: '';
     position: fixed;
@@ -158,12 +159,18 @@ All colors MUST be HSL.
     pointer-events: none;
     opacity: 1;
     transition: opacity 300ms ease-out;
+    /* GPU 가속 최적화 */
+    will-change: opacity;
+    transform: translateZ(0);
+    /* CSS Containment - 레이아웃 재계산 방지 */
+    contain: layout style paint;
   }
 
   /* 로딩 완료 시 숨김 */
   body.loading-complete::before {
     opacity: 0;
     pointer-events: none;
+    will-change: auto; /* 완료 후 GPU 메모리 해제 */
   }
 
   /* 로딩 화면 내용은 별도 div로 처리 */
@@ -177,11 +184,17 @@ All colors MUST be HSL.
     pointer-events: none;
     opacity: 1;
     transition: opacity 300ms ease-out;
+    /* GPU 가속 최적화 */
+    will-change: opacity;
+    transform: translateZ(0);
+    /* CSS Containment */
+    contain: layout style paint;
   }
 
   body.loading-complete #initial-loading-content {
     opacity: 0;
     display: none;
+    will-change: auto;
   }
 }
 
