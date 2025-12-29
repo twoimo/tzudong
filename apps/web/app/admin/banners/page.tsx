@@ -126,13 +126,14 @@ function BannerManagementPage() {
     const [previewMode, setPreviewMode] = useState<'sidebar' | 'mobile' | null>(null);
 
     // 권한 체크
-    if (authLoading) {
-        return <GlobalLoader />;
-    }
+    useEffect(() => {
+        if (!authLoading && (!user || !isAdmin)) {
+            router.push('/');
+        }
+    }, [authLoading, user, isAdmin, router]);
 
-    if (!user || !isAdmin) {
-        router.push('/');
-        return null;
+    if (authLoading || !user || !isAdmin) {
+        return <GlobalLoader />;
     }
 
     // 폼 초기화
