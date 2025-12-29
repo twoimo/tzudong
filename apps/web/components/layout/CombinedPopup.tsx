@@ -62,10 +62,12 @@ SlideIndicator.displayName = 'SlideIndicator';
 // 배너 슬라이드 컴포넌트 (메모이제이션)
 const BannerSlide = memo(({
     banner,
-    onClick
+    onClick,
+    onVideoEnded
 }: {
     banner: AdBanner;
     onClick: () => void;
+    onVideoEnded?: () => void;
 }) => (
     <div className="absolute inset-0" onClick={onClick}>
         {/* 영상 배너 (우선순위 1) */}
@@ -75,8 +77,8 @@ const BannerSlide = memo(({
                 className="w-full h-full object-cover"
                 autoPlay
                 muted
-                loop
                 playsInline
+                onEnded={onVideoEnded}
             />
         ) : banner.image_url ? (
             /* 이미지 배너 (우선순위 2) */
@@ -159,9 +161,13 @@ const CombinedPopupComponent = () => {
         }
     }, [isMobileOrTablet, banners.length, shouldShowPopup]);
 
-    // 자동 슬라이드
+    // 자동 슬라이드 (영상 배너가 아닐 때만)
     useEffect(() => {
         if (!isAutoPlaying || !isVisible || banners.length <= 1) return;
+
+        // 현재 배너가 영상이면 자동 슬라이드 건너뛰기 (영상 종료 시 onVideoEnded로 처리)
+        const currentBanner = banners[currentSlide];
+        if (currentBanner?.video_url) return;
 
         timeoutRef.current = setTimeout(() => {
             setCurrentSlide((prev) => (prev + 1) % banners.length);
@@ -170,7 +176,7 @@ const CombinedPopupComponent = () => {
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [isAutoPlaying, isVisible, currentSlide, banners.length]);
+    }, [isAutoPlaying, isVisible, currentSlide, banners]);
 
     // 팝업 닫기
     const handleClose = useCallback(() => {
@@ -218,6 +224,11 @@ const CombinedPopupComponent = () => {
                     <BannerSlide
                         banner={currentBanner}
                         onClick={() => handleBannerClick(currentBanner)}
+                        onVideoEnded={() => {
+                            if (banners.length > 1) {
+                                setCurrentSlide((prev) => (prev + 1) % banners.length);
+                            }
+                        }}
                     />
                 </div>
 
