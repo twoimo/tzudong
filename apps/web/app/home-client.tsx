@@ -92,6 +92,16 @@ export default function HomeClient() {
     const searchParams = useSearchParams();
     const router = useRouter();
 
+    // 초기 로딩 화면 제거 (지도 로딩 완료 시그널)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            window.dispatchEvent(new Event('mapLoadingComplete'));
+        }, 200); // 최적화: 부드러운 전환
+
+        return () => clearTimeout(timer);
+    }, []);
+
+
     useEffect(() => {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');

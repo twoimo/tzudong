@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
@@ -25,7 +25,7 @@ const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPre
 });
 
 export function MainLayoutContent({ children }: { children: React.ReactNode }) {
-    const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
+    const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup, isLoading } = useAuth();
     const queryClient = useQueryClient();
     const pathname = usePathname();
     const router = useRouter();
@@ -53,13 +53,28 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
 
     const shouldShowCenteredLayoutButton = pathname !== '/' && !isMyPage;
 
-    const handleLogout = async () => {
+    const handleLogout = useCallback(async () => {
         try {
             await signOut();
+            queryClient.clear();
+            router.push('/');
         } catch (error) {
-            console.error("Logout error:", error);
+            console.error('Logout error:', error);
         }
-    };
+    }, [signOut, queryClient, router]);
+
+    // 성능 최적화: 핸들러 메모이제이션
+    const handleToggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen]);
+    const handleOpenAuth = useCallback(() => setIsAuthModalOpen(true), []);
+    const handleProfileClick = useCallback(() => setIsProfileModalOpen(true), []);
+    const handleToggleCenteredLayout = useCallback(() => setIsCenteredLayout(!isCenteredLayout), [isCenteredLayout]);
+    const handleAnnouncementClick = useCallback((announcement: Announcement) => {
+        if (pathname === '/') {
+            window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: announcement }));
+        } else {
+            router.push(`/?panel=announcement&announcementId=${announcement.id}`);
+        }
+    }, [pathname, router]);
 
     const handleAdminSuccess = (updatedRestaurant?: Restaurant) => {
         queryClient.invalidateQueries({ queryKey: ['restaurants'] });
@@ -100,26 +115,17 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 "max-[1599px]:pb-[var(--mobile-bottom-nav-height)]"
             )}>
                 <Header
-                    onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+                    onToggleSidebar={handleToggleSidebar}
                     isLoggedIn={!!user}
-                    onOpenAuth={() => setIsAuthModalOpen(true)}
+                    isAuthLoading={isLoading}
+                    onOpenAuth={handleOpenAuth}
                     onLogout={handleLogout}
-                    onProfileClick={() => setIsProfileModalOpen(true)}
+                    onProfileClick={handleProfileClick}
                     isCenteredLayout={isCenteredLayout}
-                    onToggleCenteredLayout={shouldShowCenteredLayoutButton ? () => setIsCenteredLayout(!isCenteredLayout) : undefined}
+                    onToggleCenteredLayout={shouldShowCenteredLayoutButton ? handleToggleCenteredLayout : undefined}
                     isAdmin={isAdmin}
-                    onAnnouncementClick={(announcement: Announcement) => {
-                        // 홈 페이지에서 공지사항 패널 열기
-                        if (pathname === '/') {
-                            window.dispatchEvent(new CustomEvent('openAnnouncementDetail', { detail: announcement }));
-                        } else {
-                            // 다른 페이지에서는 홈으로 이동 후 패널 열기
-                            router.push(`/?panel=announcement&announcementId=${announcement.id}`);
-                        }
-                    }}
-                    // 모바일/태블릿에서 사이드바 토글 버튼 숨김
+                    onAnnouncementClick={handleAnnouncementClick}
                     hideToggleSidebar={isMobileOrTablet}
-                    isMobileOrTablet={isMobileOrTablet}
                 />
 
                 <main className={cn(

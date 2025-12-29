@@ -29,10 +29,12 @@ import { getBannerAnnouncements, getActiveAnnouncements, Announcement } from "@/
 import { useHydration } from "@/hooks/useHydration";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmarks } from "@/hooks/use-bookmarks";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
   isLoggedIn: boolean;
+  isAuthLoading?: boolean;
   onOpenAuth: () => void;
   onLogout: () => void;
   onProfileClick?: () => void;
@@ -42,14 +44,14 @@ interface HeaderProps {
   isAdmin?: boolean;
   onAnnouncementClick?: (announcement: Announcement) => void;
   hideToggleSidebar?: boolean;
-  isMobileOrTablet?: boolean;
 }
 
 const BANNER_ROTATION_INTERVAL = 5000;
 
-const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false, isMobileOrTablet = false }: HeaderProps) => {
+const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
   const isHydrated = useHydration();
+  const { isMobileOrTablet } = useDeviceType();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
@@ -75,6 +77,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
   // 북마크 데이터
   const { data: bookmarksData = [] } = useBookmarks();
+
+  // 성능 최적화: 조건부 렌더링 로직 메모이제이션
+  const shouldShowAuthUI = useMemo(() => isHydrated && !isAuthLoading, [isHydrated, isAuthLoading]);
 
   useEffect(() => {
     const dismissed = sessionStorage.getItem('announcementBannerDismissed');
@@ -164,6 +169,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
     if (currentAnnouncement) {
       if (isMobileOrTablet) {
         // 모바일/태블릿: 바텀시트로 상세 뷰 표시
+        // 뒤로가기를 위해 전체 공지사항 리스트도 로드
+        const announcements = getActiveAnnouncements();
+        setAllAnnouncements(announcements);
+        setAnnouncementPage(1);
         setSelectedAnnouncement(currentAnnouncement);
         setAnnouncementViewMode('detail');
         setIsAnnouncementSheetOpen(true);
@@ -327,10 +336,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
   return (
     <header
-      className={cn(
-        "border-b border-stone-800/10 bg-card flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4",
-        isMobileOrTablet ? "h-14 px-2" : "h-16 px-4"
-      )}
+      className="border-b border-stone-800/10 bg-card flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
     >
       {/* 한지 질감 오버레이 */}
       <div
@@ -343,7 +349,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
       {/* 좌측: 사이드바 토글 */}
       {!hideToggleSidebar && (
-        <div className="flex items-center relative z-10 flex-shrink-0">
+        <div className={cn(
+          "flex items-center relative z-10 flex-shrink-0 transition-all duration-300",
+          isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
+        )}>
           <Button
             variant="ghost"
             size="icon"
@@ -379,11 +388,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
             </Button>
           )}
           <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
-          <span className={cn(
-            "font-medium truncate group-hover:text-red-800 transition-colors text-stone-700 flex-1 min-w-0",
-            // 모바일: 텍스트 크기 축소
-            "text-xs lg:text-sm"
-          )}>
+          <span className="font-medium truncate group-hover:text-red-800 transition-colors text-stone-700 flex-1 min-w-0 text-xs md:text-sm">
             {currentBanner.title}
           </span>
           {bannerAnnouncements.length > 1 && (
@@ -405,7 +410,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
       )}>
         {/* 랭킹 및 접속자 위젯 - 데스크탑에서만 표시 */}
-        {isHydrated && !isMobileOrTablet && <RankingWidget />}
+        <div className={cn(
+          "hidden md:flex",
+          isHydrated ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}>
+          <RankingWidget />
+        </div>
 
         {/* 한지 모드 토글 */}
         <Button
@@ -418,8 +428,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
           {isHanjiMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
         </Button>
 
-        {/* 알림 - hydration 완료 후 렌더링 */}
-        {isHydrated && (
+        {/* 알림 */}
+        <div className={cn(
+          shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
@@ -503,155 +515,160 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
               </ScrollArea>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
+        </div>
 
         {/* 북마크 - 드롭다운 */}
-        {isHydrated && isLoggedIn && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
-                <Bookmark className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-72 bg-[#fdfbf7] border-stone-800/10 font-serif"
-            >
-              <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
-                <span>북마크</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => router.push('/mypage/bookmarks')}
-                  className="h-6 w-6 hover:bg-stone-200/50 text-stone-600"
-                >
-                  <Settings className="h-3 w-3" />
+        {isLoggedIn && (
+          <div className={cn(
+            shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
+                  <Bookmark className="h-5 w-5" />
                 </Button>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-stone-800/10" />
-              <ScrollArea className="h-64">
-                {bookmarksData.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-stone-500">
-                    북마크한 맛집이 없습니다
-                  </div>
-                ) : (
-                  <DropdownMenuGroup>
-                    {bookmarksData.slice(0, 5).map((bookmark) => (
-                      <DropdownMenuItem
-                        key={bookmark.id}
-                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-stone-100"
-                        onClick={() => {
-                          // 이미 홈페이지면 커스텀 이벤트 발생, 아니면 URL로 이동
-                          if (pathname === '/') {
-                            window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', { detail: bookmark.restaurant_id }));
-                          } else {
-                            router.push(`/?r=${bookmark.restaurant_id}`);
-                          }
-                        }}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-stone-900 truncate">
-                            {bookmark.restaurant.name}
-                          </p>
-                          <p className="text-xs text-stone-500 truncate">
-                            {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
-                          </p>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-72 bg-[#fdfbf7] border-stone-800/10 font-serif"
+              >
+                <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
+                  <span>북마크</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => router.push('/mypage/bookmarks')}
+                    className="h-6 w-6 hover:bg-stone-200/50 text-stone-600"
+                  >
+                    <Settings className="h-3 w-3" />
+                  </Button>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator className="bg-stone-800/10" />
+                <ScrollArea className="h-64">
+                  {bookmarksData.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-stone-500">
+                      북마크한 맛집이 없습니다
+                    </div>
+                  ) : (
+                    <DropdownMenuGroup>
+                      {bookmarksData.slice(0, 5).map((bookmark) => (
+                        <DropdownMenuItem
+                          key={bookmark.id}
+                          className="flex items-center gap-2 p-3 cursor-pointer hover:bg-stone-100"
+                          onClick={() => {
+                            // 이미 홈페이지면 커스텀 이벤트 발생, 아니면 URL로 이동
+                            if (pathname === '/') {
+                              window.dispatchEvent(new CustomEvent('selectBookmarkRestaurant', { detail: bookmark.restaurant_id }));
+                            } else {
+                              router.push(`/?r=${bookmark.restaurant_id}`);
+                            }
+                          }}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-stone-900 truncate">
+                              {bookmark.restaurant.name}
+                            </p>
+                            <p className="text-xs text-stone-500 truncate">
+                              {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
+                            </p>
+                          </div>
+                          {bookmark.restaurant.category?.[0] && (
+                            <Badge variant="secondary" className="text-[10px] shrink-0">
+                              {bookmark.restaurant.category[0]}
+                            </Badge>
+                          )}
+                        </DropdownMenuItem>
+                      ))}
+                      {bookmarksData.length > 5 && (
+                        <div className="p-2 text-center text-xs text-stone-500">
+                          +{bookmarksData.length - 5}개 더
                         </div>
-                        {bookmark.restaurant.category?.[0] && (
-                          <Badge variant="secondary" className="text-[10px] shrink-0">
-                            {bookmark.restaurant.category[0]}
-                          </Badge>
-                        )}
-                      </DropdownMenuItem>
-                    ))}
-                    {bookmarksData.length > 5 && (
-                      <div className="p-2 text-center text-xs text-stone-500">
-                        +{bookmarksData.length - 5}개 더
-                      </div>
-                    )}
-                  </DropdownMenuGroup>
-                )}
-              </ScrollArea>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                      )}
+                    </DropdownMenuGroup>
+                  )}
+                </ScrollArea>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
 
         {/* 전체화면 - 데스크탑에서만 표시 */}
-        {!isMobileOrTablet && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleFullscreen}
-            className="hover:bg-stone-200/50 text-stone-700 transition-colors"
-          >
-            <Maximize className="h-5 w-5" />
-          </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleFullscreen}
+          className="hidden md:flex hover:bg-stone-200/50 text-stone-700 transition-colors"
+        >
+          <Maximize className="h-5 w-5" />
+        </Button>
+
+        {/* 로그인 상태 */}
+        {isLoggedIn && (
+          <div className={cn(
+            shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 transition-colors">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#fdfbf7] border-stone-800/10 font-serif">
+                <DropdownMenuItem onClick={handleMyPageClick} className="text-stone-900 hover:bg-stone-200/50">
+                  <User className="mr-2 h-4 w-4" />
+                  마이페이지
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator className="bg-stone-800/10" />
+                    <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
+                      <Megaphone className="mr-2 h-4 w-4" />
+                      공지사항
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
+                      <ClipboardList className="mr-2 h-4 w-4" />
+                      제보관리
+                      {pendingSubmissionCount > 0 && (
+                        <Badge
+                          variant="destructive"
+                          className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
+                        >
+                          {pendingSubmissionCount > 99 ? '99+' : pendingSubmissionCount}
+                        </Badge>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-stone-900 hover:bg-stone-200/50">
+                      <MessageSquare className="mr-2 h-4 w-4" />
+                      리뷰관리
+                      {pendingReviewCount > 0 && (
+                        <Badge
+                          variant="destructive"
+                          className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
+                        >
+                          {pendingReviewCount > 99 ? '99+' : pendingReviewCount}
+                        </Badge>
+                      )}
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuSeparator className="bg-stone-800/10" />
+                <DropdownMenuItem onClick={onLogout} className="text-stone-900 hover:bg-stone-200/50">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  로그아웃
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         )}
 
-        {/* 로그인 상태 - hydration 완료 후에만 렌더링 */}
-        {isHydrated && isLoggedIn && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 transition-colors">
-                <User className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#fdfbf7] border-stone-800/10 font-serif">
-              <DropdownMenuItem onClick={handleMyPageClick} className="text-stone-900 hover:bg-stone-200/50">
-                <User className="mr-2 h-4 w-4" />
-                마이페이지
-              </DropdownMenuItem>
-              {isAdmin && (
-                <>
-                  <DropdownMenuSeparator className="bg-stone-800/10" />
-                  <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
-                    <Megaphone className="mr-2 h-4 w-4" />
-                    공지사항
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
-                    <ClipboardList className="mr-2 h-4 w-4" />
-                    제보관리
-                    {pendingSubmissionCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
-                      >
-                        {pendingSubmissionCount > 99 ? '99+' : pendingSubmissionCount}
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-stone-900 hover:bg-stone-200/50">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    리뷰관리
-                    {pendingReviewCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
-                      >
-                        {pendingReviewCount > 99 ? '99+' : pendingReviewCount}
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                </>
-              )}
-              <DropdownMenuSeparator className="bg-stone-800/10" />
-              <DropdownMenuItem onClick={onLogout} className="text-stone-900 hover:bg-stone-200/50">
-                <LogOut className="mr-2 h-4 w-4" />
-                로그아웃
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
-        {/* 로그인 버튼 - hydration 완료 후에만 렌더링 */}
-        {isHydrated && !isLoggedIn && (
+        {/* 로그인 버튼 */}
+        {!isLoggedIn && (
           <Button
             onClick={onOpenAuth}
-            size={isMobileOrTablet ? "sm" : "default"}
             className={cn(
               "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
-              // 모바일: 여백 축소 및 텍스트 크기 조정
-              isMobileOrTablet ? "ml-1 px-5 text-xs" : "ml-2"
+              "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2",
+              shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
           >
             로그인
