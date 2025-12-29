@@ -144,6 +144,45 @@ All colors MUST be HSL.
     @apply bg-background text-foreground font-serif tracking-tight;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
   }
+
+  /* 초기 로딩 화면 - CSS로만 구현하여 hydration 충돌 방지 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: linear-gradient(to bottom right, hsl(var(--background)), hsl(var(--muted)));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 300ms ease-out;
+  }
+
+  /* 로딩 완료 시 숨김 */
+  body.loading-complete::before {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* 로딩 화면 내용은 별도 div로 처리 */
+  #initial-loading-content {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 300ms ease-out;
+  }
+
+  body.loading-complete #initial-loading-content {
+    opacity: 0;
+    display: none;
+  }
 }
 
 /* 네이버 지도 마커 최적화 및 스타일 초기화 */

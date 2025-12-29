@@ -81,6 +81,46 @@ export default function RootLayout({
                 <link rel="dns-prefetch" href="https://i.ytimg.com" />
             </head>
             <body className={notoSerifKR.className}>
+                {/* 초기 로딩 화면 - 순수 HTML, CSS로 제어 */}
+                <div id="initial-loading-content">
+                    <div style={{ textAlign: 'center' }}>
+                        <div style={{ position: 'relative', margin: '0 auto 1.5rem', width: '4rem', height: '4rem' }}>
+                            <div style={{ position: 'absolute', inset: '0', borderRadius: '9999px', border: '4px solid', borderColor: 'hsl(var(--primary)/0.2)', borderTopColor: 'hsl(var(--primary))', animation: 'spin 1s linear infinite' }}></div>
+                            <div style={{ position: 'absolute', inset: '0', borderRadius: '9999px', border: '4px solid transparent', borderRightColor: 'hsl(var(--secondary))', animation: 'spin 1.5s linear infinite' }}></div>
+                        </div>
+                        <div style={{ marginBottom: '0.75rem' }}>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: '700', background: 'linear-gradient(to right,hsl(var(--primary)),hsl(var(--secondary)))', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', marginBottom: '0.75rem' }}>쯔동여지도 로딩 중...</h2>
+                            <p style={{ color: 'hsl(var(--muted-foreground))', marginBottom: '0.75rem' }}>맛있는 발견을 준비하고 있습니다</p>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.25rem' }}>
+                                <div style={{ width: '0.5rem', height: '0.5rem', background: 'hsl(var(--primary))', borderRadius: '9999px', animation: 'bounce 1s infinite' }}></div>
+                                <div style={{ width: '0.5rem', height: '0.5rem', background: 'hsl(var(--primary))', borderRadius: '9999px', animation: 'bounce 1s infinite', animationDelay: '0.1s' }}></div>
+                                <div style={{ width: '0.5rem', height: '0.5rem', background: 'hsl(var(--primary))', borderRadius: '9999px', animation: 'bounce 1s infinite', animationDelay: '0.2s' }}></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <script dangerouslySetInnerHTML={{
+                    __html: `
+                        (function() {
+                            var removed = false;
+                            
+                            // 지도 로딩 완료 시 로딩 화면 제거
+                            function removeLoading() {
+                                if (removed) return;
+                                removed = true;
+                                document.body.classList.add('loading-complete');
+                            }
+                            
+                            // 지도 로딩 완료 이벤트 리스닝
+                            window.addEventListener('mapLoadingComplete', removeLoading);
+                            
+                            // 즉시 fallback 타이머 시작 (1초)
+                            setTimeout(removeLoading, 1000);
+                        })();
+                    `
+                }} />
+
                 <QueryProvider>
                     <AppProviders>
                         <MainLayout>{children}</MainLayout>
