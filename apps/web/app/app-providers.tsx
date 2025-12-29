@@ -6,7 +6,6 @@ import AuthModal from '@/components/auth/AuthModal';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
 import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
-import { DailyRecommendationPopup } from '@/components/recommendation/DailyRecommendationPopup';
 
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
@@ -24,7 +23,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                     <WebVitals />
                     <Toaster />
                     <Sonner />
-                    <DailyRecommendationPopup />
                     {children}
                 </TooltipProvider>
             </NotificationProvider>

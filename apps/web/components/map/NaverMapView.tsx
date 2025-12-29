@@ -1244,25 +1244,31 @@ const NaverMapView = memo(({
                     const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
                     const html = createClusterMarkerHTML(feature, categories, currentIndex);
 
-                    // 마커 풀에서 획득
-                    const existingMarker = markerPool.get(markerId);
-                    if (!existingMarker) {
-                        const marker = markerPool.acquire(
+                    // 마커 풀에서 획득 또는 새로 생성
+                    let marker = markerPool.get(markerId);
+                    if (!marker) {
+                        marker = markerPool.acquire(
                             markerId,
                             new naver.maps.LatLng(lat, lng),
                             { content: html, anchor: new naver.maps.Point(24, 24) },
                             map
                         );
-
-                        // 클릭: 줌인
-                        naver.maps.Event.addListener(marker, 'click', () => {
-                            const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
-                            map.morph(new naver.maps.LatLng(lat, lng), expansionZoom, {
-                                duration: 400,
-                                easing: 'easeOutCubic',
-                            });
-                        });
                     }
+
+                    // 기존 클릭 리스너 제거 후 재등록 (마커 재사용 시에도 작동하도록)
+                    naver.maps.Event.clearListeners(marker, 'click');
+                    naver.maps.Event.addListener(marker, 'click', () => {
+                        const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
+                        const currentZoom = map.getZoom();
+                        // 7레벨 등 낮은 줌에서 클릭 시 최소 9레벨까지는 확대하여 마커를 펼침
+                        const targetZoom = Math.max(expansionZoom, 9);
+
+                        console.log(`[클러스터 클릭] 현재 줌: ${currentZoom}, targetZoom: ${targetZoom} (expansion: ${expansionZoom}), 클러스터 개수: ${count}`);
+                        map.morph(new naver.maps.LatLng(lat, lng), targetZoom, {
+                            duration: 400,
+                            easing: 'easeOutCubic',
+                        });
+                    });
                 } else {
                     // 개별 포인트 (클러스터 모드 내)
                     const restaurantId = feature.properties.restaurantId;
@@ -1274,29 +1280,44 @@ const NaverMapView = memo(({
 
                     const html = createIndividualMarkerHTML(category, isSelected);
 
-                    const existingMarker = markerPool.get(restaurantId);
-                    if (!existingMarker) {
-                        const marker = markerPool.acquire(
+                    // 마커 풀에서 획득 또는 새로 생성
+                    let marker = markerPool.get(restaurantId);
+                    if (!marker) {
+                        marker = markerPool.acquire(
                             restaurantId,
                             new naver.maps.LatLng(lat, lng),
                             { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
                             map
                         );
-
-                        naver.maps.Event.addListener(marker, 'click', () => {
-                            const restaurant = displayRestaurants.find(r => r.id === restaurantId);
-                            if (restaurant) {
-                                if (onMarkerClick) {
-                                    onMarkerClick(restaurant);
-                                } else {
-                                    if (onRestaurantSelect) {
-                                        onRestaurantSelect(restaurant);
-                                    }
-                                    setInternalPanelOpen(true);
-                                }
-                            }
-                        });
                     }
+
+                    // 기존 클릭 리스너 제거 후 재등록
+                    naver.maps.Event.clearListeners(marker, 'click');
+                    naver.maps.Event.addListener(marker, 'click', () => {
+                        const restaurant = displayRestaurants.find(r => r.id === restaurantId);
+                        if (restaurant) {
+                            const currentZoom = map.getZoom();
+                            console.log(`[개별 마커 클릭] 현재 줌: ${currentZoom}, 맛집: ${restaurant.name}`);
+
+                            // 줌 레벨이 낮으면 줌인 후 상세 패널 열기
+                            const targetZoom = 15;
+                            if (currentZoom < targetZoom) {
+                                map.morph(new naver.maps.LatLng(lat, lng), targetZoom, {
+                                    duration: 400,
+                                    easing: 'easeOutCubic',
+                                });
+                            }
+
+                            if (onMarkerClick) {
+                                onMarkerClick(restaurant);
+                            } else {
+                                if (onRestaurantSelect) {
+                                    onRestaurantSelect(restaurant);
+                                }
+                                setInternalPanelOpen(true);
+                            }
+                        }
+                    });
                 }
             });
 
@@ -1345,26 +1366,40 @@ const NaverMapView = memo(({
 
                 const html = createIndividualMarkerHTML(category, isSelected);
 
-                const existingMarker = markerPool.get(restaurant.id);
-                if (!existingMarker) {
-                    const marker = markerPool.acquire(
+                let marker = markerPool.get(restaurant.id);
+                if (!marker) {
+                    marker = markerPool.acquire(
                         restaurant.id,
                         new naver.maps.LatLng(restaurant.lat, restaurant.lng),
                         { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
                         map
                     );
-
-                    naver.maps.Event.addListener(marker, 'click', () => {
-                        if (onMarkerClick) {
-                            onMarkerClick(restaurant);
-                        } else {
-                            if (onRestaurantSelect) {
-                                onRestaurantSelect(restaurant);
-                            }
-                            setInternalPanelOpen(true);
-                        }
-                    });
                 }
+
+                // 기존 클릭 리스너 제거 후 재등록 (마커 재사용 시에도 작동하도록)
+                naver.maps.Event.clearListeners(marker, 'click');
+                naver.maps.Event.addListener(marker, 'click', () => {
+                    const currentZoom = map.getZoom();
+                    console.log(`[개별 마커 클릭-일반] 현재 줌: ${currentZoom}, 맛집: ${restaurant.name}`);
+
+                    // 줌 레벨이 낮으면 줌인 효과 추가
+                    const targetZoom = 15;
+                    if (currentZoom < targetZoom) {
+                        map.morph(new naver.maps.LatLng(restaurant.lat, restaurant.lng), targetZoom, {
+                            duration: 400,
+                            easing: 'easeOutCubic',
+                        });
+                    }
+
+                    if (onMarkerClick) {
+                        onMarkerClick(restaurant);
+                    } else {
+                        if (onRestaurantSelect) {
+                            onRestaurantSelect(restaurant);
+                        }
+                        setInternalPanelOpen(true);
+                    }
+                });
             });
 
             // 사용하지 않는 마커 반환
