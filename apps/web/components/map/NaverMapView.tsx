@@ -1146,7 +1146,7 @@ const NaverMapView = memo(({
 
         const newClusters = getClusters(index, bbox, zoom);
         setClusters(newClusters);
-    }, [displayRestaurants.length, selectedRegion]);
+    }, [displayRestaurants.length, selectedRegion, isMapInitialized]);
 
     // [🆕 클러스터링] 지도 이동/줌 시 클러스터 업데이트
     useEffect(() => {
@@ -1216,7 +1216,7 @@ const NaverMapView = memo(({
         return () => {
             naver.maps.Event.removeListener(idleListener);
         };
-    }, [displayRestaurants]);
+    }, [displayRestaurants, isMapInitialized]);
 
 
 
