@@ -342,7 +342,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-stone-800/20 to-transparent" />
 
       {/* 좌측: 사이드바 토글 */}
-      {!hideToggleSidebar && (
+      {isHydrated && !hideToggleSidebar && (
         <div className="flex items-center relative z-10 flex-shrink-0">
           <Button
             variant="ghost"
