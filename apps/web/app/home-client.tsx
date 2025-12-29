@@ -89,6 +89,9 @@ export default function HomeClient() {
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
 
+    // [Fix] 마운트 시점 기록 - 라우트 변경 후 돌아왔을 때 지도 강제 리마운트
+    const [mapMountKey] = useState(() => Date.now());
+
     // URL 쿼리 파라미터 처리
     const searchParams = useSearchParams();
     const router = useRouter();
@@ -410,6 +413,7 @@ export default function HomeClient() {
             />
 
             <HomeMapContainer
+                key={mapMountKey}
                 mapMode={mapMode}
                 filters={state.filters}
                 selectedRegion={state.selectedRegion}
