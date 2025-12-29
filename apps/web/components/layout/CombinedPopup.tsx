@@ -62,21 +62,31 @@ SlideIndicator.displayName = 'SlideIndicator';
 // 배너 슬라이드 컴포넌트 (메모이제이션)
 const BannerSlide = memo(({
     banner,
-    onClick
+    isActive,
+    onClick,
+    onVideoEnded
 }: {
     banner: AdBanner;
+    isActive: boolean;
     onClick: () => void;
+    onVideoEnded?: () => void;
 }) => (
-    <div className="absolute inset-0" onClick={onClick}>
+    <div
+        className={cn(
+            "absolute inset-0 transition-opacity duration-500",
+            isActive ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={onClick}
+    >
         {/* 영상 배너 (우선순위 1) */}
         {banner.video_url ? (
             <video
                 src={banner.video_url}
                 className="w-full h-full object-cover"
-                autoPlay
+                autoPlay={isActive}
                 muted
-                loop
                 playsInline
+                onEnded={onVideoEnded}
             />
         ) : banner.image_url ? (
             /* 이미지 배너 (우선순위 2) */
@@ -84,7 +94,7 @@ const BannerSlide = memo(({
                 src={banner.image_url}
                 alt={banner.title}
                 className="w-full h-full object-cover"
-                loading="lazy"
+                loading={isActive ? "eager" : "lazy"}
                 decoding="async"
             />
         ) : (
@@ -159,9 +169,13 @@ const CombinedPopupComponent = () => {
         }
     }, [isMobileOrTablet, banners.length, shouldShowPopup]);
 
-    // 자동 슬라이드
+    // 자동 슬라이드 (영상 배너가 아닐 때만)
     useEffect(() => {
         if (!isAutoPlaying || !isVisible || banners.length <= 1) return;
+
+        // 현재 배너가 영상이면 자동 슬라이드 건너뛰기 (영상 종료 시 onVideoEnded로 처리)
+        const currentBanner = banners[currentSlide];
+        if (currentBanner?.video_url) return;
 
         timeoutRef.current = setTimeout(() => {
             setCurrentSlide((prev) => (prev + 1) % banners.length);
@@ -170,7 +184,7 @@ const CombinedPopupComponent = () => {
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [isAutoPlaying, isVisible, currentSlide, banners.length]);
+    }, [isAutoPlaying, isVisible, currentSlide, banners]);
 
     // 팝업 닫기
     const handleClose = useCallback(() => {
@@ -213,12 +227,21 @@ const CombinedPopupComponent = () => {
                 )}
                 style={{ backgroundColor: '#fdfbf7' }}
             >
-                {/* 배너 슬라이드 컨텐츠 */}
-                <div className="relative aspect-[4/5] cursor-pointer">
-                    <BannerSlide
-                        banner={currentBanner}
-                        onClick={() => handleBannerClick(currentBanner)}
-                    />
+                {/* 배너 슬라이드 컨텐츠 - 모든 배너를 렌더링하여 크로스페이드 */}
+                <div className="relative aspect-[4/5]">
+                    {banners.map((banner, index) => (
+                        <BannerSlide
+                            key={banner.id}
+                            banner={banner}
+                            isActive={index === currentSlide}
+                            onClick={() => handleBannerClick(banner)}
+                            onVideoEnded={() => {
+                                if (banners.length > 1 && index === currentSlide) {
+                                    setCurrentSlide((prev) => (prev + 1) % banners.length);
+                                }
+                            }}
+                        />
+                    ))}
                 </div>
 
                 {/* 슬라이드 인디케이터 */}
