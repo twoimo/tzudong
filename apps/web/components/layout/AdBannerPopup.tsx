@@ -153,32 +153,11 @@ const AdBannerPopupComponent = () => {
                     onClick={() => handleBannerClick(currentBanner)}
                 >
                     {currentBanner.image_url ? (
-                        <>
-                            {/* 이미지 배경 */}
-                            <img
-                                src={currentBanner.image_url}
-                                alt={currentBanner.title}
-                                className="absolute inset-0 w-full h-full object-cover"
-                            />
-                            {/* 그라데이션 오버레이 */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-
-                            {/* 텍스트 컨텐츠 */}
-                            <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-                                <h3 className="text-lg font-bold mb-1">{currentBanner.title}</h3>
-                                {currentBanner.description && (
-                                    <p className="text-sm opacity-90 whitespace-pre-line line-clamp-2">
-                                        {currentBanner.description}
-                                    </p>
-                                )}
-                                {currentBanner.link_url && (
-                                    <div className="flex items-center gap-1 mt-2 text-xs opacity-80">
-                                        <ExternalLink className="h-3 w-3" />
-                                        <span>클릭하여 이동</span>
-                                    </div>
-                                )}
-                            </div>
-                        </>
+                        <img
+                            src={currentBanner.image_url}
+                            alt={currentBanner.title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                        />
                     ) : (
                         <>
                             {/* 한지 질감 오버레이 */}

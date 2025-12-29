@@ -80,7 +80,7 @@ export default function RootLayout({
                 <link rel="preconnect" href="https://img.youtube.com" crossOrigin="anonymous" />
                 <link rel="dns-prefetch" href="https://i.ytimg.com" />
             </head>
-            <body className={notoSerifKR.className}>
+            <body className={notoSerifKR.className} suppressHydrationWarning>
                 {/* 초기 로딩 화면 - 순수 HTML, CSS로 제어 */}
                 <div id="initial-loading-content">
                     <div style={{ textAlign: 'center' }}>

@@ -87,33 +87,11 @@ const AdBannerComponent = () => {
         >
             {/* 이미지 배경 (이미지가 있는 경우) */}
             {currentBanner.image_url ? (
-                <>
-                    <img
-                        src={currentBanner.image_url}
-                        alt={currentBanner.title}
-                        className="absolute inset-0 w-full h-full object-cover"
-                    />
-                    {/* 이미지 위 오버레이 */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
-
-                    {/* 이미지 위 텍스트 컨텐츠 */}
-                    <div className="relative h-full flex flex-col items-center justify-end text-center p-6 z-10">
-                        <h3 className="text-xl font-serif font-bold text-white mb-2 tracking-wide drop-shadow-lg">
-                            {currentBanner.title}
-                        </h3>
-                        {currentBanner.description && (
-                            <p className="text-sm font-serif text-white/90 whitespace-pre-line leading-relaxed mb-3 drop-shadow-md">
-                                {currentBanner.description}
-                            </p>
-                        )}
-                        {currentBanner.link_url && (
-                            <div className="flex items-center gap-1 text-xs text-white/80">
-                                <ExternalLink className="h-3 w-3" />
-                                <span>클릭하여 이동</span>
-                            </div>
-                        )}
-                    </div>
-                </>
+                <img
+                    src={currentBanner.image_url}
+                    alt={currentBanner.title}
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
             ) : (
                 <>
                     {/* 한지 질감 오버레이 */}
