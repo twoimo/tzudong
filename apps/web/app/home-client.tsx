@@ -54,6 +54,16 @@ const MyPagePanel = dynamic(
     { ssr: false }
 );
 
+const StampPanel = dynamic(
+    () => import('@/components/stamp/StampPanel'),
+    { ssr: false }
+);
+
+const LeaderboardPanel = dynamic(
+    () => import('@/components/leaderboard/LeaderboardPanel'),
+    { ssr: false }
+);
+
 const AdminReviewPanel = dynamic(
     () => import('@/components/admin/AdminReviewPanel'),
     { ssr: false }
@@ -83,9 +93,10 @@ export default function HomeClient() {
 
     // 통합 패널 상태 관리
     // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
-    type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
+    type PanelType = 'mypage' | 'adminReviews' | 'announcement' | 'stamp' | 'leaderboard' | null;
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
+    const [myPageTab, setMyPageTab] = useState<string>('profile'); // 마이페이지 초기 탭
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
 
     // URL 쿼리 파라미터 처리
@@ -107,7 +118,13 @@ export default function HomeClient() {
         const announcementId = searchParams.get('announcementId');
         const restaurantId = searchParams.get('r');
 
-        if (panelParam === 'announcement' && announcementId) {
+        if (panelParam === 'stamp') {
+            setTimeout(() => openPanel('stamp'), 100);
+            router.replace('/', { scroll: false });
+        } else if (panelParam === 'leaderboard') {
+            setTimeout(() => openPanel('leaderboard'), 100);
+            router.replace('/', { scroll: false });
+        } else if (panelParam === 'announcement' && announcementId) {
             const announcement = DUMMY_ANNOUNCEMENTS.find(a => a.id === announcementId);
             if (announcement) {
                 // 약간의 지연을 주어 초기 렌더링 후 패널이 열리도록 함
@@ -171,12 +188,15 @@ export default function HomeClient() {
 
     // 패널 열기 (상호 배타적) - 마이페이지, 제보관리, 리뷰관리용
     // [OPTIMIZATION] useCallback으로 메모이제이션하여 불필요한 리렌더링 방지
-    const openPanel = useCallback((panel: PanelType) => {
+    const openPanel = useCallback((panel: PanelType, tab?: string) => {
         // 맛집 상세 패널 닫기
         state.setIsPanelOpen(false);
         state.setPanelRestaurant(null);
         setActiveRightPanel(panel);
         setIsPanelCollapsed(false); // 새 패널 열릴 때 펼쳐진 상태로
+        if (panel === 'mypage' && tab) {
+            setMyPageTab(tab);
+        }
     }, [state.setIsPanelOpen, state.setPanelRestaurant]);
 
     // 모든 패널 닫기
@@ -268,8 +288,18 @@ export default function HomeClient() {
 
     // 헤더에서 패널 열기 이벤트 리스너
     useEffect(() => {
-        const handleMyPageOpen = () => {
-            openPanel('mypage');
+        const handleMyPageOpen = (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const tab = customEvent.detail?.tab || 'profile';
+            openPanel('mypage', tab);
+        };
+
+        const handleStampOpen = () => {
+            openPanel('stamp');
+        };
+
+        const handleLeaderboardOpen = () => {
+            openPanel('leaderboard');
         };
 
         const handleAdminSubmissionsOpen = () => {
@@ -341,6 +371,8 @@ export default function HomeClient() {
         };
 
         window.addEventListener('openMyPage', handleMyPageOpen);
+        window.addEventListener('openStamp', handleStampOpen);
+        window.addEventListener('openLeaderboard', handleLeaderboardOpen);
         window.addEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
         window.addEventListener('openAdminReviews', handleAdminReviewsOpen);
         window.addEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
@@ -349,6 +381,8 @@ export default function HomeClient() {
 
         return () => {
             window.removeEventListener('openMyPage', handleMyPageOpen);
+            window.removeEventListener('openStamp', handleStampOpen);
+            window.removeEventListener('openLeaderboard', handleLeaderboardOpen);
             window.removeEventListener('openAdminSubmissions', handleAdminSubmissionsOpen);
             window.removeEventListener('openAdminReviews', handleAdminReviewsOpen);
             window.removeEventListener('openAdminAnnouncements', handleAdminAnnouncementsOpen);
@@ -489,6 +523,34 @@ export default function HomeClient() {
                 isCollapsed={isPanelCollapsed}
             >
                 <MyPagePanel
+                    isOpen={!isPanelCollapsed}
+                    onClose={closeAllPanels}
+                    onToggleCollapse={togglePanelCollapse}
+                    isCollapsed={isPanelCollapsed}
+                    initialTab={myPageTab}
+                />
+            </RightPanelWrapper>
+
+            {/* 도장 패널 */}
+            <RightPanelWrapper
+                isOpen={activeRightPanel === 'stamp'}
+                isCollapsed={isPanelCollapsed}
+            >
+                <StampPanel
+                    isOpen={!isPanelCollapsed}
+                    onClose={closeAllPanels}
+                    onToggleCollapse={togglePanelCollapse}
+                    isCollapsed={isPanelCollapsed}
+                    onSelectRestaurant={openDetailPanel}
+                />
+            </RightPanelWrapper>
+
+            {/* 랭킹 패널 */}
+            <RightPanelWrapper
+                isOpen={activeRightPanel === 'leaderboard'}
+                isCollapsed={isPanelCollapsed}
+            >
+                <LeaderboardPanel
                     isOpen={!isPanelCollapsed}
                     onClose={closeAllPanels}
                     onToggleCollapse={togglePanelCollapse}
