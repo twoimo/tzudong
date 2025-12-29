@@ -1299,9 +1299,11 @@ const NaverMapView = memo(({
                             const currentZoom = map.getZoom();
                             console.log(`[개별 마커 클릭] 현재 줌: ${currentZoom}, 맛집: ${restaurant.name}`);
 
-                            // 줌 레벨이 낮으면 줌인 후 상세 패널 열기
+                            // 줌 차이가 적당할 때만 줌인 애니메이션 실행 (차이가 너무 크면 바로 상세 패널 오픈)
                             const targetZoom = 15;
-                            if (currentZoom < targetZoom) {
+                            const zoomDiff = targetZoom - currentZoom;
+
+                            if (currentZoom < targetZoom && zoomDiff < 5) {
                                 map.morph(new naver.maps.LatLng(lat, lng), targetZoom, {
                                     duration: 400,
                                     easing: 'easeOutCubic',
@@ -1382,9 +1384,11 @@ const NaverMapView = memo(({
                     const currentZoom = map.getZoom();
                     console.log(`[개별 마커 클릭-일반] 현재 줌: ${currentZoom}, 맛집: ${restaurant.name}`);
 
-                    // 줌 레벨이 낮으면 줌인 효과 추가
                     const targetZoom = 15;
-                    if (currentZoom < targetZoom) {
+                    const zoomDiff = targetZoom - currentZoom;
+
+                    // 줌 차이가 적당할 때만 줌인 애니메이션 실행
+                    if (currentZoom < targetZoom && zoomDiff < 5) {
                         map.morph(new naver.maps.LatLng(restaurant.lat, restaurant.lng), targetZoom, {
                             duration: 400,
                             easing: 'easeOutCubic',
