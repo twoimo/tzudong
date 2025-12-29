@@ -62,38 +62,74 @@ export class MarkerPool {
         id: string,
         position: any,
         icon: any,
-        map: any
+        map: any,
+        onClick?: () => void
     ): any {
-        // 이미 활성화된 마커가 있으면 반환
-        if (this.active.has(id)) {
-            const existingMarker = this.active.get(id)!;
-            // 위치와 아이콘 업데이트
-            existingMarker.setPosition(position);
-            existingMarker.setIcon(icon);
-            if (existingMarker.getMap() !== map) {
-                existingMarker.setMap(map);
-            }
-            return existingMarker;
-        }
-
         let marker: any;
+        let isNew = false;
 
-        // 풀에서 재사용 가능한 마커 가져오기
-        if (this.pool.length > 0) {
-            marker = this.pool.pop()!;
-            marker.setPosition(position);
-            marker.setIcon(icon);
-            marker.setMap(map);
-            this.stats.reused++;
-        } else {
-            // 새 마커 생성
-            marker = new window.naver.maps.Marker({
-                position,
-                icon,
-                map,
-            });
-            this.stats.created++;
+        // 1. 이미 활성화된 마커 재사용
+        if (this.active.has(id)) {
+            marker = this.active.get(id)!;
         }
+        // 2. 풀에서 가져오기
+        else if (this.pool.length > 0) {
+            marker = this.pool.pop()!;
+            this.stats.reused++;
+        }
+        // 3. 새 마커 생성
+        else {
+            marker = new window.naver.maps.Marker({
+                position, // 초기값
+                icon,     // 초기값
+                map,      // 초기값
+            });
+            isNew = true;
+            this.stats.created++;
+
+            // [PERFORMANCE] 이벤트 위임: 마커 생성 시 단 1회만 리스너 등록
+            // 이후 핸들러 교체는 __onClick 프로퍼티만 변경하여 zero-overhead 달성
+            window.naver.maps.Event.addListener(marker, 'click', (e: any) => {
+                if (marker.__onClick) {
+                    marker.__onClick(e);
+                }
+            });
+        }
+
+        // [PERFORMANCE] 불필요한 DOM 조작/렌더링 방지
+        // 값이 실제로 변경되었을 때만 setter 호출
+
+        // 1. Map 설정 (새로 생성된 경우 이미 설정됨)
+        if (!isNew && marker.getMap() !== map) {
+            marker.setMap(map);
+        }
+
+        // 2. 위치 업데이트 (새로 생성된 경우 이미 설정됨)
+        if (!isNew) {
+            const currentPos = marker.getPosition();
+            // LatLng.equals 메서드 활용 또는 좌표값 비교
+            if (!currentPos.equals(position)) {
+                marker.setPosition(position);
+            }
+        }
+
+        // 3. 아이콘 업데이트 (컨텐츠/앵커 비교)
+        if (!isNew) {
+            const currentIcon = marker.getIcon();
+            // content가 다르거나 anchor가 다르면 업데이트
+            const isContentDifferent = currentIcon.content !== icon.content;
+            const isAnchorDifferent =
+                (currentIcon.anchor && !icon.anchor) ||
+                (!currentIcon.anchor && icon.anchor) ||
+                (currentIcon.anchor && icon.anchor && (currentIcon.anchor.x !== icon.anchor.x || currentIcon.anchor.y !== icon.anchor.y));
+
+            if (isContentDifferent || isAnchorDifferent) {
+                marker.setIcon(icon);
+            }
+        }
+
+        // 4. 이벤트 핸들러 교체 (프로퍼티 할당 O(1))
+        marker.__onClick = onClick;
 
         this.active.set(id, marker);
         return marker;
