@@ -404,8 +404,6 @@ const NaverMapView = memo(({
     useEffect(() => {
         // 라우트가 변경되었고, 현재 라우트가 홈('/')이면 지도 리셋
         if (prevPathnameRef.current !== pathname && pathname === '/') {
-            console.log('[NaverMapView] 라우트 변경 감지 - 지도 재초기화:', prevPathnameRef.current, '->', pathname);
-
             // 지도 인스턴스 및 마커 정리
             if (mapInstanceRef.current) {
                 markerPool.clear();
@@ -1279,8 +1277,6 @@ const NaverMapView = memo(({
                             const currentZoom = map.getZoom();
                             // 7레벨 등 낮은 줌에서 클릭 시 최소 9레벨까지는 확대하여 마커를 펼침
                             const targetZoom = Math.max(expansionZoom, 9);
-
-                            console.log(`[클러스터 클릭] 현재 줌: ${currentZoom}, targetZoom: ${targetZoom} (expansion: ${expansionZoom}), 클러스터 개수: ${count}`);
                             map.morph(new naver.maps.LatLng(lat, lng), targetZoom, {
                                 duration: 400,
                                 easing: 'easeOutCubic',
@@ -1307,7 +1303,6 @@ const NaverMapView = memo(({
                             const restaurant = displayRestaurants.find(r => r.id === restaurantId);
                             if (restaurant) {
                                 const currentZoom = map.getZoom();
-                                console.log(`[개별 마커 클릭-클러스터내] 현재 줌: ${currentZoom}, 맛집: ${restaurant.name}`);
 
                                 // 줌 차이가 적당할 때만 줌인 애니메이션 실행 (차이가 너무 크면 바로 상세 패널 오픈)
                                 const targetZoom = 15;
@@ -1386,7 +1381,6 @@ const NaverMapView = memo(({
                     map,
                     () => {
                         const currentZoom = map.getZoom();
-                        console.log(`[개별 마커 클릭-일반] 현재 줌: ${currentZoom}, 맛집: ${restaurant.name}`);
 
                         const targetZoom = 15;
                         const zoomDiff = targetZoom - currentZoom;
@@ -1593,7 +1587,6 @@ const NaverMapView = memo(({
 
         // 유효하지 않은 기존 인스턴스 정리
         if (mapInstanceRef.current) {
-            console.log('[NaverMapView] 기존 지도 인스턴스 정리 (zombie 인스턴스 감지)');
             markerPool.clear();
             clusterAnimationManager.clear();
             mapInstanceRef.current = null;
