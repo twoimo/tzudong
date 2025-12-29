@@ -13,6 +13,27 @@ import { toast } from "sonner";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
+import Supercluster from 'supercluster';
+import {
+    createClusterIndex,
+    restaurantsToGeoJSON,
+    getClusters,
+    getClusterCategories,
+    isCluster,
+    getClusterCount,
+    getClusterMaxZoom,
+    type RestaurantFeature,
+    type ClusterProperties
+} from "@/lib/clustering";
+import { markerPool } from "@/lib/marker-pool";
+import {
+    createClusterMarkerHTML,
+    createIndividualMarkerHTML,
+    clusterAnimationManager,
+    injectClusterCSS,
+    removeClusterCSS
+} from "@/lib/cluster-marker";
+import { perfMonitor } from "@/lib/performance-monitor";
 
 // 상수 정의
 const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
@@ -22,8 +43,15 @@ const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
 const VIEWPORT_PADDING = 0.05; // 가시영역 여백 (5% 확장)
-const MAP_UPDATE_DEBOUNCE_MS = 300; // 지도 업데이트 디바운스 시간 (ms)
+const MAP_UPDATE_DEBOUNCE_MS = 150; // 지도 업데이트 디바운스 시간 (최적화: 300ms → 150ms)
 const PERFORMANCE_LOG_ENABLED = false; // 성능 로깅 활성화 (개발용)
+
+// 클러스터링 상수 (네이버 지도 스타일)
+const ENABLE_CLUSTERING = true; // 클러스터링 전체 활성화
+const CLUSTER_MAX_ZOOM = 16; // 이 줌 레벨까지 클러스터링 (16 초과 시 모든 개별 마커 표시)
+const CLUSTER_RADIUS = 60; // 클러스터 반경 (픽셀)
+const CLUSTER_MIN_POINTS = 2; // 최소 2개부터 클러스터링
+const CLUSTER_ANIMATION_INTERVAL = 6000; // 클러스터 이모지 애니메이션 주기 (ms)
 
 interface NaverMapViewProps {
     filters: FilterState;
@@ -81,10 +109,53 @@ const getCategoryIcon = (category: string | string[] | null | undefined): string
 };
 
 /**
- * [OPTIMIZATION] HTML 마커 콘텐츠 캐시 (메모리 최적화)
+ * [OPTIMIZATION] LRU 캐시 구현
+ * 메모리 누수 방지를 위한 크기 제한
+ */
+class LRUCache<K, V> {
+    private maxSize: number;
+    private cache: Map<K, V>;
+
+    constructor(maxSize: number = 500) {
+        this.maxSize = maxSize;
+        this.cache = new Map();
+    }
+
+    get(key: K): V | undefined {
+        const value = this.cache.get(key);
+        if (value !== undefined) {
+            // LRU: 접근한 항목을 맨 뒤로 이동
+            this.cache.delete(key);
+            this.cache.set(key, value);
+        }
+        return value;
+    }
+
+    set(key: K, value: V): void {
+        // 이미 존재하면 삭제 후 재추가 (LRU 순서 유지)
+        if (this.cache.has(key)) {
+            this.cache.delete(key);
+        }
+
+        this.cache.set(key, value);
+
+        // 크기 초과 시 가장 오래된 항목 제거
+        if (this.cache.size > this.maxSize) {
+            const firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+        }
+    }
+
+    clear(): void {
+        this.cache.clear();
+    }
+}
+
+/**
+ * [OPTIMIZATION] HTML 마커 콘텐츠 캐시 (LRU 기반)
  * 각 레스토랑의 선택/비선택 상태별로 HTML을 캐싱하여 재사용
  */
-const markerContentCache = new Map<string, string>();
+const markerContentCache = new LRUCache<string, string>(500);
 
 /**
  * [OPTIMIZATION] 마커 콘텐츠 생성 함수 - 캐싱 + 스타일 외부화 버전
@@ -275,6 +346,12 @@ const NaverMapView = memo(({
     const prevSidebarOpenRef = useRef<boolean>(true); // 이전 사이드바 열림 상태 추적
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
 
+    // [🆕 클러스터링] Supercluster 인덱스 및 클러스터 상태
+    const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
+    const [clusters, setClusters] = useState<Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>>([]);
+    const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
+    const clusterMarkersRef = useRef<Map<number | string, any>>(new Map()); // 클러스터 마커 Map
+
     // 사이드바 상태 가져오기
     const { isSidebarOpen } = useLayout();
 
@@ -363,8 +440,12 @@ const NaverMapView = memo(({
         };
     }, []); // 1회만 실행
 
-    // [OPTIMIZATION] 마커 애니메이션 스타일을 document head에 1회 삽입
+    // [OPTIMIZATION] 마커 및 클러스터 애니메이션 스타일 주입 + 클러스터 애니메이션 시작
     useEffect(() => {
+        // 클러스터 CSS 주입
+        injectClusterCSS();
+
+        // 기존 마커 스타일이 없으면 추가 (cluster-marker.ts와 중복 방지)
         if (!document.getElementById('naver-map-marker-styles')) {
             const style = document.createElement('style');
             style.id = 'naver-map-marker-styles';
@@ -380,13 +461,27 @@ const NaverMapView = memo(({
             document.head.appendChild(style);
         }
 
-        // Cleanup: 컴포넌트 언마운트 시 캐시 및 스타일 정리
+        // 클러스터 애니메이션 시작
+        if (ENABLE_CLUSTERING) {
+            clusterAnimationManager.start(CLUSTER_ANIMATION_INTERVAL);
+        }
+
+        // Cleanup: 컴포넌트 언마운트 시
         return () => {
             markerContentCache.clear();
+
+            // 기존 마커 스타일 제거
             const styleEl = document.getElementById('naver-map-marker-styles');
             if (styleEl) {
                 styleEl.remove();
             }
+
+            // 클러스터 CSS 및 애니메이션 정리
+            removeClusterCSS();
+            clusterAnimationManager.clear();
+
+            // 마커 풀 정리
+            markerPool.clear();
         };
     }, []);
 
@@ -957,112 +1052,340 @@ const NaverMapView = memo(({
         return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
     }, [isLoadingRestaurants, previousRestaurants, restaurants]);
 
-    // [최적화] 마커 데이터 동기화 (생성/삭제) with 가시영역 필터링
+    // [🆕 클러스터링] 클러스터 인덱스 생성 및 업데이트
+    useEffect(() => {
+
+
+        if (!ENABLE_CLUSTERING || displayRestaurants.length === 0) {
+            if (clusterIndexRef.current) {
+
+                setClusters([]);
+                clusterIndexRef.current = null;
+            }
+            return;
+        }
+
+        if (!mapInstanceRef.current) {
+
+            return;
+        }
+
+        // GeoJSON 변환
+        const geoJsonPoints = restaurantsToGeoJSON(displayRestaurants);
+
+        // 클러스터 인덱스 생성 (지역별 동적 maxZoom)
+        const index = createClusterIndex(selectedRegion, {
+            radius: CLUSTER_RADIUS,
+            minPoints: CLUSTER_MIN_POINTS,
+        });
+
+        // 데이터 로드
+        index.load(geoJsonPoints);
+        clusterIndexRef.current = index;
+
+        // 초기 클러스터 계산
+        const map = mapInstanceRef.current;
+        // 줌 레벨 2단위로 묶기 (7,8 → 8, 9,10 → 10, 11,12 → 12)
+        const zoom = Math.floor(map.getZoom() / 2) * 2;
+
+        // bounds 가져오기
+        let bbox: [number, number, number, number];
+        const bounds = map.getBounds();
+
+        if (bounds && typeof bounds.getWest === 'function') {
+            bbox = [
+                bounds.getWest(),
+                bounds.getSouth(),
+                bounds.getEast(),
+                bounds.getNorth(),
+            ];
+        } else {
+            // bounds가 아직 초기화되지 않은 경우 - 전체 한국 영역 사용
+            bbox = [124, 33, 132, 43]; // 한국 전체 영역 (서-남-동-북)
+        }
+
+        const newClusters = getClusters(index, bbox, zoom);
+        setClusters(newClusters);
+    }, [displayRestaurants.length, selectedRegion]);
+
+    // [🆕 클러스터링] 지도 이동/줌 시 클러스터 업데이트
+    useEffect(() => {
+        if (!mapInstanceRef.current || !ENABLE_CLUSTERING || !clusterIndexRef.current) return;
+
+        const { naver } = window;
+
+        const updateClusters = () => {
+            if (!clusterIndexRef.current || !mapInstanceRef.current) return;
+
+            const map = mapInstanceRef.current;
+            // 줌 레벨 2단위로 묶기 (7,8 → 8, 9,10 → 10, 11,12 → 12)
+            const zoom = Math.floor(map.getZoom() / 2) * 2;
+
+
+
+            let bbox: [number, number, number, number];
+
+            // 먼저 getBounds() 시도
+            const bounds = map.getBounds();
+
+            if (bounds && typeof bounds.getWest === 'function') {
+                // getBounds() 성공
+                bbox = [
+                    bounds.getWest(),
+                    bounds.getSouth(),
+                    bounds.getEast(),
+                    bounds.getNorth(),
+                ];
+            } else {
+                // getBounds() 실패 - center와 zoom으로 계산
+                const center = map.getCenter();
+                if (!center) {
+                    console.error('[지도 이동/줌] center도 가져올 수 없음');
+                    return;
+                }
+
+                // zoom 레벨에 따른 대략적인 거리 계산 (미터)
+                const metersPerPixelAtZoom = 156543.03392 * Math.cos(center.lat() * Math.PI / 180) / Math.pow(2, zoom);
+                const mapWidthPixels = 1000; // 대략적인 지도 너비
+                const mapHeightPixels = 800;  // 대략적인 지도 높이
+
+                const metersWidth = metersPerPixelAtZoom * mapWidthPixels;
+                const metersHeight = metersPerPixelAtZoom * mapHeightPixels;
+
+                // 위도 1도 ≈ 111km, 경도 1도 ≈ 111km * cos(lat)
+                const latDelta = (metersHeight / 2) / 111000;
+                const lngDelta = (metersWidth / 2) / (111000 * Math.cos(center.lat() * Math.PI / 180));
+
+                bbox = [
+                    center.lng() - lngDelta, // west
+                    center.lat() - latDelta, // south
+                    center.lng() + lngDelta, // east
+                    center.lat() + latDelta, // north
+                ];
+
+            }
+
+            const newClusters = getClusters(clusterIndexRef.current, bbox, zoom);
+            setClusters(newClusters);
+        };
+
+        const map = mapInstanceRef.current;
+        // idle 이벤트: 모든 지도 애니메이션 완료 후 실행
+        const idleListener = naver.maps.Event.addListener(map, 'idle', updateClusters);
+
+        return () => {
+            naver.maps.Event.removeListener(idleListener);
+        };
+    }, [displayRestaurants]);
+
+
+
+    // [🆕 클러스터/마커 통합 렌더링] 줌 레벨에 따라 클러스터 또는 개별 마커 표시
     useEffect(() => {
         if (!mapInstanceRef.current || !window.naver) return;
         const { naver } = window;
         const map = mapInstanceRef.current;
+        const currentZoom = Math.floor(map.getZoom());
 
-        const perfStart = PERFORMANCE_LOG_ENABLED ? performance.now() : 0;
+        // 🔥 전국만 클러스터링, 특정 지역은 모두 개별 마커 표시
+        const effectiveMaxZoom = getClusterMaxZoom(selectedRegion);
+        const shouldCluster = ENABLE_CLUSTERING && !selectedRegion && currentZoom <= effectiveMaxZoom;
 
-        // 표시할 레스토랑 목록 준비 (검색어 포함)
-        const restaurantsToShow = [...displayRestaurants];
+        setIsClusterMode(shouldCluster);
 
-        // 검색된 맛집 추가 로직 (기존과 동일)
-        if (searchedRestaurant) {
-            let alreadyExists = false;
-            // (중복 체크 로직 생략 - 기존과 동일하다고 가정하거나 간단히 ID 체크)
-            if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
-                const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
-                alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
-            } else {
-                alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
+
+
+        if (shouldCluster) {
+            // ===== 클러스터 모드 =====
+            if (clusters.length === 0) {
+                return;
             }
+            const activeIds = new Set<string>();
 
-            if (!alreadyExists) {
-                restaurantsToShow.push(searchedRestaurant);
-            }
-        }
+            clusters.forEach((feature) => {
+                if (isCluster(feature)) {
+                    // 클러스터 마커
+                    const clusterId = feature.properties.cluster_id!;
+                    const count = getClusterCount(feature);
+                    const [lng, lat] = feature.geometry.coordinates;
+                    const markerId = `cluster-${clusterId}`;
 
-        // [성능 최적화] 가시영역 필터링 적용
-        const visibleRestaurants = VIEWPORT_FILTER_ENABLED
-            ? restaurantsToShow.filter(r => {
-                // 선택된 레스토랑이나 검색된 레스토랑은 항상 표시
-                if (r.id === selectedRestaurant?.id || r.id === searchedRestaurant?.id) {
-                    return true;
-                }
-                return isRestaurantInViewport(r, map);
-            })
-            : restaurantsToShow;
+                    activeIds.add(markerId);
 
-        if (PERFORMANCE_LOG_ENABLED) {
-            console.log(`[Performance] Viewport filtering: ${restaurantsToShow.length} -> ${visibleRestaurants.length} markers`);
-        }
+                    // 애니메이션 등록
+                    clusterAnimationManager.register(clusterId);
 
-        // 1. 가시영역 밖의 마커 숨기기 또는 삭제
-        const visibleIds = new Set(visibleRestaurants.map(r => r.id));
-        markersMapRef.current.forEach((marker, id) => {
-            if (!visibleIds.has(id)) {
-                // 가시영역 밖이면 지도에서 제거
-                marker.setMap(null);
-            }
-        });
-
-        // 2. 가시영역 내의 마커 생성 또는 재표시
-        visibleRestaurants.forEach(restaurant => {
-            if (!restaurant.lat || !restaurant.lng) return;
-
-            const existingMarker = markersMapRef.current.get(restaurant.id);
-
-            if (existingMarker) {
-                // 기존 마커가 있으면 다시 지도에 표시
-                if (existingMarker.getMap() !== map) {
-                    existingMarker.setMap(map);
-                }
-            } else {
-                // 새로운 마커 생성
-                const isSelected = false; // 생성 시점엔 기본 상태
-                const contentHtml = createMarkerContent(restaurant, isSelected);
-
-                const marker = new naver.maps.Marker({
-                    position: new naver.maps.LatLng(restaurant.lat, restaurant.lng),
-                    map: map,
-                    icon: {
-                        content: contentHtml,
-                        anchor: new naver.maps.Point(14, 14), // 기본 Anchor (28px/2)
-                    },
-                    title: restaurant.name,
-                });
-
-                // [최적화] 마커 객체에 메타데이터 저장 (상태 관리용)
-                (marker as any).__restaurant = restaurant;
-                (marker as any).__isSelected = isSelected;
-
-                // 클릭 리스너 등록
-                naver.maps.Event.addListener(marker, "click", () => {
-                    if (onMarkerClick) {
-                        onMarkerClick(restaurant);
-                    } else {
-                        if (onRestaurantSelect) {
-                            onRestaurantSelect(restaurant);
-                        }
-                        setInternalPanelOpen(true);
+                    // 카테고리 목록 (에러 방지)
+                    let categories: string[];
+                    try {
+                        categories = getClusterCategories(clusterIndexRef.current!, clusterId);
+                    } catch (error) {
+                        // 클러스터 ID가 유효하지 않을 경우 빈 배열
+                        categories = [];
                     }
-                });
+                    const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
+                    const html = createClusterMarkerHTML(feature, categories, currentIndex);
 
-                markersMapRef.current.set(restaurant.id, marker);
+                    // 마커 풀에서 획득
+                    const existingMarker = markerPool.get(markerId);
+                    if (!existingMarker) {
+                        const marker = markerPool.acquire(
+                            markerId,
+                            new naver.maps.LatLng(lat, lng),
+                            { content: html, anchor: new naver.maps.Point(24, 24) },
+                            map
+                        );
+
+                        // 클릭: 줌인
+                        naver.maps.Event.addListener(marker, 'click', () => {
+                            const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
+                            map.morph(new naver.maps.LatLng(lat, lng), expansionZoom, {
+                                duration: 400,
+                                easing: 'easeOutCubic',
+                            });
+                        });
+                    }
+                } else {
+                    // 개별 포인트 (클러스터 모드 내)
+                    const restaurantId = feature.properties.restaurantId;
+                    const [lng, lat] = feature.geometry.coordinates;
+                    const category = feature.properties.category;
+                    const isSelected = selectedRestaurant?.id === restaurantId;
+
+                    activeIds.add(restaurantId);
+
+                    const html = createIndividualMarkerHTML(category, isSelected);
+
+                    const existingMarker = markerPool.get(restaurantId);
+                    if (!existingMarker) {
+                        const marker = markerPool.acquire(
+                            restaurantId,
+                            new naver.maps.LatLng(lat, lng),
+                            { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
+                            map
+                        );
+
+                        naver.maps.Event.addListener(marker, 'click', () => {
+                            const restaurant = displayRestaurants.find(r => r.id === restaurantId);
+                            if (restaurant) {
+                                if (onMarkerClick) {
+                                    onMarkerClick(restaurant);
+                                } else {
+                                    if (onRestaurantSelect) {
+                                        onRestaurantSelect(restaurant);
+                                    }
+                                    setInternalPanelOpen(true);
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+
+            // 사용하지 않는 마커 반환
+            markerPool.releaseExcept(activeIds);
+
+        } else {
+            // ===== 개별 마커 모드 =====
+            const restaurantsToShow = [...displayRestaurants];
+
+            // 검색된 맛집 추가
+            if (searchedRestaurant) {
+                let alreadyExists = false;
+                if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
+                    const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
+                    alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
+                } else {
+                    alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
+                }
+                if (!alreadyExists) {
+                    restaurantsToShow.push(searchedRestaurant);
+                }
             }
-        });
 
-        // restaurantsRef 업데이트
-        restaurantsRef.current = restaurantsToShow;
+            // 가시영역 필터링
+            const visibleRestaurants = VIEWPORT_FILTER_ENABLED
+                ? restaurantsToShow.filter(r => {
+                    if (r.id === selectedRestaurant?.id || r.id === searchedRestaurant?.id) {
+                        return true;
+                    }
+                    return isRestaurantInViewport(r, map);
+                })
+                : restaurantsToShow;
 
-        if (PERFORMANCE_LOG_ENABLED) {
-            const perfEnd = performance.now();
-            console.log(`[Performance] Marker update took ${(perfEnd - perfStart).toFixed(2)}ms`);
+            const activeIds = new Set<string>();
+
+            visibleRestaurants.forEach(restaurant => {
+                if (!restaurant.lat || !restaurant.lng) return;
+
+                activeIds.add(restaurant.id);
+
+                const isSelected = selectedRestaurant?.id === restaurant.id;
+                const category = (Array.isArray(restaurant.categories)
+                    ? restaurant.categories[0]
+                    : restaurant.category || '기타') as string;
+
+                const html = createIndividualMarkerHTML(category, isSelected);
+
+                const existingMarker = markerPool.get(restaurant.id);
+                if (!existingMarker) {
+                    const marker = markerPool.acquire(
+                        restaurant.id,
+                        new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                        { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
+                        map
+                    );
+
+                    naver.maps.Event.addListener(marker, 'click', () => {
+                        if (onMarkerClick) {
+                            onMarkerClick(restaurant);
+                        } else {
+                            if (onRestaurantSelect) {
+                                onRestaurantSelect(restaurant);
+                            }
+                            setInternalPanelOpen(true);
+                        }
+                    });
+                }
+            });
+
+            // 사용하지 않는 마커 반환
+            markerPool.releaseExcept(activeIds);
+
+            // restaurantsRef 업데이트
+            restaurantsRef.current = restaurantsToShow;
         }
 
-    }, [displayRestaurants, searchedRestaurant, selectedRestaurant, createMarkerContent, onMarkerClick, onRestaurantSelect]);
+    }, [clusters, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode]);
+
+    // [🆕 클러스터 애니메이션] 카테고리 이모지 순환 업데이트
+    useEffect(() => {
+        if (!isClusterMode) return;
+
+        // 애니메이션 업데이트 시 클러스터 마커 HTML 갱신
+        const cleanup = clusterAnimationManager.addListener(() => {
+            clusters.forEach((feature) => {
+                if (isCluster(feature)) {
+                    const clusterId = feature.properties.cluster_id!;
+                    const markerId = `cluster-${clusterId}`;
+                    const marker = markerPool.get(markerId);
+
+                    if (marker && clusterIndexRef.current) {
+                        const categories = getClusterCategories(clusterIndexRef.current, clusterId);
+                        const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
+                        const html = createClusterMarkerHTML(feature, categories, currentIndex);
+
+                        marker.setIcon({
+                            content: html,
+                            anchor: new window.naver.maps.Point(24, 24),
+                        });
+                    }
+                }
+            });
+        });
+
+        return cleanup;
+    }, [isClusterMode, clusters]);
 
     // [OPTIMIZATION] 선택 상태 변경에 따른 마커 스타일 업데이트 (O(N) → O(1) 최적화)
     // 이전 선택 마커 ID 추적
@@ -1079,37 +1402,49 @@ const NaverMapView = memo(({
         }
 
         // [CRITICAL OPTIMIZATION] 전체 순회(O(N)) 대신 2개 마커만 업데이트(O(1))
+        const { naver } = window;
 
         // 1. 이전 선택 마커 비활성화
         if (prevSelectedId && prevSelectedId !== currentSelectedId) {
-            const prevMarker = markersMapRef.current.get(prevSelectedId);
-            if (prevMarker && prevMarker.__isSelected) {
-                const restaurant = prevMarker.__restaurant;
+            const prevMarker = markerPool.get(prevSelectedId);
+            if (prevMarker) {
+                // 카테고리 계산
+                const restaurant = displayRestaurants.find(r => r.id === prevSelectedId);
                 if (restaurant) {
-                    const content = createMarkerContent(restaurant, false);
-                    prevMarker.setIcon({
-                        content: content,
-                        anchor: new naver.maps.Point(14, 14) // 기본 (28px/2)
+                    const category = (Array.isArray(restaurant.categories)
+                        ? restaurant.categories[0]
+                        : restaurant.category || '기타') as string;
+                    const content = createIndividualMarkerHTML(category, false);
+
+                    markerPool.update(prevSelectedId, {
+                        icon: {
+                            content,
+                            anchor: new naver.maps.Point(14, 14)
+                        },
+                        zIndex: 1
                     });
-                    prevMarker.setZIndex(0);
-                    prevMarker.__isSelected = false;
                 }
             }
         }
 
         // 2. 현재 선택 마커 활성화
         if (currentSelectedId) {
-            const currentMarker = markersMapRef.current.get(currentSelectedId);
-            if (currentMarker && !currentMarker.__isSelected) {
-                const restaurant = currentMarker.__restaurant;
+            const currentMarker = markerPool.get(currentSelectedId);
+            if (currentMarker) {
+                const restaurant = displayRestaurants.find(r => r.id === currentSelectedId);
                 if (restaurant) {
-                    const content = createMarkerContent(restaurant, true);
-                    currentMarker.setIcon({
-                        content: content,
-                        anchor: new naver.maps.Point(18, 18) // 선택됨 (36px/2)
+                    const category = (Array.isArray(restaurant.categories)
+                        ? restaurant.categories[0]
+                        : restaurant.category || '기타') as string;
+                    const content = createIndividualMarkerHTML(category, true);
+
+                    markerPool.update(currentSelectedId, {
+                        icon: {
+                            content,
+                            anchor: new naver.maps.Point(18, 18)
+                        },
+                        zIndex: 100
                     });
-                    currentMarker.setZIndex(100);
-                    currentMarker.__isSelected = true;
                 }
             }
         }
@@ -1118,7 +1453,7 @@ const NaverMapView = memo(({
         prevSelectedMarkerIdRef.current = currentSelectedId;
         prevSelectedRestaurantIdRef.current = currentSelectedId;
 
-    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, createMarkerContent]);
+    }, [selectedRestaurant, gridSelectedRestaurant, isGridMode, displayRestaurants]);
 
 
     // selectedRestaurant이 기존 데이터와 다른 경우 기존 데이터로 교체
@@ -1233,9 +1568,7 @@ const NaverMapView = memo(({
                 return isRestaurantInViewport(r, map);
             });
 
-            if (PERFORMANCE_LOG_ENABLED) {
-                console.log(`[Performance] After map move: ${restaurantsToShow.length} -> ${visibleRestaurants.length} markers`);
-            }
+
 
             const visibleIds = new Set(visibleRestaurants.map(r => r.id));
 
@@ -1255,10 +1588,7 @@ const NaverMapView = memo(({
                 }
             });
 
-            if (PERFORMANCE_LOG_ENABLED) {
-                const perfEnd = performance.now();
-                console.log(`[Performance] Map event update took ${(perfEnd - perfStart).toFixed(2)}ms`);
-            }
+
         };
 
         // 디바운스된 업데이트 함수
