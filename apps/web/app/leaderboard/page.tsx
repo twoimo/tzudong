@@ -1,68 +1,34 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, Medal, Award, TrendingUp, Star, CheckCircle, Loader2 } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Trophy, Medal, Award, Stamp } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
+import { useDeviceType } from "@/hooks/useDeviceType";
+import { cn } from "@/lib/utils";
 
 export default function LeaderboardPage() {
-
     const { user: currentUser } = useAuth();
-    const [sortBy, setSortBy] = useState<"reviews">("reviews");
-    const userRowRef = useRef<HTMLTableRowElement>(null);
+    const { isMobileOrTablet } = useDeviceType();
+    const { data: leaderboardData = [] } = useLeaderboard();
+    const userItemRef = useRef<HTMLDivElement>(null);
 
-    // Fetch leaderboard data using custom hook
-    const { data: leaderboardData = [], isLoading } = useLeaderboard();
+    const sortedLeaderboard = [...leaderboardData].sort((a, b) => b.verifiedReviewCount - a.verifiedReviewCount);
 
-    // Apply sorting
-    const sortedLeaderboard = [...leaderboardData].sort((a, b) => {
-        if (sortBy === "reviews") {
-            return b.verifiedReviewCount - a.verifiedReviewCount;
-        }
-        return 0;
-    });
-
-
-    const getRankIcon = (rank: number, forTable: boolean = false) => {
-        if (forTable) {
-            // 테이블에서는 각 등수에 맞는 색상 사용
-            switch (rank) {
-                case 1:
-                    return <Trophy className="h-6 w-6 text-yellow-500" />;
-                case 2:
-                    return <Medal className="h-6 w-6 text-gray-400" />;
-                case 3:
-                    return <Award className="h-6 w-6 text-amber-600" />;
-                default:
-                    return <span className="text-lg font-bold text-muted-foreground">{rank}</span>;
-            }
-        } else {
-            // 카드에서는 흰색 사용 (배경색 대비)
-            switch (rank) {
-                case 1:
-                    return <Trophy className="h-6 w-6 text-white" />;
-                case 2:
-                    return <Medal className="h-6 w-6 text-white" />;
-                case 3:
-                    return <Award className="h-6 w-6 text-white" />;
-                default:
-                    return <span className="text-lg font-bold text-muted-foreground">{rank}</span>;
-            }
+    const getRankIcon = (rank: number) => {
+        switch (rank) {
+            case 1:
+                return <Trophy className="h-5 w-5 text-yellow-500" />;
+            case 2:
+                return <Medal className="h-5 w-5 text-gray-400" />;
+            case 3:
+                return <Award className="h-5 w-5 text-amber-600" />;
+            default:
+                return <span className="text-sm font-bold text-muted-foreground">{rank}</span>;
         }
     };
-
 
     const getUserTier = (reviewCount: number) => {
         if (reviewCount >= 100) return { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" };
@@ -73,157 +39,126 @@ export default function LeaderboardPage() {
         return { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
     };
 
-    // Calculate my rank
-    const myRank = currentUser
-        ? sortedLeaderboard.find((u) => u.id === currentUser.id)?.rank
-        : null;
+    const myRank = currentUser ? sortedLeaderboard.find((u) => u.id === currentUser.id)?.rank : null;
 
-    // Auto-scroll to user's row
     useEffect(() => {
-        if (!isLoading && currentUser && userRowRef.current) {
+        if (currentUser && userItemRef.current) {
             setTimeout(() => {
-                userRowRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 500); // 렌더링 후 약간의 지연을 주어 스크롤 동작 보장
+                userItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
         }
-    }, [isLoading, currentUser, sortedLeaderboard]);
+    }, [currentUser, sortedLeaderboard]);
 
     return (
-        <TooltipProvider>
-            <div className="flex flex-col h-full bg-background">
-                {/* Header */}
-                <div className="border-b border-border bg-card p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <div>
-                            <div className="flex items-center gap-3">
-                                <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                                    <Trophy className="h-6 w-6 text-primary" />
-                                    쯔동여지도 랭킹
-                                </h1>
-                            </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                리뷰를 작성하고 랭킹을 올려보세요!
-                            </p>
+        <div className="flex flex-col h-full bg-background">
+            {/* Header */}
+            <div className="border-b border-border bg-card p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <div className="flex items-center gap-3">
+                            <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
+                                <Trophy className="h-6 w-6 text-primary" />
+                                쯔동여지도 랭킹
+                            </h1>
                         </div>
-                        <div className="flex gap-8 text-right">
-                            {currentUser && (
-                                <div>
-                                    <div className="text-sm font-medium text-muted-foreground">
-                                        나의 순위
-                                    </div>
-                                    <div className="text-2xl font-bold text-primary">
-                                        {myRank ? `${myRank}위` : "-"}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">
+                            리뷰를 작성하고 랭킹을 올려보세요!
+                        </p>
                     </div>
-
-                </div>
-
-                {/* Full Rankings Table */}
-                <div className="flex-1 overflow-hidden p-6">
-                    <div className="rounded-md border bg-card h-full flex flex-col">
-                        <ScrollArea className="flex-1">
-                            <Table>
-                                <TableHeader className="sticky top-0 bg-muted z-10">
-                                    <TableRow>
-                                        <TableHead className="w-16 md:w-20 text-left whitespace-nowrap">순위</TableHead>
-                                        <TableHead className="w-32 md:w-40 text-left whitespace-nowrap">사용자</TableHead>
-                                        <TableHead className="w-20 md:w-28 text-center whitespace-nowrap">
-                                            <button
-                                                onClick={() => setSortBy("reviews")}
-                                                className="flex items-center gap-1 mx-auto hover:text-primary whitespace-nowrap">
-                                                도장 개수
-                                                {sortBy === "reviews" && <TrendingUp className="h-3 w-3" />}
-                                            </button>
-                                        </TableHead>
-                                        <TableHead className="w-20 md:w-28 text-center whitespace-nowrap">받은 좋아요</TableHead>
-                                        <TableHead className="w-24 md:w-32 text-center whitespace-nowrap">티어</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {isLoading ? (
-                                        // Loading skeleton for table
-                                        Array.from({ length: 10 }).map((_, index) => (
-                                            <TableRow key={index}>
-                                                <TableCell>
-                                                    <div className="flex items-center justify-center">
-                                                        <div className="w-8 h-8 bg-muted rounded animate-pulse"></div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="h-4 bg-muted rounded animate-pulse w-24"></div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="h-4 bg-muted rounded animate-pulse w-8 mx-auto"></div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="h-4 bg-muted rounded animate-pulse w-10 mx-auto"></div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="h-4 bg-muted rounded animate-pulse w-12 mx-auto"></div>
-                                                </TableCell>
-
-                                            </TableRow>
-                                        ))
-                                    ) : sortedLeaderboard.map((user, index) => {
-                                        const isCurrentUser = currentUser?.id === user.id;
-                                        return (
-                                            <TableRow
-                                                key={`${user.id}-${index}`}
-                                                ref={isCurrentUser ? userRowRef : null}
-                                                className={`hover:bg-muted/50 ${isCurrentUser ? "bg-primary/10 hover:bg-primary/20 border-l-4 border-l-primary" : ""}`}
-                                            >
-                                                <TableCell className="text-center whitespace-nowrap">
-                                                    <div className="flex items-center justify-center">
-                                                        {getRankIcon(user.rank, true)}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="max-w-40">
-                                                    <span className={`font-medium block truncate ${isCurrentUser ? "text-primary font-bold" : ""}`}>
-                                                        {user.username}
-                                                        {isCurrentUser && " (나)"}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="text-center whitespace-nowrap">
-                                                    <span className="font-semibold">{user.verifiedReviewCount}</span>
-                                                    <span className="text-muted-foreground text-xs ml-1">개</span>
-                                                </TableCell>
-                                                <TableCell className="text-center whitespace-nowrap">
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        <span className="font-semibold text-red-600">{user.totalLikes}</span>
-                                                        <span className="text-muted-foreground text-xs">❤️</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-center whitespace-nowrap">
-                                                    <Badge variant="outline" className={`${getUserTier(user.verifiedReviewCount).bgColor} ${getUserTier(user.verifiedReviewCount).color} border-current text-xs px-2`}>
-                                                        {getUserTier(user.verifiedReviewCount).name}
-                                                    </Badge>
-                                                </TableCell>
-
-                                            </TableRow>
-                                        );
-                                    })}
-
-                                    {/* 빈 데이터 상태 */}
-                                    {!isLoading && sortedLeaderboard.length === 0 && (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="text-center py-12">
-                                                <div className="text-muted-foreground">
-                                                    <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                                    <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
-                                                    <p className="text-xs">리뷰를 작성하고 랭킹에 도전해보세요!</p>
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-
-                                </TableBody>
-                            </Table>
-                        </ScrollArea>
+                    <div className="flex gap-8 text-right">
+                        {currentUser && (
+                            <div>
+                                <div className="text-sm font-medium text-muted-foreground">
+                                    나의 순위
+                                </div>
+                                <div className="text-2xl font-bold text-primary">
+                                    {myRank ? `${myRank}위` : "-"}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
-        </TooltipProvider>
+
+            {/* Compact List */}
+            <div className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full">
+                    <div className="divide-y divide-border">
+                        {sortedLeaderboard.map((user, index) => {
+                            const isCurrentUser = currentUser?.id === user.id;
+                            const tier = getUserTier(user.verifiedReviewCount);
+
+                            return (
+                                <div
+                                    key={`${user.id}-${index}`}
+                                    ref={isCurrentUser ? userItemRef : null}
+                                    className={cn(
+                                        "flex items-center gap-3 md:gap-4 px-4 md:px-6 py-3 transition-colors hover:bg-muted/50",
+                                        isCurrentUser && "bg-primary/5 border-l-4 border-l-primary"
+                                    )}
+                                >
+                                    {/* 순위 */}
+                                    <div className="flex-shrink-0 w-10 flex items-center justify-center">
+                                        {getRankIcon(user.rank)}
+                                    </div>
+
+                                    {/* 사용자명 */}
+                                    <div className="flex-1 min-w-0 max-w-xs">
+                                        <span className={cn(
+                                            "font-semibold text-base truncate block",
+                                            isCurrentUser && "text-primary"
+                                        )}>
+                                            {user.username}
+                                            {isCurrentUser && " (나)"}
+                                        </span>
+                                    </div>
+
+                                    {/* 통계 - 인라인 스타일 */}
+                                    <div className="flex items-center gap-6 flex-1 justify-end">
+                                        {/* 도장 개수 */}
+                                        <div className="flex items-center gap-1.5">
+                                            <Stamp className="h-3.5 w-3.5 text-muted-foreground" />
+                                            <span className="font-bold text-base">
+                                                {user.verifiedReviewCount}
+                                            </span>
+                                        </div>
+
+                                        {/* 좋아요 */}
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-xs text-muted-foreground">❤️</span>
+                                            <span className="font-bold text-base text-red-600">
+                                                {user.totalLikes}
+                                            </span>
+                                        </div>
+
+                                        {/* 티어 */}
+                                        <Badge
+                                            variant="outline"
+                                            className={cn(
+                                                "text-xs px-2.5 h-6 whitespace-nowrap min-w-[80px] justify-center",
+                                                tier.bgColor,
+                                                tier.color,
+                                                "border-current"
+                                            )}
+                                        >
+                                            {tier.name}
+                                        </Badge>
+                                    </div>
+                                </div>
+                            );
+                        })}
+
+                        {/* 빈 데이터 상태 */}
+                        {sortedLeaderboard.length === 0 && (
+                            <div className="text-center py-12 text-muted-foreground">
+                                <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p className="text-sm mb-2">아직 랭킹 데이터가 없습니다</p>
+                                <p className="text-xs">리뷰를 작성하고 랭킹에 도전해보세요!</p>
+                            </div>
+                        )}
+                    </div>
+                </ScrollArea>
+            </div>
+        </div>
     );
 }

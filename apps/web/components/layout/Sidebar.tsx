@@ -40,6 +40,133 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
     });
   }, [queryClient]);
 
+  // [최적화] 도장 페이지 데이터 프리페치 (전체 맛집 + 사용자 리뷰)
+  const prefetchStampData = useCallback(async () => {
+    // 전체 맛집 데이터 prefetch
+    await queryClient.prefetchQuery({
+      queryKey: ["restaurants", undefined, undefined, undefined, undefined],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("restaurants")
+          .select("id, name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
+          .eq("status", "approved")
+          .order("name");
+
+        if (error) throw error;
+        return data || [];
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+
+    // 로그인된 사용자의 스탬프 데이터 prefetch
+    if (user?.id) {
+      await queryClient.prefetchQuery({
+        queryKey: ['user-stamp-reviews', user.id],
+        queryFn: async () => {
+          const { data, error } = await supabase
+            .from('reviews')
+            .select('restaurant_id, is_verified')
+            .eq('user_id', user.id)
+            .eq('is_verified', true);
+          if (error) throw error;
+          return data || [];
+        },
+      });
+    }
+  }, [queryClient, user?.id]);
+
+  // [최적화] 랭킹 페이지 데이터 프리페치
+  const prefetchLeaderboardData = useCallback(async () => {
+    await queryClient.prefetchQuery({
+      queryKey: ['leaderboard-all-users'],
+      queryFn: async () => {
+        try {
+          // 모든 프로필 조회
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('user_id, nickname')
+            .not('nickname', 'is', null)
+            .neq('nickname', '탈퇴한 사용자');
+
+          if (profilesError) throw new Error(`프로필 데이터 조회 실패: ${profilesError.message}`);
+          if (!profilesData || profilesData.length === 0) return [];
+
+          // 해당 사용자들의 모든 리뷰 조회
+          const userIds = profilesData.map((profile: any) => profile.user_id);
+          const { data: allReviewsData } = await supabase
+            .from('reviews')
+            .select('id, user_id, is_verified')
+            .in('user_id', userIds);
+
+          // 모든 리뷰의 좋아요 데이터 조회
+          let reviewIds: string[] = [];
+          if (allReviewsData) {
+            reviewIds = allReviewsData.map((review: any) => review.id);
+          }
+
+          const { data: likesData } = await supabase
+            .from('review_likes')
+            .select('review_id')
+            .in('review_id', reviewIds);
+
+          // 통계 계산
+          const reviewCountMap = new Map<string, number>();
+          const verifiedReviewCountMap = new Map<string, number>();
+          const totalLikesMap = new Map<string, number>();
+          const reviewLikesMap = new Map<string, number>();
+
+          if (likesData) {
+            likesData.forEach((like: any) => {
+              const current = reviewLikesMap.get(like.review_id) || 0;
+              reviewLikesMap.set(like.review_id, current + 1);
+            });
+          }
+
+          if (allReviewsData && allReviewsData.length > 0) {
+            allReviewsData.forEach((review: any) => {
+              const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
+              reviewCountMap.set(review.user_id, currentReviewCount + 1);
+
+              if (review.is_verified) {
+                const currentVerifiedCount = verifiedReviewCountMap.get(review.user_id) || 0;
+                verifiedReviewCountMap.set(review.user_id, currentVerifiedCount + 1);
+              }
+
+              const reviewLikes = reviewLikesMap.get(review.id) || 0;
+              const currentLikes = totalLikesMap.get(review.user_id) || 0;
+              totalLikesMap.set(review.user_id, currentLikes + reviewLikes);
+            });
+          }
+
+          const users = profilesData.map((profile: any) => {
+            const reviewCount = reviewCountMap.get(profile.user_id) || 0;
+            const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
+            const totalLikes = totalLikesMap.get(profile.user_id) || 0;
+
+            return {
+              id: profile.user_id,
+              username: profile.nickname,
+              reviewCount,
+              verifiedReviewCount,
+              totalLikes,
+            };
+          });
+
+          return users
+            .sort((a: any, b: any) => b.verifiedReviewCount - a.verifiedReviewCount)
+            .map((user: any, index: number) => ({
+              ...user,
+              rank: index + 1,
+            }));
+        } catch (error) {
+          console.warn('리더보드 데이터 조회 중 오류 발생:', error);
+          return [];
+        }
+      },
+      staleTime: 5 * 60 * 1000,
+    });
+  }, [queryClient]);
+
   // [메뉴 설정] 메뉴 아이템 메모이제이션
   const menuItems = useMemo(() => {
     // 마이페이지 모드가 아닐 때는 일반 메뉴 표시
@@ -185,9 +312,15 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
             )}
             onClick={item.onClick}
             onMouseEnter={() => {
-              // [성능 최적화] 홈 페이지 호버 시 레스토랑 데이터 미리 로드
-              if (isHomePage && !isActive) {
-                prefetchRestaurants();
+              // [성능 최적화] 페이지 호버 시 해당 페이지 데이터 미리 로드
+              if (!isActive) {
+                if (isHomePage) {
+                  prefetchRestaurants();
+                } else if (item.path === "/stamp") {
+                  prefetchStampData();
+                } else if (item.path === "/leaderboard") {
+                  prefetchLeaderboardData();
+                }
               }
             }}
             disabled={!item.onClick}
