@@ -212,21 +212,8 @@ export function DailyRecommendationPopup() {
             {/* 광고 팝업 스타일 */}
             <div className="absolute max-md:top-1/2 max-md:left-1/2 max-md:-translate-x-1/2 max-md:-translate-y-1/2 md:bottom-6 md:right-6 pointer-events-auto max-md:opacity-0 max-md:animate-[fadeIn_0.5s_ease-out_forwards] md:animate-in md:slide-in-from-bottom-4 md:duration-500">
                 <Card
-                    className="w-[320px] overflow-hidden shadow-2xl border-2 border-primary/30 cursor-pointer hover:shadow-primary/20 transition-all hover:scale-[1.02] bg-white font-serif"
-                    onClick={handleCardClick}
+                    className="w-[320px] overflow-hidden shadow-2xl border-2 border-primary/30 bg-white font-serif"
                 >
-                    {/* X 닫기 버튼 */}
-                    <button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            handleClose();
-                        }}
-                        className="absolute top-2 right-2 z-10 w-6 h-6 rounded-full bg-black/60 hover:bg-black/80 text-white flex items-center justify-center transition-colors"
-                        aria-label="닫기"
-                    >
-                        <X className="w-3 h-3" />
-                    </button>
-
                     {/* 오늘의 추천 배지 */}
                     <div className="absolute top-2 left-2 z-10">
                         <Badge className="bg-[#8B5A2B] text-white hover:bg-[#7A4E25] border-none px-3 py-1.5 shadow-lg flex items-center gap-1.5 transition-colors">
@@ -235,64 +222,63 @@ export function DailyRecommendationPopup() {
                         </Badge>
                     </div>
 
-                    {/* YouTube 썸네일 */}
-                    {thumbnailUrl && (
-                        <div className="aspect-video relative group">
-                            <img
-                                src={thumbnailUrl}
-                                alt={`${selectedRestaurant.name} 썸네일`}
-                                className="w-full h-full object-cover group-hover:brightness-110 transition-all"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                    )}
-
-                    {/* 음식점 정보 */}
-                    <div className="p-4 space-y-2">
-                        <div>
-                            <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-1">
-                                {selectedRestaurant.name}
-                            </h3>
-                            <div className="flex items-start gap-1.5 text-xs text-gray-600">
-                                <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                                <span className="line-clamp-1">{address}</span>
-                            </div>
-                        </div>
-
-                        {/* 카테고리 */}
-                        {selectedRestaurant.categories && selectedRestaurant.categories.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                                {selectedRestaurant.categories.slice(0, 2).map((category, index) => (
-                                    <Badge key={index} variant="secondary" className="text-xs px-2 py-0">
-                                        {category}
-                                    </Badge>
-                                ))}
+                    {/* 클릭 가능 영역 */}
+                    <div className="cursor-pointer hover:opacity-95 transition-opacity" onClick={handleCardClick}>
+                        {/* YouTube 썸네일 */}
+                        {thumbnailUrl && (
+                            <div className="aspect-video relative group">
+                                <img
+                                    src={thumbnailUrl}
+                                    alt={`${selectedRestaurant.name} 썸네일`}
+                                    className="w-full h-full object-cover group-hover:brightness-110 transition-all"
+                                />
                             </div>
                         )}
 
-                        {/* 클릭 유도 텍스트 */}
-                        <div className="pt-1 flex items-center justify-between text-primary font-medium text-sm">
-                            <span>지도에서 확인하기</span>
-                            <ExternalLink className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </div>
+                        {/* 음식점 정보 */}
+                        <div className="p-4 space-y-2">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-1">
+                                    {selectedRestaurant.name}
+                                </h3>
+                                <div className="flex items-start gap-1.5 text-xs text-gray-600">
+                                    <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                    <span className="line-clamp-1">{address}</span>
+                                </div>
+                            </div>
 
-                        {/* 오늘 하루 안 보이기 체크박스 */}
-                        <div
-                            className="flex items-center space-x-2 pt-2 border-t"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <Checkbox
-                                id="hide-today"
-                                checked={hideToday}
-                                onCheckedChange={(checked) => setHideToday(checked as boolean)}
-                            />
-                            <label
-                                htmlFor="hide-today"
-                                className="text-xs text-gray-600 cursor-pointer select-none"
-                            >
-                                오늘 하루 안 보이기
-                            </label>
                         </div>
+                    </div>
+
+                    {/* 하단 버튼 (광고 배너와 동일) */}
+                    <div className="flex border-t border-stone-200">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                // 오늘 하루 안 보기 설정 후 닫기
+                                if (typeof window !== 'undefined') {
+                                    const tomorrow = new Date();
+                                    tomorrow.setDate(tomorrow.getDate() + 1);
+                                    tomorrow.setHours(0, 0, 0, 0);
+                                    localStorage.setItem(POPUP_STORAGE_KEY, tomorrow.toISOString());
+                                }
+                                setIsVisible(false);
+                                window.dispatchEvent(new CustomEvent('dailyRecommendationPopupClosed'));
+                            }}
+                            className="flex-1 py-3 text-sm text-stone-500 hover:bg-stone-100 transition-colors"
+                        >
+                            오늘 하루 안 보기
+                        </button>
+                        <div className="w-px bg-stone-200" />
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleClose();
+                            }}
+                            className="flex-1 py-3 text-sm font-medium text-stone-700 hover:bg-stone-100 transition-colors"
+                        >
+                            닫기
+                        </button>
                     </div>
                 </Card>
             </div>
