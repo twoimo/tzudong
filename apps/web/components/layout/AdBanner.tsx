@@ -48,21 +48,27 @@ const SlideIndicator = memo(({
 SlideIndicator.displayName = 'SlideIndicator';
 
 // 배너 컨텐츠 컴포넌트 (메모이제이션)
-const BannerContent = memo(({ banner }: { banner: AdBannerType }) => {
+const BannerContent = memo(({ banner, isActive }: { banner: AdBannerType; isActive: boolean }) => {
     if (banner.image_url) {
         return (
             <img
                 src={banner.image_url}
                 alt={banner.title}
-                className="absolute inset-0 w-full h-full object-cover"
-                loading="lazy"
+                className={cn(
+                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+                    isActive ? "opacity-100" : "opacity-0"
+                )}
+                loading="eager"
                 decoding="async"
             />
         );
     }
 
     return (
-        <>
+        <div className={cn(
+            "absolute inset-0 transition-opacity duration-500",
+            isActive ? "opacity-100" : "opacity-0"
+        )}>
             <div
                 className="absolute inset-0 opacity-40 pointer-events-none"
                 style={{
@@ -97,7 +103,7 @@ const BannerContent = memo(({ banner }: { banner: AdBannerType }) => {
                     </Button>
                 )}
             </div>
-        </>
+        </div>
     );
 });
 BannerContent.displayName = 'BannerContent';
@@ -170,7 +176,14 @@ const AdBannerComponent = () => {
             onClick={handleBannerClick}
             style={{ backgroundColor: '#fdfbf7' }}
         >
-            <BannerContent banner={currentBanner} />
+            {/* 모든 배너를 렌더링하여 크로스페이드 효과 적용 */}
+            {banners.map((banner, index) => (
+                <BannerContent
+                    key={banner.id}
+                    banner={banner}
+                    isActive={index === currentSlide}
+                />
+            ))}
             <SlideIndicator
                 count={banners.length}
                 current={currentSlide}
