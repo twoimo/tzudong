@@ -114,6 +114,9 @@ export function DailyRecommendationPopup() {
             localStorage.setItem(POPUP_STORAGE_KEY, tomorrow.toISOString());
         }
         setIsVisible(false);
+
+        // 광고 배너 팝업에게 닫힘 알림
+        window.dispatchEvent(new CustomEvent('dailyRecommendationPopupClosed'));
     };
 
     // 맛집의 지역 정보를 추출하는 함수

@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2 } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -251,6 +251,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       window.location.href = '/';
     }
   }, [pathname]);
+
+  const handleAdminBannersClick = useCallback(() => {
+    router.push('/admin/banners');
+  }, [router]);
 
   const toggleTheme = useCallback(() => {
     // 한지 모드 전환 시 모든 transition 임시 비활성화하여 즉시 적용
@@ -648,6 +652,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                           {pendingReviewCount > 99 ? '99+' : pendingReviewCount}
                         </Badge>
                       )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleAdminBannersClick} className="text-stone-900 hover:bg-stone-200/50">
+                      <Image className="mr-2 h-4 w-4" />
+                      배너관리
                     </DropdownMenuItem>
                   </>
                 )}

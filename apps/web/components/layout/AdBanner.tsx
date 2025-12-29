@@ -1,33 +1,10 @@
 import { useState, useEffect, useRef, memo, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Scroll } from "lucide-react";
+import { ChevronLeft, ChevronRight, Scroll, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useHydration } from "@/hooks/useHydration";
-
-interface AdBannerSlide {
-    id: number;
-    title: string;
-    description: string;
-}
-
-// 광고 배너 슬라이드 데이터 (옛스러운 말투 적용)
-const AD_SLIDES: AdBannerSlide[] = [
-    {
-        id: 1,
-        title: "광고주 모집",
-        description: "귀하의 맛집을\n천하에 널리 알리옵소서",
-    },
-    {
-        id: 2,
-        title: "명당 자리",
-        description: "수많은 미식가들이\n오가는 길목이옵니다",
-    },
-    {
-        id: 3,
-        title: "동반 성장",
-        description: "쯔동여지도와 더불어\n큰 뜻을 펼치시옵소서",
-    }
-];
+import { useSidebarAdBanners } from "@/hooks/use-ad-banners";
+import { AdBanner as AdBannerType, FALLBACK_AD_BANNERS } from "@/types/ad-banner";
 
 const AdBannerComponent = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -35,18 +12,28 @@ const AdBannerComponent = () => {
     const isHydrated = useHydration();
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Supabase에서 배너 데이터 가져오기
+    const { data: banners = FALLBACK_AD_BANNERS } = useSidebarAdBanners();
+
+    // 슬라이드 인덱스 조정 (배너 개수가 변경될 때)
+    useEffect(() => {
+        if (currentSlide >= banners.length && banners.length > 0) {
+            setCurrentSlide(0);
+        }
+    }, [banners.length, currentSlide]);
+
     // 자동 슬라이드 전환
     useEffect(() => {
-        if (!isAutoPlaying) return;
+        if (!isAutoPlaying || banners.length <= 1) return;
 
         timeoutRef.current = setTimeout(() => {
-            setCurrentSlide((prev) => (prev + 1) % AD_SLIDES.length);
+            setCurrentSlide((prev) => (prev + 1) % banners.length);
         }, 5000);
 
         return () => {
             if (timeoutRef.current) clearTimeout(timeoutRef.current);
         };
-    }, [isAutoPlaying, currentSlide]);
+    }, [isAutoPlaying, currentSlide, banners.length]);
 
     // 핸들러 메모이제이션
     const goToSlide = useCallback((index: number) => {
@@ -60,108 +47,168 @@ const AdBannerComponent = () => {
 
     const nextSlide = useCallback((e?: React.MouseEvent) => {
         e?.stopPropagation();
-        setCurrentSlide((prev) => (prev + 1) % AD_SLIDES.length);
+        setCurrentSlide((prev) => (prev + 1) % banners.length);
         setIsAutoPlaying(false);
         setTimeout(() => setIsAutoPlaying(true), 5000);
-    }, []);
+    }, [banners.length]);
 
     const prevSlide = useCallback((e?: React.MouseEvent) => {
         e?.stopPropagation();
-        setCurrentSlide((prev) => (prev - 1 + AD_SLIDES.length) % AD_SLIDES.length);
+        setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
         setIsAutoPlaying(false);
         setTimeout(() => setIsAutoPlaying(true), 5000);
-    }, []);
+    }, [banners.length]);
 
     const handleMouseEnter = useCallback(() => setIsAutoPlaying(false), []);
     const handleMouseLeave = useCallback(() => setIsAutoPlaying(true), []);
 
-    const currentAd = AD_SLIDES[currentSlide];
+    // 배너 클릭 핸들러
+    const handleBannerClick = useCallback((banner: AdBannerType) => {
+        if (banner.link_url) {
+            window.open(banner.link_url, '_blank', 'noopener,noreferrer');
+        }
+    }, []);
+
+    if (banners.length === 0) return null;
+
+    const currentBanner = banners[currentSlide];
 
     return (
         <div
             className={cn(
                 "relative w-full h-64 rounded-lg overflow-hidden group select-none shadow-md transition-opacity duration-300",
-                isHydrated ? "opacity-100" : "opacity-0"
+                isHydrated ? "opacity-100" : "opacity-0",
+                currentBanner.link_url && "cursor-pointer"
             )}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
+            onClick={() => handleBannerClick(currentBanner)}
             style={{ backgroundColor: '#fdfbf7' }}
         >
-            {/* 한지 질감 오버레이 */}
-            <div className="absolute inset-0 opacity-40 pointer-events-none"
-                style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")` }}
-            />
+            {/* 이미지 배경 (이미지가 있는 경우) */}
+            {currentBanner.image_url ? (
+                <>
+                    <img
+                        src={currentBanner.image_url}
+                        alt={currentBanner.title}
+                        className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    {/* 이미지 위 오버레이 */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
 
-            {/* 전통 문양 테두리 */}
-            <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
-            <div className="absolute inset-0 border-4 border-stone-800/10 rounded-lg pointer-events-none" />
+                    {/* 이미지 위 텍스트 컨텐츠 */}
+                    <div className="relative h-full flex flex-col items-center justify-end text-center p-6 z-10">
+                        <h3 className="text-xl font-serif font-bold text-white mb-2 tracking-wide drop-shadow-lg">
+                            {currentBanner.title}
+                        </h3>
+                        {currentBanner.description && (
+                            <p className="text-sm font-serif text-white/90 whitespace-pre-line leading-relaxed mb-3 drop-shadow-md">
+                                {currentBanner.description}
+                            </p>
+                        )}
+                        {currentBanner.link_url && (
+                            <div className="flex items-center gap-1 text-xs text-white/80">
+                                <ExternalLink className="h-3 w-3" />
+                                <span>클릭하여 이동</span>
+                            </div>
+                        )}
+                    </div>
+                </>
+            ) : (
+                <>
+                    {/* 한지 질감 오버레이 */}
+                    <div className="absolute inset-0 opacity-40 pointer-events-none"
+                        style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")` }}
+                    />
 
-            {/* 슬라이드 컨텐츠 */}
-            <div className="relative h-full flex flex-col items-center justify-center text-center p-6 z-10">
-                {/* 상단 장식 */}
-                <div className="mb-3 text-stone-500 opacity-60">
-                    <Scroll className="w-6 h-6" />
-                </div>
+                    {/* 전통 문양 테두리 */}
+                    <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
+                    <div className="absolute inset-0 border-4 border-stone-800/10 rounded-lg pointer-events-none" />
 
-                {/* 제목 */}
-                <h3 className="text-2xl font-serif font-bold text-stone-900 mb-3 tracking-widest drop-shadow-sm">
-                    {currentAd.title}
-                </h3>
+                    {/* 슬라이드 컨텐츠 */}
+                    <div className="relative h-full flex flex-col items-center justify-center text-center p-6 z-10">
+                        {/* 상단 장식 */}
+                        <div className="mb-3 text-stone-500 opacity-60">
+                            <Scroll className="w-6 h-6" />
+                        </div>
 
-                {/* 설명 */}
-                <p className="text-base font-serif text-stone-700 whitespace-pre-line leading-loose mb-3 opacity-90">
-                    {currentAd.description}
-                </p>
+                        {/* 제목 */}
+                        <h3 className="text-2xl font-serif font-bold text-stone-900 mb-3 tracking-widest drop-shadow-sm">
+                            {currentBanner.title}
+                        </h3>
 
-                {/* 버튼 */}
-                <Button
-                    variant="outline"
-                    size="sm"
-                    className="font-serif bg-stone-100/50 hover:bg-stone-200 text-stone-800 border-stone-400 hover:border-stone-600 transition-all duration-300"
-                >
-                    전갈 보내기
-                </Button>
-            </div>
+                        {/* 설명 */}
+                        {currentBanner.description && (
+                            <p className="text-base font-serif text-stone-700 whitespace-pre-line leading-loose mb-3 opacity-90">
+                                {currentBanner.description}
+                            </p>
+                        )}
+
+                        {/* 버튼 */}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="font-serif bg-stone-100/50 hover:bg-stone-200 text-stone-800 border-stone-400 hover:border-stone-600 transition-all duration-300"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (currentBanner.link_url) {
+                                    window.open(currentBanner.link_url, '_blank', 'noopener,noreferrer');
+                                }
+                            }}
+                        >
+                            {currentBanner.link_url ? '자세히 보기' : '전갈 보내기'}
+                        </Button>
+                    </div>
+                </>
+            )}
 
             {/* 네비게이션 컨트롤 */}
-            <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto transition-all duration-200"
-                    onClick={prevSlide}
-                >
-                    <ChevronLeft className="h-5 w-5" />
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto transition-all duration-200"
-                    onClick={nextSlide}
-                >
-                    <ChevronRight className="h-5 w-5" />
-                </Button>
-            </div>
+            {banners.length > 1 && (
+                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto transition-all duration-200"
+                        onClick={prevSlide}
+                    >
+                        <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto transition-all duration-200"
+                        onClick={nextSlide}
+                    >
+                        <ChevronRight className="h-5 w-5" />
+                    </Button>
+                </div>
+            )}
 
             {/* 하단 인디케이터 */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2.5 z-20">
-                {AD_SLIDES.map((_, index) => (
-                    <button
-                        key={index}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            goToSlide(index);
-                        }}
-                        className={cn(
-                            "w-2 h-2 rounded-full transition-all duration-300 ease-out",
-                            currentSlide === index
-                                ? "bg-stone-700 scale-110 shadow-sm"
-                                : "bg-stone-400/60 hover:bg-stone-500 scale-100"
-                        )}
-                        aria-label={`슬라이드 ${index + 1}로 이동`}
-                    />
-                ))}
-            </div>
+            {banners.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2.5 z-20">
+                    {banners.map((_, index) => (
+                        <button
+                            key={index}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                goToSlide(index);
+                            }}
+                            className={cn(
+                                "w-2 h-2 rounded-full transition-all duration-300 ease-out",
+                                currentSlide === index
+                                    ? currentBanner.image_url
+                                        ? "bg-white scale-110 shadow-sm"
+                                        : "bg-stone-700 scale-110 shadow-sm"
+                                    : currentBanner.image_url
+                                        ? "bg-white/60 hover:bg-white/80 scale-100"
+                                        : "bg-stone-400/60 hover:bg-stone-500 scale-100"
+                            )}
+                            aria-label={`슬라이드 ${index + 1}로 이동`}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };
