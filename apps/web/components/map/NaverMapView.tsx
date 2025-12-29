@@ -49,9 +49,9 @@ const PERFORMANCE_LOG_ENABLED = false; // 성능 로깅 활성화 (개발용)
 // 클러스터링 상수 (네이버 지도 스타일)
 const ENABLE_CLUSTERING = true; // 클러스터링 전체 활성화
 const CLUSTER_MAX_ZOOM = 16; // 이 줌 레벨까지 클러스터링 (16 초과 시 모든 개별 마커 표시)
-const CLUSTER_RADIUS = 60; // 클러스터 반경 (픽셀)
-const CLUSTER_MIN_POINTS = 2; // 최소 2개부터 클러스터링
-const CLUSTER_ANIMATION_INTERVAL = 6000; // 클러스터 이모지 애니메이션 주기 (ms)
+const CLUSTER_RADIUS = 40; // 클러스터 반경 (픽셀)
+const CLUSTER_MIN_POINTS = 5; // 최소 2개부터 클러스터링
+const CLUSTER_ANIMATION_INTERVAL = 5000; // 클러스터 이모지 애니메이션 주기 (ms)
 
 interface NaverMapViewProps {
     filters: FilterState;
