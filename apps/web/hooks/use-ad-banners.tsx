@@ -253,7 +253,7 @@ export function useToggleAdBanner() {
 }
 
 /**
- * 이미지 업로드 (클라이언트 사이드에서 압축 후 업로드)
+ * 미디어 파일 업로드 (이미지/동영상 지원)
  */
 export function useUploadBannerImage() {
     const { user } = useAuth();
@@ -264,10 +264,27 @@ export function useUploadBannerImage() {
                 throw new Error('로그인이 필요합니다.');
             }
 
+            // 파일 타입 감지
+            const isVideo = file.type.startsWith('video/');
+
+            // 확장자 및 content-type 결정
+            let extension: string;
+            let contentType: string;
+
+            if (isVideo) {
+                // 동영상: 원본 확장자 및 content-type 유지
+                extension = file.name.split('.').pop()?.toLowerCase() || 'mp4';
+                contentType = file.type || 'video/mp4';
+            } else {
+                // 이미지: webp 변환 (기존 로직)
+                extension = 'webp';
+                contentType = 'image/webp';
+            }
+
             // 파일명 생성 (안전한 파일명)
             const timestamp = Date.now();
             const randomString = Math.random().toString(36).substring(2, 15);
-            const fileName = `${user.id}/${timestamp}_${randomString}.webp`;
+            const fileName = `${user.id}/${timestamp}_${randomString}.${extension}`;
 
             // Supabase Storage에 업로드
             const { data, error } = await supabase.storage
@@ -275,7 +292,7 @@ export function useUploadBannerImage() {
                 .upload(fileName, file, {
                     cacheControl: '3600',
                     upsert: false,
-                    contentType: 'image/webp',
+                    contentType: contentType,
                 });
 
             if (error) {

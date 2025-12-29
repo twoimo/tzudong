@@ -310,7 +310,8 @@ const isRestaurantInViewport = (restaurant: Restaurant, map: any, padding: numbe
     if (!map || !restaurant.lat || !restaurant.lng) return false;
 
     const bounds = map.getBounds();
-    if (!bounds) return false;
+    // [Fix] 초기 로딩 시 bounds가 없으면 가시 영역으로 간주하여 필터링하지 않음
+    if (!bounds) return true;
 
     const latLng = new window.naver.maps.LatLng(restaurant.lat, restaurant.lng);
 
@@ -1640,7 +1641,7 @@ const NaverMapView = memo(({
             naver.maps.Event.removeListener(dragEndListener);
             naver.maps.Event.removeListener(zoomChangedListener);
         };
-    }, [displayRestaurants, searchedRestaurant, selectedRestaurant]);
+    }, [displayRestaurants, searchedRestaurant, selectedRestaurant, isMapInitialized]);
 
     // [삭제됨] 네이버 로고 숨김 로직은 약관 위반 소지가 있어 제거하였습니다.
     // useEffect(() => { ... logo hiding logic ... }, [isLoaded]);
