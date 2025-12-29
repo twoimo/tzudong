@@ -49,10 +49,11 @@ const RestaurantSubmissionModal = dynamic(
     { ssr: false }
 );
 
-const MyPagePanel = dynamic(
-    () => import('@/components/profile/MyPagePanel'),
-    { ssr: false }
-);
+// MyPagePanel은 별도 라우트(/mypage)로 처리됨
+// const MyPagePanel = dynamic(
+//     () => import('@/components/profile/MyPagePanel'),
+//     { ssr: false }
+// );
 
 const AdminReviewPanel = dynamic(
     () => import('@/components/admin/AdminReviewPanel'),
@@ -269,7 +270,8 @@ export default function HomeClient() {
     // 헤더에서 패널 열기 이벤트 리스너
     useEffect(() => {
         const handleMyPageOpen = () => {
-            openPanel('mypage');
+            // MyPage는 별도 라우트로 처리
+            router.push('/mypage');
         };
 
         const handleAdminSubmissionsOpen = () => {
@@ -483,8 +485,8 @@ export default function HomeClient() {
                 />
             )}
 
-            {/* 마이페이지 패널 */}
-            <RightPanelWrapper
+            {/* 마이페이지 패널 - 별도 라우트(/mypage)로 처리됨 */}
+            {/* <RightPanelWrapper
                 isOpen={activeRightPanel === 'mypage'}
                 isCollapsed={isPanelCollapsed}
             >
@@ -494,7 +496,7 @@ export default function HomeClient() {
                     onToggleCollapse={togglePanelCollapse}
                     isCollapsed={isPanelCollapsed}
                 />
-            </RightPanelWrapper>
+            </RightPanelWrapper> */}
 
             {/* 관리자 리뷰관리 패널 */}
             {isAdmin && (
