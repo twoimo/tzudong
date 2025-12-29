@@ -11,8 +11,7 @@ import AuthModal from '@/components/auth/AuthModal';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';
 import { AdminRestaurantModal } from '@/components/admin/AdminRestaurantModal';
-import { DailyRecommendationPopup } from '@/components/recommendation/DailyRecommendationPopup';
-import AdBannerPopup from '@/components/layout/AdBannerPopup';
+import CombinedPopup from '@/components/layout/CombinedPopup';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLayout } from '@/contexts/LayoutContext';
 import { useDeviceType } from '@/hooks/useDeviceType';
@@ -174,8 +173,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 onComplete={completeNicknameSetup}
             />
 
-            <DailyRecommendationPopup />
-            <AdBannerPopup />
+            <CombinedPopup />
         </div>
     );
 }
