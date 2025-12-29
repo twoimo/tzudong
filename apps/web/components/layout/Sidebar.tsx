@@ -42,41 +42,11 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
 
   // [메뉴 설정] 메뉴 아이템 메모이제이션
   const menuItems = useMemo(() => {
-    const handleNavigation = (path: string, eventName: string, tab?: string) => {
-      if (pathname === '/') {
-        if (tab) {
-          window.dispatchEvent(new CustomEvent(eventName, { detail: { tab } }));
-        } else {
-          window.dispatchEvent(new Event(eventName));
-        }
-      } else {
-        let url = `/?panel=${eventName.replace('open', '').toLowerCase()}`;
-        if (tab) url += `&tab=${tab}`;
-        router.push(url);
-      }
-    };
-
     // 마이페이지 모드가 아닐 때는 일반 메뉴 표시
     const baseMenuItems = [
       { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
-      {
-        icon: Stamp,
-        label: "쯔동여지도 도장",
-        path: "/stamp",
-        onClick: () => handleNavigation("/stamp", "openStamp")
-      },
-      {
-        icon: Trophy,
-        label: "쯔동여지도 랭킹",
-        path: "/leaderboard",
-        onClick: () => handleNavigation("/leaderboard", "openLeaderboard")
-      },
-      {
-        icon: User,
-        label: "마이페이지",
-        path: "/mypage",
-        onClick: () => handleNavigation("/mypage", "openMyPage", "profile")
-      },
+      { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
+      { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
     ];
 
     // [권한 관리] 관리자 메뉴 (hydration 완료 후에만 표시)
