@@ -55,8 +55,8 @@ export interface ClusterOptions {
  * 전국 선택 시: 기본 maxZoom(16) 사용하여 계속 클러스터링
  * 
  * @example
- * // 전국(selectedRegion = null) → maxZoom: 16 (기본값, 계속 클러스터링)
- * getClusterMaxZoom(null) // 16
+ * // 전국(selectedRegion = null) → maxZoom: 8 (기본값, 9레벨부터 개별 마커)
+ * getClusterMaxZoom(null) // 8
  * 
  * // 서울(zoom: 12) → maxZoom: 11 → 12레벨부터 개별 마커
  * getClusterMaxZoom('서울특별시') // 11
@@ -68,7 +68,7 @@ export interface ClusterOptions {
  * @param defaultMaxZoom 기본 최대 줌 레벨 (전국일 때 사용)
  * @returns 클러스터링 최대 줌 레벨
  */
-export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom: number = 16): number => {
+export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom: number = 8): number => {
     // 전국 선택 시 기본값 사용 (계속 클러스터링)
     if (!selectedRegion) {
         return defaultMaxZoom;
