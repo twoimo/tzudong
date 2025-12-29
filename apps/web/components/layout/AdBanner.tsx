@@ -49,7 +49,25 @@ SlideIndicator.displayName = 'SlideIndicator';
 
 // 배너 컨텐츠 컴포넌트 (메모이제이션)
 const BannerContent = memo(({ banner, isActive }: { banner: AdBannerType; isActive: boolean }) => {
-    if (banner.image_url) {
+    // 영상 배너
+    if (banner.media_type === 'video' && banner.video_url) {
+        return (
+            <video
+                src={banner.video_url}
+                className={cn(
+                    "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+                    isActive ? "opacity-100" : "opacity-0"
+                )}
+                autoPlay
+                muted
+                loop
+                playsInline
+            />
+        );
+    }
+
+    // 이미지 배너
+    if (banner.media_type === 'image' && banner.image_url) {
         return (
             <img
                 src={banner.image_url}
@@ -64,6 +82,7 @@ const BannerContent = memo(({ banner, isActive }: { banner: AdBannerType; isActi
         );
     }
 
+    // 텍스트 전용 배너
     return (
         <div className={cn(
             "absolute inset-0 transition-opacity duration-500",
