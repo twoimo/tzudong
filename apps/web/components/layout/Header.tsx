@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -74,6 +74,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
   const [pendingSubmissionCount, setPendingSubmissionCount] = useState(0);
   // 미처리 리뷰 건수 상태
   const [pendingReviewCount, setPendingReviewCount] = useState(0);
+  // 사업자 정보 펼치기 상태
+  const [isBusinessInfoExpanded, setIsBusinessInfoExpanded] = useState(false);
 
   // 북마크 데이터
   const { data: bookmarksData = [] } = useBookmarks();
@@ -664,28 +666,55 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <LogOut className="mr-2 h-4 w-4" />
                   로그아웃
                 </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-stone-800/10" />
+                <div className="px-2 py-1">
+                  <button
+                    onClick={() => setIsBusinessInfoExpanded(!isBusinessInfoExpanded)}
+                    className="w-full flex items-center justify-between hover:bg-stone-100 rounded px-1.5 py-1 transition-colors"
+                  >
+                    <div className="text-[10px] text-stone-400 flex-1">
+                      <p>쯔동여지도 v2.0.0</p>
+                      <p className="text-stone-300">© 2025 타이니번 데이터랩</p>
+                    </div>
+                    {isBusinessInfoExpanded ? (
+                      <ChevronUp className="h-3 w-3 text-stone-400 flex-shrink-0 ml-1" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3 text-stone-400 flex-shrink-0 ml-1" />
+                    )}
+                  </button>
+                  {isBusinessInfoExpanded && (
+                    <div className="mt-1.5 pt-1.5 border-t border-stone-200 text-[10px] text-stone-500 space-y-0.5 px-1.5">
+                      <p className="font-semibold text-stone-600">타이니번 데이터랩</p>
+                      <p>대표: 최연우</p>
+                      <p>사업자등록번호: 601-09-04613</p>
+                      <p>이메일: twoimo@dgu.ac.kr</p>
+                    </div>
+                  )}
+                </div>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          </div >
         )}
 
         {/* 로그인 버튼 */}
-        {!isLoggedIn && (
-          <Button
-            onClick={onOpenAuth}
-            className={cn(
-              "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
-              "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2",
-              shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
-            )}
-          >
-            로그인
-          </Button>
-        )}
-      </div>
+        {
+          !isLoggedIn && (
+            <Button
+              onClick={onOpenAuth}
+              className={cn(
+                "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
+                "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2",
+                shouldShowAuthUI ? "opacity-100" : "opacity-0 pointer-events-none"
+              )}
+            >
+              로그인
+            </Button>
+          )
+        }
+      </div >
 
       {/* 공지사항 바텀시트 */}
-      <Sheet open={isAnnouncementSheetOpen} onOpenChange={setIsAnnouncementSheetOpen}>
+      < Sheet open={isAnnouncementSheetOpen} onOpenChange={setIsAnnouncementSheetOpen} >
         <SheetContent side="bottom" className="bg-[#fdfbf7] border-stone-800/10 font-serif max-h-[80vh] flex flex-col">
           <SheetHeader className="flex-shrink-0">
             <div className="flex items-center gap-2">
@@ -853,8 +882,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             )}
           </div>
         </SheetContent>
-      </Sheet>
-    </header>
+      </Sheet >
+    </header >
   );
 };
 
