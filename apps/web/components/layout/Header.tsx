@@ -34,6 +34,7 @@ import { useDeviceType } from "@/hooks/useDeviceType";
 interface HeaderProps {
   onToggleSidebar: () => void;
   isLoggedIn: boolean;
+  isAuthLoading?: boolean;
   onOpenAuth: () => void;
   onLogout: () => void;
   onProfileClick?: () => void;
@@ -47,7 +48,7 @@ interface HeaderProps {
 
 const BANNER_ROTATION_INTERVAL = 5000;
 
-const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
+const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
   const isHydrated = useHydration();
   const { isMobileOrTablet } = useDeviceType();
@@ -425,7 +426,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         </Button>
 
         {/* 알림 */}
-        <div className={cn(isHydrated ? "opacity-100" : "opacity-0 pointer-events-none")}>
+        <div className={cn(
+          isHydrated && !isAuthLoading ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
@@ -513,7 +516,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
         {/* 북마크 - 드롭다운 */}
         {isLoggedIn && (
-          <div className={cn(isHydrated ? "opacity-100" : "opacity-0 pointer-events-none")}>
+          <div className={cn(
+            isHydrated && !isAuthLoading ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
@@ -596,7 +601,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
         {/* 로그인 상태 */}
         {isLoggedIn && (
-          <div className={cn(isHydrated ? "opacity-100" : "opacity-0 pointer-events-none")}>
+          <div className={cn(
+            isHydrated && !isAuthLoading ? "opacity-100" : "opacity-0 pointer-events-none"
+          )}>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 transition-colors">
@@ -658,7 +665,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
             className={cn(
               "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
               "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2",
-              isHydrated ? "opacity-100" : "opacity-0 pointer-events-none"
+              isHydrated && !isAuthLoading ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
           >
             로그인

@@ -25,7 +25,7 @@ const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPre
 });
 
 export function MainLayoutContent({ children }: { children: React.ReactNode }) {
-    const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup } = useAuth();
+    const { user, signOut, isAdmin, needsNicknameSetup, completeNicknameSetup, isLoading } = useAuth();
     const queryClient = useQueryClient();
     const pathname = usePathname();
     const router = useRouter();
@@ -102,6 +102,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                 <Header
                     onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
                     isLoggedIn={!!user}
+                    isAuthLoading={isLoading}
                     onOpenAuth={() => setIsAuthModalOpen(true)}
                     onLogout={handleLogout}
                     onProfileClick={() => setIsProfileModalOpen(true)}
