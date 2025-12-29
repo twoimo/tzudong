@@ -216,40 +216,35 @@ const CombinedPopupComponent = () => {
                 )}
                 style={{ backgroundColor: '#fdfbf7' }}
             >
-                {/* 슬라이드 컨텐츠 */}
-                <div className="relative aspect-[4/5] cursor-pointer">
+                {/* 슬라이드 컨텐츠 - 타입에 따라 비율 조정 */}
+                <div className={cn(
+                    "relative cursor-pointer",
+                    currentSlideData.type === 'restaurant' ? "aspect-[16/9]" : "aspect-[4/5]"
+                )}>
                     {currentSlideData.type === 'restaurant' ? (
-                        // 맛집 슬라이드 - 상단 썸네일 + 하단 정보
+                        // 맛집 슬라이드 - 16:9 비율 썸네일
                         <div
-                            className="absolute inset-0 flex flex-col bg-white"
+                            className="absolute inset-0"
                             onClick={() => handleRestaurantClick(currentSlideData.data)}
                         >
-                            {/* 상단 썸네일 영역 */}
-                            <div className="relative flex-1 overflow-hidden">
-                                {/* 오늘의 추천 배지 */}
-                                <div className="absolute top-2 left-2 z-10">
-                                    <Badge className="bg-[#8B5A2B] text-white hover:bg-[#7A4E25] border-none px-3 py-1.5 shadow-lg flex items-center gap-1.5">
-                                        <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300" />
-                                        <span className="font-medium tracking-wide">오늘의 추천</span>
-                                    </Badge>
-                                </div>
+                            {/* 썸네일 이미지 - 16:9에 맞게 표시 */}
+                            {currentSlideData.data.youtube_link && (
+                                <img
+                                    src={getYouTubeThumbnailUrl(currentSlideData.data.youtube_link) || ''}
+                                    alt={currentSlideData.data.name}
+                                    className="w-full h-full object-cover"
+                                />
+                            )}
 
-                                {/* 썸네일 이미지 - 확대하여 letterbox 제거 */}
-                                {currentSlideData.data.youtube_link && (
-                                    <img
-                                        src={getYouTubeThumbnailUrl(currentSlideData.data.youtube_link) || ''}
-                                        alt={currentSlideData.data.name}
-                                        className="w-full h-full object-cover scale-150"
-                                    />
-                                )}
-                            </div>
+                            {/* 하단 그라데이션 */}
+                            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/80 to-transparent" />
 
-                            {/* 하단 정보 영역 */}
-                            <div className="p-4 bg-white border-t border-stone-200">
-                                <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-1">
+                            {/* 맛집 정보 - 하단 오버레이 */}
+                            <div className="absolute bottom-0 left-0 right-0 p-3 text-white z-10">
+                                <h3 className="text-base font-bold line-clamp-1 mb-0.5 drop-shadow-lg">
                                     {currentSlideData.data.name}
                                 </h3>
-                                <div className="flex items-start gap-1.5 text-xs text-gray-600">
+                                <div className="flex items-start gap-1 text-xs opacity-90 drop-shadow-md">
                                     <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
                                     <span className="line-clamp-1">
                                         {currentSlideData.data.road_address || currentSlideData.data.jibun_address || '주소 정보 없음'}
