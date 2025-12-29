@@ -1533,7 +1533,36 @@ const NaverMapView = memo(({
 
     // 지도 초기화
     useEffect(() => {
-        if (!isLoaded || !mapRef.current || mapInstanceRef.current) return;
+        if (!isLoaded || !mapRef.current) return;
+
+        // [Fix] 기존 지도 인스턴스가 유효한지 검증 (soft navigation 시 zombie 인스턴스 방지)
+        const isMapInstanceValid = () => {
+            if (!mapInstanceRef.current) return false;
+
+            try {
+                // 지도의 컨테이너 엘리먼트 확인
+                const mapContainer = mapInstanceRef.current.getElement?.();
+                if (!mapContainer) return false;
+
+                // 컨테이너가 현재 DOM에 연결되어 있고, mapRef와 일치하는지 확인
+                return document.body.contains(mapContainer) &&
+                    (mapContainer === mapRef.current || mapRef.current?.contains(mapContainer));
+            } catch {
+                return false;
+            }
+        };
+
+        // 기존 인스턴스가 유효하면 재초기화 불필요
+        if (isMapInstanceValid()) return;
+
+        // 유효하지 않은 기존 인스턴스 정리
+        if (mapInstanceRef.current) {
+            console.log('[NaverMapView] 기존 지도 인스턴스 정리 (zombie 인스턴스 감지)');
+            markerPool.clear();
+            clusterAnimationManager.clear();
+            mapInstanceRef.current = null;
+            setIsMapInitialized(false);
+        }
 
         try {
             const { naver } = window;
