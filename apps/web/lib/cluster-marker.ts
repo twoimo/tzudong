@@ -146,9 +146,23 @@ export const createClusterMarkerHTML = (
   const displayCategory = categories[currentIndex % categories.length] || '기타';
   const icon = getCategoryIcon(displayCategory);
 
-  // 개수에 따라 크기 조절
-  const size = count < 10 ? 36 : count < 100 ? 44 : 52;
-  const iconSize = count < 10 ? 20 : count < 100 ? 24 : 28;
+  // 개수에 따라 크기 동적 조정 (32px ~ 64px)
+  let size: number;
+  if (count < 5) {
+    size = 32;
+  } else if (count < 10) {
+    size = 36;
+  } else if (count < 20) {
+    size = 40;
+  } else if (count < 50) {
+    size = 48;
+  } else if (count < 100) {
+    size = 56;
+  } else {
+    size = 64;
+  }
+  const iconSize = Math.floor(size * 0.6);
+
 
   return `
     <div 
