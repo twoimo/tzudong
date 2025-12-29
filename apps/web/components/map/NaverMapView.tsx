@@ -1394,7 +1394,7 @@ const NaverMapView = memo(({
             restaurantsRef.current = restaurantsToShow;
         }
 
-    }, [clusters, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode]);
+    }, [clusters, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isMapInitialized]);
 
     // [🆕 클러스터 애니메이션] 카테고리 이모지 순환 업데이트
     useEffect(() => {
