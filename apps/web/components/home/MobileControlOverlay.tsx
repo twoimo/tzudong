@@ -6,7 +6,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Region, REGIONS } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { mergeRestaurants } from '@/hooks/use-restaurants';
@@ -74,6 +73,7 @@ function MobileControlOverlayComponent({
 }: MobileControlOverlayProps) {
     const [activeSheet, setActiveSheet] = useState<ActiveSheet>('none');
     const [sheetHeight, setSheetHeight] = useState(50); // 최종 높이 (스냅 시에만 업데이트)
+    // [OPTIMIZATION] isDragging은 UI 업데이트용으로만 사용, 실제 드래그 로직은 ref 사용
     const [isDragging, setIsDragging] = useState(false);
 
     // [OPTIMIZATION] ref로 실시간 드래그 상태 추적 (리렌더링 없이)
@@ -82,14 +82,15 @@ function MobileControlOverlayComponent({
     const currentHeightRef = useRef(50); // 현재 드래그 중인 높이
     const startYRef = useRef(0);
     const startHeightRef = useRef(50);
+    const isDraggingRef = useRef(false); // [OPTIMIZATION] isDragging도 ref로 관리
 
-    // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 캐싱 전략 추가
+    // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 필요한 필드만 선택
     const { data: restaurants = [] } = useQuery({
         queryKey: ['mobile-control-restaurants', mapMode],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('restaurants')
-                .select('*')
+                .select('id, name, road_address, jibun_address, categories')
                 .eq('status', 'approved');
 
             if (error) return [];
@@ -114,16 +115,17 @@ function MobileControlOverlayComponent({
         }
     }, [activeSheet]);
 
-    // [OPTIMIZATION] 드래그 시작 - passive 이벤트 방지를 위해 별도 처리
+    // [OPTIMIZATION] 드래그 시작 - ref 기반으로 리렌더링 최소화
     const handleDragStart = useCallback((e: TouchEvent) => {
-        setIsDragging(true);
+        isDraggingRef.current = true;
+        setIsDragging(true); // will-change 적용용
         startYRef.current = e.touches[0].clientY;
         startHeightRef.current = currentHeightRef.current;
     }, []);
 
-    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음, sheetRef 체크 제거)
+    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음)
     const handleDragMove = useCallback((e: TouchEvent) => {
-        if (!isDragging) return;
+        if (!isDraggingRef.current) return;
 
         const currentY = e.touches[0].clientY;
         const deltaY = startYRef.current - currentY;
@@ -135,15 +137,16 @@ function MobileControlOverlayComponent({
 
         currentHeightRef.current = newHeight;
 
-        // [OPTIMIZATION] ref로 DOM 직접 조작 (리렌더링 제거)
+        // [OPTIMIZATION] requestAnimationFrame으로 DOM 직접 조작
         requestAnimationFrame(() => {
             if (sheetRef.current) {
                 sheetRef.current.style.transform = `translateY(calc(85vh - ${newHeight}vh))`;
             }
         });
-    }, [isDragging]);
+    }, []); // 의존성 배열 비움 - ref만 사용하므로 안정적
     // [OPTIMIZATION] 드래그 종료 - 스냅 포인트로 이동
     const handleDragEnd = useCallback(() => {
+        isDraggingRef.current = false;
         setIsDragging(false);
 
         const currentHeight = currentHeightRef.current;
@@ -168,55 +171,62 @@ function MobileControlOverlayComponent({
         }
     }, [activeSheet, handleClose]);
 
-    // [OPTIMIZATION] 지역별 맛집 수 계산
+    // [OPTIMIZATION] 지역별 맛집 수 계산 - 단일 패스로 최적화
     const regionCounts = useMemo(() => {
         const counts: Record<string, number> = {};
+
+        // 지역 키워드 매핑 (라지 로딩 시 1회만 생성)
+        const regionKeywords: Record<string, string> = {
+            '울릉도': '울릉',
+            '욕지도': '욕지'
+        };
+
         restaurants.forEach((restaurant) => {
             const address = restaurant.road_address || restaurant.jibun_address || '';
-            REGIONS.forEach((region) => {
-                if (region === "울릉도" && address.includes('울릉')) {
+
+            for (const region of REGIONS) {
+                const keyword = regionKeywords[region] || region;
+                if (address.includes(keyword)) {
                     counts[region] = (counts[region] || 0) + 1;
-                } else if (region === "욕지도" && address.includes('욕지')) {
-                    counts[region] = (counts[region] || 0) + 1;
-                } else if (address.includes(region)) {
-                    counts[region] = (counts[region] || 0) + 1;
+                    break; // 한 지역에만 해당할 수 있으므로 조기 종료
                 }
-            });
+            }
         });
         return counts;
     }, [restaurants]);
 
-    // [OPTIMIZATION] 카테고리별 맛집 수 계산 (선택된 지역 고려)
+    // [OPTIMIZATION] 카테고리별 맛집 수 계산 (선택된 지역 고려) - 지역 필터링 최적화
     const categoryCounts = useMemo(() => {
         const counts: Record<string, number> = {};
 
-        // 지역이 선택된 경우 해당 지역의 맛집만 필터링
-        const filteredRestaurants = selectedRegion
-            ? restaurants.filter((restaurant) => {
-                const address = restaurant.road_address || restaurant.jibun_address || '';
-                if (selectedRegion === "울릉도") {
-                    return address.includes('울릉');
-                } else if (selectedRegion === "욕지도") {
-                    return address.includes('욕지');
-                } else {
-                    return address.includes(selectedRegion);
-                }
+        // 지역 키워드 매핑
+        const regionKeywords: Record<string, string> = {
+            '울릉도': '울릉',
+            '욕지도': '욕지'
+        };
+        const keyword = selectedRegion ? (regionKeywords[selectedRegion] || selectedRegion) : null;
+
+        // 지역이 선택된 경우 해당 지역만 필터링, 아니면 전체
+        const targetRestaurants = keyword
+            ? restaurants.filter((r) => {
+                const addr = r.road_address || r.jibun_address || '';
+                return addr.includes(keyword);
             })
             : restaurants;
 
-        filteredRestaurants.forEach((restaurant) => {
+        for (const restaurant of targetRestaurants) {
             const categories = restaurant.categories || [];
-            categories.forEach((category: string) => {
+            for (const category of categories) {
                 counts[category] = (counts[category] || 0) + 1;
-            });
-        });
+            }
+        }
         return counts;
     }, [restaurants, selectedRegion]);
 
-    // [OPTIMIZATION] Passive 이벤트 리스너 등록
+    // [OPTIMIZATION] Passive 이벤트 리스너 등록 (검색 시트는 제외)
     useEffect(() => {
         const handleEl = handleRef.current;
-        if (!handleEl || activeSheet === 'none') return;
+        if (!handleEl || activeSheet === 'none' || activeSheet === 'search') return;
 
         // Passive: true로 스크롤 성능 최적화
         handleEl.addEventListener('touchstart', handleDragStart as any, { passive: true });
@@ -238,8 +248,12 @@ function MobileControlOverlayComponent({
         currentHeightRef.current = initialHeight;
         setSheetHeight(initialHeight);
 
-        // DOM에 즉시 반영 (애니메이션과 함께)
-        sheetRef.current.style.transform = `translateY(calc(85vh - ${initialHeight}vh))`;
+        // DOM에 즉시 반영 (애니메이션과 함께) - 검색 시트는 transform 사용 안 함
+        if (activeSheet !== 'search') {
+            sheetRef.current.style.transform = `translateY(calc(85vh - ${initialHeight}vh))`;
+        } else {
+            sheetRef.current.style.transform = 'none';
+        }
     }, [activeSheet]);
 
     // [OPTIMIZATION] useMemo로 버튼 레이블 캐싱
@@ -381,31 +395,43 @@ function MobileControlOverlayComponent({
                             'fixed bottom-0 left-0 right-0 z-50',
                             'bg-background rounded-t-2xl shadow-xl',
                             'flex flex-col', // flexbox로 변경하여 컨텐츠 영역 제어
-                            // [OPTIMIZATION] transition은 드래그 종료 시에만
-                            isDragging ? '' : 'transition-transform duration-150 ease-out',
+                            // [OPTIMIZATION] transition은 드래그 종료 시에만 (검색 시트는 제외)
+                            (isDragging || activeSheet === 'search') ? '' : 'transition-transform duration-150 ease-out',
                             // 검색 시트일 때는 드롭다운이 위로 나오도록 overflow visible
                             activeSheet === 'search' ? 'overflow-visible' : 'overflow-hidden',
                             // 하단 네비게이션바 공간 + iOS safe area + 여유 공간
-                            'pb-[calc(env(safe-area-inset-bottom)+80px)]'
+                            // 검색 시트는 컨텐츠에 딱 맞게 불필요한 여백 최소화
+                            activeSheet === 'search'
+                                ? 'pb-4'
+                                : 'pb-[calc(env(safe-area-inset-bottom)+80px)]'
                         )}
                         style={{
-                            // [OPTIMIZATION] 고정 높이 + transform으로 위치 조정 (GPU 합성)
-                            height: '85vh',
-                            transform: `translateY(calc(85vh - ${sheetHeight}vh))`,
+                            // [OPTIMIZATION] 검색 시트는 auto height, 나머지는 고정 높이 + transform
+                            height: activeSheet === 'search' ? 'auto' : '85vh',
+                            transform: activeSheet === 'search'
+                                ? 'none'
+                                : `translateY(calc(85vh - ${sheetHeight}vh))`,
                             willChange: isDragging ? 'transform' : 'auto', // 드래그 중 GPU 레이어 유지
+                            // 검색 시트는 네비게이션 바(약 65px) + Safe Area 위로 띄움
+                            bottom: activeSheet === 'search' ? 'calc(35px + env(safe-area-inset-bottom))' : 0,
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* 핸들 바 - 드래그 가능, 항상 상단 고정 */}
-                        <div
-                            ref={handleRef}
-                            className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
-                        >
-                            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                        </div>
+                        {/* 핸들 바 - 검색 시트는 드래그 불가 */}
+                        {activeSheet !== 'search' && (
+                            <div
+                                ref={handleRef}
+                                className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                            >
+                                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+                            </div>
+                        )}
 
                         {/* 헤더 */}
-                        <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
+                        <div className={cn(
+                            "flex items-center justify-between px-4 pb-3 border-b border-border",
+                            activeSheet === 'search' && "pt-3" // 검색 시트는 핸들이 없으므로 상단 패딩 추가
+                        )}>
                             <h3 className="text-lg font-semibold">
                                 {activeSheet === 'region' && (mapMode === 'domestic' ? '지역 선택' : '국가 선택')}
                                 {activeSheet === 'category' && '카테고리 필터'}
@@ -424,7 +450,10 @@ function MobileControlOverlayComponent({
                                 activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto'
                             )}
                             style={{
-                                maxHeight: `calc(${sheetHeight}vh - 120px)`, // 핸들바(52px) + 헤더(68px) 제외
+                                // 검색 시트는 핸들바 없으므로 헤더만 제외 (68px), 다른 시트는 핸들바+헤더 (120px)
+                                maxHeight: activeSheet === 'search'
+                                    ? 'none' // 검색 시트는 높이 제한 없음 (컨텐츠만큼만)
+                                    : `calc(${sheetHeight}vh - 120px)`,
                             }}
                         >
                             <div className="p-4 pb-8">{/* 하단 패딩으로 스크롤 끝까지 가능 */}
