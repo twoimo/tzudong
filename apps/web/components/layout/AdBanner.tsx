@@ -50,7 +50,8 @@ SlideIndicator.displayName = 'SlideIndicator';
 // 배너 컨텐츠 컴포넌트 (메모이제이션)
 const BannerContent = memo(({ banner, isActive }: { banner: AdBannerType; isActive: boolean }) => {
     // 영상 배너
-    if (banner.media_type === 'video' && banner.video_url) {
+    // 영상 배너 (우선순위 1)
+    if (banner.video_url) {
         return (
             <video
                 src={banner.video_url}
@@ -66,8 +67,8 @@ const BannerContent = memo(({ banner, isActive }: { banner: AdBannerType; isActi
         );
     }
 
-    // 이미지 배너
-    if (banner.media_type === 'image' && banner.image_url) {
+    // 이미지 배너 (우선순위 2)
+    if (banner.image_url) {
         return (
             <img
                 src={banner.image_url}

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, memo, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, ExternalLink, Scroll } from 'lucide-react';
+import { Scroll } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useDeviceType } from '@/hooks/useDeviceType';
@@ -156,8 +156,8 @@ const AdBannerPopupComponent = () => {
                     {banners.map((banner, index) => {
                         const isActive = index === currentSlide;
 
-                        // 영상 배너
-                        if (banner.media_type === 'video' && banner.video_url) {
+                        // 영상 배너 (우선순위 1)
+                        if (banner.video_url) {
                             return (
                                 <video
                                     key={banner.id}
@@ -174,8 +174,8 @@ const AdBannerPopupComponent = () => {
                             );
                         }
 
-                        // 이미지 배너
-                        if (banner.media_type === 'image' && banner.image_url) {
+                        // 이미지 배너 (우선순위 2)
+                        if (banner.image_url) {
                             return (
                                 <img
                                     key={banner.id}
@@ -252,10 +252,10 @@ const AdBannerPopupComponent = () => {
                                 className={cn(
                                     "w-2 h-2 rounded-full transition-all",
                                     currentSlide === index
-                                        ? currentBanner.image_url
+                                        ? currentBanner.image_url || currentBanner.video_url
                                             ? "bg-white scale-110"
                                             : "bg-stone-700 scale-110"
-                                        : currentBanner.image_url
+                                        : currentBanner.image_url || currentBanner.video_url
                                             ? "bg-white/50"
                                             : "bg-stone-400/50"
                                 )}
