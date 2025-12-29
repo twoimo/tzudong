@@ -62,20 +62,28 @@ SlideIndicator.displayName = 'SlideIndicator';
 // 배너 슬라이드 컴포넌트 (메모이제이션)
 const BannerSlide = memo(({
     banner,
+    isActive,
     onClick,
     onVideoEnded
 }: {
     banner: AdBanner;
+    isActive: boolean;
     onClick: () => void;
     onVideoEnded?: () => void;
 }) => (
-    <div className="absolute inset-0" onClick={onClick}>
+    <div
+        className={cn(
+            "absolute inset-0 transition-opacity duration-500",
+            isActive ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}
+        onClick={onClick}
+    >
         {/* 영상 배너 (우선순위 1) */}
         {banner.video_url ? (
             <video
                 src={banner.video_url}
                 className="w-full h-full object-cover"
-                autoPlay
+                autoPlay={isActive}
                 muted
                 playsInline
                 onEnded={onVideoEnded}
@@ -86,7 +94,7 @@ const BannerSlide = memo(({
                 src={banner.image_url}
                 alt={banner.title}
                 className="w-full h-full object-cover"
-                loading="lazy"
+                loading={isActive ? "eager" : "lazy"}
                 decoding="async"
             />
         ) : (
@@ -219,17 +227,21 @@ const CombinedPopupComponent = () => {
                 )}
                 style={{ backgroundColor: '#fdfbf7' }}
             >
-                {/* 배너 슬라이드 컨텐츠 */}
-                <div className="relative aspect-[4/5] cursor-pointer">
-                    <BannerSlide
-                        banner={currentBanner}
-                        onClick={() => handleBannerClick(currentBanner)}
-                        onVideoEnded={() => {
-                            if (banners.length > 1) {
-                                setCurrentSlide((prev) => (prev + 1) % banners.length);
-                            }
-                        }}
-                    />
+                {/* 배너 슬라이드 컨텐츠 - 모든 배너를 렌더링하여 크로스페이드 */}
+                <div className="relative aspect-[4/5]">
+                    {banners.map((banner, index) => (
+                        <BannerSlide
+                            key={banner.id}
+                            banner={banner}
+                            isActive={index === currentSlide}
+                            onClick={() => handleBannerClick(banner)}
+                            onVideoEnded={() => {
+                                if (banners.length > 1 && index === currentSlide) {
+                                    setCurrentSlide((prev) => (prev + 1) % banners.length);
+                                }
+                            }}
+                        />
+                    ))}
                 </div>
 
                 {/* 슬라이드 인디케이터 */}
