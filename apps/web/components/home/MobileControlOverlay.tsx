@@ -175,8 +175,8 @@ function MobileControlOverlayComponent({
     const regionCounts = useMemo(() => {
         const counts: Record<string, number> = {};
 
-        // 지역 키워드 매핑 (라지 로딩 시 1회만 생성)
-        const regionKeywords: Record<string, string> = {
+        // 특수 지역 키워드 매핑 (욕지도/울릉도는 상위 지역보다 먼저 체크해야 함)
+        const specialRegions: Record<string, string> = {
             '울릉도': '울릉',
             '욕지도': '욕지'
         };
@@ -184,11 +184,26 @@ function MobileControlOverlayComponent({
         restaurants.forEach((restaurant) => {
             const address = restaurant.road_address || restaurant.jibun_address || '';
 
-            for (const region of REGIONS) {
-                const keyword = regionKeywords[region] || region;
+            // 1. 특수 지역 먼저 체크 (욕지도, 울릉도)
+            let matched = false;
+            for (const [region, keyword] of Object.entries(specialRegions)) {
                 if (address.includes(keyword)) {
                     counts[region] = (counts[region] || 0) + 1;
-                    break; // 한 지역에만 해당할 수 있으므로 조기 종료
+                    matched = true;
+                    break;
+                }
+            }
+
+            // 2. 특수 지역에 매칭되지 않았으면 일반 지역 체크
+            if (!matched) {
+                for (const region of REGIONS) {
+                    // 특수 지역은 이미 위에서 처리했으니 스킵
+                    if (region in specialRegions) continue;
+
+                    if (address.includes(region)) {
+                        counts[region] = (counts[region] || 0) + 1;
+                        break;
+                    }
                 }
             }
         });
