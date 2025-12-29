@@ -213,10 +213,10 @@ function MobileControlOverlayComponent({
         return counts;
     }, [restaurants, selectedRegion]);
 
-    // [OPTIMIZATION] Passive 이벤트 리스너 등록
+    // [OPTIMIZATION] Passive 이벤트 리스너 등록 (검색 시트는 제외)
     useEffect(() => {
         const handleEl = handleRef.current;
-        if (!handleEl || activeSheet === 'none') return;
+        if (!handleEl || activeSheet === 'none' || activeSheet === 'search') return;
 
         // Passive: true로 스크롤 성능 최적화
         handleEl.addEventListener('touchstart', handleDragStart as any, { passive: true });
@@ -238,8 +238,12 @@ function MobileControlOverlayComponent({
         currentHeightRef.current = initialHeight;
         setSheetHeight(initialHeight);
 
-        // DOM에 즉시 반영 (애니메이션과 함께)
-        sheetRef.current.style.transform = `translateY(calc(85vh - ${initialHeight}vh))`;
+        // DOM에 즉시 반영 (애니메이션과 함께) - 검색 시트는 transform 사용 안 함
+        if (activeSheet !== 'search') {
+            sheetRef.current.style.transform = `translateY(calc(85vh - ${initialHeight}vh))`;
+        } else {
+            sheetRef.current.style.transform = 'none';
+        }
     }, [activeSheet]);
 
     // [OPTIMIZATION] useMemo로 버튼 레이블 캐싱
@@ -381,31 +385,43 @@ function MobileControlOverlayComponent({
                             'fixed bottom-0 left-0 right-0 z-50',
                             'bg-background rounded-t-2xl shadow-xl',
                             'flex flex-col', // flexbox로 변경하여 컨텐츠 영역 제어
-                            // [OPTIMIZATION] transition은 드래그 종료 시에만
-                            isDragging ? '' : 'transition-transform duration-150 ease-out',
+                            // [OPTIMIZATION] transition은 드래그 종료 시에만 (검색 시트는 제외)
+                            (isDragging || activeSheet === 'search') ? '' : 'transition-transform duration-150 ease-out',
                             // 검색 시트일 때는 드롭다운이 위로 나오도록 overflow visible
                             activeSheet === 'search' ? 'overflow-visible' : 'overflow-hidden',
                             // 하단 네비게이션바 공간 + iOS safe area + 여유 공간
-                            'pb-[calc(env(safe-area-inset-bottom)+80px)]'
+                            // 검색 시트는 컨텐츠에 딱 맞게 불필요한 여백 최소화
+                            activeSheet === 'search'
+                                ? 'pb-4'
+                                : 'pb-[calc(env(safe-area-inset-bottom)+80px)]'
                         )}
                         style={{
-                            // [OPTIMIZATION] 고정 높이 + transform으로 위치 조정 (GPU 합성)
-                            height: '85vh',
-                            transform: `translateY(calc(85vh - ${sheetHeight}vh))`,
+                            // [OPTIMIZATION] 검색 시트는 auto height, 나머지는 고정 높이 + transform
+                            height: activeSheet === 'search' ? 'auto' : '85vh',
+                            transform: activeSheet === 'search'
+                                ? 'none'
+                                : `translateY(calc(85vh - ${sheetHeight}vh))`,
                             willChange: isDragging ? 'transform' : 'auto', // 드래그 중 GPU 레이어 유지
+                            // 검색 시트는 네비게이션 바(약 65px) + Safe Area 위로 띄움
+                            bottom: activeSheet === 'search' ? 'calc(35px + env(safe-area-inset-bottom))' : 0,
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* 핸들 바 - 드래그 가능, 항상 상단 고정 */}
-                        <div
-                            ref={handleRef}
-                            className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
-                        >
-                            <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
-                        </div>
+                        {/* 핸들 바 - 검색 시트는 드래그 불가 */}
+                        {activeSheet !== 'search' && (
+                            <div
+                                ref={handleRef}
+                                className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                            >
+                                <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+                            </div>
+                        )}
 
                         {/* 헤더 */}
-                        <div className="flex items-center justify-between px-4 pb-3 border-b border-border">
+                        <div className={cn(
+                            "flex items-center justify-between px-4 pb-3 border-b border-border",
+                            activeSheet === 'search' && "pt-3" // 검색 시트는 핸들이 없으므로 상단 패딩 추가
+                        )}>
                             <h3 className="text-lg font-semibold">
                                 {activeSheet === 'region' && (mapMode === 'domestic' ? '지역 선택' : '국가 선택')}
                                 {activeSheet === 'category' && '카테고리 필터'}
@@ -424,7 +440,10 @@ function MobileControlOverlayComponent({
                                 activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto'
                             )}
                             style={{
-                                maxHeight: `calc(${sheetHeight}vh - 120px)`, // 핸들바(52px) + 헤더(68px) 제외
+                                // 검색 시트는 핸들바 없으므로 헤더만 제외 (68px), 다른 시트는 핸들바+헤더 (120px)
+                                maxHeight: activeSheet === 'search'
+                                    ? 'none' // 검색 시트는 높이 제한 없음 (컨텐츠만큼만)
+                                    : `calc(${sheetHeight}vh - 120px)`,
                             }}
                         >
                             <div className="p-4 pb-8">{/* 하단 패딩으로 스크롤 끝까지 가능 */}
