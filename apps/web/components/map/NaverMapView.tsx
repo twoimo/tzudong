@@ -1105,8 +1105,8 @@ const NaverMapView = memo(({
             return;
         }
 
-        if (!mapInstanceRef.current) {
-
+        // [Fix] 지도가 초기화되지 않았으면 대기 (isMapInitialized 의존성으로 재실행됨)
+        if (!isMapInitialized || !mapInstanceRef.current) {
             return;
         }
 
@@ -1146,11 +1146,12 @@ const NaverMapView = memo(({
 
         const newClusters = getClusters(index, bbox, zoom);
         setClusters(newClusters);
-    }, [displayRestaurants.length, selectedRegion]);
+    }, [displayRestaurants.length, selectedRegion, isMapInitialized]);
 
     // [🆕 클러스터링] 지도 이동/줌 시 클러스터 업데이트
     useEffect(() => {
-        if (!mapInstanceRef.current || !ENABLE_CLUSTERING || !clusterIndexRef.current) return;
+        // [Fix] 지도가 초기화되지 않았으면 대기
+        if (!isMapInitialized || !mapInstanceRef.current || !ENABLE_CLUSTERING || !clusterIndexRef.current) return;
 
         const { naver } = window;
 
@@ -1216,13 +1217,14 @@ const NaverMapView = memo(({
         return () => {
             naver.maps.Event.removeListener(idleListener);
         };
-    }, [displayRestaurants]);
+    }, [displayRestaurants, isMapInitialized]);
 
 
 
     // [🆕 클러스터/마커 통합 렌더링] 줌 레벨에 따라 클러스터 또는 개별 마커 표시
     useEffect(() => {
-        if (!mapInstanceRef.current || !window.naver) return;
+        // [Fix] 지도가 초기화되지 않았으면 대기
+        if (!isMapInitialized || !mapInstanceRef.current || !window.naver) return;
         const { naver } = window;
         const map = mapInstanceRef.current;
         const currentZoom = Math.floor(map.getZoom());
@@ -1629,6 +1631,13 @@ const NaverMapView = memo(({
 
             mapInstanceRef.current = map;
             setIsMapInitialized(true);
+
+            // [Fix] 지도 초기화 후 idle 이벤트 강제 트리거 - 클러스터 초기화 보장
+            setTimeout(() => {
+                if (map) {
+                    naver.maps.Event.trigger(map, 'idle');
+                }
+            }, 100);
         } catch (error) {
             console.error("네이버 지도 초기화 오류:", error);
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
