@@ -220,7 +220,7 @@ const CombinedPopupComponent = () => {
                             onClick={() => handleRestaurantClick(currentSlideData.data)}
                         >
                             {/* 상단 썸네일 영역 */}
-                            <div className="relative flex-1">
+                            <div className="relative flex-1 overflow-hidden">
                                 {/* 오늘의 추천 배지 */}
                                 <div className="absolute top-2 left-2 z-10">
                                     <Badge className="bg-[#8B5A2B] text-white hover:bg-[#7A4E25] border-none px-3 py-1.5 shadow-lg flex items-center gap-1.5">
@@ -229,12 +229,12 @@ const CombinedPopupComponent = () => {
                                     </Badge>
                                 </div>
 
-                                {/* 썸네일 이미지 */}
+                                {/* 썸네일 이미지 - 확대하여 letterbox 제거 */}
                                 {currentSlideData.data.youtube_link && (
                                     <img
                                         src={getYouTubeThumbnailUrl(currentSlideData.data.youtube_link) || ''}
                                         alt={currentSlideData.data.name}
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover scale-150"
                                     />
                                 )}
                             </div>
