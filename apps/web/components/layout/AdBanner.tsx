@@ -117,18 +117,24 @@ const AdBannerComponent = () => {
     const handleRestaurantClick = useCallback((restaurant: any) => {
         sessionStorage.setItem('selectedRestaurant', JSON.stringify(restaurant));
 
+        // 지역 정보 추출
         const address = restaurant.road_address || restaurant.jibun_address || '';
+        let selectedRegion: string | null = null;
         for (const region of KOREAN_REGIONS) {
             if (address.includes(region)) {
+                selectedRegion = region;
                 sessionStorage.setItem('selectedRegion', region);
                 break;
             }
         }
 
-        window.dispatchEvent(new CustomEvent('restaurant-selected', {
-            detail: { restaurant }
-        }));
+        // 커스텀 이벤트 발생 (지역 정보 포함)
+        const event = new CustomEvent('restaurant-selected', {
+            detail: { restaurant, region: selectedRegion }
+        });
+        window.dispatchEvent(event);
 
+        // 홈이 아니면 홈으로 이동
         if (pathname !== '/') {
             router.push('/');
         }

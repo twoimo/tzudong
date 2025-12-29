@@ -132,6 +132,11 @@ function BannerManagementPage() {
         }
     }, [authLoading, user, isAdmin, router]);
 
+    // 정렬된 배너 목록 (조건부 return 전에 useMemo 호출)
+    const sortedBanners = useMemo(() => {
+        return [...banners].sort((a, b) => b.priority - a.priority);
+    }, [banners]);
+
     if (authLoading || !user || !isAdmin) {
         return <GlobalLoader />;
     }
@@ -340,11 +345,6 @@ function BannerManagementPage() {
     const handleToggle = async (banner: AdBanner) => {
         await toggleBanner.mutateAsync({ id: banner.id, is_active: !banner.is_active });
     };
-
-    // 정렬된 배너 목록
-    const sortedBanners = useMemo(() => {
-        return [...banners].sort((a, b) => b.priority - a.priority);
-    }, [banners]);
 
     return (
         <div className="min-h-screen bg-[#fdfbf7] font-serif">
