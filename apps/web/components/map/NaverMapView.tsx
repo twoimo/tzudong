@@ -142,8 +142,26 @@ class LRUCache<K, V> {
         // 크기 초과 시 가장 오래된 항목 제거
         if (this.cache.size > this.maxSize) {
             const firstKey = this.cache.keys().next().value;
-            this.cache.delete(firstKey);
+            if (firstKey !== undefined) {
+                this.cache.delete(firstKey);
+            }
         }
+    }
+
+    has(key: K): boolean {
+        return this.cache.has(key);
+    }
+
+    get size(): number {
+        return this.cache.size;
+    }
+
+    keys(): IterableIterator<K> {
+        return this.cache.keys();
+    }
+
+    delete(key: K): boolean {
+        return this.cache.delete(key);
     }
 
     clear(): void {
@@ -1090,14 +1108,14 @@ const NaverMapView = memo(({
 
         // bounds 가져오기
         let bbox: [number, number, number, number];
-        const bounds = map.getBounds();
+        const mapBounds = map.getBounds();
 
-        if (bounds && typeof bounds.getWest === 'function') {
+        if (mapBounds && typeof mapBounds.getWest === 'function') {
             bbox = [
-                bounds.getWest(),
-                bounds.getSouth(),
-                bounds.getEast(),
-                bounds.getNorth(),
+                mapBounds.getWest(),
+                mapBounds.getSouth(),
+                mapBounds.getEast(),
+                mapBounds.getNorth(),
             ];
         } else {
             // bounds가 아직 초기화되지 않은 경우 - 전체 한국 영역 사용
@@ -1126,15 +1144,15 @@ const NaverMapView = memo(({
             let bbox: [number, number, number, number];
 
             // 먼저 getBounds() 시도
-            const bounds = map.getBounds();
+            const updateBounds = map.getBounds();
 
-            if (bounds && typeof bounds.getWest === 'function') {
+            if (updateBounds && typeof updateBounds.getWest === 'function') {
                 // getBounds() 성공
                 bbox = [
-                    bounds.getWest(),
-                    bounds.getSouth(),
-                    bounds.getEast(),
-                    bounds.getNorth(),
+                    updateBounds.getWest(),
+                    updateBounds.getSouth(),
+                    updateBounds.getEast(),
+                    updateBounds.getNorth(),
                 ];
             } else {
                 // getBounds() 실패 - center와 zoom으로 계산

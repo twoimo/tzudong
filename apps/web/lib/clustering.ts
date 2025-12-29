@@ -7,9 +7,12 @@
  */
 
 import Supercluster from 'supercluster';
-import type { BBox, GeoJsonProperties } from 'supercluster';
 import { REGION_MAP_CONFIG } from '@/config/maps';
 import type { Restaurant, Region } from '@/types/restaurant';
+
+// Supercluster 타입 정의 (패키지에서 export하지 않으므로 직접 정의)
+type BBox = [number, number, number, number];
+type GeoJsonProperties = Record<string, any>;
 
 /**
  * 클러스터 포인트 속성 인터페이스
@@ -108,18 +111,17 @@ export const restaurantsToGeoJSON = (restaurants: Restaurant[]): RestaurantFeatu
             properties: {
                 restaurantId: r.id,
                 name: r.name,
-                category: Array.isArray(r.categories) ? r.categories[0] : r.category || '기타',
+                category: (Array.isArray(r.categories) ? r.categories[0] : r.category || '기타') as string,
                 categories: r.categories || (r.category ? [r.category] : []),
                 // 추가 속성들
                 address: r.address,
-                rating: r.rating,
                 reviewCount: r.review_count,
             },
             geometry: {
                 type: 'Point' as const,
                 coordinates: [r.lng!, r.lat!], // GeoJSON은 [lng, lat] 순서
             },
-        }));
+        })) as RestaurantFeature[];
 
     // 캐시 저장
     geoJsonCache.set(restaurants, features);
@@ -162,7 +164,7 @@ export const getClusters = (
     bbox: BBox,
     zoom: number
 ): Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>> => {
-    return index.getClusters(bbox, Math.floor(zoom));
+    return index.getClusters(bbox, Math.floor(zoom)) as Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>;
 };
 
 /**
