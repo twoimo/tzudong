@@ -393,7 +393,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
           >
             <div className="text-xs text-stone-400 font-serif space-y-1">
               <p>쯔동여지도 v2.0.0</p>
-              <p className="text-stone-300">© 2025 타이니번 데이터랩</p>
+              <p className="text-stone-300">© 2026 타이니번 데이터랩</p>
             </div>
           </div>
         </div>

@@ -674,7 +674,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   >
                     <div className="text-[10px] text-stone-400 flex-1">
                       <p>쯔동여지도 v2.0.0</p>
-                      <p className="text-stone-300">© 2025 타이니번 데이터랩</p>
+                      <p className="text-stone-300">© 2026 타이니번 데이터랩</p>
                     </div>
                     {isBusinessInfoExpanded ? (
                       <ChevronUp className="h-3 w-3 text-stone-400 flex-shrink-0 ml-1" />
