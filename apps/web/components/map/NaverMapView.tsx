@@ -109,10 +109,53 @@ const getCategoryIcon = (category: string | string[] | null | undefined): string
 };
 
 /**
- * [OPTIMIZATION] HTML 마커 콘텐츠 캐시 (메모리 최적화)
+ * [OPTIMIZATION] LRU 캐시 구현
+ * 메모리 누수 방지를 위한 크기 제한
+ */
+class LRUCache<K, V> {
+    private maxSize: number;
+    private cache: Map<K, V>;
+
+    constructor(maxSize: number = 500) {
+        this.maxSize = maxSize;
+        this.cache = new Map();
+    }
+
+    get(key: K): V | undefined {
+        const value = this.cache.get(key);
+        if (value !== undefined) {
+            // LRU: 접근한 항목을 맨 뒤로 이동
+            this.cache.delete(key);
+            this.cache.set(key, value);
+        }
+        return value;
+    }
+
+    set(key: K, value: V): void {
+        // 이미 존재하면 삭제 후 재추가 (LRU 순서 유지)
+        if (this.cache.has(key)) {
+            this.cache.delete(key);
+        }
+
+        this.cache.set(key, value);
+
+        // 크기 초과 시 가장 오래된 항목 제거
+        if (this.cache.size > this.maxSize) {
+            const firstKey = this.cache.keys().next().value;
+            this.cache.delete(firstKey);
+        }
+    }
+
+    clear(): void {
+        this.cache.clear();
+    }
+}
+
+/**
+ * [OPTIMIZATION] HTML 마커 콘텐츠 캐시 (LRU 기반)
  * 각 레스토랑의 선택/비선택 상태별로 HTML을 캐싱하여 재사용
  */
-const markerContentCache = new Map<string, string>();
+const markerContentCache = new LRUCache<string, string>(500);
 
 /**
  * [OPTIMIZATION] 마커 콘텐츠 생성 함수 - 캐싱 + 스타일 외부화 버전

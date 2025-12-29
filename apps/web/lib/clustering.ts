@@ -82,13 +82,26 @@ export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom:
 };
 
 /**
- * 레스토랑 데이터를 GeoJSON Feature로 변환
+ * [성능 최적화] GeoJSON 변환 캐시
+ * WeakMap을 사용하여 동일한 레스토랑 배열에 대한 재변환을 방지
+ */
+const geoJsonCache = new WeakMap<Restaurant[], RestaurantFeature[]>();
+
+/**
+ * 레스토랑 데이터를 GeoJSON Feature로 변환 (캐싱 포함)
  * 
  * @param restaurants 레스토랑 목록
  * @returns GeoJSON Feature 배열
  */
 export const restaurantsToGeoJSON = (restaurants: Restaurant[]): RestaurantFeature[] => {
-    return restaurants
+    // 캐시 확인
+    const cached = geoJsonCache.get(restaurants);
+    if (cached) {
+        return cached;
+    }
+
+    // 새로 변환
+    const features = restaurants
         .filter((r) => r.lat != null && r.lng != null)
         .map((r) => ({
             type: 'Feature' as const,
@@ -107,6 +120,11 @@ export const restaurantsToGeoJSON = (restaurants: Restaurant[]): RestaurantFeatu
                 coordinates: [r.lng!, r.lat!], // GeoJSON은 [lng, lat] 순서
             },
         }));
+
+    // 캐시 저장
+    geoJsonCache.set(restaurants, features);
+
+    return features;
 };
 
 /**

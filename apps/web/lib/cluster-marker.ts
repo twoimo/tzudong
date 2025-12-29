@@ -10,35 +10,48 @@ import type { ClusterProperties } from './clustering';
  */
 class ClusterAnimationManager {
   private categoryIndices: Map<number, number> = new Map();
-  private intervalId: NodeJS.Timeout | null = null;
+  private animationFrameId: number | null = null;
   private listeners: Set<() => void> = new Set();
+  private lastUpdateTime: number = 0;
 
   /**
-   * 애니메이션 시작
+   * 애니메이션 시작 (requestAnimationFrame 사용)
    * 
    * @param intervalMs 애니메이션 주기 (ms)
    */
   public start(intervalMs: number = 1000): void {
-    if (this.intervalId) return;
+    if (this.animationFrameId) return;
 
-    this.intervalId = setInterval(() => {
-      // 모든 클러스터의 카테고리 인덱스 증가
-      this.categoryIndices.forEach((index, clusterId) => {
-        this.categoryIndices.set(clusterId, index + 1);
-      });
+    const animate = (currentTime: number) => {
+      // 마지막 업데이트로부터 intervalMs가 경과했는지 확인
+      if (currentTime - this.lastUpdateTime >= intervalMs) {
+        // 모든 클러스터의 카테고리 인덱스 증가
+        this.categoryIndices.forEach((index, clusterId) => {
+          this.categoryIndices.set(clusterId, index + 1);
+        });
 
-      // 리스너들에게 업데이트 알림
-      this.listeners.forEach((listener) => listener());
-    }, intervalMs);
+        // 리스너들에게 업데이트 알림
+        this.listeners.forEach((listener) => listener());
+
+        this.lastUpdateTime = currentTime;
+      }
+
+      // 다음 프레임 예약
+      this.animationFrameId = requestAnimationFrame(animate);
+    };
+
+    // 첫 프레임 시작
+    this.lastUpdateTime = performance.now();
+    this.animationFrameId = requestAnimationFrame(animate);
   }
 
   /**
    * 애니메이션 정지
    */
   public stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
     }
   }
 
