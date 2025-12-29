@@ -119,7 +119,6 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     }}
                     // 모바일/태블릿에서 사이드바 토글 버튼 숨김
                     hideToggleSidebar={isMobileOrTablet}
-                    isMobileOrTablet={isMobileOrTablet}
                 />
 
                 <main className={cn(

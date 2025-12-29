@@ -29,6 +29,7 @@ import { getBannerAnnouncements, getActiveAnnouncements, Announcement } from "@/
 import { useHydration } from "@/hooks/useHydration";
 import { supabase } from "@/integrations/supabase/client";
 import { useBookmarks } from "@/hooks/use-bookmarks";
+import { useDeviceType } from "@/hooks/useDeviceType";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -42,14 +43,14 @@ interface HeaderProps {
   isAdmin?: boolean;
   onAnnouncementClick?: (announcement: Announcement) => void;
   hideToggleSidebar?: boolean;
-  isMobileOrTablet?: boolean;
 }
 
 const BANNER_ROTATION_INTERVAL = 5000;
 
-const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false, isMobileOrTablet = false }: HeaderProps) => {
+const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, onProfileClick, onMyPageClick, isCenteredLayout = false, onToggleCenteredLayout, isAdmin = false, onAnnouncementClick, hideToggleSidebar = false }: HeaderProps) => {
   const [isHanjiMode, setIsHanjiMode] = useState(false);
   const isHydrated = useHydration();
+  const { isMobileOrTablet } = useDeviceType();
   const { notifications, unreadCount, markAsRead, markAllAsRead, removeNotification } = useNotifications();
   const pathname = usePathname();
   const router = useRouter();
@@ -327,10 +328,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
 
   return (
     <header
-      className={cn(
-        "border-b border-stone-800/10 bg-card flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4",
-        isMobileOrTablet ? "h-14 px-2" : "h-16 px-4"
-      )}
+      className="border-b border-stone-800/10 bg-card flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
     >
       {/* 한지 질감 오버레이 */}
       <div
@@ -382,11 +380,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
             </Button>
           )}
           <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
-          <span className={cn(
-            "font-medium truncate group-hover:text-red-800 transition-colors text-stone-700 flex-1 min-w-0",
-            // 모바일: 텍스트 크기 축소
-            "text-xs lg:text-sm"
-          )}>
+          <span className="font-medium truncate group-hover:text-red-800 transition-colors text-stone-700 flex-1 min-w-0 text-xs md:text-sm">
             {currentBanner.title}
           </span>
           {bannerAnnouncements.length > 1 && (
@@ -408,11 +402,12 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
       )}>
         {/* 랭킹 및 접속자 위젯 - 데스크탑에서만 표시 */}
-        {!isMobileOrTablet && (
-          <div className={cn(isHydrated ? "opacity-100" : "opacity-0 pointer-events-none")}>
-            <RankingWidget />
-          </div>
-        )}
+        <div className={cn(
+          "hidden md:flex",
+          isHydrated ? "opacity-100" : "opacity-0 pointer-events-none"
+        )}>
+          <RankingWidget />
+        </div>
 
         {/* 한지 모드 토글 */}
         <Button
@@ -586,16 +581,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         )}
 
         {/* 전체화면 - 데스크탑에서만 표시 */}
-        {!isMobileOrTablet && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleFullscreen}
-            className="hover:bg-stone-200/50 text-stone-700 transition-colors"
-          >
-            <Maximize className="h-5 w-5" />
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={toggleFullscreen}
+          className="hidden md:flex hover:bg-stone-200/50 text-stone-700 transition-colors"
+        >
+          <Maximize className="h-5 w-5" />
+        </Button>
 
         {/* 로그인 상태 */}
         {isLoggedIn && (
@@ -658,11 +651,9 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, onOpenAuth, onLogout, on
         {!isLoggedIn && (
           <Button
             onClick={onOpenAuth}
-            size={isMobileOrTablet ? "sm" : "default"}
             className={cn(
               "bg-red-800 hover:bg-red-900 text-white font-serif transition-colors shadow-md",
-              // 모바일: 여백 축소 및 텍스트 크기 조정
-              isMobileOrTablet ? "ml-1 px-5 text-xs" : "ml-2",
+              "h-8 px-5 text-xs ml-1 md:h-10 md:px-4 md:text-sm md:ml-2",
               isHydrated ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
           >
