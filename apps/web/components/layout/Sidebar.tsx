@@ -386,11 +386,14 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
           {/* 광고 배너 */}
           <AdBanner />
 
-          {/* 버전 정보 */}
-          <div className="border-t border-stone-800/10 pt-4 text-center">
+          {/* 버전 및 사업자 정보 */}
+          <div
+            className="border-t border-stone-800/10 pt-4 text-center cursor-help"
+            title={`타이니번 데이터랩\n대표: 최연우\n사업자등록번호: 601-09-04613\n이메일: twoimo@dgu.ac.kr`}
+          >
             <div className="text-xs text-stone-400 font-serif space-y-1">
-              <p>쯔동여지도 v1.5.3</p>
-              <p className="text-stone-300">@ 2025 Tzudong</p>
+              <p>쯔동여지도 v2.0.0</p>
+              <p className="text-stone-300">© 2025 타이니번 데이터랩</p>
             </div>
           </div>
         </div>
