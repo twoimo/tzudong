@@ -145,59 +145,79 @@ const AdBannerPopupComponent = () => {
                 )}
                 style={{ backgroundColor: '#fdfbf7' }}
             >
-                {/* 배너 컨텐츠 */}
+                {/* 배너 컨텐츠 - 크로스페이드 효과 */}
                 <div
                     className={cn(
                         "relative aspect-[4/5] cursor-pointer"
                     )}
                     onClick={() => handleBannerClick(currentBanner)}
                 >
-                    {currentBanner.image_url ? (
-                        <img
-                            src={currentBanner.image_url}
-                            alt={currentBanner.title}
-                            className="absolute inset-0 w-full h-full object-cover"
-                        />
-                    ) : (
-                        <>
-                            {/* 한지 질감 오버레이 */}
+                    {/* 모든 배너를 렌더링하여 크로스페이드 효과 */}
+                    {banners.map((banner, index) => {
+                        const isActive = index === currentSlide;
+
+                        if (banner.image_url) {
+                            return (
+                                <img
+                                    key={banner.id}
+                                    src={banner.image_url}
+                                    alt={banner.title}
+                                    className={cn(
+                                        "absolute inset-0 w-full h-full object-cover transition-opacity duration-500",
+                                        isActive ? "opacity-100" : "opacity-0"
+                                    )}
+                                    loading="eager"
+                                />
+                            );
+                        }
+
+                        return (
                             <div
-                                className="absolute inset-0 opacity-40 pointer-events-none"
-                                style={{
-                                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
-                                }}
-                            />
-
-                            {/* 전통 문양 테두리 */}
-                            <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
-
-                            {/* 텍스트 컨텐츠 */}
-                            <div className="relative h-full flex flex-col items-center justify-center text-center p-6">
-                                <Scroll className="w-8 h-8 text-stone-500 mb-3 opacity-60" />
-                                <h3 className="text-xl font-serif font-bold text-stone-900 mb-2 tracking-wide">
-                                    {currentBanner.title}
-                                </h3>
-                                {currentBanner.description && (
-                                    <p className="text-sm font-serif text-stone-700 whitespace-pre-line leading-relaxed">
-                                        {currentBanner.description}
-                                    </p>
+                                key={banner.id}
+                                className={cn(
+                                    "absolute inset-0 transition-opacity duration-500",
+                                    isActive ? "opacity-100" : "opacity-0"
                                 )}
-                                {currentBanner.link_url && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="mt-4 font-serif"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleBannerClick(currentBanner);
-                                        }}
-                                    >
-                                        자세히 보기
-                                    </Button>
-                                )}
+                            >
+                                {/* 한지 질감 오버레이 */}
+                                <div
+                                    className="absolute inset-0 opacity-40 pointer-events-none"
+                                    style={{
+                                        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
+                                    }}
+                                />
+
+                                {/* 전통 문양 테두리 */}
+                                <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
+
+                                {/* 텍스트 컨텐츠 */}
+                                <div className="relative h-full flex flex-col items-center justify-center text-center p-6">
+                                    <Scroll className="w-8 h-8 text-stone-500 mb-3 opacity-60" />
+                                    <h3 className="text-xl font-serif font-bold text-stone-900 mb-2 tracking-wide">
+                                        {banner.title}
+                                    </h3>
+                                    {banner.description && (
+                                        <p className="text-sm font-serif text-stone-700 whitespace-pre-line leading-relaxed">
+                                            {banner.description}
+                                        </p>
+                                    )}
+                                    {banner.link_url && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="mt-4 font-serif"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleBannerClick(banner);
+                                            }}
+                                        >
+                                            자세히 보기
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
-                        </>
-                    )}
+                        );
+                    })}
                 </div>
 
                 {/* 슬라이드 인디케이터 */}
