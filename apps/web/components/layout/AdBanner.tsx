@@ -144,45 +144,25 @@ const AdBannerComponent = () => {
                             </p>
                         )}
 
-                        {/* 버튼 */}
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="font-serif bg-stone-100/50 hover:bg-stone-200 text-stone-800 border-stone-400 hover:border-stone-600 transition-all duration-300"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                if (currentBanner.link_url) {
-                                    window.open(currentBanner.link_url, '_blank', 'noopener,noreferrer');
-                                }
-                            }}
-                        >
-                            {currentBanner.link_url ? '자세히 보기' : '전갈 보내기'}
-                        </Button>
+                        {/* 버튼 (링크가 있을 때만 표시) */}
+                        {currentBanner.link_url && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="font-serif bg-stone-100/50 hover:bg-stone-200 text-stone-800 border-stone-400 hover:border-stone-600 transition-all duration-300"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    window.open(currentBanner.link_url!, '_blank', 'noopener,noreferrer');
+                                }}
+                            >
+                                자세히 보기
+                            </Button>
+                        )}
                     </div>
                 </>
             )}
 
-            {/* 네비게이션 컨트롤 */}
-            {banners.length > 1 && (
-                <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-between px-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20 pointer-events-none">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto transition-all duration-200"
-                        onClick={prevSlide}
-                    >
-                        <ChevronLeft className="h-5 w-5" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full text-stone-400 hover:text-stone-800 hover:bg-stone-200/50 pointer-events-auto transition-all duration-200"
-                        onClick={nextSlide}
-                    >
-                        <ChevronRight className="h-5 w-5" />
-                    </Button>
-                </div>
-            )}
+
 
             {/* 하단 인디케이터 */}
             {banners.length > 1 && (
