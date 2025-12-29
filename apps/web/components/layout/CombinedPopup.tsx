@@ -68,7 +68,18 @@ const BannerSlide = memo(({
     onClick: () => void;
 }) => (
     <div className="absolute inset-0" onClick={onClick}>
-        {banner.image_url ? (
+        {/* 영상 배너 (우선순위 1) */}
+        {banner.video_url ? (
+            <video
+                src={banner.video_url}
+                className="w-full h-full object-cover"
+                autoPlay
+                muted
+                loop
+                playsInline
+            />
+        ) : banner.image_url ? (
+            /* 이미지 배너 (우선순위 2) */
             <img
                 src={banner.image_url}
                 alt={banner.title}
@@ -77,6 +88,7 @@ const BannerSlide = memo(({
                 decoding="async"
             />
         ) : (
+            /* 텍스트 전용 배너 (Fallback) */
             <>
                 <div
                     className="absolute inset-0 opacity-40 pointer-events-none"
