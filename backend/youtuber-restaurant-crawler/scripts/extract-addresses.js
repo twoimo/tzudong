@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
-import { execSync, spawn } from 'child_process';
+import { execSync, spawn, spawnSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -303,10 +303,12 @@ async function extractWithGemini(video, transcript) {
             try {
                 log('debug', `Gemini 모델 시도: ${model}`);
 
-                // Gemini CLI 호출
-                const cmd = `gemini -p "$(cat "${tempPromptFile}")" --output-format json --model ${model}`;
-
-                const output = execSync(cmd, {
+                // Gemini CLI 호출 - bash를 통해 파이프라인으로 프롬프트 전달
+                // cat file | gemini ... 방식으로 명령행 길이 제한 우회
+                const geminiResult = spawnSync('bash', [
+                    '-c',
+                    `cat "${tempPromptFile}" | gemini --output-format json --model ${model}`
+                ], {
                     encoding: 'utf-8',
                     maxBuffer: 10 * 1024 * 1024,
                     timeout: 120000, // 2분 타임아웃
@@ -316,11 +318,35 @@ async function extractWithGemini(video, transcript) {
                     }
                 });
 
-                // 결과에 에러가 포함되어 있는지 확인
-                if (output.includes('Error when talking to Gemini API') ||
-                    (output.includes('"error"') && output.includes('"code"'))) {
+                // 에러 확인
+                if (geminiResult.error) {
+                    log('debug', `모델 ${model} 실행 에러: ${geminiResult.error.message}`);
+                    lastError = geminiResult.error;
+                    continue;
+                }
+
+                const output = geminiResult.stdout || '';
+                const stderr = geminiResult.stderr || '';
+
+                // stderr에 에러 메시지가 있는지 확인
+                if (stderr.includes('Error when talking to Gemini API') || 
+                    output.includes('Error when talking to Gemini API')) {
                     log('debug', `모델 ${model} API 오류, 다음 모델 시도...`);
-                    lastError = new Error(`API error with ${model}`);
+                    lastError = new Error(`API error with ${model}: ${stderr.slice(0, 200)}`);
+                    continue;
+                }
+
+                // exit code 확인
+                if (geminiResult.status !== 0) {
+                    log('debug', `모델 ${model} 종료 코드: ${geminiResult.status}`);
+                    lastError = new Error(`Exit code ${geminiResult.status} with ${model}`);
+                    continue;
+                }
+
+                // 결과에 에러가 포함되어 있는지 확인
+                if (output.includes('"error"') && output.includes('"code"')) {
+                    log('debug', `모델 ${model} 응답에 에러 포함, 다음 모델 시도...`);
+                    lastError = new Error(`Response error with ${model}`);
                     continue;
                 }
 
