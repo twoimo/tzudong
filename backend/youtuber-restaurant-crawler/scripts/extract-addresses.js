@@ -373,41 +373,72 @@ async function extractWithGemini(video, transcript) {
                     continue;
                 }
 
-                // JSON 파싱
+                // JSON 파싱 (여러 방법 시도)
+                let parsedResult = null;
+
+                // 방법 1: ```json``` 블록에서 추출
                 const jsonMatch = output.match(/```json\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
-                    result = JSON.parse(jsonMatch[1]);
+                    try {
+                        parsedResult = JSON.parse(jsonMatch[1].trim());
+                    } catch (e) {
+                        log('debug', `JSON 블록 파싱 실패: ${e.message}`);
+                    }
+                }
+
+                // 방법 2: 전체 출력을 JSON으로 파싱
+                if (!parsedResult) {
+                    try {
+                        // 앞뒤 공백 및 특수 문자 제거
+                        const cleaned = output.trim().replace(/^\uFEFF/, '');
+                        parsedResult = JSON.parse(cleaned);
+                    } catch (e) {
+                        // 무시
+                    }
+                }
+
+                // 방법 3: { 와 } 사이의 JSON 추출
+                if (!parsedResult) {
+                    const jsonStart = output.indexOf('{');
+                    const jsonEnd = output.lastIndexOf('}');
+                    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                        try {
+                            const extracted = output.slice(jsonStart, jsonEnd + 1);
+                            parsedResult = JSON.parse(extracted);
+                        } catch (e) {
+                            // 무시
+                        }
+                    }
+                }
+
+                // 방법 4: 이스케이프된 JSON 처리 (\\n, \\" 등)
+                if (!parsedResult) {
+                    try {
+                        // 이스케이프된 줄바꿈/따옴표 처리
+                        let unescaped = output
+                            .replace(/\\n/g, '\n')
+                            .replace(/\\"/g, '"')
+                            .replace(/\\\\/g, '\\');
+                        const jsonStart = unescaped.indexOf('{');
+                        const jsonEnd = unescaped.lastIndexOf('}');
+                        if (jsonStart !== -1 && jsonEnd !== -1) {
+                            parsedResult = JSON.parse(unescaped.slice(jsonStart, jsonEnd + 1));
+                        }
+                    } catch (e) {
+                        // 무시
+                    }
+                }
+
+                // 파싱 성공 확인
+                if (parsedResult && !parsedResult.error) {
+                    result = parsedResult;
                     log('success', `Gemini 분석 성공 (모델: ${model})`);
                     break;
                 }
 
-                // JSON 블록이 없으면 전체를 파싱 시도
-                try {
-                    const parsed = JSON.parse(output);
-                    if (parsed && !parsed.error) {
-                        result = parsed;
-                        log('success', `Gemini 분석 성공 (모델: ${model})`);
-                        break;
-                    }
-                } catch {
-                    // 응답에서 JSON 부분만 추출
-                    const jsonStart = output.indexOf('{');
-                    const jsonEnd = output.lastIndexOf('}');
-                    if (jsonStart !== -1 && jsonEnd !== -1) {
-                        const extracted = output.slice(jsonStart, jsonEnd + 1);
-                        try {
-                            const parsed = JSON.parse(extracted);
-                            if (parsed && !parsed.error) {
-                                result = parsed;
-                                log('success', `Gemini 분석 성공 (모델: ${model})`);
-                                break;
-                            }
-                        } catch { }
-                    }
-                }
-
                 // JSON 파싱 실패시 다음 모델 시도
                 log('debug', `모델 ${model} 응답 파싱 실패, 다음 모델 시도...`);
+                log('debug', `응답 미리보기: ${output.slice(0, 200)}...`);
                 lastError = new Error(`Parse error with ${model}`);
 
             } catch (error) {

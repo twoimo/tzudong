@@ -69,34 +69,34 @@ jobs:
         run: |
           echo "🔐 Gemini CLI OAuth 인증 설정 시작..."
           echo ""
-          
+
           # 중요: API 키 환경변수 제거 (OAuth만 사용)
           unset GEMINI_API_KEY
           unset GEMINI_API_KEY_BYEON
           unset GOOGLE_API_KEY
           echo "✅ API 키 환경변수 제거 완료 (OAuth만 사용)"
           echo ""
-          
+
           # 로컬 .gemini 폴더 확인
           echo "📁 로컬 .gemini 폴더 확인:"
           ls -la .gemini/ || echo "폴더 없음"
           echo ""
-          
+
           # Node.js 스크립트로 토큰 갱신 및 파일 복사
           node scripts/gemini-oauth-manager.js
           echo ""
-          
+
           # 복사 결과 확인
           echo "📁 ~/.gemini 디렉토리 최종 확인:"
           ls -la ~/.gemini/ || echo "디렉토리 없음"
           echo ""
-          
+
           # 설정 파일 내용 확인 (민감 정보 제외)
           if [ -f ~/.gemini/settings.json ]; then
             echo "📋 settings.json 내용:"
             cat ~/.gemini/settings.json
           fi
-          
+
           # 토큰 만료 시간 확인
           if [ -f ~/.gemini/oauth_creds.json ]; then
             echo ""
@@ -107,7 +107,7 @@ jobs:
               date -d "@$EXPIRY_SEC" '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "만료 시간: $EXPIRY (timestamp)"
             fi
           fi
-          
+
           # Gemini CLI 테스트 (OAuth 인증 확인)
           echo ""
           echo "🧪 Gemini CLI OAuth 인증 테스트..."
@@ -172,7 +172,7 @@ jobs:
           unset GEMINI_API_KEY
           unset GEMINI_API_KEY_BYEON
           unset GOOGLE_API_KEY
-          
+
           START_FROM="${{ github.event.inputs.start_from || '1' }}"
           echo "🚀 파이프라인 시작 (단계: $START_FROM부터)"
           echo "🤖 Gemini 모델: $GEMINI_MODEL"
@@ -207,7 +207,7 @@ jobs:
           # 변경사항 추가
           git add backend/youtuber-restaurant-crawler/data/ 2>/dev/null || true
           git add backend/log/youtuber-restaurant-crawler/ 2>/dev/null || true
-          
+
           # .gemini 폴더의 OAuth 크레덴셜 추가 (갱신된 토큰 저장)
           git add backend/youtuber-restaurant-crawler/.gemini/oauth_creds.json 2>/dev/null || true
 
