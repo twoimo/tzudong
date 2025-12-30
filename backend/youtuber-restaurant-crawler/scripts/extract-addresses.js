@@ -236,10 +236,11 @@ async function searchPlaceWithKakao(keyword, category = null) {
 /**
  * YouTube 자막 가져오기 (여러 방법 시도)
  * 1차: youtube-transcript 패키지
- * 2차: fetch로 직접 YouTube 자막 API 호출
+ * 2차: Puppeteer로 maestra.ai에서 수집
+ * 3차: Puppeteer로 tubetranscript.com에서 수집
  */
 async function getTranscript(videoId) {
-    // 1차: youtube-transcript 패키지 사용
+    // 1차: youtube-transcript 패키지 사용 (가장 빠름)
     try {
         const { YoutubeTranscript } = await import('youtube-transcript');
         const transcript = await YoutubeTranscript.fetchTranscript(videoId);
@@ -254,12 +255,227 @@ async function getTranscript(videoId) {
         log('debug', `자막 수집 성공 (youtube-transcript): ${transcript.length}개 세그먼트`);
         return text;
     } catch (error) {
-        log('debug', `자막 가져오기 실패: ${error.message}`);
+        log('debug', `youtube-transcript 실패: ${error.message.slice(0, 50)}...`);
     }
 
-    // 2차: 다른 방법들은 추후 추가 (Puppeteer 필요)
-    // 현재는 자막 없이도 description 기반으로 분석 진행
+    // 2차: Puppeteer로 maestra.ai에서 수집
+    try {
+        const result = await getTranscriptWithPuppeteer(videoId);
+        if (result) {
+            log('debug', `자막 수집 성공 (Puppeteer): ${result.segments}개 세그먼트`);
+            return result.text;
+        }
+    } catch (error) {
+        log('debug', `Puppeteer 자막 수집 실패: ${error.message}`);
+    }
+
+    // 자막 없이 description 기반으로 분석 진행
     return null;
+}
+
+// Puppeteer 인스턴스 (재사용)
+let puppeteerBrowser = null;
+
+/**
+ * Puppeteer로 자막 수집 (maestra.ai → tubetranscript.com fallback)
+ */
+async function getTranscriptWithPuppeteer(videoId) {
+    // GitHub Actions에서는 Puppeteer 사용 가능 여부 확인
+    let puppeteer;
+    try {
+        puppeteer = await import('puppeteer');
+    } catch {
+        log('debug', 'Puppeteer 모듈 없음 - 스킵');
+        return null;
+    }
+
+    try {
+        // 브라우저 재사용
+        if (!puppeteerBrowser) {
+            puppeteerBrowser = await puppeteer.default.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            });
+        }
+
+        const page = await puppeteerBrowser.newPage();
+        await page.setViewport({ width: 1280, height: 800 });
+
+        let result = null;
+
+        // 1차: maestra.ai 시도
+        result = await collectFromMaestra(page, videoId);
+
+        // 2차: tubetranscript.com fallback
+        if (!result) {
+            result = await collectFromTubeTranscript(page, videoId);
+        }
+
+        await page.close();
+
+        if (result) {
+            // 텍스트로 변환
+            const text = result.transcript.map(seg => {
+                const minutes = Math.floor(seg.start / 60);
+                const seconds = Math.floor(seg.start % 60);
+                return `[${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}] ${seg.text}`;
+            }).join('\n');
+
+            return { text, segments: result.transcript.length, language: result.language };
+        }
+
+        return null;
+    } catch (error) {
+        log('debug', `Puppeteer 오류: ${error.message}`);
+        return null;
+    }
+}
+
+/**
+ * maestra.ai에서 자막 수집
+ */
+async function collectFromMaestra(page, videoId) {
+    const url = `https://maestra.ai/tools/video-to-text/youtube-transcript-generator?v=${videoId}`;
+    const PAGE_TIMEOUT = 60000;
+
+    try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT });
+
+        // mode-toggle 버튼 또는 "Get Transcript" 버튼 대기 (최대 30초)
+        const startTime = Date.now();
+        const maxWait = 30000;
+
+        while (Date.now() - startTime < maxWait) {
+            const hasModeToggle = await page.evaluate(() => {
+                return document.querySelector('button.mode-toggle') !== null;
+            });
+
+            if (hasModeToggle) break;
+
+            // "Get Transcript" 버튼 클릭 시도
+            const submitButton = await page.evaluate(() => {
+                const btn = document.querySelector('input.search-button[type="submit"]');
+                return btn !== null;
+            });
+
+            if (submitButton) {
+                await page.click('input.search-button[type="submit"]');
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // caption 모드로 전환
+        const currentMode = await page.evaluate(() => {
+            const btn = document.querySelector('button.mode-toggle');
+            return btn?.getAttribute('data-mode') || '';
+        });
+
+        if (currentMode !== 'caption') {
+            try {
+                await page.click('button.mode-toggle svg[data-icon="caption"]');
+                await new Promise(resolve => setTimeout(resolve, 2000));
+            } catch {
+                // 무시
+            }
+        }
+
+        // 자막 라인 대기 (최대 20초)
+        const captionStartTime = Date.now();
+        while (Date.now() - captionStartTime < 20000) {
+            const count = await page.evaluate(() => {
+                return document.querySelectorAll('.transcript-content samp.caption-line').length;
+            });
+            if (count > 0) break;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // 자막 파싱
+        const transcript = await page.evaluate(() => {
+            const segments = [];
+            const captionLines = document.querySelectorAll('.transcript-content samp.caption-line');
+
+            captionLines.forEach(line => {
+                const textEl = line.querySelector('.caption-text');
+                const dataStart = line.getAttribute('data-start');
+
+                if (textEl) {
+                    segments.push({
+                        start: dataStart ? parseFloat(dataStart) : 0,
+                        text: textEl.textContent?.trim() || ''
+                    });
+                }
+            });
+
+            return segments;
+        });
+
+        if (transcript.length === 0) return null;
+
+        return { transcript, language: 'korean' };
+
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
+ * tubetranscript.com에서 자막 수집 (fallback)
+ */
+async function collectFromTubeTranscript(page, videoId) {
+    const url = `https://www.tubetranscript.com/ko/watch?v=${videoId}`;
+    const PAGE_TIMEOUT = 60000;
+
+    try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT });
+
+        // 자막 컨테이너 대기 (최대 30초)
+        const startTime = Date.now();
+        while (Date.now() - startTime < 30000) {
+            const hasContent = await page.evaluate(() => {
+                return document.querySelector('#main-transcript-content .transcript-group-box') !== null;
+            });
+            if (hasContent) break;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        // 자막 파싱
+        const transcript = await page.evaluate(() => {
+            const segments = [];
+            const groups = document.querySelectorAll('#main-transcript-content .transcript-group-box');
+
+            groups.forEach(group => {
+                const timeEl = group.querySelector('.transcript-time a[target="_blank"]');
+                const textEl = group.querySelector('.transcript-text');
+
+                if (timeEl && textEl) {
+                    const timeStr = timeEl.textContent?.trim() || '';
+                    const parts = timeStr.split(':').map(Number);
+
+                    let startSeconds = 0;
+                    if (parts.length === 2) {
+                        startSeconds = parts[0] * 60 + parts[1];
+                    } else if (parts.length === 3) {
+                        startSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                    }
+
+                    segments.push({
+                        start: startSeconds,
+                        text: textEl.textContent?.trim() || ''
+                    });
+                }
+            });
+
+            return segments;
+        });
+
+        if (transcript.length === 0) return null;
+
+        return { transcript, language: 'korean' };
+
+    } catch (error) {
+        return null;
+    }
 }
 
 /**
@@ -672,6 +888,30 @@ async function main() {
     log('info', `발견된 맛집: ${stats.restaurantsFound}개`);
     log('info', `소요 시간: ${Math.round(duration / 1000)}초`);
     log('info', '='.repeat(60));
+
+    // Puppeteer 브라우저 정리
+    if (puppeteerBrowser) {
+        try {
+            await puppeteerBrowser.close();
+            log('debug', 'Puppeteer 브라우저 종료');
+        } catch (e) {
+            // 무시
+        }
+    }
 }
+
+// 프로세스 종료 시 Puppeteer 정리
+process.on('exit', () => {
+    if (puppeteerBrowser) {
+        puppeteerBrowser.close().catch(() => { });
+    }
+});
+
+process.on('SIGINT', async () => {
+    if (puppeteerBrowser) {
+        await puppeteerBrowser.close();
+    }
+    process.exit(0);
+});
 
 main();
