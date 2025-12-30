@@ -61,8 +61,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 변경사항 추가
-          git add backend/oauth_creds.json 2>/dev/null || true
+          # 변경사항 추가 (.gemini 폴더 내 oauth_creds.json)
+          git add backend/youtuber-restaurant-crawler/.gemini/oauth_creds.json 2>/dev/null || true
           
           if git diff --staged --quiet; then
             echo "📭 OAuth 크레덴셜 변경사항 없음"
@@ -81,8 +81,9 @@ jobs:
           echo "- **실행 시간**: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')" >> $GITHUB_STEP_SUMMARY
           echo "- **트리거**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
           
-          if [ -f "backend/oauth_creds.json" ]; then
-            EXPIRY=$(jq -r '.expiry_date // 0' backend/oauth_creds.json)
+          OAUTH_FILE="backend/youtuber-restaurant-crawler/.gemini/oauth_creds.json"
+          if [ -f "$OAUTH_FILE" ]; then
+            EXPIRY=$(jq -r '.expiry_date // 0' "$OAUTH_FILE")
             EXPIRY_DATE=$(date -d @$((EXPIRY/1000)) '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "알 수 없음")
             echo "- **토큰 만료 시간**: $EXPIRY_DATE" >> $GITHUB_STEP_SUMMARY
           fi

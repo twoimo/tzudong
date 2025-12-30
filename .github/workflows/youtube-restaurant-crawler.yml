@@ -64,14 +64,38 @@ jobs:
       # ============================
       # 4. OAuth 토큰 자동 갱신 (핵심!)
       # ============================
-      - name: 🔐 Refresh OAuth Token (Auto)
+      - name: 🔐 Setup Gemini CLI Authentication
         working-directory: backend/youtuber-restaurant-crawler
         run: |
-          echo "🔐 OAuth 토큰 자동 갱신 시작..."
+          echo "🔐 Gemini CLI 인증 설정 시작..."
+          echo ""
+          
+          # 로컬 .gemini 폴더 확인
+          echo "📁 로컬 .gemini 폴더 확인:"
+          ls -la .gemini/ || echo "폴더 없음"
+          echo ""
+          
+          # Node.js 스크립트로 토큰 갱신 및 파일 복사
           node scripts/gemini-oauth-manager.js
           echo ""
-          echo "📁 ~/.gemini 디렉토리 확인:"
+          
+          # 복사 결과 확인
+          echo "📁 ~/.gemini 디렉토리 최종 확인:"
           ls -la ~/.gemini/ || echo "디렉토리 없음"
+          echo ""
+          
+          # 설정 파일 내용 확인 (민감 정보 제외)
+          if [ -f ~/.gemini/settings.json ]; then
+            echo "📋 settings.json 내용:"
+            cat ~/.gemini/settings.json
+          fi
+          
+          # 토큰 만료 시간 확인
+          if [ -f ~/.gemini/oauth_creds.json ]; then
+            echo ""
+            echo "⏰ 토큰 만료 시간:"
+            cat ~/.gemini/oauth_creds.json | jq '.expiry_date' | xargs -I {} date -d @$(({}/ 1000)) '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "(확인 불가)"
+          fi
 
       # ============================
       # 6. 환경 변수 파일 생성
@@ -159,7 +183,9 @@ jobs:
           # 변경사항 추가
           git add backend/youtuber-restaurant-crawler/data/ 2>/dev/null || true
           git add backend/log/youtuber-restaurant-crawler/ 2>/dev/null || true
-          git add backend/oauth_creds.json 2>/dev/null || true
+          
+          # .gemini 폴더의 OAuth 크레덴셜 추가 (갱신된 토큰 저장)
+          git add backend/youtuber-restaurant-crawler/.gemini/oauth_creds.json 2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "📭 변경사항 없음"

@@ -17,12 +17,14 @@ const __dirname = path.dirname(__filename);
 const GEMINI_CLI_CLIENT_ID = '681255809395-oo8ft2oprdrn9pe3aqf6av3hmdib135j.apps.googleusercontent.com';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 
-// 파일 경로
-const BACKEND_DIR = path.resolve(__dirname, '../..');
-const OAUTH_CREDS_PATH = path.join(BACKEND_DIR, 'oauth_creds.json');
-const GOOGLE_ACCOUNTS_PATH = path.join(BACKEND_DIR, 'google_accounts.json');
-const SETTINGS_PATH = path.join(BACKEND_DIR, 'settings.json');
-const STATE_PATH = path.join(BACKEND_DIR, 'state.json');
+// 파일 경로 (youtuber-restaurant-crawler/.gemini 폴더 기준)
+const CRAWLER_DIR = path.resolve(__dirname, '..');
+const GEMINI_LOCAL_DIR = path.join(CRAWLER_DIR, '.gemini');
+const OAUTH_CREDS_PATH = path.join(GEMINI_LOCAL_DIR, 'oauth_creds.json');
+const GOOGLE_ACCOUNTS_PATH = path.join(GEMINI_LOCAL_DIR, 'google_accounts.json');
+const SETTINGS_PATH = path.join(GEMINI_LOCAL_DIR, 'settings.json');
+const STATE_PATH = path.join(GEMINI_LOCAL_DIR, 'state.json');
+const INSTALLATION_ID_PATH = path.join(GEMINI_LOCAL_DIR, 'installation_id');
 
 const GEMINI_CONFIG_DIR = path.join(process.env.HOME || process.env.USERPROFILE, '.gemini');
 
@@ -97,31 +99,43 @@ async function refreshAccessToken(refreshToken) {
 
 /**
  * Gemini CLI 설정 디렉토리에 파일 복사
+ * antigravity 관련 폴더/파일 제외
  */
 function copyToGeminiConfig() {
     if (!fs.existsSync(GEMINI_CONFIG_DIR)) {
         fs.mkdirSync(GEMINI_CONFIG_DIR, { recursive: true });
     }
 
-    // OAuth 크레덴셜 복사
-    if (fs.existsSync(OAUTH_CREDS_PATH)) {
-        fs.copyFileSync(OAUTH_CREDS_PATH, path.join(GEMINI_CONFIG_DIR, 'oauth_creds.json'));
-    }
+    log('info', `📁 로컬 .gemini 폴더: ${GEMINI_LOCAL_DIR}`);
+    log('info', `📁 대상 ~/.gemini 폴더: ${GEMINI_CONFIG_DIR}`);
 
-    // 기타 설정 파일 복사
+    // 복사할 파일 목록 (antigravity 제외)
     const files = [
+        { src: OAUTH_CREDS_PATH, dest: 'oauth_creds.json' },
         { src: GOOGLE_ACCOUNTS_PATH, dest: 'google_accounts.json' },
         { src: SETTINGS_PATH, dest: 'settings.json' },
         { src: STATE_PATH, dest: 'state.json' },
+        { src: INSTALLATION_ID_PATH, dest: 'installation_id' },
     ];
 
+    let copiedCount = 0;
     files.forEach(({ src, dest }) => {
         if (fs.existsSync(src)) {
             fs.copyFileSync(src, path.join(GEMINI_CONFIG_DIR, dest));
+            log('success', `  ✓ ${dest} 복사 완료`);
+            copiedCount++;
+        } else {
+            log('warning', `  ✗ ${dest} 파일 없음: ${src}`);
         }
     });
 
-    log('success', `Gemini 설정 디렉토리 업데이트: ${GEMINI_CONFIG_DIR}`);
+    log('success', `Gemini 설정 디렉토리 업데이트 완료 (${copiedCount}개 파일)`);
+    
+    // 복사된 파일 목록 출력
+    if (fs.existsSync(GEMINI_CONFIG_DIR)) {
+        const copied = fs.readdirSync(GEMINI_CONFIG_DIR);
+        log('info', `📂 ~/.gemini 폴더 내용: ${copied.join(', ')}`);
+    }
 }
 
 /**
