@@ -161,6 +161,7 @@ async function main() {
         oauth: null,
         crawl: null,
         extract: null,
+        geocode: null,
         insert: null
     };
     
@@ -196,11 +197,24 @@ async function main() {
             );
         }
         
-        // Phase 3: DB 저장
+        // Phase 3: 좌표 보완 (지오코딩)
         if (parseInt(startFrom) <= 3) {
             log('info', '');
             log('info', '─' .repeat(60));
-            log('phase', 'Phase 3: 데이터베이스 저장');
+            log('phase', 'Phase 3: 좌표 보완 (지오코딩)');
+            log('info', '─' .repeat(60));
+            
+            results.geocode = await runScript(
+                path.join(__dirname, 'enrich-coordinates.js'),
+                '좌표 보완'
+            );
+        }
+        
+        // Phase 4: DB 저장
+        if (parseInt(startFrom) <= 4) {
+            log('info', '');
+            log('info', '─' .repeat(60));
+            log('phase', 'Phase 4: 데이터베이스 저장');
             log('info', '─' .repeat(60));
             
             results.insert = await runScript(
@@ -254,7 +268,7 @@ if (process.argv.includes('--help')) {
   node pipeline.js [옵션]
 
 옵션:
-  --start-from=N    N단계부터 시작 (1: 크롤링, 2: 추출, 3: DB저장)
+  --start-from=N    N단계부터 시작 (1: 크롤링, 2: 추출, 3: 지오코딩, 4: DB저장)
   --help            도움말 표시
 
 예시:

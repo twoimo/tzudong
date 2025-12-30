@@ -198,13 +198,13 @@ async function insertToSupabase(restaurants) {
     // 기존 unique_id 로드
     log('info', '기존 데이터 확인 중...');
     const { data: existingData, error: fetchError } = await supabase
-        .from('youtuber_restaurants')
+        .from('youtuber_restaurant')
         .select('unique_id, youtube_link');
     
     if (fetchError) {
         // 테이블이 없으면 생성 필요
         if (fetchError.message.includes('does not exist')) {
-            log('warning', 'youtuber_restaurants 테이블이 없습니다. 마이그레이션을 실행하세요.');
+            log('warning', 'youtuber_restaurant 테이블이 없습니다. 마이그레이션을 실행하세요.');
             return stats;
         }
         log('error', `기존 데이터 조회 실패: ${fetchError.message}`);
@@ -230,7 +230,7 @@ async function insertToSupabase(restaurants) {
         
         try {
             const { error } = await supabase
-                .from('youtuber_restaurants')
+                .from('youtuber_restaurant')
                 .insert(restaurant);
             
             if (error) {
