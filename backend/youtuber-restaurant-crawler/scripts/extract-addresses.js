@@ -761,8 +761,14 @@ async function processVideo(video) {
     const mapUrlStats = { google: 0, naver: 0, kakao: 0 };
     let coordsFromMapUrl = null; // 지도 URL에서 직접 추출한 좌표
 
-    // 1. 지도 URL에서 정보 추출
-    for (const mapUrl of video.mapUrls) {
+    // 1. 지도 URL에서 정보 추출 (없으면 스킵)
+    const mapUrls = video.mapUrls || [];
+
+    if (mapUrls.length === 0) {
+        log('info', `  📍 지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도`);
+    }
+
+    for (const mapUrl of mapUrls) {
         let mapInfo;
         mapUrlStats[mapUrl.type]++;
 
@@ -883,10 +889,12 @@ async function main() {
 
     const startTime = Date.now();
 
-    // 입력 파일 확인
-    const inputFile = path.join(TODAY_PATH, 'meatcreator_videos_with_map.jsonl');
+    // 입력 파일 확인 (모든 영상 또는 지도 URL 있는 영상)
+    // 우선순위: 전체 영상 처리 파일 > 지도 URL 영상 파일
+    let inputFile = path.join(TODAY_PATH, 'meatcreator_videos_all.jsonl');
+
     if (!fs.existsSync(inputFile)) {
-        // 전체 영상 목록에서 지도 URL 있는 것만 필터링
+        // 전체 영상 목록에서 처리할 영상 필터링
         const allVideosFile = path.join(TODAY_PATH, 'meatcreator_videos.json');
         if (!fs.existsSync(allVideosFile)) {
             log('error', '영상 목록 파일이 없습니다. 먼저 crawl-channel.js를 실행하세요.');
@@ -894,11 +902,28 @@ async function main() {
         }
 
         const allVideos = JSON.parse(fs.readFileSync(allVideosFile, 'utf-8'));
-        const videosWithMap = allVideos.videos.filter(v => v.hasMapUrl);
 
-        const content = videosWithMap.map(v => JSON.stringify(v)).join('\n');
+        // 모든 영상 처리 (지도 URL 유무와 관계없이)
+        // 단, 음식/맛집 관련 키워드가 제목이나 설명에 포함된 영상 우선
+        const foodKeywords = ['맛집', '먹방', '고기', '삼겹살', '소고기', '돼지', '치킨', '음식', '식당', '밥', '고깃집', '스테이크', '라멘', '짬뽕', '짜장', '분식', '회', '초밥', '파스타', '피자', '카페', '디저트', '빵', '육회', '갈비', '한우', '야키니쿠', '불고기', '냉면', '국밥', '설렁탕', '해물', '곱창', '대창', '막창'];
+
+        // 음식 관련 영상인지 판별
+        const isFoodRelated = (video) => {
+            const text = `${video.title} ${video.description}`.toLowerCase();
+            return foodKeywords.some(keyword => text.includes(keyword));
+        };
+
+        // 지도 URL이 있거나 음식 관련 영상인 경우 처리
+        const videosToProcess = allVideos.videos.filter(v => v.hasMapUrl || isFoodRelated(v));
+
+        const content = videosToProcess.map(v => JSON.stringify(v)).join('\n');
         fs.writeFileSync(inputFile, content, 'utf-8');
-        log('info', `지도 URL 포함 영상 ${videosWithMap.length}개 필터링`);
+
+        const withMapCount = videosToProcess.filter(v => v.hasMapUrl).length;
+        const withoutMapCount = videosToProcess.length - withMapCount;
+        log('info', `처리할 영상 ${videosToProcess.length}개 필터링`);
+        log('info', `  - 지도 URL 포함: ${withMapCount}개`);
+        log('info', `  - 지도 URL 없음 (음식 관련): ${withoutMapCount}개`);
     }
 
     // 영상 목록 로드
@@ -907,21 +932,37 @@ async function main() {
 
     log('info', `처리할 영상: ${videos.length}개`);
 
-    // 이미 처리된 영상 체크
+    // 이미 처리된 영상 체크 (videoId와 description 해시로 변경 감지)
     const outputFile = path.join(TODAY_PATH, 'meatcreator_restaurants.jsonl');
-    const processedIds = new Set();
+    const processedVideos = new Map(); // videoId -> { descriptionHash, lineIndex }
 
     if (fs.existsSync(outputFile)) {
         const existingContent = fs.readFileSync(outputFile, 'utf-8');
-        for (const line of existingContent.trim().split('\n')) {
+        const lines = existingContent.trim().split('\n');
+        for (let idx = 0; idx < lines.length; idx++) {
+            const line = lines[idx];
             if (line) {
                 try {
                     const data = JSON.parse(line);
-                    processedIds.add(data.videoId);
+                    // description 해시 저장 (변경 감지용)
+                    const descHash = data.descriptionHash || '';
+                    processedVideos.set(data.videoId, {
+                        descriptionHash: descHash,
+                        lineIndex: idx,
+                        restaurants: data.restaurants?.length || 0
+                    });
                 } catch { }
             }
         }
-        log('info', `이미 처리된 영상: ${processedIds.size}개`);
+        log('info', `이미 처리된 영상: ${processedVideos.size}개`);
+    }
+
+    // description 해시 함수 (간단한 변경 감지용)
+    function hashDescription(desc) {
+        if (!desc) return '';
+        // 간단한 해시: 첫 100자 + 길이 + 지도 URL 포함 여부
+        const hasMapUrl = /maps\.google|goo\.gl\/maps|naver\.me|map\.naver|place\.naver|map\.kakao|kko\.to/i.test(desc);
+        return `${desc.slice(0, 100).trim()}|${desc.length}|${hasMapUrl}`;
     }
 
     // 통계
@@ -929,19 +970,31 @@ async function main() {
         total: videos.length,
         processed: 0,
         skipped: 0,
+        updated: 0,  // description 변경으로 재처리
         success: 0,
         failed: 0,
         restaurantsFound: 0
     };
 
     // 영상별 처리
+    let batchCount = 0;
+    const BATCH_SIZE = 10; // 10개마다 진행 상황 로그
+
     for (let i = 0; i < videos.length; i++) {
         const video = videos[i];
+        const currentDescHash = hashDescription(video.description);
 
-        // 이미 처리된 영상 스킵
-        if (processedIds.has(video.videoId)) {
-            stats.skipped++;
-            continue;
+        // 이미 처리된 영상 체크 (description 변경 감지 포함)
+        const existing = processedVideos.get(video.videoId);
+        if (existing) {
+            // description이 변경되었는지 확인
+            if (existing.descriptionHash === currentDescHash) {
+                stats.skipped++;
+                continue;
+            } else {
+                log('info', `[${i + 1}/${videos.length}] 📝 description 변경 감지 - 재처리: ${video.title.slice(0, 35)}...`);
+                stats.updated++;
+            }
         }
 
         log('info', `[${i + 1}/${videos.length}] 처리 중: ${video.title.slice(0, 40)}...`);
@@ -949,14 +1002,24 @@ async function main() {
         try {
             const result = await processVideo(video);
 
+            // description 해시 추가
+            result.descriptionHash = currentDescHash;
+
             // 결과 저장 (append)
             fs.appendFileSync(outputFile, JSON.stringify(result) + '\n', 'utf-8');
 
             stats.processed++;
             stats.success++;
             stats.restaurantsFound += result.restaurants.length;
+            batchCount++;
 
             log('success', `  → ${result.restaurants.length}개 맛집 발견`);
+
+            // 10개마다 진행 상황 출력
+            if (batchCount >= BATCH_SIZE) {
+                log('info', `📊 진행 상황: ${stats.processed}/${stats.total - stats.skipped} 처리 완료, 총 ${stats.restaurantsFound}개 맛집 발견`);
+                batchCount = 0;
+            }
 
         } catch (error) {
             stats.failed++;
@@ -972,16 +1035,29 @@ async function main() {
 
     log('info', '');
     log('info', '='.repeat(60));
-    log('success', '처리 완료');
+    log('success', '🎉 처리 완료');
     log('info', '='.repeat(60));
-    log('info', `총 영상: ${stats.total}개`);
-    log('info', `처리됨: ${stats.processed}개`);
-    log('info', `스킵됨: ${stats.skipped}개 (이미 처리)`);
-    log('success', `성공: ${stats.success}개`);
-    log('error', `실패: ${stats.failed}개`);
-    log('info', `발견된 맛집: ${stats.restaurantsFound}개`);
-    log('info', `소요 시간: ${Math.round(duration / 1000)}초`);
+    log('info', `📊 총 영상: ${stats.total}개`);
+    log('info', `✅ 처리됨: ${stats.processed}개`);
+    log('info', `⏭️  스킵됨: ${stats.skipped}개 (이미 처리)`);
+    if (stats.updated > 0) {
+        log('info', `🔄 재처리: ${stats.updated}개 (description 변경)`);
+    }
+    log('success', `✅ 성공: ${stats.success}개`);
+    if (stats.failed > 0) {
+        log('error', `❌ 실패: ${stats.failed}개`);
+    }
+    log('info', `🍽️  발견된 맛집: ${stats.restaurantsFound}개`);
+    log('info', `⏱️  소요 시간: ${Math.round(duration / 1000)}초`);
     log('info', '='.repeat(60));
+
+    // 중간 결과 요약 파일 생성 (GitHub Actions Summary용)
+    const summaryFile = path.join(TODAY_PATH, 'extract_summary.json');
+    fs.writeFileSync(summaryFile, JSON.stringify({
+        timestamp: new Date().toISOString(),
+        stats,
+        duration: Math.round(duration / 1000)
+    }, null, 2));
 
     // Puppeteer 브라우저 정리
     if (puppeteerBrowser) {
