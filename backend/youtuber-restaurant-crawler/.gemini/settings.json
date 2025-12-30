@@ -8,10 +8,6 @@
     }
   },
   "general": {
-    "previewFeatures": true,
-    "selectedModel": "gemini-2.5-pro"
-  },
-  "tools": {
-    "autoApprove": true
+    "previewFeatures": true
   }
 }
