@@ -290,11 +290,7 @@ async function extractWithGemini(video, transcript) {
     // 시도할 모델 목록 (우선순위 순)
     const modelsToTry = [
         process.env.GEMINI_MODEL || 'gemini-3.0-pro-preview',
-        'gemini-3.0-flash-preview',
-        'gemini-2.5-pro-preview-05-06',
-        'gemini-2.5-flash-preview-05-20',
-        'gemini-2.0-flash-exp',
-        'gemini-1.5-pro'
+        'gemini-3.0-flash-preview'
     ];
 
     let lastError = null;
