@@ -684,6 +684,42 @@ function sleep(ms) {
 }
 
 /**
+ * 카카오 placeId로 장소 상세 정보 조회
+ */
+async function getKakaoPlaceById(placeId) {
+    if (!KAKAO_REST_API_KEY || !placeId) {
+        return null;
+    }
+
+    try {
+        // 카카오는 placeId로 직접 조회하는 공개 API가 없음
+        // 대신 place URL에서 placeId를 사용해 검색 시도
+        const url = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(placeId)}&category_group_code=FD6`;
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}`
+            }
+        });
+
+        const data = await response.json();
+        if (data.documents && data.documents.length > 0) {
+            const doc = data.documents[0];
+            return {
+                name: doc.place_name,
+                lat: parseFloat(doc.y),
+                lng: parseFloat(doc.x),
+                address: doc.address_name,
+                roadAddress: doc.road_address_name || null,
+                phone: doc.phone || null,
+            };
+        }
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
  * 지도 URL 정보와 Gemini 분석 결과 병합
  */
 async function processVideo(video) {
@@ -698,21 +734,60 @@ async function processVideo(video) {
         processedAt: getKSTDate().toISOString()
     };
 
+    // 지도 URL 형태별 통계
+    const mapUrlStats = { google: 0, naver: 0, kakao: 0 };
+    let coordsFromMapUrl = null; // 지도 URL에서 직접 추출한 좌표
+
     // 1. 지도 URL에서 정보 추출
     for (const mapUrl of video.mapUrls) {
         let mapInfo;
+        mapUrlStats[mapUrl.type]++;
+
         switch (mapUrl.type) {
             case 'naver':
                 mapInfo = await extractFromNaverMap(mapUrl.url);
+                log('debug', `  🗺️ 네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 break;
             case 'google':
                 mapInfo = await extractFromGoogleMap(mapUrl.url);
+                // 구글 지도 URL에서 좌표가 직접 추출된 경우
+                if (mapInfo.lat && mapInfo.lng) {
+                    coordsFromMapUrl = { lat: mapInfo.lat, lng: mapInfo.lng, source: 'google_url' };
+                    log('debug', `  🗺️ 구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`);
+                } else {
+                    log('debug', `  🗺️ 구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                }
                 break;
             case 'kakao':
                 mapInfo = await extractFromKakaoMap(mapUrl.url);
+                // 카카오 placeId가 있으면 API로 좌표 조회
+                if (mapInfo.placeId) {
+                    const kakaoPlace = await getKakaoPlaceById(mapInfo.placeId);
+                    if (kakaoPlace?.lat && kakaoPlace?.lng) {
+                        coordsFromMapUrl = {
+                            lat: kakaoPlace.lat,
+                            lng: kakaoPlace.lng,
+                            source: 'kakao_place',
+                            name: kakaoPlace.name,
+                            address: kakaoPlace.address
+                        };
+                        log('debug', `  🗺️ 카카오 지도 placeId로 좌표 조회: (${kakaoPlace.lat}, ${kakaoPlace.lng})`);
+                    }
+                } else {
+                    log('debug', `  🗺️ 카카오 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                }
                 break;
         }
         mapUrl.extractedInfo = mapInfo;
+    }
+
+    // 지도 URL 형태별 통계 출력
+    const urlTypes = [];
+    if (mapUrlStats.google > 0) urlTypes.push(`구글 ${mapUrlStats.google}개`);
+    if (mapUrlStats.naver > 0) urlTypes.push(`네이버 ${mapUrlStats.naver}개`);
+    if (mapUrlStats.kakao > 0) urlTypes.push(`카카오 ${mapUrlStats.kakao}개`);
+    if (urlTypes.length > 0) {
+        log('info', `  📍 지도 URL: ${urlTypes.join(', ')}`);
     }
 
     // 2. 자막 가져오기
@@ -724,16 +799,32 @@ async function processVideo(video) {
 
     if (geminiResult && geminiResult.restaurants) {
         for (const restaurant of geminiResult.restaurants) {
-            // 4. 카카오 API로 좌표 보완
+            // 4. 좌표 보완 (우선순위: 지도URL → 카카오주소검색 → 카카오장소검색)
             let geoInfo = null;
+            let geocodingSource = null;
 
-            if (restaurant.address) {
-                geoInfo = await geocodeWithKakao(restaurant.address);
+            // 4-1. 지도 URL에서 추출한 좌표가 있으면 우선 사용
+            if (coordsFromMapUrl) {
+                geoInfo = coordsFromMapUrl;
+                geocodingSource = coordsFromMapUrl.source;
             }
 
+            // 4-2. 없으면 카카오 API로 주소 검색
+            if (!geoInfo && restaurant.address) {
+                const kakaoGeo = await geocodeWithKakao(restaurant.address);
+                if (kakaoGeo) {
+                    geoInfo = kakaoGeo;
+                    geocodingSource = 'kakao_address';
+                }
+            }
+
+            // 4-3. 그래도 없으면 장소명으로 검색
             if (!geoInfo && restaurant.name) {
-                // 주소로 찾지 못하면 장소명으로 검색
-                geoInfo = await searchPlaceWithKakao(restaurant.name, 'FD6'); // FD6: 음식점
+                const kakaoPlace = await searchPlaceWithKakao(restaurant.name, 'FD6'); // FD6: 음식점
+                if (kakaoPlace) {
+                    geoInfo = kakaoPlace;
+                    geocodingSource = 'kakao_keyword';
+                }
             }
 
             result.restaurants.push({
@@ -746,7 +837,9 @@ async function processVideo(video) {
                 lng: geoInfo?.lng || null,
                 geocoded_address: geoInfo?.roadAddress || geoInfo?.address || null,
                 phone: geoInfo?.phone || null,
-                geocoding_source: geoInfo ? 'kakao' : null
+                geocoding_source: geocodingSource,
+                map_type: video.mapUrls?.[0]?.type || null,
+                map_url: video.mapUrls?.[0]?.url || null
             });
         }
     }

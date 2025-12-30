@@ -7,7 +7,7 @@
   "scripts": {
     "crawl": "node scripts/crawl-channel.js",
     "extract-addresses": "node scripts/extract-addresses.js",
-    "validate": "node scripts/validate-with-transcript.js",
+    "geocode": "node scripts/enrich-coordinates.js",
     "insert-db": "node scripts/insert-to-supabase.js",
     "pipeline": "node scripts/pipeline.js",
     "gemini-login": "node scripts/gemini-oauth-manager.js"
