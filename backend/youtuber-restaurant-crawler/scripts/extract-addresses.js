@@ -989,13 +989,13 @@ async function main() {
     // 중간 커밋 함수
     async function commitProgress(message) {
         if (!isGitHubActions) return; // 로컬에서는 커밋 안 함
-        
+
         try {
             const { execSync } = await import('child_process');
             execSync('git config user.name "github-actions[bot]"', { stdio: 'pipe' });
             execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', { stdio: 'pipe' });
             execSync(`git add ${outputFile}`, { stdio: 'pipe' });
-            
+
             // 변경사항 있는지 확인
             try {
                 execSync('git diff --staged --quiet', { stdio: 'pipe' });
@@ -1003,7 +1003,7 @@ async function main() {
             } catch {
                 // 변경사항 있음 - 커밋 진행
             }
-            
+
             execSync(`git commit -m "${message}"`, { stdio: 'pipe' });
             execSync('git push', { stdio: 'pipe' });
             stats.commits++;

@@ -65,6 +65,7 @@ jobs:
             echo "📭 커밋할 변경사항 없음 (토큰 갱신 실패?)"
           else
             git commit -m "🔐 토큰 갱신"
+            git pull --rebase origin main
             git push
             echo "✅ 커밋 완료"
           fi
