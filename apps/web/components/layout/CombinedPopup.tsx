@@ -70,71 +70,92 @@ const BannerSlide = memo(({
     isActive: boolean;
     onClick: () => void;
     onVideoEnded?: () => void;
-}) => (
-    <div
-        className={cn(
-            "absolute inset-0 transition-opacity duration-500",
-            isActive ? "opacity-100" : "opacity-0 pointer-events-none"
-        )}
-        onClick={onClick}
-    >
-        {/* 영상 배너 (우선순위 1) */}
-        {banner.video_url ? (
-            <video
-                src={banner.video_url}
-                className="w-full h-full object-cover"
-                autoPlay={isActive}
-                muted
-                playsInline
-                onEnded={onVideoEnded}
-            />
-        ) : banner.image_url ? (
-            /* 이미지 배너 (우선순위 2) */
-            <img
-                src={banner.image_url}
-                alt={banner.title}
-                className="w-full h-full object-cover"
-                loading={isActive ? "eager" : "lazy"}
-                decoding="async"
-            />
-        ) : (
-            /* 텍스트 전용 배너 (Fallback) */
-            <>
-                <div
-                    className="absolute inset-0 opacity-40 pointer-events-none"
-                    style={{
-                        backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
-                    }}
+}) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    // isActive 변경 시 영상 재생/정지 제어
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !banner.video_url) return;
+
+        if (isActive) {
+            // 영상을 처음부터 재생
+            video.currentTime = 0;
+            video.play().catch(() => {
+                // 자동 재생 실패 시 무시 (브라우저 정책)
+            });
+        } else {
+            // 비활성화 시 정지
+            video.pause();
+        }
+    }, [isActive, banner.video_url]);
+
+    return (
+        <div
+            className={cn(
+                "absolute inset-0 transition-opacity duration-500",
+                isActive ? "opacity-100" : "opacity-0 pointer-events-none"
+            )}
+            onClick={onClick}
+        >
+            {/* 영상 배너 (우선순위 1) */}
+            {banner.video_url ? (
+                <video
+                    ref={videoRef}
+                    src={banner.video_url}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    onEnded={onVideoEnded}
                 />
-                <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
-                <div className="relative h-full flex flex-col items-center justify-center text-center p-6">
-                    <Scroll className="w-8 h-8 text-stone-500 mb-3 opacity-60" />
-                    <h3 className="text-xl font-serif font-bold text-stone-900 mb-2 tracking-wide">
-                        {banner.title}
-                    </h3>
-                    {banner.description && (
-                        <p className="text-sm font-serif text-stone-700 whitespace-pre-line leading-relaxed">
-                            {banner.description}
-                        </p>
-                    )}
-                    {banner.link_url && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="mt-4 font-serif"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onClick();
-                            }}
-                        >
-                            자세히 보기
-                        </Button>
-                    )}
-                </div>
-            </>
-        )}
-    </div>
-));
+            ) : banner.image_url ? (
+                /* 이미지 배너 (우선순위 2) */
+                <img
+                    src={banner.image_url}
+                    alt={banner.title}
+                    className="w-full h-full object-cover"
+                    loading={isActive ? "eager" : "lazy"}
+                    decoding="async"
+                />
+            ) : (
+                /* 텍스트 전용 배너 (Fallback) */
+                <>
+                    <div
+                        className="absolute inset-0 opacity-40 pointer-events-none"
+                        style={{
+                            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
+                        }}
+                    />
+                    <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
+                    <div className="relative h-full flex flex-col items-center justify-center text-center p-6">
+                        <Scroll className="w-8 h-8 text-stone-500 mb-3 opacity-60" />
+                        <h3 className="text-xl font-serif font-bold text-stone-900 mb-2 tracking-wide">
+                            {banner.title}
+                        </h3>
+                        {banner.description && (
+                            <p className="text-sm font-serif text-stone-700 whitespace-pre-line leading-relaxed">
+                                {banner.description}
+                            </p>
+                        )}
+                        {banner.link_url && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-4 font-serif"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onClick();
+                                }}
+                            >
+                                자세히 보기
+                            </Button>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+});
 BannerSlide.displayName = 'BannerSlide';
 
 const CombinedPopupComponent = () => {

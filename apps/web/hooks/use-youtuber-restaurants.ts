@@ -14,11 +14,11 @@ export interface YoutuberRestaurant {
     categories: string[];
     status: 'pending' | 'verified' | 'rejected';
     source_type: string;
-    
+
     // 유튜버 정보
     youtuber_name: string;
     youtuber_channel: string | null;
-    
+
     // 유튜브 정보
     youtube_link: string | null;
     youtube_meta: {
@@ -26,27 +26,27 @@ export interface YoutuberRestaurant {
         publishedAt?: string;
         duration?: number;
     } | null;
-    
+
     // 평가 정보
     reasoning_basis: string | null;
     tzuyang_review: string | null;
-    
+
     // 주소 정보
     origin_address: string | null;
     road_address: string | null;
     jibun_address: string | null;
-    
+
     // 좌표
     lat: number | null;
     lng: number | null;
     geocoding_success: boolean;
-    
+
     // 추가 메타
     map_url: string | null;
     map_type: string | null;
     confidence: string;
     address_source: string | null;
-    
+
     // 타임스탬프
     created_at: string;
     updated_at: string;
@@ -159,7 +159,8 @@ export function useYoutuberList() {
                 if (error) throw error;
 
                 // 유튜버별로 그룹화
-                const grouped = (data || []).reduce((acc, item) => {
+                type YoutuberRow = { youtuber_name: string; youtuber_channel: string | null };
+                const grouped = ((data || []) as YoutuberRow[]).reduce((acc, item) => {
                     const key = item.youtuber_name;
                     if (!acc[key]) {
                         acc[key] = {
