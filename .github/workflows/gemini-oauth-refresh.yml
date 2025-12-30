@@ -2,7 +2,7 @@ name: 🔐 Gemini OAuth 토큰 자동 갱신
 
 on:
   schedule:
-    - cron: "*/55 * * * *"  # 55분마다 (토큰 60분 유효)
+    - cron: "*/55 * * * *" # 55분마다 (토큰 60분 유효)
   workflow_dispatch:
 
 jobs:
@@ -20,46 +20,49 @@ jobs:
       - name: 🔄 Refresh Token
         run: |
           GEMINI_DIR="backend/youtuber-restaurant-crawler/.gemini"
-          
-          # 갱신 전 토큰 상태 확인
-          BEFORE_EXPIRY=$(jq -r '.expiry_date // 0' "$GEMINI_DIR/oauth_creds.json")
-          BEFORE_TOKEN=$(jq -r '.access_token // ""' "$GEMINI_DIR/oauth_creds.json" | cut -c1-20)
+
+          # 토큰 만료 시간 확인
+          EXPIRY=$(jq -r '.expiry_date // 0' "$GEMINI_DIR/oauth_creds.json")
           NOW=$(($(date +%s) * 1000))
-          REMAINING=$(( (BEFORE_EXPIRY - NOW) / 60000 ))
-          echo "📊 갱신 전: 토큰 ${REMAINING}분 남음 (${BEFORE_TOKEN}...)"
-          
+          REMAINING=$(( (EXPIRY - NOW) / 60000 ))
+          echo "⏰ 토큰 남은 시간: ${REMAINING}분"
+
+          # 10분 이상 남았으면 갱신 불필요 (리스크 감수하고 스킵)
+          if [ $REMAINING -gt 10 ]; then
+            echo "✅ 토큰 아직 유효 - 갱신 스킵"
+            echo "SKIP=true" >> $GITHUB_ENV
+            exit 0
+          fi
+
+          echo "🔄 토큰 만료 임박 - 갱신 시작..."
+
           # Gemini CLI 설치
           npm install -g @google/gemini-cli --silent
-          
+
           # OAuth 설정 복사
           mkdir -p ~/.gemini
           cp "$GEMINI_DIR"/*.json ~/.gemini/ 2>/dev/null || true
-          
-          # 토큰 갱신 시도 (CLI 실행 시 만료된 경우 자동 갱신)
+
+          # 토큰 갱신 (CLI 실행 시 만료된 경우 자동 갱신)
           unset GEMINI_API_KEY GOOGLE_API_KEY
           echo "1+1" | timeout 20 gemini --model gemini-2.5-flash 2>&1 | head -3 || true
-          
+
           # 갱신된 토큰 복사
           cp ~/.gemini/oauth_creds.json "$GEMINI_DIR/" 2>/dev/null || true
-          
-          # 갱신 후 토큰 상태 확인
-          AFTER_EXPIRY=$(jq -r '.expiry_date // 0' "$GEMINI_DIR/oauth_creds.json")
-          AFTER_TOKEN=$(jq -r '.access_token // ""' "$GEMINI_DIR/oauth_creds.json" | cut -c1-20)
-          
-          if [ "$BEFORE_TOKEN" != "$AFTER_TOKEN" ]; then
-            echo "✅ 토큰 갱신됨! 새 만료: $(date -d @$((AFTER_EXPIRY/1000)) '+%m/%d %H:%M KST')"
-          else
-            echo "ℹ️ 토큰 변경 없음 (아직 유효해서 갱신 불필요)"
-          fi
+
+          # 새 만료 시간 출력
+          NEW_EXPIRY=$(jq -r '.expiry_date // 0' "$GEMINI_DIR/oauth_creds.json")
+          echo "✅ 토큰 갱신 완료! 새 만료: $(date -d @$((NEW_EXPIRY/1000)) '+%m/%d %H:%M KST')"
 
       - name: 📤 Commit
+        if: env.SKIP != 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add backend/youtuber-restaurant-crawler/.gemini/oauth_creds.json 2>/dev/null || true
-          
+
           if git diff --staged --quiet; then
-            echo "📭 커밋할 변경사항 없음"
+            echo "📭 커밋할 변경사항 없음 (토큰 갱신 실패?)"
           else
             git commit -m "🔐 토큰 갱신"
             git push
