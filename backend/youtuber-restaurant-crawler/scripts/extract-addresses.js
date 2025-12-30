@@ -512,9 +512,13 @@ async function extractWithGemini(video, transcript) {
 
     fs.writeFileSync(tempPromptFile, promptTemplate, 'utf-8');
 
+    // GitHub Actions 환경 감지 (로컬: 3.0-pro, Actions: 2.5-pro)
+    const isGitHubActions = !!process.env.GITHUB_ACTIONS;
+    const defaultModel = isGitHubActions ? 'gemini-2.5-pro' : 'gemini-3.0-pro';
+
     // 시도할 모델 목록 (우선순위 순)
     const modelsToTry = [
-        process.env.GEMINI_MODEL ||
+        process.env.GEMINI_MODEL || defaultModel,
         'gemini-2.5-pro',
         'gemini-2.5-flash',
         'gemini-3.0-pro',
