@@ -43,13 +43,13 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: backend/youtube-restaurant-crawler/package.json
+          cache-dependency-path: backend/youtuber-restaurant-crawler/package.json
 
       # ============================
       # 2. Node.js 패키지 설치
       # ============================
       - name: 📦 Install Node.js dependencies
-        working-directory: backend/youtube-restaurant-crawler
+        working-directory: backend/youtuber-restaurant-crawler
         run: |
           npm install
           echo "✅ Node.js 패키지 설치 완료"
@@ -107,7 +107,7 @@ jobs:
       # 5. OAuth 토큰 갱신 (필요시)
       # ============================
       - name: 🔄 Refresh OAuth token if needed
-        working-directory: backend/youtube-restaurant-crawler
+        working-directory: backend/youtuber-restaurant-crawler
         env:
           GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
         run: |
@@ -117,7 +117,7 @@ jobs:
       # 6. 환경 변수 파일 생성
       # ============================
       - name: 📝 Create .env file
-        working-directory: backend/youtube-restaurant-crawler
+        working-directory: backend/youtuber-restaurant-crawler
         run: |
           cat > .env << EOF
           # YouTube API
@@ -146,15 +146,15 @@ jobs:
           echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
           echo "📅 파이프라인 날짜 폴더: $PIPELINE_DATE"
 
-          mkdir -p backend/youtube-restaurant-crawler/data/$PIPELINE_DATE
-          mkdir -p backend/log/youtube-restaurant-crawler/$PIPELINE_DATE
+          mkdir -p backend/youtuber-restaurant-crawler/data/$PIPELINE_DATE
+          mkdir -p backend/log/youtuber-restaurant-crawler/$PIPELINE_DATE
           echo "✅ 폴더 생성 완료"
 
       # ============================
       # 8. 파이프라인 실행
       # ============================
       - name: 🚀 Run Youtuber Restaurant Pipeline
-        working-directory: backend/youtube-restaurant-crawler
+        working-directory: backend/youtuber-restaurant-crawler
         env:
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
           GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
@@ -173,9 +173,9 @@ jobs:
         with:
           name: youtuber-restaurant-results-${{ github.run_number }}
           path: |
-            backend/youtube-restaurant-crawler/data/**/*.json
-            backend/youtube-restaurant-crawler/data/**/*.jsonl
-            backend/log/youtube-restaurant-crawler/**/*.json
+            backend/youtuber-restaurant-crawler/data/**/*.json
+            backend/youtuber-restaurant-crawler/data/**/*.jsonl
+            backend/log/youtuber-restaurant-crawler/**/*.json
           retention-days: 30
           if-no-files-found: warn
 
@@ -189,8 +189,8 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # 변경사항 추가
-          git add backend/youtube-restaurant-crawler/data/ 2>/dev/null || true
-          git add backend/log/youtube-restaurant-crawler/ 2>/dev/null || true
+          git add backend/youtuber-restaurant-crawler/data/ 2>/dev/null || true
+          git add backend/log/youtuber-restaurant-crawler/ 2>/dev/null || true
           git add backend/oauth_creds.json 2>/dev/null || true
 
           if git diff --staged --quiet; then
@@ -219,7 +219,7 @@ jobs:
           # 결과 파일 통계
           echo "## 📊 처리 결과" >> $GITHUB_STEP_SUMMARY
 
-          VIDEOS_FILE="backend/youtube-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/meatcreator_videos.json"
+          VIDEOS_FILE="backend/youtuber-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/meatcreator_videos.json"
           if [ -f "$VIDEOS_FILE" ]; then
             VIDEO_COUNT=$(jq '.stats.totalVideos // 0' "$VIDEOS_FILE")
             MAP_URL_COUNT=$(jq '.stats.videosWithMapUrl // 0' "$VIDEOS_FILE")
@@ -227,7 +227,7 @@ jobs:
             echo "- **지도 URL 포함**: $MAP_URL_COUNT 개" >> $GITHUB_STEP_SUMMARY
           fi
 
-          RESTAURANTS_FILE="backend/youtube-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/meatcreator_restaurants.jsonl"
+          RESTAURANTS_FILE="backend/youtuber-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/meatcreator_restaurants.jsonl"
           if [ -f "$RESTAURANTS_FILE" ]; then
             TOTAL_RESTAURANTS=$(cat "$RESTAURANTS_FILE" | jq -s '[.[].restaurants | length] | add // 0')
             echo "- **추출된 맛집**: $TOTAL_RESTAURANTS 개" >> $GITHUB_STEP_SUMMARY
