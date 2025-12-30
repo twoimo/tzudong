@@ -973,13 +973,47 @@ async function main() {
         updated: 0,  // description 변경으로 재처리
         success: 0,
         failed: 0,
-        restaurantsFound: 0
+        restaurantsFound: 0,
+        commits: 0
     };
 
-    // 영상별 처리
+    // 배치 설정
     let batchCount = 0;
-    const BATCH_SIZE = 10; // 10개마다 진행 상황 로그
+    const LOG_BATCH_SIZE = 10;     // 10개마다 진행 상황 로그
+    const COMMIT_BATCH_SIZE = 50;  // 50개마다 자동 커밋
+    let lastCommitCount = 0;
 
+    // GitHub Actions 환경인지 확인
+    const isGitHubActions = process.env.GITHUB_ACTIONS === 'true';
+
+    // 중간 커밋 함수
+    async function commitProgress(message) {
+        if (!isGitHubActions) return; // 로컬에서는 커밋 안 함
+        
+        try {
+            const { execSync } = await import('child_process');
+            execSync('git config user.name "github-actions[bot]"', { stdio: 'pipe' });
+            execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', { stdio: 'pipe' });
+            execSync(`git add ${outputFile}`, { stdio: 'pipe' });
+            
+            // 변경사항 있는지 확인
+            try {
+                execSync('git diff --staged --quiet', { stdio: 'pipe' });
+                return; // 변경사항 없음
+            } catch {
+                // 변경사항 있음 - 커밋 진행
+            }
+            
+            execSync(`git commit -m "${message}"`, { stdio: 'pipe' });
+            execSync('git push', { stdio: 'pipe' });
+            stats.commits++;
+            log('success', `💾 중간 커밋 완료 (#${stats.commits})`);
+        } catch (error) {
+            log('warning', `중간 커밋 실패: ${error.message}`);
+        }
+    }
+
+    // 영상별 처리
     for (let i = 0; i < videos.length; i++) {
         const video = videos[i];
         const currentDescHash = hashDescription(video.description);
@@ -1016,9 +1050,15 @@ async function main() {
             log('success', `  → ${result.restaurants.length}개 맛집 발견`);
 
             // 10개마다 진행 상황 출력
-            if (batchCount >= BATCH_SIZE) {
+            if (batchCount >= LOG_BATCH_SIZE) {
                 log('info', `📊 진행 상황: ${stats.processed}/${stats.total - stats.skipped} 처리 완료, 총 ${stats.restaurantsFound}개 맛집 발견`);
                 batchCount = 0;
+            }
+
+            // 50개마다 자동 커밋 (GitHub Actions에서만)
+            if (stats.processed - lastCommitCount >= COMMIT_BATCH_SIZE) {
+                await commitProgress(`🤖 중간저장: ${stats.processed}개 처리 (${TODAY_FOLDER})`);
+                lastCommitCount = stats.processed;
             }
 
         } catch (error) {
@@ -1028,6 +1068,11 @@ async function main() {
 
         // Rate limit 대응 (Gemini: 60 RPM)
         await new Promise(resolve => setTimeout(resolve, 1500));
+    }
+
+    // 마지막 남은 데이터 커밋
+    if (stats.processed > lastCommitCount) {
+        await commitProgress(`🤖 최종저장: ${stats.processed}개 처리 완료 (${TODAY_FOLDER})`);
     }
 
     // 결과 출력
@@ -1048,6 +1093,9 @@ async function main() {
         log('error', `❌ 실패: ${stats.failed}개`);
     }
     log('info', `🍽️  발견된 맛집: ${stats.restaurantsFound}개`);
+    if (stats.commits > 0) {
+        log('info', `💾 중간 커밋: ${stats.commits}회`);
+    }
     log('info', `⏱️  소요 시간: ${Math.round(duration / 1000)}초`);
     log('info', '='.repeat(60));
 
