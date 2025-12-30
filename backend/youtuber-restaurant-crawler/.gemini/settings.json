@@ -8,7 +8,6 @@
     }
   },
   "general": {
-    "previewFeatures": true,
-    "selectedModel": "gemini-3.0-pro"
+    "previewFeatures": true
   }
 }
