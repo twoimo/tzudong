@@ -1,9 +1,9 @@
 name: 🔐 Gemini OAuth 토큰 자동 갱신
 
 on:
-  # 30분마다 실행 + 랜덤 딜레이로 실제 30~50분 간격
+  # 40분마다 토큰 갱신 (토큰은 1시간 유효)
   schedule:
-    - cron: "*/30 * * * *"  # 30분마다 트리거
+    - cron: "*/40 * * * *"  # 40분마다
   
   # 수동 실행 가능
   workflow_dispatch:
@@ -13,11 +13,6 @@ on:
         required: false
         default: "false"
         type: boolean
-      skip_delay:
-        description: "랜덤 딜레이 스킵"
-        required: false
-        default: "true"
-        type: boolean
 
 env:
   NODE_VERSION: "20"
@@ -26,24 +21,12 @@ env:
 jobs:
   refresh-oauth-token:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # 딜레이 포함하여 타임아웃 증가
+    timeout-minutes: 5
 
     permissions:
       contents: write
 
     steps:
-      - name: ⏰ Random delay (30-50분 간격 분산)
-        if: github.event_name == 'schedule'
-        run: |
-          # 0~20분(0~1200초) 사이의 랜덤 딜레이
-          DELAY=$((RANDOM % 1200))
-          DELAY_MIN=$((DELAY / 60))
-          DELAY_SEC=$((DELAY % 60))
-          echo "🎲 랜덤 딜레이: ${DELAY_MIN}분 ${DELAY_SEC}초 (총 ${DELAY}초)"
-          echo "⏳ 대기 중..."
-          sleep $DELAY
-          echo "✅ 딜레이 완료, 토큰 갱신 시작"
-
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
         with:
