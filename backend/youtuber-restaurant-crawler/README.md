@@ -11,7 +11,7 @@
 1. **영상 목록 수집**: YouTube Data API로 채널의 모든 영상 수집
 2. **지도 URL 추출**: 영상 description에서 구글/네이버/카카오 지도 URL 추출
 3. **자막 수집**: Puppeteer로 maestra.ai / tubetranscript.com에서 자막 수집
-4. **Gemini AI 분석**: 영상 내용에서 맛집 정보 추출 (OAuth 인증)
+4. **Gemini AI 분석**: 영상 내용에서 맛집 정보 추출 (OAuth 인증 + 웹 검색)
 5. **지오코딩**: 지도 URL 형태에 맞는 API로 좌표 변환
 6. **DB 저장**: Supabase에 저장
 

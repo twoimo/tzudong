@@ -477,11 +477,33 @@ async function extractWithGemini(video, transcript) {
     // 프롬프트 템플릿 로드
     let promptTemplate = fs.readFileSync(PROMPT_FILE, 'utf-8');
 
+    // 지도 URL 목록 생성
+    let mapUrlsText = '(없음)';
+    if (video.mapUrls && video.mapUrls.length > 0) {
+        mapUrlsText = video.mapUrls.map(m => {
+            let info = `- ${m.type}: ${m.url}`;
+            // 추출된 정보가 있으면 추가
+            if (m.extractedInfo) {
+                if (m.extractedInfo.lat && m.extractedInfo.lng) {
+                    info += ` → 좌표: (${m.extractedInfo.lat}, ${m.extractedInfo.lng})`;
+                }
+                if (m.extractedInfo.placeName) {
+                    info += ` → 장소명: ${m.extractedInfo.placeName}`;
+                }
+                if (m.extractedInfo.placeId) {
+                    info += ` → placeId: ${m.extractedInfo.placeId}`;
+                }
+            }
+            return info;
+        }).join('\n');
+    }
+
     // 플레이스홀더 치환
     promptTemplate = promptTemplate
         .replace('<유튜브_링크>', video.youtube_link)
         .replace('<영상_제목>', video.title)
         .replace('<영상_설명>', video.description)
+        .replace('<지도_URL_목록>', mapUrlsText)
         .replace('<자막>', transcript || '(자막 없음)');
 
     // 임시 파일에 프롬프트 저장
@@ -517,9 +539,10 @@ async function extractWithGemini(video, transcript) {
                 delete envWithoutApiKey.GEMINI_API_KEY_BYEON;
                 delete envWithoutApiKey.GOOGLE_API_KEY;
 
+                // --yolo 옵션: 웹 검색(google_web_search) 등 도구 사용 자동 허용
                 const geminiResult = spawnSync('bash', [
                     '-c',
-                    `gemini -p "$(cat '${tempPromptFile}')" --output-format json --model ${model} 2>&1`
+                    `gemini -p "$(cat '${tempPromptFile}')" --output-format json --model ${model} --yolo 2>&1`
                 ], {
                     encoding: 'utf-8',
                     maxBuffer: 50 * 1024 * 1024, // 50MB로 증가
