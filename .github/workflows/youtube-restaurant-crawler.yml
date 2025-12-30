@@ -108,7 +108,7 @@ jobs:
           echo "🚀 Mode: $START_FROM ($INPUT)"
 
           RESTAURANTS_FILE="backend/youtuber-restaurant-crawler/data/$PIPELINE_DATE/meatcreator_restaurants.jsonl"
-          [ -f "$RESTAURANTS_FILE" ] && echo "📊 기존: $(wc -l < "$RESTAURANTS_FILE")개"
+          [ -f "$RESTAURANTS_FILE" ] && echo "📊 기존: $(wc -l < "$RESTAURANTS_FILE")개" || true
 
       # ========================================
       # Mode 5: 전체 파이프라인 (중간 커밋 포함)
