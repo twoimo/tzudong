@@ -481,39 +481,42 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     {notifications.map((notification) => (
                       <DropdownMenuItem
                         key={notification.id}
-                        className={`flex-col items-start p-4 cursor-pointer ${!notification.isRead ? 'bg-stone-100/50' : ''
-                          }`}
+                        className={cn(
+                          "flex items-center gap-2 p-3 cursor-pointer hover:bg-stone-100",
+                          !notification.isRead && "bg-stone-100/50"
+                        )}
                         onClick={() => markAsRead(notification.id)}
                       >
-                        <div className="flex items-start justify-between w-full mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg">{getNotificationIcon(notification.type)}</span>
-                            <span className="font-medium text-sm text-stone-900">{notification.title}</span>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 opacity-50 hover:opacity-100"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeNotification(notification.id);
-                            }}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <p className="text-sm text-stone-600 mb-2">{notification.message}</p>
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xs text-stone-500">
+                        {/* 타입별 컬러 인디케이터 */}
+                        <div className={cn(
+                          "w-1 h-10 rounded-full flex-shrink-0",
+                          getNotificationColor(notification.type)
+                        )} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-stone-900 truncate">
+                            {notification.title}
+                          </p>
+                          <p className="text-xs text-stone-500 truncate">
+                            {notification.message}
+                          </p>
+                          <p className="text-xs text-stone-400 mt-0.5">
                             {formatDistanceToNow(notification.createdAt, {
                               addSuffix: true,
                               locale: ko
                             })}
-                          </span>
-                          {!notification.isRead && (
-                            <div className={`w-2 h-2 rounded-full ${getNotificationColor(notification.type)}`} />
-                          )}
+                          </p>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 opacity-50 hover:opacity-100 flex-shrink-0"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeNotification(notification.id);
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuGroup>
