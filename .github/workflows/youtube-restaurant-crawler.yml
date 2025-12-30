@@ -4,16 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       start_from:
-        description: "시작 단계"
+        description: "실행 모드 선택"
         required: false
-        default: "5"
+        default: "5-전체(가장빠름)"
         type: choice
         options:
-          - "1"
-          - "2"
-          - "3"
-          - "4"
-          - "5"
+          - "1-영상수집"
+          - "2-맛집추출"
+          - "3-좌표보완"
+          - "4-DB저장"
+          - "5-전체(가장빠름)"
   schedule:
     - cron: "0 15 * * 6"
 
@@ -78,34 +78,75 @@ jobs:
           PIPELINE_DATE=$(TZ=Asia/Seoul date '+%y-%m-%d')
           echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
           mkdir -p backend/youtuber-restaurant-crawler/data/$PIPELINE_DATE
-          
-          START_FROM="${{ github.event.inputs.start_from || '5' }}"
+
+          # 옵션에서 숫자만 추출 (예: "5-전체(가장빠름)" → "5")
+          INPUT="${{ github.event.inputs.start_from || '5-전체(가장빠름)' }}"
+          START_FROM=$(echo "$INPUT" | cut -d'-' -f1)
           echo "START_FROM=$START_FROM" >> $GITHUB_ENV
-          echo "🚀 Mode: $START_FROM (5=전체)"
-          
+          echo "🚀 Mode: $START_FROM ($INPUT)"
+
           RESTAURANTS_FILE="backend/youtuber-restaurant-crawler/data/$PIPELINE_DATE/meatcreator_restaurants.jsonl"
           [ -f "$RESTAURANTS_FILE" ] && echo "📊 기존: $(wc -l < "$RESTAURANTS_FILE")개"
 
-      - name: 🚀 Full Pipeline (Mode 5)
+      # ========================================
+      # Mode 5: 전체 파이프라인 (중간 커밋 포함)
+      # ========================================
+      - name: 🚀 [5] Phase 1 - 영상 수집
         if: ${{ env.START_FROM == '5' || env.START_FROM == '' }}
         working-directory: backend/youtuber-restaurant-crawler
         env:
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
+        run: |
+          echo "📺 [1/4] 채널 영상 수집..."
+          bun run scripts/crawl-channel.js
+
+      - name: 🤖 [5] Phase 2 - 맛집 추출
+        if: ${{ env.START_FROM == '5' || env.START_FROM == '' }}
+        working-directory: backend/youtuber-restaurant-crawler
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
           KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_MODEL: "gemini-2.5-pro"
         run: |
           unset GEMINI_API_KEY GEMINI_API_KEY_BYEON GOOGLE_API_KEY
-          echo "═══════════════════════════════════════"
-          echo "🚀 전체 파이프라인 (중간 커밋 없음)"
-          echo "═══════════════════════════════════════"
-          bun run scripts/crawl-channel.js
+          echo "🤖 [2/4] 맛집 정보 추출 (Gemini AI)..."
           bun run scripts/extract-addresses.js
+
+      - name: 💾 [5] 중간 커밋 (맛집 추출 결과)
+        if: ${{ env.START_FROM == '5' || env.START_FROM == '' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/youtuber-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/ 2>/dev/null || true
+          git add backend/youtuber-restaurant-crawler/.gemini/oauth_creds.json 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "🤖 중간저장: 맛집 추출 (${{ env.PIPELINE_DATE }})"
+            git push
+            echo "✅ 중간 커밋 완료"
+          fi
+
+      - name: 🗺️ [5] Phase 3 - 좌표 보완
+        if: ${{ env.START_FROM == '5' || env.START_FROM == '' }}
+        working-directory: backend/youtuber-restaurant-crawler
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+        run: |
+          echo "🗺️ [3/4] 좌표 보완..."
           bun run scripts/enrich-coordinates.js
+
+      - name: 💾 [5] Phase 4 - DB 저장
+        if: ${{ env.START_FROM == '5' || env.START_FROM == '' }}
+        working-directory: backend/youtuber-restaurant-crawler
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          echo "💾 [4/4] DB 저장..."
           bun run scripts/insert-to-supabase.js
-          echo "✅ 완료!"
+          echo "✅ 전체 완료!"
 
       - name: 📺 Phase 1 (Mode 1)
         if: ${{ env.START_FROM == '1' }}
