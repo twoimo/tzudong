@@ -1,7 +1,7 @@
 /**
  * Gemini CLI OAuth 토큰 관리자
  * - oauth_creds.json 파일을 사용하여 인증
- * - 토큰 만료 시 자동 갱신
+ * - 토큰 만료 시 자동 갱신 (Public Client 방식 - client_secret 불필요)
  * - GitHub Actions에서 갱신된 토큰 커밋
  */
 
@@ -19,9 +19,9 @@ const GEMINI_CONFIG_DIR = path.join(process.env.HOME || process.env.USERPROFILE,
 const GEMINI_OAUTH_PATH = path.join(GEMINI_CONFIG_DIR, 'oauth_creds.json');
 const GEMINI_SETTINGS_PATH = path.join(GEMINI_CONFIG_DIR, 'settings.json');
 
-// Google OAuth 설정 (Gemini CLI 공식 클라이언트 ID)
+// Google OAuth 설정 (Gemini CLI 공식 클라이언트 ID - Public Client)
+// Gemini CLI는 Public Client 방식을 사용하므로 client_secret이 필요 없습니다
 const GOOGLE_CLIENT_ID = '681255809395-oo8ft2oprdrn9pe3aqf6av3hmdib135j.apps.googleusercontent.com';
-const GOOGLE_CLIENT_SECRET = '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';
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 
 // 로그 함수
@@ -64,12 +64,13 @@ function isTokenExpired(creds) {
 }
 
 /**
- * refresh_token으로 access_token 갱신
+ * refresh_token으로 access_token 갱신 (Public Client 방식)
  */
 async function refreshAccessToken(refreshToken) {
-    log('info', '액세스 토큰 갱신 중...');
+    log('info', '액세스 토큰 갱신 중... (Public Client 방식)');
 
     try {
+        // Public Client 방식: client_secret 없이 갱신
         const response = await fetch(TOKEN_ENDPOINT, {
             method: 'POST',
             headers: {
@@ -77,7 +78,6 @@ async function refreshAccessToken(refreshToken) {
             },
             body: new URLSearchParams({
                 client_id: GOOGLE_CLIENT_ID,
-                client_secret: GOOGLE_CLIENT_SECRET,
                 refresh_token: refreshToken,
                 grant_type: 'refresh_token',
             }).toString(),
@@ -86,7 +86,7 @@ async function refreshAccessToken(refreshToken) {
         const data = await response.json();
 
         if (data.error) {
-            throw new Error(`토큰 갱신 실패: ${data.error} - ${data.error_description}`);
+            throw new Error(`${data.error} - ${data.error_description}`);
         }
 
         log('success', '액세스 토큰 갱신 완료');
@@ -124,7 +124,7 @@ function saveOAuthCreds(creds) {
 }
 
 /**
- * Gemini CLI 설정 파일 생성
+ * Gemini CLI 설정 파일 생성 (OAuth 전용)
  */
 function setupGeminiSettings() {
     if (!fs.existsSync(GEMINI_CONFIG_DIR)) {
@@ -208,7 +208,7 @@ function commitOAuthCreds() {
 }
 
 /**
- * Gemini CLI 인증 설정 (메인)
+ * Gemini CLI 인증 설정 (메인) - OAuth 전용
  */
 async function setupGeminiAuth() {
     log('info', '='.repeat(50));
@@ -271,8 +271,9 @@ async function setupGeminiAuth() {
     if (isLoggedIn) {
         log('success', 'Gemini CLI 인증 설정 완료!');
     } else {
-        log('warning', 'Gemini CLI 로그인 상태를 확인할 수 없습니다.');
-        log('info', 'API 키 모드로 대체 실행됩니다.');
+        log('error', 'Gemini CLI 로그인 상태를 확인할 수 없습니다.');
+        log('error', 'OAuth 토큰이 유효하지 않습니다. 로컬에서 다시 로그인해주세요.');
+        process.exit(1);
     }
 
     log('info', '='.repeat(50));
@@ -280,49 +281,17 @@ async function setupGeminiAuth() {
     return isLoggedIn;
 }
 
-/**
- * API 키 모드 설정
- */
-function setupApiKeyMode() {
-    log('info', 'API 키 모드로 Gemini CLI 설정 중...');
-
-    // Gemini 설정 디렉토리 생성
-    if (!fs.existsSync(GEMINI_CONFIG_DIR)) {
-        fs.mkdirSync(GEMINI_CONFIG_DIR, { recursive: true });
-    }
-
-    const settings = {
-        auth: { type: 'api-key' },
-        theme: 'default',
-        sandbox: false,
-        yoloMode: true,
-        selectedModel: 'gemini-3.0-flash'
-    };
-
-    fs.writeFileSync(GEMINI_SETTINGS_PATH, JSON.stringify(settings, null, 2), 'utf-8');
-    log('success', 'API 키 모드 설정 완료');
-}
-
 // 메인 실행
 async function main() {
     const args = process.argv.slice(2);
 
-    if (args.includes('--api-key')) {
-        // API 키 모드
-        setupApiKeyMode();
-    } else if (args.includes('--check')) {
+    if (args.includes('--check')) {
         // 로그인 상태만 확인
         const isLoggedIn = checkGeminiLogin();
         process.exit(isLoggedIn ? 0 : 1);
     } else {
-        // OAuth 모드 (기본)
-        try {
-            await setupGeminiAuth();
-        } catch (error) {
-            log('error', `OAuth 설정 실패: ${error.message}`);
-            log('info', 'API 키 모드로 대체합니다.');
-            setupApiKeyMode();
-        }
+        // OAuth 모드 (유일한 모드)
+        await setupGeminiAuth();
     }
 }
 
