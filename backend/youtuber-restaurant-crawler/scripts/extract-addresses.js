@@ -298,7 +298,10 @@ async function extractWithGemini(video, transcript) {
 
     // 시도할 모델 목록 (우선순위 순)
     const modelsToTry = [
-        process.env.GEMINI_MODEL || 'gemini-3.0-pro',
+        process.env.GEMINI_MODEL ||
+        'gemini-2.5-pro',
+        'gemini-2.5-flash',
+        'gemini-3.0-pro',
         'gemini-3.0-flash',
         'gemini-3.0-pro-preview',
         'gemini-3.0-flash-preview'
@@ -375,7 +378,7 @@ async function extractWithGemini(video, transcript) {
 
                 // JSON 파싱 (여러 방법 시도)
                 let parsedResult = null;
-                
+
                 // 먼저 이스케이프된 문자 정리 (모든 방법에 적용)
                 // 순서 중요: \\\\ → \\ 먼저, 그 다음 \\n → \n, \\" → "
                 let cleanedOutput = output
