@@ -17,7 +17,6 @@ on:
     - cron: "0 15 * * 6"
 
 env:
-  PYTHON_VERSION: "3.11"
   NODE_VERSION: "20"
   TZ: "Asia/Seoul"
 
@@ -63,55 +62,45 @@ jobs:
           echo "✅ Gemini CLI 설치 완료: $(gemini --version)"
 
       # ============================
-      # 4. OAuth 토큰 설정
+      # 4. OAuth 토큰 설정 (OAuth 전용 - API 키 사용 안함)
       # ============================
       - name: 🔐 Setup OAuth credentials
         run: |
           # OAuth 크레덴셜 파일 확인
-          if [ -f "backend/oauth_creds.json" ]; then
-            echo "✅ OAuth 크레덴셜 파일 존재"
-            
-            # Gemini 설정 디렉토리 생성
-            mkdir -p ~/.gemini
-            
-            # OAuth 크레덴셜 복사
-            cp backend/oauth_creds.json ~/.gemini/oauth_creds.json
-            
-            # Gemini 설정 파일 생성
-            cat > ~/.gemini/settings.json << EOF
-            {
-              "auth": { "type": "oauth" },
-              "theme": "default",
-              "sandbox": false,
-              "yoloMode": true,
-              "selectedModel": "gemini-3.0-flash"
-            }
-          EOF
-            
-            echo "✅ Gemini CLI 설정 완료"
-          else
-            echo "⚠️ OAuth 크레덴셜 없음, API 키 모드 사용"
-            
-            mkdir -p ~/.gemini
-            cat > ~/.gemini/settings.json << EOF
-            {
-              "auth": { "type": "api-key" },
-              "theme": "default",
-              "sandbox": false,
-              "yoloMode": true
-            }
-          EOF
+          if [ ! -f "backend/oauth_creds.json" ]; then
+            echo "❌ OAuth 크레덴셜 파일이 없습니다!"
+            echo "로컬에서 'gemini' 명령어로 로그인 후 oauth_creds.json을 커밋해주세요."
+            exit 1
           fi
+          
+          echo "✅ OAuth 크레덴셜 파일 존재"
+          
+          # Gemini 설정 디렉토리 생성
+          mkdir -p ~/.gemini
+          
+          # OAuth 크레덴셜 복사
+          cp backend/oauth_creds.json ~/.gemini/oauth_creds.json
+          
+          # Gemini 설정 파일 생성 (OAuth 전용)
+          cat > ~/.gemini/settings.json << 'EOF'
+          {
+            "auth": { "type": "oauth" },
+            "theme": "default",
+            "sandbox": false,
+            "yoloMode": true,
+            "selectedModel": "gemini-3.0-flash"
+          }
+          EOF
+          
+          echo "✅ Gemini CLI OAuth 설정 완료"
 
       # ============================
-      # 5. OAuth 토큰 갱신 (필요시)
+      # 5. OAuth 토큰 갱신
       # ============================
-      - name: 🔄 Refresh OAuth token if needed
+      - name: 🔄 Refresh OAuth token
         working-directory: backend/youtuber-restaurant-crawler
-        env:
-          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
         run: |
-          node scripts/gemini-oauth-manager.js || echo "OAuth 갱신 실패, API 키 모드로 계속"
+          node scripts/gemini-oauth-manager.js
 
       # ============================
       # 6. 환경 변수 파일 생성
@@ -119,23 +108,25 @@ jobs:
       - name: 📝 Create .env file
         working-directory: backend/youtuber-restaurant-crawler
         run: |
-          cat > .env << EOF
-          # YouTube API
+          cat > .env << 'ENVEOF'
           YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY_BYEON }}
-
-          # Gemini CLI
-          GEMINI_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
-          GEMINI_API_KEY_BYEON=${{ secrets.GOOGLE_API_KEY_BYEON }}
-          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
-
-          # 카카오 지오코딩
+          YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
           KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}
-
-          # Supabase
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          EOF
+          ENVEOF
+          
           echo "✅ .env 파일 생성 완료"
+          echo "📝 .env 내용 확인:"
+          cat .env | while read line; do
+            key=$(echo "$line" | cut -d'=' -f1)
+            val=$(echo "$line" | cut -d'=' -f2-)
+            if [ -n "$val" ]; then
+              echo "   $key=***설정됨*** (길이: ${#val})"
+            else
+              echo "   $key=(비어있음)"
+            fi
+          done
 
       # ============================
       # 7. 파이프라인 날짜 폴더 설정
@@ -157,7 +148,11 @@ jobs:
         working-directory: backend/youtuber-restaurant-crawler
         env:
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
-          GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
+          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           START_FROM="${{ github.event.inputs.start_from || '1' }}"
           echo "🚀 파이프라인 시작 (단계: $START_FROM부터)"
@@ -183,7 +178,7 @@ jobs:
       # 10. 결과 커밋
       # ============================
       - name: 📤 Commit results
-        if: success()
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

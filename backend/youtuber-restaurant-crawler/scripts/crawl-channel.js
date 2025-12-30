@@ -28,6 +28,9 @@ const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || process.env.YOUTUBE_API_K
 const CHANNEL_ID = 'UCMcPjioYcn0M6mGBOQeTkpQ'; // 정육왕 MeatCreator
 const CHANNEL_HANDLE = '@meatcreator';
 
+// 디버깅: API 키 확인
+console.log(`[DEBUG] YOUTUBE_API_KEY 설정됨: ${YOUTUBE_API_KEY ? '예 (길이: ' + YOUTUBE_API_KEY.length + ')' : '아니오'}`);
+
 // 한국 시간 (KST)
 function getKSTDate() {
     const now = new Date();
