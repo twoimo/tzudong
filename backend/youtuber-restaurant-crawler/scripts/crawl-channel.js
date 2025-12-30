@@ -25,8 +25,7 @@ for (const envPath of envPaths) {
 
 // 설정
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || process.env.YOUTUBE_API_KEY_BYEON;
-const CHANNEL_ID = 'UCMcPjioYcn0M6mGBOQeTkpQ'; // 정육왕 MeatCreator
-const CHANNEL_HANDLE = '@meatcreator';
+const CHANNEL_HANDLE = '@meatcreator'; // 정육왕 MeatCreator
 
 // 디버깅: API 키 확인
 console.log(`[DEBUG] YOUTUBE_API_KEY 설정됨: ${YOUTUBE_API_KEY ? '예 (길이: ' + YOUTUBE_API_KEY.length + ')' : '아니오'}`);
@@ -67,10 +66,73 @@ function log(level, msg) {
 }
 
 /**
- * 채널의 uploads 플레이리스트 ID 가져오기
+ * 핸들(@username)로 채널 정보 가져오기
+ * YouTube API v3의 forHandle 파라미터 사용
  */
-async function getUploadsPlaylistId(channelId) {
-    const url = `https://www.googleapis.com/youtube/v3/channels?part=contentDetails&id=${channelId}&key=${YOUTUBE_API_KEY}`;
+async function getChannelByHandle(handle) {
+    // @ 기호 제거 (있는 경우)
+    const cleanHandle = handle.startsWith('@') ? handle : `@${handle}`;
+    
+    log('info', `핸들로 채널 검색: ${cleanHandle}`);
+    
+    const url = `https://www.googleapis.com/youtube/v3/channels?part=id,snippet,contentDetails&forHandle=${encodeURIComponent(cleanHandle)}&key=${YOUTUBE_API_KEY}`;
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.error) {
+        log('error', `API 응답: ${JSON.stringify(data.error)}`);
+        throw new Error(`YouTube API 오류: ${data.error.message}`);
+    }
+    
+    if (!data.items || data.items.length === 0) {
+        // forHandle이 작동하지 않으면 검색 API로 폴백
+        log('warning', 'forHandle로 채널을 찾을 수 없습니다. 검색 API로 시도...');
+        return await searchChannelByName(cleanHandle);
+    }
+    
+    const channel = data.items[0];
+    log('success', `채널 발견: ${channel.snippet.title} (ID: ${channel.id})`);
+    
+    return {
+        id: channel.id,
+        title: channel.snippet.title,
+        uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads,
+    };
+}
+
+/**
+ * 검색 API로 채널 찾기 (폴백)
+ */
+async function searchChannelByName(query) {
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&type=channel&maxResults=5&key=${YOUTUBE_API_KEY}`;
+    
+    const response = await fetch(searchUrl);
+    const data = await response.json();
+    
+    if (data.error) {
+        throw new Error(`YouTube 검색 API 오류: ${data.error.message}`);
+    }
+    
+    if (!data.items || data.items.length === 0) {
+        throw new Error(`채널을 찾을 수 없습니다: ${query}`);
+    }
+    
+    // 검색 결과에서 첫 번째 채널 사용
+    const channelId = data.items[0].snippet.channelId;
+    const channelTitle = data.items[0].snippet.title;
+    
+    log('info', `검색 결과 채널: ${channelTitle} (ID: ${channelId})`);
+    
+    // 채널 상세 정보 가져오기
+    return await getChannelById(channelId);
+}
+
+/**
+ * 채널 ID로 채널 정보 가져오기
+ */
+async function getChannelById(channelId) {
+    const url = `https://www.googleapis.com/youtube/v3/channels?part=id,snippet,contentDetails&id=${channelId}&key=${YOUTUBE_API_KEY}`;
     
     const response = await fetch(url);
     const data = await response.json();
@@ -83,7 +145,13 @@ async function getUploadsPlaylistId(channelId) {
         throw new Error('채널을 찾을 수 없습니다.');
     }
     
-    return data.items[0].contentDetails.relatedPlaylists.uploads;
+    const channel = data.items[0];
+    
+    return {
+        id: channel.id,
+        title: channel.snippet.title,
+        uploadsPlaylistId: channel.contentDetails.relatedPlaylists.uploads,
+    };
 }
 
 /**
@@ -247,9 +315,11 @@ async function main() {
     const startTime = Date.now();
     
     try {
-        // 1. 채널의 uploads 플레이리스트 ID 가져오기
+        // 1. 핸들로 채널 정보 가져오기
         log('info', '채널 정보 조회 중...');
-        const uploadsPlaylistId = await getUploadsPlaylistId(CHANNEL_ID);
+        const channelInfo = await getChannelByHandle(CHANNEL_HANDLE);
+        const uploadsPlaylistId = channelInfo.uploadsPlaylistId;
+        log('success', `채널: ${channelInfo.title} (ID: ${channelInfo.id})`);
         log('success', `Uploads 플레이리스트 ID: ${uploadsPlaylistId}`);
         
         // 2. 모든 영상 목록 가져오기
@@ -299,9 +369,9 @@ async function main() {
         const outputFile = path.join(TODAY_PATH, 'meatcreator_videos.json');
         const output = {
             channel: {
-                id: CHANNEL_ID,
+                id: channelInfo.id,
                 handle: CHANNEL_HANDLE,
-                name: '정육왕',
+                name: channelInfo.title,
             },
             crawledAt: getKSTDate().toISOString(),
             stats,

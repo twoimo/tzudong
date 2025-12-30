@@ -1,0 +1,88 @@
+name: 🔐 Gemini OAuth 토큰 자동 갱신
+
+on:
+  # 매 시간 토큰 갱신 (토큰은 1시간 유효)
+  schedule:
+    - cron: "0 * * * *"  # 매 시간 정각
+  
+  # 수동 실행 가능
+  workflow_dispatch:
+    inputs:
+      force_refresh:
+        description: "강제 갱신 (만료 여부 무관)"
+        required: false
+        default: "false"
+        type: boolean
+
+env:
+  NODE_VERSION: "20"
+  TZ: "Asia/Seoul"
+
+jobs:
+  refresh-oauth-token:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📦 Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 📦 Install dependencies
+        working-directory: backend/youtuber-restaurant-crawler
+        run: npm install
+
+      - name: 🔐 Refresh OAuth Token
+        working-directory: backend/youtuber-restaurant-crawler
+        env:
+          FORCE_REFRESH: ${{ github.event.inputs.force_refresh || 'false' }}
+        run: |
+          echo "🔐 Gemini OAuth 토큰 갱신 시작..."
+          echo "강제 갱신: $FORCE_REFRESH"
+          
+          # 토큰 갱신 스크립트 실행
+          node scripts/gemini-oauth-manager.js
+          
+          echo ""
+          echo "✅ 토큰 갱신 완료"
+
+      - name: 📤 Commit updated OAuth credentials
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 변경사항 추가
+          git add backend/oauth_creds.json 2>/dev/null || true
+          
+          if git diff --staged --quiet; then
+            echo "📭 OAuth 크레덴셜 변경사항 없음"
+          else
+            COMMIT_MSG="🔐 Auto: Gemini OAuth 토큰 갱신 ($(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M KST'))"
+            git commit -m "$COMMIT_MSG"
+            git push
+            echo "✅ OAuth 크레덴셜 커밋 완료"
+          fi
+
+      - name: 📝 Generate Summary
+        if: always()
+        run: |
+          echo "# 🔐 Gemini OAuth 토큰 갱신 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **실행 시간**: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')" >> $GITHUB_STEP_SUMMARY
+          echo "- **트리거**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f "backend/oauth_creds.json" ]; then
+            EXPIRY=$(jq -r '.expiry_date // 0' backend/oauth_creds.json)
+            EXPIRY_DATE=$(date -d @$((EXPIRY/1000)) '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "알 수 없음")
+            echo "- **토큰 만료 시간**: $EXPIRY_DATE" >> $GITHUB_STEP_SUMMARY
+          fi

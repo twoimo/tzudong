@@ -1,8 +1,8 @@
 /**
- * Gemini CLI OAuth 설정 관리자
- * - oauth_creds.json 및 관련 설정 파일을 ~/.gemini/에 복사
- * - Gemini CLI가 자체적으로 토큰 갱신을 처리함
- * - GitHub Actions에서 변경된 파일 커밋
+ * Gemini CLI OAuth 토큰 자동 갱신 관리자
+ * - Gemini CLI의 실제 Client ID를 사용하여 토큰 갱신
+ * - refresh_token을 사용해서 access_token 자동 갱신
+ * - 갱신된 토큰을 GitHub에 자동 커밋
  */
 
 import fs from 'fs';
@@ -12,6 +12,10 @@ import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Gemini CLI의 실제 OAuth Client ID (id_token에서 추출)
+const GEMINI_CLI_CLIENT_ID = '681255809395-oo8ft2oprdrn9pe3aqf6av3hmdib135j.apps.googleusercontent.com';
+const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
 
 // 파일 경로
 const BACKEND_DIR = path.resolve(__dirname, '../..');
@@ -30,152 +34,222 @@ function log(level, msg) {
 }
 
 /**
- * 파일 복사 (존재하는 경우)
+ * OAuth 크레덴셜 로드
  */
-function copyIfExists(src, dest, description) {
-    if (fs.existsSync(src)) {
-        fs.copyFileSync(src, dest);
-        log('success', `${description} 복사 완료`);
-        return true;
+function loadOAuthCreds() {
+    if (!fs.existsSync(OAUTH_CREDS_PATH)) {
+        throw new Error('OAuth 크레덴셜 파일이 없습니다: ' + OAUTH_CREDS_PATH);
     }
-    return false;
+    return JSON.parse(fs.readFileSync(OAUTH_CREDS_PATH, 'utf-8'));
 }
 
 /**
- * OAuth 토큰 만료 확인
+ * OAuth 크레덴셜 저장
  */
-function checkTokenExpiry() {
-    if (!fs.existsSync(OAUTH_CREDS_PATH)) {
-        return { valid: false, message: 'OAuth 크레덴셜 파일이 없습니다.' };
-    }
-
-    try {
-        const creds = JSON.parse(fs.readFileSync(OAUTH_CREDS_PATH, 'utf-8'));
-        
-        if (!creds.expiry_date) {
-            return { valid: false, message: 'expiry_date가 없습니다.' };
-        }
-
-        const now = Date.now();
-        const bufferMs = 5 * 60 * 1000; // 5분 버퍼
-
-        if (now >= (creds.expiry_date - bufferMs)) {
-            const expiryDate = new Date(creds.expiry_date);
-            return {
-                valid: false,
-                expired: true,
-                message: `토큰이 만료되었습니다. (만료: ${expiryDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })})`
-            };
-        }
-
-        const expiryDate = new Date(creds.expiry_date);
-        return {
-            valid: true,
-            message: `토큰 유효 (만료: ${expiryDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })})`
-        };
-    } catch (error) {
-        return { valid: false, message: `파일 파싱 실패: ${error.message}` };
-    }
+function saveOAuthCreds(creds) {
+    fs.writeFileSync(OAUTH_CREDS_PATH, JSON.stringify(creds, null, 2), 'utf-8');
+    log('success', 'OAuth 크레덴셜 저장 완료');
 }
 
 /**
- * Gemini CLI 설정 디렉토리 설정
+ * 토큰 만료 확인
  */
-function setupGeminiConfig() {
-    log('info', '='.repeat(50));
-    log('info', '  Gemini CLI 설정 복사');
-    log('info', '='.repeat(50));
+function isTokenExpired(creds) {
+    if (!creds.expiry_date) return true;
+    
+    const now = Date.now();
+    const bufferMs = 5 * 60 * 1000; // 5분 버퍼
+    
+    return now >= (creds.expiry_date - bufferMs);
+}
 
-    // 1. OAuth 크레덴셜 확인
-    if (!fs.existsSync(OAUTH_CREDS_PATH)) {
-        log('error', `OAuth 크레덴셜 파일이 없습니다: ${OAUTH_CREDS_PATH}`);
-        log('info', '');
-        log('info', '해결 방법:');
-        log('info', '1. 로컬에서 `gemini` 명령어로 로그인');
-        log('info', '2. ~/.gemini/ 폴더의 파일들을 backend/ 폴더에 복사');
-        log('info', '3. GitHub에 커밋');
-        process.exit(1);
+/**
+ * refresh_token을 사용하여 access_token 갱신
+ * Gemini CLI의 실제 Client ID 사용
+ */
+async function refreshAccessToken(refreshToken) {
+    log('info', '액세스 토큰 갱신 중...');
+    
+    const body = new URLSearchParams({
+        client_id: GEMINI_CLI_CLIENT_ID,
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+    });
+
+    const response = await fetch(GOOGLE_TOKEN_ENDPOINT, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: body.toString(),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        log('error', `토큰 갱신 응답: ${JSON.stringify(data)}`);
+        throw new Error(`토큰 갱신 실패: ${data.error} - ${data.error_description || '알 수 없는 오류'}`);
     }
 
-    // 2. 토큰 만료 확인
-    const tokenStatus = checkTokenExpiry();
-    if (tokenStatus.valid) {
-        log('success', tokenStatus.message);
-    } else if (tokenStatus.expired) {
-        log('warning', tokenStatus.message);
-        log('warning', 'Gemini CLI가 실행 시 자동으로 토큰 갱신을 시도합니다.');
-        log('warning', '만약 실패하면 로컬에서 다시 로그인이 필요합니다.');
-    } else {
-        log('error', tokenStatus.message);
-    }
+    log('success', '액세스 토큰 갱신 성공');
+    return data;
+}
 
-    // 3. Gemini 설정 디렉토리 생성
+/**
+ * Gemini CLI 설정 디렉토리에 파일 복사
+ */
+function copyToGeminiConfig() {
     if (!fs.existsSync(GEMINI_CONFIG_DIR)) {
         fs.mkdirSync(GEMINI_CONFIG_DIR, { recursive: true });
-        log('success', `설정 디렉토리 생성: ${GEMINI_CONFIG_DIR}`);
     }
 
-    // 4. 파일 복사
-    copyIfExists(OAUTH_CREDS_PATH, path.join(GEMINI_CONFIG_DIR, 'oauth_creds.json'), 'oauth_creds.json');
-    copyIfExists(GOOGLE_ACCOUNTS_PATH, path.join(GEMINI_CONFIG_DIR, 'google_accounts.json'), 'google_accounts.json');
-    copyIfExists(SETTINGS_PATH, path.join(GEMINI_CONFIG_DIR, 'settings.json'), 'settings.json');
-    copyIfExists(STATE_PATH, path.join(GEMINI_CONFIG_DIR, 'state.json'), 'state.json');
+    // OAuth 크레덴셜 복사
+    if (fs.existsSync(OAUTH_CREDS_PATH)) {
+        fs.copyFileSync(OAUTH_CREDS_PATH, path.join(GEMINI_CONFIG_DIR, 'oauth_creds.json'));
+    }
 
-    log('info', '');
-    log('info', `📁 ${GEMINI_CONFIG_DIR} 내용:`);
-    const files = fs.readdirSync(GEMINI_CONFIG_DIR);
-    files.forEach(f => log('debug', `  - ${f}`));
+    // 기타 설정 파일 복사
+    const files = [
+        { src: GOOGLE_ACCOUNTS_PATH, dest: 'google_accounts.json' },
+        { src: SETTINGS_PATH, dest: 'settings.json' },
+        { src: STATE_PATH, dest: 'state.json' },
+    ];
 
-    log('info', '='.repeat(50));
-    log('success', 'Gemini CLI 설정 완료');
-    log('info', '='.repeat(50));
+    files.forEach(({ src, dest }) => {
+        if (fs.existsSync(src)) {
+            fs.copyFileSync(src, path.join(GEMINI_CONFIG_DIR, dest));
+        }
+    });
+
+    log('success', `Gemini 설정 디렉토리 업데이트: ${GEMINI_CONFIG_DIR}`);
 }
 
 /**
- * GitHub Actions에서 변경된 설정 파일 커밋
+ * GitHub에 변경사항 커밋
  */
-function commitChangedFiles() {
+function commitToGitHub() {
     if (!process.env.GITHUB_ACTIONS) {
         log('info', 'GitHub Actions 환경이 아니므로 커밋 스킵');
-        return;
+        return false;
     }
 
     try {
-        // Gemini CLI가 토큰을 갱신했을 수 있으므로 ~/.gemini/에서 backend/로 복사
-        const geminiOAuthPath = path.join(GEMINI_CONFIG_DIR, 'oauth_creds.json');
-        
-        if (fs.existsSync(geminiOAuthPath)) {
-            const geminiCreds = fs.readFileSync(geminiOAuthPath, 'utf-8');
-            const backendCreds = fs.existsSync(OAUTH_CREDS_PATH) 
-                ? fs.readFileSync(OAUTH_CREDS_PATH, 'utf-8') 
-                : '';
-
-            // 파일이 변경되었으면 복사
-            if (geminiCreds !== backendCreds) {
-                fs.writeFileSync(OAUTH_CREDS_PATH, geminiCreds, 'utf-8');
-                log('success', 'OAuth 크레덴셜 업데이트됨 (Gemini CLI에서 갱신)');
-            }
-        }
-
         // Git 설정
         execSync('git config user.name "github-actions[bot]"', { stdio: 'pipe' });
         execSync('git config user.email "github-actions[bot]@users.noreply.github.com"', { stdio: 'pipe' });
 
         // 변경사항 추가
-        execSync(`git add "${OAUTH_CREDS_PATH}" 2>/dev/null || true`, { stdio: 'pipe' });
+        execSync(`git add "${OAUTH_CREDS_PATH}"`, { stdio: 'pipe' });
 
         // 변경사항 확인
         const status = execSync('git status --porcelain', { encoding: 'utf-8' });
 
         if (status.includes('oauth_creds.json')) {
-            execSync('git commit -m "🔐 Auto: OAuth 토큰 업데이트"', { stdio: 'pipe' });
+            const now = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+            execSync(`git commit -m "🔐 Auto: OAuth 토큰 갱신 (${now})"`, { stdio: 'pipe' });
             execSync('git push', { stdio: 'pipe' });
-            log('success', 'OAuth 크레덴셜 변경사항 커밋 완료');
+            log('success', 'OAuth 크레덴셜 GitHub 커밋 완료');
+            return true;
         } else {
             log('info', 'OAuth 크레덴셜 변경사항 없음');
+            return false;
         }
     } catch (error) {
-        log('warning', `커밋 처리 중 오류: ${error.message}`);
+        log('warning', `GitHub 커밋 중 오류: ${error.message}`);
+        return false;
+    }
+}
+
+/**
+ * 메인: OAuth 토큰 갱신 및 설정
+ */
+async function setupGeminiAuth() {
+    log('info', '='.repeat(50));
+    log('info', '  Gemini CLI OAuth 토큰 자동 갱신');
+    log('info', '='.repeat(50));
+
+    try {
+        // 1. 크레덴셜 로드
+        let creds = loadOAuthCreds();
+        log('success', 'OAuth 크레덴셜 로드 완료');
+
+        // 2. 토큰 만료 확인 및 갱신
+        if (isTokenExpired(creds)) {
+            log('warning', '액세스 토큰이 만료되었거나 곧 만료됩니다. 갱신 중...');
+
+            if (!creds.refresh_token) {
+                throw new Error('refresh_token이 없습니다. 로컬에서 다시 로그인해주세요.');
+            }
+
+            // 토큰 갱신
+            const newTokens = await refreshAccessToken(creds.refresh_token);
+
+            // 크레덴셜 업데이트
+            creds.access_token = newTokens.access_token;
+            creds.expiry_date = Date.now() + (newTokens.expires_in * 1000);
+            
+            // id_token이 있으면 업데이트
+            if (newTokens.id_token) {
+                creds.id_token = newTokens.id_token;
+            }
+
+            // scope가 있으면 업데이트
+            if (newTokens.scope) {
+                creds.scope = newTokens.scope;
+            }
+
+            // 저장
+            saveOAuthCreds(creds);
+
+            const expiryDate = new Date(creds.expiry_date);
+            log('success', `토큰 갱신 완료! 새 만료 시간: ${expiryDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}`);
+
+            // GitHub에 커밋
+            commitToGitHub();
+        } else {
+            const expiryDate = new Date(creds.expiry_date);
+            const remainingMs = creds.expiry_date - Date.now();
+            const remainingMin = Math.floor(remainingMs / 60000);
+            log('success', `토큰 유효 (${remainingMin}분 남음, 만료: ${expiryDate.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })})`);
+        }
+
+        // 3. Gemini 설정 디렉토리에 복사
+        copyToGeminiConfig();
+
+        log('info', '='.repeat(50));
+        log('success', 'Gemini CLI 인증 설정 완료');
+        log('info', '='.repeat(50));
+
+        return true;
+    } catch (error) {
+        log('error', `설정 실패: ${error.message}`);
+        throw error;
+    }
+}
+
+/**
+ * 토큰 상태 확인만
+ */
+function checkTokenStatus() {
+    try {
+        const creds = loadOAuthCreds();
+        const expired = isTokenExpired(creds);
+        const expiryDate = new Date(creds.expiry_date);
+        const remainingMs = creds.expiry_date - Date.now();
+        const remainingMin = Math.floor(remainingMs / 60000);
+
+        return {
+            valid: !expired,
+            expired,
+            expiryDate: expiryDate.toISOString(),
+            remainingMinutes: remainingMin,
+            hasRefreshToken: !!creds.refresh_token,
+        };
+    } catch (error) {
+        return {
+            valid: false,
+            error: error.message,
+        };
     }
 }
 
@@ -185,18 +259,21 @@ async function main() {
 
     if (args.includes('--check')) {
         // 토큰 상태만 확인
-        const status = checkTokenExpiry();
+        const status = checkTokenStatus();
         console.log(JSON.stringify(status, null, 2));
         process.exit(status.valid ? 0 : 1);
     } else if (args.includes('--commit')) {
         // 변경사항 커밋만
-        commitChangedFiles();
+        commitToGitHub();
     } else {
-        // 기본: 설정 복사
-        setupGeminiConfig();
+        // 기본: 토큰 갱신 및 설정
+        await setupGeminiAuth();
     }
 }
 
-main();
+main().catch(error => {
+    log('error', error.message);
+    process.exit(1);
+});
 
-export { setupGeminiConfig, checkTokenExpiry, commitChangedFiles };
+export { setupGeminiAuth, checkTokenStatus, refreshAccessToken, commitToGitHub };
