@@ -25,7 +25,8 @@ for (const envPath of envPaths) {
 }
 
 // 설정
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY_BYEON || process.env.GOOGLE_API_KEY;
+// OAuth 인증을 사용하므로 GEMINI_API_KEY는 사용하지 않음
+// GEMINI_API_KEY가 설정되어 있으면 OAuth 대신 API 키 모드를 사용하려고 해서 오류 발생
 const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
 
 // 한국 시간 (KST)
@@ -312,8 +313,13 @@ async function extractWithGemini(video, transcript) {
             try {
                 log('debug', `Gemini 모델 시도 [${i + 1}/${modelsToTry.length}]: ${model}`);
 
-                // Gemini CLI 호출 - bash를 통해 프롬프트 파일 전달
-                // 방법 1: -p 플래그로 직접 전달 (shell=true로 확장)
+                // Gemini CLI 호출 - OAuth 인증 사용
+                // 중요: GEMINI_API_KEY 환경변수를 제거해야 OAuth가 작동함
+                const envWithoutApiKey = { ...process.env };
+                delete envWithoutApiKey.GEMINI_API_KEY;
+                delete envWithoutApiKey.GEMINI_API_KEY_BYEON;
+                delete envWithoutApiKey.GOOGLE_API_KEY;
+
                 const geminiResult = spawnSync('bash', [
                     '-c',
                     `gemini -p "$(cat '${tempPromptFile}')" --output-format json --model ${model} 2>&1`
@@ -321,10 +327,7 @@ async function extractWithGemini(video, transcript) {
                     encoding: 'utf-8',
                     maxBuffer: 50 * 1024 * 1024, // 50MB로 증가
                     timeout: 180000, // 3분 타임아웃
-                    env: {
-                        ...process.env,
-                        GEMINI_API_KEY: GEMINI_API_KEY
-                    }
+                    env: envWithoutApiKey  // API 키 없이 OAuth만 사용
                 });
 
                 // 에러 확인
