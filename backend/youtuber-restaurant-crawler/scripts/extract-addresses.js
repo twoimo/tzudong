@@ -375,12 +375,22 @@ async function extractWithGemini(video, transcript) {
 
                 // JSON 파싱 (여러 방법 시도)
                 let parsedResult = null;
+                
+                // 먼저 이스케이프된 문자 정리 (모든 방법에 적용)
+                // 순서 중요: \\\\ → \\ 먼저, 그 다음 \\n → \n, \\" → "
+                let cleanedOutput = output
+                    .replace(/\\\\/g, '\\')      // \\\\ → \\
+                    .replace(/\\n/g, '\n')       // \\n → 줄바꿈
+                    .replace(/\\r/g, '\r')       // \\r → 캐리지리턴
+                    .replace(/\\t/g, '\t')       // \\t → 탭
+                    .replace(/\\"/g, '"');       // \\" → "
 
                 // 방법 1: ```json``` 블록에서 추출
-                const jsonMatch = output.match(/```json\s*([\s\S]*?)\s*```/);
+                const jsonMatch = cleanedOutput.match(/```json\s*([\s\S]*?)\s*```/);
                 if (jsonMatch) {
                     try {
                         parsedResult = JSON.parse(jsonMatch[1].trim());
+                        log('debug', `방법 1 성공: JSON 블록에서 추출`);
                     } catch (e) {
                         log('debug', `JSON 블록 파싱 실패: ${e.message}`);
                     }
@@ -389,9 +399,9 @@ async function extractWithGemini(video, transcript) {
                 // 방법 2: 전체 출력을 JSON으로 파싱
                 if (!parsedResult) {
                     try {
-                        // 앞뒤 공백 및 특수 문자 제거
-                        const cleaned = output.trim().replace(/^\uFEFF/, '');
-                        parsedResult = JSON.parse(cleaned);
+                        const trimmed = cleanedOutput.trim().replace(/^\uFEFF/, '');
+                        parsedResult = JSON.parse(trimmed);
+                        log('debug', `방법 2 성공: 전체 출력 파싱`);
                     } catch (e) {
                         // 무시
                     }
@@ -399,40 +409,45 @@ async function extractWithGemini(video, transcript) {
 
                 // 방법 3: { 와 } 사이의 JSON 추출
                 if (!parsedResult) {
-                    const jsonStart = output.indexOf('{');
-                    const jsonEnd = output.lastIndexOf('}');
+                    const jsonStart = cleanedOutput.indexOf('{');
+                    const jsonEnd = cleanedOutput.lastIndexOf('}');
                     if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
                         try {
-                            const extracted = output.slice(jsonStart, jsonEnd + 1);
+                            const extracted = cleanedOutput.slice(jsonStart, jsonEnd + 1);
                             parsedResult = JSON.parse(extracted);
+                            log('debug', `방법 3 성공: {와 } 사이 추출`);
                         } catch (e) {
                             // 무시
                         }
                     }
                 }
 
-                // 방법 4: 이스케이프된 JSON 처리 (\\n, \\" 등)
+                // 방법 4: 원본 output에서 { } 추출 (이스케이프 처리 없이)
                 if (!parsedResult) {
-                    try {
-                        // 이스케이프된 줄바꿈/따옴표 처리
-                        let unescaped = output
-                            .replace(/\\n/g, '\n')
-                            .replace(/\\"/g, '"')
-                            .replace(/\\\\/g, '\\');
-                        const jsonStart = unescaped.indexOf('{');
-                        const jsonEnd = unescaped.lastIndexOf('}');
-                        if (jsonStart !== -1 && jsonEnd !== -1) {
-                            parsedResult = JSON.parse(unescaped.slice(jsonStart, jsonEnd + 1));
+                    const jsonStart = output.indexOf('{');
+                    const jsonEnd = output.lastIndexOf('}');
+                    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                        try {
+                            const extracted = output.slice(jsonStart, jsonEnd + 1);
+                            parsedResult = JSON.parse(extracted);
+                            log('debug', `방법 4 성공: 원본에서 추출`);
+                        } catch (e) {
+                            // 무시
                         }
-                    } catch (e) {
-                        // 무시
                     }
                 }
 
                 // 파싱 성공 확인
                 if (parsedResult && !parsedResult.error) {
                     result = parsedResult;
+                    // 결과 상세 로그
+                    const restaurantCount = parsedResult.restaurants?.length || 0;
                     log('success', `Gemini 분석 성공 (모델: ${model})`);
+                    if (restaurantCount === 0) {
+                        log('debug', `파싱 결과: is_restaurant_video=${parsedResult.is_restaurant_video}, video_type=${parsedResult.video_type}`);
+                        // 원본 응답 일부 출력 (디버깅용)
+                        log('debug', `응답 미리보기: ${output.slice(0, 300)}...`);
+                    }
                     break;
                 }
 
