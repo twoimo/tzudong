@@ -234,42 +234,20 @@ async function searchPlaceWithKakao(keyword, category = null) {
 }
 
 /**
- * YouTube 자막 가져오기 (여러 방법 시도)
- * 1차: youtube-transcript 패키지
- * 2차: Puppeteer로 maestra.ai에서 수집
- * 3차: Puppeteer로 tubetranscript.com에서 수집
+ * YouTube 자막 가져오기
+ * Puppeteer로 maestra.ai → tubetranscript.com 순서로 수집
  */
 async function getTranscript(videoId) {
-    // 1차: youtube-transcript 패키지 사용 (가장 빠름)
-    try {
-        const { YoutubeTranscript } = await import('youtube-transcript');
-        const transcript = await YoutubeTranscript.fetchTranscript(videoId);
-
-        // 자막을 텍스트로 변환
-        const text = transcript.map(item => {
-            const minutes = Math.floor(item.offset / 60000);
-            const seconds = Math.floor((item.offset % 60000) / 1000);
-            return `[${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}] ${item.text}`;
-        }).join('\n');
-
-        log('debug', `자막 수집 성공 (youtube-transcript): ${transcript.length}개 세그먼트`);
-        return text;
-    } catch (error) {
-        log('debug', `youtube-transcript 실패: ${error.message.slice(0, 50)}...`);
-    }
-
-    // 2차: Puppeteer로 maestra.ai에서 수집
     try {
         const result = await getTranscriptWithPuppeteer(videoId);
         if (result) {
-            log('debug', `자막 수집 성공 (Puppeteer): ${result.segments}개 세그먼트`);
+            log('debug', `자막 수집 성공: ${result.segments}개 세그먼트`);
             return result.text;
         }
     } catch (error) {
-        log('debug', `Puppeteer 자막 수집 실패: ${error.message}`);
+        // 실패 시 로그 생략
     }
 
-    // 자막 없이 description 기반으로 분석 진행
     return null;
 }
 
@@ -515,12 +493,12 @@ async function extractWithGemini(video, transcript) {
     // 시도할 모델 목록 (우선순위 순)
     const modelsToTry = [
         process.env.GEMINI_MODEL ||
+        'gemini-2.5-pro',
+        'gemini-2.5-flash',
         'gemini-3.0-pro',
         'gemini-3.0-flash',
         'gemini-3.0-pro-preview',
-        'gemini-3.0-flash-preview',
-        'gemini-2.5-pro',
-        'gemini-2.5-flash'
+        'gemini-3.0-flash-preview'
     ];
 
     let lastError = null;
