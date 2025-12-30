@@ -57,10 +57,21 @@ jobs:
           echo "✅ Gemini CLI: $(gemini --version)"
 
       - name: 🔐 Setup OAuth
-        working-directory: backend/youtuber-restaurant-crawler
         run: |
+          # OAuth 설정 복사 (HTTP 갱신 대신 CLI 방식 사용)
+          GEMINI_DIR="backend/youtuber-restaurant-crawler/.gemini"
+          mkdir -p ~/.gemini
+          cp "$GEMINI_DIR"/*.json ~/.gemini/ 2>/dev/null || true
+          
+          # API 키 비활성화 (OAuth만 사용)
           unset GEMINI_API_KEY GEMINI_API_KEY_BYEON GOOGLE_API_KEY
-          bun run scripts/gemini-oauth-manager.js
+          
+          # Gemini CLI로 토큰 갱신 (CLI 실행 시 자동 갱신)
+          echo "ping" | timeout 30 gemini --model gemini-2.5-flash 2>&1 | head -3 || true
+          
+          # 갱신된 토큰 복사
+          cp ~/.gemini/oauth_creds.json "$GEMINI_DIR/" 2>/dev/null || true
+          
           [ -f ~/.gemini/oauth_creds.json ] && echo "✅ OAuth OK"
 
       - name: 📝 Setup env
