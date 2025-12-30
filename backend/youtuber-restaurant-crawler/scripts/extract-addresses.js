@@ -233,24 +233,32 @@ async function searchPlaceWithKakao(keyword, category = null) {
 }
 
 /**
- * YouTube 자막 가져오기
+ * YouTube 자막 가져오기 (여러 방법 시도)
+ * 1차: youtube-transcript 패키지
+ * 2차: fetch로 직접 YouTube 자막 API 호출
  */
 async function getTranscript(videoId) {
+    // 1차: youtube-transcript 패키지 사용
     try {
-        // youtube-transcript 패키지 사용
         const { YoutubeTranscript } = await import('youtube-transcript');
         const transcript = await YoutubeTranscript.fetchTranscript(videoId);
 
         // 자막을 텍스트로 변환
-        return transcript.map(item => {
+        const text = transcript.map(item => {
             const minutes = Math.floor(item.offset / 60000);
             const seconds = Math.floor((item.offset % 60000) / 1000);
             return `[${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}] ${item.text}`;
         }).join('\n');
+
+        log('debug', `자막 수집 성공 (youtube-transcript): ${transcript.length}개 세그먼트`);
+        return text;
     } catch (error) {
         log('debug', `자막 가져오기 실패: ${error.message}`);
-        return null;
     }
+
+    // 2차: 다른 방법들은 추후 추가 (Puppeteer 필요)
+    // 현재는 자막 없이도 description 기반으로 분석 진행
+    return null;
 }
 
 /**
@@ -299,19 +307,20 @@ async function extractWithGemini(video, transcript) {
     let result = null;
 
     try {
-        for (const model of modelsToTry) {
+        for (let i = 0; i < modelsToTry.length; i++) {
+            const model = modelsToTry[i];
             try {
-                log('debug', `Gemini 모델 시도: ${model}`);
+                log('debug', `Gemini 모델 시도 [${i + 1}/${modelsToTry.length}]: ${model}`);
 
-                // Gemini CLI 호출 - bash를 통해 파이프라인으로 프롬프트 전달
-                // cat file | gemini ... 방식으로 명령행 길이 제한 우회
+                // Gemini CLI 호출 - bash를 통해 프롬프트 파일 전달
+                // 방법 1: -p 플래그로 직접 전달 (shell=true로 확장)
                 const geminiResult = spawnSync('bash', [
                     '-c',
-                    `cat "${tempPromptFile}" | gemini --output-format json --model ${model}`
+                    `gemini -p "$(cat '${tempPromptFile}')" --output-format json --model ${model} 2>&1`
                 ], {
                     encoding: 'utf-8',
-                    maxBuffer: 10 * 1024 * 1024,
-                    timeout: 120000, // 2분 타임아웃
+                    maxBuffer: 50 * 1024 * 1024, // 50MB로 증가
+                    timeout: 180000, // 3분 타임아웃
                     env: {
                         ...process.env,
                         GEMINI_API_KEY: GEMINI_API_KEY
@@ -322,31 +331,42 @@ async function extractWithGemini(video, transcript) {
                 if (geminiResult.error) {
                     log('debug', `모델 ${model} 실행 에러: ${geminiResult.error.message}`);
                     lastError = geminiResult.error;
+                    // 다음 모델 시도 전 3초 대기
+                    await sleep(3000);
                     continue;
                 }
 
                 const output = geminiResult.stdout || '';
                 const stderr = geminiResult.stderr || '';
+                const combinedOutput = output + stderr;
 
-                // stderr에 에러 메시지가 있는지 확인
-                if (stderr.includes('Error when talking to Gemini API') || 
-                    output.includes('Error when talking to Gemini API')) {
+                // API 오류 확인
+                if (combinedOutput.includes('Error when talking to Gemini API')) {
+                    // 오류 상세 내용 추출
+                    const errorMatch = combinedOutput.match(/error.*?(\{[\s\S]*?\})/i);
                     log('debug', `모델 ${model} API 오류, 다음 모델 시도...`);
-                    lastError = new Error(`API error with ${model}: ${stderr.slice(0, 200)}`);
+                    if (errorMatch) {
+                        log('debug', `상세 오류: ${errorMatch[1].slice(0, 300)}`);
+                    }
+                    lastError = new Error(`API error with ${model}`);
+                    // Rate limit 방지를 위해 5초 대기
+                    await sleep(5000);
                     continue;
                 }
 
-                // exit code 확인
-                if (geminiResult.status !== 0) {
+                // exit code 확인 (0이 아니면 실패)
+                if (geminiResult.status !== 0 && !output.includes('restaurants')) {
                     log('debug', `모델 ${model} 종료 코드: ${geminiResult.status}`);
                     lastError = new Error(`Exit code ${geminiResult.status} with ${model}`);
+                    await sleep(3000);
                     continue;
                 }
 
-                // 결과에 에러가 포함되어 있는지 확인
-                if (output.includes('"error"') && output.includes('"code"')) {
+                // 결과에 에러 JSON이 포함되어 있는지 확인
+                if (output.includes('"error"') && output.includes('"code"') && !output.includes('restaurants')) {
                     log('debug', `모델 ${model} 응답에 에러 포함, 다음 모델 시도...`);
                     lastError = new Error(`Response error with ${model}`);
+                    await sleep(3000);
                     continue;
                 }
 
