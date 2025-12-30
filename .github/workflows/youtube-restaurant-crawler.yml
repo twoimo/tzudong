@@ -4,16 +4,16 @@ on:
   workflow_dispatch:
     inputs:
       start_from:
-        description: "시작 단계"
+        description: "실행 모드 선택"
         required: false
-        default: "5"
+        default: "5-전체(가장빠름)"
         type: choice
         options:
-          - "1"
-          - "2"
-          - "3"
-          - "4"
-          - "5"
+          - "1-영상수집"
+          - "2-맛집추출"
+          - "3-좌표보완"
+          - "4-DB저장"
+          - "5-전체(가장빠름)"
   schedule:
     - cron: "0 15 * * 6"
 
@@ -78,11 +78,13 @@ jobs:
           PIPELINE_DATE=$(TZ=Asia/Seoul date '+%y-%m-%d')
           echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
           mkdir -p backend/youtuber-restaurant-crawler/data/$PIPELINE_DATE
-          
-          START_FROM="${{ github.event.inputs.start_from || '5' }}"
+
+          # 옵션에서 숫자만 추출 (예: "5-전체(가장빠름)" → "5")
+          INPUT="${{ github.event.inputs.start_from || '5-전체(가장빠름)' }}"
+          START_FROM=$(echo "$INPUT" | cut -d'-' -f1)
           echo "START_FROM=$START_FROM" >> $GITHUB_ENV
-          echo "🚀 Mode: $START_FROM (5=전체)"
-          
+          echo "🚀 Mode: $START_FROM ($INPUT)"
+
           RESTAURANTS_FILE="backend/youtuber-restaurant-crawler/data/$PIPELINE_DATE/meatcreator_restaurants.jsonl"
           [ -f "$RESTAURANTS_FILE" ] && echo "📊 기존: $(wc -l < "$RESTAURANTS_FILE")개"
 
