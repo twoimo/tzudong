@@ -254,7 +254,21 @@ async function getTranscript(videoId) {
 }
 
 /**
+ * 임시 파일 정리 헬퍼
+ */
+function cleanupTempFiles(...files) {
+    for (const file of files) {
+        try {
+            if (fs.existsSync(file)) fs.unlinkSync(file);
+        } catch (e) {
+            // 무시
+        }
+    }
+}
+
+/**
  * Gemini CLI로 맛집 정보 추출
+ * 여러 모델을 순차적으로 시도 (fallback 지원)
  */
 async function extractWithGemini(video, transcript) {
     // 프롬프트 템플릿 로드
@@ -273,47 +287,106 @@ async function extractWithGemini(video, transcript) {
 
     fs.writeFileSync(tempPromptFile, promptTemplate, 'utf-8');
 
+    // 시도할 모델 목록 (우선순위 순)
+    const modelsToTry = [
+        process.env.GEMINI_MODEL || 'gemini-3.0-pro-preview',
+        'gemini-3.0-flash-preview'
+    ];
+
+    let lastError = null;
+    let result = null;
+
     try {
-        // Gemini CLI 호출 (gemini-3.0-flash 모델 사용)
-        const cmd = `gemini -p "$(cat "${tempPromptFile}")" --output-format json --model gemini-3.0-flash`;
+        for (const model of modelsToTry) {
+            try {
+                log('debug', `Gemini 모델 시도: ${model}`);
+                
+                // Gemini CLI 호출
+                const cmd = `gemini -p "$(cat "${tempPromptFile}")" --output-format json --model ${model}`;
 
-        const result = execSync(cmd, {
-            encoding: 'utf-8',
-            maxBuffer: 10 * 1024 * 1024,
-            timeout: 60000,
-            env: {
-                ...process.env,
-                GEMINI_API_KEY: GEMINI_API_KEY
+                const output = execSync(cmd, {
+                    encoding: 'utf-8',
+                    maxBuffer: 10 * 1024 * 1024,
+                    timeout: 120000, // 2분 타임아웃
+                    env: {
+                        ...process.env,
+                        GEMINI_API_KEY: GEMINI_API_KEY
+                    }
+                });
+
+                // 결과에 에러가 포함되어 있는지 확인
+                if (output.includes('Error when talking to Gemini API') || 
+                    (output.includes('"error"') && output.includes('"code"'))) {
+                    log('debug', `모델 ${model} API 오류, 다음 모델 시도...`);
+                    lastError = new Error(`API error with ${model}`);
+                    continue;
+                }
+
+                // JSON 파싱
+                const jsonMatch = output.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    result = JSON.parse(jsonMatch[1]);
+                    log('success', `Gemini 분석 성공 (모델: ${model})`);
+                    break;
+                }
+
+                // JSON 블록이 없으면 전체를 파싱 시도
+                try {
+                    const parsed = JSON.parse(output);
+                    if (parsed && !parsed.error) {
+                        result = parsed;
+                        log('success', `Gemini 분석 성공 (모델: ${model})`);
+                        break;
+                    }
+                } catch {
+                    // 응답에서 JSON 부분만 추출
+                    const jsonStart = output.indexOf('{');
+                    const jsonEnd = output.lastIndexOf('}');
+                    if (jsonStart !== -1 && jsonEnd !== -1) {
+                        const extracted = output.slice(jsonStart, jsonEnd + 1);
+                        try {
+                            const parsed = JSON.parse(extracted);
+                            if (parsed && !parsed.error) {
+                                result = parsed;
+                                log('success', `Gemini 분석 성공 (모델: ${model})`);
+                                break;
+                            }
+                        } catch {}
+                    }
+                }
+
+                // JSON 파싱 실패시 다음 모델 시도
+                log('debug', `모델 ${model} 응답 파싱 실패, 다음 모델 시도...`);
+                lastError = new Error(`Parse error with ${model}`);
+
+            } catch (error) {
+                log('debug', `모델 ${model} 실패: ${error.message}`);
+                lastError = error;
+                // 다음 모델 시도
+                continue;
             }
-        });
-
-        // JSON 파싱
-        const jsonMatch = result.match(/```json\s*([\s\S]*?)\s*```/);
-        if (jsonMatch) {
-            return JSON.parse(jsonMatch[1]);
         }
 
-        // JSON 블록이 없으면 전체를 파싱 시도
-        try {
-            return JSON.parse(result);
-        } catch {
-            // 응답에서 JSON 부분만 추출
-            const jsonStart = result.indexOf('{');
-            const jsonEnd = result.lastIndexOf('}');
-            if (jsonStart !== -1 && jsonEnd !== -1) {
-                return JSON.parse(result.slice(jsonStart, jsonEnd + 1));
+        // 모든 모델 실패
+        if (!result) {
+            log('warning', `Gemini 분석 실패 (${video.videoId}): 모든 모델 시도 실패`);
+            if (lastError) {
+                log('debug', `마지막 오류: ${lastError.message}`);
             }
         }
 
-        return null;
-    } catch (error) {
-        log('warning', `Gemini 분석 실패 (${video.videoId}): ${error.message}`);
-        return null;
+        return result;
     } finally {
-        // 임시 파일 정리
-        if (fs.existsSync(tempPromptFile)) fs.unlinkSync(tempPromptFile);
-        if (fs.existsSync(tempOutputFile)) fs.unlinkSync(tempOutputFile);
+        // 임시 파일 정리 (성공/실패 모두)
+        cleanupTempFiles(tempPromptFile, tempOutputFile);
     }
+}
+
+/**
+ * 지연 실행 (Rate Limit 방지)
+ */
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /**
