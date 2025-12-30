@@ -289,7 +289,9 @@ async function extractWithGemini(video, transcript) {
 
     // 시도할 모델 목록 (우선순위 순)
     const modelsToTry = [
-        process.env.GEMINI_MODEL || 'gemini-3.0-pro-preview',
+        process.env.GEMINI_MODEL || 'gemini-3.0-pro',
+        'gemini-3.0-flash',
+        'gemini-3.0-pro-preview',
         'gemini-3.0-flash-preview'
     ];
 
@@ -300,7 +302,7 @@ async function extractWithGemini(video, transcript) {
         for (const model of modelsToTry) {
             try {
                 log('debug', `Gemini 모델 시도: ${model}`);
-                
+
                 // Gemini CLI 호출
                 const cmd = `gemini -p "$(cat "${tempPromptFile}")" --output-format json --model ${model}`;
 
@@ -315,7 +317,7 @@ async function extractWithGemini(video, transcript) {
                 });
 
                 // 결과에 에러가 포함되어 있는지 확인
-                if (output.includes('Error when talking to Gemini API') || 
+                if (output.includes('Error when talking to Gemini API') ||
                     (output.includes('"error"') && output.includes('"code"'))) {
                     log('debug', `모델 ${model} API 오류, 다음 모델 시도...`);
                     lastError = new Error(`API error with ${model}`);
@@ -351,7 +353,7 @@ async function extractWithGemini(video, transcript) {
                                 log('success', `Gemini 분석 성공 (모델: ${model})`);
                                 break;
                             }
-                        } catch {}
+                        } catch { }
                     }
                 }
 
