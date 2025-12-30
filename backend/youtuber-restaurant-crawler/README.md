@@ -12,6 +12,8 @@
 2. **지도 URL 추출**: 영상 description에서 구글/네이버/카카오 지도 URL 추출
 3. **자막 수집**: Puppeteer로 maestra.ai / tubetranscript.com에서 자막 수집
 4. **Gemini AI 분석**: 영상 내용에서 맛집 정보 추출 (OAuth 인증 + 웹 검색)
+   - **지도 URL이 없어도** 자막/제목/설명에서 맛집 추출
+   - 웹 검색으로 정확한 상호명/주소 확인
 5. **지오코딩**: 지도 URL 형태에 맞는 API로 좌표 변환
 6. **DB 저장**: Supabase에 저장
 
@@ -125,7 +127,7 @@ youtuber-restaurant-crawler/
 
 GitHub Actions에서는 자동으로 OAuth 토큰을 관리합니다:
 
-1. **토큰 갱신**: 45분마다 자동 갱신 (`gemini-oauth-refresh.yml`)
+1. **토큰 갱신**: 40분마다 자동 갱신 (`gemini-oauth-refresh.yml`)
 2. **설정 복사**: `.gemini/` 폴더의 파일들을 `~/.gemini/`로 복사
 3. **커밋**: 갱신된 `oauth_creds.json`을 자동 커밋
 
@@ -184,4 +186,93 @@ YouTube Data API
 ## 🔗 관련 워크플로우
 
 - `youtube-restaurant-crawler.yml`: 메인 크롤링 파이프라인 (매주 일요일)
-- `gemini-oauth-refresh.yml`: OAuth 토큰 자동 갱신 (45분마다)
+- `gemini-oauth-refresh.yml`: OAuth 토큰 자동 갱신 (40분마다)
+
+## ⚡ 실행 모드
+
+| 모드  | 설명             | 중간 커밋 | 권장 상황   |
+| ----- | ---------------- | --------- | ----------- |
+| **1** | 영상 목록 수집만 | ✅         | 테스트용    |
+| **2** | 맛집 추출만      | ✅         | 이어서 처리 |
+| **3** | 좌표 보완만      | ✅         | 좌표만 필요 |
+| **4** | DB 저장만        | ❌         | 최종 단계만 |
+| **5** | 전체 한번에      | ❌         | ⭐ 시간 절약 |
+
+> **💡 349분 제한 상황**: Mode 5 권장 (중간 커밋 없어서 가장 빠름)
+
+## 🍞 Bun 런타임
+
+npm/Node.js 대신 **Bun**을 사용하여 3~5배 빠른 실행:
+
+```bash
+# 패키지 설치
+bun install
+
+# 전체 파이프라인
+bun run full
+
+# 개별 실행
+bun run crawl    # 영상 수집
+bun run extract  # 맛집 추출
+bun run geocode  # 좌표 보완
+bun run insert   # DB 저장
+```
+
+## 🔄 이어서 처리 기능
+
+### 중간 저장 및 커밋
+
+GitHub Actions에서 각 Phase 완료 후 자동 커밋되어 **중단 시 이어서 처리** 가능:
+
+| Phase | 설명           | 커밋 파일                       |
+| ----- | -------------- | ------------------------------- |
+| 1     | 영상 목록 수집 | `meatcreator_videos.json`       |
+| 2     | 맛집 정보 추출 | `meatcreator_restaurants.jsonl` |
+| 3     | 좌표 보완      | `meatcreator_restaurants.jsonl` |
+| 4     | DB 저장        | 없음 (Supabase에 직접 저장)     |
+
+### 이미 처리된 영상 스킵
+
+`extract-addresses.js`에서 **이미 처리된 영상 자동 스킵**:
+
+```
+📊 기존 처리된 영상: 150개 (이어서 처리)
+[151/457] 처리 중: ...
+```
+
+### Description 변경 감지
+
+영상의 description이 변경된 경우 **자동 재처리**:
+
+```
+[100/457] 📝 description 변경 감지 - 재처리: ...
+```
+
+변경 감지 기준:
+- Description 앞 100자
+- Description 길이
+- 지도 URL 포함 여부
+
+### 수동 재처리
+
+특정 단계부터 다시 시작하려면:
+
+```bash
+# GitHub Actions에서
+- start_from: "2"  # 추출부터 시작 (영상 목록 유지)
+- start_from: "3"  # 좌표 보완부터 시작
+- start_from: "4"  # DB 저장만 실행
+```
+
+## 🌐 웹 검색 (YOLO Mode)
+
+Gemini CLI의 `--yolo` 옵션을 통해 **웹 검색 자동 활성화**:
+
+1. Gemini가 맛집 정보 분석 시 Google 웹 검색 수행
+2. 정확한 상호명/주소/전화번호 확인
+3. 지도 URL 정보(좌표, placeId 등)를 활용한 검색
+
+### YOLO Mode 설정
+
+- `settings.json`: `"tools": { "autoApprove": true }`
+- CLI 호출: `gemini ... --yolo`

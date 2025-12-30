@@ -4,249 +4,198 @@ on:
   workflow_dispatch:
     inputs:
       start_from:
-        description: "시작 단계 (1: 크롤링, 2: 주소추출, 3: DB저장)"
+        description: "시작 단계"
         required: false
-        default: "1"
+        default: "5"
         type: choice
         options:
           - "1"
           - "2"
           - "3"
+          - "4"
+          - "5"
   schedule:
-    # 매주 일요일 00:00 KST (토요일 15:00 UTC)
     - cron: "0 15 * * 6"
 
 env:
-  NODE_VERSION: "20"
+  BUN_VERSION: "1.1.38"
   TZ: "Asia/Seoul"
 
 jobs:
   crawl-youtuber-restaurants:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-
     permissions:
       contents: write
 
     steps:
-      # ============================
-      # 1. 기본 환경 설정
-      # ============================
-      - name: 📥 Checkout repository
+      - name: 📥 Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 1
 
-      - name: 📦 Setup Node.js ${{ env.NODE_VERSION }}
-        uses: actions/setup-node@v4
+      - name: 🍞 Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: backend/youtuber-restaurant-crawler/package.json
+          bun-version: ${{ env.BUN_VERSION }}
 
-      # ============================
-      # 2. Node.js 패키지 설치
-      # ============================
-      - name: 📦 Install Node.js dependencies
+      - name: 📦 Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.bun/install/cache
+            backend/youtuber-restaurant-crawler/node_modules
+          key: bun-${{ runner.os }}-${{ hashFiles('backend/youtuber-restaurant-crawler/package.json') }}
+
+      - name: 📦 Install dependencies
         working-directory: backend/youtuber-restaurant-crawler
-        run: |
-          npm install
-          echo "✅ Node.js 패키지 설치 완료"
+        run: bun install
 
-      # ============================
-      # 3. Gemini CLI 설치
-      # ============================
       - name: 🤖 Install Gemini CLI
         run: |
           npm install -g @google/gemini-cli
-          echo "✅ Gemini CLI 설치 완료: $(gemini --version)"
+          echo "✅ Gemini CLI: $(gemini --version)"
 
-      # ============================
-      # 4. OAuth 토큰 자동 갱신 (핵심!)
-      # ============================
-      - name: 🔐 Setup Gemini CLI Authentication
+      - name: 🔐 Setup OAuth
         working-directory: backend/youtuber-restaurant-crawler
         run: |
-          echo "🔐 Gemini CLI OAuth 인증 설정 시작..."
-          echo ""
+          unset GEMINI_API_KEY GEMINI_API_KEY_BYEON GOOGLE_API_KEY
+          bun run scripts/gemini-oauth-manager.js
+          [ -f ~/.gemini/oauth_creds.json ] && echo "✅ OAuth OK"
 
-          # 중요: API 키 환경변수 제거 (OAuth만 사용)
-          unset GEMINI_API_KEY
-          unset GEMINI_API_KEY_BYEON
-          unset GOOGLE_API_KEY
-          echo "✅ API 키 환경변수 제거 완료 (OAuth만 사용)"
-          echo ""
-
-          # 로컬 .gemini 폴더 확인
-          echo "📁 로컬 .gemini 폴더 확인:"
-          ls -la .gemini/ || echo "폴더 없음"
-          echo ""
-
-          # Node.js 스크립트로 토큰 갱신 및 파일 복사
-          node scripts/gemini-oauth-manager.js
-          echo ""
-
-          # 복사 결과 확인
-          echo "📁 ~/.gemini 디렉토리 최종 확인:"
-          ls -la ~/.gemini/ || echo "디렉토리 없음"
-          echo ""
-
-          # 설정 파일 내용 확인 (민감 정보 제외)
-          if [ -f ~/.gemini/settings.json ]; then
-            echo "📋 settings.json 내용:"
-            cat ~/.gemini/settings.json
-          fi
-
-          # 토큰 만료 시간 확인
-          if [ -f ~/.gemini/oauth_creds.json ]; then
-            echo ""
-            echo "⏰ 토큰 만료 시간:"
-            EXPIRY=$(cat ~/.gemini/oauth_creds.json | jq -r '.expiry_date')
-            if [ "$EXPIRY" != "null" ] && [ -n "$EXPIRY" ]; then
-              EXPIRY_SEC=$((EXPIRY / 1000))
-              date -d "@$EXPIRY_SEC" '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "만료 시간: $EXPIRY (timestamp)"
-            fi
-          fi
-
-          # Gemini CLI 테스트 (OAuth 인증 확인)
-          echo ""
-          echo "🧪 Gemini CLI OAuth 인증 테스트..."
-          gemini -p "Say 'OAuth authentication successful' in Korean" --model gemini-1.5-flash 2>&1 | head -5 || echo "⚠️ 테스트 실패 (계속 진행)"
-
-      # ============================
-      # 6. 환경 변수 파일 생성
-      # ============================
-      - name: 📝 Create .env file
+      - name: 📝 Setup env
         working-directory: backend/youtuber-restaurant-crawler
         run: |
-          # 중요: GEMINI_API_KEY는 포함하지 않음 (OAuth 인증 사용)
-          cat > .env << 'ENVEOF'
+          cat > .env << EOF
           YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY_BYEON }}
-          YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
           KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          ENVEOF
+          EOF
 
-          echo "✅ .env 파일 생성 완료 (GEMINI_API_KEY 미포함 - OAuth 사용)"
-          echo "📝 .env 내용 확인:"
-          cat .env | while read line; do
-            key=$(echo "$line" | cut -d'=' -f1)
-            val=$(echo "$line" | cut -d'=' -f2-)
-            if [ -n "$val" ]; then
-              echo "   $key=***설정됨*** (길이: ${#val})"
-            else
-              echo "   $key=(비어있음)"
-            fi
-          done
-
-      # ============================
-      # 7. 파이프라인 날짜 폴더 설정
-      # ============================
-      - name: 📅 Set Pipeline Date Folder
+      - name: 📅 Setup pipeline
         run: |
           PIPELINE_DATE=$(TZ=Asia/Seoul date '+%y-%m-%d')
           echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
-          echo "📅 파이프라인 날짜 폴더: $PIPELINE_DATE"
-
           mkdir -p backend/youtuber-restaurant-crawler/data/$PIPELINE_DATE
-          mkdir -p backend/log/youtuber-restaurant-crawler/$PIPELINE_DATE
-          echo "✅ 폴더 생성 완료"
+          
+          START_FROM="${{ github.event.inputs.start_from || '5' }}"
+          echo "START_FROM=$START_FROM" >> $GITHUB_ENV
+          echo "🚀 Mode: $START_FROM (5=전체)"
+          
+          RESTAURANTS_FILE="backend/youtuber-restaurant-crawler/data/$PIPELINE_DATE/meatcreator_restaurants.jsonl"
+          [ -f "$RESTAURANTS_FILE" ] && echo "📊 기존: $(wc -l < "$RESTAURANTS_FILE")개"
 
-      # ============================
-      # 8. 파이프라인 실행
-      # ============================
-      - name: 🚀 Run Youtuber Restaurant Pipeline
+      - name: 🚀 Full Pipeline (Mode 5)
+        if: ${{ env.START_FROM == '5' || env.START_FROM == '' }}
         working-directory: backend/youtuber-restaurant-crawler
         env:
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
-          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
           KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          # OAuth 인증을 위해 API 키 환경변수 제거 (GEMINI_API_KEY 등)
           GEMINI_MODEL: "gemini-2.5-pro"
         run: |
-          # OAuth 인증을 사용하므로 GEMINI_API_KEY 환경변수 제거
-          unset GEMINI_API_KEY
-          unset GEMINI_API_KEY_BYEON
-          unset GOOGLE_API_KEY
+          unset GEMINI_API_KEY GEMINI_API_KEY_BYEON GOOGLE_API_KEY
+          echo "═══════════════════════════════════════"
+          echo "🚀 전체 파이프라인 (중간 커밋 없음)"
+          echo "═══════════════════════════════════════"
+          bun run scripts/crawl-channel.js
+          bun run scripts/extract-addresses.js
+          bun run scripts/enrich-coordinates.js
+          bun run scripts/insert-to-supabase.js
+          echo "✅ 완료!"
 
-          START_FROM="${{ github.event.inputs.start_from || '1' }}"
-          echo "🚀 파이프라인 시작 (단계: $START_FROM부터)"
-          echo "🤖 Gemini 모델: $GEMINI_MODEL"
-          echo "🔐 인증 방식: OAuth (API 키 미사용)"
+      - name: 📺 Phase 1 (Mode 1)
+        if: ${{ env.START_FROM == '1' }}
+        working-directory: backend/youtuber-restaurant-crawler
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
+        run: bun run scripts/crawl-channel.js
 
-          node scripts/pipeline.js --start-from=$START_FROM
+      - name: 💾 Commit 1
+        if: ${{ env.START_FROM == '1' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/youtuber-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/*.json 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "📺 Phase 1 (${{ env.PIPELINE_DATE }})"
+            git push
+          fi
 
-      # ============================
-      # 9. 결과 파일 업로드
-      # ============================
-      - name: 📊 Upload Results as Artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: youtuber-restaurant-results-${{ github.run_number }}
-          path: |
-            backend/youtuber-restaurant-crawler/data/**/*.json
-            backend/youtuber-restaurant-crawler/data/**/*.jsonl
-            backend/log/youtuber-restaurant-crawler/**/*.json
-          retention-days: 30
-          if-no-files-found: warn
+      - name: 🤖 Phase 2 (Mode 2)
+        if: ${{ env.START_FROM == '2' }}
+        working-directory: backend/youtuber-restaurant-crawler
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          GEMINI_MODEL: "gemini-2.5-pro"
+        run: |
+          unset GEMINI_API_KEY GEMINI_API_KEY_BYEON GOOGLE_API_KEY
+          bun run scripts/extract-addresses.js
 
-      # ============================
-      # 10. 결과 커밋
-      # ============================
-      - name: 📤 Commit results
+      - name: 💾 Commit 2
+        if: ${{ env.START_FROM == '2' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/youtuber-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/*.jsonl 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "🤖 Phase 2 (${{ env.PIPELINE_DATE }})"
+            git push
+          fi
+
+      - name: 🗺️ Phase 3 (Mode 3)
+        if: ${{ env.START_FROM == '3' }}
+        working-directory: backend/youtuber-restaurant-crawler
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+        run: bun run scripts/enrich-coordinates.js
+
+      - name: 💾 Commit 3
+        if: ${{ env.START_FROM == '3' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/youtuber-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/*.jsonl 2>/dev/null || true
+          if ! git diff --staged --quiet; then
+            git commit -m "🗺️ Phase 3 (${{ env.PIPELINE_DATE }})"
+            git push
+          fi
+
+      - name: 💾 Phase 4 (Mode 4)
+        if: ${{ env.START_FROM == '4' }}
+        working-directory: backend/youtuber-restaurant-crawler
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: bun run scripts/insert-to-supabase.js
+
+      - name: 📤 Final Commit
         if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # 변경사항 추가
           git add backend/youtuber-restaurant-crawler/data/ 2>/dev/null || true
-          git add backend/log/youtuber-restaurant-crawler/ 2>/dev/null || true
-
-          # .gemini 폴더의 OAuth 크레덴셜 추가 (갱신된 토큰 저장)
           git add backend/youtuber-restaurant-crawler/.gemini/oauth_creds.json 2>/dev/null || true
-
-          if git diff --staged --quiet; then
-            echo "📭 변경사항 없음"
-          else
-            COMMIT_MSG="🥩 Auto: 정육왕 맛집 크롤링 완료 (${{ env.PIPELINE_DATE }})"
-            git commit -m "$COMMIT_MSG"
+          if ! git diff --staged --quiet; then
+            git commit -m "🥩 완료 (${{ env.PIPELINE_DATE }}) [Mode ${{ env.START_FROM }}]"
             git push
-            echo "✅ 결과 커밋 완료"
           fi
 
-      # ============================
-      # 11. Job Summary
-      # ============================
-      - name: 📝 Generate Job Summary
+      - name: 📝 Summary
         if: always()
         run: |
-          echo "# 🥩 유튜버 맛집 크롤링 결과" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "## 📅 실행 정보" >> $GITHUB_STEP_SUMMARY
-          echo "- **실행 시간**: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')" >> $GITHUB_STEP_SUMMARY
-          echo "- **트리거**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **시작 단계**: ${{ github.event.inputs.start_from || '1' }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          # 결과 파일 통계
-          echo "## 📊 처리 결과" >> $GITHUB_STEP_SUMMARY
-
+          echo "# 🥩 결과" >> $GITHUB_STEP_SUMMARY
+          echo "| 항목 | 값 |" >> $GITHUB_STEP_SUMMARY
+          echo "|---|---|" >> $GITHUB_STEP_SUMMARY
+          echo "| Mode | ${{ env.START_FROM }} |" >> $GITHUB_STEP_SUMMARY
           VIDEOS_FILE="backend/youtuber-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/meatcreator_videos.json"
-          if [ -f "$VIDEOS_FILE" ]; then
-            VIDEO_COUNT=$(jq '.stats.totalVideos // 0' "$VIDEOS_FILE")
-            MAP_URL_COUNT=$(jq '.stats.videosWithMapUrl // 0' "$VIDEOS_FILE")
-            echo "- **총 영상 수**: $VIDEO_COUNT 개" >> $GITHUB_STEP_SUMMARY
-            echo "- **지도 URL 포함**: $MAP_URL_COUNT 개" >> $GITHUB_STEP_SUMMARY
-          fi
-
+          [ -f "$VIDEOS_FILE" ] && echo "| 영상 | $(jq '.stats.totalVideos // 0' "$VIDEOS_FILE") |" >> $GITHUB_STEP_SUMMARY
           RESTAURANTS_FILE="backend/youtuber-restaurant-crawler/data/${{ env.PIPELINE_DATE }}/meatcreator_restaurants.jsonl"
-          if [ -f "$RESTAURANTS_FILE" ]; then
-            TOTAL_RESTAURANTS=$(cat "$RESTAURANTS_FILE" | jq -s '[.[].restaurants | length] | add // 0')
-            echo "- **추출된 맛집**: $TOTAL_RESTAURANTS 개" >> $GITHUB_STEP_SUMMARY
-          fi
+          [ -f "$RESTAURANTS_FILE" ] && echo "| 처리 | $(wc -l < "$RESTAURANTS_FILE") |" >> $GITHUB_STEP_SUMMARY
