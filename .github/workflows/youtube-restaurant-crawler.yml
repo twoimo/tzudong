@@ -67,7 +67,14 @@ jobs:
       - name: 🔐 Setup Gemini CLI Authentication
         working-directory: backend/youtuber-restaurant-crawler
         run: |
-          echo "🔐 Gemini CLI 인증 설정 시작..."
+          echo "🔐 Gemini CLI OAuth 인증 설정 시작..."
+          echo ""
+          
+          # 중요: API 키 환경변수 제거 (OAuth만 사용)
+          unset GEMINI_API_KEY
+          unset GEMINI_API_KEY_BYEON
+          unset GOOGLE_API_KEY
+          echo "✅ API 키 환경변수 제거 완료 (OAuth만 사용)"
           echo ""
           
           # 로컬 .gemini 폴더 확인
@@ -94,8 +101,17 @@ jobs:
           if [ -f ~/.gemini/oauth_creds.json ]; then
             echo ""
             echo "⏰ 토큰 만료 시간:"
-            cat ~/.gemini/oauth_creds.json | jq '.expiry_date' | xargs -I {} date -d @$(({}/ 1000)) '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "(확인 불가)"
+            EXPIRY=$(cat ~/.gemini/oauth_creds.json | jq -r '.expiry_date')
+            if [ "$EXPIRY" != "null" ] && [ -n "$EXPIRY" ]; then
+              EXPIRY_SEC=$((EXPIRY / 1000))
+              date -d "@$EXPIRY_SEC" '+%Y-%m-%d %H:%M:%S KST' 2>/dev/null || echo "만료 시간: $EXPIRY (timestamp)"
+            fi
           fi
+          
+          # Gemini CLI 테스트 (OAuth 인증 확인)
+          echo ""
+          echo "🧪 Gemini CLI OAuth 인증 테스트..."
+          gemini -p "Say 'OAuth authentication successful' in Korean" --model gemini-1.5-flash 2>&1 | head -5 || echo "⚠️ 테스트 실패 (계속 진행)"
 
       # ============================
       # 6. 환경 변수 파일 생성
@@ -103,6 +119,7 @@ jobs:
       - name: 📝 Create .env file
         working-directory: backend/youtuber-restaurant-crawler
         run: |
+          # 중요: GEMINI_API_KEY는 포함하지 않음 (OAuth 인증 사용)
           cat > .env << 'ENVEOF'
           YOUTUBE_API_KEY=${{ secrets.YOUTUBE_API_KEY_BYEON }}
           YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
@@ -111,7 +128,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ENVEOF
 
-          echo "✅ .env 파일 생성 완료"
+          echo "✅ .env 파일 생성 완료 (GEMINI_API_KEY 미포함 - OAuth 사용)"
           echo "📝 .env 내용 확인:"
           cat .env | while read line; do
             key=$(echo "$line" | cut -d'=' -f1)
@@ -148,11 +165,18 @@ jobs:
           KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          GEMINI_MODEL: "gemini-3.0-pro-preview"
+          # OAuth 인증을 위해 API 키 환경변수 제거 (GEMINI_API_KEY 등)
+          GEMINI_MODEL: "gemini-2.5-pro"
         run: |
+          # OAuth 인증을 사용하므로 GEMINI_API_KEY 환경변수 제거
+          unset GEMINI_API_KEY
+          unset GEMINI_API_KEY_BYEON
+          unset GOOGLE_API_KEY
+          
           START_FROM="${{ github.event.inputs.start_from || '1' }}"
           echo "🚀 파이프라인 시작 (단계: $START_FROM부터)"
           echo "🤖 Gemini 모델: $GEMINI_MODEL"
+          echo "🔐 인증 방식: OAuth (API 키 미사용)"
 
           node scripts/pipeline.js --start-from=$START_FROM
 

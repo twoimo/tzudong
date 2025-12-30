@@ -49,10 +49,19 @@ jobs:
         run: |
           echo "🔐 Gemini OAuth 토큰 갱신 시작..."
           echo "강제 갱신: $FORCE_REFRESH"
+          echo ""
+          
+          # 로컬 .gemini 폴더 확인
+          echo "📁 로컬 .gemini 폴더 확인:"
+          ls -la .gemini/ || echo "폴더 없음"
+          echo ""
           
           # 토큰 갱신 스크립트 실행
           node scripts/gemini-oauth-manager.js
           
+          echo ""
+          echo "📁 ~/.gemini 폴더 확인:"
+          ls -la ~/.gemini/ || echo "폴더 없음"
           echo ""
           echo "✅ 토큰 갱신 완료"
 
