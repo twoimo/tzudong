@@ -2,7 +2,7 @@ name: 🔐 Gemini OAuth 토큰 자동 갱신
 
 on:
   schedule:
-    - cron: "*/55 * * * *" # 55분마다 (토큰 60분 유효)
+    - cron: "*/45 * * * *" # 45분마다 (토큰 60분 유효, 여유 있게 갱신)
   workflow_dispatch:
 
 jobs:
@@ -27,9 +27,9 @@ jobs:
           REMAINING=$(( (EXPIRY - NOW) / 60000 ))
           echo "⏰ 토큰 남은 시간: ${REMAINING}분"
 
-          # 10분 이상 남았으면 갱신 불필요 (리스크 감수하고 스킵)
-          if [ $REMAINING -gt 10 ]; then
-            echo "✅ 토큰 아직 유효 - 갱신 스킵"
+          # 20분 이상 남았으면 갱신 불필요 (안전 마진 확보)
+          if [ $REMAINING -gt 20 ]; then
+            echo "✅ 토큰 아직 유효 ($REMAINING분 남음) - 갱신 스킵"
             echo "SKIP=true" >> $GITHUB_ENV
             exit 0
           fi
