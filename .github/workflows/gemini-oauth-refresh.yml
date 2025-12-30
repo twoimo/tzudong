@@ -1,9 +1,9 @@
 name: 🔐 Gemini OAuth 토큰 자동 갱신
 
 on:
-  # 매 시간 토큰 갱신 (토큰은 1시간 유효)
+  # 45분마다 토큰 갱신 (토큰은 1시간 유효)
   schedule:
-    - cron: "0 * * * *"  # 매 시간 정각
+    - cron: "*/45 * * * *"  # 45분마다
   
   # 수동 실행 가능
   workflow_dispatch:
