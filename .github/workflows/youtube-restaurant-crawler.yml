@@ -166,7 +166,7 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           # OAuth 인증을 위해 API 키 환경변수 제거 (GEMINI_API_KEY 등)
-          GEMINI_MODEL: "gemini-2.5-pro"
+          GEMINI_MODEL: "gemini-3.0-pro"
         run: |
           # OAuth 인증을 사용하므로 GEMINI_API_KEY 환경변수 제거
           unset GEMINI_API_KEY
