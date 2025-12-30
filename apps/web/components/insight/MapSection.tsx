@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
     MapPin,
     ExternalLink,
@@ -17,10 +18,12 @@ import {
     ChevronRight,
     Users,
     Star,
-    Clock
+    Clock,
+    RefreshCw
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNaverMaps } from '@/hooks/use-naver-maps';
+import { useYoutuberRestaurants, useYoutuberList, type YoutuberRestaurant } from '@/hooks/use-youtuber-restaurants';
 
 // [TYPE] 맛집 마커 데이터 타입
 interface RestaurantMarker {
@@ -46,13 +49,41 @@ interface RestaurantMarker {
     // 통계 (사용자 제보)
     reportCount?: number;
     reportedAt?: string;
+    
+    // 추가 메타 (실제 데이터)
+    confidence?: string;
+    addressSource?: string;
 }
 
-// [MOCK] 사용자 제보 맛집 데이터
-// [MOCK] 사용자 제보 맛집 데이터
+// [HELPER] YoutuberRestaurant를 RestaurantMarker로 변환
+function convertToMarker(restaurant: YoutuberRestaurant): RestaurantMarker | null {
+    // 좌표가 없으면 null 반환
+    if (!restaurant.lat || !restaurant.lng) return null;
+    
+    return {
+        id: restaurant.id,
+        name: restaurant.name,
+        address: restaurant.road_address || restaurant.origin_address || '주소 정보 없음',
+        category: restaurant.categories?.[0] || '기타',
+        lat: restaurant.lat,
+        lng: restaurant.lng,
+        source: 'other_youtuber',
+        youtuberName: restaurant.youtuber_name,
+        youtuberChannel: restaurant.youtuber_channel || undefined,
+        videoTitle: restaurant.youtube_meta?.title || undefined,
+        phone: restaurant.phone || undefined,
+        description: restaurant.tzuyang_review || restaurant.reasoning_basis || undefined,
+        youtubeUrl: restaurant.youtube_link || undefined,
+        reportedAt: restaurant.created_at?.split('T')[0],
+        confidence: restaurant.confidence,
+        addressSource: restaurant.address_source || undefined,
+    };
+}
+
+// [MOCK] 사용자 제보 맛집 데이터 (목업 - 실제 서비스 시 제거)
 const MOCK_USER_REPORTS: RestaurantMarker[] = [
     {
-        id: 'ur1',
+        id: 'mock_ur1',
         name: '원조 청진동 해장국',
         address: '서울 종로구 종로3길 32',
         category: '한식',
@@ -67,7 +98,7 @@ const MOCK_USER_REPORTS: RestaurantMarker[] = [
         submitterNickname: '해장국매니아',
     },
     {
-        id: 'ur2',
+        id: 'mock_ur2',
         name: '황소곱창',
         address: '서울 마포구 와우산로 112',
         category: '곱창/막창',
@@ -81,48 +112,8 @@ const MOCK_USER_REPORTS: RestaurantMarker[] = [
     },
 ];
 
-// [MOCK] 타 유튜버 맛집 데이터
-const MOCK_YOUTUBER_SPOTS: RestaurantMarker[] = [
-    {
-        id: 'yt1',
-        name: '풍년옥',
-        address: '서울 중구 명동길 74',
-        category: '냉면',
-        lat: 37.5636,
-        lng: 126.9832,
-        source: 'other_youtuber',
-        youtuberName: '먹방유튜버A',
-        youtuberChannel: '@mukbangA',
-        youtubeUrl: 'https://youtube.com/watch?v=example1',
-        videoTitle: '명동 최고의 냉면집!',
-    },
-    {
-        id: 'yt2',
-        name: '을밀대',
-        address: '서울 마포구 도화동 543',
-        category: '평양냉면',
-        lat: 37.5406,
-        lng: 126.9525,
-        source: 'other_youtuber',
-        youtuberName: '먹방유튜버B',
-        youtuberChannel: '@foodieB',
-        youtubeUrl: 'https://youtube.com/watch?v=example2',
-        videoTitle: '평양냉면 맛집 탐방',
-    },
-    {
-        id: 'yt3',
-        name: '진미평양냉면',
-        address: '서울 강남구 역삼동 823',
-        category: '평양냉면',
-        lat: 37.5012,
-        lng: 127.0396,
-        source: 'other_youtuber',
-        youtuberName: '먹방유튜버C',
-        youtuberChannel: '@gourmetC',
-        youtubeUrl: 'https://youtube.com/watch?v=example3',
-        videoTitle: '강남에서 만난 평양냉면',
-    },
-];
+// [CONFIG] 목업 데이터 사용 여부 (실제 서비스 시 false로 변경)
+const USE_MOCK_DATA = true;
 
 // [COMPONENT] 맛집 리스트 아이템
 const RestaurantListItem = memo(({
@@ -268,20 +259,55 @@ const DetailPanel = memo(({
                                 영상 정보
                             </h4>
                             <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-                                <p className="text-sm font-medium">{marker.videoTitle}</p>
+                                <p className="text-sm font-medium">{marker.videoTitle || '영상 제목 없음'}</p>
                                 <p className="text-xs text-muted-foreground">
-                                    {marker.youtuberName} ({marker.youtuberChannel})
+                                    {marker.youtuberName} {marker.youtuberChannel && `(${marker.youtuberChannel})`}
                                 </p>
                             </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full"
-                                onClick={() => window.open(marker.youtubeUrl, '_blank')}
-                            >
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                유튜브에서 보기
-                            </Button>
+                            
+                            {/* 유튜버 리뷰/설명 */}
+                            {marker.description && (
+                                <div className="space-y-2">
+                                    <h4 className="font-medium text-sm">유튜버 리뷰</h4>
+                                    <div className="p-3 bg-muted/50 rounded-lg text-sm leading-relaxed whitespace-pre-wrap">
+                                        {marker.description}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {marker.youtubeUrl && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full border-red-200 hover:bg-red-50 hover:text-red-600"
+                                    onClick={() => window.open(marker.youtubeUrl, '_blank')}
+                                >
+                                    <Youtube className="h-4 w-4 mr-2 text-red-500" />
+                                    유튜브에서 보기
+                                </Button>
+                            )}
+                            
+                            {/* 데이터 신뢰도 표시 */}
+                            {marker.confidence && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
+                                    <Badge 
+                                        variant="outline" 
+                                        className={cn(
+                                            "text-xs",
+                                            marker.confidence === 'high' && "border-green-300 text-green-700",
+                                            marker.confidence === 'medium' && "border-yellow-300 text-yellow-700",
+                                            marker.confidence === 'low' && "border-red-300 text-red-700"
+                                        )}
+                                    >
+                                        신뢰도: {marker.confidence}
+                                    </Badge>
+                                    {marker.addressSource && (
+                                        <span className="text-muted-foreground/70">
+                                            출처: {marker.addressSource}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -508,10 +534,34 @@ const MapSectionComponent = () => {
     const [viewMode, setViewMode] = useState<'all' | 'user_report' | 'other_youtuber'>('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedMarker, setSelectedMarker] = useState<RestaurantMarker | null>(null);
+    const [selectedYoutuber, setSelectedYoutuber] = useState<string>('all');
+
+    // [DATA] 유튜버 맛집 데이터 가져오기
+    const { 
+        restaurants: youtuberRestaurants, 
+        isLoading, 
+        error, 
+        refetch,
+        totalCount 
+    } = useYoutuberRestaurants({
+        youtuberName: selectedYoutuber !== 'all' ? selectedYoutuber : undefined,
+        onlyWithCoordinates: true
+    });
+
+    // [DATA] 유튜버 목록 가져오기
+    const { youtubers, isLoading: isLoadingYoutubers } = useYoutuberList();
 
     // [OPTIMIZATION] 필터링된 마커 메모이제이션
     const filteredMarkers = useMemo(() => {
-        const allMarkers = [...MOCK_USER_REPORTS, ...MOCK_YOUTUBER_SPOTS];
+        // 유튜버 맛집 데이터를 마커로 변환
+        const youtuberMarkers: RestaurantMarker[] = youtuberRestaurants
+            .map(convertToMarker)
+            .filter((m): m is RestaurantMarker => m !== null);
+
+        // 목업 데이터 (USE_MOCK_DATA가 true일 때만)
+        const mockMarkers = USE_MOCK_DATA ? MOCK_USER_REPORTS : [];
+        
+        const allMarkers = [...mockMarkers, ...youtuberMarkers];
 
         let filtered = allMarkers;
 
@@ -528,12 +578,13 @@ const MapSectionComponent = () => {
             filtered = filtered.filter(m =>
                 m.name.toLowerCase().includes(query) ||
                 m.address.toLowerCase().includes(query) ||
-                m.category.toLowerCase().includes(query)
+                m.category.toLowerCase().includes(query) ||
+                m.youtuberName?.toLowerCase().includes(query)
             );
         }
 
         return filtered;
-    }, [viewMode, searchQuery]);
+    }, [viewMode, searchQuery, youtuberRestaurants]);
 
     // [OPTIMIZATION] 핸들러 메모이제이션
     const handleMarkerClick = useCallback((marker: RestaurantMarker) => {
@@ -549,35 +600,89 @@ const MapSectionComponent = () => {
             {/* 좌측: 맛집 목록 */}
             <Card className="lg:col-span-1 flex flex-col min-h-0">
                 <CardHeader className="pb-3">
-                    <CardTitle className="text-base">맛집 목록</CardTitle>
+                    <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">맛집 목록</CardTitle>
+                        <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="text-xs">
+                                {filteredMarkers.length}개
+                            </Badge>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => refetch()}
+                                disabled={isLoading}
+                            >
+                                <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
+                            </Button>
+                        </div>
+                    </div>
                     <div className="space-y-2 mt-2">
                         <div className="relative">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="맛집 검색..."
+                                placeholder="맛집, 유튜버 검색..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="pl-9 h-9 text-sm"
                             />
                         </div>
-                        <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
-                            <SelectTrigger className="h-9 text-xs">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">전체 보기</SelectItem>
-                                <SelectItem value="user_report">사용자 제보만</SelectItem>
-                                <SelectItem value="other_youtuber">타 유튜버만</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <div className="flex gap-2">
+                            <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
+                                <SelectTrigger className="h-9 text-xs flex-1">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">전체 보기</SelectItem>
+                                    <SelectItem value="user_report">사용자 제보</SelectItem>
+                                    <SelectItem value="other_youtuber">유튜버 맛집</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {youtubers.length > 0 && (
+                                <Select value={selectedYoutuber} onValueChange={setSelectedYoutuber}>
+                                    <SelectTrigger className="h-9 text-xs flex-1">
+                                        <SelectValue placeholder="유튜버 선택" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">모든 유튜버</SelectItem>
+                                        {youtubers.map((yt) => (
+                                            <SelectItem key={yt.name} value={yt.name}>
+                                                {yt.name} ({yt.count}개)
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            )}
+                        </div>
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
                     <ScrollArea className="h-full px-4 pb-4">
                         <div className="space-y-2">
-                            {filteredMarkers.length === 0 ? (
+                            {isLoading ? (
+                                // 로딩 스켈레톤
+                                Array.from({ length: 5 }).map((_, i) => (
+                                    <div key={i} className="p-3 rounded-lg border">
+                                        <Skeleton className="h-4 w-3/4 mb-2" />
+                                        <Skeleton className="h-3 w-1/2 mb-2" />
+                                        <Skeleton className="h-5 w-20" />
+                                    </div>
+                                ))
+                            ) : error ? (
+                                <div className="text-center py-8 text-destructive text-sm">
+                                    데이터를 불러올 수 없습니다
+                                    <Button
+                                        variant="link"
+                                        size="sm"
+                                        className="block mx-auto mt-2"
+                                        onClick={() => refetch()}
+                                    >
+                                        다시 시도
+                                    </Button>
+                                </div>
+                            ) : filteredMarkers.length === 0 ? (
                                 <div className="text-center py-8 text-muted-foreground text-sm">
-                                    검색 결과가 없습니다
+                                    {searchQuery ? '검색 결과가 없습니다' : '등록된 맛집이 없습니다'}
                                 </div>
                             ) : (
                                 filteredMarkers.map((marker) => (
