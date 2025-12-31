@@ -517,14 +517,14 @@ async function extractWithGemini(video, transcript) {
 
     // GitHub Actions 환경 감지
     const isGitHubActions = !!process.env.GITHUB_ACTIONS;
-    const defaultModel = process.env.GEMINI_MODEL || (isGitHubActions ? 'gemini-2.5-flash' : 'gemini-3-pro-preview');
+    const defaultModel = process.env.GEMINI_MODEL || (isGitHubActions ? 'gemini-3-pro-preview' : 'gemini-3-pro-preview');
 
     // 시도할 모델 목록 (우선순위 순, 중복 제거)
     const modelsToTry = [...new Set([
         defaultModel,
-        'gemini-2.5-flash',
         'gemini-3-pro-preview',
         'gemini-3-flash-preview',
+        'gemini-2.5-flash',
         'gemini-2.5-pro'
     ])];
 
