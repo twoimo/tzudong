@@ -1172,27 +1172,17 @@ async function main() {
 
         const allVideos = JSON.parse(fs.readFileSync(allVideosFile, 'utf-8'));
 
-        // 모든 영상 처리 (지도 URL 유무와 관계없이)
-        // 단, 음식/맛집 관련 키워드가 제목이나 설명에 포함된 영상 우선
-        const foodKeywords = ['맛집', '먹방', '고기', '삼겹살', '소고기', '돼지', '치킨', '음식', '식당', '밥', '고깃집', '스테이크', '라멘', '짬뽕', '짜장', '분식', '회', '초밥', '파스타', '피자', '카페', '디저트', '빵', '육회', '갈비', '한우', '야키니쿠', '불고기', '냉면', '국밥', '설렁탕', '해물', '곱창', '대창', '막창'];
-
-        // 음식 관련 영상인지 판별
-        const isFoodRelated = (video) => {
-            const text = `${video.title} ${video.description}`.toLowerCase();
-            return foodKeywords.some(keyword => text.includes(keyword));
-        };
-
-        // 지도 URL이 있거나 음식 관련 영상인 경우 처리
-        const videosToProcess = allVideos.videos.filter(v => v.hasMapUrl || isFoodRelated(v));
+        // 모든 영상 처리 (필터링 없음 - 1041개 전부)
+        const videosToProcess = allVideos.videos;
 
         const content = videosToProcess.map(v => JSON.stringify(v)).join('\n');
         fs.writeFileSync(inputFile, content, 'utf-8');
 
         const withMapCount = videosToProcess.filter(v => v.hasMapUrl).length;
         const withoutMapCount = videosToProcess.length - withMapCount;
-        log('info', `처리할 영상 ${videosToProcess.length}개 필터링`);
+        log('info', `처리할 영상 ${videosToProcess.length}개`);
         log('info', `  - 지도 URL 포함: ${withMapCount}개`);
-        log('info', `  - 지도 URL 없음 (음식 관련): ${withoutMapCount}개`);
+        log('info', `  - 지도 URL 없음: ${withoutMapCount}개`);
     }
 
     // 영상 목록 로드
