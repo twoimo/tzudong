@@ -113,7 +113,7 @@ class RateLimiter {
         // RPD 체크
         if (this.requestsToday >= this.RPD_LIMIT) {
             log('error', `일일 쿼타 초과 (${this.requestsToday}/${this.RPD_LIMIT} RPD)`);
-            log('info', '쿼타는 PST 자정 (한국시간 오후 5시)에 리셋됩니다.');
+            log('info', '쿼타 리셋: PT 자정 (KST 17:00) 또는 소진 시점 기준 24시간');
             return false;
         }
 
