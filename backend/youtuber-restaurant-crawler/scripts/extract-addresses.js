@@ -406,18 +406,48 @@ async function searchPlaceWithKakao(keyword, category = null) {
     }
 }
 
+// Puppeteer 동시 실행 제한 (세마포어)
+const PUPPETEER_CONCURRENCY = 5;
+let puppeteerActiveCount = 0;
+const puppeteerQueue = [];
+
+async function acquirePuppeteerSlot() {
+    if (puppeteerActiveCount < PUPPETEER_CONCURRENCY) {
+        puppeteerActiveCount++;
+        return;
+    }
+    // 대기열에 추가
+    await new Promise(resolve => puppeteerQueue.push(resolve));
+    puppeteerActiveCount++;
+}
+
+function releasePuppeteerSlot() {
+    puppeteerActiveCount--;
+    if (puppeteerQueue.length > 0) {
+        const next = puppeteerQueue.shift();
+        next();
+    }
+}
+
 /**
  * YouTube 자막 가져오기
  * Puppeteer로 maestra.ai → tubetranscript.com 순서로 수집
  */
 async function getTranscript(videoId) {
     try {
+        // Puppeteer 슬롯 대기
+        await acquirePuppeteerSlot();
+
         const result = await getTranscriptWithPuppeteer(videoId);
+
+        releasePuppeteerSlot();
+
         if (result) {
             log('debug', `자막 수집 성공: ${result.segments}개 세그먼트`);
             return result.text;
         }
     } catch (error) {
+        releasePuppeteerSlot();
         // 실패 시 로그 생략
     }
 
