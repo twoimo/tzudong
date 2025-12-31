@@ -1043,12 +1043,6 @@ async function main() {
     // 영상별 처리
     for (let i = 0; i < videos.length; i++) {
         const video = videos[i];
-
-        // 50분마다 토큰 체크 (만료 임박 시 갱신)
-        if (i % 10 === 0) {
-            await checkTokenMidPipeline();
-        }
-
         const currentDescHash = hashDescription(video.description);
 
         // 이미 처리된 영상 체크 (description 변경 감지 포함)
@@ -1062,6 +1056,11 @@ async function main() {
                 log('info', `[${i + 1}/${videos.length}] 📝 description 변경 감지 - 재처리: ${video.title.slice(0, 35)}...`);
                 stats.updated++;
             }
+        }
+
+        // 50분마다 토큰 체크 (만료 임박 시 갱신) - 실제 처리되는 영상에 대해서만
+        if (stats.processed > 0 && stats.processed % 50 === 0) {
+            await checkTokenMidPipeline();
         }
 
         log('info', `[${i + 1}/${videos.length}] 처리 중: ${video.title.slice(0, 40)}...`);
