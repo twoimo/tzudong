@@ -481,6 +481,7 @@ async function getTranscriptWithPuppeteer(videoId) {
         if (!puppeteerBrowser) {
             puppeteerBrowser = await puppeteerModule.default.launch({
                 headless: true,
+                protocolTimeout: 180000,
                 args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
             });
         }
