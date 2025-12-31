@@ -66,7 +66,7 @@ class RateLimiter {
         // Google AI Pro 구독자 기준
         this.RPM_LIMIT = 60;      // 안전 마진 적용 (실제 120)
         this.RPD_LIMIT = 1000;    // 안전 마진 적용 (실제 1500)
-        this.CONCURRENCY = 10;    // 동시 처리 수 (속도 2배)
+        this.CONCURRENCY = 2;     // 동시 처리 수 (안정성 우선)
 
         this.requestsThisMinute = 0;
         this.requestsToday = 0;
