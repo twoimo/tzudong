@@ -6,11 +6,12 @@
   "main": "scripts/main.js",
   "scripts": {
     "crawl": "bun run scripts/crawl-channel.js",
+    "transcripts": "bun run scripts/collect-transcripts.js",
     "extract": "bun run scripts/extract-addresses.js",
     "geocode": "bun run scripts/enrich-coordinates.js",
     "insert": "bun run scripts/insert-to-supabase.js",
     "pipeline": "bun run scripts/pipeline.js",
-    "full": "bun run oauth && bun run crawl && bun run extract && bun run geocode && bun run insert",
+    "full": "bun run oauth && bun run crawl && bun run transcripts && bun run extract && bun run geocode && bun run insert",
     "oauth": "bun run scripts/gemini-oauth-manager.js"
   },
   "dependencies": {
