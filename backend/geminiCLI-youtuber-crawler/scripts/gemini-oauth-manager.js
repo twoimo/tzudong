@@ -84,9 +84,11 @@ function refreshTokenWithCLI() {
         delete env.GOOGLE_API_KEY;
 
         // 간단한 프롬프트로 CLI 실행 (토큰 자동 갱신됨)
+        // GitHub Actions에서는 gemini-3-pro-preview 사용
+        const model = process.env.GITHUB_ACTIONS ? 'gemini-3-pro-preview' : 'gemini-2.5-flash';
         const result = spawnSync('bash', [
             '-c',
-            'echo "ping" | timeout 30 gemini --model gemini-2.5-flash 2>&1 | head -3'
+            `echo "ping" | timeout 30 gemini --model ${model} 2>&1 | head -3`
         ], {
             encoding: 'utf-8',
             timeout: 60000,
