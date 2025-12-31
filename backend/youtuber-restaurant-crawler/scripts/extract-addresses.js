@@ -211,18 +211,18 @@ function log(level, msg, videoId = null) {
     if (level === 'debug' && !DEBUG_MODE) return;
 
     const time = getKSTDate().toTimeString().slice(0, 8);
-    const icons = {
-        info: 'ℹ️',
-        success: '✅',
-        warning: '⚠️',
-        error: '❌',
-        debug: '🔍',
-        progress: '📊'
+    const tags = {
+        info: '[INFO]',
+        success: '[OK]',
+        warning: '[WARN]',
+        error: '[ERR]',
+        debug: '[DBG]',
+        progress: '[PROG]'
     };
 
     // 병렬 처리 시 videoId 포함 (첫 8자)
     const prefix = videoId ? `[${videoId.slice(0, 8)}]` : '';
-    const logLine = `[${time}] ${icons[level] || ''} ${prefix} ${msg}`;
+    const logLine = `[${time}] ${tags[level] || '[LOG]'} ${prefix}${msg}`;
 
     // 중복 메시지 필터링 (1초 내 동일 메시지)
     const msgKey = `${level}:${msg}`;
@@ -697,30 +697,38 @@ async function extractWithGemini(video, transcript) {
     const defaultModel = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
 
     // 시도할 모델 목록 (우선순위 순, 중복 제거)
-    // 3-pro → 3-flash → 2.5-pro → 2.5-flash 순서
-    const modelsToTry = [...new Set([
-        defaultModel,
+    // 3-pro → 3-flash 순서 (2.5 모델 사용 안 함)
+    const allModels = [
         'gemini-3-pro-preview',    // 1순위
-        'gemini-3-flash-preview',  // 2순위 (pro 소진 후)
-        'gemini-2.5-pro',          // 3순위
-        'gemini-2.5-flash'         // 4순위
-    ])];
+        'gemini-3-flash-preview'   // 2순위
+    ];
+
+    // 사용 가능한 모델만 필터링 (블랙리스트 제외)
+    const availableModels = allModels.filter(m => !isModelBlacklisted(m));
+
+    if (availableModels.length === 0) {
+        // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간 확인
+        const earliest = getEarliestResetTime();
+        if (earliest) {
+            const waitMin = Math.ceil((earliest - Date.now()) / 60000);
+            log('warning', `모든 모델 쿼타 소진됨. 가장 빠른 리셋: ${waitMin}분 후`);
+        }
+        cleanupTempFiles(tempPromptFile, tempOutputFile);
+        return null;
+    }
+
+    // 사용 가능한 첫 번째 모델로 시작
+    log('debug', `사용 가능한 모델: ${availableModels.join(', ')}`);
 
     let lastError = null;
     let result = null;
 
     try {
-        for (let i = 0; i < modelsToTry.length; i++) {
-            const model = modelsToTry[i];
-
-            // 블랙리스트된 모델 스킵 (리셋 시간이 지났으면 자동 해제)
-            if (isModelBlacklisted(model)) {
-                log('debug', `모델 ${model} 블랙리스트됨 - 스킵`);
-                continue;
-            }
+        for (let i = 0; i < availableModels.length; i++) {
+            const model = availableModels[i];
 
             try {
-                log('debug', `Gemini 모델 시도 [${i + 1}/${modelsToTry.length}]: ${model}`);
+                log('debug', `Gemini 모델 시도 [${i + 1}/${availableModels.length}]: ${model}`);
 
                 // Gemini CLI 호출 - OAuth 인증 사용
                 // 중요: GEMINI_API_KEY 환경변수를 제거해야 OAuth가 작동함
@@ -784,9 +792,9 @@ async function extractWithGemini(video, transcript) {
 
                             // 30분 이하면 즉시 대기, 그 이상이면 다른 모델 시도
                             if (waitMs <= 30 * 60 * 1000) {
-                                log('info', `⏳ 쿼타 리셋 대기 중... (${Math.ceil(waitMs / 60000)}분)`);
+                                log('info', `쿼타 리셋 대기 중... (${Math.ceil(waitMs / 60000)}분)`);
                                 await sleep(waitMs + 5000); // 5초 여유
-                                log('info', `✅ 쿼타 리셋 완료 - 재시도`);
+                                log('info', `쿼타 리셋 완료 - 재시도`);
                                 // 블랙리스트에서 제거하고 다시 시도
                                 blacklistedModels.delete(model);
                                 i--; // 같은 모델 다시 시도
@@ -996,7 +1004,7 @@ async function processVideo(video) {
     const mapUrls = video.mapUrls || [];
 
     if (mapUrls.length === 0) {
-        log('info', `  📍 지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도`);
+        log('info', `  지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도`);
     }
 
     for (const mapUrl of mapUrls) {
@@ -1006,16 +1014,16 @@ async function processVideo(video) {
         switch (mapUrl.type) {
             case 'naver':
                 mapInfo = await extractFromNaverMap(mapUrl.url);
-                log('debug', `  🗺️ 네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                log('debug', `  네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 break;
             case 'google':
                 mapInfo = await extractFromGoogleMap(mapUrl.url);
                 // 구글 지도 URL에서 좌표가 직접 추출된 경우
                 if (mapInfo.lat && mapInfo.lng) {
                     coordsFromMapUrl = { lat: mapInfo.lat, lng: mapInfo.lng, source: 'google_url' };
-                    log('debug', `  🗺️ 구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`);
+                    log('debug', `  구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`);
                 } else {
-                    log('debug', `  🗺️ 구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                    log('debug', `  구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 }
                 break;
             case 'kakao':
@@ -1031,10 +1039,10 @@ async function processVideo(video) {
                             name: kakaoPlace.name,
                             address: kakaoPlace.address
                         };
-                        log('debug', `  🗺️ 카카오 지도 placeId로 좌표 조회: (${kakaoPlace.lat}, ${kakaoPlace.lng})`);
+                        log('debug', `  카카오 지도 placeId로 좌표 조회: (${kakaoPlace.lat}, ${kakaoPlace.lng})`);
                     }
                 } else {
-                    log('debug', `  🗺️ 카카오 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                    log('debug', `  카카오 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 }
                 break;
         }
@@ -1047,7 +1055,7 @@ async function processVideo(video) {
     if (mapUrlStats.naver > 0) urlTypes.push(`네이버 ${mapUrlStats.naver}개`);
     if (mapUrlStats.kakao > 0) urlTypes.push(`카카오 ${mapUrlStats.kakao}개`);
     if (urlTypes.length > 0) {
-        log('info', `  📍 지도 URL: ${urlTypes.join(', ')}`);
+        log('info', `  지도 URL: ${urlTypes.join(', ')}`);
     }
 
     // 2. 자막 가져오기
@@ -1242,7 +1250,7 @@ async function main() {
             execSync(`git commit -m "${message}"`, { stdio: 'pipe' });
             execSync('git push', { stdio: 'pipe' });
             stats.commits++;
-            log('success', `💾 중간 커밋 완료 (#${stats.commits})`);
+            log('success', `중간 커밋 완료 (#${stats.commits})`);
         } catch (error) {
             log('warning', `중간 커밋 실패: ${error.message}`);
         }
@@ -1278,8 +1286,8 @@ async function main() {
         videosToProcess.push({ video, index: i, descHash: currentDescHash });
     }
 
-    log('info', `📋 처리 대상: ${videosToProcess.length}개 / 스킵: ${stats.skipped}개`);
-    log('info', `⚡ 병렬 처리 모드: 동시 ${rateLimiter.CONCURRENCY}개`);
+    log('info', `처리 대상: ${videosToProcess.length}개 / 스킵: ${stats.skipped}개`);
+    log('info', `병렬 처리 모드: 동시 ${rateLimiter.CONCURRENCY}개`);
 
     // 단일 영상 처리 함수
     async function processVideoWithRateLimit(item) {
@@ -1302,9 +1310,9 @@ async function main() {
                 if (earliestReset) {
                     const waitMs = earliestReset - Date.now();
                     if (waitMs > 0 && waitMs <= 60 * 60 * 1000) { // 1시간 이내면 대기
-                        log('info', `⏳ 모든 모델 쿼타 소진 - 리셋까지 ${Math.ceil(waitMs / 60000)}분 대기...`);
+                        log('info', `모든 모델 쿼타 소진 - 리셋까지 ${Math.ceil(waitMs / 60000)}분 대기...`);
                         await sleep(waitMs + 5000);
-                        log('info', `✅ 쿼타 리셋 완료 - 계속 진행`);
+                        log('info', `쿼타 리셋 완료 - 계속 진행`);
                         // 블랙리스트 정리 (만료된 항목 제거)
                         allModels.forEach(m => isModelBlacklisted(m));
                     } else {
@@ -1368,7 +1376,7 @@ async function main() {
                 const allData = Array.from(allResults.values());
                 fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
                 rateLimiter.forceFlush();
-                await commitProgress(`⚠️ 쿼타 초과 중단 (${TODAY_FOLDER})`);
+                await commitProgress(`쿼타 초과 중단 (${TODAY_FOLDER})`);
                 process.exit(1);
             }
 
@@ -1379,7 +1387,7 @@ async function main() {
                 const allData = Array.from(allResults.values());
                 fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
                 rateLimiter.forceFlush();
-                await commitProgress(`⚠️ 중단: 모델 오류 (${TODAY_FOLDER})`);
+                await commitProgress(`중단: 모델 오류 (${TODAY_FOLDER})`);
                 process.exit(1);
             }
 
@@ -1411,7 +1419,7 @@ async function main() {
             const allData = Array.from(allResults.values());
             fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
 
-            await commitProgress(`🤖 중간저장: ${stats.processed}개 처리 (${TODAY_FOLDER})`);
+            await commitProgress(`중간저장: ${stats.processed}개 처리 (${TODAY_FOLDER})`);
             lastCommitCount = stats.processed;
         }
     }
@@ -1422,7 +1430,7 @@ async function main() {
     rateLimiter.forceFlush();
 
     if (stats.processed > lastCommitCount) {
-        await commitProgress(`🤖 최종저장: ${stats.processed}개 처리 완료 (${TODAY_FOLDER})`);
+        await commitProgress(`최종저장: ${stats.processed}개 처리 완료 (${TODAY_FOLDER})`);
     }
 
     // 결과 출력
@@ -1430,25 +1438,25 @@ async function main() {
 
     log('info', '');
     log('info', '='.repeat(60));
-    log('success', '🎉 처리 완료');
+    log('success', '처리 완료');
     log('info', '='.repeat(60));
-    log('info', `📊 총 영상: ${stats.total}개`);
-    log('info', `✅ 처리됨: ${stats.processed}개`);
-    log('info', `⏭️  스킵됨: ${stats.skipped}개 (이미 처리)`);
+    log('info', `총 영상: ${stats.total}개`);
+    log('info', `처리됨: ${stats.processed}개`);
+    log('info', `스킵됨: ${stats.skipped}개 (이미 처리)`);
     if (stats.updated > 0) {
-        log('info', `🔄 재처리: ${stats.updated}개 (description 변경)`);
+        log('info', `재처리: ${stats.updated}개 (description 변경)`);
     }
-    log('success', `✅ 성공: ${stats.success}개`);
+    log('success', `성공: ${stats.success}개`);
     if (stats.failed > 0) {
-        log('error', `❌ 실패: ${stats.failed}개`);
+        log('error', `실패: ${stats.failed}개`);
     }
-    log('info', `🍽️  발견된 맛집: ${stats.restaurantsFound}개`);
+    log('info', `발견된 맛집: ${stats.restaurantsFound}개`);
     if (stats.commits > 0) {
-        log('info', `💾 중간 커밋: ${stats.commits}회`);
+        log('info', `중간 커밋: ${stats.commits}회`);
     }
-    log('info', `⏱️  소요 시간: ${Math.round(duration / 1000)}초`);
+    log('info', `소요 시간: ${Math.round(duration / 1000)}초`);
     const finalRateStats = rateLimiter.getStats();
-    log('info', `📈 Rate Limit: RPM ${finalRateStats.rpm}, RPD ${finalRateStats.rpd}`);
+    log('info', `Rate Limit: RPM ${finalRateStats.rpm}, RPD ${finalRateStats.rpd}`);
     log('info', '='.repeat(60));
 
     // 중간 결과 요약 파일 생성 (GitHub Actions Summary용)
