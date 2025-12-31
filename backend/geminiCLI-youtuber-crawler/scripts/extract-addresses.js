@@ -73,7 +73,7 @@ class RateLimiter {
         this.minuteStart = Date.now();
         this.activeRequests = 0;
         this.lastSaveCount = 0;   // 마지막 저장 시점
-        this.SAVE_INTERVAL = 10;  // 10개마다 저장 (I/O 최적화)
+        this.SAVE_INTERVAL = 20;  // 20개마다 저장 (I/O 최적화)
 
         // 통계 파일에서 오늘 요청 수 로드
         this.loadDailyStats();
@@ -1047,8 +1047,8 @@ async function main() {
 
     // 배치 설정
     let batchCount = 0;
-    const LOG_BATCH_SIZE = 10;     // 10개마다 진행 상황 로그
-    const COMMIT_BATCH_SIZE = 50;  // 50개마다 자동 커밋
+    const LOG_BATCH_SIZE = 20;     // 20개마다 진행 상황 로그 (로그 I/O 최적화)
+    const COMMIT_BATCH_SIZE = 100; // 100개마다 자동 커밋 (I/O 최적화)
     let lastCommitCount = 0;
 
     // GitHub Actions 환경인지 확인
