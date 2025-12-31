@@ -407,7 +407,8 @@ async function searchPlaceWithKakao(keyword, category = null) {
 }
 
 // Puppeteer 동시 실행 제한 (세마포어)
-const PUPPETEER_CONCURRENCY = 5;
+// 리소스 부족으로 인한 Page.enable 타임아웃 방지를 위해 동시 실행 수 제한
+const PUPPETEER_CONCURRENCY = 2;
 let puppeteerActiveCount = 0;
 const puppeteerQueue = [];
 
@@ -481,7 +482,7 @@ async function getTranscriptWithPuppeteer(videoId) {
         if (!puppeteerBrowser) {
             puppeteerBrowser = await puppeteerModule.default.launch({
                 headless: true,
-                protocolTimeout: 180000,
+                protocolTimeout: 300000,  // 5분 타임아웃 (리소스 부족 시 대비)
                 args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
             });
         }
