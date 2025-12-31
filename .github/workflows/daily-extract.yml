@@ -11,10 +11,6 @@ on:
         required: false
         default: 'false'
 
-defaults:
-  run:
-    working-directory: backend/geminiCLI-youtuber-crawler
-
 jobs:
   extract:
     runs-on: ubuntu-latest
@@ -36,7 +32,7 @@ jobs:
 
       - name: Install Gemini CLI
         run: |
-          curl -sS https://raw.githubusercontent.com/google-gemini/gemini-cli/main/scripts/install.sh | bash
+          curl -sS https://raw.githubusercontent.com/anthropics/anthropic-quickstarts/main/install-gemini.sh | bash
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Setup Gemini OAuth
@@ -53,8 +49,6 @@ jobs:
         if: github.event.inputs.skip_crawl != 'true'
         run: bun run crawl
         continue-on-error: true
-        env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
 
       - name: Run Extract
         run: bun run extract
@@ -77,13 +71,12 @@ jobs:
           fi
 
       - name: Commit Results
-        working-directory: .
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
           # 데이터 파일 및 토큰 파일 추가
-          git add backend/geminiCLI-youtuber-crawler/data/ backend/geminiCLI-youtuber-crawler/.gemini/oauth_creds.json
+          git add data/ .gemini/oauth_creds.json
           
           # 변경사항 확인
           if git diff --staged --quiet; then
