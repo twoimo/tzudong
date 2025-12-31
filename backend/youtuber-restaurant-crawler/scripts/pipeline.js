@@ -35,7 +35,7 @@ function getKSTDate() {
 function getTodayFolder() {
     const pipelineDate = process.env.PIPELINE_DATE;
     if (pipelineDate) return pipelineDate;
-    
+
     const now = getKSTDate();
     const yy = String(now.getFullYear()).slice(-2);
     const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -61,15 +61,15 @@ const LOG_DIR = path.resolve(__dirname, '../../log/youtube-restaurant-crawler', 
 // 로그 함수
 function log(level, msg) {
     const time = getKSTDate().toTimeString().slice(0, 8);
-    const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', debug: '🔍', phase: '🚀' };
-    console.log(`[${time}] ${icons[level] || ''} ${msg}`);
+    const tags = { info: '[INFO]', success: '[OK]', warning: '[WARN]', error: '[ERR]', debug: '[DBG]', phase: '[PHASE]' };
+    console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
 
 function formatDuration(ms) {
     const seconds = Math.floor(ms / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
-    
+
     if (hours > 0) {
         return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
     } else if (minutes > 0) {
@@ -86,7 +86,7 @@ function runScript(scriptPath, description) {
     return new Promise((resolve, reject) => {
         log('phase', `${description} 시작...`);
         const startTime = Date.now();
-        
+
         const child = spawn('node', [scriptPath], {
             cwd: path.dirname(scriptPath),
             env: {
@@ -95,10 +95,10 @@ function runScript(scriptPath, description) {
             },
             stdio: 'inherit'
         });
-        
+
         child.on('close', (code) => {
             const duration = Date.now() - startTime;
-            
+
             if (code === 0) {
                 log('success', `${description} 완료 (${formatDuration(duration)})`);
                 resolve({ success: true, duration });
@@ -107,7 +107,7 @@ function runScript(scriptPath, description) {
                 reject(new Error(`${description} 실패`));
             }
         });
-        
+
         child.on('error', (error) => {
             log('error', `${description} 에러: ${error.message}`);
             reject(error);
@@ -120,10 +120,10 @@ function runScript(scriptPath, description) {
  */
 async function setupGeminiAuth() {
     log('phase', 'Gemini CLI 인증 설정...');
-    
+
     try {
         const oauthScript = path.join(__dirname, 'gemini-oauth-manager.js');
-        
+
         if (fs.existsSync(oauthScript)) {
             await runScript(oauthScript, 'OAuth 설정');
         } else {
@@ -145,18 +145,18 @@ async function setupGeminiAuth() {
  */
 async function main() {
     const totalStartTime = Date.now();
-    
+
     log('info', '');
-    log('info', '═' .repeat(60));
+    log('info', '═'.repeat(60));
     log('info', '  📺 유튜버 맛집 크롤링 파이프라인');
-    log('info', '═' .repeat(60));
+    log('info', '═'.repeat(60));
     log('info', `시작 시간: ${getKSTDate().toLocaleString('ko-KR')}`);
     log('info', `데이터 폴더: ${TODAY_FOLDER}`);
     log('info', '');
-    
+
     const args = process.argv.slice(2);
     const startFrom = args.find(a => a.startsWith('--start-from='))?.split('=')[1] || '1';
-    
+
     const results = {
         oauth: null,
         crawl: null,
@@ -164,76 +164,76 @@ async function main() {
         geocode: null,
         insert: null
     };
-    
+
     try {
         // Phase 0: Gemini OAuth 설정
         if (parseInt(startFrom) <= 1) {
             await setupGeminiAuth();
         }
-        
+
         // Phase 1: 채널 영상 수집
         if (parseInt(startFrom) <= 1) {
             log('info', '');
-            log('info', '─' .repeat(60));
+            log('info', '─'.repeat(60));
             log('phase', 'Phase 1: 채널 영상 수집');
-            log('info', '─' .repeat(60));
-            
+            log('info', '─'.repeat(60));
+
             results.crawl = await runScript(
                 path.join(__dirname, 'crawl-channel.js'),
                 '채널 크롤링'
             );
         }
-        
+
         // Phase 2: 주소 추출 및 Gemini 분석
         if (parseInt(startFrom) <= 2) {
             log('info', '');
-            log('info', '─' .repeat(60));
+            log('info', '─'.repeat(60));
             log('phase', 'Phase 2: 주소 추출 및 AI 분석');
-            log('info', '─' .repeat(60));
-            
+            log('info', '─'.repeat(60));
+
             results.extract = await runScript(
                 path.join(__dirname, 'extract-addresses.js'),
                 '주소 추출'
             );
         }
-        
+
         // Phase 3: 좌표 보완 (지오코딩)
         if (parseInt(startFrom) <= 3) {
             log('info', '');
-            log('info', '─' .repeat(60));
+            log('info', '─'.repeat(60));
             log('phase', 'Phase 3: 좌표 보완 (지오코딩)');
-            log('info', '─' .repeat(60));
-            
+            log('info', '─'.repeat(60));
+
             results.geocode = await runScript(
                 path.join(__dirname, 'enrich-coordinates.js'),
                 '좌표 보완'
             );
         }
-        
+
         // Phase 4: DB 저장
         if (parseInt(startFrom) <= 4) {
             log('info', '');
-            log('info', '─' .repeat(60));
+            log('info', '─'.repeat(60));
             log('phase', 'Phase 4: 데이터베이스 저장');
-            log('info', '─' .repeat(60));
-            
+            log('info', '─'.repeat(60));
+
             results.insert = await runScript(
                 path.join(__dirname, 'insert-to-supabase.js'),
                 'DB 저장'
             );
         }
-        
+
         // 완료
         const totalDuration = Date.now() - totalStartTime;
-        
+
         log('info', '');
-        log('info', '═' .repeat(60));
+        log('info', '═'.repeat(60));
         log('success', '🎉 파이프라인 완료!');
-        log('info', '═' .repeat(60));
+        log('info', '═'.repeat(60));
         log('info', `총 소요 시간: ${formatDuration(totalDuration)}`);
         log('info', `종료 시간: ${getKSTDate().toLocaleString('ko-KR')}`);
         log('info', '');
-        
+
         // 로그 저장
         const logFile = path.join(LOG_DIR, `pipeline_${Date.now()}.json`);
         fs.writeFileSync(logFile, JSON.stringify({
@@ -242,19 +242,19 @@ async function main() {
             duration: totalDuration,
             results
         }, null, 2), 'utf-8');
-        
+
         log('info', `로그 저장: ${logFile}`);
-        
+
     } catch (error) {
         const totalDuration = Date.now() - totalStartTime;
-        
+
         log('info', '');
-        log('info', '═' .repeat(60));
+        log('info', '═'.repeat(60));
         log('error', '파이프라인 실패');
-        log('info', '═' .repeat(60));
+        log('info', '═'.repeat(60));
         log('error', `에러: ${error.message}`);
         log('info', `소요 시간: ${formatDuration(totalDuration)}`);
-        
+
         process.exit(1);
     }
 }

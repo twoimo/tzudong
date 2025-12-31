@@ -56,8 +56,8 @@ const TODAY_PATH = path.join(DATA_DIR, TODAY_FOLDER);
 // 로그 함수
 function log(level, msg) {
     const time = getKSTDate().toTimeString().slice(0, 8);
-    const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', debug: '🔍' };
-    console.log(`[${time}] ${icons[level] || ''} ${msg}`);
+    const tags = { info: '[INFO]', success: '[OK]', warning: '[WARN]', error: '[ERR]', debug: '[DBG]' };
+    console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
 
 /**

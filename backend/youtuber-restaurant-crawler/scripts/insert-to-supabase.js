@@ -50,7 +50,7 @@ function getKSTDate() {
 function getTodayFolder() {
     const pipelineDate = process.env.PIPELINE_DATE;
     if (pipelineDate) return pipelineDate;
-    
+
     const now = getKSTDate();
     const yy = String(now.getFullYear()).slice(-2);
     const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -66,8 +66,8 @@ const TODAY_PATH = path.join(DATA_DIR, TODAY_FOLDER);
 // 로그 함수
 function log(level, msg) {
     const time = getKSTDate().toTimeString().slice(0, 8);
-    const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', debug: '🔍' };
-    console.log(`[${time}] ${icons[level] || ''} ${msg}`);
+    const tags = { info: '[INFO]', success: '[OK]', warning: '[WARN]', error: '[ERR]', debug: '[DBG]' };
+    console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
 
 /**
@@ -79,7 +79,7 @@ function generateUniqueId(restaurant) {
         restaurant.youtuber_name || '',
         restaurant.youtube_link || '',
     ];
-    
+
     // 간단한 해시 생성
     const str = components.join('|');
     let hash = 0;
@@ -88,7 +88,7 @@ function generateUniqueId(restaurant) {
         hash = ((hash << 5) - hash) + char;
         hash = hash & hash;
     }
-    
+
     return `yt_${Math.abs(hash).toString(36)}_${Date.now().toString(36)}`;
 }
 
@@ -118,16 +118,16 @@ function normalizeCategory(category) {
         '카페': '카페·디저트',
         '디저트': '카페·디저트',
     };
-    
+
     if (!category) return ['고기']; // 정육왕 기본 카테고리
-    
+
     const normalized = category.toLowerCase();
     for (const [key, value] of Object.entries(categoryMap)) {
         if (normalized.includes(key.toLowerCase())) {
             return [value];
         }
     }
-    
+
     return [category];
 }
 
@@ -142,11 +142,11 @@ function transformRestaurant(restaurant, video) {
         categories: normalizeCategory(restaurant.category),
         status: 'pending',
         source_type: 'youtuber_crawl',
-        
+
         // 유튜버 정보
         youtuber_name: restaurant.youtuber_name || '정육왕',
         youtuber_channel: restaurant.youtuber_channel || '@meatcreator',
-        
+
         // 유튜브 정보
         youtube_link: restaurant.youtube_link,
         youtube_meta: {
@@ -154,27 +154,27 @@ function transformRestaurant(restaurant, video) {
             publishedAt: video?.publishedAt,
             duration: video?.duration,
         },
-        
+
         // 평가 정보
         reasoning_basis: restaurant.reasoning_basis || null,
         tzuyang_review: restaurant.youtuber_review || null,
-        
+
         // 주소 정보
         origin_address: restaurant.address || null,
         road_address: restaurant.geocoded_address || restaurant.address || null,
         jibun_address: null,
         address_elements: {},
-        
+
         // 지오코딩
         lat: restaurant.lat || null,
         lng: restaurant.lng || null,
         geocoding_success: !!(restaurant.lat && restaurant.lng),
         geocoding_false_stage: restaurant.lat ? null : 1,
-        
+
         // 상태
         is_missing: false,
         is_not_selected: false,
-        
+
         // 추가 메타
         map_url: restaurant.map_url || null,
         map_type: restaurant.map_type || null,
@@ -194,13 +194,13 @@ async function insertToSupabase(restaurants) {
         failed: 0,
         errors: []
     };
-    
+
     // 기존 unique_id 로드
     log('info', '기존 데이터 확인 중...');
     const { data: existingData, error: fetchError } = await supabase
         .from('youtuber_restaurant')
         .select('unique_id, youtube_link');
-    
+
     if (fetchError) {
         // 테이블이 없으면 생성 필요
         if (fetchError.message.includes('does not exist')) {
@@ -209,30 +209,30 @@ async function insertToSupabase(restaurants) {
         }
         log('error', `기존 데이터 조회 실패: ${fetchError.message}`);
     }
-    
+
     const existingIds = new Set(existingData?.map(d => d.unique_id) || []);
     const existingLinks = new Set(existingData?.map(d => d.youtube_link) || []);
-    
+
     log('info', `기존 레코드: ${existingIds.size}개`);
-    
+
     // 데이터 삽입
     for (let i = 0; i < restaurants.length; i++) {
         const restaurant = restaurants[i];
-        
+
         // 중복 체크 (unique_id 또는 youtube_link + name)
         if (existingIds.has(restaurant.unique_id)) {
             stats.skipped++;
             continue;
         }
-        
+
         // 같은 youtube_link에서 같은 이름의 맛집이 있는지 확인
         const duplicateKey = `${restaurant.youtube_link}|${restaurant.name}`;
-        
+
         try {
             const { error } = await supabase
                 .from('youtuber_restaurant')
                 .insert(restaurant);
-            
+
             if (error) {
                 stats.failed++;
                 stats.errors.push({ name: restaurant.name, error: error.message });
@@ -246,13 +246,13 @@ async function insertToSupabase(restaurants) {
             stats.errors.push({ name: restaurant.name, error: error.message });
             log('error', `[${i + 1}/${stats.total}] ${restaurant.name} - 예외: ${error.message}`);
         }
-        
+
         // Rate limit 대응
         if ((i + 1) % 50 === 0) {
             await new Promise(resolve => setTimeout(resolve, 500));
         }
     }
-    
+
     return stats;
 }
 
@@ -260,22 +260,22 @@ async function insertToSupabase(restaurants) {
  * 메인 실행
  */
 async function main() {
-    log('info', '=' .repeat(60));
+    log('info', '='.repeat(60));
     log('info', '  Supabase 데이터 삽입 시작');
-    log('info', '=' .repeat(60));
-    
+    log('info', '='.repeat(60));
+
     const startTime = Date.now();
-    
+
     // 입력 파일 찾기
     let inputFile = path.join(TODAY_PATH, 'meatcreator_restaurants.jsonl');
-    
+
     // 오늘 폴더에 없으면 가장 최근 폴더에서 찾기
     if (!fs.existsSync(inputFile)) {
         const folders = fs.readdirSync(DATA_DIR)
             .filter(f => /^\d{2}-\d{2}-\d{2}$/.test(f))
             .sort()
             .reverse();
-        
+
         for (const folder of folders) {
             const filePath = path.join(DATA_DIR, folder, 'meatcreator_restaurants.jsonl');
             if (fs.existsSync(filePath)) {
@@ -285,16 +285,16 @@ async function main() {
             }
         }
     }
-    
+
     if (!fs.existsSync(inputFile)) {
         log('error', '맛집 데이터 파일이 없습니다. 먼저 extract-addresses.js를 실행하세요.');
         process.exit(1);
     }
-    
+
     // 데이터 로드
     const content = fs.readFileSync(inputFile, 'utf-8');
     const videos = content.trim().split('\n').map(line => JSON.parse(line));
-    
+
     // 레스토랑 데이터 추출 및 변환
     const restaurants = [];
     for (const video of videos) {
@@ -303,31 +303,31 @@ async function main() {
             restaurants.push(transformed);
         }
     }
-    
+
     log('info', `총 ${restaurants.length}개 맛집 데이터 로드 완료`);
-    
+
     if (restaurants.length === 0) {
         log('warning', '삽입할 데이터가 없습니다.');
         return;
     }
-    
+
     // Supabase에 삽입
     const stats = await insertToSupabase(restaurants);
-    
+
     // 결과 출력
     const duration = Date.now() - startTime;
-    
+
     log('info', '');
-    log('info', '=' .repeat(60));
+    log('info', '='.repeat(60));
     log('success', '데이터 삽입 완료');
-    log('info', '=' .repeat(60));
+    log('info', '='.repeat(60));
     log('info', `총 레코드: ${stats.total}개`);
     log('success', `성공: ${stats.success}개`);
     log('warning', `스킵: ${stats.skipped}개 (이미 존재)`);
     log('error', `실패: ${stats.failed}개`);
     log('info', `소요 시간: ${Math.round(duration / 1000)}초`);
-    log('info', '=' .repeat(60));
-    
+    log('info', '='.repeat(60));
+
     if (stats.errors.length > 0 && stats.errors.length <= 10) {
         log('error', '실패한 항목:');
         stats.errors.forEach(({ name, error }, idx) => {
