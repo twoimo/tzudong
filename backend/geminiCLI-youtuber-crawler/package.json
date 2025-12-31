@@ -1,5 +1,5 @@
 {
-  "name": "youtube-restaurant-crawler",
+  "name": "geminicli-youtuber-crawler",
   "version": "1.0.0",
   "description": "유튜버 맛집 크롤러 - 정육왕 채널 등의 맛집 데이터 수집",
   "type": "module",

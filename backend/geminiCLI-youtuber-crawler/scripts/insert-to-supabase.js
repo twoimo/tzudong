@@ -1,6 +1,6 @@
 /**
  * 유튜버 맛집 데이터를 Supabase에 저장
- * youtuber_restaurants 테이블에 저장
+ * youtuber_restaurant 테이블에 저장
  */
 
 import fs from 'fs';

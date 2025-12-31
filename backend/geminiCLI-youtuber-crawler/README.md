@@ -51,7 +51,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
 ## 📦 설치
 
 ```bash
-cd backend/youtuber-restaurant-crawler
+cd backend/geminiCLI-youtuber-crawler
 npm install
 ```
 
@@ -80,7 +80,7 @@ npm run insert-db
 ## 📁 디렉토리 구조
 
 ```
-youtuber-restaurant-crawler/
+geminiCLI-youtuber-crawler/
 ├── .gemini/                              # Gemini CLI 설정
 │   ├── oauth_creds.json                  # OAuth 토큰 (자동 갱신)
 │   ├── settings.json                     # CLI 설정 (모델, previewFeatures)
@@ -220,7 +220,7 @@ YouTube Data API
 
 ## 🔗 관련 워크플로우
 
-- `youtube-restaurant-crawler.yml`: 메인 크롤링 파이프라인 (매주 일요일)
+- `youtube-restaurant-crawler.yml`: 메인 크롤링 파이프라인 (geminiCLI-youtuber-crawler 사용)
 - `gemini-oauth-refresh.yml`: OAuth 토큰 자동 갱신 (40분마다)
 
 ## ⚡ 실행 모드

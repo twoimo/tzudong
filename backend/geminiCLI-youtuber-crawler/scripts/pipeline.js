@@ -49,7 +49,7 @@ const TODAY_FOLDER = getTodayFolder();
 const TODAY_PATH = path.join(DATA_DIR, TODAY_FOLDER);
 
 // 로그 디렉토리
-const LOG_DIR = path.resolve(__dirname, '../../log/youtube-restaurant-crawler', TODAY_FOLDER);
+const LOG_DIR = path.resolve(__dirname, '../../log/geminiCLI-youtuber-crawler', TODAY_FOLDER);
 
 // 디렉토리 생성
 [TODAY_PATH, LOG_DIR].forEach(dir => {
