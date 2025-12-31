@@ -408,7 +408,9 @@ async function searchPlaceWithKakao(keyword, category = null) {
 
 // Puppeteer 동시 실행 제한 (세마포어)
 // 리소스 부족으로 인한 Page.enable 타임아웃 방지를 위해 동시 실행 수 제한
-const PUPPETEER_CONCURRENCY = 2;
+// GitHub Actions에서는 병렬 처리 비활성화 (리소스 제한)
+const isGitHubActionsEnv = !!process.env.GITHUB_ACTIONS;
+const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 2;
 let puppeteerActiveCount = 0;
 const puppeteerQueue = [];
 
@@ -729,11 +731,14 @@ async function extractWithGemini(video, transcript) {
     const defaultModel = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
 
     // 시도할 모델 목록 (우선순위 순, 중복 제거)
-    // 3-pro → 3-flash 순서 (2.5 모델 사용 안 함)
-    const allModels = [
-        'gemini-3-pro-preview',    // 1순위
-        'gemini-3-flash-preview'   // 2순위
-    ];
+    // GitHub Actions에서는 gemini-3-pro-preview만 사용 (안정성)
+    // 로컬에서는 3-pro → 3-flash 순서 (2.5 모델 사용 안 함)
+    const allModels = isGitHubActions
+        ? ['gemini-3-pro-preview']  // GitHub Actions: pro만
+        : [
+            'gemini-3-pro-preview',    // 1순위
+            'gemini-3-flash-preview'   // 2순위
+        ];
 
     // 사용 가능한 모델만 필터링 (블랙리스트 제외)
     const availableModels = allModels.filter(m => !isModelBlacklisted(m));
