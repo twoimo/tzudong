@@ -10,8 +10,8 @@
 
 1. **영상 목록 수집**: YouTube Data API로 채널의 모든 영상 수집
 2. **지도 URL 추출**: 영상 description에서 구글/네이버/카카오 지도 URL 추출
-3. **자막 수집**: Puppeteer로 maestra.ai / tubetranscript.com에서 자막 수집
-4. **Gemini AI 분석**: 영상 내용에서 맛집 정보 추출 (OAuth 인증 + 웹 검색)
+3. **자막 수집 (Phase 1)**: Puppeteer 병렬 3개로 maestra.ai / tubetranscript.com에서 자막 수집
+4. **Gemini AI 분석 (Phase 2)**: 수집된 자막으로 맛집 정보 추출 (병렬 10개)
    - **지도 URL이 없어도** 자막/제목/설명에서 맛집 추출
    - 웹 검색으로 정확한 상호명/주소 확인
 5. **지오코딩**: 지도 URL 형태에 맞는 API로 좌표 변환
@@ -57,24 +57,27 @@ npm install
 
 ## 🚀 실행
 
-### 전체 파이프라인
+### 전체 파이프라인 (권장)
 ```bash
-npm run pipeline
+bun run full
 ```
 
-### 개별 단계
+### 개별 단계 (2-Phase 구조)
 ```bash
 # 1. 채널 영상 목록 수집
-npm run crawl
+bun run crawl
 
-# 2. 주소 추출 및 Gemini 분석
-npm run extract-addresses
+# 2. Phase 1: 자막 수집 (Puppeteer 병렬 3개)
+bun run transcripts
 
-# 3. 좌표 보완 (지오코딩)
-npm run geocode
+# 3. Phase 2: Gemini 분석 (병렬 10개)
+bun run extract
 
-# 4. DB 저장
-npm run insert-db
+# 4. 좌표 보완 (지오코딩)
+bun run geocode
+
+# 5. DB 저장
+bun run insert
 ```
 
 ## 📁 디렉토리 구조
@@ -90,12 +93,14 @@ geminiCLI-youtuber-crawler/
 ├── data/
 │   └── yy-mm-dd/
 │       ├── meatcreator_videos.json       # 영상 목록
-│       └── meatcreator_restaurants.jsonl # 추출된 맛집 데이터
+│       ├── transcripts.jsonl             # 수집된 자막 (Phase 1)
+│       └── meatcreator_restaurants.jsonl # 추출된 맛집 데이터 (Phase 2)
 ├── prompts/
 │   └── extract_restaurant.txt            # Gemini 프롬프트
 ├── scripts/
 │   ├── crawl-channel.js                  # 채널 크롤링
-│   ├── extract-addresses.js              # 주소 추출 + Gemini 분석
+│   ├── collect-transcripts.js            # Phase 1: 자막 수집 (Puppeteer)
+│   ├── extract-addresses.js              # Phase 2: Gemini 분석 (자막 로드)
 │   ├── enrich-coordinates.js             # 좌표 보완 (지오코딩)
 │   ├── insert-to-supabase.js             # DB 저장
 │   ├── gemini-oauth-manager.js           # OAuth 토큰 관리
@@ -165,12 +170,13 @@ GitHub Actions에서는 자동으로 OAuth 토큰을 관리합니다:
 | RPM  | 120  | 60             |
 | RPD  | 1500 | 1000           |
 
-### 병렬 처리
+### 병렬 처리 (2-Phase 분리)
 
-| 환경 | Gemini 동시 처리 | Puppeteer 동시 실행 |
-| ---- | ---- | ---- |
-| 로컬 | 10개 | 2개 |
-| GitHub Actions | 10개 | 1개 (리소스 제한) |
+| Phase | 환경 | 동시 처리 수 | 비고 |
+| ----- | ---- | ------------ | ---- |
+| Phase 1 (자막) | 로컬 | 3개 | Puppeteer 브라우저 재사용 |
+| Phase 1 (자막) | GitHub Actions | 1개 | 리소스 제한 |
+| Phase 2 (Gemini) | 공통 | 10개 | 자막 수집 분리 후 증가 |
 
 - **RPM 자동 조절**: 분당 60개 초과 시 대기
 - **RPD 초과 시**: 자동 종료 + 데이터 저장
@@ -205,31 +211,32 @@ Puppeteer를 사용하여 외부 서비스에서 자막을 수집합니다:
 YouTube Data API
     │
     ▼
-[영상 목록 수집]
-    │
-    ▼
-[Description에서 지도 URL 추출]
-    │
-    ▼
-[Puppeteer로 자막 수집]
-    │
-    ▼
-[Gemini AI 분석]
-    │
-    ├── 맛집 이름
-    ├── 주소
-    ├── 카테고리
-    ├── 유튜버 리뷰
-    └── 신뢰도
-    │
-    ▼
-[카카오 API 지오코딩]
-    │
-    ├── 위도 (lat)
-    └── 경도 (lng)
-    │
-    ▼
-[Supabase 저장]
+[영상 목록 수집] ─────────────────────┐
+    │                                 │
+    ▼                                 │
+[Description에서 지도 URL 추출]       │
+    │                                 │
+    ▼                                 │
+┌─────────────────────────────────────┘
+│   Phase 1: 자막 수집 (Puppeteer 병렬 3개)
+│   └── transcripts.jsonl 저장
+│
+└─► Phase 2: Gemini AI 분석 (병렬 10개)
+        │
+        ├── 맛집 이름
+        ├── 주소
+        ├── 카테고리
+        ├── 유튜버 리뷰
+        └── 신뢰도
+        │
+        ▼
+    [카카오 API 지오코딩]
+        │
+        ├── 위도 (lat)
+        └── 경도 (lng)
+        │
+        ▼
+    [Supabase 저장]
 ```
 
 ## 🔗 GitHub Actions 워크플로우
