@@ -202,11 +202,35 @@ const TODAY_FOLDER = getTodayFolder();
 const TODAY_PATH = path.join(DATA_DIR, TODAY_FOLDER);
 const PROMPT_FILE = path.resolve(__dirname, '../prompts/extract_restaurant.txt');
 
-// 로그 함수
-function log(level, msg) {
+// 로그 함수 (개선됨)
+const DEBUG_MODE = process.env.DEBUG === 'true';
+const loggedMessages = new Set(); // 중복 로그 방지
+
+function log(level, msg, videoId = null) {
+    // debug 레벨은 DEBUG_MODE일 때만 출력
+    if (level === 'debug' && !DEBUG_MODE) return;
+
     const time = getKSTDate().toTimeString().slice(0, 8);
-    const icons = { info: 'ℹ️', success: '✅', warning: '⚠️', error: '❌', debug: '🔍' };
-    console.log(`[${time}] ${icons[level] || ''} ${msg}`);
+    const icons = {
+        info: 'ℹ️',
+        success: '✅',
+        warning: '⚠️',
+        error: '❌',
+        debug: '🔍',
+        progress: '📊'
+    };
+
+    // 병렬 처리 시 videoId 포함 (첫 8자)
+    const prefix = videoId ? `[${videoId.slice(0, 8)}]` : '';
+    const logLine = `[${time}] ${icons[level] || ''} ${prefix} ${msg}`;
+
+    // 중복 메시지 필터링 (1초 내 동일 메시지)
+    const msgKey = `${level}:${msg}`;
+    if (loggedMessages.has(msgKey)) return;
+    loggedMessages.add(msgKey);
+    setTimeout(() => loggedMessages.delete(msgKey), 1000);
+
+    console.log(logLine);
 }
 
 /**
@@ -1373,10 +1397,11 @@ async function main() {
             }
         }
 
-        // 진행 상황 출력
+        // 진행 상황 출력 (더 깔끔하게)
         if (batchCount >= LOG_BATCH_SIZE) {
             const rateStats = rateLimiter.getStats();
-            log('info', `📊 진행: ${stats.processed}/${videosToProcess.length} 처리, ${stats.restaurantsFound}개 맛집, RPM: ${rateStats.rpm}, RPD: ${rateStats.rpd}`);
+            const percent = Math.round((stats.processed / videosToProcess.length) * 100);
+            log('progress', `${percent}% 완료 | ${stats.processed}/${videosToProcess.length} | 맛집: ${stats.restaurantsFound}개 | RPD: ${rateStats.rpd}`);
             batchCount = 0;
         }
 
