@@ -973,7 +973,8 @@ async function main() {
                     processedVideos.set(data.videoId, {
                         descriptionHash: descHash,
                         lineIndex: idx,
-                        restaurants: data.restaurants?.length || 0
+                        restaurants: data.restaurants?.length || 0,
+                        is_restaurant_video: data.is_restaurant_video ?? null
                     });
                 } catch { }
             }
@@ -1050,8 +1051,16 @@ async function main() {
         if (existing) {
             // description이 변경되었는지 확인
             if (existing.descriptionHash === currentDescHash) {
-                stats.skipped++;
-                continue;
+                // 재처리 조건: restaurants=0 이고 is_restaurant_video=true (맛집 영상인데 실패)
+                // 스킵 조건: restaurants>0 이거나, is_restaurant_video=false (맛집 아닌 영상 - 정상 분석됨)
+                const shouldRetry = existing.restaurants === 0 && existing.is_restaurant_video === true;
+                if (shouldRetry) {
+                    log('info', `[${i + 1}/${videos.length}] 🔄 이전 실패 영상 재처리: ${video.title.slice(0, 35)}...`);
+                    stats.updated++;
+                } else {
+                    stats.skipped++;
+                    continue;
+                }
             } else {
                 log('info', `[${i + 1}/${videos.length}] 📝 description 변경 감지 - 재처리: ${video.title.slice(0, 35)}...`);
                 stats.updated++;
@@ -1063,10 +1072,27 @@ async function main() {
             await checkTokenMidPipeline();
         }
 
+        // 모든 모델이 블랙리스트되었는지 확인
+        const allModels = ['gemini-3-pro-preview', 'gemini-3-flash-preview', 'gemini-2.5-flash', 'gemini-2.5-pro'];
+        const allBlacklisted = allModels.every(m => blacklistedModels.has(m));
+        if (allBlacklisted) {
+            log('error', '모든 Gemini 모델이 블랙리스트됨 - 프로세스 종료');
+            log('info', '토큰 갱신 후 다시 시도하세요: bun run oauth');
+            await commitProgress(`⚠️ 중단: 모델 오류 (${TODAY_FOLDER})`);
+            process.exit(1);
+        }
+
         log('info', `[${i + 1}/${videos.length}] 처리 중: ${video.title.slice(0, 40)}...`);
 
         try {
             const result = await processVideo(video);
+
+            // Gemini 분석 실패 시 (모든 모델 실패) - 저장하지 않고 스킵 (다음 실행 시 재시도)
+            if (!result) {
+                log('warning', `  → Gemini 분석 실패 - 다음 실행 시 재시도`);
+                stats.failed++;
+                continue;
+            }
 
             // description 해시 추가
             result.descriptionHash = currentDescHash;
