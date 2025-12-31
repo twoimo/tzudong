@@ -1,9 +1,7 @@
-name: 🔐 Gemini OAuth 토큰 자동 갱신
+name: 🔐 Gemini OAuth 토큰 수동 갱신
 
 on:
-  schedule:
-    - cron: "*/45 * * * *" # 45분마다 (토큰 60분 유효, 여유 있게 갱신)
-  workflow_dispatch:
+  workflow_dispatch:  # 수동 실행만 허용
 
 jobs:
   refresh:
@@ -19,7 +17,7 @@ jobs:
 
       - name: 🔄 Refresh Token
         run: |
-          GEMINI_DIR="backend/youtuber-restaurant-crawler/.gemini"
+          GEMINI_DIR="backend/geminiCLI-youtuber-crawler/.gemini"
 
           # 토큰 만료 시간 확인
           EXPIRY=$(jq -r '.expiry_date // 0' "$GEMINI_DIR/oauth_creds.json")
@@ -59,7 +57,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add backend/youtuber-restaurant-crawler/.gemini/oauth_creds.json 2>/dev/null || true
+          git add backend/geminiCLI-youtuber-crawler/.gemini/oauth_creds.json 2>/dev/null || true
 
           if git diff --staged --quiet; then
             echo "📭 커밋할 변경사항 없음 (토큰 갱신 실패?)"
