@@ -10,7 +10,7 @@
     "geocode": "bun run scripts/enrich-coordinates.js",
     "insert": "bun run scripts/insert-to-supabase.js",
     "pipeline": "bun run scripts/pipeline.js",
-    "full": "bun run crawl && bun run extract && bun run geocode && bun run insert",
+    "full": "bun run oauth && bun run crawl && bun run extract && bun run geocode && bun run insert",
     "oauth": "bun run scripts/gemini-oauth-manager.js"
   },
   "dependencies": {
