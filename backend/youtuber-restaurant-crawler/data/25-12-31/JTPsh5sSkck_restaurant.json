@@ -1,0 +1,34 @@
+{
+  "restaurants": [
+    {
+      "name": "마초스테이크",
+      "phone": "070-4333-1331",
+      "address": "서울 강남구 논현로159길 10 지상1층 102호",
+      "lat": null,
+      "lng": null,
+      "address_source": "description | google_search",
+      "map_url": "https://naver.me/xDJguOUk",
+      "map_type": "naver",
+      "category": "양식",
+      "youtuber_review": "가오픈 기간 고기 굽는 방식에 아쉬움이 있었으나 피드백 후 개선됨. 리베라 스테이크 소스와 유사한 짠맛 간장맛이 비슷하다고 평가받음. 양파 입자와 소스 간장 밸런스 조절 필요. 소스를 살짝 끼얹어 고기와 조화롭게 먹는 것을 추천. 굽기 타이밍이 좋아 부드러운 고기 맛을 유지. 한국 철판 스테이크 시장 발전에 긍정적인 영향을 기대함.",
+      "reasoning_basis": "[00:20] '마초 스테이크' 언급, [01:18] '마초 스테이크' 피드백, 영상 설명 내 '압구정 마초스테이크' 네이버 지도 URL, Google 검색으로 주소/전화번호 확인",
+      "confidence": "high"
+    },
+    {
+      "name": "리베라 스테이크",
+      "phone": "+81-3-3446-6941",
+      "address": "3-6-18 Higashigotanda, Shinagawa 141-0022, Tokyo Prefecture, Japan",
+      "lat": null,
+      "lng": null,
+      "address_source": "transcript | google_search",
+      "map_url": null,
+      "map_type": "none",
+      "category": "양식",
+      "youtuber_review": "50년 전통의 고기 굽는 방식(겉면 살짝 익혀 레어 형태로 제공, 불판에 추가로 익혀 먹음)을 고수. 고기 기름만 사용하며 빼는 타이밍이 중요함. 일본인들도 소스를 다 부어 먹지 않고 개인 기호에 맞게 먹는 것이 좋다고 사장님이 설명. 마초 스테이크의 소스가 리베라 소스의 짠맛 간장맛을 비슷하게 내려고 했다고 평가됨.",
+      "reasoning_basis": "[00:00] '도쿄 리베라 스테이크' 언급, [02:20] '리베라 스테이크' 고기 굽는 방식 언급, Google 검색으로 주소/전화번호 확인",
+      "confidence": "high"
+    }
+  ],
+  "is_restaurant_video": true,
+  "video_type": "리뷰"
+}

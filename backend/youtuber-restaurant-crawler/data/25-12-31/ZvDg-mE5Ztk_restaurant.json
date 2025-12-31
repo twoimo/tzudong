@@ -1,0 +1,20 @@
+{
+  "restaurants": [
+    {
+      "name": "만게츠",
+      "phone": "0507-1323-9596",
+      "address": "울산광역시 남구 달삼로 53 1층",
+      "lat": null,
+      "lng": null,
+      "address_source": "description",
+      "map_url": "https://naver.me/xHgdBLdc",
+      "map_type": "naver",
+      "category": "일식",
+      "youtuber_review": "울산 삼산동에 위치한 정통 일본식 야끼니꾸 전문점입니다. 일본 현지에서 점장까지 경험한 사장님이 운영하며, 시판 제품이 아닌 사과, 바나나, 레드와인 등을 넣어 직접 끓인 특제 타레(소스)를 사용합니다. 프라임급 살치살, 안창살 등 고품질 고기와 한우 꾸리살을 사용한 아보카도 육회가 별미입니다. 특히 기린 생맥주 관리가 철저하여 울산 1등 퀄리티를 자부합니다.",
+      "reasoning_basis": "영상 설명의 네이버 지도 링크(https://naver.me/xHgdBLdc)와 '울산 만게츠' 언급, 자막의 [00:32] '울산에서 야끼니꾸 만게츠를 운영하고 있는' 자기소개를 통해 확인했습니다. Google 검색을 통해 정확한 도로명 주소와 전화번호를 보완했습니다.",
+      "confidence": "high"
+    }
+  ],
+  "is_restaurant_video": true,
+  "video_type": "맛집탐방"
+}

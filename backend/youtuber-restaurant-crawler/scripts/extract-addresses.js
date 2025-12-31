@@ -29,6 +29,9 @@ for (const envPath of envPaths) {
 // GEMINI_API_KEY가 설정되어 있으면 OAuth 대신 API 키 모드를 사용하려고 해서 오류 발생
 const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
 
+// 실패한 모델 블랙리스트 (세션 동안 유지)
+const blacklistedModels = new Set();
+
 // 한국 시간 (KST)
 function getKSTDate() {
     const now = new Date();
@@ -512,20 +515,18 @@ async function extractWithGemini(video, transcript) {
 
     fs.writeFileSync(tempPromptFile, promptTemplate, 'utf-8');
 
-    // GitHub Actions 환경 감지 (로컬: 3.0-pro, Actions: 2.5-pro)
+    // GitHub Actions 환경 감지
     const isGitHubActions = !!process.env.GITHUB_ACTIONS;
-    const defaultModel = isGitHubActions ? 'gemini-2.5-pro' : 'gemini-3.0-pro';
+    const defaultModel = process.env.GEMINI_MODEL || (isGitHubActions ? 'gemini-2.5-flash' : 'gemini-3-pro-preview');
 
-    // 시도할 모델 목록 (우선순위 순)
-    const modelsToTry = [
-        process.env.GEMINI_MODEL || defaultModel,
-        'gemini-2.5-pro',
+    // 시도할 모델 목록 (우선순위 순, 중복 제거)
+    const modelsToTry = [...new Set([
+        defaultModel,
         'gemini-2.5-flash',
-        'gemini-3.0-pro',
-        'gemini-3.0-flash',
-        'gemini-3.0-pro-preview',
-        'gemini-3.0-flash-preview'
-    ];
+        'gemini-3-pro-preview',
+        'gemini-3-flash-preview',
+        'gemini-2.5-pro'
+    ])];
 
     let lastError = null;
     let result = null;
@@ -533,6 +534,13 @@ async function extractWithGemini(video, transcript) {
     try {
         for (let i = 0; i < modelsToTry.length; i++) {
             const model = modelsToTry[i];
+
+            // 블랙리스트된 모델 스킵
+            if (blacklistedModels.has(model)) {
+                log('debug', `모델 ${model} 블랙리스트됨 - 스킵`);
+                continue;
+            }
+
             try {
                 log('debug', `Gemini 모델 시도 [${i + 1}/${modelsToTry.length}]: ${model}`);
 
@@ -575,6 +583,17 @@ async function extractWithGemini(video, transcript) {
                     if (errorMatch) {
                         log('debug', `상세 오류: ${errorMatch[1].slice(0, 300)}`);
                     }
+
+                    // 쿼타 소진, 엔티티 없음, 또는 일반 API 오류 시 블랙리스트에 추가
+                    // "[object Object]" 형태의 오류도 API 문제로 간주
+                    if (combinedOutput.includes('exhausted your capacity') ||
+                        combinedOutput.includes('Requested entity was not found') ||
+                        combinedOutput.includes('quota') ||
+                        combinedOutput.includes('[object Object]')) {
+                        blacklistedModels.add(model);
+                        log('warning', `모델 ${model} 블랙리스트에 추가됨 (API 오류)`);
+                    }
+
                     lastError = new Error(`API error with ${model}`);
                     // Rate limit 방지를 위해 5초 대기
                     await sleep(5000);
