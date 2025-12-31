@@ -127,16 +127,25 @@ geminiCLI-youtuber-crawler/
 
 GitHub Actions에서는 자동으로 OAuth 토큰을 관리합니다:
 
-1. **토큰 갱신**: 40분마다 자동 갱신 (`gemini-oauth-refresh.yml`)
+1. **자동 토큰 갱신**: Gemini CLI가 access_token 만료 시 자동으로 refresh_token으로 갱신
 2. **설정 복사**: `.gemini/` 폴더의 파일들을 `~/.gemini/`로 복사
 3. **커밋**: 갱신된 `oauth_creds.json`을 자동 커밋
 
+#### 토큰 수명
+
+| 토큰 종류 | 수명 | 비고 |
+| ---- | ---- | ---- |
+| `access_token` | 1시간 | CLI가 자동 갱신 |
+| `refresh_token` | 6개월 미사용 시 | 매일 실행으로 유지 |
+
+> ⚠️ **주의**: OAuth consent screen이 "Testing" 상태면 refresh_token이 7일 만료됩니다. 프로덕션으로 게시하세요.
+
 ### 사용 모델
 
-| 순위 | 모델                    | 비고                  |
-| ---- | ----------------------- | --------------------- |
-| 1    | `gemini-3-pro-preview`  | 먼저 소진             |
-| 2    | `gemini-3-flash-preview`| pro 소진 후 사용      |
+| 환경 | 모델 | 비고 |
+| ---- | ---- | ---- |
+| GitHub Actions | `gemini-3-pro-preview` | 안정성 우선 |
+| 로컬 | `gemini-3-pro-preview` → `gemini-3-flash-preview` | Fallback 지원 |
 
 > 쿼타 소진 시 자동으로 다음 모델로 전환. 사용 가능한 모델만 미리 필터링.
 
@@ -157,7 +166,12 @@ GitHub Actions에서는 자동으로 OAuth 토큰을 관리합니다:
 | RPD  | 1500 | 1000           |
 
 ### 병렬 처리
-- **동시 처리**: 5개 영상
+
+| 환경 | Gemini 동시 처리 | Puppeteer 동시 실행 |
+| ---- | ---- | ---- |
+| 로컬 | 10개 | 2개 |
+| GitHub Actions | 10개 | 1개 (리소스 제한) |
+
 - **RPM 자동 조절**: 분당 60개 초과 시 대기
 - **RPD 초과 시**: 자동 종료 + 데이터 저장
 
@@ -218,10 +232,28 @@ YouTube Data API
 [Supabase 저장]
 ```
 
-## 🔗 관련 워크플로우
+## 🔗 GitHub Actions 워크플로우
 
-- `youtube-restaurant-crawler.yml`: 메인 크롤링 파이프라인 (geminiCLI-youtuber-crawler 사용)
-- `gemini-oauth-refresh.yml`: OAuth 토큰 자동 갱신 (40분마다)
+### 파일 구조
+
+```
+.github/workflows/
+└── daily-extract.yml    # 매일 KST 오전 6시 자동 실행
+```
+
+### 필요한 GitHub Secrets
+
+| Secret | 설명 |
+| ------ | ---- |
+| `KAKAO_REST_API_KEY` | 카카오 지도 API |
+| `SUPABASE_URL` | Supabase URL |
+| `SUPABASE_ANON_KEY` | Supabase 키 |
+
+### 최초 설정
+
+1. 로컬에서 `gemini` 명령어로 로그인
+2. `.gemini/oauth_creds.json` 커밋
+3. 이후 GitHub Actions가 자동으로 토큰 갱신 및 커밋
 
 ## ⚡ 실행 모드
 
