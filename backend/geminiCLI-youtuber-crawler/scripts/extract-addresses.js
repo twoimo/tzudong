@@ -8,7 +8,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 import { execSync, spawn, spawnSync } from 'child_process';
-import { checkTokenMidPipeline, recordPipelineStart } from './gemini-oauth-manager.js';
+import { recordPipelineStart } from './gemini-oauth-manager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1387,10 +1387,8 @@ async function main() {
     lastCommitCount = 0;  // 리셋 (이미 상위에서 선언됨)
 
     for (let i = 0; i < videosToProcess.length; i += BATCH_SIZE) {
-        // 50분마다 토큰 체크
-        if (stats.processed > 0 && stats.processed % 50 === 0) {
-            await checkTokenMidPipeline();
-        }
+        // Gemini CLI가 access_token 만료 시 자동으로 refresh_token으로 갱신하므로
+        // 수동 토큰 체크 불필요
 
         const batch = videosToProcess.slice(i, i + BATCH_SIZE);
         const results = await Promise.all(batch.map(item => processVideoWithRateLimit(item)));

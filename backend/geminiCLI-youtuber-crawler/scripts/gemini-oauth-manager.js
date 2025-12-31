@@ -244,6 +244,8 @@ export function recordPipelineStart() {
 
 /**
  * 50분 경과 체크 (파이프라인 중간에 호출)
+ * 참고: Gemini CLI가 access_token 만료 시 자동으로 refresh_token으로 갱신하므로
+ * 이 함수 호출은 선택 사항임
  */
 export async function checkTokenMidPipeline() {
     if (!pipelineStartTime) return true;
