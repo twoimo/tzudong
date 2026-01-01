@@ -1205,7 +1205,7 @@ async function main() {
     // 배치 설정
     let batchCount = 0;
     const LOG_BATCH_SIZE = 20;     // 20개마다 진행 상황 로그 (로그 I/O 최적화)
-    const COMMIT_BATCH_SIZE = 25;  // 25개마다 자동 저장
+    const COMMIT_BATCH_SIZE = 1;   // 1개마다 즉시 저장
     let lastCommitCount = 0;
 
     // GitHub Actions 환경인지 확인
