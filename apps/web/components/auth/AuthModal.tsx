@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +30,14 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+
+  // 이전에 동의한 적 있으면 localStorage에서 불러오기
+  useEffect(() => {
+    const hasAgreed = localStorage.getItem('privacy_policy_agreed');
+    if (hasAgreed === 'true') {
+      setPrivacyAgreed(true);
+    }
+  }, []);
 
   const resetForm = () => {
     setEmail("");
@@ -177,7 +185,15 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
               type="button"
               variant="outline"
               className="w-full"
-              onClick={handleGoogleLogin}
+              onClick={() => {
+                // Google 로그인은 신규 가입도 동시에 처리되므로 동의 확인 필요
+                if (!privacyAgreed) {
+                  setIsPrivacyModalOpen(true);
+                  toast.info("처음 이용하시는 경우 개인정보 처리방침 동의가 필요합니다");
+                  return;
+                }
+                handleGoogleLogin();
+              }}
               disabled={isGoogleLoading}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -200,6 +216,9 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
               </svg>
               {isGoogleLoading ? "연결 중..." : "Google로 계속하기"}
             </Button>
+            <p className="text-xs text-center text-muted-foreground mt-2">
+              처음 이용하시는 경우 회원가입이 진행됩니다
+            </p>
           </TabsContent>
 
           <TabsContent value="signup">
@@ -545,6 +564,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
             </Button>
             <Button onClick={() => {
               setPrivacyAgreed(true);
+              localStorage.setItem('privacy_policy_agreed', 'true');
               setIsPrivacyModalOpen(false);
             }}>
               동의하기
