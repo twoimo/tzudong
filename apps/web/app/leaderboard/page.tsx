@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Trophy, Medal, Award, Stamp } from "lucide-react";
@@ -102,15 +103,19 @@ export default function LeaderboardPage() {
                                         {getRankIcon(user.rank)}
                                     </div>
 
-                                    {/* 사용자명 */}
+
+                                    {/* 사용자명 - 클릭하면 프로필 페이지로 이동 */}
                                     <div className="flex-1 min-w-0 max-w-xs">
-                                        <span className={cn(
-                                            "font-semibold text-base truncate block",
-                                            isCurrentUser && "text-primary"
-                                        )}>
+                                        <Link
+                                            href={`/user/${user.id}`}
+                                            className={cn(
+                                                "font-semibold text-base truncate block hover:underline cursor-pointer",
+                                                isCurrentUser ? "text-primary" : "hover:text-primary"
+                                            )}
+                                        >
                                             {user.username}
                                             {isCurrentUser && " (나)"}
-                                        </span>
+                                        </Link>
                                     </div>
 
                                     {/* 통계 - 인라인 스타일 */}
