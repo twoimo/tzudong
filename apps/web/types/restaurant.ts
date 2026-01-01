@@ -21,15 +21,18 @@ export interface Restaurant extends BaseRestaurant {
     address?: string; // road_address 또는 jibun_address의 가상 속성
     category?: string[]; // categories의 별칭
 
+    // 검색 관련 (주간 인기 검색용)
+    weekly_search_count?: number; // 주간 검색 횟수
+
     // 마커 그룹화 시 병합된 데이터 (배열)
     mergedYoutubeLinks?: string[]; // 병합된 모든 유튜브 링크
     mergedTzuyangReviews?: string[]; // 병합된 모든 쯔양 리뷰
     mergedYoutubeMetas?: YoutubeMeta[]; // 병합된 모든 유튜브 메타
-    
+
     // 마커 클릭 시 동일 name+jibun_address 레코드 병합 데이터
     youtube_links?: string[]; // 모든 유튜브 링크 배열
     tzuyang_reviews?: string[]; // 모든 쯔양 리뷰 배열
-    
+
     // 병합된 원본 레코드들
     mergedRestaurants?: BaseRestaurant[]; // 병합된 모든 레스토랑 레코드
 }

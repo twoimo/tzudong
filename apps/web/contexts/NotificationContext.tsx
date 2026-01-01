@@ -11,10 +11,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { user } = useAuth();
+    const userId = user?.id; // [OPTIMIZATION] user 객체 대신 id만 추출
 
-    // 알림 로드 함수
+    // 알림 로드 함수 - [OPTIMIZATION] userId 의존성
     const loadNotifications = useCallback(async () => {
-        if (!user) {
+        if (!userId) {
             setNotifications([]);
             setIsLoading(false);
             return;
@@ -24,14 +25,17 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
             const { data, error } = await (supabase
                 .from('notifications') as any)
                 .select('*')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .order('created_at', { ascending: false })
                 .limit(50); // 최근 50개만 로드
 
             if (error) {
-                // 알림 테이블이 존재하지 않는 경우 조용히 무시
-                if (error.code === 'PGRST205' || error.message?.includes('notifications')) {
-                    console.warn('알림 시스템이 아직 설정되지 않았습니다. 관리자에게 문의하세요.');
+                // 테이블이 없는 경우 조용히 무시
+                if (error.code === 'PGRST116' || error.code === 'PGRST204' || error.message?.includes('relation') || error.message?.includes('notifications')) {
+                    // 개발 환경에서만 정보 표시
+                    if (process.env.NODE_ENV === 'development') {
+                        console.info('[NotificationContext] 알림 테이블이 존재하지 않음 (정상, 무시됨)');
+                    }
                 } else {
                     console.error('알림 로드 실패:', error);
                 }
@@ -54,16 +58,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
         } finally {
             setIsLoading(false);
         }
-    }, [user]);
+    }, [userId]); // [OPTIMIZATION] user → userId
 
     // 초기 알림 로드
     useEffect(() => {
         loadNotifications();
     }, [loadNotifications]);
 
-    // 실시간 알림 구독
+    // 실시간 알림 구독 - [OPTIMIZATION] userId 의존성
     useEffect(() => {
-        if (!user) return;
+        if (!userId) return;
 
         const channel = supabase
             .channel('notifications')
@@ -73,7 +77,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                     event: 'INSERT',
                     schema: 'public',
                     table: 'notifications',
-                    filter: `user_id=eq.${user.id}`
+                    filter: `user_id=eq.${userId}`
                 },
                 (payload) => {
                     const newNotification: Notification = {
@@ -89,16 +93,16 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
                 }
             )
             .subscribe((status) => {
-                // 알림 테이블이 존재하지 않는 경우 경고 로그만 출력
-                if (status === 'CHANNEL_ERROR') {
-                    console.warn('알림 실시간 구독 실패 - 테이블이 존재하지 않을 수 있습니다.');
+                // 개발 환경에서만 한 번만 경고 표시
+                if (status === 'CHANNEL_ERROR' && process.env.NODE_ENV === 'development') {
+                    console.info('[NotificationContext] 알림 실시간 구독 실패 (notifications 테이블이 없을 수 있음, 무시됨)');
                 }
             });
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user]);
+    }, [userId]); // [OPTIMIZATION] user → userId
 
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -327,7 +331,7 @@ export const createReviewApprovedNotification = async (
     restaurantName: string,
     customData?: Record<string, unknown>
 ) => {
-    const title = '리뷰가 승인되었습니다 ✅';
+    const title = '리뷰 승인 완료';
     const message = `"${restaurantName}" 리뷰가 관리자에 의해 승인되었습니다!`;
 
     try {

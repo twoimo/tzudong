@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { X, Send, CheckCircle2 } from "lucide-react";
 import { RESTAURANT_CATEGORIES } from "@/types/restaurant";
 import { saveDraft, getDraft, deleteDraft } from "@/lib/submissionDraftDB";
+import { cn } from "@/lib/utils";
 
 interface RestaurantSubmissionModalProps {
     isOpen: boolean;
@@ -267,9 +268,35 @@ export default function RestaurantSubmissionModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                    <div className="flex items-start justify-between gap-4">
+            <DialogContent className={cn(
+                // 모바일: 전체 화면, 둥근 모서리 없음
+                "max-lg:max-w-full max-lg:w-full max-lg:h-full max-lg:rounded-none max-lg:m-0",
+                // 데스크탑: 기존 스타일
+                "lg:max-w-2xl",
+                // 공통: overflow 및 높이
+                "max-h-[90vh] overflow-y-auto"
+            )}>
+                <DialogHeader className="relative">
+                    {/* 자동 저장 상태 표시 - 좌측 상단 */}
+                    {lastSavedAt && (
+                        <div className="absolute -top-1 left-0 flex items-center gap-1 text-[10px] text-muted-foreground">
+                            {isSaving ? (
+                                <>
+                                    <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
+                                    <span>저장 중</span>
+                                </>
+                            ) : (
+                                <>
+                                    <CheckCircle2 className="h-2.5 w-2.5 text-green-600" />
+                                    <span className="text-green-600">
+                                        저장됨 {lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    <div className="flex items-start justify-between gap-2 pt-3">
                         <div className="flex-1">
                             <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
                                 {submissionMode === 'new' ? '쯔동여지도 제보하기' : '쯔양에게 맛집 제보하기'}
@@ -281,25 +308,6 @@ export default function RestaurantSubmissionModal({
                                 }
                             </DialogDescription>
                         </div>
-
-                        {/* 자동 저장 상태 표시 */}
-                        {lastSavedAt && (
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
-                                {isSaving ? (
-                                    <>
-                                        <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full" />
-                                        <span>저장 중...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                        <span className="text-green-600">
-                                            저장됨 ({lastSavedAt.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })})
-                                        </span>
-                                    </>
-                                )}
-                            </div>
-                        )}
                     </div>
                 </DialogHeader>
 

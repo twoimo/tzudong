@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, memo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo, memo, forwardRef } from 'react';
 import { EvaluationRecord } from '@/types/evaluation';
 import {
   Table,
@@ -187,7 +187,291 @@ const FilterDropdown = memo(function FilterDropdown({
   );
 });
 
+// 테이블 행 Props 타입
+interface EvaluationTableRowProps {
+  record: EvaluationRecord;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onApprove: (record: EvaluationRecord) => void;
+  onDelete: (record: EvaluationRecord) => void;
+  onRestore?: (record: EvaluationRecord) => void;
+  onEdit?: (record: EvaluationRecord) => void;
+  loading?: boolean;
+  thumbnailState?: 'loading' | 'loaded' | 'error';
+  thumbnailUrl?: string;
+  onLoadThumbnail: (videoId: string) => void;
+}
 
+// 메모이제이션된 테이블 행 컴포넌트
+const EvaluationTableRow = memo(forwardRef<HTMLTableRowElement, EvaluationTableRowProps>(
+  function EvaluationTableRow(
+    {
+      record,
+      isExpanded,
+      onToggleExpand,
+      onApprove,
+      onDelete,
+      onRestore,
+      onEdit,
+      loading,
+      thumbnailState,
+      thumbnailUrl,
+      onLoadThumbnail,
+    },
+    ref
+  ) {
+    const videoId = getYoutubeVideoId(record.youtube_link);
+
+    // 썸네일 로딩 트리거
+    useEffect(() => {
+      if (videoId && !thumbnailState) {
+        onLoadThumbnail(videoId);
+      }
+    }, [videoId, thumbnailState, onLoadThumbnail]);
+
+    return (
+      <TableRow
+        ref={ref}
+        className={cn("group hover:bg-muted/50 transition-colors cursor-pointer", isExpanded && "bg-muted/30 border-l-4 border-l-primary")}
+        onClick={onToggleExpand}
+      >
+        <TableCell className="sticky left-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleExpand();
+            }}
+          >
+            {isExpanded ? (
+              <ChevronUp className="w-4 h-4" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </Button>
+        </TableCell>
+
+        <TableCell className="sticky left-12">
+          <div className="flex items-center gap-3">
+            {videoId && (
+              <a
+                href={record.youtube_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="w-24 h-16 bg-muted rounded flex items-center justify-center hover:opacity-80 transition-opacity relative overflow-hidden">
+                  {/* 로딩 상태 */}
+                  {thumbnailState === 'loading' && (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  )}
+
+                  {/* 성공 상태 - 썸네일 표시 */}
+                  {thumbnailState === 'loaded' && thumbnailUrl && (
+                    <img
+                      src={thumbnailUrl}
+                      alt="유튜브 썸네일"
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+
+                  {/* 에러 상태 또는 기본 상태 - YouTube 아이콘 표시 */}
+                  {(thumbnailState === 'error' || !thumbnailState) && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                      <svg
+                        className="w-6 h-6 text-muted-foreground"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </a>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium line-clamp-2">
+                {record.youtube_meta?.title || record.youtube_link}
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR')}
+              </div>
+            </div>
+          </div>
+        </TableCell>
+
+        {/* 평가 컬럼 값들 */}
+        <TableCell className="text-center text-sm">
+          {record.status === 'not_selected' ? '-' : (record.evaluation_results?.visit_authenticity?.eval_value ?? '-')}
+        </TableCell>
+
+        <TableCell className="text-center text-sm">
+          {record.status === 'not_selected' ? '-' : (record.evaluation_results?.rb_inference_score?.eval_value ?? '-')}
+        </TableCell>
+
+        <TableCell className="text-center text-sm">
+          {record.status === 'not_selected' ? '-' : (record.evaluation_results?.rb_grounding_TF?.eval_value !== undefined
+            ? (record.evaluation_results.rb_grounding_TF.eval_value
+              ? <Badge variant="default" className="bg-green-600">True</Badge>
+              : <Badge variant="destructive">False</Badge>)
+            : '-')}
+        </TableCell>
+
+        <TableCell className="text-center text-sm">
+          {record.status === 'not_selected' ? '-' : (record.evaluation_results?.review_faithfulness_score?.eval_value ?? '-')}
+        </TableCell>
+
+        <TableCell className="text-center text-sm">
+          {record.status === 'not_selected' ? '-' : (
+            record.geocoding_success === true
+              ? <Badge variant="default" className="bg-green-600">True</Badge>
+              : record.geocoding_success === false && record.geocoding_false_stage === null
+                ? <Badge variant="outline" className="bg-yellow-100">Failed</Badge>
+                : record.geocoding_success === false && record.geocoding_false_stage !== null
+                  ? <Badge variant="destructive">False</Badge>
+                  : '-'
+          )}
+        </TableCell>
+
+        <TableCell className="text-center text-sm">
+          {record.status === 'not_selected' ? '-' : (record.evaluation_results?.category_validity_TF?.eval_value !== undefined
+            ? (record.evaluation_results.category_validity_TF.eval_value
+              ? <Badge variant="default" className="bg-green-600">True</Badge>
+              : <Badge variant="destructive">False</Badge>)
+            : '-')}
+        </TableCell>
+
+        <TableCell className="text-center text-sm">
+          {record.status === 'not_selected' ? '-' : (record.evaluation_results?.category_TF?.eval_value !== undefined
+            ? (record.evaluation_results.category_TF.eval_value
+              ? <Badge variant="default" className="bg-green-600">True</Badge>
+              : <Badge variant="destructive">False</Badge>)
+            : '-')}
+        </TableCell>
+
+        {/* 고정 컬럼: 상태 */}
+        <TableCell className="text-center sticky right-[180px]">
+          {getStatusBadge(record.status)}
+        </TableCell>
+
+        {/* 고정 컬럼: 액션 */}
+        <TableCell className="sticky right-0">
+          <div className="flex gap-2 justify-center">
+            {record.status === 'deleted' ? (
+              // 삭제된 레코드 - 되돌리기 버튼만 표시
+              <>
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRestore?.(record);
+                  }}
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Undo2 className="w-4 h-4 mr-1" />
+                  되돌리기
+                </Button>
+              </>
+            ) : record.is_missing || record.is_not_selected || !record.geocoding_success ? (
+              // 지오코딩 실패한 케이스 (Missing, 평가 미대상, 지오코딩 실패)
+              <>
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.(record);
+                  }}
+                  disabled={loading}
+                  variant="outline"
+                >
+                  <Edit className="w-4 h-4 mr-1" />
+                  수정
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(record);
+                  }}
+                  disabled={loading}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApprove(record);
+                  }}
+                  disabled={loading || !canApprove(record)}
+                >
+                  <Check className="w-4 h-4 mr-1" />
+                  승인
+                </Button>
+
+                {onEdit && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(record);
+                    }}
+                    disabled={loading}
+                  >
+                    <Edit className="w-4 h-4 mr-1" />
+                    수정
+                  </Button>
+                )}
+
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(record);
+                  }}
+                  disabled={loading}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
+
+          {!record.geocoding_success && record.status !== 'missing' && (
+            <div className="text-xs text-destructive mt-1 text-center flex items-center justify-center gap-1">
+              <AlertCircle className="w-3 h-3" />
+              지오코딩 실패
+            </div>
+          )}
+        </TableCell>
+      </TableRow>
+    );
+  }
+), (prevProps, nextProps) => {
+  // 최적화된 비교 함수 - 중요한 props만 비교
+  return (
+    prevProps.record.id === nextProps.record.id &&
+    prevProps.record.status === nextProps.record.status &&
+    prevProps.record.geocoding_success === nextProps.record.geocoding_success &&
+    prevProps.isExpanded === nextProps.isExpanded &&
+    prevProps.loading === nextProps.loading &&
+    prevProps.thumbnailState === nextProps.thumbnailState &&
+    prevProps.thumbnailUrl === nextProps.thumbnailUrl
+  );
+});
 
 export function EvaluationTable({
   records,
@@ -307,42 +591,58 @@ export function EvaluationTable({
   // 썸네일 로딩 상태와 URL을 통합 관리
   const [thumbnailData, setThumbnailData] = useState<Record<string, { state: 'loading' | 'loaded' | 'error'; url?: string }>>({});
 
+  // 로딩 중인 썸네일 추적 (리렌더링 방지를 위해 useRef 사용)
+  const loadingThumbnailsRef = useRef<Set<string>>(new Set());
+
   const loadThumbnail = useCallback((videoId: string) => {
-    if (thumbnailData[videoId]?.state === 'loaded' || thumbnailData[videoId]?.state === 'error') {
+    // 이미 로딩 중이거나 완료된 경우 스킵
+    if (loadingThumbnailsRef.current.has(videoId)) {
       return;
     }
 
-    setThumbnailData(prev => ({ ...prev, [videoId]: { state: 'loading' } }));
+    // 함수형 업데이트로 현재 상태 확인
+    setThumbnailData(prev => {
+      if (prev[videoId]?.state === 'loaded' || prev[videoId]?.state === 'error') {
+        return prev;
+      }
 
-    // 가장 확실한 썸네일부터 시도: default -> hqdefault -> mqdefault -> maxresdefault
-    const tryThumbnail = (quality: string) => {
-      const img = new Image();
-      const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+      // 로딩 시작
+      loadingThumbnailsRef.current.add(videoId);
 
-      img.onload = () => {
-        setThumbnailData(prev => ({ ...prev, [videoId]: { state: 'loaded', url: thumbnailUrl } }));
+      // 가장 확실한 썸네일부터 시도: default -> hqdefault -> mqdefault -> maxresdefault
+      const tryThumbnail = (quality: string) => {
+        const img = new Image();
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${quality}.jpg`;
+
+        img.onload = () => {
+          loadingThumbnailsRef.current.delete(videoId);
+          setThumbnailData(p => ({ ...p, [videoId]: { state: 'loaded', url: thumbnailUrl } }));
+        };
+
+        img.onerror = () => {
+          // 다음 품질 시도
+          if (quality === 'default') {
+            tryThumbnail('hqdefault');
+          } else if (quality === 'hqdefault') {
+            tryThumbnail('mqdefault');
+          } else if (quality === 'mqdefault') {
+            tryThumbnail('maxresdefault');
+          } else {
+            // 모든 시도 실패
+            loadingThumbnailsRef.current.delete(videoId);
+            setThumbnailData(p => ({ ...p, [videoId]: { state: 'error' } }));
+          }
+        };
+
+        img.src = thumbnailUrl;
       };
 
-      img.onerror = () => {
-        // 다음 품질 시도
-        if (quality === 'default') {
-          tryThumbnail('hqdefault');
-        } else if (quality === 'hqdefault') {
-          tryThumbnail('mqdefault');
-        } else if (quality === 'mqdefault') {
-          tryThumbnail('maxresdefault');
-        } else {
-          // 모든 시도 실패
-          setThumbnailData(prev => ({ ...prev, [videoId]: { state: 'error' } }));
-        }
-      };
+      // default부터 시작 (모든 영상에 존재)
+      tryThumbnail('default');
 
-      img.src = thumbnailUrl;
-    };
-
-    // default부터 시작 (모든 영상에 존재)
-    tryThumbnail('default');
-  }, [thumbnailData]);
+      return { ...prev, [videoId]: { state: 'loading' } };
+    });
+  }, []); // 의존성 배열 비움 - 함수형 업데이트 사용으로 상태 의존성 제거
 
   // 레코드가 변경될 때 더 이상 표시되지 않는 썸네일 데이터 정리
   useEffect(() => {
@@ -374,7 +674,7 @@ export function EvaluationTable({
         <div className="border rounded-lg">
           <Table>
             <TableHeader className="sticky top-0 bg-background z-20">
-              <TableRow>
+              <TableRow className="hover:bg-transparent">
                 <TableHead className="w-12 sticky left-0 bg-background z-10">
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -565,7 +865,7 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
       <div className="border rounded-lg">
         <Table>
           <TableHeader className="sticky top-0 bg-background z-20">
-            <TableRow>
+            <TableRow className="hover:bg-transparent">
               <TableHead className="w-12 sticky left-0 bg-background z-10">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -741,245 +1041,27 @@ Failed = 지오코딩 자체 실패 (geocoding_success = false, geocoding_false_
             {records.flatMap((record) => {
               const videoId = getYoutubeVideoId(record.youtube_link);
 
-              // 썸네일 로딩 상태 확인 및 로드
+              // 썸네일 정보 조회
               const thumbnailInfo = videoId ? thumbnailData[videoId] : null;
-              const thumbnailState = thumbnailInfo?.state;
-              const thumbnailUrl = thumbnailInfo?.url;
-              if (videoId && !thumbnailState) {
-                loadThumbnail(videoId);
-              }
 
               const mainRow = (
-                <TableRow
+                <EvaluationTableRow
                   key={record.id}
-                  className={cn("group hover:bg-muted/50 transition-colors cursor-pointer", expandedId === record.id && "bg-muted/30 border-l-4 border-l-primary")}
                   ref={(el) => {
                     if (el) rowRefs.current[record.id] = el;
                   }}
-                  onClick={() => toggleExpand(record.id)}
-                >
-                  <TableCell className="sticky left-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleExpand(record.id);
-                      }}
-                    >
-                      {expandedId === record.id ? (
-                        <ChevronUp className="w-4 h-4" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4" />
-                      )}
-                    </Button>
-                  </TableCell>
-
-                  <TableCell className="sticky left-12">
-                    <div className="flex items-center gap-3">
-                      {videoId && (
-                        <a
-                          href={record.youtube_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex-shrink-0"
-                        >
-                          <div className="w-24 h-16 bg-muted rounded flex items-center justify-center hover:opacity-80 transition-opacity relative overflow-hidden">
-                            {/* 로딩 상태 */}
-                            {thumbnailState === 'loading' && (
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                              </div>
-                            )}
-
-                            {/* 성공 상태 - 썸네일 표시 */}
-                            {thumbnailState === 'loaded' && thumbnailUrl && (
-                              <img
-                                src={thumbnailUrl}
-                                alt="유튜브 썸네일"
-                                className="w-full h-full object-cover"
-                              />
-                            )}
-
-                            {/* 에러 상태 또는 기본 상태 - YouTube 아이콘 표시 */}
-                            {(thumbnailState === 'error' || !thumbnailState) && (
-                              <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                                <svg
-                                  className="w-6 h-6 text-muted-foreground"
-                                  fill="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
-                                </svg>
-                              </div>
-                            )}
-                          </div>
-                        </a>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium line-clamp-2">
-                          {record.youtube_meta?.title || record.youtube_link}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          {new Date(record.youtube_meta?.publishedAt || record.created_at).toLocaleDateString('ko-KR')}
-                        </div>
-                      </div>
-                    </div>
-                  </TableCell>
-
-                  {/* 평가 컬럼 값들 */}
-                  <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (record.evaluation_results?.visit_authenticity?.eval_value ?? '-')}
-                  </TableCell>
-
-                  <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (record.evaluation_results?.rb_inference_score?.eval_value ?? '-')}
-                  </TableCell>
-
-                  <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (record.evaluation_results?.rb_grounding_TF?.eval_value !== undefined
-                      ? (record.evaluation_results.rb_grounding_TF.eval_value
-                        ? <Badge variant="default" className="bg-green-600">True</Badge>
-                        : <Badge variant="destructive">False</Badge>)
-                      : '-')}
-                  </TableCell>
-
-                  <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (record.evaluation_results?.review_faithfulness_score?.eval_value ?? '-')}
-                  </TableCell>
-
-                  <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (
-                      record.geocoding_success === true
-                        ? <Badge variant="default" className="bg-green-600">True</Badge>
-                        : record.geocoding_success === false && record.geocoding_false_stage === null
-                          ? <Badge variant="outline" className="bg-yellow-100">Failed</Badge>
-                          : record.geocoding_success === false && record.geocoding_false_stage !== null
-                            ? <Badge variant="destructive">False</Badge>
-                            : '-'
-                    )}
-                  </TableCell>
-
-                  <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (record.evaluation_results?.category_validity_TF?.eval_value !== undefined
-                      ? (record.evaluation_results.category_validity_TF.eval_value
-                        ? <Badge variant="default" className="bg-green-600">True</Badge>
-                        : <Badge variant="destructive">False</Badge>)
-                      : '-')}
-                  </TableCell>
-
-                  <TableCell className="text-center text-sm">
-                    {record.status === 'not_selected' ? '-' : (record.evaluation_results?.category_TF?.eval_value !== undefined
-                      ? (record.evaluation_results.category_TF.eval_value
-                        ? <Badge variant="default" className="bg-green-600">True</Badge>
-                        : <Badge variant="destructive">False</Badge>)
-                      : '-')}
-                  </TableCell>
-
-                  {/* 고정 컬럼: 상태 */}
-                  <TableCell className="text-center sticky right-[180px]">
-                    {getStatusBadge(record.status)}
-                  </TableCell>
-
-                  {/* 고정 컬럼: 액션 */}
-                  <TableCell className="sticky right-0">
-                    <div className="flex gap-2 justify-center">
-                      {record.status === 'deleted' ? (
-                        // 삭제된 레코드 - 되돌리기 버튼만 표시
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRestore?.(record);
-                            }}
-                            disabled={loading}
-                            className="bg-blue-600 hover:bg-blue-700"
-                          >
-                            <Undo2 className="w-4 h-4 mr-1" />
-                            되돌리기
-                          </Button>
-                        </>
-                      ) : record.is_missing || record.is_not_selected || !record.geocoding_success ? (
-                        // 지오코딩 실패한 케이스 (Missing, 평가 미대상, 지오코딩 실패)
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onEdit?.(record);
-                            }}
-                            disabled={loading}
-                            variant="outline"
-                          >
-                            <Edit className="w-4 h-4 mr-1" />
-                            수정
-                          </Button>
-
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(record);
-                            }}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onApprove(record);
-                            }}
-                            disabled={loading || !canApprove(record)}
-                          >
-                            <Check className="w-4 h-4 mr-1" />
-                            승인
-                          </Button>
-
-                          {onEdit && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onEdit(record);
-                              }}
-                              disabled={loading}
-                            >
-                              <Edit className="w-4 h-4 mr-1" />
-                              수정
-                            </Button>
-                          )}
-
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDelete(record);
-                            }}
-                            disabled={loading}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </>
-                      )}
-                    </div>
-
-                    {!record.geocoding_success && record.status !== 'missing' && (
-                      <div className="text-xs text-destructive mt-1 text-center flex items-center justify-center gap-1">
-                        <AlertCircle className="w-3 h-3" />
-                        지오코딩 실패
-                      </div>
-                    )}
-                  </TableCell>
-                </TableRow>
+                  record={record}
+                  isExpanded={expandedId === record.id}
+                  onToggleExpand={() => toggleExpand(record.id)}
+                  onApprove={onApprove}
+                  onDelete={onDelete}
+                  onRestore={onRestore}
+                  onEdit={onEdit}
+                  loading={loading}
+                  thumbnailState={thumbnailInfo?.state}
+                  thumbnailUrl={thumbnailInfo?.url}
+                  onLoadThumbnail={loadThumbnail}
+                />
               );
 
               const detailRow = expandedId === record.id ? (

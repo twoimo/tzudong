@@ -4,8 +4,8 @@
 
 # set -e 제거 - jq 파싱 실패 등에서 스크립트가 멈추지 않도록
 
-# Gemini 모델 설정 (gemini-3-flash-preview 사용)
-export GEMINI_MODEL="${GEMINI_MODEL:-gemini-3-flash-preview}"
+# Gemini 모델 설정 (gemini-2.5-flash 사용)
+export GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-flash}"
 
 # 한국 시간대 설정 (KST, UTC+9)
 export TZ="Asia/Seoul"

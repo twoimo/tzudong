@@ -4,11 +4,15 @@
 
 /* 스크롤바 숨김 유틸리티 */
 .scrollbar-hide {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
+
 .scrollbar-hide::-webkit-scrollbar {
-  display: none;  /* Chrome, Safari and Opera */
+  display: none;
+  /* Chrome, Safari and Opera */
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
@@ -69,6 +73,9 @@ All colors MUST be HSL.
     --ring: 0 74% 42%;
 
     --radius: 0.5rem;
+
+    /* 모바일 하단 네비게이션 높이 (동적 업데이트) */
+    --mobile-bottom-nav-height: 60px;
 
     --sidebar-background: 38 30% 98%;
     --sidebar-foreground: 24 10% 10%;
@@ -136,6 +143,58 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground font-serif tracking-tight;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+  }
+
+  /* 초기 로딩 화면 - CSS로만 구현하여 hydration 충돌 방지 */
+  /* GPU 가속 및 성능 최적화 적용 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: linear-gradient(to bottom right, hsl(var(--background)), hsl(var(--muted)));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 300ms ease-out;
+    /* GPU 가속 최적화 */
+    will-change: opacity;
+    transform: translateZ(0);
+    /* CSS Containment - 레이아웃 재계산 방지 */
+    contain: layout style paint;
+  }
+
+  /* 로딩 완료 시 숨김 */
+  body.loading-complete::before {
+    opacity: 0;
+    pointer-events: none;
+    will-change: auto; /* 완료 후 GPU 메모리 해제 */
+  }
+
+  /* 로딩 화면 내용은 별도 div로 처리 */
+  #initial-loading-content {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 300ms ease-out;
+    /* GPU 가속 최적화 */
+    will-change: opacity;
+    transform: translateZ(0);
+    /* CSS Containment */
+    contain: layout style paint;
+  }
+
+  body.loading-complete #initial-loading-content {
+    opacity: 0;
+    display: none;
+    will-change: auto;
   }
 }
 
@@ -214,6 +273,17 @@ div[style*="z-index"]>div>.custom-marker {
 
 .selected-marker {
   animation: pulse 2s infinite !important;
+}
+
+/* 페이드인 애니메이션 (위치 이동 없음) */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 /* 네이버 지도 로고 숨기기 CSS 제거됨 (약관 준수) */

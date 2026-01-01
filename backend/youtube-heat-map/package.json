@@ -1,0 +1,18 @@
+{
+  "name": "youtube-heat-map",
+  "version": "1.0.0",
+  "description": "YouTube Most Replayed Heatmap Scraper",
+  "main": "scripts/collect.js",
+  "type": "module",
+  "scripts": {
+    "collect": "node scripts/collect.js"
+  },
+  "dependencies": {
+    "puppeteer": "^22.0.0",
+    "puppeteer-extra": "^3.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -240,9 +240,10 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
         staleTime: 5 * 60 * 1000, // 5분 동안 fresh 상태 유지
         gcTime: 10 * 60 * 1000, // 10분 동안 캐시 유지
         queryFn: async () => {
+            // [OPTIMIZATION] 필요한 필드만 선택하여 네트워크 전송량 및 파싱 시간 감소
             let query = supabase
                 .from("restaurants")
-                .select("*")
+                .select("id, name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
                 .eq("status", "approved") // status가 approved인 것만 조회
                 .order("name"); // 이름순으로 정렬
 
@@ -288,10 +289,30 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
                 throw error;
             }
 
+            // 승인된 리뷰 수 조회
+            const restaurantIds = ((data || []) as any[]).map(r => r.id);
+            let verifiedCountMap = new Map<string, number>();
+
+            if (restaurantIds.length > 0) {
+                const { data: reviewCounts } = await supabase
+                    .from('reviews')
+                    .select('restaurant_id')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('is_verified', true);
+
+                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                });
+            }
+
             // 병합 로직 적용
             const restaurants = mergeRestaurants(data || []);
 
-            return restaurants;
+            // 승인된 리뷰 수 추가
+            return restaurants.map(r => ({
+                ...r,
+                verified_review_count: verifiedCountMap.get(r.id) || 0
+            })) as Restaurant[];
         },
         enabled,
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함

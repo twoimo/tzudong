@@ -43,25 +43,37 @@ const RegionSelector = ({ selectedRegion, onRegionChange, onRegionSelect, classN
   const regionCounts = useMemo(() => {
     const counts: Record<string, number> = {};
 
+    // 특수 지역 키워드 매핑 (욕지도/울릉도는 상위 지역보다 먼저 체크해야 함)
+    const specialRegions: Record<string, string> = {
+      '울릉도': '울릉',
+      '욕지도': '욕지'
+    };
+
     restaurants.forEach((restaurant) => {
       const address = restaurant.road_address || restaurant.jibun_address || '';
 
-      // 각 지역에 대해 확인
-      REGIONS.forEach((region) => {
-        if (region === "울릉도") {
-          if (address.includes('울릉')) {
-            counts[region] = (counts[region] || 0) + 1;
-          }
-        } else if (region === "욕지도") {
-          if (address.includes('욕지')) {
-            counts[region] = (counts[region] || 0) + 1;
-          }
-        } else {
+      // 1. 특수 지역 먼저 체크 (욕지도, 울릉도)
+      let matched = false;
+      for (const [region, keyword] of Object.entries(specialRegions)) {
+        if (address.includes(keyword)) {
+          counts[region] = (counts[region] || 0) + 1;
+          matched = true;
+          break;
+        }
+      }
+
+      // 2. 특수 지역에 매칭되지 않았으면 일반 지역 체크
+      if (!matched) {
+        for (const region of REGIONS) {
+          // 특수 지역은 이미 위에서 처리했으니 스킵
+          if (region in specialRegions) continue;
+
           if (address.includes(region)) {
             counts[region] = (counts[region] || 0) + 1;
+            break;
           }
         }
-      });
+      }
     });
 
     return counts;

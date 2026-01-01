@@ -2,7 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, X, PenSquare, Plus, ChevronLeft, ChevronRight, ArrowLeft, Heart, Clock } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,9 @@ import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
+import { useDeviceType } from "@/hooks/useDeviceType";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { RestaurantReviewsPanel } from "@/components/stamp/RestaurantReviewsPanel";
 
 // 지역 목록
 const REGIONS = [
@@ -144,12 +147,33 @@ interface RestaurantCardProps {
     restaurant: Restaurant;
     visited: boolean;
     isSelected: boolean;
+    currentThumbnailIndex: number;
+    onThumbnailChange: (index: number) => void;
     onClick: (restaurant: Restaurant) => void;
 }
 
-const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: RestaurantCardProps) => {
-    const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnailIndex, onThumbnailChange, onClick }: RestaurantCardProps) => {
+    // 병합된 YouTube 링크 배열 가져오기
+    const youtubeLinks = (restaurant as any).mergedYoutubeLinks ||
+        (restaurant.youtube_link ? [restaurant.youtube_link] : []);
+
+    // 현재 인덱스의 썸네일 URL 생성
+    const currentIndex = currentThumbnailIndex % youtubeLinks.length;
+    const thumbnailUrl = youtubeLinks[currentIndex] ? getYouTubeThumbnailUrl(youtubeLinks[currentIndex]) : null;
     const category = parseCategory(restaurant.category || (restaurant as any).categories);
+
+    // 다음/이전 썸네일로 이동
+    const handlePrevThumbnail = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newIndex = currentIndex === 0 ? youtubeLinks.length - 1 : currentIndex - 1;
+        onThumbnailChange(newIndex);
+    };
+
+    const handleNextThumbnail = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const newIndex = currentIndex === youtubeLinks.length - 1 ? 0 : currentIndex + 1;
+        onThumbnailChange(newIndex);
+    };
 
     return (
         <Card
@@ -170,10 +194,45 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: Resta
                                 "w-full h-full object-cover transition-all duration-300",
                                 visited ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
+                            loading="lazy"
                         />
+
+                        {/* 화살표 버튼 - 2개 이상의 썸네일이 있을 때만 표시 */}
+                        {youtubeLinks.length > 1 && (
+                            <>
+                                <button
+                                    onClick={handlePrevThumbnail}
+                                    className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="이전 썸네일"
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={handleNextThumbnail}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-colors"
+                                    aria-label="다음 썸네일"
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+
+                                {/* 점 인디케이터 */}
+                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                    {youtubeLinks.map((_: string, index: number) => (
+                                        <div
+                                            key={index}
+                                            className={cn(
+                                                "w-1.5 h-1.5 rounded-full transition-colors",
+                                                index === currentIndex ? "bg-white" : "bg-white/40"
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                            </>
+                        )}
+
                         {visited && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-red-500 font-bold text-4xl sm:text-5xl transform -rotate-12 border-4 border-red-500 rounded-lg p-2 opacity-90">
+                                <div className="text-red-500 font-bold text-5xl sm:text-6xl transform -rotate-12 border-4 border-red-500 rounded-lg px-3 py-2 opacity-90">
                                     CLEAR
                                 </div>
                             </div>
@@ -198,7 +257,7 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, onClick }: Resta
                         )}
                     </div>
                     <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                        리뷰 {restaurant.review_count || 0}
+                        리뷰 {(restaurant as any).verified_review_count ?? restaurant.review_count ?? 0}
                     </span>
                 </div>
             </div>
@@ -217,6 +276,7 @@ interface RestaurantRowProps {
 const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: RestaurantRowProps) => {
     const category = parseCategory(restaurant.category || (restaurant as any).categories);
     const thumbnailUrl = restaurant.youtube_link ? getYouTubeThumbnailUrl(restaurant.youtube_link) : null;
+    const reviewCount = (restaurant as any).verified_review_count ?? restaurant.review_count ?? 0;
 
     return (
         <TableRow
@@ -234,6 +294,8 @@ const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: Restau
                                 src={thumbnailUrl}
                                 alt={`${restaurant.name} 썸네일`}
                                 className="w-full h-full object-cover"
+                                loading="lazy"
+                                decoding="async"
                             />
                         </div>
                     )}
@@ -250,7 +312,7 @@ const RestaurantRow = memo(({ restaurant, visited, isSelected, onClick }: Restau
             <TableCell className="text-muted-foreground text-sm truncate max-w-[400px]">
                 {restaurant.road_address || restaurant.jibun_address}
             </TableCell>
-            <TableCell className="text-center">{restaurant.review_count || 0}</TableCell>
+            <TableCell className="text-center">{reviewCount}</TableCell>
         </TableRow>
     );
 });
@@ -259,6 +321,7 @@ RestaurantRow.displayName = 'RestaurantRow';
 export default function StampPage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
+    const { isMobileOrTablet, isDesktop } = useDeviceType();
 
     // --- State ---
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -273,6 +336,9 @@ export default function StampPage() {
     const [sortColumn, setSortColumn] = useState<SortColumn>("fanVisits");
     const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
+    // 모바일/태블릿 필터 확장 상태
+    const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+
     // Right Panel State
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRightPanelVisible, setIsRightPanelVisible] = useState(false);
@@ -283,9 +349,13 @@ export default function StampPage() {
     // Review Detail State
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+    const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
 
     // User Stamp Data
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
+
+    // 카드별 썸네일 인덱스 상태 (병합된 맛집의 여러 썸네일 중 현재 표시 중인 인덱스)
+    const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
 
     // --- Data Fetching: User Stamps ---
     const { data: userReviewData = [] } = useQuery({
@@ -333,7 +403,27 @@ export default function StampPage() {
                     max_results: 100
                 });
                 if (error) throw error;
-                return restaurants || [];
+                if (!restaurants || restaurants.length === 0) return [];
+
+                // 승인된 리뷰 수 조회
+                const restaurantIds = restaurants.map((r: any) => r.id);
+                const { data: reviewCounts } = await supabase
+                    .from('reviews')
+                    .select('restaurant_id')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('is_verified', true);
+
+                // 승인된 리뷰 수 카운트
+                const verifiedCountMap = new Map<string, number>();
+                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                });
+
+                // 맛집에 승인된 리뷰 수 추가
+                return restaurants.map((r: any) => ({
+                    ...r,
+                    verified_review_count: verifiedCountMap.get(r.id) || 0
+                }));
             } catch (error) {
                 console.error('맛집 검색 중 오류:', error);
                 return [];
@@ -363,8 +453,28 @@ export default function StampPage() {
                 if (error) throw error;
                 if (!restaurants || restaurants.length === 0) return { restaurants: [], nextCursor: null };
 
+                // 승인된 리뷰 수 조회
+                const restaurantIds = (restaurants as any[]).map(r => r.id);
+                const { data: reviewCounts } = await supabase
+                    .from('reviews')
+                    .select('restaurant_id')
+                    .in('restaurant_id', restaurantIds)
+                    .eq('is_verified', true);
+
+                // 승인된 리뷰 수 카운트
+                const verifiedCountMap = new Map<string, number>();
+                (reviewCounts as any[])?.forEach((r: { restaurant_id: string }) => {
+                    verifiedCountMap.set(r.restaurant_id, (verifiedCountMap.get(r.restaurant_id) || 0) + 1);
+                });
+
+                // 맛집에 승인된 리뷰 수 추가
+                const restaurantsWithCount = (restaurants as any[]).map(r => ({
+                    ...r,
+                    verified_review_count: verifiedCountMap.get(r.id) || 0
+                }));
+
                 const nextCursor = restaurants.length === 50 ? pageParam + 50 : null;
-                return { restaurants, nextCursor };
+                return { restaurants: restaurantsWithCount, nextCursor };
             } catch (error) {
                 console.error('맛집 데이터 조회 중 오류:', error);
                 return { restaurants: [], nextCursor: null };
@@ -467,12 +577,12 @@ export default function StampPage() {
         return result;
     }, [restaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
-    // --- 클라이언트 측 페이지네이션: 50개씩 표시 ---
-    const [displayLimit, setDisplayLimit] = useState(50);
+    // --- 클라이언트 측 페이지네이션: 20개씩 표시 (성능 최적화) ---
+    const [displayLimit, setDisplayLimit] = useState(20);
 
     // 필터 변경 시 표시 개수 리셋
     useEffect(() => {
-        setDisplayLimit(50);
+        setDisplayLimit(20);
     }, [filters, sortColumn, sortDirection, searchQuery]);
 
     // 현재 표시할 맛집 목록 (displayLimit까지만)
@@ -489,7 +599,7 @@ export default function StampPage() {
 
     const loadMoreRestaurants = useCallback(() => {
         if (hasMoreToDisplay) {
-            setDisplayLimit(prev => prev + 50);
+            setDisplayLimit(prev => prev + 20);
         }
     }, [hasMoreToDisplay]);
 
@@ -612,10 +722,83 @@ export default function StampPage() {
 
 
     // --- Handlers ---
-    const handleRestaurantClick = useCallback((restaurant: Restaurant) => {
+    const handleRestaurantClick = useCallback(async (restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
+
+        // 리뷰 데이터 prefetch로 바텀 시트 열리기 전에 미리 로드
+        await queryClient.prefetchInfiniteQuery({
+            queryKey: ['restaurant-reviews', restaurant.id],
+            queryFn: async ({ pageParam = 0 }) => {
+                try {
+                    const { data: reviewsData, error } = await supabase
+                        .from('reviews')
+                        .select('*')
+                        .eq('restaurant_id', restaurant.id)
+                        .eq('is_verified', true)
+                        .order('is_pinned', { ascending: false })
+                        .order('created_at', { ascending: false })
+                        .range(pageParam, pageParam + 19) as any;
+
+                    if (error) throw error;
+                    if (!reviewsData || reviewsData.length === 0) return { reviews: [], nextCursor: null };
+
+                    // User Profiles
+                    const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
+                    const { data: profilesData } = await supabase
+                        .from('profiles')
+                        .select('user_id, nickname')
+                        .in('user_id', userIds);
+                    const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, p.nickname]));
+
+                    // Likes
+                    const reviewIds = reviewsData.map((r: any) => r.id);
+                    const { data: likesData } = await supabase
+                        .from('review_likes')
+                        .select('review_id, user_id')
+                        .in('review_id', reviewIds) as any;
+
+                    const likesMap = new Map<string, { count: number; isLiked: boolean }>();
+                    reviewIds.forEach((reviewId: string) => {
+                        const likesForReview = likesData?.filter((like: any) => like.review_id === reviewId) || [];
+                        const isLiked = user ? likesForReview.some((like: any) => like.user_id === user.id) : false;
+                        likesMap.set(reviewId, { count: likesForReview.length, isLiked });
+                    });
+
+                    const reviews = reviewsData.map((review: any) => {
+                        const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
+                        return {
+                            id: review.id,
+                            userId: review.user_id,
+                            restaurantName: restaurant.name || '알 수 없음',
+                            restaurantCategories: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category || '기타'],
+                            userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                            visitedAt: review.visited_at,
+                            submittedAt: review.created_at || '',
+                            content: review.content,
+                            isVerified: review.is_verified || false,
+                            isPinned: review.is_pinned || false,
+                            isEditedByAdmin: review.is_edited_by_admin || false,
+                            admin_note: review.admin_note || null,
+                            photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
+                            category: review.categories?.[0] || review.category,
+                            likeCount: likesInfo.count,
+                            isLikedByUser: likesInfo.isLiked,
+                        };
+                    }) as Review[];
+
+                    const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
+                    return { reviews, nextCursor };
+                } catch (error) {
+                    console.error('리뷰 데이터 조회 중 오류:', error);
+                    return { reviews: [], nextCursor: null };
+                }
+            },
+            initialPageParam: 0,
+        });
+
+        // prefetch 완료 후 바텀 시트 열기
         setIsRightPanelVisible(true);
-    }, []);
+    }, [queryClient, user]);
 
     const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
@@ -782,20 +965,43 @@ export default function StampPage() {
                                 </p>
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* View Toggle */}
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                                    title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
-                                >
-                                    {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
-                                </Button>
+                                {/* View Toggle - 데스크톱에서만 표시 */}
+                                {!isMobileOrTablet && (
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                                        title={viewMode === 'grid' ? "리스트 뷰로 보기" : "그리드 뷰로 보기"}
+                                    >
+                                        {viewMode === 'grid' ? <List className="h-5 w-5" /> : <Grid className="h-5 w-5" />}
+                                    </Button>
+                                )}
                             </div>
                         </div>
 
                         {/* Filter Controls */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+                        {/* 모바일/태블릿: 필터 토글 버튼 */}
+                        {isMobileOrTablet && (
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                                className="w-full mb-3 justify-between"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Filter className="h-4 w-4" />
+                                    필터 {activeFilterCount > 0 && `(${activeFilterCount}개 선택됨)`}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                    {isFilterExpanded ? '접기' : '펼치기'}
+                                </span>
+                            </Button>
+                        )}
+
+                        {/* 필터 컨트롤 그리드 - 데스크톱에서는 항상 표시, 모바일/태블릿에서는 확장시에만 표시 */}
+                        <div className={cn(
+                            "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 transition-all duration-300 overflow-hidden",
+                            isMobileOrTablet && !isFilterExpanded && "hidden"
+                        )}>
                             {/* 검색 */}
                             <div className="lg:col-span-2">
                                 <div className="relative">
@@ -945,13 +1151,17 @@ export default function StampPage() {
                     <div className="flex-1 overflow-auto p-6 bg-background">
                         {viewMode === 'grid' ? (
                             /* Grid View */
-                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                                 {displayedRestaurants.map((restaurant, index) => (
                                     <RestaurantCard
                                         key={`${restaurant.id}-${index}`}
                                         restaurant={restaurant}
                                         visited={isVisited(restaurant.id)}
                                         isSelected={selectedRestaurant?.id === restaurant.id}
+                                        currentThumbnailIndex={cardThumbnailIndexes[restaurant.id] || 0}
+                                        onThumbnailChange={(newIndex) =>
+                                            setCardThumbnailIndexes(prev => ({ ...prev, [restaurant.id]: newIndex }))
+                                        }
                                         onClick={handleRestaurantClick}
                                     />
                                 ))}
@@ -1018,281 +1228,63 @@ export default function StampPage() {
                     </div>
                 </Panel>
 
-                {/* Right Panel - Reviews */}
-                {isRightPanelVisible && (
+                {/* Right Panel - Reviews (Desktop only) */}
+                {isRightPanelVisible && isDesktop && (
                     <>
                         <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
                         <Panel defaultSize={30} minSize={20} maxSize={50} className="flex flex-col border-l border-border bg-card">
-                            <div className="p-6 border-b border-border bg-card flex flex-col justify-center min-h-[161px]">
-                                <div className="flex items-start justify-between gap-4">
-                                    <div className="space-y-1.5 overflow-hidden">
-                                        <div className="flex items-center gap-2 flex-wrap">
-                                            <h2 className="font-bold text-2xl truncate">
-                                                {selectedRestaurant?.name || "맛집 선택"}
-                                            </h2>
-                                            {(() => {
-                                                const category = parseCategory(selectedRestaurant?.category || (selectedRestaurant as any)?.categories);
-                                                return category && (
-                                                    <Badge variant="secondary" className="text-[10px] px-1.5 h-5 font-normal bg-secondary/50 text-secondary-foreground/90">
-                                                        {category}
-                                                    </Badge>
-                                                );
-                                            })()}
-                                        </div>
-                                        <p className="text-sm text-muted-foreground truncate">
-                                            {selectedRestaurant?.road_address || selectedRestaurant?.jibun_address || "주소 정보 없음"}
-                                        </p>
-                                    </div>
-                                    <Button variant="ghost" size="icon" onClick={handleCloseRightPanel} className="h-8 w-8 shrink-0 -mt-1 -mr-2">
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-
-                            <ScrollArea className="flex-1 p-4">
-                                {selectedRestaurant ? (
-                                    <>
-                                        {/* 리뷰 섹션 헤더 - 리뷰 상세가 아닐 때만 표시 */}
-                                        {!selectedReview && (
-                                            <div className="flex items-center justify-between gap-2 mb-4">
-                                                <h3 className="font-semibold flex items-center gap-2">
-                                                    <Trophy className="h-4 w-4 text-primary" />
-                                                    방문자 리뷰 ({restaurantReviews.length})
-                                                </h3>
-                                                <Button
-                                                    onClick={handleWriteReview}
-                                                    size="sm"
-                                                    className="h-8 gap-1.5"
-                                                    variant={restaurantReviews.length > 0 ? "outline" : "default"}
-                                                >
-                                                    <PenSquare className="h-3.5 w-3.5" />
-                                                    리뷰 작성
-                                                </Button>
-                                            </div>
-                                        )}
-
-                                        {selectedReview ? (
-                                            /* 리뷰 상세 뷰 */
-                                            <div className="space-y-4">
-                                                {/* 뒤로가기 헤더 */}
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={handleBackFromReviewDetail}
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <ArrowLeft className="h-4 w-4" />
-                                                    </Button>
-                                                    <h3 className="font-semibold">리뷰 상세</h3>
-                                                </div>
-
-                                                {/* 사용자 정보 */}
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold">{selectedReview.userName}</span>
-                                                        {selectedReview.isVerified && (
-                                                            <Badge variant="outline" className="text-[10px] border-green-500 text-green-500 px-1 py-0 h-4">
-                                                                인증됨
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 px-2 bg-muted hover:bg-muted/80 rounded-full flex items-center gap-1"
-                                                        onClick={() => toggleLike(selectedReview.id, selectedReview.isLikedByUser)}
-                                                    >
-                                                        <Heart
-                                                            className={`h-4 w-4 ${selectedReview.isLikedByUser
-                                                                ? 'fill-red-500 text-red-500'
-                                                                : 'text-muted-foreground'
-                                                                }`}
-                                                        />
-                                                        <span className="text-xs font-medium">
-                                                            {selectedReview.likeCount >= 100 ? '99+' : selectedReview.likeCount}
-                                                        </span>
-                                                    </Button>
-                                                </div>
-
-                                                {/* 방문일 */}
-                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                    <Clock className="h-3 w-3" />
-                                                    <span>방문일: {new Date(selectedReview.visitedAt).toLocaleDateString()}</span>
-                                                </div>
-
-                                                {/* 인스타그램 스타일 캐러셀 */}
-                                                {selectedReview.photos && selectedReview.photos.length > 0 && (
-                                                    <div className="relative">
-                                                        <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden">
-                                                            <img
-                                                                src={supabase.storage.from('review-photos').getPublicUrl(selectedReview.photos[currentPhotoIndex].url).data.publicUrl}
-                                                                alt={`음식 사진 ${currentPhotoIndex + 1}`}
-                                                                className="w-full h-full object-cover"
-                                                                onError={(e) => {
-                                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                                }}
-                                                            />
-
-                                                            {/* 좌우 화살표 */}
-                                                            {selectedReview.photos.length > 1 && (
-                                                                <>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 hover:bg-black/60 text-white rounded-full"
-                                                                        onClick={handlePrevPhoto}
-                                                                    >
-                                                                        <ChevronLeft className="h-5 w-5" />
-                                                                    </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 hover:bg-black/60 text-white rounded-full"
-                                                                        onClick={handleNextPhoto}
-                                                                    >
-                                                                        <ChevronRight className="h-5 w-5" />
-                                                                    </Button>
-                                                                </>
-                                                            )}
-
-                                                            {/* 사진 카운터 */}
-                                                            {selectedReview.photos.length > 1 && (
-                                                                <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                                                                    {currentPhotoIndex + 1} / {selectedReview.photos.length}
-                                                                </div>
-                                                            )}
-                                                        </div>
-
-                                                        {/* 점 인디케이터 */}
-                                                        {selectedReview.photos.length > 1 && (
-                                                            <div className="flex justify-center gap-1.5 mt-3">
-                                                                {selectedReview.photos.map((_, index) => (
-                                                                    <button
-                                                                        key={index}
-                                                                        className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
-                                                                            ? 'bg-primary'
-                                                                            : 'bg-muted-foreground/30'
-                                                                            }`}
-                                                                        onClick={() => setCurrentPhotoIndex(index)}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* 리뷰 내용 */}
-                                                <div>
-                                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                                                        {selectedReview.content}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        ) : restaurantReviews.length > 0 ? (
-                                            /* 리뷰 목록 */
-                                            <div className="space-y-4">
-                                                {restaurantReviews.map((review) => (
-                                                    <Card
-                                                        key={review.id}
-                                                        className="p-0 relative cursor-pointer hover:bg-muted/50 transition-colors overflow-hidden"
-                                                        onClick={() => handleReviewClick(review)}
-                                                    >
-                                                        {/* 좋아요 버튼 - 이미지 우측 상단 */}
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="sm"
-                                                            className="absolute top-2 right-2 z-10 h-8 px-2 bg-black/50 hover:bg-black/70 backdrop-blur-sm rounded-full flex items-center gap-1"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleLike(review.id, review.isLikedByUser);
-                                                            }}
-                                                        >
-                                                            <Heart
-                                                                className={`h-4 w-4 ${review.isLikedByUser
-                                                                    ? 'fill-red-500 text-red-500'
-                                                                    : 'text-white'
-                                                                    }`}
-                                                            />
-                                                            <span className="text-xs text-white font-medium">
-                                                                {review.likeCount >= 100 ? '99+' : review.likeCount}
-                                                            </span>
-                                                        </Button>
-
-                                                        {/* 사진 먼저 (인스타그램 스타일) */}
-                                                        {review.photos && review.photos.length > 0 && (
-                                                            <div className="relative w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                                                                <img
-                                                                    src={supabase.storage.from('review-photos').getPublicUrl(review.photos[0].url).data.publicUrl}
-                                                                    alt="리뷰 사진"
-                                                                    className="w-full h-full object-cover"
-                                                                    onError={(e) => {
-                                                                        (e.target as HTMLImageElement).style.display = 'none';
-                                                                    }}
-                                                                />
-                                                                {/* 추가 사진 수 표시 */}
-                                                                {review.photos.length > 1 && (
-                                                                    <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-full backdrop-blur-sm">
-                                                                        +{review.photos.length - 1}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )}
-
-                                                        {/* 사용자 정보와 내용 */}
-                                                        <div className="p-3">
-                                                            <div className="flex items-center gap-2 mb-1">
-                                                                <span className="text-xs font-medium truncate">
-                                                                    {review.userName}
-                                                                </span>
-                                                                {review.isVerified && (
-                                                                    <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
-                                                                        인증
-                                                                    </Badge>
-                                                                )}
-                                                                <span className="text-[10px] text-muted-foreground ml-auto">
-                                                                    {new Date(review.visitedAt).toLocaleDateString()}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-xs text-muted-foreground line-clamp-2">
-                                                                {review.content}
-                                                            </p>
-                                                        </div>
-                                                    </Card>
-                                                ))}
-                                                <div ref={loadMoreReviewsRef} className="h-4" />
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center px-4 text-center" style={{ minHeight: 'calc(100vh - 400px)' }}>
-                                                <div className="bg-muted/50 rounded-full p-4 mb-4">
-                                                    <PenSquare className="h-8 w-8 text-muted-foreground" />
-                                                </div>
-                                                <h4 className="font-semibold text-base mb-2">아직 작성된 리뷰가 없습니다</h4>
-                                                <p className="text-sm text-muted-foreground mb-4">
-                                                    첫 번째 리뷰를 작성하고<br />
-                                                    다른 팬들과 경험을 공유해보세요!
-                                                </p>
-                                                <Button
-                                                    onClick={handleWriteReview}
-                                                    className="gap-2"
-                                                >
-                                                    <Plus className="h-4 w-4" />
-                                                    첫 리뷰 작성하기
-                                                </Button>
-                                            </div>
-                                        )}
-                                    </>
-                                ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                                        <MapPin className="h-8 w-8 mb-2 opacity-50" />
-                                        <p>맛집을 선택하여<br />상세 정보를 확인하세요</p>
-                                    </div>
-                                )}
-                            </ScrollArea>
+                            <RestaurantReviewsPanel
+                                restaurant={selectedRestaurant}
+                                reviews={restaurantReviews}
+                                selectedReview={selectedReview}
+                                currentPhotoIndex={currentPhotoIndex}
+                                cardPhotoIndexes={cardPhotoIndexes}
+                                onReviewClick={handleReviewClick}
+                                onBackFromDetail={handleBackFromReviewDetail}
+                                onWriteReview={handleWriteReview}
+                                onToggleLike={toggleLike}
+                                onPrevPhoto={handlePrevPhoto}
+                                onNextPhoto={handleNextPhoto}
+                                onPhotoIndexChange={setCurrentPhotoIndex}
+                                onCardPhotoChange={(reviewId, index) => setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }))}
+                                onClose={handleCloseRightPanel}
+                                showHeader={true}
+                                isLoading={reviewsLoading}
+                            />
                         </Panel>
                     </>
                 )}
             </PanelGroup>
+
+            {/* Bottom Sheet - Reviews (Mobile/Tablet only) */}
+            {isMobileOrTablet && (
+                <BottomSheet
+                    isOpen={isRightPanelVisible}
+                    onClose={handleCloseRightPanel}
+                    snapPoints={[30, 50, 75, 85]}
+                    defaultSnap={75}
+                    showHandle={true}
+                    showCloseButton={false}
+                >
+                    <RestaurantReviewsPanel
+                        restaurant={selectedRestaurant}
+                        reviews={restaurantReviews}
+                        selectedReview={selectedReview}
+                        currentPhotoIndex={currentPhotoIndex}
+                        cardPhotoIndexes={cardPhotoIndexes}
+                        onReviewClick={handleReviewClick}
+                        onBackFromDetail={handleBackFromReviewDetail}
+                        onWriteReview={handleWriteReview}
+                        onToggleLike={toggleLike}
+                        onPrevPhoto={handlePrevPhoto}
+                        onNextPhoto={handleNextPhoto}
+                        onPhotoIndexChange={setCurrentPhotoIndex}
+                        onCardPhotoChange={(reviewId, index) => setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }))}
+                        showHeader={true}
+                        isLoading={reviewsLoading}
+                    />
+                </BottomSheet>
+            )}
 
             {/* Review Modal */}
             <ReviewModal
