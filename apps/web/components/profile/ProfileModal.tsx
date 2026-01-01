@@ -263,6 +263,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         value={newNickname}
                                         onChange={(e) => setNewNickname(e.target.value)}
                                         placeholder="닉네임을 입력하세요"
+                                        autoComplete="username"
+                                        enterKeyHint="done"
                                     />
                                     <Button
                                         onClick={handleNicknameChange}
@@ -300,6 +302,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         value={currentPassword}
                                         onChange={(e) => setCurrentPassword(e.target.value)}
                                         placeholder="현재 비밀번호를 입력하세요"
+                                        autoComplete="current-password"
+                                        enterKeyHint="next"
                                     />
                                     <Button
                                         type="button"
@@ -326,6 +330,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
                                         placeholder="새 비밀번호를 입력하세요"
+                                        autoComplete="new-password"
+                                        enterKeyHint="next"
                                     />
                                     <Button
                                         type="button"
@@ -352,6 +358,8 @@ export function ProfileModal({ isOpen, onClose }: ProfileModalProps) {
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                         placeholder="새 비밀번호를 다시 입력하세요"
+                                        autoComplete="new-password"
+                                        enterKeyHint="done"
                                     />
                                     <Button
                                         type="button"

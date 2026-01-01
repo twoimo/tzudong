@@ -588,6 +588,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                             onChange={(e) => setVisitedDate(e.target.value)}
                                             max={new Date().toISOString().split('T')[0]}
                                             min={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                                            enterKeyHint="next"
                                         />
                                         <p className="text-xs text-muted-foreground">
                                             📅 3개월 이내 방문한 맛집만 리뷰 작성 가능합니다
@@ -604,6 +605,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                             step="60"
                                             value={visitedTime}
                                             onChange={(e) => setVisitedTime(e.target.value)}
+                                            enterKeyHint="next"
                                         />
                                     </div>
                                 </div>

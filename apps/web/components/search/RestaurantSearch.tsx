@@ -245,6 +245,9 @@ const RestaurantSearch = ({
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsFocused(true)}
           className="pl-10 pr-10 w-full min-w-[250px]"
+          inputMode="search"
+          enterKeyHint="search"
+          autoComplete="off"
         />
         {searchQuery && (
           <button
