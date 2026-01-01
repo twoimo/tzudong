@@ -218,12 +218,10 @@ export function useUserLikers(userId: string) {
                 return [];
             }
 
-            // 자기 자신 제외, 사용자별 좋아요 수 집계
+            // 사용자별 좋아요 수 집계 (자기 자신 포함)
             const likerMap = new Map<string, number>();
             likes.forEach((like: any) => {
-                if (like.user_id !== userId) {
-                    likerMap.set(like.user_id, (likerMap.get(like.user_id) || 0) + 1);
-                }
+                likerMap.set(like.user_id, (likerMap.get(like.user_id) || 0) + 1);
             });
 
             if (likerMap.size === 0) return [];
