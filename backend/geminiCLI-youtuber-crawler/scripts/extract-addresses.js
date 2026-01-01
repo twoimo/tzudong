@@ -1494,14 +1494,26 @@ async function main() {
         duration: Math.round(duration / 1000)
     }, null, 2));
 
-    // Puppeteer 브라우저 정리
-    if (puppeteerBrowser) {
-        try {
-            await puppeteerBrowser.close();
-            log('debug', 'Puppeteer 브라우저 종료');
-        } catch (e) {
-            // 무시
+    // 실패한 영상(is_restaurant_video=null) 재시도 확인
+    const failedVideos = Array.from(allResults.values()).filter(v => v.is_restaurant_video === null);
+    if (failedVideos.length > 0) {
+        log('info', '');
+        log('warning', `분석 실패 영상 ${failedVideos.length}개 발견 - 30초 후 재시도...`);
+        log('info', '(Ctrl+C로 종료 가능)');
+        await sleep(30000);
+
+        // 만료된 블랙리스트 정리
+        for (const model of blacklistedModels.keys()) {
+            isModelBlacklisted(model);
         }
+
+        log('info', '');
+        log('info', '='.repeat(60));
+        log('info', '  실패 영상 재분석 시작');
+        log('info', '='.repeat(60));
+
+        // main 함수를 다시 호출하여 재시도 (null인 영상만 처리됨)
+        return main();
     }
 }
 
