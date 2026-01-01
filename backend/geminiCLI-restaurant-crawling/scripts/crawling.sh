@@ -59,8 +59,8 @@ if [ "$ENV_LOADED" = false ]; then
     fi
 fi
 
-# Gemini 모델 설정 (gemini-3.0-pro-preview 사용)
-export GEMINI_MODEL="${GEMINI_MODEL:-gemini-3.0-pro-preview}"
+# Gemini 모델 설정 (gemini-2.5-pro 사용)
+export GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-pro}"
 
 # 한국 시간대 설정 (KST, UTC+9)
 export TZ="Asia/Seoul"
