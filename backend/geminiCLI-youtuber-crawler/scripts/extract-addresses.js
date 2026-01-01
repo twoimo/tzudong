@@ -1312,9 +1312,10 @@ async function main() {
             const result = await processVideo(video);
 
             if (!result) {
-                log('warning', `  → Gemini 분석 실패 - 다음 실행 시 재시도`);
+                log('warning', `  → Gemini 분석 실패 - 모든 모델 실패`);
                 rateLimiter.release();
-                return { success: false };
+                // 모든 모델이 실패하면 allBlacklisted로 처리하여 루프 중단
+                return { success: false, allBlacklisted: true, videoId: video.videoId };
             }
 
             // description 해시 추가
@@ -1361,14 +1362,57 @@ async function main() {
             }
 
             if (res.allBlacklisted) {
-                log('error', '모든 Gemini 모델이 블랙리스트됨 - 프로세스 종료');
-                log('info', '토큰 갱신 후 다시 시도하세요: bun run oauth');
-                // 종료 전 저장
+                log('error', '='.repeat(50));
+                log('error', '모든 Gemini 모델 사용 불가');
+                log('error', '='.repeat(50));
+
+                // 블랙리스트된 모델들의 상태 출력
+                for (const [model, info] of blacklistedModels) {
+                    const reasonText = info.reason === 'daily_quota' ? '일일 쿼타 소진' : 'API 오류';
+                    if (info.resetTime) {
+                        const waitMs = info.resetTime - Date.now();
+                        const waitHours = Math.floor(waitMs / 3600000);
+                        const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+                        log('warning', `  ${model}: ${reasonText} (리셋까지 ${waitHours}시간 ${waitMins}분)`);
+                    } else {
+                        log('warning', `  ${model}: ${reasonText}`);
+                    }
+                }
+
+                // 가장 빠른 리셋 시간까지 대기
+                const earliest = getEarliestResetTime();
+                let waitMs = earliest ? (earliest - Date.now()) : (60 * 60 * 1000); // 기본 1시간
+
+                if (waitMs <= 0) waitMs = 60 * 60 * 1000; // 최소 1시간
+
+                const waitHours = Math.floor(waitMs / 3600000);
+                const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+                log('info', '');
+                log('info', `쿼타 리셋까지 ${waitHours}시간 ${waitMins}분 대기 중...`);
+                log('info', '(Ctrl+C로 중단 가능)');
+
+                // 중간 저장
                 const allData = Array.from(allResults.values());
-                fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+                if (allData.length > 0) {
+                    fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+                    log('info', `중간 저장 완료: ${allData.length}개`);
+                }
                 rateLimiter.forceFlush();
-                await commitProgress(`중단: 모델 오류 (${TODAY_FOLDER})`);
-                process.exit(1);
+
+                // 대기
+                await sleep(waitMs + 5000);
+
+                // 블랙리스트 정리 (만료된 항목 제거)
+                for (const model of blacklistedModels.keys()) {
+                    isModelBlacklisted(model);
+                }
+
+                log('success', '쿼타 리셋 완료 - 크롤링 재개');
+                log('info', '');
+
+                // 같은 배치를 다시 처리하도록 인덱스 되돌림
+                i -= BATCH_SIZE;
+                break; // 현재 결과 처리 루프 탈출 후 배치 재시도
             }
 
             if (res.success && res.result) {
