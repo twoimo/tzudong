@@ -378,7 +378,7 @@ $TRANSCRIPT
     # --yolo: 도구 사용 자동 승인, stderr 분리
     # Note: < /dev/null을 추가하여 stdin을 닫아 while read 루프와의 충돌 방지
     GEMINI_START=$(date +%s)
-    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$GEMINI_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
         GEMINI_END=$(date +%s)
         GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
         TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
@@ -418,7 +418,7 @@ $TRANSCRIPT
                     sleep 1
                     # Gemini CLI 재호출 (< /dev/null로 stdin 닫기)
                     GEMINI_START=$(date +%s)
-                    if gemini -p "$(cat "$TEMP_PROMPT")" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$GEMINI_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
                         GEMINI_END=$(date +%s)
                         GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
                         TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
@@ -450,6 +450,15 @@ $TRANSCRIPT
         log_error "Gemini CLI 호출 실패 ($FAILED/$TOTAL) - ${GEMINI_DURATION}s"
         echo "[$(date)] Gemini CLI 실패: $YOUTUBE_LINK" >> "$ERROR_LOG"
         cat "$TEMP_STDERR" >> "$ERROR_LOG" 2>/dev/null || true
+        
+        # 에러 리포트 파일 내용 출력 (디버깅용)
+        ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
+        if [ -f "$ERROR_REPORT" ]; then
+            log_error "Gemini 에러 리포트 내용:"
+            cat "$ERROR_REPORT"
+            echo "[$(date)] Gemini 에러 리포트:" >> "$ERROR_LOG"
+            cat "$ERROR_REPORT" >> "$ERROR_LOG"
+        fi
         
         # 에러 레코드 저장 (youtube_meta 포함) - 파일에서 읽기
         ERROR_RECORD=$(echo "$line" | jq -c --slurpfile meta "$TEMP_META" '. + {youtube_meta: $meta[0]}')
