@@ -786,6 +786,8 @@ export function AdminRestaurantModal({
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 placeholder="맛집 이름"
+                                autoComplete="off"
+                                enterKeyHint="next"
                             />
                         </div>
 
@@ -932,6 +934,8 @@ export function AdminRestaurantModal({
                                     onChange={(e) => setFormData({ ...formData, searchAddress: e.target.value })}
                                     placeholder="서울시 강남구... or Las Vegas..."
                                     className="flex-1"
+                                    autoComplete="street-address"
+                                    enterKeyHint="search"
                                 />
                                 <Button
                                     type="button"
@@ -1035,9 +1039,12 @@ export function AdminRestaurantModal({
                         <Label htmlFor="phone">전화번호</Label>
                         <Input
                             id="phone"
+                            type="tel"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="02-1234-5678"
+                            autoComplete="tel"
+                            enterKeyHint="next"
                         />
                     </div>
 
@@ -1097,6 +1104,7 @@ export function AdminRestaurantModal({
                                             <Label htmlFor={`youtube_link_${index}`} className="text-xs">유튜브 링크</Label>
                                             <Input
                                                 id={`youtube_link_${index}`}
+                                                type="url"
                                                 value={review.youtube_link}
                                                 onChange={(e) => {
                                                     const newReviews = [...formData.youtube_reviews];
@@ -1104,6 +1112,8 @@ export function AdminRestaurantModal({
                                                     setFormData({ ...formData, youtube_reviews: newReviews });
                                                 }}
                                                 placeholder="https://youtube.com/watch?v=..."
+                                                autoComplete="url"
+                                                enterKeyHint="next"
                                             />
                                         </div>
 

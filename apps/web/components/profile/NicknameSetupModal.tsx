@@ -133,6 +133,8 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
                             placeholder="2-20자 사이로 입력하세요"
                             autoFocus
                             maxLength={20}
+                            autoComplete="username"
+                            enterKeyHint="done"
                         />
                         <p className="text-sm text-muted-foreground">
                             프로필 설정에서 닉네임을 변경할 수 있습니다.

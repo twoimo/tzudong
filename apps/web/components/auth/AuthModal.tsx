@@ -149,6 +149,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  enterKeyHint="next"
                 />
               </div>
               <div className="space-y-2">
@@ -159,6 +161,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
+                  enterKeyHint="done"
                 />
               </div>
               <Button
@@ -230,6 +234,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   placeholder="닉네임을 입력하세요"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  enterKeyHint="next"
                 />
               </div>
               <div className="space-y-2">
@@ -240,6 +246,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   placeholder="your@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  enterKeyHint="next"
                 />
               </div>
               <div className="space-y-2">
@@ -250,6 +258,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="new-password"
+                  enterKeyHint="next"
                 />
               </div>
               <div className="space-y-2">
@@ -260,6 +270,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
                   placeholder="••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
+                  autoComplete="new-password"
+                  enterKeyHint="done"
                 />
               </div>
 

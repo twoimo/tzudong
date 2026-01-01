@@ -333,6 +333,8 @@ export default function RestaurantSubmissionModal({
                             value={formData.restaurant_name}
                             onChange={(e) => setFormData({ ...formData, restaurant_name: e.target.value })}
                             placeholder="예: 명동 짜장면"
+                            autoComplete="off"
+                            enterKeyHint="next"
                         />
                     </div>
 
@@ -442,6 +444,8 @@ export default function RestaurantSubmissionModal({
                             value={formData.address}
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                             placeholder="서울시 중구 명동길 123"
+                            autoComplete="street-address"
+                            enterKeyHint="next"
                         />
                     </div>
 
@@ -449,9 +453,12 @@ export default function RestaurantSubmissionModal({
                         <Label htmlFor="phone">전화번호</Label>
                         <Input
                             id="phone"
+                            type="tel"
                             value={formData.phone}
                             onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                             placeholder="02-1234-5678"
+                            autoComplete="tel"
+                            enterKeyHint="next"
                         />
                     </div>
 
@@ -462,12 +469,15 @@ export default function RestaurantSubmissionModal({
                         </Label>
                         <Input
                             id="youtube_link"
+                            type="url"
                             value={formData.youtube_link}
                             onChange={(e) => setFormData({ ...formData, youtube_link: e.target.value })}
                             placeholder={submissionMode === 'new'
                                 ? "https://youtube.com/watch?v=... (필수)"
                                 : "관련 영상 링크 (선택)"
                             }
+                            autoComplete="url"
+                            enterKeyHint="next"
                         />
                     </div>
 

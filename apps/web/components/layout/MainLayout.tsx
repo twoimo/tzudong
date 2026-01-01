@@ -91,7 +91,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <div className="h-screen flex overflow-hidden">
+        // h-screen 대신 CSS 변수(--full-height)로 모바일 브라우저 UI 고려
+        // dvh/svh 지원 브라우저에서는 동적 뷰포트, 미지원은 JS fallback
+        <div className="flex overflow-hidden" style={{ height: 'var(--full-height, 100vh)' }}>
             {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
             {user && <UserDataPrefetcher />}
 

@@ -2,6 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================
+   모바일 뷰포트 높이 문제 해결 (Mobile Viewport Height Fix)
+   
+   문제: 모바일 브라우저(삼성 인터넷, Safari 등)에서 100vh가
+   URL 바와 하단 네비게이션을 포함한 높이로 계산되어 콘텐츠가 잘림.
+   
+   해결: 
+   1. 신규 CSS 단위(dvh/svh) 사용 - Safari 15.4+, Chrome 108+, Samsung Internet 20+
+   2. JavaScript fallback으로 --vh 변수 설정 - 구형 브라우저 지원
+   ============================================ */
+
+:root {
+  /* JavaScript fallback 변수 (동적 업데이트됨) */
+  --vh: 1vh;
+
+  /* 전체 높이 계산 - 우선순위: dvh > svh > JS fallback > vh */
+  --full-height: 100vh;
+  /* 기본값 (fallback) */
+}
+
+/* dvh 지원 브라우저용 */
+@supports (height: 100dvh) {
+  :root {
+    --full-height: 100dvh;
+  }
+}
+
+/* svh 지원 브라우저용 (dvh 미지원 시) */
+@supports (height: 100svh) and (not (height: 100dvh)) {
+  :root {
+    --full-height: 100svh;
+  }
+}
+
 /* 스크롤바 숨김 유틸리티 */
 .scrollbar-hide {
   -ms-overflow-style: none;
@@ -140,9 +174,22 @@ All colors MUST be HSL.
 }
 
 @layer base {
+
+  /* html과 body에 동적 뷰포트 높이 적용 */
+  html {
+    /* 모바일 브라우저 뷰포트 문제 해결 */
+    height: 100%;
+    height: var(--full-height, 100vh);
+  }
+
   body {
     @apply bg-background text-foreground font-serif tracking-tight;
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    /* 동적 뷰포트 높이 적용 */
+    height: 100%;
+    min-height: var(--full-height, 100vh);
+    /* 스크롤 방지 (메인 레이아웃에서 처리) */
+    overflow: hidden;
   }
 
   /* 초기 로딩 화면 - CSS로만 구현하여 hydration 충돌 방지 */
@@ -170,7 +217,8 @@ All colors MUST be HSL.
   body.loading-complete::before {
     opacity: 0;
     pointer-events: none;
-    will-change: auto; /* 완료 후 GPU 메모리 해제 */
+    will-change: auto;
+    /* 완료 후 GPU 메모리 해제 */
   }
 
   /* 로딩 화면 내용은 별도 div로 처리 */
