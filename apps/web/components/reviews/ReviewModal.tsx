@@ -498,14 +498,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             {isOpen && (
-                <DialogContent className={cn(
-                    // 모바일: 전체 화면, 둥근 모서리 없음
-                    "max-lg:max-w-full max-lg:w-full max-lg:h-full max-lg:rounded-none max-lg:m-0",
-                    // 데스크탑: 기존 스타일
-                    "lg:max-w-3xl",
-                    // 공통: overflow 및 높이
-                    "max-h-[90vh] overflow-hidden p-0"
-                )}>
+                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-hidden p-0 rounded-xl">
                     <div className="flex flex-col h-full max-h-[90vh]">
                         <DialogHeader className="px-6 pt-6 pb-4 border-b relative">
                             {/* 자동 저장 상태 표시 - 좌측 상단 */}
