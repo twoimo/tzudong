@@ -24,6 +24,7 @@ import {
     useUserStamps,
     getUserTier
 } from "@/hooks/useUserProfile";
+import { useLeaderboard, LeaderboardUser } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -80,8 +81,12 @@ export default function UserProfilePage() {
     const { data: stamps = [], isLoading: stampsLoading } = useUserStamps(userId);
     const { data: reviews = [], isLoading: reviewsLoading } = useUserReviews(userId);
     const { data: likers = [], isLoading: likersLoading } = useUserLikers(userId);
+    const { data: leaderboard = [] } = useLeaderboard();
 
     const [activeTab, setActiveTab] = useState<'stamps' | 'reviews' | 'likers'>('stamps');
+
+    // 사용자의 랭킹 계산
+    const userRank = leaderboard.findIndex((u: LeaderboardUser) => u.id === userId) + 1;
 
     if (profileLoading) {
         return (
@@ -122,51 +127,55 @@ export default function UserProfilePage() {
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
             <div className="border-b border-border bg-card p-4 md:p-6">
-                <div className="flex items-center justify-between gap-4">
-                    {/* 왼쪽: 뒤로가기 + 닉네임 + 티어 */}
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => router.back()}
-                            className="flex-shrink-0 -ml-2"
-                        >
-                            <ChevronLeft className="h-5 w-5" />
-                        </Button>
-                        <h1 className="text-xl md:text-2xl font-bold truncate">
-                            {profile.nickname}
-                        </h1>
-                        <Badge
-                            variant="outline"
-                            className={cn(
-                                "text-xs px-2 h-6 whitespace-nowrap flex-shrink-0",
-                                profile.tier.bgColor,
-                                profile.tier.color,
-                                "border-current"
-                            )}
-                        >
-                            {profile.tier.name}
-                        </Badge>
-                    </div>
-
-                    {/* 오른쪽: 랭킹 */}
-                    <div className="flex-shrink-0 text-right">
-                        <div className="text-xs text-muted-foreground">랭킹</div>
-                        <div className="text-lg font-bold text-primary">-</div>
-                    </div>
+                {/* 첫번째 줄: 뒤로가기 + 닉네임 + 티어 */}
+                <div className="flex items-center gap-2 min-w-0">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => router.back()}
+                        className="flex-shrink-0 -ml-2"
+                    >
+                        <ChevronLeft className="h-5 w-5" />
+                    </Button>
+                    <h1 className="text-xl md:text-2xl font-bold truncate">
+                        {profile.nickname}
+                    </h1>
+                    <Badge
+                        variant="outline"
+                        className={cn(
+                            "text-xs px-2 h-6 whitespace-nowrap flex-shrink-0",
+                            profile.tier.bgColor,
+                            profile.tier.color,
+                            "border-current"
+                        )}
+                    >
+                        {profile.tier.name}
+                    </Badge>
                 </div>
 
-                {/* 통계 */}
-                <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground ml-8">
-                    <div className="flex items-center gap-1">
-                        <Stamp className="h-4 w-4" />
-                        <span className="font-semibold text-foreground">{profile.verifiedReviewCount}</span>
-                        <span>도장</span>
+                {/* 통계 카드 */}
+                <div className="grid grid-cols-3 gap-3 mt-4">
+                    <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                            <Stamp className="h-4 w-4" />
+                            <span className="text-xs">도장</span>
+                        </div>
+                        <span className="text-lg font-bold text-foreground">{profile.verifiedReviewCount}</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                        <Heart className="h-4 w-4 text-red-500" />
-                        <span className="font-semibold text-red-600">{profile.totalLikes}</span>
-                        <span>좋아요</span>
+                    <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                            <Heart className="h-4 w-4 text-red-500" />
+                            <span className="text-xs">좋아요</span>
+                        </div>
+                        <span className="text-lg font-bold text-red-600">{profile.totalLikes}</span>
+                    </div>
+                    <div className="flex flex-col items-center justify-center py-3 px-2 rounded-lg bg-muted/50">
+                        <div className="flex items-center gap-1 text-muted-foreground mb-1">
+                            <span className="text-xs">🏆 랭킹</span>
+                        </div>
+                        <span className="text-lg font-bold text-primary">
+                            {userRank > 0 ? `#${userRank}` : '-'}
+                        </span>
                     </div>
                 </div>
             </div>
