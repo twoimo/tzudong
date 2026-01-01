@@ -130,7 +130,7 @@ export function useUserReviews(userId: string) {
             // 승인된 리뷰만 조회
             const { data: reviews, error: reviewsError } = await (supabase
                 .from('reviews') as any)
-                .select('id, restaurant_id, rating, content, is_verified, created_at, visited_date')
+                .select('id,restaurant_id,title,content,is_verified,created_at,visited_at')
                 .eq('user_id', userId)
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false });
@@ -174,12 +174,12 @@ export function useUserReviews(userId: string) {
                 id: r.id,
                 restaurantId: r.restaurant_id,
                 restaurantName: restaurantMap.get(r.restaurant_id) || '알 수 없음',
-                rating: r.rating,
+                rating: 5, // 리뷰 테이블에 rating 컨럼 없음 - 기본값 5
                 content: r.content,
                 isVerified: r.is_verified,
                 likeCount: likesMap.get(r.id) || 0,
                 createdAt: r.created_at,
-                visitedDate: r.visited_date,
+                visitedDate: r.visited_at,
             }));
         },
         enabled: !!userId,
@@ -247,6 +247,67 @@ export function useUserLikers(userId: string) {
                     likedReviewCount: likerMap.get(p.user_id) || 0,
                 }))
                 .sort((a: Liker, b: Liker) => b.likedReviewCount - a.likedReviewCount);
+        },
+        enabled: !!userId,
+        staleTime: 1000 * 60 * 5,
+    });
+}
+
+/**
+ * 도장(스탬프) 정보 - 방문한 맛집
+ */
+export interface UserStamp {
+    restaurantId: string;
+    restaurantName: string;
+    visitedDate?: string;
+    createdAt: string;
+}
+
+/**
+ * 특정 사용자의 도장(방문한 맛집) 목록 조회
+ * 승인된 리뷰 기준
+ */
+export function useUserStamps(userId: string) {
+    return useQuery({
+        queryKey: ['user-stamps', userId],
+        queryFn: async (): Promise<UserStamp[]> => {
+            if (!userId) return [];
+
+            // 승인된 리뷰만 조회
+            const { data: reviews, error: reviewsError } = await (supabase
+                .from('reviews') as any)
+                .select('restaurant_id,visited_at,created_at')
+                .eq('user_id', userId)
+                .eq('is_verified', true)
+                .order('created_at', { ascending: false });
+
+            if (reviewsError) {
+                console.warn('도장 목록 조회 실패:', reviewsError.message);
+                return [];
+            }
+
+            if (!reviews || reviews.length === 0) return [];
+
+            // 맛집 정보 별도 조회
+            const restaurantIds = [...new Set(reviews.map((r: any) => r.restaurant_id))];
+            const { data: restaurants, error: restaurantsError } = await (supabase
+                .from('restaurants') as any)
+                .select('id, name')
+                .in('id', restaurantIds);
+
+            const restaurantMap = new Map<string, string>();
+            if (!restaurantsError && restaurants) {
+                restaurants.forEach((r: any) => {
+                    restaurantMap.set(r.id, r.name);
+                });
+            }
+
+            return reviews.map((r: any) => ({
+                restaurantId: r.restaurant_id,
+                restaurantName: restaurantMap.get(r.restaurant_id) || '알 수 없음',
+                visitedDate: r.visited_at,
+                createdAt: r.created_at,
+            }));
         },
         enabled: !!userId,
         staleTime: 1000 * 60 * 5,
