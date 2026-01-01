@@ -112,7 +112,7 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
 
     return (
         <Dialog open={isOpen} onOpenChange={() => { }}>
-            <DialogContent className="sm:max-w-md [&>button]:hidden">
+            <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl [&>button]:hidden">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <User className="h-5 w-5" />
