@@ -698,44 +698,35 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
         ? ['gemini-3-pro-preview']      // GitHub Actions: pro만
         : ['gemini-3-flash-preview'];   // 로컬: flash만
 
-    // 최대 재시도 횟수 (무한 루프 방지)
-    const MAX_RETRY_ATTEMPTS = 3;
-
-    while (retryAttempt < MAX_RETRY_ATTEMPTS) {
+    // Infinite loop until models are available
+    while (true) {
         // 사용 가능한 모델만 필터링 (블랙리스트 제외)
         const availableModels = allModels.filter(m => !isModelBlacklisted(m));
 
-        if (availableModels.length === 0) {
-            // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간까지 대기
-            const earliest = getEarliestResetTime();
-            if (earliest) {
-                const waitMs = earliest - Date.now();
-                if (waitMs > 0 && waitMs <= 24 * 60 * 60 * 1000) { // 24시간 이내면 대기
-                    const waitMin = Math.ceil(waitMs / 60000);
-                    log('warning', `모든 모델 쿼타 소진됨. ${waitMin}분 후 재시도...`);
-                    await sleep(waitMs + 5000); // 5초 여유
-                    log('info', `쿼타 리셋 완료 - 재시도 (${retryAttempt + 1}/${MAX_RETRY_ATTEMPTS})`);
-                    retryAttempt++;
-                    // 블랙리스트 정리 후 다시 루프
-                    allModels.forEach(m => isModelBlacklisted(m));
-                    continue;
-                } else {
-                    log('error', `리셋 대기 시간이 너무 김 (${Math.ceil(waitMs / 60000)}분) - 스킵`);
-                }
-            }
-            cleanupTempFiles(tempPromptFile, tempOutputFile);
-            return null;
+        if (availableModels.length > 0) {
+            break; // 사용 가능한 모델 있음 -> 진행
         }
 
-        // 사용 가능한 모델이 있으면 루프 탈출
-        break;
-    }
+        // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간까지 대기 (무한 대기)
+        const earliest = getEarliestResetTime();
+        let waitMs = 10 * 60 * 1000; // 기본 10분
 
-    // 재시도 횟수 초과 시 실패
-    if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
-        log('error', `최대 재시도 횟수(${MAX_RETRY_ATTEMPTS}) 초과 - 스킵`);
-        cleanupTempFiles(tempPromptFile, tempOutputFile);
-        return null;
+        if (earliest) {
+            waitMs = earliest - Date.now();
+        }
+        if (waitMs <= 0) waitMs = 60000; // 최소 1분
+
+        const waitMin = Math.ceil(waitMs / 60000);
+        log('warning', `모든 모델 쿼타 소진. ${waitMin}분 대기 후 재시도...`);
+
+        await sleep(waitMs + 5000); // 여유 시간
+        log('info', `대기 완료 - 모델 재확인`);
+
+        // 블랙리스트 초기화/재확인
+        blacklistedModels.clear();
+
+        // 여기서 retryAttempt를 증가시키지 않음 (쿼타 대기는 재시도 횟수 차감 X)
+        // continue to check availableModels again
     }
 
     // 사용 가능한 모델 재확인
@@ -973,23 +964,32 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 log('debug', `마지막 오류: ${lastError.message}`);
             }
 
-            // 재시도 가능 여부 확인 (재시도 횟수가 남아있고, 리셋 시간이 있는 경우)
-            if (retryAttempt < MAX_RETRY_ATTEMPTS) {
-                const earliest = getEarliestResetTime();
-                if (earliest) {
-                    const waitMs = earliest - Date.now();
-                    if (waitMs > 0 && waitMs <= 24 * 60 * 60 * 1000) { // 24시간 이내면 대기
-                        const waitMin = Math.ceil(waitMs / 60000);
-                        log('warning', `모든 모델 실패. ${waitMin}분 후 재시도...`);
-                        await sleep(waitMs + 5000);
-                        log('info', `쿼타 리셋 완료 - 동일 맛집 재시도 (${retryAttempt + 1}/${MAX_RETRY_ATTEMPTS})`);
-                        retryAttempt++;
-                        // 블랙리스트 정리 (만료된 항목 제거)
-                        allModels.forEach(m => isModelBlacklisted(m));
-                        // 재귀적으로 다시 시도 (현재 함수 다시 호출)
-                        cleanupTempFiles(tempPromptFile, tempOutputFile);
-                        return await extractWithGemini(video, transcript, retryAttempt);
-                    }
+            // 재시도 가능 여부 확인
+            // 쿼타 소진(blacklist)으로 인한 실패인 경우 -> 무한 재시도 (retryAttempt 증가 X)
+            // 그 외(파싱 에러 등)인 경우 -> MAX_RETRY_ATTEMPTS까지 재시도
+            const earliest = getEarliestResetTime();
+
+            if (earliest) {
+                // 쿼타 문제로 판단 -> 무한 대기 후 재시도
+                const waitMs = earliest - Date.now();
+                const waitMin = Math.ceil(waitMs > 0 ? waitMs / 60000 : 10);
+
+                log('warning', `모든 모델 쿼타 소진으로 실패. ${waitMin}분 대기 후 무한 재시도...`);
+                await sleep((waitMs > 0 ? waitMs : 10 * 60 * 1000) + 5000);
+
+                // 블랙리스트 초기화
+                blacklistedModels.clear();
+
+                // 재귀 호출 (retryAttempt 증가시키지 않음)
+                cleanupTempFiles(tempPromptFile, tempOutputFile);
+                return await extractWithGemini(video, transcript, retryAttempt);
+            } else {
+                // 일반 에러 -> 재시도 횟수 차감
+                if (retryAttempt < 3) { // MAX_RETRY_ATTEMPTS = 3 하드코딩 (상단 변수 제거됨)
+                    log('warning', `분석 실패 - 재시도 (${retryAttempt + 1}/3)...`);
+                    await sleep(5000);
+                    cleanupTempFiles(tempPromptFile, tempOutputFile);
+                    return await extractWithGemini(video, transcript, retryAttempt + 1);
                 }
             }
         }
