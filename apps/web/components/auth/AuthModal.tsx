@@ -118,7 +118,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
         <DialogHeader>
           <div className="flex items-center gap-2 mb-2">
             <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
@@ -357,14 +357,14 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
       {/* 개인정보 처리방침 모달 */}
       <Dialog open={isPrivacyModalOpen} onOpenChange={setIsPrivacyModalOpen}>
-        <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] overflow-hidden p-4 sm:p-6 rounded-xl">
           <DialogHeader>
             <DialogTitle>개인정보 처리방침</DialogTitle>
             <DialogDescription>
               쯔동여지도 서비스의 개인정보 처리방침입니다.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="h-[60vh] pr-4">
+          <ScrollArea className="h-[50vh] sm:h-[55vh] pr-4">
             <div className="space-y-4 text-sm">
               <section>
                 <h3 className="font-semibold text-base mb-2">1. 개인정보의 수집 및 이용 목적</h3>
