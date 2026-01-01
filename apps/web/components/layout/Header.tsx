@@ -618,13 +618,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
               </DropdownMenuItem>
+              <DropdownMenuSeparator className="bg-stone-800/10" />
+              <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
+                <Megaphone className="mr-2 h-4 w-4" />
+                공지사항
+              </DropdownMenuItem>
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-stone-800/10" />
-                  <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
-                    <Megaphone className="mr-2 h-4 w-4" />
-                    공지사항
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리

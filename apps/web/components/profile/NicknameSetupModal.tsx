@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import {
     Dialog,
     DialogContent,
@@ -21,13 +22,28 @@ interface NicknameSetupModalProps {
 
 export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalProps) {
     const { user } = useAuth();
+    const queryClient = useQueryClient();
     const [nickname, setNickname] = useState("");
     const [loading, setLoading] = useState(false);
 
+    // 쯔양 테마 랜덤 닉네임 생성
+    const generateRandomNickname = () => {
+        const prefixes = [
+            '위장이2개', '블랙홀위장', '쯔동민턴', '냉면빨대', '짜장면통째로',
+            '라면8봉', '삼겹살산맥', '치킨흡입기', '쩝쩝박사', '대왕카스테라',
+            '국밥말아먹어', '쯔양제자', '먹방견습생', '위장무한대', '풀코스다먹어',
+            '5인분혼밥러', '배터지기직전', '밥도둑잡아라', '냠냠폭격기', '칼로리는숫자',
+            '야식은기본', '다이어트내일부터'
+        ];
+        const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+        const randomSuffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+        return `${randomPrefix}_${randomSuffix}`;
+    };
+
     useEffect(() => {
         if (isOpen && user) {
-            // 기본값으로 이메일 앞부분 사용
-            setNickname(user.email?.split('@')[0] || "");
+            // 랜덤 닉네임 생성
+            setNickname(generateRandomNickname());
         }
     }, [isOpen, user]);
 
@@ -68,6 +84,9 @@ export function NicknameSetupModal({ isOpen, onComplete }: NicknameSetupModalPro
                 .eq('user_id', user.id);
 
             if (error) throw error;
+
+            // 리더보드 등 캐시 무효화 - 즉시 반영
+            await queryClient.invalidateQueries({ queryKey: ['leaderboard-all-users'] });
 
             toast.success('닉네임이 설정되었습니다! 다시 오신 것을 환영합니다 🎉');
 

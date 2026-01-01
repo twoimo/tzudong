@@ -291,10 +291,9 @@ export default function HomeClient() {
         };
 
         const handleAdminAnnouncementsOpen = () => {
-            if (isAdmin) {
-                setSelectedAnnouncement(null); // 목록부터 시작
-                openPanel('announcement');
-            }
+            // 공지사항은 모든 로그인 사용자가 볼 수 있음
+            setSelectedAnnouncement(null); // 목록부터 시작
+            openPanel('announcement');
         };
 
         const handleAnnouncementDetailOpen = (e: Event) => {

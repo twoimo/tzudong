@@ -1,5 +1,6 @@
 -- 쯔양 테마 랜덤 닉네임 생성을 위한 handle_new_user 함수 업데이트
 -- 실행 방법: Supabase SQL Editor에서 실행
+-- 중복 닉네임 방지를 위해 최대 10회 재시도 로직 포함
 
 DROP FUNCTION IF EXISTS public.handle_new_user() CASCADE;
 
@@ -11,49 +12,47 @@ SET search_path = public
 AS $$
 DECLARE
     prefixes TEXT[] := ARRAY[
-        '위장이2개',     -- 쯔양 별명
-        '블랙홀위장',    -- 먹방 유머
-        '쯔동민턴',      -- 쯔동 + 배드민턴
-        '냉면빨대',      -- 쯔양 냉면 빨대흡입
-        '짜장면통째로',  -- 자장면 통으로
-        '라면8봉',       -- 라면 많이 먹방
-        '삼겹살산맥',    -- 고기 먹방
-        '치킨흡입기',    -- 치킨 먹방
-        '쩝쩝박사',      -- 먹방 소리
-        '대왕카스테라',  -- 대왕 시리즈
-        '국밥말아먹어',  -- 국밥
-        '쯔양제자',      -- 쯔양 팬
-        '먹방견습생',    -- 먹방 입문
-        '위장무한대',    -- 위장 크기
-        '풀코스다먹어',  -- 코스요리
-        '5인분혼밥러',   -- 혼밥
-        '배터지기직전',  -- 배부름
-        '밥도둑잡아라',  -- 밥도둑 반찬
-        '냠냠폭격기',    -- 폭풍흡입
-        '칼로리는숫자',  -- 다이어트 무시
-        '야식은기본',    -- 야식
-        '다이어트내일부터' -- 내일부터 다이어트
+        '위장이2개', '블랙홀위장', '쯔동민턴', '냉면빨대', '짜장면통째로',
+        '라면8봉', '삼겹살산맥', '치킨흡입기', '쩝쩝박사', '대왕카스테라',
+        '국밥말아먹어', '쯔양제자', '먹방견습생', '위장무한대', '풀코스다먹어',
+        '5인분혼밥러', '배터지기직전', '밥도둑잡아라', '냠냠폭격기', '칼로리는숫자',
+        '야식은기본', '다이어트내일부터'
     ];
     random_prefix TEXT;
     random_suffix TEXT;
     generated_nickname TEXT;
+    retry_count INTEGER := 0;
+    max_retries CONSTANT INTEGER := 10;
+    nickname_exists BOOLEAN;
 BEGIN
-    -- 랜덤 prefix 선택
-    random_prefix := prefixes[1 + floor(random() * array_length(prefixes, 1))::int];
-    
-    -- 랜덤 4자리 숫자
-    random_suffix := lpad((floor(random() * 10000))::text, 4, '0');
-    
-    -- 닉네임 생성
-    generated_nickname := random_prefix || '_' || random_suffix;
-    
-    -- 프로필 생성 (메타데이터에 닉네임이 있으면 사용, 없으면 랜덤 생성)
+    -- 메타데이터에 닉네임이 있으면 사용
+    IF NEW.raw_user_meta_data->>'nickname' IS NOT NULL THEN
+        generated_nickname := NEW.raw_user_meta_data->>'nickname';
+    ELSE
+        -- 중복되지 않는 닉네임 생성 (최대 10회 재시도)
+        LOOP
+            random_prefix := prefixes[1 + floor(random() * array_length(prefixes, 1))::int];
+            random_suffix := lpad((floor(random() * 10000))::text, 4, '0');
+            generated_nickname := random_prefix || '_' || random_suffix;
+            
+            -- 중복 체크
+            SELECT EXISTS(
+                SELECT 1 FROM public.profiles WHERE nickname = generated_nickname
+            ) INTO nickname_exists;
+            
+            EXIT WHEN NOT nickname_exists OR retry_count >= max_retries;
+            retry_count := retry_count + 1;
+        END LOOP;
+        
+        -- 최대 재시도 초과 시 user_id 기반 폴백
+        IF nickname_exists THEN
+            generated_nickname := '쯔동이_' || substr(NEW.id::text, 1, 8);
+        END IF;
+    END IF;
+
+    -- 프로필 생성
     INSERT INTO public.profiles (user_id, nickname, email)
-    VALUES (
-        NEW.id,
-        COALESCE(NEW.raw_user_meta_data->>'nickname', generated_nickname),
-        NEW.email
-    );
+    VALUES (NEW.id, generated_nickname, NEW.email);
 
     -- 일반 사용자 역할 부여
     INSERT INTO public.user_roles (user_id, role)
@@ -66,15 +65,14 @@ BEGIN
     RETURN NEW;
 EXCEPTION
     WHEN OTHERS THEN
-        -- 에러 로깅
         RAISE WARNING 'Error in handle_new_user: %', SQLERRM;
         RETURN NEW;
 END;
 $$;
 
-COMMENT ON FUNCTION public.handle_new_user IS '신규 사용자 가입 시 쯔양 테마 랜덤 닉네임으로 프로필, 역할, 통계 자동 생성';
+COMMENT ON FUNCTION public.handle_new_user IS '신규 사용자 가입 시 쯔양 테마 랜덤 닉네임(중복 체크 포함)으로 프로필, 역할, 통계 자동 생성';
 
--- 트리거 재생성 (기존 것이 DROP CASCADE로 삭제되었으므로)
+-- 트리거 재생성
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users

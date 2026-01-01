@@ -68,7 +68,10 @@ export default function ProfilePage() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // 계정 삭제
+  // 계정 비활성화 (익명화)
+  const [deactivateConfirmationEmail, setDeactivateConfirmationEmail] = useState("");
+
+  // 계정 완전 삭제
   const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState("");
 
   useEffect(() => {
@@ -170,17 +173,18 @@ export default function ProfilePage() {
     }
   };
 
-  const handleAccountDelete = async () => {
+  // 계정 비활성화 (익명화 후 로그아웃)
+  const handleAccountDeactivate = async () => {
     if (!user) return;
 
-    if (deleteConfirmationEmail !== user.email) {
+    if (deactivateConfirmationEmail !== user.email) {
       toast.error('이메일이 일치하지 않습니다');
       return;
     }
 
     setLoading(true);
     try {
-      // 1. 프로필 익명화
+      // 프로필 익명화
       const { error: profileError } = await (supabase
         .from('profiles') as any)
         .update({ nickname: '탈퇴한 사용자' })
@@ -190,17 +194,7 @@ export default function ProfilePage() {
         console.warn('프로필 익명화 실패:', profileError);
       }
 
-      // 2. user_stats 정보 삭제
-      const { error: statsError } = await supabase
-        .from('user_stats')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (statsError) {
-        console.warn('통계 정보 삭제 실패:', statsError);
-      }
-
-      toast.success('계정 탈퇴가 완료되었습니다. 잠시 후 로그아웃됩니다.');
+      toast.success('계정이 비활성화되었습니다. 잠시 후 로그아웃됩니다.');
 
       setTimeout(async () => {
         try {
@@ -210,6 +204,54 @@ export default function ProfilePage() {
           console.warn('로그아웃 실패:', signOutError);
           window.location.href = '/';
         }
+      }, 2000);
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '계정 비활성화 중 오류가 발생했습니다';
+      toast.error(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 계정 완전 삭제 (Supabase Auth에서 삭제)
+  const handleAccountPermanentDelete = async () => {
+    if (!user) return;
+
+    if (deleteConfirmationEmail !== user.email) {
+      toast.error('이메일이 일치하지 않습니다');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/account/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user.id }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '계정 삭제에 실패했습니다');
+      }
+
+      toast.success('계정이 영구적으로 삭제되었습니다. 잠시 후 홈으로 이동합니다.');
+
+      // 세션 정리
+      await supabase.auth.signOut();
+
+      // localStorage에서 Supabase 관련 항목 정리
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith('sb-') || key.startsWith('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      setTimeout(() => {
+        window.location.href = '/';
       }, 2000);
 
     } catch (error) {
@@ -483,33 +525,100 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* 계정 삭제 */}
+      {/* 계정 비활성화 */}
+      <Card className="border-yellow-500/50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-yellow-600">
+            <EyeOff className="h-5 w-5" />
+            계정 비활성화
+          </CardTitle>
+          <CardDescription>
+            계정을 비활성화하면 닉네임이 익명화되고 로그아웃됩니다. 나중에 다시 로그인할 수 있습니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="outline" className="w-full border-yellow-500 text-yellow-600 hover:bg-yellow-50">
+                계정 비활성화
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>계정을 비활성화하시겠습니까?</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <span className="block">계정을 비활성화하면:</span>
+                  <span className="block">• 닉네임이 '탈퇴한 사용자'로 변경됩니다</span>
+                  <span className="block">• 작성한 리뷰는 유지됩니다</span>
+                  <span className="block">• 랭킹에서 제외됩니다</span>
+                  <span className="block">• 나중에 다시 로그인하면 복구할 수 있습니다</span>
+                  <span className="block mt-4">계속하시려면 아래에 계정 이메일을 입력해주세요.</span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="py-4">
+                <Input
+                  value={deactivateConfirmationEmail}
+                  onChange={(e) => setDeactivateConfirmationEmail(e.target.value)}
+                  placeholder={user.email || ""}
+                  className="text-center"
+                />
+                {deactivateConfirmationEmail && deactivateConfirmationEmail !== user.email && (
+                  <p className="text-sm text-destructive mt-2 text-center">
+                    이메일이 일치하지 않습니다
+                  </p>
+                )}
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel onClick={() => setDeactivateConfirmationEmail("")}>
+                  취소
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleAccountDeactivate}
+                  className="bg-yellow-600 text-white hover:bg-yellow-700"
+                  disabled={loading || deactivateConfirmationEmail !== user.email}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      처리 중...
+                    </>
+                  ) : (
+                    "비활성화"
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
+
+      {/* 계정 완전 삭제 */}
       <Card className="border-destructive/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-destructive">
             <Trash2 className="h-5 w-5" />
-            계정 삭제
+            계정 완전 삭제
           </CardTitle>
           <CardDescription>
-            계정을 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
+            계정을 완전히 삭제하면 모든 데이터가 영구적으로 삭제됩니다. 이 작업은 되돌릴 수 없습니다.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button variant="destructive" className="w-full">
-                계정 삭제
+                계정 완전 삭제
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
               <AlertDialogHeader>
-                <AlertDialogTitle>정말로 계정을 삭제하시겠습니까?</AlertDialogTitle>
+                <AlertDialogTitle>정말로 계정을 완전히 삭제하시겠습니까?</AlertDialogTitle>
                 <AlertDialogDescription className="space-y-2">
-                  <span className="block">계정을 탈퇴하면:</span>
+                  <span className="block font-semibold text-destructive">⚠️ 이 작업은 되돌릴 수 없습니다!</span>
+                  <span className="block">계정을 완전히 삭제하면:</span>
+                  <span className="block">• 모든 개인 정보가 삭제됩니다</span>
                   <span className="block">• 작성한 리뷰는 '탈퇴한 사용자'로 유지됩니다</span>
-                  <span className="block">• 프로필이 익명화됩니다</span>
-                  <span className="block">• 랭킹에서 제외됩니다</span>
-                  <span className="block">• 자동으로 로그아웃됩니다</span>
+                  <span className="block">• 다시는 이 계정으로 로그인할 수 없습니다</span>
                   <span className="block mt-4">계속하시려면 아래에 계정 이메일을 입력해주세요.</span>
                 </AlertDialogDescription>
               </AlertDialogHeader>
@@ -531,7 +640,7 @@ export default function ProfilePage() {
                   취소
                 </AlertDialogCancel>
                 <AlertDialogAction
-                  onClick={handleAccountDelete}
+                  onClick={handleAccountPermanentDelete}
                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   disabled={loading || deleteConfirmationEmail !== user.email}
                 >
