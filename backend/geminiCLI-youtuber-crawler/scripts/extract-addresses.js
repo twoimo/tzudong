@@ -162,14 +162,20 @@ async function checkModelQuotas() {
                     output.includes('RESOURCE_EXHAUSTED')) {
                     log('warning', `  ${model}: 실제 쿼타 소진 확인됨`);
 
-                    // PT 자정(KST 17:00)까지 대기 시간 계산
-                    const now = getKSTDate();
-                    let resetDate = new Date(now);
-                    if (now.getHours() >= 17) {
-                        resetDate.setDate(resetDate.getDate() + 1);
+                    // 리셋 시간 파싱 또는 기본 10분
+                    const resetMatch = output.match(/reset after (\d+)h(\d+)m(\d+)s/);
+                    let waitMs = 10 * 60 * 1000;
+
+                    if (resetMatch) {
+                        const h = parseInt(resetMatch[1]);
+                        const m = parseInt(resetMatch[2]);
+                        const s = parseInt(resetMatch[3]);
+                        waitMs = (h * 3600 + m * 60 + s) * 1000;
+                        log('warning', `  ${model}: 쿼타 소진 - ${h}시간 ${m}분 ${s}초 후 리셋`);
+                    } else {
+                        log('warning', `  ${model}: 쿼타 소진 - 10분 후 재확인`);
                     }
-                    resetDate.setHours(17, 0, 0, 0);
-                    const resetTime = Date.now() + (resetDate.getTime() - now.getTime());
+                    const resetTime = Date.now() + waitMs;
 
                     blacklistedModels.set(model, { resetTime, reason: 'daily_quota_verified' });
                 } else {
@@ -817,23 +823,21 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                                 continue;
                             }
                         } else if (combinedOutput.includes('exhausted your daily quota')) {
-                            // 일일 쿼타 소진 - PT 자정(KST 17:00)까지 대기 시간 계산
-                            const now = getKSTDate();
-                            let resetDate = new Date(now);
+                            // 일일 쿼타 소진 - 리셋 시간 파싱 시도 또는 10분 대기
+                            const resetMatch = combinedOutput.match(/reset after (\d+)h(\d+)m(\d+)s/);
+                            let waitMs = 10 * 60 * 1000; // 기본 10분
 
-                            // KST 17:00 = PT 자정
-                            if (now.getHours() >= 17) {
-                                // 다음 날 17:00
-                                resetDate.setDate(resetDate.getDate() + 1);
+                            if (resetMatch) {
+                                const h = parseInt(resetMatch[1]);
+                                const m = parseInt(resetMatch[2]);
+                                const s = parseInt(resetMatch[3]);
+                                waitMs = (h * 3600 + m * 60 + s) * 1000;
                             }
-                            resetDate.setHours(17, 0, 0, 0);
-
-                            const waitMs = resetDate.getTime() - now.getTime();
                             resetTime = Date.now() + waitMs;
 
                             const waitHours = Math.floor(waitMs / 3600000);
                             const waitMins = Math.ceil((waitMs % 3600000) / 60000);
-                            log('warning', `모델 ${model} 일일 쿼타 소진 - PT 자정(KST 17:00)까지 ${waitHours}시간 ${waitMins}분`);
+                            log('warning', `모델 ${model} 일일 쿼타 소진 - ${waitHours}시간 ${waitMins}분 후 재시도`);
                         }
 
                         // 블랙리스트에 리셋 시간과 함께 저장
