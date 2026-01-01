@@ -293,7 +293,6 @@ jobs:
           cat > backend/geminiCLI-restaurant-crawling/.env << EOF
           GEMINI_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
           GEMINI_API_KEY_BYEON=${{ secrets.GOOGLE_API_KEY_BYEON }}
-          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
           YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}
           OPENAI_API_KEY_BYEON=${{ secrets.OPENAI_API_KEY_BYEON }}
           KAKAO_REST_API_KEY=${{ secrets.KAKAO_REST_API_KEY }}
@@ -306,7 +305,6 @@ jobs:
           NCP_MAPS_KEY_BYEON=${{ secrets.NCP_MAPS_KEY_BYEON }}
           GEMINI_API_KEY_BYEON=${{ secrets.GOOGLE_API_KEY_BYEON }}
           GEMINI_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
-          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY_BYEON }}
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           EOF
@@ -346,7 +344,6 @@ jobs:
         working-directory: backend/geminiCLI-restaurant-crawling/scripts
         env:
           GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
           KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
         run: |
@@ -376,7 +373,6 @@ jobs:
         working-directory: backend/geminiCLI-restaurant-evaluation/scripts
         env:
           GEMINI_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
-          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY_BYEON }}
           PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
           NAVER_CLIENT_ID_BYEON: ${{ secrets.NAVER_CLIENT_ID_BYEON }}
           NAVER_CLIENT_SECRET_BYEON: ${{ secrets.NAVER_CLIENT_SECRET_BYEON }}
