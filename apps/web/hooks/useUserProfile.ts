@@ -114,7 +114,8 @@ export function useUserProfile(userId: string) {
             };
         },
         enabled: !!userId,
-        staleTime: 1000 * 60 * 5, // 5분
+        staleTime: 1000 * 60 * 5, // 5분 - 데이터가 오래된 것으로 간주되지 않음
+        gcTime: 1000 * 60 * 10, // 10분 - 가비지 컨렉션 시간 (캩0시 유지)
     });
 }
 
@@ -183,7 +184,8 @@ export function useUserReviews(userId: string) {
             }));
         },
         enabled: !!userId,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60 * 5, // 5분
+        gcTime: 1000 * 60 * 10, // 10분
     });
 }
 
@@ -247,7 +249,8 @@ export function useUserLikers(userId: string) {
                 .sort((a: Liker, b: Liker) => b.likedReviewCount - a.likedReviewCount);
         },
         enabled: !!userId,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60 * 5, // 5분
+        gcTime: 1000 * 60 * 10, // 10분
     });
 }
 
@@ -308,6 +311,7 @@ export function useUserStamps(userId: string) {
             }));
         },
         enabled: !!userId,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60 * 5, // 5분
+        gcTime: 1000 * 60 * 10, // 10분
     });
 }
