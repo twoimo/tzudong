@@ -102,6 +102,42 @@ export default function RootLayout({
                 <script dangerouslySetInnerHTML={{
                     __html: `
                         (function() {
+                            // ==========================================
+                            // 모바일 뷰포트 높이 동적 계산 (JS Fallback)
+                            // dvh/svh 미지원 구형 브라우저용
+                            // ==========================================
+                            function setViewportHeight() {
+                                // 1vh = window.innerHeight의 1%
+                                // 모바일 브라우저의 동적 UI(URL 바, 하단 네비)를 제외한 실제 가시 높이
+                                var vh = window.innerHeight * 0.01;
+                                document.documentElement.style.setProperty('--vh', vh + 'px');
+                                
+                                // dvh 미지원 브라우저를 위한 --full-height fallback
+                                // CSS에서 dvh가 지원되면 이 값은 무시됨 (@supports로 덮어씀)
+                                if (!CSS.supports('height', '100dvh')) {
+                                    document.documentElement.style.setProperty('--full-height', (vh * 100) + 'px');
+                                }
+                            }
+                            
+                            // 초기 설정
+                            setViewportHeight();
+                            
+                            // resize/orientationchange 이벤트에 debounce 적용
+                            var resizeTimeout;
+                            function onResize() {
+                                clearTimeout(resizeTimeout);
+                                resizeTimeout = setTimeout(setViewportHeight, 100);
+                            }
+                            
+                            window.addEventListener('resize', onResize);
+                            window.addEventListener('orientationchange', function() {
+                                // orientationchange 후 약간의 지연 필요 (브라우저 UI 재배치)
+                                setTimeout(setViewportHeight, 200);
+                            });
+                            
+                            // ==========================================
+                            // 초기 로딩 화면 제거
+                            // ==========================================
                             var removed = false;
                             function hide() {
                                 if (removed) return;
