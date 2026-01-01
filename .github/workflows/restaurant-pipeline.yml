@@ -282,7 +282,6 @@ jobs:
           cat > ~/.gemini/settings.json << EOF
           {
             "auth": { "type": "api-key" },
-            "theme": "default",
             "sandbox": false,
             "yoloMode": true
           }
