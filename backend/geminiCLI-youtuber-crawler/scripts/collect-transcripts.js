@@ -47,6 +47,10 @@ const DATA_DIR = path.resolve(__dirname, '../data');
 const TODAY_FOLDER = getTodayFolder();
 const TODAY_PATH = path.join(DATA_DIR, TODAY_FOLDER);
 
+// [개선] 자막 파일은 날짜에 관계없이 공유 (재사용)
+// data/transcripts.jsonl에 저장하여 날짜가 바뀌어도 기존 자막 활용
+const SHARED_TRANSCRIPT_FILE = path.join(DATA_DIR, 'transcripts.jsonl');
+
 // 로그 함수
 const DEBUG_MODE = process.env.DEBUG === 'true';
 
@@ -371,8 +375,9 @@ async function main() {
 
     log('info', `총 영상: ${videos.length}개`);
 
-    // 이미 수집된 자막 체크
-    const transcriptFile = path.join(TODAY_PATH, 'transcripts.jsonl');
+    // 이미 수집된 자막 체크 (공유 파일 사용)
+    // [개선] 날짜별 폴더가 아닌 data/ 루트의 공유 파일 사용
+    const transcriptFile = SHARED_TRANSCRIPT_FILE;
     const collectedTranscripts = new Map();
 
     if (fs.existsSync(transcriptFile)) {
@@ -386,7 +391,7 @@ async function main() {
                 } catch { }
             }
         }
-        log('info', `이미 수집된 자막: ${collectedTranscripts.size}개`);
+        log('info', `기존 자막 로드 (공유): ${collectedTranscripts.size}개`);
     }
 
     // 수집할 영상 필터링

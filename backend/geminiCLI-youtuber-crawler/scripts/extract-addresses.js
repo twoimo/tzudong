@@ -551,8 +551,9 @@ async function searchPlaceWithKakao(keyword, category = null) {
 // ============================================
 // 자막 로드 (transcripts.jsonl에서 미리 수집된 자막 로드)
 // Phase 1에서 collect-transcripts.js로 수집된 자막 사용
+// [개선] 날짜별 폴더가 아닌 data/ 루트의 공유 파일 사용
 // ============================================
-const TRANSCRIPT_FILE = path.join(TODAY_PATH, 'transcripts.jsonl');
+const TRANSCRIPT_FILE = path.join(DATA_DIR, 'transcripts.jsonl');
 let transcriptsCache = null; // videoId -> transcript
 
 /**
