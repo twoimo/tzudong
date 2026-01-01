@@ -182,13 +182,28 @@ async function checkModelQuotas() {
 
         if (availableCount === 0) {
             const earliest = getEarliestResetTime();
+            let waitMs = 60 * 60 * 1000; // 기본 1시간
+
             if (earliest) {
-                const waitMs = earliest - Date.now();
-                const waitHours = Math.floor(waitMs / 3600000);
-                const waitMins = Math.ceil((waitMs % 3600000) / 60000);
-                log('error', `실제 쿼타 소진 확인됨. 리셋까지 ${waitHours}시간 ${waitMins}분 대기 필요.`);
+                waitMs = earliest - Date.now();
             }
-            return false;
+
+            if (waitMs <= 0) waitMs = 60000; // 최소 1분
+
+            const waitHours = Math.floor(waitMs / 3600000);
+            const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+            log('warning', `모든 모델 쿼타 소진. ${waitHours}시간 ${waitMins}분 대기 후 재확인...`);
+
+            // 블랙리스트 초기화 후 대기
+            blacklistedModels.clear();
+
+            // 대기 (child_process.spawnSync는 이벤트 루프를 차단하지 않지만, 여기선 sleep으로 대기)
+            // 비동기 함수 안이므로 Promise 기반 sleep 사용 필요하지만, 
+            // checkModelQuotas가 async 함수이므로 await 가능
+            await new Promise(resolve => setTimeout(resolve, waitMs + 10000));
+
+            // 재귀 호출로 다시 확인
+            return checkModelQuotas();
         }
     }
 
@@ -249,9 +264,28 @@ class RateLimiter {
     async waitForSlot() {
         // RPD 체크
         if (this.requestsToday >= this.RPD_LIMIT) {
-            log('error', `일일 쿼타 초과 (${this.requestsToday}/${this.RPD_LIMIT} RPD)`);
-            log('info', '쿼타 리셋: PT 자정 (KST 17:00) 또는 소진 시점 기준 24시간');
-            return false;
+            log('warning', `일일 쿼타 초과 (${this.requestsToday}/${this.RPD_LIMIT} RPD)`);
+
+            // PT 자정(KST 17:00)까지 대기 시간 계산
+            const now = getKSTDate();
+            let resetDate = new Date(now);
+
+            if (now.getHours() >= 17) {
+                resetDate.setDate(resetDate.getDate() + 1);
+            }
+            resetDate.setHours(17, 0, 0, 0);
+
+            const waitMs = resetDate.getTime() - now.getTime();
+            const waitHours = Math.floor(waitMs / 3600000);
+            const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+
+            log('info', `쿼타 리셋까지 ${waitHours}시간 ${waitMins}분 대기 중... (KST 17:00 리셋)`);
+            await new Promise(resolve => setTimeout(resolve, waitMs + 60000)); // 리셋 시간 + 1분 여유
+
+            // 리셋
+            this.requestsToday = 0;
+            this.saveDailyStats();
+            log('info', '쿼타 리셋 완료. 작업 재개.');
         }
 
         // RPM 체크 및 대기
@@ -687,7 +721,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
             const earliest = getEarliestResetTime();
             if (earliest) {
                 const waitMs = earliest - Date.now();
-                if (waitMs > 0 && waitMs <= 2 * 60 * 60 * 1000) { // 2시간 이내면 대기
+                if (waitMs > 0 && waitMs <= 24 * 60 * 60 * 1000) { // 24시간 이내면 대기
                     const waitMin = Math.ceil(waitMs / 60000);
                     log('warning', `모든 모델 쿼타 소진됨. ${waitMin}분 후 재시도...`);
                     await sleep(waitMs + 5000); // 5초 여유
@@ -955,7 +989,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 const earliest = getEarliestResetTime();
                 if (earliest) {
                     const waitMs = earliest - Date.now();
-                    if (waitMs > 0 && waitMs <= 2 * 60 * 60 * 1000) { // 2시간 이내면 대기
+                    if (waitMs > 0 && waitMs <= 24 * 60 * 60 * 1000) { // 24시간 이내면 대기
                         const waitMin = Math.ceil(waitMs / 60000);
                         log('warning', `모든 모델 실패. ${waitMin}분 후 재시도...`);
                         await sleep(waitMs + 5000);
@@ -1168,12 +1202,8 @@ async function main() {
 
     const startTime = Date.now();
 
-    // 모델 쿼타 상태 사전 확인
-    const hasAvailableModels = await checkModelQuotas();
-    if (!hasAvailableModels) {
-        log('error', '사용 가능한 모델이 없습니다. 쿼타 리셋 후 다시 실행하세요.');
-        process.exit(1);
-    }
+    // 모델 쿼타 상태 사전 확인 (무한 대기하므로 false 반환 없음)
+    await checkModelQuotas();
 
     // 입력 파일 확인 (모든 영상 또는 지도 URL 있는 영상)
     // 우선순위: 전체 영상 처리 파일 > 지도 URL 영상 파일
@@ -1349,7 +1379,7 @@ async function main() {
                 const earliestReset = getEarliestResetTime();
                 if (earliestReset) {
                     const waitMs = earliestReset - Date.now();
-                    if (waitMs > 0 && waitMs <= 60 * 60 * 1000) { // 1시간 이내면 대기
+                    if (waitMs > 0 && waitMs <= 24 * 60 * 60 * 1000) { // 24시간 이내면 대기
                         log('info', `모든 모델 쿼타 소진 - 리셋까지 ${Math.ceil(waitMs / 60000)}분 대기...`);
                         await sleep(waitMs + 5000);
                         log('info', `쿼타 리셋 완료 - 계속 진행`);
@@ -1410,13 +1440,11 @@ async function main() {
         // 결과 처리
         for (const res of results) {
             if (res.quotaExceeded) {
-                log('error', '일일 쿼타 초과 - 프로세스 종료');
-                // 종료 전 저장
-                const allData = Array.from(allResults.values());
-                fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
-                rateLimiter.forceFlush();
-                await commitProgress(`쿼타 초과 중단 (${TODAY_FOLDER})`);
-                process.exit(1);
+                // waitForSlot에서 이미 대기하므로 이 코드는 도달할 일이 거의 없으나 안전장치로 유지
+                log('warning', '일일 쿼타 초과 감지 - 잠시 대기 후 재시도');
+                await sleep(60000);
+                i -= BATCH_SIZE; // 현재 배치 재시도
+                continue;
             }
 
             if (res.allBlacklisted) {
