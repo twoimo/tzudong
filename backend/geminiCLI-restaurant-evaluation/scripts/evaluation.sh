@@ -6,8 +6,10 @@
 
 set -e  # 에러 발생 시 즉시 종료
 
-# Gemini 모델 설정 (gemini-2.5-flash 사용)
-export GEMINI_MODEL="${GEMINI_MODEL:-gemini-2.5-flash}"
+# Gemini 모델 설정 (Primary: gemini-3-flash-preview, Fallback: gemini-2.5-flash)
+export PRIMARY_MODEL="gemini-3-flash-preview"
+export FALLBACK_MODEL="gemini-2.5-flash"
+export CURRENT_MODEL="$PRIMARY_MODEL"
 
 # 한국 시간대 설정 (KST, UTC+9)
 export TZ="Asia/Seoul"
@@ -378,12 +380,33 @@ $TRANSCRIPT
     # --yolo: 도구 사용 자동 승인, stderr 분리
     # Note: < /dev/null을 추가하여 stdin을 닫아 while read 루프와의 충돌 방지
     GEMINI_START=$(date +%s)
-    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$GEMINI_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+    GEMINI_SUCCESS=false
+    
+    # Primary 모델로 시도
+    log_debug "Gemini 모델: $CURRENT_MODEL"
+    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+        GEMINI_SUCCESS=true
+    else
+        # 에러 리포트에서 quota 에러 확인
+        ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
+        if [ -f "$ERROR_REPORT" ] && grep -q "exhausted your daily quota" "$ERROR_REPORT" 2>/dev/null; then
+            if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
+                log_warning "$PRIMARY_MODEL 일일 할당량 소진 - $FALLBACK_MODEL 으로 전환"
+                CURRENT_MODEL="$FALLBACK_MODEL"
+                sleep 12  # RPM 대기
+                if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                    GEMINI_SUCCESS=true
+                fi
+            fi
+        fi
+    fi
+    
+    if [ "$GEMINI_SUCCESS" = true ]; then
         GEMINI_END=$(date +%s)
         GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
         TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
         GEMINI_CALLS=$((GEMINI_CALLS + 1))
-        log_debug "Gemini CLI 응답 완료 (${GEMINI_DURATION}s)"
+        log_debug "Gemini CLI 응답 완료 (${GEMINI_DURATION}s, 모델: $CURRENT_MODEL)"
         
         # 파서 실행 (최대 2회 시도)
         PARSE_SUCCESS=false
@@ -415,10 +438,10 @@ $TRANSCRIPT
                 
                 if [ $PARSE_ATTEMPT -eq 1 ]; then
                     log_warning "파서 실패 (1차 시도) - Gemini 재호출 중..."
-                    sleep 1
+                    sleep 12  # RPM 대기
                     # Gemini CLI 재호출 (< /dev/null로 stdin 닫기)
                     GEMINI_START=$(date +%s)
-                    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$GEMINI_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
                         GEMINI_END=$(date +%s)
                         GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
                         TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
@@ -468,8 +491,8 @@ $TRANSCRIPT
     # 임시 파일 정리
     rm -f "$TEMP_RESPONSE" "$TEMP_PROMPT" "$TEMP_META"
     
-    # Rate Limit 준수 (60 RPM = 1초 대기)
-    sleep 1
+    # Rate Limit 준수 (5 RPM = 12초 대기)
+    sleep 12
     
 done < "$INPUT_FILE"
 
