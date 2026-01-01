@@ -575,7 +575,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                 </div>
 
                                 {/* 방문 날짜 및 시간 */}
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-2">
                                         <Label htmlFor="visitDate" className="flex items-center gap-2">
                                             <Calendar className="h-4 w-4" />

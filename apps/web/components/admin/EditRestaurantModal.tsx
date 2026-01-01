@@ -1201,7 +1201,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
 
               {/* 카테고리 체크박스 목록 (2열 그리드) */}
               <div className="border rounded-lg p-3 max-h-48 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                   {RESTAURANT_CATEGORIES.map((category) => (
                     <div key={category} className="flex items-center space-x-2">
                       <Checkbox

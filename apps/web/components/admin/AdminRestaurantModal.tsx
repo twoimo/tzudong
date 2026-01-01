@@ -778,7 +778,7 @@ export function AdminRestaurantModal({
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label htmlFor="name">이름 *</Label>
                             <Input
@@ -1016,7 +1016,7 @@ export function AdminRestaurantModal({
                                         <Label className="text-xs text-muted-foreground">지번 주소</Label>
                                         <p className="text-sm">{formData.jibun_address}</p>
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         <div>
                                             <Label className="text-xs text-muted-foreground">위도</Label>
                                             <p className="text-sm">{formData.lat}</p>
