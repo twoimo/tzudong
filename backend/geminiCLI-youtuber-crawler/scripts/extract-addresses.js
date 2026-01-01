@@ -82,7 +82,7 @@ async function checkModelQuotas() {
                 `gemini -p "1+1" --model ${model} 2>&1`
             ], {
                 encoding: 'utf-8',
-                timeout: 30000,
+                timeout: 120000,
                 env: envWithoutApiKey
             });
 
@@ -1502,17 +1502,10 @@ async function main() {
     }
 }
 
-// 프로세스 종료 시 Puppeteer 정리
-process.on('exit', () => {
-    if (puppeteerBrowser) {
-        puppeteerBrowser.close().catch(() => { });
-    }
-});
-
-process.on('SIGINT', async () => {
-    if (puppeteerBrowser) {
-        await puppeteerBrowser.close();
-    }
+// 프로세스 종료 핸들러
+process.on('SIGINT', () => {
+    log('info', '프로세스 중단됨 (Ctrl+C)');
+    rateLimiter.forceFlush();
     process.exit(0);
 });
 
