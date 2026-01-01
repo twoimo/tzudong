@@ -124,18 +124,72 @@ async function checkModelQuotas() {
     }
 
     // 사용 가능한 모델 수 확인
-    const availableCount = models.filter(m => !isModelBlacklisted(m)).length;
+    let availableCount = models.filter(m => !isModelBlacklisted(m)).length;
     log('info', `사용 가능한 모델: ${availableCount}/${models.length}개`);
 
     if (availableCount === 0) {
-        const earliest = getEarliestResetTime();
-        if (earliest) {
-            const waitMs = earliest - Date.now();
-            const waitHours = Math.floor(waitMs / 3600000);
-            const waitMins = Math.ceil((waitMs % 3600000) / 60000);
-            log('error', `모든 모델 쿼타 소진. 리셋까지 ${waitHours}시간 ${waitMins}분 대기 필요.`);
+        // 쿼타 소진으로 모든 모델이 블랙리스트일 때, 실제 쿼타 상태 재확인
+        log('info', '블랙리스트 초기화 후 실제 쿼타 상태 재확인 중...');
+
+        // 블랙리스트 초기화
+        blacklistedModels.clear();
+
+        // 실제 Gemini CLI로 테스트
+        for (const model of models) {
+            try {
+                const envWithoutApiKey = { ...process.env };
+                delete envWithoutApiKey.GEMINI_API_KEY;
+                delete envWithoutApiKey.GEMINI_API_KEY_BYEON;
+                delete envWithoutApiKey.GOOGLE_API_KEY;
+
+                const result = spawnSync('bash', [
+                    '-c',
+                    `gemini -p "1+1" --model ${model} 2>&1`
+                ], {
+                    encoding: 'utf-8',
+                    timeout: 60000,
+                    env: envWithoutApiKey
+                });
+
+                const output = result.stdout || '';
+
+                if (output.includes('exhausted your daily quota') ||
+                    output.includes('exhausted your capacity') ||
+                    output.includes('RESOURCE_EXHAUSTED')) {
+                    log('warning', `  ${model}: 실제 쿼타 소진 확인됨`);
+
+                    // PT 자정(KST 17:00)까지 대기 시간 계산
+                    const now = getKSTDate();
+                    let resetDate = new Date(now);
+                    if (now.getHours() >= 17) {
+                        resetDate.setDate(resetDate.getDate() + 1);
+                    }
+                    resetDate.setHours(17, 0, 0, 0);
+                    const resetTime = Date.now() + (resetDate.getTime() - now.getTime());
+
+                    blacklistedModels.set(model, { resetTime, reason: 'daily_quota_verified' });
+                } else {
+                    log('success', `  ${model}: 실제 사용 가능 확인!`);
+                }
+            } catch (error) {
+                log('warning', `  ${model}: 재확인 실패 - ${error.message}`);
+            }
         }
-        return false;
+
+        // 재확인 후 사용 가능한 모델 수 체크
+        availableCount = models.filter(m => !isModelBlacklisted(m)).length;
+        log('info', `재확인 후 사용 가능한 모델: ${availableCount}/${models.length}개`);
+
+        if (availableCount === 0) {
+            const earliest = getEarliestResetTime();
+            if (earliest) {
+                const waitMs = earliest - Date.now();
+                const waitHours = Math.floor(waitMs / 3600000);
+                const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+                log('error', `실제 쿼타 소진 확인됨. 리셋까지 ${waitHours}시간 ${waitMins}분 대기 필요.`);
+            }
+            return false;
+        }
     }
 
     return true;
