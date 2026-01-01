@@ -1097,7 +1097,7 @@ async function processVideo(video) {
         }
     }
 
-    result.is_restaurant_video = geminiResult?.is_restaurant_video || false;
+    result.is_restaurant_video = geminiResult?.is_restaurant_video ?? null;  // null = 분석 실패 (재시도 필요)
     result.video_type = geminiResult?.video_type || 'unknown';
 
     return result;
@@ -1252,9 +1252,12 @@ async function main() {
         if (existing) {
             // description이 변경되었는지 확인
             if (existing.descriptionHash === currentDescHash) {
-                // 재처리 조건: restaurants=0 이고 is_restaurant_video=true (맛집 영상인데 실패)
-                // 스킵 조건: restaurants>0 이거나, is_restaurant_video=false (맛집 아닌 영상 - 정상 분석됨)
-                const shouldRetry = existing.restaurants === 0 && existing.is_restaurant_video === true;
+                // 재처리 조건: 
+                //   1. restaurants=0 이고 is_restaurant_video=true (맛집 영상인데 추출 실패)
+                //   2. is_restaurant_video=null (분석 자체 실패)
+                // 스킵 조건: restaurants>0 이거나, is_restaurant_video=false (맛집 아닌 영상)
+                const shouldRetry = existing.is_restaurant_video === null ||
+                    (existing.restaurants === 0 && existing.is_restaurant_video === true);
                 if (!shouldRetry) {
                     stats.skipped++;
                     continue;
