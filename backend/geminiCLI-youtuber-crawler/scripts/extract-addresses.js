@@ -92,16 +92,20 @@ async function checkModelQuotas() {
                 output.includes('exhausted your capacity') ||
                 output.includes('quota')) {
 
-                // PT 자정(KST 17:00)까지 대기 시간 계산
-                const now = getKSTDate();
-                let resetDate = new Date(now);
+                // 리셋 시간 파싱 (reset after 1h20m30s)
+                const resetMatch = output.match(/reset after (\d+)h(\d+)m(\d+)s/);
+                let waitMs = 10 * 60 * 1000; // 기본 10분 후 재확인 (파싱 실패 시)
 
-                if (now.getHours() >= 17) {
-                    resetDate.setDate(resetDate.getDate() + 1);
+                if (resetMatch) {
+                    const h = parseInt(resetMatch[1]);
+                    const m = parseInt(resetMatch[2]);
+                    const s = parseInt(resetMatch[3]);
+                    waitMs = (h * 3600 + m * 60 + s) * 1000;
+                    log('warning', `  ${model}: 쿼타 소진 - ${h}시간 ${m}분 ${s}초 후 리셋`);
+                } else {
+                    log('warning', `  ${model}: 쿼타 소진 - 10분 후 재확인`);
                 }
-                resetDate.setHours(17, 0, 0, 0);
 
-                const waitMs = resetDate.getTime() - now.getTime();
                 const resetTime = Date.now() + waitMs;
 
                 const waitHours = Math.floor(waitMs / 3600000);
@@ -217,7 +221,7 @@ class RateLimiter {
     constructor() {
         // Google AI Pro 구독자 기준
         this.RPM_LIMIT = 60;      // 안전 마진 적용 (실제 120)
-        this.RPD_LIMIT = 1000;    // 안전 마진 적용 (실제 1500)
+        this.RPD_LIMIT = 10000;   // API 오류로 제어하므로 클라이언트 제한은 느슨하게 설정
         this.CONCURRENCY = 3;    // 동시 3개 + 1초 딜레이
 
         this.requestsThisMinute = 0;
@@ -265,27 +269,12 @@ class RateLimiter {
         // RPD 체크
         if (this.requestsToday >= this.RPD_LIMIT) {
             log('warning', `일일 쿼타 초과 (${this.requestsToday}/${this.RPD_LIMIT} RPD)`);
+            log('info', `쿼타 리셋까지 10분 대기 중... (RPD ${this.RPD_LIMIT} 초과)`);
+            await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000)); // 10분 대기
 
-            // PT 자정(KST 17:00)까지 대기 시간 계산
-            const now = getKSTDate();
-            let resetDate = new Date(now);
-
-            if (now.getHours() >= 17) {
-                resetDate.setDate(resetDate.getDate() + 1);
-            }
-            resetDate.setHours(17, 0, 0, 0);
-
-            const waitMs = resetDate.getTime() - now.getTime();
-            const waitHours = Math.floor(waitMs / 3600000);
-            const waitMins = Math.ceil((waitMs % 3600000) / 60000);
-
-            log('info', `쿼타 리셋까지 ${waitHours}시간 ${waitMins}분 대기 중... (KST 17:00 리셋)`);
-            await new Promise(resolve => setTimeout(resolve, waitMs + 60000)); // 리셋 시간 + 1분 여유
-
-            // 리셋
-            this.requestsToday = 0;
-            this.saveDailyStats();
-            log('info', '쿼타 리셋 완료. 작업 재개.');
+            // 리셋 (계속 시도)
+            // this.requestsToday = 0; // 누적 카운트는 유지하되, 대기 후 재시도 허용
+            log('info', '대기 완료. 작업 재개.');
         }
 
         // RPM 체크 및 대기
@@ -1290,7 +1279,7 @@ async function main() {
     // 배치 설정
     let batchCount = 0;
     const LOG_BATCH_SIZE = 20;     // 20개마다 진행 상황 로그 (로그 I/O 최적화)
-    const COMMIT_BATCH_SIZE = 1;   // 1개마다 즉시 저장
+    const COMMIT_BATCH_SIZE = 50;  // 50개마다 저장 (빈번한 I/O 오류 방지)
     let lastCommitCount = 0;
 
     // GitHub Actions 환경인지 확인
@@ -1480,8 +1469,12 @@ async function main() {
                 // 중간 저장
                 const allData = Array.from(allResults.values());
                 if (allData.length > 0) {
-                    fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
-                    log('info', `중간 저장 완료: ${allData.length}개`);
+                    try {
+                        fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+                        log('info', `중간 저장 완료: ${allData.length}개`);
+                    } catch (e) {
+                        log('warning', `중간 저장 실패: ${e.message}`);
+                    }
                 }
                 rateLimiter.forceFlush();
 
@@ -1525,18 +1518,49 @@ async function main() {
 
         // 50개마다 파일 저장 + 자동 커밋 (I/O 최적화)
         if (stats.processed - lastCommitCount >= COMMIT_BATCH_SIZE) {
-            // 파일 저장 (50개마다만 - 성능 최적화)
+            // 종료 전 저장
             const allData = Array.from(allResults.values());
-            fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+            try {
+                fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+            } catch (e) { log('error', `비상 저장 실패: ${e.message}`); }
 
-            await commitProgress(`중간저장: ${stats.processed}개 처리 (${TODAY_FOLDER})`);
-            lastCommitCount = stats.processed;
+            let saved = false;
+            const content = Array.from(allResults.values()).map(d => JSON.stringify(d)).join('\n') + '\n'; // Define content here
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    fs.writeFileSync(outputFile, content, 'utf-8');
+                    saved = true;
+                    break;
+                } catch (e) {
+                    log('warning', `파일 저장 실패(시도 ${attempt}/3): ${e.message}`);
+                    await sleep(2000 * attempt);
+                }
+            }
+
+            if (saved) {
+                await commitProgress(`중간저장: ${stats.processed}개 처리 (${TODAY_FOLDER})`);
+                lastCommitCount = stats.processed;
+            } else {
+                log('error', '파일 저장 최종 실패 - 다음 배치에서 재시도');
+            }
         }
     }
 
     // 마지막 남은 데이터 저장 + 커밋
     const allDataFinal = Array.from(allResults.values());
-    fs.writeFileSync(outputFile, allDataFinal.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+    const finalContent = allDataFinal.map(d => JSON.stringify(d)).join('\n') + '\n';
+
+    // 최종 저장 재시도 로직
+    for (let attempt = 1; attempt <= 5; attempt++) {
+        try {
+            fs.writeFileSync(outputFile, finalContent, 'utf-8');
+            break;
+        } catch (e) {
+            log('warning', `최종 저장 실패(시도 ${attempt}/5): ${e.message}`);
+            await sleep(2000 * attempt);
+        }
+    }
+
     rateLimiter.forceFlush();
 
     if (stats.processed > lastCommitCount) {
