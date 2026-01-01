@@ -35,6 +35,7 @@ import {
     removeClusterCSS
 } from "@/lib/cluster-marker";
 import { perfMonitor } from "@/lib/performance-monitor";
+import { supabase } from "@/integrations/supabase/client";
 
 // 상수 정의
 const PANEL_WIDTH = 400; // 상세 패널 너비 (px)
@@ -271,6 +272,20 @@ const RestaurantCountBadge = memo(({ count, style, className }: { count: number,
 ));
 RestaurantCountBadge.displayName = 'RestaurantCountBadge';
 
+// 동시 접속자 토스트 컴포넌트
+const OnlineUsersBadge = memo(({ count, style, className }: { count: number, style?: React.CSSProperties, className?: string }) => (
+    <div
+        style={{ ...style, animation: 'fadeInOut 4s ease-in-out forwards' }}
+        className={`bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300 ${className || ''}`}
+    >
+        <span className="text-sm font-medium">
+            👥 {count}명이 함께 보는 중
+        </span>
+    </div>
+));
+OnlineUsersBadge.displayName = 'OnlineUsersBadge';
+
+
 // 빈 상태 UI 컴포넌트
 const EmptyStateIndicator = memo(() => (
     <div className="bg-card/95 backdrop-blur border border-border rounded-lg px-5 py-3 shadow-lg z-10 flex items-center gap-3">
@@ -395,6 +410,8 @@ const NaverMapView = memo(({
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
     const [showRestaurantCount, setShowRestaurantCount] = useState(false);
+    const [showOnlineUsers, setShowOnlineUsers] = useState(false);
+    const [onlineUsersCount, setOnlineUsersCount] = useState(0);
     const [isMapInitialized, setIsMapInitialized] = useState(false);
 
     // [Fix] 라우트 변경 감지 - 다른 페이지 갔다가 돌아왔을 때 지도 재초기화
@@ -1084,6 +1101,69 @@ const NaverMapView = memo(({
             return () => clearTimeout(timer);
         }
     }, [restaurants, isLoadingRestaurants]);
+
+    // 동시 접속자 추적을 위한 ref (useEffect 의존성 문제 방지)
+    const onlineUsersCountRef = useRef(onlineUsersCount);
+    const showRestaurantCountRef = useRef(showRestaurantCount);
+    const hasShownInitialToastRef = useRef(false);
+    useEffect(() => { onlineUsersCountRef.current = onlineUsersCount; }, [onlineUsersCount]);
+    useEffect(() => { showRestaurantCountRef.current = showRestaurantCount; }, [showRestaurantCount]);
+
+    // 동시 접속자 추적 (Supabase Presence) 및 주기적 토스트 표시
+    useEffect(() => {
+        if (!isLoaded) return;
+
+        // 토스트 표시 함수
+        const showOnlineToast = () => {
+            // 맛집 개수 표시 중이 아닐 때만 표시
+            if (!showRestaurantCountRef.current && onlineUsersCountRef.current >= 1) {
+                setShowOnlineUsers(true);
+                setTimeout(() => setShowOnlineUsers(false), 4000);
+            }
+        };
+
+        // Supabase Presence 채널 구독
+        const channel = supabase.channel('map-online-users')
+            .on('presence', { event: 'sync' }, () => {
+                const state = channel.presenceState();
+                const uniqueUserIds = new Set<string>();
+                Object.entries(state).forEach(([presenceKey, presences]) => {
+                    (presences as any[]).forEach((presence: any) => {
+                        uniqueUserIds.add(presence.user_id || presence.presence_ref || presenceKey);
+                    });
+                });
+                const count = uniqueUserIds.size;
+                setOnlineUsersCount(count);
+                onlineUsersCountRef.current = count;
+
+                // 첫 번째 sync 후 5초 뒤에 토스트 표시 (맛집 개수 표시가 끝난 후)
+                if (!hasShownInitialToastRef.current && count >= 1) {
+                    hasShownInitialToastRef.current = true;
+                    setTimeout(() => {
+                        if (!showRestaurantCountRef.current) {
+                            setShowOnlineUsers(true);
+                            setTimeout(() => setShowOnlineUsers(false), 4000);
+                        }
+                    }, 5000);
+                }
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({
+                        user_id: `map-user-${Math.random().toString(36).slice(2)}`,
+                        online_at: new Date().toISOString(),
+                    });
+                }
+            });
+
+        // 90초마다 동시 접속자 토스트 표시
+        const interval = setInterval(showOnlineToast, 90000);
+
+        return () => {
+            supabase.removeChannel(channel);
+            clearInterval(interval);
+        };
+    }, [isLoaded]); // isLoaded만 의존성으로
 
     // 표시할 마커 데이터 (로딩 중에는 이전 데이터를 사용) - 메모이제이션
     const displayRestaurants = useMemo(() => {
@@ -1818,6 +1898,15 @@ const NaverMapView = memo(({
                 {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
                     <RestaurantCountBadge
                         count={restaurants.length}
+                        style={centerOffsetStyle}
+                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                    />
+                )}
+
+                {/* 동시 접속자 표시 (주기적으로 표시) */}
+                {isLoaded && showOnlineUsers && onlineUsersCount >= 1 && !showRestaurantCount && (
+                    <OnlineUsersBadge
+                        count={onlineUsersCount}
                         style={centerOffsetStyle}
                         className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
                     />

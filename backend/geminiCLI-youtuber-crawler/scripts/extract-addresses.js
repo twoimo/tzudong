@@ -92,16 +92,20 @@ async function checkModelQuotas() {
                 output.includes('exhausted your capacity') ||
                 output.includes('quota')) {
 
-                // PT 자정(KST 17:00)까지 대기 시간 계산
-                const now = getKSTDate();
-                let resetDate = new Date(now);
+                // 리셋 시간 파싱 (reset after 1h20m30s)
+                const resetMatch = output.match(/reset after (\d+)h(\d+)m(\d+)s/);
+                let waitMs = 10 * 60 * 1000; // 기본 10분 후 재확인 (파싱 실패 시)
 
-                if (now.getHours() >= 17) {
-                    resetDate.setDate(resetDate.getDate() + 1);
+                if (resetMatch) {
+                    const h = parseInt(resetMatch[1]);
+                    const m = parseInt(resetMatch[2]);
+                    const s = parseInt(resetMatch[3]);
+                    waitMs = (h * 3600 + m * 60 + s) * 1000;
+                    log('warning', `  ${model}: 쿼타 소진 - ${h}시간 ${m}분 ${s}초 후 리셋`);
+                } else {
+                    log('warning', `  ${model}: 쿼타 소진 - 10분 후 재확인`);
                 }
-                resetDate.setHours(17, 0, 0, 0);
 
-                const waitMs = resetDate.getTime() - now.getTime();
                 const resetTime = Date.now() + waitMs;
 
                 const waitHours = Math.floor(waitMs / 3600000);
@@ -158,14 +162,20 @@ async function checkModelQuotas() {
                     output.includes('RESOURCE_EXHAUSTED')) {
                     log('warning', `  ${model}: 실제 쿼타 소진 확인됨`);
 
-                    // PT 자정(KST 17:00)까지 대기 시간 계산
-                    const now = getKSTDate();
-                    let resetDate = new Date(now);
-                    if (now.getHours() >= 17) {
-                        resetDate.setDate(resetDate.getDate() + 1);
+                    // 리셋 시간 파싱 또는 기본 10분
+                    const resetMatch = output.match(/reset after (\d+)h(\d+)m(\d+)s/);
+                    let waitMs = 10 * 60 * 1000;
+
+                    if (resetMatch) {
+                        const h = parseInt(resetMatch[1]);
+                        const m = parseInt(resetMatch[2]);
+                        const s = parseInt(resetMatch[3]);
+                        waitMs = (h * 3600 + m * 60 + s) * 1000;
+                        log('warning', `  ${model}: 쿼타 소진 - ${h}시간 ${m}분 ${s}초 후 리셋`);
+                    } else {
+                        log('warning', `  ${model}: 쿼타 소진 - 10분 후 재확인`);
                     }
-                    resetDate.setHours(17, 0, 0, 0);
-                    const resetTime = Date.now() + (resetDate.getTime() - now.getTime());
+                    const resetTime = Date.now() + waitMs;
 
                     blacklistedModels.set(model, { resetTime, reason: 'daily_quota_verified' });
                 } else {
@@ -182,13 +192,28 @@ async function checkModelQuotas() {
 
         if (availableCount === 0) {
             const earliest = getEarliestResetTime();
+            let waitMs = 60 * 60 * 1000; // 기본 1시간
+
             if (earliest) {
-                const waitMs = earliest - Date.now();
-                const waitHours = Math.floor(waitMs / 3600000);
-                const waitMins = Math.ceil((waitMs % 3600000) / 60000);
-                log('error', `실제 쿼타 소진 확인됨. 리셋까지 ${waitHours}시간 ${waitMins}분 대기 필요.`);
+                waitMs = earliest - Date.now();
             }
-            return false;
+
+            if (waitMs <= 0) waitMs = 60000; // 최소 1분
+
+            const waitHours = Math.floor(waitMs / 3600000);
+            const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+            log('warning', `모든 모델 쿼타 소진. ${waitHours}시간 ${waitMins}분 대기 후 재확인...`);
+
+            // 블랙리스트 초기화 후 대기
+            blacklistedModels.clear();
+
+            // 대기 (child_process.spawnSync는 이벤트 루프를 차단하지 않지만, 여기선 sleep으로 대기)
+            // 비동기 함수 안이므로 Promise 기반 sleep 사용 필요하지만, 
+            // checkModelQuotas가 async 함수이므로 await 가능
+            await new Promise(resolve => setTimeout(resolve, waitMs + 10000));
+
+            // 재귀 호출로 다시 확인
+            return checkModelQuotas();
         }
     }
 
@@ -202,7 +227,7 @@ class RateLimiter {
     constructor() {
         // Google AI Pro 구독자 기준
         this.RPM_LIMIT = 60;      // 안전 마진 적용 (실제 120)
-        this.RPD_LIMIT = 1000;    // 안전 마진 적용 (실제 1500)
+        this.RPD_LIMIT = 10000;   // API 오류로 제어하므로 클라이언트 제한은 느슨하게 설정
         this.CONCURRENCY = 3;    // 동시 3개 + 1초 딜레이
 
         this.requestsThisMinute = 0;
@@ -249,9 +274,13 @@ class RateLimiter {
     async waitForSlot() {
         // RPD 체크
         if (this.requestsToday >= this.RPD_LIMIT) {
-            log('error', `일일 쿼타 초과 (${this.requestsToday}/${this.RPD_LIMIT} RPD)`);
-            log('info', '쿼타 리셋: PT 자정 (KST 17:00) 또는 소진 시점 기준 24시간');
-            return false;
+            log('warning', `일일 쿼타 초과 (${this.requestsToday}/${this.RPD_LIMIT} RPD)`);
+            log('info', `쿼타 리셋까지 10분 대기 중... (RPD ${this.RPD_LIMIT} 초과)`);
+            await new Promise(resolve => setTimeout(resolve, 10 * 60 * 1000)); // 10분 대기
+
+            // 리셋 (계속 시도)
+            // this.requestsToday = 0; // 누적 카운트는 유지하되, 대기 후 재시도 허용
+            log('info', '대기 완료. 작업 재개.');
         }
 
         // RPM 체크 및 대기
@@ -675,44 +704,35 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
         ? ['gemini-3-pro-preview']      // GitHub Actions: pro만
         : ['gemini-3-flash-preview'];   // 로컬: flash만
 
-    // 최대 재시도 횟수 (무한 루프 방지)
-    const MAX_RETRY_ATTEMPTS = 3;
-
-    while (retryAttempt < MAX_RETRY_ATTEMPTS) {
+    // Infinite loop until models are available
+    while (true) {
         // 사용 가능한 모델만 필터링 (블랙리스트 제외)
         const availableModels = allModels.filter(m => !isModelBlacklisted(m));
 
-        if (availableModels.length === 0) {
-            // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간까지 대기
-            const earliest = getEarliestResetTime();
-            if (earliest) {
-                const waitMs = earliest - Date.now();
-                if (waitMs > 0 && waitMs <= 2 * 60 * 60 * 1000) { // 2시간 이내면 대기
-                    const waitMin = Math.ceil(waitMs / 60000);
-                    log('warning', `모든 모델 쿼타 소진됨. ${waitMin}분 후 재시도...`);
-                    await sleep(waitMs + 5000); // 5초 여유
-                    log('info', `쿼타 리셋 완료 - 재시도 (${retryAttempt + 1}/${MAX_RETRY_ATTEMPTS})`);
-                    retryAttempt++;
-                    // 블랙리스트 정리 후 다시 루프
-                    allModels.forEach(m => isModelBlacklisted(m));
-                    continue;
-                } else {
-                    log('error', `리셋 대기 시간이 너무 김 (${Math.ceil(waitMs / 60000)}분) - 스킵`);
-                }
-            }
-            cleanupTempFiles(tempPromptFile, tempOutputFile);
-            return null;
+        if (availableModels.length > 0) {
+            break; // 사용 가능한 모델 있음 -> 진행
         }
 
-        // 사용 가능한 모델이 있으면 루프 탈출
-        break;
-    }
+        // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간까지 대기 (무한 대기)
+        const earliest = getEarliestResetTime();
+        let waitMs = 10 * 60 * 1000; // 기본 10분
 
-    // 재시도 횟수 초과 시 실패
-    if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
-        log('error', `최대 재시도 횟수(${MAX_RETRY_ATTEMPTS}) 초과 - 스킵`);
-        cleanupTempFiles(tempPromptFile, tempOutputFile);
-        return null;
+        if (earliest) {
+            waitMs = earliest - Date.now();
+        }
+        if (waitMs <= 0) waitMs = 60000; // 최소 1분
+
+        const waitMin = Math.ceil(waitMs / 60000);
+        log('warning', `모든 모델 쿼타 소진. ${waitMin}분 대기 후 재시도...`);
+
+        await sleep(waitMs + 5000); // 여유 시간
+        log('info', `대기 완료 - 모델 재확인`);
+
+        // 블랙리스트 초기화/재확인
+        blacklistedModels.clear();
+
+        // 여기서 retryAttempt를 증가시키지 않음 (쿼타 대기는 재시도 횟수 차감 X)
+        // continue to check availableModels again
     }
 
     // 사용 가능한 모델 재확인
@@ -803,23 +823,21 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                                 continue;
                             }
                         } else if (combinedOutput.includes('exhausted your daily quota')) {
-                            // 일일 쿼타 소진 - PT 자정(KST 17:00)까지 대기 시간 계산
-                            const now = getKSTDate();
-                            let resetDate = new Date(now);
+                            // 일일 쿼타 소진 - 리셋 시간 파싱 시도 또는 10분 대기
+                            const resetMatch = combinedOutput.match(/reset after (\d+)h(\d+)m(\d+)s/);
+                            let waitMs = 10 * 60 * 1000; // 기본 10분
 
-                            // KST 17:00 = PT 자정
-                            if (now.getHours() >= 17) {
-                                // 다음 날 17:00
-                                resetDate.setDate(resetDate.getDate() + 1);
+                            if (resetMatch) {
+                                const h = parseInt(resetMatch[1]);
+                                const m = parseInt(resetMatch[2]);
+                                const s = parseInt(resetMatch[3]);
+                                waitMs = (h * 3600 + m * 60 + s) * 1000;
                             }
-                            resetDate.setHours(17, 0, 0, 0);
-
-                            const waitMs = resetDate.getTime() - now.getTime();
                             resetTime = Date.now() + waitMs;
 
                             const waitHours = Math.floor(waitMs / 3600000);
                             const waitMins = Math.ceil((waitMs % 3600000) / 60000);
-                            log('warning', `모델 ${model} 일일 쿼타 소진 - PT 자정(KST 17:00)까지 ${waitHours}시간 ${waitMins}분`);
+                            log('warning', `모델 ${model} 일일 쿼타 소진 - ${waitHours}시간 ${waitMins}분 후 재시도`);
                         }
 
                         // 블랙리스트에 리셋 시간과 함께 저장
@@ -950,23 +968,32 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 log('debug', `마지막 오류: ${lastError.message}`);
             }
 
-            // 재시도 가능 여부 확인 (재시도 횟수가 남아있고, 리셋 시간이 있는 경우)
-            if (retryAttempt < MAX_RETRY_ATTEMPTS) {
-                const earliest = getEarliestResetTime();
-                if (earliest) {
-                    const waitMs = earliest - Date.now();
-                    if (waitMs > 0 && waitMs <= 2 * 60 * 60 * 1000) { // 2시간 이내면 대기
-                        const waitMin = Math.ceil(waitMs / 60000);
-                        log('warning', `모든 모델 실패. ${waitMin}분 후 재시도...`);
-                        await sleep(waitMs + 5000);
-                        log('info', `쿼타 리셋 완료 - 동일 맛집 재시도 (${retryAttempt + 1}/${MAX_RETRY_ATTEMPTS})`);
-                        retryAttempt++;
-                        // 블랙리스트 정리 (만료된 항목 제거)
-                        allModels.forEach(m => isModelBlacklisted(m));
-                        // 재귀적으로 다시 시도 (현재 함수 다시 호출)
-                        cleanupTempFiles(tempPromptFile, tempOutputFile);
-                        return await extractWithGemini(video, transcript, retryAttempt);
-                    }
+            // 재시도 가능 여부 확인
+            // 쿼타 소진(blacklist)으로 인한 실패인 경우 -> 무한 재시도 (retryAttempt 증가 X)
+            // 그 외(파싱 에러 등)인 경우 -> MAX_RETRY_ATTEMPTS까지 재시도
+            const earliest = getEarliestResetTime();
+
+            if (earliest) {
+                // 쿼타 문제로 판단 -> 무한 대기 후 재시도
+                const waitMs = earliest - Date.now();
+                const waitMin = Math.ceil(waitMs > 0 ? waitMs / 60000 : 10);
+
+                log('warning', `모든 모델 쿼타 소진으로 실패. ${waitMin}분 대기 후 무한 재시도...`);
+                await sleep((waitMs > 0 ? waitMs : 10 * 60 * 1000) + 5000);
+
+                // 블랙리스트 초기화
+                blacklistedModels.clear();
+
+                // 재귀 호출 (retryAttempt 증가시키지 않음)
+                cleanupTempFiles(tempPromptFile, tempOutputFile);
+                return await extractWithGemini(video, transcript, retryAttempt);
+            } else {
+                // 일반 에러 -> 재시도 횟수 차감
+                if (retryAttempt < 3) { // MAX_RETRY_ATTEMPTS = 3 하드코딩 (상단 변수 제거됨)
+                    log('warning', `분석 실패 - 재시도 (${retryAttempt + 1}/3)...`);
+                    await sleep(5000);
+                    cleanupTempFiles(tempPromptFile, tempOutputFile);
+                    return await extractWithGemini(video, transcript, retryAttempt + 1);
                 }
             }
         }
@@ -1168,12 +1195,8 @@ async function main() {
 
     const startTime = Date.now();
 
-    // 모델 쿼타 상태 사전 확인
-    const hasAvailableModels = await checkModelQuotas();
-    if (!hasAvailableModels) {
-        log('error', '사용 가능한 모델이 없습니다. 쿼타 리셋 후 다시 실행하세요.');
-        process.exit(1);
-    }
+    // 모델 쿼타 상태 사전 확인 (무한 대기하므로 false 반환 없음)
+    await checkModelQuotas();
 
     // 입력 파일 확인 (모든 영상 또는 지도 URL 있는 영상)
     // 우선순위: 전체 영상 처리 파일 > 지도 URL 영상 파일
@@ -1260,7 +1283,7 @@ async function main() {
     // 배치 설정
     let batchCount = 0;
     const LOG_BATCH_SIZE = 20;     // 20개마다 진행 상황 로그 (로그 I/O 최적화)
-    const COMMIT_BATCH_SIZE = 1;   // 1개마다 즉시 저장
+    const COMMIT_BATCH_SIZE = 50;  // 50개마다 저장 (빈번한 I/O 오류 방지)
     let lastCommitCount = 0;
 
     // GitHub Actions 환경인지 확인
@@ -1349,7 +1372,7 @@ async function main() {
                 const earliestReset = getEarliestResetTime();
                 if (earliestReset) {
                     const waitMs = earliestReset - Date.now();
-                    if (waitMs > 0 && waitMs <= 60 * 60 * 1000) { // 1시간 이내면 대기
+                    if (waitMs > 0 && waitMs <= 24 * 60 * 60 * 1000) { // 24시간 이내면 대기
                         log('info', `모든 모델 쿼타 소진 - 리셋까지 ${Math.ceil(waitMs / 60000)}분 대기...`);
                         await sleep(waitMs + 5000);
                         log('info', `쿼타 리셋 완료 - 계속 진행`);
@@ -1410,13 +1433,11 @@ async function main() {
         // 결과 처리
         for (const res of results) {
             if (res.quotaExceeded) {
-                log('error', '일일 쿼타 초과 - 프로세스 종료');
-                // 종료 전 저장
-                const allData = Array.from(allResults.values());
-                fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
-                rateLimiter.forceFlush();
-                await commitProgress(`쿼타 초과 중단 (${TODAY_FOLDER})`);
-                process.exit(1);
+                // waitForSlot에서 이미 대기하므로 이 코드는 도달할 일이 거의 없으나 안전장치로 유지
+                log('warning', '일일 쿼타 초과 감지 - 잠시 대기 후 재시도');
+                await sleep(60000);
+                i -= BATCH_SIZE; // 현재 배치 재시도
+                continue;
             }
 
             if (res.allBlacklisted) {
@@ -1452,8 +1473,12 @@ async function main() {
                 // 중간 저장
                 const allData = Array.from(allResults.values());
                 if (allData.length > 0) {
-                    fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
-                    log('info', `중간 저장 완료: ${allData.length}개`);
+                    try {
+                        fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+                        log('info', `중간 저장 완료: ${allData.length}개`);
+                    } catch (e) {
+                        log('warning', `중간 저장 실패: ${e.message}`);
+                    }
                 }
                 rateLimiter.forceFlush();
 
@@ -1497,18 +1522,49 @@ async function main() {
 
         // 50개마다 파일 저장 + 자동 커밋 (I/O 최적화)
         if (stats.processed - lastCommitCount >= COMMIT_BATCH_SIZE) {
-            // 파일 저장 (50개마다만 - 성능 최적화)
+            // 종료 전 저장
             const allData = Array.from(allResults.values());
-            fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+            try {
+                fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+            } catch (e) { log('error', `비상 저장 실패: ${e.message}`); }
 
-            await commitProgress(`중간저장: ${stats.processed}개 처리 (${TODAY_FOLDER})`);
-            lastCommitCount = stats.processed;
+            let saved = false;
+            const content = Array.from(allResults.values()).map(d => JSON.stringify(d)).join('\n') + '\n'; // Define content here
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    fs.writeFileSync(outputFile, content, 'utf-8');
+                    saved = true;
+                    break;
+                } catch (e) {
+                    log('warning', `파일 저장 실패(시도 ${attempt}/3): ${e.message}`);
+                    await sleep(2000 * attempt);
+                }
+            }
+
+            if (saved) {
+                await commitProgress(`중간저장: ${stats.processed}개 처리 (${TODAY_FOLDER})`);
+                lastCommitCount = stats.processed;
+            } else {
+                log('error', '파일 저장 최종 실패 - 다음 배치에서 재시도');
+            }
         }
     }
 
     // 마지막 남은 데이터 저장 + 커밋
     const allDataFinal = Array.from(allResults.values());
-    fs.writeFileSync(outputFile, allDataFinal.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+    const finalContent = allDataFinal.map(d => JSON.stringify(d)).join('\n') + '\n';
+
+    // 최종 저장 재시도 로직
+    for (let attempt = 1; attempt <= 5; attempt++) {
+        try {
+            fs.writeFileSync(outputFile, finalContent, 'utf-8');
+            break;
+        } catch (e) {
+            log('warning', `최종 저장 실패(시도 ${attempt}/5): ${e.message}`);
+            await sleep(2000 * attempt);
+        }
+    }
+
     rateLimiter.forceFlush();
 
     if (stats.processed > lastCommitCount) {
