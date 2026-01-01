@@ -58,6 +58,89 @@ function getEarliestResetTime() {
     return earliest;
 }
 
+/**
+ * 스크립트 시작 시 각 모델의 쿼타 상태를 사전 확인
+ * "gemini -p 1+1 --model X" 명령어로 테스트
+ */
+async function checkModelQuotas() {
+    // GitHub Actions에서는 pro만, 로컬에서는 flash만 사용
+    const isGitHubActions = !!process.env.GITHUB_ACTIONS;
+    const models = isGitHubActions
+        ? ['gemini-3-pro-preview']      // GitHub Actions: pro만
+        : ['gemini-3-flash-preview'];   // 로컬: flash만
+    log('info', `모델 쿼타 상태 확인 중... (${isGitHubActions ? 'GitHub Actions' : '로컬'} 환경)`);
+
+    for (const model of models) {
+        try {
+            const envWithoutApiKey = { ...process.env };
+            delete envWithoutApiKey.GEMINI_API_KEY;
+            delete envWithoutApiKey.GEMINI_API_KEY_BYEON;
+            delete envWithoutApiKey.GOOGLE_API_KEY;
+
+            const result = spawnSync('bash', [
+                '-c',
+                `gemini -p "1+1" --model ${model} 2>&1`
+            ], {
+                encoding: 'utf-8',
+                timeout: 120000,
+                env: envWithoutApiKey
+            });
+
+            const output = result.stdout || '';
+
+            if (output.includes('exhausted your daily quota') ||
+                output.includes('exhausted your capacity') ||
+                output.includes('quota')) {
+
+                // PT 자정(KST 17:00)까지 대기 시간 계산
+                const now = getKSTDate();
+                let resetDate = new Date(now);
+
+                if (now.getHours() >= 17) {
+                    resetDate.setDate(resetDate.getDate() + 1);
+                }
+                resetDate.setHours(17, 0, 0, 0);
+
+                const waitMs = resetDate.getTime() - now.getTime();
+                const resetTime = Date.now() + waitMs;
+
+                const waitHours = Math.floor(waitMs / 3600000);
+                const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+
+                blacklistedModels.set(model, {
+                    resetTime,
+                    reason: 'daily_quota'
+                });
+
+                log('warning', `  ${model}: 일일 쿼타 소진 (리셋까지 ${waitHours}시간 ${waitMins}분)`);
+            } else if (output.includes('2') || !result.error) {
+                log('success', `  ${model}: 사용 가능`);
+            } else {
+                log('warning', `  ${model}: 알 수 없는 상태`);
+            }
+        } catch (error) {
+            log('warning', `  ${model}: 확인 실패 - ${error.message}`);
+        }
+    }
+
+    // 사용 가능한 모델 수 확인
+    const availableCount = models.filter(m => !isModelBlacklisted(m)).length;
+    log('info', `사용 가능한 모델: ${availableCount}/${models.length}개`);
+
+    if (availableCount === 0) {
+        const earliest = getEarliestResetTime();
+        if (earliest) {
+            const waitMs = earliest - Date.now();
+            const waitHours = Math.floor(waitMs / 3600000);
+            const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+            log('error', `모든 모델 쿼타 소진. 리셋까지 ${waitHours}시간 ${waitMins}분 대기 필요.`);
+        }
+        return false;
+    }
+
+    return true;
+}
+
 // ============================================
 // Rate Limiter (Google AI Pro: 120 RPM, 1500 RPD)
 // ============================================
@@ -66,14 +149,14 @@ class RateLimiter {
         // Google AI Pro 구독자 기준
         this.RPM_LIMIT = 60;      // 안전 마진 적용 (실제 120)
         this.RPD_LIMIT = 1000;    // 안전 마진 적용 (실제 1500)
-        this.CONCURRENCY = 10;    // 동시 처리 수 (자막 수집 분리 후 증가)
+        this.CONCURRENCY = 3;    // 동시 3개 + 1초 딜레이
 
         this.requestsThisMinute = 0;
         this.requestsToday = 0;
         this.minuteStart = Date.now();
         this.activeRequests = 0;
         this.lastSaveCount = 0;   // 마지막 저장 시점
-        this.SAVE_INTERVAL = 10;  // 10개마다 저장 (I/O 최적화)
+        this.SAVE_INTERVAL = 20;  // 20개마다 저장 (I/O 최적화)
 
         // 통계 파일에서 오늘 요청 수 로드
         this.loadDailyStats();
@@ -135,6 +218,11 @@ class RateLimiter {
         // 동시 요청 제한
         while (this.activeRequests >= this.CONCURRENCY) {
             await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        // 요청 간 1초 딜레이 (Rate Limit 안정적 준수)
+        if (this.requestsThisMinute > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
         }
 
         this.activeRequests++;
@@ -484,7 +572,7 @@ function cleanupTempFiles(...files) {
  * Gemini CLI로 맛집 정보 추출
  * 여러 모델을 순차적으로 시도 (fallback 지원)
  */
-async function extractWithGemini(video, transcript) {
+async function extractWithGemini(video, transcript, retryAttempt = 0) {
     // 프롬프트 템플릿 로드
     let promptTemplate = fs.readFileSync(PROMPT_FILE, 'utf-8');
 
@@ -525,32 +613,55 @@ async function extractWithGemini(video, transcript) {
 
     // GitHub Actions 환경 감지
     const isGitHubActions = !!process.env.GITHUB_ACTIONS;
-    // 기본 모델: pro 모델 먼저 소진 후 flash로 전환
-    const defaultModel = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
 
-    // 시도할 모델 목록 (우선순위 순, 중복 제거)
-    // GitHub Actions에서는 gemini-3-pro-preview만 사용 (안정성)
-    // 로컬에서는 3-pro → 3-flash 순서 (2.5 모델 사용 안 함)
+    // 시도할 모델 목록
+    // GitHub Actions에서는 pro만, 로컬에서는 flash만 사용
     const allModels = isGitHubActions
-        ? ['gemini-3-pro-preview']  // GitHub Actions: pro만
-        : [
-            'gemini-3-pro-preview',    // 1순위
-            'gemini-3-flash-preview'   // 2순위
-        ];
+        ? ['gemini-3-pro-preview']      // GitHub Actions: pro만
+        : ['gemini-3-flash-preview'];   // 로컬: flash만
 
-    // 사용 가능한 모델만 필터링 (블랙리스트 제외)
-    const availableModels = allModels.filter(m => !isModelBlacklisted(m));
+    // 최대 재시도 횟수 (무한 루프 방지)
+    const MAX_RETRY_ATTEMPTS = 3;
 
-    if (availableModels.length === 0) {
-        // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간 확인
-        const earliest = getEarliestResetTime();
-        if (earliest) {
-            const waitMin = Math.ceil((earliest - Date.now()) / 60000);
-            log('warning', `모든 모델 쿼타 소진됨. 가장 빠른 리셋: ${waitMin}분 후`);
+    while (retryAttempt < MAX_RETRY_ATTEMPTS) {
+        // 사용 가능한 모델만 필터링 (블랙리스트 제외)
+        const availableModels = allModels.filter(m => !isModelBlacklisted(m));
+
+        if (availableModels.length === 0) {
+            // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간까지 대기
+            const earliest = getEarliestResetTime();
+            if (earliest) {
+                const waitMs = earliest - Date.now();
+                if (waitMs > 0 && waitMs <= 2 * 60 * 60 * 1000) { // 2시간 이내면 대기
+                    const waitMin = Math.ceil(waitMs / 60000);
+                    log('warning', `모든 모델 쿼타 소진됨. ${waitMin}분 후 재시도...`);
+                    await sleep(waitMs + 5000); // 5초 여유
+                    log('info', `쿼타 리셋 완료 - 재시도 (${retryAttempt + 1}/${MAX_RETRY_ATTEMPTS})`);
+                    retryAttempt++;
+                    // 블랙리스트 정리 후 다시 루프
+                    allModels.forEach(m => isModelBlacklisted(m));
+                    continue;
+                } else {
+                    log('error', `리셋 대기 시간이 너무 김 (${Math.ceil(waitMs / 60000)}분) - 스킵`);
+                }
+            }
+            cleanupTempFiles(tempPromptFile, tempOutputFile);
+            return null;
         }
+
+        // 사용 가능한 모델이 있으면 루프 탈출
+        break;
+    }
+
+    // 재시도 횟수 초과 시 실패
+    if (retryAttempt >= MAX_RETRY_ATTEMPTS) {
+        log('error', `최대 재시도 횟수(${MAX_RETRY_ATTEMPTS}) 초과 - 스킵`);
         cleanupTempFiles(tempPromptFile, tempOutputFile);
         return null;
     }
+
+    // 사용 가능한 모델 재확인
+    const availableModels = allModels.filter(m => !isModelBlacklisted(m));
 
     // 사용 가능한 첫 번째 모델로 시작
     log('debug', `사용 가능한 모델: ${availableModels.join(', ')}`);
@@ -606,8 +717,9 @@ async function extractWithGemini(video, transcript) {
                     }
 
                     // 쿼타 소진, 엔티티 없음, 또는 일반 API 오류 시 블랙리스트에 추가
-                    // "[object Object]" 형태의 오류도 API 문제로 간주
+                    // "exhausted your daily quota" 에러도 감지
                     if (combinedOutput.includes('exhausted your capacity') ||
+                        combinedOutput.includes('exhausted your daily quota') ||
                         combinedOutput.includes('Requested entity was not found') ||
                         combinedOutput.includes('quota') ||
                         combinedOutput.includes('[object Object]')) {
@@ -635,14 +747,32 @@ async function extractWithGemini(video, transcript) {
                                 i--; // 같은 모델 다시 시도
                                 continue;
                             }
+                        } else if (combinedOutput.includes('exhausted your daily quota')) {
+                            // 일일 쿼타 소진 - PT 자정(KST 17:00)까지 대기 시간 계산
+                            const now = getKSTDate();
+                            let resetDate = new Date(now);
+
+                            // KST 17:00 = PT 자정
+                            if (now.getHours() >= 17) {
+                                // 다음 날 17:00
+                                resetDate.setDate(resetDate.getDate() + 1);
+                            }
+                            resetDate.setHours(17, 0, 0, 0);
+
+                            const waitMs = resetDate.getTime() - now.getTime();
+                            resetTime = Date.now() + waitMs;
+
+                            const waitHours = Math.floor(waitMs / 3600000);
+                            const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+                            log('warning', `모델 ${model} 일일 쿼타 소진 - PT 자정(KST 17:00)까지 ${waitHours}시간 ${waitMins}분`);
                         }
 
                         // 블랙리스트에 리셋 시간과 함께 저장
                         blacklistedModels.set(model, {
                             resetTime,
-                            reason: combinedOutput.includes('quota') ? 'quota' : 'api_error'
+                            reason: combinedOutput.includes('daily quota') ? 'daily_quota' : 'quota'
                         });
-                        log('warning', `모델 ${model} 블랙리스트에 추가됨 (API 오류)`);
+                        log('warning', `모델 ${model} 블랙리스트에 추가됨 (${combinedOutput.includes('daily quota') ? '일일 쿼타 소진' : 'API 오류'})`);
                     }
 
                     lastError = new Error(`API error with ${model}`);
@@ -758,11 +888,31 @@ async function extractWithGemini(video, transcript) {
             }
         }
 
-        // 모든 모델 실패
+        // 모든 모델 실패 - 리셋 시간까지 대기 후 재시도
         if (!result) {
             log('warning', `Gemini 분석 실패 (${video.videoId}): 모든 모델 시도 실패`);
             if (lastError) {
                 log('debug', `마지막 오류: ${lastError.message}`);
+            }
+
+            // 재시도 가능 여부 확인 (재시도 횟수가 남아있고, 리셋 시간이 있는 경우)
+            if (retryAttempt < MAX_RETRY_ATTEMPTS) {
+                const earliest = getEarliestResetTime();
+                if (earliest) {
+                    const waitMs = earliest - Date.now();
+                    if (waitMs > 0 && waitMs <= 2 * 60 * 60 * 1000) { // 2시간 이내면 대기
+                        const waitMin = Math.ceil(waitMs / 60000);
+                        log('warning', `모든 모델 실패. ${waitMin}분 후 재시도...`);
+                        await sleep(waitMs + 5000);
+                        log('info', `쿼타 리셋 완료 - 동일 맛집 재시도 (${retryAttempt + 1}/${MAX_RETRY_ATTEMPTS})`);
+                        retryAttempt++;
+                        // 블랙리스트 정리 (만료된 항목 제거)
+                        allModels.forEach(m => isModelBlacklisted(m));
+                        // 재귀적으로 다시 시도 (현재 함수 다시 호출)
+                        cleanupTempFiles(tempPromptFile, tempOutputFile);
+                        return await extractWithGemini(video, transcript, retryAttempt);
+                    }
+                }
             }
         }
 
@@ -947,7 +1097,7 @@ async function processVideo(video) {
         }
     }
 
-    result.is_restaurant_video = geminiResult?.is_restaurant_video || false;
+    result.is_restaurant_video = geminiResult?.is_restaurant_video ?? null;  // null = 분석 실패 (재시도 필요)
     result.video_type = geminiResult?.video_type || 'unknown';
 
     return result;
@@ -962,6 +1112,13 @@ async function main() {
     log('info', '='.repeat(60));
 
     const startTime = Date.now();
+
+    // 모델 쿼타 상태 사전 확인
+    const hasAvailableModels = await checkModelQuotas();
+    if (!hasAvailableModels) {
+        log('error', '사용 가능한 모델이 없습니다. 쿼타 리셋 후 다시 실행하세요.');
+        process.exit(1);
+    }
 
     // 입력 파일 확인 (모든 영상 또는 지도 URL 있는 영상)
     // 우선순위: 전체 영상 처리 파일 > 지도 URL 영상 파일
@@ -1047,8 +1204,8 @@ async function main() {
 
     // 배치 설정
     let batchCount = 0;
-    const LOG_BATCH_SIZE = 10;     // 10개마다 진행 상황 로그
-    const COMMIT_BATCH_SIZE = 50;  // 50개마다 자동 커밋
+    const LOG_BATCH_SIZE = 20;     // 20개마다 진행 상황 로그 (로그 I/O 최적화)
+    const COMMIT_BATCH_SIZE = 1;   // 1개마다 즉시 저장
     let lastCommitCount = 0;
 
     // GitHub Actions 환경인지 확인
@@ -1095,9 +1252,12 @@ async function main() {
         if (existing) {
             // description이 변경되었는지 확인
             if (existing.descriptionHash === currentDescHash) {
-                // 재처리 조건: restaurants=0 이고 is_restaurant_video=true (맛집 영상인데 실패)
-                // 스킵 조건: restaurants>0 이거나, is_restaurant_video=false (맛집 아닌 영상 - 정상 분석됨)
-                const shouldRetry = existing.restaurants === 0 && existing.is_restaurant_video === true;
+                // 재처리 조건: 
+                //   1. restaurants=0 이고 is_restaurant_video=true (맛집 영상인데 추출 실패)
+                //   2. is_restaurant_video=null (분석 자체 실패)
+                // 스킵 조건: restaurants>0 이거나, is_restaurant_video=false (맛집 아닌 영상)
+                const shouldRetry = existing.is_restaurant_video === null ||
+                    (existing.restaurants === 0 && existing.is_restaurant_video === true);
                 if (!shouldRetry) {
                     stats.skipped++;
                     continue;
@@ -1155,9 +1315,10 @@ async function main() {
             const result = await processVideo(video);
 
             if (!result) {
-                log('warning', `  → Gemini 분석 실패 - 다음 실행 시 재시도`);
+                log('warning', `  → Gemini 분석 실패 - 모든 모델 실패`);
                 rateLimiter.release();
-                return { success: false };
+                // 모든 모델이 실패하면 allBlacklisted로 처리하여 루프 중단
+                return { success: false, allBlacklisted: true, videoId: video.videoId };
             }
 
             // description 해시 추가
@@ -1204,14 +1365,57 @@ async function main() {
             }
 
             if (res.allBlacklisted) {
-                log('error', '모든 Gemini 모델이 블랙리스트됨 - 프로세스 종료');
-                log('info', '토큰 갱신 후 다시 시도하세요: bun run oauth');
-                // 종료 전 저장
+                log('error', '='.repeat(50));
+                log('error', '모든 Gemini 모델 사용 불가');
+                log('error', '='.repeat(50));
+
+                // 블랙리스트된 모델들의 상태 출력
+                for (const [model, info] of blacklistedModels) {
+                    const reasonText = info.reason === 'daily_quota' ? '일일 쿼타 소진' : 'API 오류';
+                    if (info.resetTime) {
+                        const waitMs = info.resetTime - Date.now();
+                        const waitHours = Math.floor(waitMs / 3600000);
+                        const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+                        log('warning', `  ${model}: ${reasonText} (리셋까지 ${waitHours}시간 ${waitMins}분)`);
+                    } else {
+                        log('warning', `  ${model}: ${reasonText}`);
+                    }
+                }
+
+                // 가장 빠른 리셋 시간까지 대기
+                const earliest = getEarliestResetTime();
+                let waitMs = earliest ? (earliest - Date.now()) : (60 * 60 * 1000); // 기본 1시간
+
+                if (waitMs <= 0) waitMs = 60 * 60 * 1000; // 최소 1시간
+
+                const waitHours = Math.floor(waitMs / 3600000);
+                const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+                log('info', '');
+                log('info', `쿼타 리셋까지 ${waitHours}시간 ${waitMins}분 대기 중...`);
+                log('info', '(Ctrl+C로 중단 가능)');
+
+                // 중간 저장
                 const allData = Array.from(allResults.values());
-                fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+                if (allData.length > 0) {
+                    fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
+                    log('info', `중간 저장 완료: ${allData.length}개`);
+                }
                 rateLimiter.forceFlush();
-                await commitProgress(`중단: 모델 오류 (${TODAY_FOLDER})`);
-                process.exit(1);
+
+                // 대기
+                await sleep(waitMs + 5000);
+
+                // 블랙리스트 정리 (만료된 항목 제거)
+                for (const model of blacklistedModels.keys()) {
+                    isModelBlacklisted(model);
+                }
+
+                log('success', '쿼타 리셋 완료 - 크롤링 재개');
+                log('info', '');
+
+                // 같은 배치를 다시 처리하도록 인덱스 되돌림
+                i -= BATCH_SIZE;
+                break; // 현재 결과 처리 루프 탈출 후 배치 재시도
             }
 
             if (res.success && res.result) {
@@ -1290,28 +1494,33 @@ async function main() {
         duration: Math.round(duration / 1000)
     }, null, 2));
 
-    // Puppeteer 브라우저 정리
-    if (puppeteerBrowser) {
-        try {
-            await puppeteerBrowser.close();
-            log('debug', 'Puppeteer 브라우저 종료');
-        } catch (e) {
-            // 무시
+    // 실패한 영상(is_restaurant_video=null) 재시도 확인
+    const failedVideos = Array.from(allResults.values()).filter(v => v.is_restaurant_video === null);
+    if (failedVideos.length > 0) {
+        log('info', '');
+        log('warning', `분석 실패 영상 ${failedVideos.length}개 발견 - 30초 후 재시도...`);
+        log('info', '(Ctrl+C로 종료 가능)');
+        await sleep(30000);
+
+        // 만료된 블랙리스트 정리
+        for (const model of blacklistedModels.keys()) {
+            isModelBlacklisted(model);
         }
+
+        log('info', '');
+        log('info', '='.repeat(60));
+        log('info', '  실패 영상 재분석 시작');
+        log('info', '='.repeat(60));
+
+        // main 함수를 다시 호출하여 재시도 (null인 영상만 처리됨)
+        return main();
     }
 }
 
-// 프로세스 종료 시 Puppeteer 정리
-process.on('exit', () => {
-    if (puppeteerBrowser) {
-        puppeteerBrowser.close().catch(() => { });
-    }
-});
-
-process.on('SIGINT', async () => {
-    if (puppeteerBrowser) {
-        await puppeteerBrowser.close();
-    }
+// 프로세스 종료 핸들러
+process.on('SIGINT', () => {
+    log('info', '프로세스 중단됨 (Ctrl+C)');
+    rateLimiter.forceFlush();
     process.exit(0);
 });
 

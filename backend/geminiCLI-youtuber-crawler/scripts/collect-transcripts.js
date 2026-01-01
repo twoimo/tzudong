@@ -165,26 +165,21 @@ async function collectFromMaestra(page, videoId) {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT });
 
         // mode-toggle 버튼 또는 "Get Transcript" 버튼 대기
-        const startTime = Date.now();
-        const maxWait = 30000;
+        try {
+            // waitForSelector로 네이티브 대기 (성능 최적화)
+            await Promise.race([
+                page.waitForSelector('button.mode-toggle', { timeout: 30000 }),
+                page.waitForSelector('input.search-button[type="submit"]', { timeout: 30000 })
+            ]);
 
-        while (Date.now() - startTime < maxWait) {
-            const hasModeToggle = await page.evaluate(() => {
-                return document.querySelector('button.mode-toggle') !== null;
-            });
-
-            if (hasModeToggle) break;
-
-            const submitButton = await page.evaluate(() => {
-                const btn = document.querySelector('input.search-button[type="submit"]');
-                return btn !== null;
-            });
-
+            // Get Transcript 버튼이 있으면 클릭
+            const submitButton = await page.$('input.search-button[type="submit"]');
             if (submitButton) {
-                await page.click('input.search-button[type="submit"]');
+                await submitButton.click();
+                await page.waitForSelector('button.mode-toggle', { timeout: 30000 }).catch(() => { });
             }
-
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch {
+            // 타임아웃 - 계속 진행
         }
 
         // caption 모드로 전환
@@ -202,14 +197,11 @@ async function collectFromMaestra(page, videoId) {
             }
         }
 
-        // 자막 라인 대기
-        const captionStartTime = Date.now();
-        while (Date.now() - captionStartTime < 20000) {
-            const count = await page.evaluate(() => {
-                return document.querySelectorAll('.transcript-content samp.caption-line').length;
-            });
-            if (count > 0) break;
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        // 자막 라인 대기 (waitForSelector로 최적화)
+        try {
+            await page.waitForSelector('.transcript-content samp.caption-line', { timeout: 20000 });
+        } catch {
+            // 타임아웃 - 계속 진행
         }
 
         // 자막 파싱
@@ -251,14 +243,11 @@ async function collectFromTubeTranscript(page, videoId) {
     try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: PAGE_TIMEOUT });
 
-        // 자막 컨테이너 대기
-        const startTime = Date.now();
-        while (Date.now() - startTime < 30000) {
-            const hasContent = await page.evaluate(() => {
-                return document.querySelector('#main-transcript-content .transcript-group-box') !== null;
-            });
-            if (hasContent) break;
-            await new Promise(resolve => setTimeout(resolve, 1000));
+        // 자막 컨테이너 대기 (waitForSelector로 최적화)
+        try {
+            await page.waitForSelector('#main-transcript-content .transcript-group-box', { timeout: 30000 });
+        } catch {
+            // 타임아웃 - 계속 진행
         }
 
         // 자막 파싱
@@ -420,7 +409,7 @@ async function main() {
 
     // 배치 처리
     const BATCH_SIZE = PUPPETEER_CONCURRENCY;
-    const SAVE_INTERVAL = 10; // 10개마다 저장
+    const SAVE_INTERVAL = 20; // 20개마다 저장 (I/O 최적화)
 
     let processedCount = 0;
     const newResults = [];
