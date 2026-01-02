@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect } from 'react';
+import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -66,73 +66,100 @@ function HomeMapContainerComponent({
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
-    // [FIX] Safari/삼성 인터넷: visualViewport API로 정확한 뷰포트 높이 추적
-    const [viewportHeight, setViewportHeight] = useState(() => {
-        if (typeof window === 'undefined') return 800;
-        return window.visualViewport?.height ?? window.innerHeight;
-    });
+    // ========== [PERFORMANCE] 상수 및 Ref 기반 상태 관리 ==========
+    const INITIAL_HEIGHT = 65;
+    const HEADER_OFFSET = 80; // 헤더(64px) + 여유(16px)
+    const MIN_DRAG_HEIGHT = 5;
+    const MIN_SHEET_HEIGHT = 20;
+    const CLOSE_THRESHOLD = 15;
+    const SWIPE_VELOCITY_THRESHOLD = 0.5;
 
-    // visualViewport resize 이벤트 구독 (주소창 숨김/표시 시 업데이트)
+    // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
+    const viewportHeightRef = useRef(typeof window !== 'undefined'
+        ? (window.visualViewport?.height ?? window.innerHeight)
+        : 800
+    );
+    const isDraggingRef = useRef(false);
+    const startYRef = useRef(0);
+    const startHeightRef = useRef(INITIAL_HEIGHT);
+    const lastYRef = useRef(0);
+    const lastTimeRef = useRef(0);
+    const velocityRef = useRef(0);
+    const handleRef = useRef<HTMLDivElement>(null);
+    const rafIdRef = useRef<number>(0);
+
+    // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
+    const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
+    const [isDragging, setIsDragging] = useState(false);
+
+    // [PERFORMANCE] 최대 높이 계산 - useMemo로 캐싱
+    const maxHeightPercent = useMemo(() => {
+        const vh = viewportHeightRef.current;
+        return ((vh - HEADER_OFFSET) / vh) * 100;
+    }, [sheetHeight]); // sheetHeight 변경 시에만 재계산 (실제 필요 시)
+
+    // [PERFORMANCE] visualViewport resize 스로틀링 (16ms ≈ 60fps)
     useEffect(() => {
         const viewport = window.visualViewport;
         if (!viewport) return;
 
+        let throttleTimer: number | null = null;
+
         const handleResize = () => {
-            setViewportHeight(viewport.height);
+            if (throttleTimer !== null) return;
+
+            throttleTimer = requestAnimationFrame(() => {
+                viewportHeightRef.current = viewport.height;
+                // 드래그 중이 아닐 때만 상태 업데이트 (리렌더링 최소화)
+                if (!isDraggingRef.current) {
+                    // maxHeight 초과 시에만 조정
+                    const maxHeight = ((viewport.height - HEADER_OFFSET) / viewport.height) * 100;
+                    setSheetHeight(prev => Math.min(prev, maxHeight));
+                }
+                throttleTimer = null;
+            });
         };
 
-        viewport.addEventListener('resize', handleResize);
-        return () => viewport.removeEventListener('resize', handleResize);
+        viewport.addEventListener('resize', handleResize, { passive: true });
+        return () => {
+            viewport.removeEventListener('resize', handleResize);
+            if (throttleTimer !== null) cancelAnimationFrame(throttleTimer);
+        };
     }, []);
-
-    // 최대 높이 계산 헬퍼 (헤더 80px 고려)
-    const getMaxHeightPercent = useCallback(() => {
-        const headerOffset = 80; // 헤더(64px) + 여유(16px)
-        return ((viewportHeight - headerOffset) / viewportHeight) * 100;
-    }, [viewportHeight]);
-
-    // 안전한 초기 높이 (65% - 대부분의 기기에서 헤더 아래)
-    const INITIAL_HEIGHT = 65;
-
-    // 바텀시트 드래그 상태
-    const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
-    const [isDragging, setIsDragging] = useState(false);
-    const [startY, setStartY] = useState(0);
-    const [startHeight, setStartHeight] = useState(INITIAL_HEIGHT);
-    const handleRef = useRef<HTMLDivElement>(null);
-    // 드래그 속도 측정용 ref
-    const lastYRef = useRef(0);
-    const lastTimeRef = useRef(0);
-    const velocityRef = useRef(0);
 
     // 패널이 열릴 때마다 안전한 초기 높이로 리셋
     useEffect(() => {
         if (isPanelOpen && isMobileOrTablet) {
-            const maxHeight = getMaxHeightPercent();
-            // 초기 높이가 최대 높이를 넘지 않도록 보정
+            const vh = viewportHeightRef.current;
+            const maxHeight = ((vh - HEADER_OFFSET) / vh) * 100;
             setSheetHeight(Math.min(INITIAL_HEIGHT, maxHeight));
         }
-    }, [isPanelOpen, isMobileOrTablet, getMaxHeightPercent]);
+    }, [isPanelOpen, isMobileOrTablet]);
 
-    // 드래그 시작
+    // [PERFORMANCE] 드래그 시작 - Ref 기반으로 리렌더링 최소화
     const handleDragStart = useCallback((e: React.TouchEvent) => {
-        setIsDragging(true);
         const touchY = e.touches[0].clientY;
-        setStartY(touchY);
-        setStartHeight(sheetHeight);
+
+        // Ref로 상태 저장 (리렌더링 없음)
+        isDraggingRef.current = true;
+        startYRef.current = touchY;
+        startHeightRef.current = sheetHeight;
         lastYRef.current = touchY;
         lastTimeRef.current = Date.now();
         velocityRef.current = 0;
+
+        // 시각적 피드백을 위한 최소한의 상태 업데이트
+        setIsDragging(true);
     }, [sheetHeight]);
 
-    // 드래그 중 - 더 자유로운 드래그
+    // [PERFORMANCE] 드래그 중 - RAF 기반 최적화, 상태 업데이트 최소화
     const handleDragMove = useCallback((e: React.TouchEvent) => {
-        if (!isDragging) return;
+        if (!isDraggingRef.current) return;
 
         const currentY = e.touches[0].clientY;
         const currentTime = Date.now();
 
-        // 속도 계산 (양수면 아래로 드래그)
+        // 속도 계산
         const deltaTime = currentTime - lastTimeRef.current;
         if (deltaTime > 0) {
             velocityRef.current = (currentY - lastYRef.current) / deltaTime;
@@ -140,43 +167,52 @@ function HomeMapContainerComponent({
         lastYRef.current = currentY;
         lastTimeRef.current = currentTime;
 
-        requestAnimationFrame(() => {
-            const deltaY = startY - currentY;
-            // viewportHeight 상태 사용 (visualViewport API 기반)
-            const deltaPercent = (deltaY / viewportHeight) * 100;
+        // [PERFORMANCE] 이전 RAF 취소하여 프레임 스키핑 방지
+        if (rafIdRef.current) {
+            cancelAnimationFrame(rafIdRef.current);
+        }
 
-            const maxHeightPercent = getMaxHeightPercent();
+        rafIdRef.current = requestAnimationFrame(() => {
+            const deltaY = startYRef.current - currentY;
+            const vh = viewportHeightRef.current;
+            const deltaPercent = (deltaY / vh) * 100;
+            const maxHeight = ((vh - HEADER_OFFSET) / vh) * 100;
 
-            let newHeight = startHeight + deltaPercent;
-            // 최소 5%까지 드래그 가능 (닫기 영역), 최대는 헤더 아래까지
-            newHeight = Math.max(5, Math.min(maxHeightPercent, newHeight));
+            let newHeight = startHeightRef.current + deltaPercent;
+            newHeight = Math.max(MIN_DRAG_HEIGHT, Math.min(maxHeight, newHeight));
 
             setSheetHeight(newHeight);
         });
-    }, [isDragging, startY, startHeight, viewportHeight, getMaxHeightPercent]);
+    }, []);
 
-    // 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
+    // [PERFORMANCE] 드래그 종료 - 조건부 로직 최적화
     const handleDragEnd = useCallback(() => {
+        isDraggingRef.current = false;
         setIsDragging(false);
 
-        // 빠르게 아래로 스와이프 (velocity > 0.5px/ms) 하면 닫기
-        if (velocityRef.current > 0.5) {
+        // RAF 정리
+        if (rafIdRef.current) {
+            cancelAnimationFrame(rafIdRef.current);
+            rafIdRef.current = 0;
+        }
+
+        // 빠른 스와이프로 닫기
+        if (velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
             onPanelClose();
             return;
         }
 
-        // 닫기 임계값 이하면 닫기 (15% 이하)
-        if (sheetHeight <= 15) {
-            onPanelClose();
-            return;
-        }
-
-        // 최소 높이 이하면 최소 높이로 조정 (20%)
-        if (sheetHeight < 20) {
-            setSheetHeight(20);
-        }
-        // 스냅 없음 - 현재 위치 그대로 유지
-    }, [sheetHeight, onPanelClose]);
+        // 현재 높이 기반 판단 (클로저 문제 회피를 위해 직접 접근)
+        setSheetHeight(currentHeight => {
+            if (currentHeight <= CLOSE_THRESHOLD) {
+                // 비동기로 닫기 처리 (상태 업데이트 후)
+                queueMicrotask(onPanelClose);
+                return currentHeight;
+            }
+            // 최소 높이 보정
+            return currentHeight < MIN_SHEET_HEIGHT ? MIN_SHEET_HEIGHT : currentHeight;
+        });
+    }, [onPanelClose]);
 
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
     useEffect(() => {
@@ -289,8 +325,8 @@ function HomeMapContainerComponent({
                                 style={{
                                     // [FIX] Safari/삼성 인터넷 100vh 버그 수정
                                     // bottom: 0 고정 + height(px)로 직접 계산
-                                    // viewportHeight 상태 사용 (visualViewport API 기반)
-                                    height: `${viewportHeight * sheetHeight / 100}px`,
+                                    // viewportHeightRef 사용 (visualViewport API 기반)
+                                    height: `${viewportHeightRef.current * sheetHeight / 100}px`,
                                     // 최소 상단 위치 강제 (헤더 80px 아래)
                                     maxHeight: `calc(100% - 80px)`,
                                     willChange: 'height',
