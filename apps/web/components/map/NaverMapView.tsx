@@ -35,6 +35,7 @@ import {
     removeClusterCSS
 } from "@/lib/cluster-marker";
 import { perfMonitor } from "@/lib/performance-monitor";
+import { useMapOptimization } from "@/hooks/useMapOptimization";
 import { supabase } from "@/integrations/supabase/client";
 
 // 상수 정의
@@ -45,15 +46,12 @@ const DISTANCE_KM_THRESHOLD = 50; // 즉시 로드할 거리 임계값 (km)
 // [성능 최적화] 가시영역 필터링 및 이벤트 처리 상수
 const VIEWPORT_FILTER_ENABLED = true; // 가시영역 필터링 활성화
 const VIEWPORT_PADDING = 0.05; // 가시영역 여백 (5% 확장)
-const MAP_UPDATE_DEBOUNCE_MS = 150; // 지도 업데이트 디바운스 시간 (최적화: 300ms → 150ms)
 const PERFORMANCE_LOG_ENABLED = false; // 성능 로깅 활성화 (개발용)
 
 // 클러스터링 상수 (네이버 지도 스타일)
 const ENABLE_CLUSTERING = true; // 클러스터링 전체 활성화
 const CLUSTER_MAX_ZOOM = 16; // 이 줌 레벨까지 클러스터링 (16 초과 시 모든 개별 마커 표시)
-const CLUSTER_RADIUS = 40; // 클러스터 반경 (픽셀)
-const CLUSTER_MIN_POINTS = 5; // 최소 2개부터 클러스터링
-const CLUSTER_ANIMATION_INTERVAL = 5000; // 클러스터 이모지 애니메이션 주기 (ms)
+// [OPTIMIZATION] 클러스터 반경, 최소 포인트, 애니메이션은 useMapOptimization 훅에서 동적으로 결정
 
 interface NaverMapViewProps {
     filters: FilterState;
@@ -393,6 +391,9 @@ const NaverMapView = memo(({
     // 디바이스 타입 감지 (모바일/태블릿에서는 오프셋 제거)
     const { isMobileOrTablet } = useDeviceType();
 
+    // [OPTIMIZATION] 디바이스 성능 티어 기반 지도 최적화 설정
+    const mapOptimization = useMapOptimization();
+
     // [OPTIMIZATION] 패널 너비 state - ResizeObserver로 자동 업데이트
     const [panelWidth, setPanelWidth] = useState(PANEL_WIDTH);
 
@@ -516,9 +517,9 @@ const NaverMapView = memo(({
             document.head.appendChild(style);
         }
 
-        // 클러스터 애니메이션 시작
-        if (ENABLE_CLUSTERING) {
-            clusterAnimationManager.start(CLUSTER_ANIMATION_INTERVAL);
+        // 클러스터 애니메이션 시작 (성능 티어에 따라 조건부 실행)
+        if (ENABLE_CLUSTERING && mapOptimization.clusterAnimationEnabled) {
+            clusterAnimationManager.start(mapOptimization.clusterAnimationInterval);
         }
 
         // Cleanup: 컴포넌트 언마운트 시
@@ -1193,10 +1194,14 @@ const NaverMapView = memo(({
         // GeoJSON 변환
         const geoJsonPoints = restaurantsToGeoJSON(displayRestaurants);
 
-        // 클러스터 인덱스 생성 (지역별 동적 maxZoom)
+        // 클러스터 인덱스 생성 (지역별 동적 maxZoom, 성능 티어별 반경)
+        // 현재 줌 레벨을 가져와서 동적 반경 계산
+        const currentZoom = mapInstanceRef.current.getZoom();
+        const clusterRadius = mapOptimization.getClusterRadius(currentZoom);
+
         const index = createClusterIndex(selectedRegion, {
-            radius: CLUSTER_RADIUS,
-            minPoints: CLUSTER_MIN_POINTS,
+            radius: clusterRadius,
+            minPoints: mapOptimization.clusterMinPoints,
         });
 
         // 데이터 로드
@@ -1291,8 +1296,9 @@ const NaverMapView = memo(({
         };
 
         const map = mapInstanceRef.current;
-        // idle 이벤트: 모든 지도 애니메이션 완료 후 실행
-        const idleListener = naver.maps.Event.addListener(map, 'idle', updateClusters);
+        // idle 이벤트: 모든 지도 애니메이션 완료 후 실행 (성능 티어별 디바운스)
+        const debouncedUpdateClusters = debounce(updateClusters, mapOptimization.idleDebounceMs);
+        const idleListener = naver.maps.Event.addListener(map, 'idle', debouncedUpdateClusters);
 
         return () => {
             naver.maps.Event.removeListener(idleListener);
@@ -1777,8 +1783,8 @@ const NaverMapView = memo(({
 
         };
 
-        // 디바운스된 업데이트 함수
-        const debouncedUpdate = debounce(triggerMarkerUpdate, MAP_UPDATE_DEBOUNCE_MS);
+        // 디바운스된 업데이트 함수 (성능 티어에 따라 동적 시간)
+        const debouncedUpdate = debounce(triggerMarkerUpdate, mapOptimization.mapUpdateDebounceMs);
 
         // 이벤트 리스너 등록
         const dragEndListener = naver.maps.Event.addListener(map, 'dragend', debouncedUpdate);
