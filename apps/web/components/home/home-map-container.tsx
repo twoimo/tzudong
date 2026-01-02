@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useState, useCallback, memo } from 'react';
+import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -71,6 +71,7 @@ function HomeMapContainerComponent({
     const [isDragging, setIsDragging] = useState(false);
     const [startY, setStartY] = useState(0);
     const [startHeight, setStartHeight] = useState(75);
+    const handleRef = useRef<HTMLDivElement>(null);
 
     // 드래그 시작
     const handleDragStart = useCallback((e: React.TouchEvent) => {
@@ -108,6 +109,36 @@ function HomeMapContainerComponent({
 
         setSheetHeight(closest);
     }, [sheetHeight]);
+
+    // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
+    useEffect(() => {
+        if (isMobileOrTablet && isPanelOpen) {
+            document.body.style.overscrollBehavior = 'contain';
+            document.documentElement.style.overscrollBehavior = 'contain';
+        }
+        return () => {
+            document.body.style.overscrollBehavior = '';
+            document.documentElement.style.overscrollBehavior = '';
+        };
+    }, [isMobileOrTablet, isPanelOpen]);
+
+    // 드래그 핸들에서 Pull-to-Refresh 방지 (passive: false 필요)
+    useEffect(() => {
+        const handle = handleRef.current;
+        if (!handle || !isPanelOpen || !isMobileOrTablet) return;
+
+        const preventPullToRefresh = (e: TouchEvent) => {
+            if (isDragging) {
+                e.preventDefault();
+            }
+        };
+
+        handle.addEventListener('touchmove', preventPullToRefresh, { passive: false });
+
+        return () => {
+            handle.removeEventListener('touchmove', preventPullToRefresh);
+        };
+    }, [isPanelOpen, isMobileOrTablet, isDragging]);
 
     return (
         <div className="relative w-full h-full">
@@ -191,9 +222,11 @@ function HomeMapContainerComponent({
                                 style={{ height: `${sheetHeight}vh` }}
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {/* 핸들 바 - 드래그 가능, 항상 상단 고정 */}
+                                {/* 핸들 바 - 드래그 가능, 항상 상단 고정, touch-action: none으로 Pull-to-Refresh 방지 */}
                                 <div
+                                    ref={handleRef}
                                     className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                                    style={{ touchAction: 'none' }}
                                     onTouchStart={handleDragStart}
                                     onTouchMove={handleDragMove}
                                     onTouchEnd={handleDragEnd}

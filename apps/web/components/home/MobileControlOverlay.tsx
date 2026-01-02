@@ -238,19 +238,41 @@ function MobileControlOverlayComponent({
         return counts;
     }, [restaurants, selectedRegion]);
 
+    // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
+    useEffect(() => {
+        if (activeSheet !== 'none') {
+            document.body.style.overscrollBehavior = 'contain';
+            document.documentElement.style.overscrollBehavior = 'contain';
+        }
+        return () => {
+            document.body.style.overscrollBehavior = '';
+            document.documentElement.style.overscrollBehavior = '';
+        };
+    }, [activeSheet]);
+
     // [OPTIMIZATION] Passive 이벤트 리스너 등록 (검색 시트는 제외)
+    // Pull-to-Refresh 방지를 위해 touchmove는 passive: false로 설정
     useEffect(() => {
         const handleEl = handleRef.current;
         if (!handleEl || activeSheet === 'none' || activeSheet === 'search') return;
 
-        // Passive: true로 스크롤 성능 최적화
+        const preventPullToRefresh = (e: TouchEvent) => {
+            // 드래그 중일 때 Pull-to-Refresh 방지
+            if (isDraggingRef.current) {
+                e.preventDefault();
+            }
+        };
+
         handleEl.addEventListener('touchstart', handleDragStart as any, { passive: true });
-        handleEl.addEventListener('touchmove', handleDragMove as any, { passive: true });
+        // touchmove는 passive: false로 설정하여 preventDefault 가능하게 함
+        handleEl.addEventListener('touchmove', handleDragMove as any, { passive: false });
+        handleEl.addEventListener('touchmove', preventPullToRefresh, { passive: false });
         handleEl.addEventListener('touchend', handleDragEnd as any, { passive: true });
 
         return () => {
             handleEl.removeEventListener('touchstart', handleDragStart as any);
             handleEl.removeEventListener('touchmove', handleDragMove as any);
+            handleEl.removeEventListener('touchmove', preventPullToRefresh);
             handleEl.removeEventListener('touchend', handleDragEnd as any);
         };
     }, [activeSheet, handleDragStart, handleDragMove, handleDragEnd]);
@@ -432,11 +454,12 @@ function MobileControlOverlayComponent({
                         }}
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* 핸들 바 - 검색 시트는 드래그 불가 */}
+                        {/* 핸들 바 - 검색 시트는 드래그 불가, touch-action: none으로 Pull-to-Refresh 방지 */}
                         {activeSheet !== 'search' && (
                             <div
                                 ref={handleRef}
                                 className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                                style={{ touchAction: 'none' }}
                             >
                                 <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
                             </div>

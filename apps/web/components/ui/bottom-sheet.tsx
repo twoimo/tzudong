@@ -35,6 +35,9 @@ export function BottomSheet({
     const [startY, setStartY] = useState(0);
     const [startHeight, setStartHeight] = useState(defaultSnap);
 
+    // 드래그 핸들 ref
+    const handleRef = useRef<HTMLDivElement>(null);
+
     // 드래그 시작
     const handleDragStart = useCallback((e: React.TouchEvent) => {
         setIsDragging(true);
@@ -91,6 +94,38 @@ export function BottomSheet({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
 
+    // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
+    useEffect(() => {
+        if (isOpen) {
+            document.body.style.overscrollBehavior = 'contain';
+            document.documentElement.style.overscrollBehavior = 'contain';
+        }
+        return () => {
+            document.body.style.overscrollBehavior = '';
+            document.documentElement.style.overscrollBehavior = '';
+        };
+    }, [isOpen]);
+
+    // 드래그 핸들에서 Pull-to-Refresh 방지 (passive: false 필요)
+    useEffect(() => {
+        const handle = handleRef.current;
+        if (!handle || !isOpen) return;
+
+        const preventPullToRefresh = (e: TouchEvent) => {
+            // 드래그 중이거나 핸들 위에서 터치 중일 때 기본 동작 방지
+            if (isDragging) {
+                e.preventDefault();
+            }
+        };
+
+        // passive: false로 등록해야 preventDefault 가능
+        handle.addEventListener('touchmove', preventPullToRefresh, { passive: false });
+
+        return () => {
+            handle.removeEventListener('touchmove', preventPullToRefresh);
+        };
+    }, [isOpen, isDragging]);
+
     if (!isOpen) return null;
 
     return (
@@ -114,10 +149,12 @@ export function BottomSheet({
                 style={{ height: `${height}vh` }}
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* 핸들 바 - 드래그 가능 */}
+                {/* 핸들 바 - 드래그 가능, touch-action: none으로 Pull-to-Refresh 방지 */}
                 {showHandle && (
                     <div
+                        ref={handleRef}
                         className="flex-shrink-0 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                        style={{ touchAction: 'none' }}
                         onTouchStart={handleDragStart}
                         onTouchMove={handleDragMove}
                         onTouchEnd={handleDragEnd}
