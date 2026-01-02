@@ -72,43 +72,72 @@ function HomeMapContainerComponent({
     const [startY, setStartY] = useState(0);
     const [startHeight, setStartHeight] = useState(75);
     const handleRef = useRef<HTMLDivElement>(null);
+    // 드래그 속도 측정용 ref
+    const lastYRef = useRef(0);
+    const lastTimeRef = useRef(0);
+    const velocityRef = useRef(0);
 
     // 드래그 시작
     const handleDragStart = useCallback((e: React.TouchEvent) => {
         setIsDragging(true);
-        setStartY(e.touches[0].clientY);
+        const touchY = e.touches[0].clientY;
+        setStartY(touchY);
         setStartHeight(sheetHeight);
+        lastYRef.current = touchY;
+        lastTimeRef.current = Date.now();
+        velocityRef.current = 0;
     }, [sheetHeight]);
 
-    // 드래그 중 - requestAnimationFrame으로 최적화
+    // 드래그 중 - 더 자유로운 드래그
     const handleDragMove = useCallback((e: React.TouchEvent) => {
         if (!isDragging) return;
 
+        const currentY = e.touches[0].clientY;
+        const currentTime = Date.now();
+
+        // 속도 계산 (양수면 아래로 드래그)
+        const deltaTime = currentTime - lastTimeRef.current;
+        if (deltaTime > 0) {
+            velocityRef.current = (currentY - lastYRef.current) / deltaTime;
+        }
+        lastYRef.current = currentY;
+        lastTimeRef.current = currentTime;
+
         requestAnimationFrame(() => {
-            const deltaY = startY - e.touches[0].clientY;
+            const deltaY = startY - currentY;
             const viewportHeight = window.innerHeight;
             const deltaPercent = (deltaY / viewportHeight) * 100;
 
             let newHeight = startHeight + deltaPercent;
-            // 최소 30%, 최대 85%로 제한
-            newHeight = Math.max(30, Math.min(85, newHeight));
+            // 최소 5%까지 드래그 가능 (닫기 영역), 최대 90%
+            newHeight = Math.max(5, Math.min(90, newHeight));
 
             setSheetHeight(newHeight);
         });
     }, [isDragging, startY, startHeight]);
 
-    // 드래그 종료
+    // 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
 
-        // 스냅 포인트: 30%, 50%, 75%, 85%
-        const snapPoints = [30, 50, 75, 85];
-        const closest = snapPoints.reduce((prev, curr) =>
-            Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight) ? curr : prev
-        );
+        // 빠르게 아래로 스와이프 (velocity > 0.5px/ms) 하면 닫기
+        if (velocityRef.current > 0.5) {
+            onPanelClose();
+            return;
+        }
 
-        setSheetHeight(closest);
-    }, [sheetHeight]);
+        // 닫기 임계값 이하면 닫기 (15% 이하)
+        if (sheetHeight <= 15) {
+            onPanelClose();
+            return;
+        }
+
+        // 최소 높이 이하면 최소 높이로 조정 (20%)
+        if (sheetHeight < 20) {
+            setSheetHeight(20);
+        }
+        // 스냅 없음 - 현재 위치 그대로 유지
+    }, [sheetHeight, onPanelClose]);
 
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용
     useEffect(() => {
@@ -128,9 +157,8 @@ function HomeMapContainerComponent({
         if (!handle || !isPanelOpen || !isMobileOrTablet) return;
 
         const preventPullToRefresh = (e: TouchEvent) => {
-            if (isDragging) {
-                e.preventDefault();
-            }
+            // 핸들 위에서 항상 기본 동작 방지
+            e.preventDefault();
         };
 
         handle.addEventListener('touchmove', preventPullToRefresh, { passive: false });
@@ -138,7 +166,7 @@ function HomeMapContainerComponent({
         return () => {
             handle.removeEventListener('touchmove', preventPullToRefresh);
         };
-    }, [isPanelOpen, isMobileOrTablet, isDragging]);
+    }, [isPanelOpen, isMobileOrTablet]);
 
     return (
         <div className="relative w-full h-full">
@@ -206,32 +234,35 @@ function HomeMapContainerComponent({
                     {/* 모바일/태블릿 바텀시트 */}
                     {isMobileOrTablet && isPanelOpen && (
                         <div
-                            className="fixed inset-0 z-50 bg-black/30"
+                            className="fixed inset-0 z-50 bg-black/30 transition-opacity duration-200"
                             onClick={onPanelClose}
                         >
                             <div
                                 className={cn(
                                     'fixed bottom-0 left-0 right-0 z-50',
                                     'bg-background rounded-t-2xl shadow-xl',
-                                    'transition-all duration-150',
-                                    isDragging ? '' : 'ease-out',
                                     'overflow-hidden flex flex-col',
+                                    // 드래그 중에는 트랜지션 완전 제거, 드래그 종료 시 부드러운 스프링 효과
+                                    isDragging ? '' : 'transition-[height] duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]',
                                     // iOS safe area 지원 + 하단 네비게이션바 공간
                                     'pb-[calc(env(safe-area-inset-bottom)+56px)]'
                                 )}
-                                style={{ height: `${sheetHeight}vh` }}
+                                style={{
+                                    height: `${sheetHeight}vh`,
+                                    willChange: isDragging ? 'height' : 'auto',
+                                }}
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {/* 핸들 바 - 드래그 가능, 항상 상단 고정, touch-action: none으로 Pull-to-Refresh 방지 */}
                                 <div
                                     ref={handleRef}
-                                    className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                                    className="sticky top-0 z-20 flex justify-center py-4 bg-background cursor-grab active:cursor-grabbing"
                                     style={{ touchAction: 'none' }}
                                     onTouchStart={handleDragStart}
                                     onTouchMove={handleDragMove}
                                     onTouchEnd={handleDragEnd}
                                 >
-                                    <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+                                    <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
                                 </div>
                                 <Button
                                     variant="ghost"
