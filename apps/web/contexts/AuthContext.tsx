@@ -110,10 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     const signInWithGoogle = useCallback(async () => {
-        // 개발 환경에서는 명시적으로 localhost 사용
-        const redirectUrl = process.env.NODE_ENV === 'development'
-            ? `${window.location.protocol}//${window.location.host}/auth/callback`
-            : `${window.location.origin}/auth/callback`;
+        const redirectUrl = `${window.location.origin}/auth/callback`;
 
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
@@ -121,6 +118,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 redirectTo: redirectUrl,
             },
         });
+
         if (error) throw error;
     }, []);
 
