@@ -1264,8 +1264,7 @@ export default function StampPage() {
                 <BottomSheet
                     isOpen={isRightPanelVisible}
                     onClose={handleCloseRightPanel}
-                    snapPoints={[30, 50, 75, 85]}
-                    defaultSnap={75}
+                    defaultHeight={75}
                     showHandle={true}
                     showCloseButton={false}
                 >
