@@ -242,14 +242,19 @@ function HomeMapContainerComponent({
                                     'fixed bottom-0 left-0 right-0 z-50',
                                     'bg-background rounded-t-2xl shadow-xl',
                                     'overflow-hidden flex flex-col',
-                                    // 드래그 중에는 트랜지션 완전 제거, 드래그 종료 시 부드러운 스프링 효과
-                                    isDragging ? '' : 'transition-[height] duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]',
+                                    // [OPTIMIZATION] transform 방식으로 GPU 가속 적용
+                                    // 드래그 중에는 트랜지션 제거, 종료 시 부드러운 스프링 효과
+                                    isDragging ? '' : 'transition-transform duration-300',
                                     // iOS safe area 지원 + 하단 네비게이션바 공간
                                     'pb-[calc(env(safe-area-inset-bottom)+56px)]'
                                 )}
                                 style={{
-                                    height: `${sheetHeight}vh`,
-                                    willChange: isDragging ? 'height' : 'auto',
+                                    // [OPTIMIZATION] height 대신 transform 사용 (리플로우 없음, GPU 컴포지트만)
+                                    height: '100vh',
+                                    transform: `translateY(${100 - sheetHeight}vh)`,
+                                    willChange: 'transform',
+                                    // 커스텀 이징 함수 (Tailwind 경고 회피)
+                                    transitionTimingFunction: isDragging ? undefined : 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                                 }}
                                 onClick={(e) => e.stopPropagation()}
                             >
