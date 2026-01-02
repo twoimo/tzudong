@@ -116,7 +116,7 @@ function HomeMapContainerComponent({
         });
     }, [isDragging, startY, startHeight]);
 
-    // 드래그 종료 - 속도 기반 스와이프 닫기
+    // 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
 
@@ -132,13 +132,11 @@ function HomeMapContainerComponent({
             return;
         }
 
-        // 스냅 포인트: 30%, 50%, 75%, 85%
-        const snapPoints = [30, 50, 75, 85];
-        const closest = snapPoints.reduce((prev, curr) =>
-            Math.abs(curr - sheetHeight) < Math.abs(prev - sheetHeight) ? curr : prev
-        );
-
-        setSheetHeight(closest);
+        // 최소 높이 이하면 최소 높이로 조정 (20%)
+        if (sheetHeight < 20) {
+            setSheetHeight(20);
+        }
+        // 스냅 없음 - 현재 위치 그대로 유지
     }, [sheetHeight, onPanelClose]);
 
     // Pull-to-Refresh 방지: 바텀시트가 열려있을 때 body에 overscroll-behavior 적용

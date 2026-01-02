@@ -164,7 +164,7 @@ function MobileControlOverlayComponent({
         });
     }, []); // 의존성 배열 비움 - ref만 사용하므로 안정적
 
-    // [OPTIMIZATION] 드래그 종료 - 속도 기반 스와이프 닫기 또는 스냅
+    // [OPTIMIZATION] 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
     const handleDragEnd = useCallback(() => {
         isDraggingRef.current = false;
         setIsDragging(false);
@@ -183,20 +183,17 @@ function MobileControlOverlayComponent({
             return;
         }
 
-        const snapPoints = activeSheet === 'search' ? [25, 50] : [30, 50, 75, 85];
-
-        // 가장 가까운 스냅 포인트 찾기
-        const snapHeight = snapPoints.reduce((prev, curr) =>
-            Math.abs(curr - currentHeight) < Math.abs(prev - currentHeight) ? curr : prev
-        );
-
-        // 스냅 포인트로 이동 (transition 포함)
-        setSheetHeight(snapHeight);
-        currentHeightRef.current = snapHeight;
-        if (sheetRef.current) {
-            sheetRef.current.style.transform = `translateY(calc(85vh - ${snapHeight}vh))`;
+        // 최소 높이 이하면 최소 높이로 조정 (20%)
+        if (currentHeight < 20) {
+            const minHeight = 20;
+            setSheetHeight(minHeight);
+            currentHeightRef.current = minHeight;
+            if (sheetRef.current) {
+                sheetRef.current.style.transform = `translateY(calc(85vh - ${minHeight}vh))`;
+            }
         }
-    }, [activeSheet, handleClose]);
+        // 스냅 없음 - 현재 위치 그대로 유지
+    }, [handleClose]);
 
     // [OPTIMIZATION] 지역별 맛집 수 계산 - 단일 패스로 최적화
     const regionCounts = useMemo(() => {

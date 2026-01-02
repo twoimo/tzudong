@@ -9,8 +9,9 @@ interface BottomSheetProps {
     isOpen: boolean;
     onClose: () => void;
     children: React.ReactNode;
-    snapPoints?: number[]; // 백분율 [30, 50, 75, 85]
-    defaultSnap?: number;
+    defaultHeight?: number; // 기본 높이 (백분율, 기본 75%)
+    minHeight?: number; // 최소 높이 (백분율, 기본 15%)
+    maxHeight?: number; // 최대 높이 (백분율, 기본 90%)
     showHandle?: boolean;
     showCloseButton?: boolean;
     className?: string;
@@ -19,23 +20,24 @@ interface BottomSheetProps {
 
 /**
  * 드래그 가능한 바텀시트 컴포넌트
- * 모바일/태블릿 환경에서 하단에서 올라오는 패널을 구현합니다.
+ * 스냅 포인트 없이 자유롭게 드래그 가능
  */
 export function BottomSheet({
     isOpen,
     onClose,
     children,
-    snapPoints = [30, 50, 75, 85],
-    defaultSnap = 75,
+    defaultHeight = 75,
+    minHeight = 15,
+    maxHeight = 90,
     showHandle = true,
     showCloseButton = true,
     className,
     closeThreshold = 15,
 }: BottomSheetProps) {
-    const [height, setHeight] = useState(defaultSnap);
+    const [height, setHeight] = useState(defaultHeight);
     const [isDragging, setIsDragging] = useState(false);
     const [startY, setStartY] = useState(0);
-    const [startHeight, setStartHeight] = useState(defaultSnap);
+    const [startHeight, setStartHeight] = useState(defaultHeight);
 
     // 드래그 핸들 ref
     const handleRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,7 @@ export function BottomSheet({
         velocityRef.current = 0;
     }, [height]);
 
-    // 드래그 중 - 더 자유로운 드래그 (닫기 임계값까지 허용)
+    // 드래그 중 - 완전히 자유로운 드래그
     const handleDragMove = useCallback((e: React.TouchEvent) => {
         if (!isDragging) return;
 
@@ -76,15 +78,14 @@ export function BottomSheet({
             const deltaPercent = (deltaY / viewportHeight) * 100;
 
             let newHeight = startHeight + deltaPercent;
-            // 최소 5%까지 드래그 가능 (닫기 영역), 최대는 snapPoints의 최대값
-            const maxSnap = Math.max(...snapPoints);
-            newHeight = Math.max(5, Math.min(maxSnap + 5, newHeight));
+            // 최소/최대 범위 내에서 자유롭게 드래그
+            newHeight = Math.max(5, Math.min(maxHeight, newHeight));
 
             setHeight(newHeight);
         });
-    }, [isDragging, startY, startHeight, snapPoints]);
+    }, [isDragging, startY, startHeight, maxHeight]);
 
-    // 드래그 종료 - 속도 기반 스와이프 닫기 또는 스냅
+    // 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
 
@@ -100,20 +101,19 @@ export function BottomSheet({
             return;
         }
 
-        // 가장 가까운 snap point로 이동
-        const closest = snapPoints.reduce((prev, curr) =>
-            Math.abs(curr - height) < Math.abs(prev - height) ? curr : prev
-        );
-
-        setHeight(closest);
-    }, [height, snapPoints, closeThreshold, onClose]);
+        // 최소 높이 이하면 최소 높이로 조정
+        if (height < minHeight) {
+            setHeight(minHeight);
+        }
+        // 스냅 없음 - 현재 위치 그대로 유지
+    }, [height, closeThreshold, minHeight, onClose]);
 
     // isOpen이 변경되면 기본 높이로 리셋
     useEffect(() => {
         if (isOpen) {
-            setHeight(defaultSnap);
+            setHeight(defaultHeight);
         }
-    }, [isOpen, defaultSnap]);
+    }, [isOpen, defaultHeight]);
 
     // ESC 키로 닫기
     useEffect(() => {
@@ -173,8 +173,8 @@ export function BottomSheet({
                     'fixed bottom-0 left-0 right-0 z-50',
                     'bg-background rounded-t-2xl shadow-xl',
                     'flex flex-col',
-                    // 드래그 중에는 트랜지션 완전 제거, 드래그 종료 시 부드러운 스프링 효과
-                    isDragging ? '' : 'transition-[height] duration-300 ease-[cubic-bezier(0.25,0.46,0.45,0.94)]',
+                    // 드래그 중에는 트랜지션 제거, 드래그 종료 시 짧은 트랜지션
+                    isDragging ? '' : 'transition-[height] duration-150 ease-out',
                     className
                 )}
                 style={{
