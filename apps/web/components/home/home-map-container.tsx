@@ -66,13 +66,30 @@ function HomeMapContainerComponent({
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
+    // [FIX] Safari/삼성 인터넷: visualViewport API로 정확한 뷰포트 높이 추적
+    const [viewportHeight, setViewportHeight] = useState(() => {
+        if (typeof window === 'undefined') return 800;
+        return window.visualViewport?.height ?? window.innerHeight;
+    });
+
+    // visualViewport resize 이벤트 구독 (주소창 숨김/표시 시 업데이트)
+    useEffect(() => {
+        const viewport = window.visualViewport;
+        if (!viewport) return;
+
+        const handleResize = () => {
+            setViewportHeight(viewport.height);
+        };
+
+        viewport.addEventListener('resize', handleResize);
+        return () => viewport.removeEventListener('resize', handleResize);
+    }, []);
+
     // 최대 높이 계산 헬퍼 (헤더 80px 고려)
     const getMaxHeightPercent = useCallback(() => {
-        if (typeof window === 'undefined') return 85;
-        const viewportHeight = window.innerHeight;
         const headerOffset = 80; // 헤더(64px) + 여유(16px)
         return ((viewportHeight - headerOffset) / viewportHeight) * 100;
-    }, []);
+    }, [viewportHeight]);
 
     // 안전한 초기 높이 (65% - 대부분의 기기에서 헤더 아래)
     const INITIAL_HEIGHT = 65;
@@ -125,7 +142,7 @@ function HomeMapContainerComponent({
 
         requestAnimationFrame(() => {
             const deltaY = startY - currentY;
-            const viewportHeight = window.innerHeight;
+            // viewportHeight 상태 사용 (visualViewport API 기반)
             const deltaPercent = (deltaY / viewportHeight) * 100;
 
             const maxHeightPercent = getMaxHeightPercent();
@@ -136,7 +153,7 @@ function HomeMapContainerComponent({
 
             setSheetHeight(newHeight);
         });
-    }, [isDragging, startY, startHeight, getMaxHeightPercent]);
+    }, [isDragging, startY, startHeight, viewportHeight, getMaxHeightPercent]);
 
     // 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
     const handleDragEnd = useCallback(() => {
@@ -264,18 +281,20 @@ function HomeMapContainerComponent({
                                     'fixed bottom-0 left-0 right-0 z-50',
                                     'bg-background rounded-t-2xl shadow-xl',
                                     'overflow-hidden flex flex-col',
-                                    // [OPTIMIZATION] transform 방식으로 GPU 가속 적용
                                     // 드래그 중에는 트랜지션 제거, 종료 시 부드러운 스프링 효과
-                                    isDragging ? '' : 'transition-transform duration-300',
+                                    isDragging ? '' : 'transition-[height] duration-300',
                                     // iOS safe area 지원 + 하단 네비게이션바 공간
                                     'pb-[calc(env(safe-area-inset-bottom)+56px)]'
                                 )}
                                 style={{
-                                    // [OPTIMIZATION] height 대신 transform 사용 (리플로우 없음, GPU 컴포지트만)
-                                    height: '100vh',
-                                    transform: `translateY(${100 - sheetHeight}vh)`,
-                                    willChange: 'transform',
-                                    // 커스텀 이징 함수 (Tailwind 경고 회피)
+                                    // [FIX] Safari/삼성 인터넷 100vh 버그 수정
+                                    // bottom: 0 고정 + height(px)로 직접 계산
+                                    // viewportHeight 상태 사용 (visualViewport API 기반)
+                                    height: `${viewportHeight * sheetHeight / 100}px`,
+                                    // 최소 상단 위치 강제 (헤더 80px 아래)
+                                    maxHeight: `calc(100% - 80px)`,
+                                    willChange: 'height',
+                                    // 커스텀 이징 함수
                                     transitionTimingFunction: isDragging ? undefined : 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                                 }}
                                 onClick={(e) => e.stopPropagation()}
