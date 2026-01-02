@@ -108,9 +108,14 @@ function HomeMapContainerComponent({
             const viewportHeight = window.innerHeight;
             const deltaPercent = (deltaY / viewportHeight) * 100;
 
+            // 헤더 높이(64px) + 드래그 핸들 여유 공간(16px) = 80px
+            // 최대 높이 = 뷰포트 - 80px를 퍼센트로 변환
+            const headerOffset = 80;
+            const maxHeightPercent = ((viewportHeight - headerOffset) / viewportHeight) * 100;
+
             let newHeight = startHeight + deltaPercent;
-            // 최소 5%까지 드래그 가능 (닫기 영역), 최대 90%
-            newHeight = Math.max(5, Math.min(90, newHeight));
+            // 최소 5%까지 드래그 가능 (닫기 영역), 최대는 헤더 아래까지
+            newHeight = Math.max(5, Math.min(maxHeightPercent, newHeight));
 
             setSheetHeight(newHeight);
         });
