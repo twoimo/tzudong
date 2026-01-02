@@ -66,16 +66,36 @@ function HomeMapContainerComponent({
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
+    // 최대 높이 계산 헬퍼 (헤더 80px 고려)
+    const getMaxHeightPercent = useCallback(() => {
+        if (typeof window === 'undefined') return 85;
+        const viewportHeight = window.innerHeight;
+        const headerOffset = 80; // 헤더(64px) + 여유(16px)
+        return ((viewportHeight - headerOffset) / viewportHeight) * 100;
+    }, []);
+
+    // 안전한 초기 높이 (65% - 대부분의 기기에서 헤더 아래)
+    const INITIAL_HEIGHT = 65;
+
     // 바텀시트 드래그 상태
-    const [sheetHeight, setSheetHeight] = useState(75);
+    const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
     const [isDragging, setIsDragging] = useState(false);
     const [startY, setStartY] = useState(0);
-    const [startHeight, setStartHeight] = useState(75);
+    const [startHeight, setStartHeight] = useState(INITIAL_HEIGHT);
     const handleRef = useRef<HTMLDivElement>(null);
     // 드래그 속도 측정용 ref
     const lastYRef = useRef(0);
     const lastTimeRef = useRef(0);
     const velocityRef = useRef(0);
+
+    // 패널이 열릴 때마다 안전한 초기 높이로 리셋
+    useEffect(() => {
+        if (isPanelOpen && isMobileOrTablet) {
+            const maxHeight = getMaxHeightPercent();
+            // 초기 높이가 최대 높이를 넘지 않도록 보정
+            setSheetHeight(Math.min(INITIAL_HEIGHT, maxHeight));
+        }
+    }, [isPanelOpen, isMobileOrTablet, getMaxHeightPercent]);
 
     // 드래그 시작
     const handleDragStart = useCallback((e: React.TouchEvent) => {
@@ -108,10 +128,7 @@ function HomeMapContainerComponent({
             const viewportHeight = window.innerHeight;
             const deltaPercent = (deltaY / viewportHeight) * 100;
 
-            // 헤더 높이(64px) + 드래그 핸들 여유 공간(16px) = 80px
-            // 최대 높이 = 뷰포트 - 80px를 퍼센트로 변환
-            const headerOffset = 80;
-            const maxHeightPercent = ((viewportHeight - headerOffset) / viewportHeight) * 100;
+            const maxHeightPercent = getMaxHeightPercent();
 
             let newHeight = startHeight + deltaPercent;
             // 최소 5%까지 드래그 가능 (닫기 영역), 최대는 헤더 아래까지
@@ -119,7 +136,7 @@ function HomeMapContainerComponent({
 
             setSheetHeight(newHeight);
         });
-    }, [isDragging, startY, startHeight]);
+    }, [isDragging, startY, startHeight, getMaxHeightPercent]);
 
     // 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
     const handleDragEnd = useCallback(() => {
