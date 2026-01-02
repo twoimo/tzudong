@@ -83,6 +83,10 @@ function MobileControlOverlayComponent({
     const startYRef = useRef(0);
     const startHeightRef = useRef(50);
     const isDraggingRef = useRef(false); // [OPTIMIZATION] isDragging도 ref로 관리
+    // 드래그 속도 측정용 ref
+    const lastYRef = useRef(0);
+    const lastTimeRef = useRef(0);
+    const velocityRef = useRef(0);
 
     // 맛집 데이터 조회 (지역/카테고리 카운트용) - [OPTIMIZATION] 필요한 필드만 선택
     const { data: restaurants = [] } = useQuery({
@@ -119,8 +123,12 @@ function MobileControlOverlayComponent({
     const handleDragStart = useCallback((e: TouchEvent) => {
         isDraggingRef.current = true;
         setIsDragging(true); // will-change 적용용
-        startYRef.current = e.touches[0].clientY;
+        const touchY = e.touches[0].clientY;
+        startYRef.current = touchY;
         startHeightRef.current = currentHeightRef.current;
+        lastYRef.current = touchY;
+        lastTimeRef.current = Date.now();
+        velocityRef.current = 0;
     }, []);
 
     // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음)
@@ -128,12 +136,23 @@ function MobileControlOverlayComponent({
         if (!isDraggingRef.current) return;
 
         const currentY = e.touches[0].clientY;
+        const currentTime = Date.now();
+
+        // 속도 계산 (양수면 아래로 드래그)
+        const deltaTime = currentTime - lastTimeRef.current;
+        if (deltaTime > 0) {
+            velocityRef.current = (currentY - lastYRef.current) / deltaTime;
+        }
+        lastYRef.current = currentY;
+        lastTimeRef.current = currentTime;
+
         const deltaY = startYRef.current - currentY;
         const viewportHeight = window.innerHeight;
         const deltaVh = (deltaY / viewportHeight) * 100;
 
         let newHeight = startHeightRef.current + deltaVh;
-        newHeight = Math.max(10, Math.min(85, newHeight));
+        // 최소 5%까지 드래그 가능 (닫기 영역), 최대 90%
+        newHeight = Math.max(5, Math.min(90, newHeight));
 
         currentHeightRef.current = newHeight;
 
@@ -144,24 +163,32 @@ function MobileControlOverlayComponent({
             }
         });
     }, []); // 의존성 배열 비움 - ref만 사용하므로 안정적
-    // [OPTIMIZATION] 드래그 종료 - 스냅 포인트로 이동
+
+    // [OPTIMIZATION] 드래그 종료 - 속도 기반 스와이프 닫기 또는 스냅
     const handleDragEnd = useCallback(() => {
         isDraggingRef.current = false;
         setIsDragging(false);
 
+        // 빠르게 아래로 스와이프 (velocity > 0.5px/ms) 하면 닫기
+        if (velocityRef.current > 0.5) {
+            handleClose();
+            return;
+        }
+
         const currentHeight = currentHeightRef.current;
-        const snapPoints = activeSheet === 'search' ? [10, 25, 50] : [10, 30, 50, 75, 85];
+
+        // 닫기 임계값 (15% 이하시 닫기)
+        if (currentHeight <= 15) {
+            handleClose();
+            return;
+        }
+
+        const snapPoints = activeSheet === 'search' ? [25, 50] : [30, 50, 75, 85];
 
         // 가장 가까운 스냅 포인트 찾기
         const snapHeight = snapPoints.reduce((prev, curr) =>
             Math.abs(curr - currentHeight) < Math.abs(prev - currentHeight) ? curr : prev
         );
-
-        // 닫기 임계값 (10vh 이하시 닫기)
-        if (snapHeight <= 10) {
-            handleClose();
-            return;
-        }
 
         // 스냅 포인트로 이동 (transition 포함)
         setSheetHeight(snapHeight);
