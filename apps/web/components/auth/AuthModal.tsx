@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
+const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
   const { signIn, signUp, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,28 +39,27 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     }
   }, []);
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setEmail("");
     setPassword("");
     setConfirmPassword("");
     setUsername("");
     setPrivacyAgreed(false);
-  };
+  }, []);
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = useCallback(async () => {
     setIsGoogleLoading(true);
     try {
       await signInWithGoogle();
-      // Google 로그인은 리다이렉트되므로 여기서 모달을 닫지 않음
     } catch (error) {
       console.error("Google login error:", error);
       const errorMessage = error instanceof Error ? error.message : "Google 로그인에 실패했습니다";
       toast.error(errorMessage);
       setIsGoogleLoading(false);
     }
-  };
+  }, [signInWithGoogle]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       toast.error("이메일과 비밀번호를 입력해주세요");
@@ -80,9 +79,9 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [email, password, signIn, resetForm, onClose]);
 
-  const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password || !username) {
       toast.error("모든 필드를 입력해주세요");
@@ -105,10 +104,8 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     try {
       const { session } = await signUp(email, password, username);
       if (session) {
-        // 이메일 확인이 비활성화된 경우 - 자동 로그인됨
         toast.success("회원가입 완료! 환영합니다.");
       } else {
-        // 이메일 확인이 활성화된 경우
         toast.success("회원가입 완료! 이메일을 확인해주세요.");
       }
       resetForm();
@@ -120,7 +117,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [email, password, username, confirmPassword, privacyAgreed, signUp, resetForm, onClose]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -592,6 +589,7 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
       </Dialog>
     </Dialog>
   );
-};
+});
+AuthModal.displayName = 'AuthModal';
 
 export default AuthModal;

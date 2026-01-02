@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useMemo } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -25,6 +25,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isAdmin, setIsAdmin] = useState(false);
     const [needsNicknameSetup, setNeedsNicknameSetup] = useState(false);
+
+    const checkAdminRole = useCallback(async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from("user_roles")
+                .select("role")
+                .eq("user_id", userId)
+                .eq("role", "admin")
+                .single();
+
+            setIsAdmin(!error && !!data);
+        } catch (error) {
+            console.error("Error checking admin role:", error);
+            setIsAdmin(false);
+        }
+    }, []);
+
+    const checkProfileStatus = useCallback(async (userId: string) => {
+        try {
+            const { data, error } = await supabase
+                .from("profiles")
+                .select("nickname")
+                .eq("user_id", userId)
+                .maybeSingle();
+
+            if (error) {
+                console.error("Profile check error:", error);
+                setNeedsNicknameSetup(false);
+            } else if (!data || (data as any).nickname === "탈퇴한 사용자") {
+                setNeedsNicknameSetup(true);
+            } else {
+                setNeedsNicknameSetup(false);
+            }
+        } catch (error) {
+            console.error("Error checking profile status:", error);
+            setNeedsNicknameSetup(false);
+        }
+    }, []);
 
     useEffect(() => {
         // 초기 세션 가져오기
@@ -54,82 +92,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [checkAdminRole, checkProfileStatus]);
 
-    const checkAdminRole = async (userId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from("user_roles")
-                .select("role")
-                .eq("user_id", userId)
-                .eq("role", "admin")
-                .single();
-
-            if (!error && data) {
-                setIsAdmin(true);
-            } else {
-                setIsAdmin(false);
-            }
-        } catch (error) {
-            console.error("Error checking admin role:", error);
-            setIsAdmin(false);
-        }
-    };
-
-    const checkProfileStatus = async (userId: string) => {
-        try {
-            const { data, error } = await supabase
-                .from("profiles")
-                .select("nickname")
-                .eq("user_id", userId)
-                .maybeSingle();
-
-            // 프로필이 없거나 닉네임이 "탈퇴한 사용자"인 경우
-            if (error) {
-                console.error("Profile check error:", error);
-                setNeedsNicknameSetup(false);
-            } else if (!data) {
-                setNeedsNicknameSetup(true);
-            } else if ((data as any).nickname === "탈퇴한 사용자") {
-                setNeedsNicknameSetup(true);
-            } else {
-                setNeedsNicknameSetup(false);
-            }
-        } catch (error) {
-            console.error("Error checking profile status:", error);
-            setNeedsNicknameSetup(false);
-        }
-    };
-
-    const completeNicknameSetup = () => {
+    const completeNicknameSetup = useCallback(() => {
         setNeedsNicknameSetup(false);
-        // 프로필 상태를 다시 확인하여 닉네임이 제대로 설정되었는지 검증
         if (user) {
             checkProfileStatus(user.id);
         }
-    };
+    }, [user, checkProfileStatus]);
 
-    const signIn = async (email: string, password: string) => {
+    const signIn = useCallback(async (email: string, password: string) => {
         const { error } = await supabase.auth.signInWithPassword({
             email,
             password,
         });
-
         if (error) throw error;
-    };
+    }, []);
 
-    const signInWithGoogle = async () => {
+    const signInWithGoogle = useCallback(async () => {
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {
                 redirectTo: `${window.location.origin}/auth/callback`,
             },
         });
-
         if (error) throw error;
-    };
+    }, []);
 
-    const signUp = async (email: string, password: string, username: string) => {
+    const signUp = useCallback(async (email: string, password: string, username: string) => {
         const { data, error } = await supabase.auth.signUp({
             email,
             password,
@@ -139,17 +129,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 },
             },
         });
-
         if (error) throw error;
         return { session: data.session };
-    };
+    }, []);
 
-    const signOut = async () => {
+    const signOut = useCallback(async () => {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
-    };
+    }, []);
 
-    const value = {
+    const value = useMemo(() => ({
         user,
         session,
         isLoading,
@@ -160,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signOut,
         completeNicknameSetup,
-    };
+    }), [user, session, isLoading, isAdmin, needsNicknameSetup, signIn, signInWithGoogle, signUp, signOut, completeNicknameSetup]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
