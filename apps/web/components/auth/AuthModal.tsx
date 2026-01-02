@@ -103,8 +103,14 @@ const AuthModal = ({ isOpen, onClose }: AuthModalProps) => {
 
     setIsLoading(true);
     try {
-      await signUp(email, password, username);
-      toast.success("회원가입 성공! 로그인해주세요.");
+      const { session } = await signUp(email, password, username);
+      if (session) {
+        // 이메일 확인이 비활성화된 경우 - 자동 로그인됨
+        toast.success("회원가입 완료! 환영합니다.");
+      } else {
+        // 이메일 확인이 활성화된 경우
+        toast.success("회원가입 완료! 이메일을 확인해주세요.");
+      }
       resetForm();
       onClose();
     } catch (error) {

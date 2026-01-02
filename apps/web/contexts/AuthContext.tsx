@@ -12,7 +12,7 @@ interface AuthContextType {
     needsNicknameSetup: boolean;
     signIn: (email: string, password: string) => Promise<void>;
     signInWithGoogle: () => Promise<void>;
-    signUp: (email: string, password: string, username: string) => Promise<void>;
+    signUp: (email: string, password: string, username: string) => Promise<{ session: Session | null }>;
     signOut: () => Promise<void>;
     completeNicknameSetup: () => void;
 }
@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     const signUp = async (email: string, password: string, username: string) => {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
             email,
             password,
             options: {
@@ -141,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
         if (error) throw error;
+        return { session: data.session };
     };
 
     const signOut = async () => {
