@@ -279,7 +279,7 @@ const OnlineUsersBadge = memo(({ count, style, className }: { count: number, sty
         className={`bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300 ${className || ''}`}
     >
         <span className="text-sm font-medium">
-            {count}명이 함께 보는 중
+            🔥 {count}명이 함께 보는 중
         </span>
     </div>
 ));
