@@ -279,7 +279,7 @@ const OnlineUsersBadge = memo(({ count, style, className }: { count: number, sty
         className={`bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-10 flex items-center gap-2 animate-in fade-in zoom-in duration-300 ${className || ''}`}
     >
         <span className="text-sm font-medium">
-            👥 {count}명이 함께 보는 중
+            {count}명이 함께 보는 중
         </span>
     </div>
 ));
@@ -1106,6 +1106,9 @@ const NaverMapView = memo(({
     const onlineUsersCountRef = useRef(onlineUsersCount);
     const showRestaurantCountRef = useRef(showRestaurantCount);
     const hasShownInitialToastRef = useRef(false);
+    const initialTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
+
     useEffect(() => { onlineUsersCountRef.current = onlineUsersCount; }, [onlineUsersCount]);
     useEffect(() => { showRestaurantCountRef.current = showRestaurantCount; }, [showRestaurantCount]);
 
@@ -1113,13 +1116,14 @@ const NaverMapView = memo(({
     useEffect(() => {
         if (!isLoaded) return;
 
+        // [중요] Strict Mode에서 재마운트 시 ref 초기화
+        hasShownInitialToastRef.current = false;
+
         // 토스트 표시 함수
         const showOnlineToast = () => {
-            // 맛집 개수 표시 중이 아닐 때만 표시
-            if (!showRestaurantCountRef.current && onlineUsersCountRef.current >= 1) {
-                setShowOnlineUsers(true);
-                setTimeout(() => setShowOnlineUsers(false), 4000);
-            }
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+            setShowOnlineUsers(true);
+            hideTimerRef.current = setTimeout(() => setShowOnlineUsers(false), 4000);
         };
 
         // Supabase Presence 채널 구독
@@ -1136,15 +1140,11 @@ const NaverMapView = memo(({
                 setOnlineUsersCount(count);
                 onlineUsersCountRef.current = count;
 
-                // 첫 번째 sync 후 5초 뒤에 토스트 표시 (맛집 개수 표시가 끝난 후)
-                if (!hasShownInitialToastRef.current && count >= 1) {
+                // 첫 번째 sync 후 5초 뒤에 토스트 표시
+                if (!hasShownInitialToastRef.current) {
                     hasShownInitialToastRef.current = true;
-                    setTimeout(() => {
-                        if (!showRestaurantCountRef.current) {
-                            setShowOnlineUsers(true);
-                            setTimeout(() => setShowOnlineUsers(false), 4000);
-                        }
-                    }, 5000);
+                    if (initialTimerRef.current) clearTimeout(initialTimerRef.current);
+                    initialTimerRef.current = setTimeout(showOnlineToast, 5000);
                 }
             })
             .subscribe(async (status) => {
@@ -1162,6 +1162,8 @@ const NaverMapView = memo(({
         return () => {
             supabase.removeChannel(channel);
             clearInterval(interval);
+            if (initialTimerRef.current) clearTimeout(initialTimerRef.current);
+            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
         };
     }, [isLoaded]); // isLoaded만 의존성으로
 
@@ -1904,7 +1906,7 @@ const NaverMapView = memo(({
                 )}
 
                 {/* 동시 접속자 표시 (주기적으로 표시) */}
-                {isLoaded && showOnlineUsers && onlineUsersCount >= 1 && !showRestaurantCount && (
+                {showOnlineUsers && !showRestaurantCount && (
                     <OnlineUsersBadge
                         count={onlineUsersCount}
                         style={centerOffsetStyle}
@@ -1968,6 +1970,15 @@ const NaverMapView = memo(({
                 {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
                     <RestaurantCountBadge
                         count={restaurants.length}
+                        style={centerOffsetStyle}
+                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                    />
+                )}
+
+                {/* 동시 접속자 표시 (주기적으로 표시) */}
+                {showOnlineUsers && !showRestaurantCount && (
+                    <OnlineUsersBadge
+                        count={onlineUsersCount}
                         style={centerOffsetStyle}
                         className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
                     />
