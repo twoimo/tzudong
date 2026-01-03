@@ -127,12 +127,12 @@ function HomeMapContainerComponent({
         };
     }, []);
 
-    // 패널이 열릴 때마다 안전한 초기 높이로 리셋
+    // 패널이 열릴 때 최대 높이로 열기 (헤더 배제)
     useEffect(() => {
         if (isPanelOpen && isMobileOrTablet) {
             const vh = viewportHeightRef.current;
             const maxHeight = ((vh - HEADER_OFFSET) / vh) * 100;
-            setSheetHeight(Math.min(INITIAL_HEIGHT, maxHeight));
+            setSheetHeight(maxHeight); // 최대 높이로 열기
         }
     }, [isPanelOpen, isMobileOrTablet]);
 
