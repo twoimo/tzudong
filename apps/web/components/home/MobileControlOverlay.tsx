@@ -421,7 +421,7 @@ function MobileControlOverlayComponent({
                         'transition-all duration-300 ease-in-out',
                         'hover:scale-110 active:scale-95',
                         'flex items-center justify-center',
-                        'border-2 border-stone-200/20'
+                        'border-2 border-border/20'
                     )}
                     title="맛집 제보하기"
                 >

@@ -121,19 +121,19 @@ const BannerSlide = memo(({
                 /* 텍스트 전용 배너 (Fallback) */
                 <>
                     <div
-                        className="absolute inset-0 opacity-40 pointer-events-none"
+                        className="absolute inset-0 opacity-40 dark:opacity-0 pointer-events-none transition-opacity"
                         style={{
                             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
                         }}
                     />
-                    <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
+                    <div className="absolute inset-2 border-2 border-double border-border rounded-md pointer-events-none dark:border-transparent" />
                     <div className="relative h-full flex flex-col items-center justify-center text-center p-6">
-                        <Scroll className="w-8 h-8 text-stone-500 mb-3 opacity-60" />
-                        <h3 className="text-xl font-serif font-bold text-stone-900 mb-2 tracking-wide">
+                        <Scroll className="w-8 h-8 text-muted-foreground mb-3 opacity-60" />
+                        <h3 className="text-xl font-serif font-bold text-foreground mb-2 tracking-wide">
                             {banner.title}
                         </h3>
                         {banner.description && (
-                            <p className="text-sm font-serif text-stone-700 whitespace-pre-line leading-relaxed">
+                            <p className="text-sm font-serif text-foreground/80 whitespace-pre-line leading-relaxed">
                                 {banner.description}
                             </p>
                         )}
@@ -246,7 +246,7 @@ const CombinedPopupComponent = () => {
                     "relative w-[320px] mx-auto rounded-lg overflow-hidden shadow-2xl",
                     "animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
                 )}
-                style={{ backgroundColor: '#fdfbf7' }}
+                style={{ backgroundColor: 'hsl(var(--background))' }}
             >
                 {/* 배너 슬라이드 컨텐츠 - 모든 배너를 렌더링하여 크로스페이드 */}
                 <div className="relative aspect-[4/5]">
@@ -273,17 +273,17 @@ const CombinedPopupComponent = () => {
                 />
 
                 {/* 하단 버튼 */}
-                <div className="flex border-t border-stone-200">
+                <div className="flex border-t border-border">
                     <button
                         onClick={handleDismissToday}
-                        className="flex-1 py-3 text-sm text-stone-500 hover:bg-stone-100 transition-colors"
+                        className="flex-1 py-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
                     >
                         오늘 하루 안 보기
                     </button>
-                    <div className="w-px bg-stone-200" />
+                    <div className="w-px bg-border" />
                     <button
                         onClick={handleClose}
-                        className="flex-1 py-3 text-sm font-medium text-stone-700 hover:bg-stone-100 transition-colors"
+                        className="flex-1 py-3 text-sm font-medium text-foreground hover:bg-accent transition-colors"
                     >
                         닫기
                     </button>

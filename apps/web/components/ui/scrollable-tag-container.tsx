@@ -82,10 +82,10 @@ export function ScrollableTagContainer({ children, className, maxWidth = '200px'
                         e.stopPropagation();
                         scroll('left');
                     }}
-                    className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-5 h-5 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                    className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-5 h-5 flex items-center justify-center bg-background border border-border rounded-full shadow-md hover:bg-accent transition-colors cursor-pointer"
                     aria-label="왼쪽으로 스크롤"
                 >
-                    <ChevronLeft className="h-3 w-3 text-gray-600 dark:text-gray-300" />
+                    <ChevronLeft className="h-3 w-3 text-muted-foreground" />
                 </button>
             )}
 
@@ -110,10 +110,10 @@ export function ScrollableTagContainer({ children, className, maxWidth = '200px'
                         e.stopPropagation();
                         scroll('right');
                     }}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-5 h-5 flex items-center justify-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                    className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-5 h-5 flex items-center justify-center bg-background border border-border rounded-full shadow-md hover:bg-accent transition-colors cursor-pointer"
                     aria-label="오른쪽으로 스크롤"
                 >
-                    <ChevronRight className="h-3 w-3 text-gray-600 dark:text-gray-300" />
+                    <ChevronRight className="h-3 w-3 text-muted-foreground" />
                 </button>
             )}
         </div>

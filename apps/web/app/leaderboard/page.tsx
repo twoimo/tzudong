@@ -23,7 +23,7 @@ export default function LeaderboardPage() {
             case 1:
                 return <Trophy className="h-5 w-5 text-yellow-500" />;
             case 2:
-                return <Medal className="h-5 w-5 text-gray-400" />;
+                return <Medal className="h-5 w-5 text-muted-foreground" />;
             case 3:
                 return <Award className="h-5 w-5 text-amber-600" />;
             default:
@@ -35,7 +35,7 @@ export default function LeaderboardPage() {
         if (reviewCount >= 100) return { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" };
         if (reviewCount >= 50) return { name: "💎 다이아몬드", color: "text-blue-600", bgColor: "bg-blue-50" };
         if (reviewCount >= 25) return { name: "🏆 골드", color: "text-yellow-600", bgColor: "bg-yellow-50" };
-        if (reviewCount >= 10) return { name: "🥈 실버", color: "text-gray-600", bgColor: "bg-gray-50" };
+        if (reviewCount >= 10) return { name: "🥈 실버", color: "text-muted-foreground", bgColor: "bg-muted" };
         if (reviewCount >= 5) return { name: "🥉 브론즈", color: "text-amber-600", bgColor: "bg-amber-50" };
         return { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
     };
@@ -53,7 +53,7 @@ export default function LeaderboardPage() {
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="border-b border-border bg-card p-6">
+            <div className="border-b border-border bg-background p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <div className="flex items-center gap-3">

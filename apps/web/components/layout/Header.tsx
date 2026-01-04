@@ -334,7 +334,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
       case 'review_like':
         return 'bg-pink-500';
       default:
-        return 'bg-gray-500';
+        return 'bg-muted-foreground';
     }
   };
 
@@ -342,16 +342,16 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   return (
     <header
-      className="border-b border-stone-800/10 bg-card flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
+      className="border-b border-border bg-background flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
     >
-      {/* 한지 질감 오버레이 */}
+      {/* 한지 질감 오버레이 - 다크모드에서 숨김 */}
       <div
-        className="absolute inset-0 opacity-30 pointer-events-none"
+        className="absolute inset-0 opacity-30 dark:opacity-0 pointer-events-none transition-opacity"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")` }}
       />
 
-      {/* 전통 문양 테두리 */}
-      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-stone-800/20 to-transparent" />
+      {/* 전통 문양 테두리 - 다크모드에서 숨김 */}
+      <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-border to-transparent dark:via-border" />
 
       {/* 좌측: 사이드바 토글 */}
       {!hideToggleSidebar && (
@@ -363,7 +363,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             variant="ghost"
             size="icon"
             onClick={onToggleSidebar}
-            className="hover:bg-stone-200/50 text-stone-700 font-serif transition-colors"
+            className="hover:bg-accent text-foreground font-serif transition-colors"
           >
             <PanelLeft className="h-5 w-5" />
           </Button>
@@ -394,7 +394,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </Button>
           )}
           <Megaphone className="h-4 w-4 text-red-700 flex-shrink-0" />
-          <span className="font-medium truncate group-hover:text-red-800 transition-colors text-stone-700 flex-1 min-w-0 text-xs md:text-sm">
+          <span className="font-medium truncate group-hover:text-red-800 transition-colors text-foreground flex-1 min-w-0 text-xs md:text-sm">
             {currentBanner.title}
           </span>
           {bannerAnnouncements.length > 1 && (
@@ -428,7 +428,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           variant="ghost"
           size="icon"
           onClick={toggleTheme}
-          className="hover:bg-stone-200/50 text-stone-700 transition-colors"
+          className="hover:bg-accent text-foreground transition-colors"
           title={isHanjiMode ? "밝은 모드" : "한지 모드"}
         >
           {isHanjiMode ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
@@ -438,7 +438,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         {shouldShowAuthUI && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
+              <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground relative transition-colors">
                 <Bell className="h-5 w-5" />
                 {unreadCount > 0 && (
                   <Badge
@@ -452,26 +452,26 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-80 bg-[#fdfbf7] border-stone-800/10 font-serif"
+              className="w-80 bg-card border-border font-serif"
             >
-              <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
+              <DropdownMenuLabel className="flex items-center justify-between text-foreground">
                 <span>알림</span>
                 {unreadCount > 0 && (
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={markAllAsRead}
-                    className="h-6 px-2 text-xs hover:bg-stone-200/50 text-stone-600"
+                    className="h-6 px-2 text-xs hover:bg-accent text-foreground"
                   >
                     <CheckCheck className="h-3 w-3 mr-1" />
                     모두 읽음
                   </Button>
                 )}
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-stone-800/10" />
+              <DropdownMenuSeparator className="bg-border" />
               <ScrollArea className="h-64">
                 {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-stone-500">
+                  <div className="p-4 text-center text-sm text-muted-foreground">
                     새로운 알림이 없습니다
                   </div>
                 ) : (
@@ -480,8 +480,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       <DropdownMenuItem
                         key={notification.id}
                         className={cn(
-                          "flex items-center gap-2 p-3 cursor-pointer hover:bg-stone-100",
-                          !notification.isRead && "bg-stone-100/50"
+                          "flex items-center gap-2 p-3 cursor-pointer hover:bg-accent",
+                          !notification.isRead && "bg-accent/50"
                         )}
                         onClick={() => markAsRead(notification.id)}
                       >
@@ -491,13 +491,13 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                           getNotificationColor(notification.type)
                         )} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-stone-900 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {notification.title}
                           </p>
-                          <p className="text-xs text-stone-500 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {notification.message}
                           </p>
-                          <p className="text-xs text-stone-400 mt-0.5">
+                          <p className="text-xs text-muted-foreground/70 mt-0.5">
                             {formatDistanceToNow(notification.createdAt, {
                               addSuffix: true,
                               locale: ko
@@ -528,29 +528,29 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         {isLoggedIn && shouldShowAuthUI && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 relative transition-colors">
+              <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground relative transition-colors">
                 <Bookmark className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-72 bg-[#fdfbf7] border-stone-800/10 font-serif"
+              className="w-72 bg-card border-border font-serif"
             >
-              <DropdownMenuLabel className="flex items-center justify-between text-stone-900">
+              <DropdownMenuLabel className="flex items-center justify-between text-foreground">
                 <span>북마크</span>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => router.push('/mypage/bookmarks')}
-                  className="h-6 w-6 hover:bg-stone-200/50 text-stone-600"
+                  className="h-6 w-6 hover:bg-accent text-foreground"
                 >
                   <Settings className="h-3 w-3" />
                 </Button>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator className="bg-stone-800/10" />
+              <DropdownMenuSeparator className="bg-border" />
               <ScrollArea className="h-64">
                 {bookmarksData.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-stone-500">
+                  <div className="p-4 text-center text-sm text-muted-foreground">
                     북마크한 맛집이 없습니다
                   </div>
                 ) : (
@@ -558,7 +558,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     {bookmarksData.slice(0, 5).map((bookmark) => (
                       <DropdownMenuItem
                         key={bookmark.id}
-                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-stone-100"
+                        className="flex items-center gap-2 p-3 cursor-pointer hover:bg-accent"
                         onClick={() => {
                           // 이미 홈페이지면 커스텀 이벤트 발생, 아니면 URL로 이동
                           if (pathname === '/') {
@@ -569,10 +569,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                         }}
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-stone-900 truncate">
+                          <p className="text-sm font-medium text-foreground truncate">
                             {bookmark.restaurant.name}
                           </p>
-                          <p className="text-xs text-stone-500 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {bookmark.restaurant.road_address || bookmark.restaurant.jibun_address || '주소 없음'}
                           </p>
                         </div>
@@ -584,7 +584,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       </DropdownMenuItem>
                     ))}
                     {bookmarksData.length > 5 && (
-                      <div className="p-2 text-center text-xs text-stone-500">
+                      <div className="p-2 text-center text-xs text-muted-foreground">
                         +{bookmarksData.length - 5}개 더
                       </div>
                     )}
@@ -600,7 +600,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           variant="ghost"
           size="icon"
           onClick={toggleFullscreen}
-          className="hidden md:flex hover:bg-stone-200/50 text-stone-700 transition-colors"
+          className="hidden md:flex hover:bg-accent text-foreground transition-colors"
         >
           <Maximize className="h-5 w-5" />
         </Button>
@@ -609,24 +609,24 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         {isLoggedIn && shouldShowAuthUI && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="hover:bg-stone-200/50 text-stone-700 transition-colors">
+              <Button variant="ghost" size="icon" className="hover:bg-accent text-foreground transition-colors">
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#fdfbf7] border-stone-800/10 font-serif">
-              <DropdownMenuItem onClick={handleMyPageClick} className="text-stone-900 hover:bg-stone-200/50">
+            <DropdownMenuContent align="end" className="bg-card border-border font-serif">
+              <DropdownMenuItem onClick={handleMyPageClick} className="text-foreground hover:bg-accent">
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-stone-800/10" />
-              <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-stone-900 hover:bg-stone-200/50">
+              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-foreground hover:bg-accent">
                 <Megaphone className="mr-2 h-4 w-4" />
                 공지사항
               </DropdownMenuItem>
               {isAdmin && (
                 <>
-                  <DropdownMenuSeparator className="bg-stone-800/10" />
-                  <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-stone-900 hover:bg-stone-200/50">
+                  <DropdownMenuSeparator className="bg-border" />
+                  <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-foreground hover:bg-accent">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
                     {pendingSubmissionCount > 0 && (
@@ -638,7 +638,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       </Badge>
                     )}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-stone-900 hover:bg-stone-200/50">
+                  <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-foreground hover:bg-accent">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     리뷰관리
                     {pendingReviewCount > 0 && (
@@ -650,36 +650,36 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                       </Badge>
                     )}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminBannersClick} className="text-stone-900 hover:bg-stone-200/50">
+                  <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent">
                     <Image className="mr-2 h-4 w-4" />
                     배너관리
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuSeparator className="bg-stone-800/10" />
-              <DropdownMenuItem onClick={onLogout} className="text-stone-900 hover:bg-stone-200/50">
+              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuItem onClick={onLogout} className="text-foreground hover:bg-accent">
                 <LogOut className="mr-2 h-4 w-4" />
                 로그아웃
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-stone-800/10" />
+              <DropdownMenuSeparator className="bg-border" />
               <div className="px-2 py-1">
                 <button
                   onClick={() => setIsBusinessInfoExpanded(!isBusinessInfoExpanded)}
-                  className="w-full flex items-center justify-between hover:bg-stone-100 rounded px-1.5 py-1 transition-colors"
+                  className="w-full flex items-center justify-between hover:bg-accent rounded px-1.5 py-1 transition-colors"
                 >
-                  <div className="text-[10px] text-stone-400 flex-1">
+                  <div className="text-[10px] text-muted-foreground flex-1">
                     <p>쯔동여지도 v2.0.0</p>
-                    <p className="text-stone-300">© 2026 타이니번 데이터랩</p>
+                    <p className="text-muted-foreground/70">© 2026 타이니번 데이터랩</p>
                   </div>
                   {isBusinessInfoExpanded ? (
-                    <ChevronUp className="h-3 w-3 text-stone-400 flex-shrink-0 ml-1" />
+                    <ChevronUp className="h-3 w-3 text-muted-foreground flex-shrink-0 ml-1" />
                   ) : (
-                    <ChevronDown className="h-3 w-3 text-stone-400 flex-shrink-0 ml-1" />
+                    <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0 ml-1" />
                   )}
                 </button>
                 {isBusinessInfoExpanded && (
-                  <div className="mt-1.5 pt-1.5 border-t border-stone-200 text-[10px] text-stone-500 space-y-0.5 px-1.5">
-                    <p className="font-semibold text-stone-600">타이니번 데이터랩</p>
+                  <div className="mt-1.5 pt-1.5 border-t border-border text-[10px] text-muted-foreground space-y-0.5 px-1.5">
+                    <p className="font-semibold text-foreground">타이니번 데이터랩</p>
                     <p>대표: 최연우</p>
                     <p>사업자등록번호: 601-09-04613</p>
                     <p>이메일: twoimo@dgu.ac.kr</p>
@@ -709,7 +709,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
       {/* 공지사항 바텀시트 */}
       < Sheet open={isAnnouncementSheetOpen} onOpenChange={setIsAnnouncementSheetOpen} >
-        <SheetContent side="bottom" className="bg-[#fdfbf7] border-stone-800/10 font-serif max-h-[80vh] flex flex-col">
+        <SheetContent side="bottom" className="bg-background border-border font-serif max-h-[80vh] flex flex-col">
           <SheetHeader className="flex-shrink-0">
             <div className="flex items-center gap-2">
               {announcementViewMode === 'detail' && (
@@ -719,15 +719,15 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   onClick={() => setAnnouncementViewMode('list')}
                   className="p-0 h-auto hover:bg-transparent"
                 >
-                  <ChevronLeft className="h-5 w-5 text-stone-700" />
+                  <ChevronLeft className="h-5 w-5 text-foreground" />
                 </Button>
               )}
               <div className="flex-1 min-w-0">
-                <SheetTitle className="text-stone-900 flex items-center gap-2">
+                <SheetTitle className="text-foreground flex items-center gap-2">
                   <Megaphone className="h-5 w-5 text-red-700 flex-shrink-0" />
                   <span className="truncate">{announcementViewMode === 'list' ? '공지사항' : selectedAnnouncement?.title}</span>
                   {announcementViewMode === 'detail' && selectedAnnouncement?.createdAt && (
-                    <span className="text-xs text-stone-500 font-normal whitespace-nowrap flex-shrink-0">
+                    <span className="text-xs text-muted-foreground font-normal whitespace-nowrap flex-shrink-0">
                       · {formatDistanceToNow(new Date(selectedAnnouncement.createdAt), {
                         addSuffix: true,
                         locale: ko
@@ -751,7 +751,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
                       if (allAnnouncements.length === 0) {
                         return (
-                          <div className="text-center py-12 text-stone-500">
+                          <div className="text-center py-12 text-muted-foreground">
                             <Megaphone className="h-12 w-12 mx-auto mb-3 opacity-30" />
                             <p>현재 공지사항이 없습니다</p>
                           </div>
@@ -763,15 +763,15 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                           {paginatedAnnouncements.map((announcement) => (
                             <div
                               key={announcement.id}
-                              className="p-4 rounded-lg border border-stone-200 hover:bg-stone-100 cursor-pointer transition-colors"
+                              className="p-4 rounded-lg border border-border hover:bg-accent cursor-pointer transition-colors"
                               onClick={() => {
                                 setSelectedAnnouncement(announcement);
                                 setAnnouncementViewMode('detail');
                               }}
                             >
-                              <h4 className="font-semibold text-stone-900 mb-1">{announcement.title}</h4>
-                              <p className="text-sm text-stone-600 line-clamp-2 mb-2">{announcement.content}</p>
-                              <div className="text-xs text-stone-500">
+                              <h4 className="font-semibold text-foreground mb-1">{announcement.title}</h4>
+                              <p className="text-sm text-foreground/80 line-clamp-2 mb-2">{announcement.content}</p>
+                              <div className="text-xs text-muted-foreground">
                                 {formatDistanceToNow(new Date(announcement.createdAt), {
                                   addSuffix: true,
                                   locale: ko
@@ -787,7 +787,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
                 {/* 페이지네이션 */}
                 {allAnnouncements.length > ANNOUNCEMENTS_PER_PAGE && (
-                  <div className="flex items-center justify-center gap-2 pt-3 border-t border-stone-200">
+                  <div className="flex items-center justify-center gap-2 pt-3 border-t border-border">
                     <Button
                       variant="outline"
                       size="sm"
@@ -797,7 +797,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    <span className="text-sm text-stone-600 px-2">
+                    <span className="text-sm text-foreground/80 px-2">
                       {announcementPage} / {Math.ceil(allAnnouncements.length / ANNOUNCEMENTS_PER_PAGE)}
                     </span>
                     <Button
@@ -815,14 +815,14 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             ) : (
               <div className="h-full flex flex-col">
                 <ScrollArea className="flex-1 pr-4">
-                  <div className="text-stone-700 text-sm whitespace-pre-wrap leading-relaxed">
+                  <div className="text-foreground text-sm whitespace-pre-wrap leading-relaxed">
                     {selectedAnnouncement?.content}
                   </div>
                 </ScrollArea>
 
                 {/* 관리자 제어 버튼 */}
                 {isAdmin && selectedAnnouncement && (
-                  <div className="flex-shrink-0 pt-4 border-t border-stone-200 mt-4">
+                  <div className="flex-shrink-0 pt-4 border-t border-border mt-4">
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         variant="outline"

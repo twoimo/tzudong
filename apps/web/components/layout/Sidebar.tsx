@@ -219,13 +219,13 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
                     "w-full font-serif text-base h-11 transition-all duration-200",
                     isOpen ? "justify-between gap-3" : "justify-center p-0",
                     isParentActive
-                      ? "bg-stone-200/70 text-stone-900"
-                      : "text-stone-600 hover:bg-stone-200/50 hover:text-stone-900"
+                      ? "bg-accent text-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
                   )}
                   onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
                 >
                   <div className="flex items-center gap-3">
-                    <item.icon className={cn("h-5 w-5", isParentActive ? "text-stone-700" : "text-stone-400")} />
+                    <item.icon className={cn("h-5 w-5", isParentActive ? "text-foreground" : "text-muted-foreground")} />
                     {isOpen && <span>{item.label}</span>}
                   </div>
                   {isOpen && (
@@ -236,7 +236,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
                   )}
                 </Button>
                 {isOpen && isSubmissionsExpanded && (
-                  <div className="ml-4 pl-4 border-l border-stone-200 space-y-1">
+                  <div className="ml-4 pl-4 border-l border-border space-y-1">
                     {item.children.map((child, childIndex) => {
                       const isActive = pathname === child.path;
                       return (
@@ -246,12 +246,12 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
                           className={cn(
                             "w-full font-serif text-sm h-9 justify-start gap-2",
                             isActive
-                              ? "bg-stone-800 text-white shadow-md hover:bg-stone-700 hover:text-white"
-                              : "text-stone-500 hover:bg-stone-200/50 hover:text-stone-900"
+                              ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:text-primary-foreground"
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
                           )}
                           onClick={child.onClick}
                         >
-                          <child.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-stone-400")} />
+                          <child.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-muted-foreground")} />
                           <span>{child.label}</span>
                         </Button>
                       );
@@ -272,12 +272,12 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
                 "w-full font-serif text-base h-11 transition-all duration-200",
                 isOpen ? "justify-start gap-3" : "justify-center p-0",
                 isActive
-                  ? "bg-stone-800 text-white shadow-md hover:bg-stone-700 hover:text-white"
-                  : "text-stone-600 hover:bg-stone-200/50 hover:text-stone-900"
+                  ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
               onClick={item.onClick}
             >
-              <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-stone-400")} />
+              <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-muted-foreground")} />
               {isOpen && (
                 <>
                   <span>{item.label}</span>
@@ -307,8 +307,8 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
               "w-full font-serif text-base h-11 transition-all duration-200",
               isOpen ? "justify-start gap-3" : "justify-center p-0",
               isActive
-                ? "bg-stone-800 text-white shadow-md hover:bg-stone-700 hover:text-white"
-                : "text-stone-600 hover:bg-stone-200/50 hover:text-stone-900"
+                ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:text-primary-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
             onClick={item.onClick}
             onMouseEnter={() => {
@@ -325,7 +325,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
             }}
             disabled={!item.onClick}
           >
-            <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-stone-400")} />
+            <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-muted-foreground")} />
             {isOpen && (
               <>
                 <span>{item.label}</span>
@@ -345,19 +345,19 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
         isOpen ? "w-64" : "w-16"
       )}
     >
-      {/* [배경 효과] 한지 질감 오버레이 - 더 선명하게 */}
-      <div className="absolute inset-0 opacity-40 pointer-events-none z-0"
+      {/* [배경 효과] 한지 질감 오버레이 - 다크모드에서 숨김 */}
+      <div className="absolute inset-0 opacity-40 dark:opacity-0 pointer-events-none z-0 transition-opacity"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E")` }}
       />
 
-      {/* 전통 문양 테두리 (내부) */}
-      <div className="absolute inset-1 border border-stone-800/10 rounded-sm pointer-events-none z-0" />
+      {/* 전통 문양 테두리 (내부) - 다크모드에서 숨김 */}
+      <div className="absolute inset-1 border border-border dark:border-transparent rounded-sm pointer-events-none z-0" />
 
       {/* 우측 테두리 강조 */}
-      <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-stone-800/20 to-transparent pointer-events-none z-0" />
+      <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-border to-transparent pointer-events-none z-0" />
 
       {/* 로고 영역 */}
-      <div className="h-16 border-b border-stone-800/10 relative z-10 flex items-center justify-center overflow-hidden">
+      <div className="h-16 border-b border-border relative z-10 flex items-center justify-center overflow-hidden">
         <div className="cursor-pointer w-full h-full flex items-center justify-center px-4" onClick={() => router.push("/")}>
           {isOpen ? (
             <Image
@@ -367,10 +367,10 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
               height={56}
               priority
               sizes="(max-width: 768px) 150px, 200px"
-              className="h-12 w-auto object-contain mix-blend-multiply opacity-90 drop-shadow-sm grayscale contrast-125"
+              className="h-12 w-auto object-contain opacity-90 drop-shadow-sm dark:invert dark:brightness-200"
             />
           ) : (
-            <Home className="h-6 w-6 text-stone-600" />
+            <Home className="h-6 w-6 text-muted-foreground" />
           )}
         </div>
       </div>
@@ -388,12 +388,12 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
 
           {/* 버전 및 사업자 정보 */}
           <div
-            className="border-t border-stone-800/10 pt-4 text-center cursor-help"
+            className="border-t border-border pt-4 text-center cursor-help"
             title={`타이니번 데이터랩\n대표: 최연우\n사업자등록번호: 601-09-04613\n이메일: twoimo@dgu.ac.kr`}
           >
-            <div className="text-xs text-stone-400 font-serif space-y-1">
+            <div className="text-xs text-muted-foreground font-serif space-y-1">
               <p>쯔동여지도 v2.0.0</p>
-              <p className="text-stone-300">© 2026 타이니번 데이터랩</p>
+              <p className="text-muted-foreground/70">© 2026 타이니번 데이터랩</p>
             </div>
           </div>
         </div>

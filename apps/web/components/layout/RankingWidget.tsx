@@ -54,7 +54,7 @@ const RankingWidgetComponent = () => {
     const rankColorClass = useMemo(() => {
         if (!myRank) return "";
         if (myRank === 1) return "text-yellow-500 border-yellow-500/20 bg-yellow-500/10";
-        if (myRank === 2) return "text-gray-400 border-gray-400/20 bg-gray-400/10";
+        if (myRank === 2) return "text-muted-foreground border-muted-foreground/20 bg-muted";
         if (myRank === 3) return "text-amber-600 border-amber-600/20 bg-amber-600/10";
         return "text-primary border-primary/20 bg-primary/10";
     }, [myRank]);

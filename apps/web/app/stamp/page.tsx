@@ -940,7 +940,7 @@ export default function StampPage() {
                     {/* Scroll Container */}
                     <div className="h-full overflow-y-auto flex flex-col">
                         {/* Header */}
-                        <div className="border-b border-border bg-card p-6 shrink-0">
+                        <div className="border-b border-border bg-background p-6 shrink-0">
                             <div className="flex items-center justify-between mb-4">
                                 <div>
                                     <div className="flex items-center gap-3">
