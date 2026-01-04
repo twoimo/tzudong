@@ -242,7 +242,7 @@ export default function ServerCostsPage() {
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="border-b border-border bg-card p-6">
+            <div className="border-b border-border bg-background p-6">
                 <div className="flex items-center justify-between mb-4">
                     <div>
                         <div className="flex items-center gap-3">

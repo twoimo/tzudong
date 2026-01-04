@@ -43,7 +43,7 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                 "transition-all duration-300 ease-in-out",
                 "hover:scale-110 active:scale-95",
                 "flex items-center justify-center",
-                "border-2 border-stone-200/20",
+                "border-2 border-border/20",
                 // Hydration 깜빡임 방지
                 isHydrated ? "opacity-100" : "opacity-0",
                 className

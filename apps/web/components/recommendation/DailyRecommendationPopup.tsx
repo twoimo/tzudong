@@ -212,7 +212,7 @@ export function DailyRecommendationPopup() {
             {/* 광고 팝업 스타일 */}
             <div className="absolute max-md:top-1/2 max-md:left-1/2 max-md:-translate-x-1/2 max-md:-translate-y-1/2 md:bottom-6 md:right-6 pointer-events-auto max-md:opacity-0 max-md:animate-[fadeIn_0.5s_ease-out_forwards] md:animate-in md:slide-in-from-bottom-4 md:duration-500">
                 <Card
-                    className="w-[320px] overflow-hidden shadow-2xl border-2 border-primary/30 bg-white font-serif"
+                    className="w-[320px] overflow-hidden shadow-2xl border-2 border-primary/30 bg-background font-serif"
                 >
                     {/* 오늘의 추천 배지 */}
                     <div className="absolute top-2 left-2 z-10">
@@ -238,10 +238,10 @@ export function DailyRecommendationPopup() {
                         {/* 음식점 정보 */}
                         <div className="p-4 space-y-2">
                             <div>
-                                <h3 className="text-lg font-bold text-gray-900 line-clamp-1 mb-1">
+                                <h3 className="text-lg font-bold text-foreground line-clamp-1 mb-1">
                                     {selectedRestaurant.name}
                                 </h3>
-                                <div className="flex items-start gap-1.5 text-xs text-gray-600">
+                                <div className="flex items-start gap-1.5 text-xs text-muted-foreground">
                                     <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0" />
                                     <span className="line-clamp-1">{address}</span>
                                 </div>
@@ -251,7 +251,7 @@ export function DailyRecommendationPopup() {
                     </div>
 
                     {/* 하단 버튼 (광고 배너와 동일) */}
-                    <div className="flex border-t border-stone-200">
+                    <div className="flex border-t border-border">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -265,17 +265,17 @@ export function DailyRecommendationPopup() {
                                 setIsVisible(false);
                                 window.dispatchEvent(new CustomEvent('dailyRecommendationPopupClosed'));
                             }}
-                            className="flex-1 py-3 text-sm text-stone-500 hover:bg-stone-100 transition-colors"
+                            className="flex-1 py-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
                         >
                             오늘 하루 안 보기
                         </button>
-                        <div className="w-px bg-stone-200" />
+                        <div className="w-px bg-border" />
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
                                 handleClose();
                             }}
-                            className="flex-1 py-3 text-sm font-medium text-stone-700 hover:bg-stone-100 transition-colors"
+                            className="flex-1 py-3 text-sm font-medium text-foreground hover:bg-accent transition-colors"
                         >
                             닫기
                         </button>

@@ -88,15 +88,11 @@ export default function AnnouncementBanner({
         >
             <div className="mx-4 mt-4">
                 <div
-                    className="flex items-center justify-between px-4 py-3 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl group"
-                    style={{
-                        background: 'linear-gradient(135deg, rgba(253, 251, 247, 0.95) 0%, rgba(245, 240, 230, 0.95) 100%)',
-                        border: '1px solid rgba(120, 100, 80, 0.2)',
-                    }}
+                    className="flex items-center justify-between px-4 py-3 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-300 hover:shadow-xl group bg-card/95 border border-border"
                 >
-                    {/* 한지 질감 오버레이 */}
+                    {/* 한지 질감 오버레이 - 다크모드에서 숨김 */}
                     <div
-                        className="absolute inset-0 opacity-20 pointer-events-none rounded-lg"
+                        className="absolute inset-0 opacity-20 pointer-events-none rounded-lg dark:opacity-0"
                         style={{
                             backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E")`,
                         }}
@@ -108,7 +104,7 @@ export default function AnnouncementBanner({
                             variant="ghost"
                             size="icon"
                             onClick={handlePrev}
-                            className="h-6 w-6 flex-shrink-0 hover:bg-stone-200/50 text-stone-600 hover:text-stone-900 relative z-10 mr-1"
+                            className="h-6 w-6 flex-shrink-0 hover:bg-accent text-muted-foreground hover:text-foreground relative z-10 mr-1"
                             aria-label="이전 공지"
                         >
                             <ChevronLeft className="h-4 w-4" />
@@ -120,7 +116,7 @@ export default function AnnouncementBanner({
                         <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-800/10 flex items-center justify-center">
                             <Megaphone className="h-4 w-4 text-red-800" />
                         </div>
-                        <span className="font-medium text-stone-800 truncate group-hover:text-red-800 transition-colors">
+                        <span className="font-medium text-foreground truncate group-hover:text-red-800 dark:group-hover:text-red-400 transition-colors">
                             {currentAnnouncement.title}
                         </span>
                     </div>
@@ -132,7 +128,7 @@ export default function AnnouncementBanner({
                                 variant="ghost"
                                 size="icon"
                                 onClick={handleNext}
-                                className="h-6 w-6 flex-shrink-0 hover:bg-stone-200/50 text-stone-600 hover:text-stone-900"
+                                className="h-6 w-6 flex-shrink-0 hover:bg-accent text-muted-foreground hover:text-foreground"
                                 aria-label="다음 공지"
                             >
                                 <ChevronRight className="h-4 w-4" />
@@ -142,7 +138,7 @@ export default function AnnouncementBanner({
                             variant="ghost"
                             size="icon"
                             onClick={handleDismiss}
-                            className="h-8 w-8 flex-shrink-0 hover:bg-stone-200/50 text-stone-600 hover:text-stone-900"
+                            className="h-8 w-8 flex-shrink-0 hover:bg-accent text-muted-foreground hover:text-foreground"
                             aria-label="공지사항 닫기"
                         >
                             <X className="h-4 w-4" />

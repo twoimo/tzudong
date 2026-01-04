@@ -1,14 +1,14 @@
 {
-  "timestamp": "2026-01-01T11:18:08.899Z",
+  "timestamp": "2026-01-04T08:25:14.381Z",
   "stats": {
     "total": 1039,
-    "processed": 954,
-    "skipped": 85,
-    "updated": 11,
-    "success": 954,
+    "processed": 639,
+    "skipped": 400,
+    "updated": 639,
+    "success": 639,
     "failed": 0,
-    "restaurantsFound": 60,
+    "restaurantsFound": 375,
     "commits": 0
   },
-  "duration": 5527
+  "duration": 174515
 }

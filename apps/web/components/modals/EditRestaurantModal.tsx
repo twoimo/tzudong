@@ -256,7 +256,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
                     {restaurant && (
                         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                             {/* 공통 정보 입력 */}
-                            <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+                            <div className="space-y-4 p-4 bg-muted rounded-lg">
                                 <h3 className="font-semibold text-lg">공통 정보</h3>
 
                                 <div className="space-y-2">

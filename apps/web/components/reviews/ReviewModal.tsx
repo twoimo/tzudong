@@ -700,7 +700,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                             ? 'border-primary bg-primary/5'
                                             : verificationPhoto
                                                 ? 'border-green-300 bg-green-50/50'
-                                                : 'border-gray-300 hover:border-primary/50'
+                                                : 'border-border hover:border-primary/50'
                                             }`}
                                         onDragOver={handleDragOver}
                                         onDragEnter={handleVerificationDragEnter}
@@ -750,7 +750,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                                 </div>
                                             ) : (
                                                 <div className="w-full text-center space-y-3">
-                                                    <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-gray-100'
+                                                    <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
                                                         }`}>
                                                         <Image className={`h-8 w-8 transition-colors ${isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
                                                             }`} />
@@ -805,7 +805,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                             {foodPhotos.map((photo, index) => (
                                                 <div key={index} className="relative group">
                                                     <Card className="p-2 hover:shadow-md transition-shadow">
-                                                        <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
+                                                        <div className="aspect-square rounded-lg overflow-hidden bg-muted">
                                                             <img
                                                                 src={foodPhotoUrls[index] || ''}
                                                                 alt={`음식 사진 ${index + 1}`}
@@ -841,7 +841,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                             ? 'border-primary bg-primary/5'
                                             : foodPhotos.length > 0
                                                 ? 'border-green-300 bg-green-50/50'
-                                                : 'border-gray-300 hover:border-primary/50'
+                                                : 'border-border hover:border-primary/50'
                                             }`}
                                         onDragOver={handleDragOver}
                                         onDragEnter={handleFoodPhotosDragEnter}
@@ -850,7 +850,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         onClick={openFoodPhotosFileDialog}
                                     >
                                         <div className="flex flex-col items-center gap-4">
-                                            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-gray-100'
+                                            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-muted'
                                                 }`}>
                                                 <Upload className={`h-8 w-8 transition-colors ${isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'
                                                     }`} />

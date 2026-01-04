@@ -34,10 +34,10 @@ const SlideIndicator = memo(({
                         current === index
                             ? hasImage
                                 ? "bg-white scale-110 shadow-sm"
-                                : "bg-stone-700 scale-110 shadow-sm"
+                                : "bg-foreground scale-110 shadow-sm"
                             : hasImage
                                 ? "bg-white/60 hover:bg-white/80 scale-100"
-                                : "bg-stone-400/60 hover:bg-stone-500 scale-100"
+                                : "bg-muted-foreground/60 hover:bg-muted-foreground scale-100"
                     )}
                     aria-label={`슬라이드 ${index + 1}로 이동`}
                 />
@@ -90,22 +90,22 @@ const BannerContent = memo(({ banner, isActive }: { banner: AdBannerType; isActi
             isActive ? "opacity-100" : "opacity-0"
         )}>
             <div
-                className="absolute inset-0 opacity-40 pointer-events-none"
+                className="absolute inset-0 opacity-40 dark:opacity-0 pointer-events-none transition-opacity"
                 style={{
                     backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`
                 }}
             />
-            <div className="absolute inset-2 border-2 border-double border-stone-800/20 rounded-md pointer-events-none" />
-            <div className="absolute inset-0 border-4 border-stone-800/10 rounded-lg pointer-events-none" />
+            <div className="absolute inset-2 border-2 border-double border-border rounded-md pointer-events-none dark:border-transparent" />
+            <div className="absolute inset-0 border-4 border-border rounded-lg pointer-events-none dark:border-transparent" />
             <div className="relative h-full flex flex-col items-center justify-center text-center p-6 z-10">
-                <div className="mb-3 text-stone-500 opacity-60">
+                <div className="mb-3 text-muted-foreground opacity-60">
                     <Scroll className="w-6 h-6" />
                 </div>
-                <h3 className="text-2xl font-serif font-bold text-stone-900 mb-3 tracking-widest drop-shadow-sm">
+                <h3 className="text-2xl font-serif font-bold text-foreground mb-3 tracking-widest drop-shadow-sm">
                     {banner.title}
                 </h3>
                 {banner.description && (
-                    <p className="text-base font-serif text-stone-700 whitespace-pre-line leading-loose mb-3 opacity-90">
+                    <p className="text-base font-serif text-foreground/80 whitespace-pre-line leading-loose mb-3 opacity-90">
                         {banner.description}
                     </p>
                 )}
@@ -113,7 +113,7 @@ const BannerContent = memo(({ banner, isActive }: { banner: AdBannerType; isActi
                     <Button
                         variant="outline"
                         size="sm"
-                        className="font-serif bg-stone-100/50 hover:bg-stone-200 text-stone-800 border-stone-400 hover:border-stone-600 transition-all duration-300"
+                        className="font-serif bg-accent hover:bg-accent/80 text-foreground border-border hover:border-muted-foreground transition-all duration-300"
                         onClick={(e) => {
                             e.stopPropagation();
                             window.open(banner.link_url!, '_blank', 'noopener,noreferrer');
@@ -194,7 +194,7 @@ const AdBannerComponent = () => {
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
             onClick={handleBannerClick}
-            style={{ backgroundColor: '#fdfbf7' }}
+            style={{ backgroundColor: 'hsl(var(--background))' }}
         >
             {/* 모든 배너를 렌더링하여 크로스페이드 효과 적용 */}
             {banners.map((banner, index) => (

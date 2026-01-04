@@ -127,49 +127,61 @@ All colors MUST be HSL.
     --shadow-glow: 0 0 20px rgba(185, 28, 28, 0.15);
   }
 
-  /* 한지 모드 (대동여지도 - 오래된 누런 종이 톤) */
+  /* 진짜 다크모드 (어두운 배경) */
   .dark {
-    --background: 45 35% 88%;
-    --foreground: 30 15% 20%;
+    /* 거의 검정에 가까운 배경 (zinc-950) */
+    --background: 240 10% 4%;
+    /* 밝은 회색 텍스트 (zinc-100) */
+    --foreground: 0 0% 95%;
 
-    --card: 45 30% 90%;
-    --card-foreground: 30 15% 20%;
+    /* 카드: 배경보다 약간 밝게 (zinc-900) */
+    --card: 240 6% 10%;
+    --card-foreground: 0 0% 95%;
 
-    --popover: 45 30% 90%;
-    --popover-foreground: 30 15% 20%;
+    /* 팝오버: 카드와 동일 */
+    --popover: 240 6% 10%;
+    --popover-foreground: 0 0% 95%;
 
-    --primary: 15 60% 40%;
-    --primary-foreground: 45 30% 95%;
+    /* 낙관 색상 유지 (빨간색) - 다크모드에서 약간 밝게 */
+    --primary: 0 72% 51%;
+    --primary-foreground: 0 0% 98%;
 
-    --secondary: 42 20% 82%;
-    --secondary-foreground: 30 15% 20%;
+    /* 보조 색상 (zinc-800) */
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 95%;
 
-    --muted: 42 20% 82%;
-    --muted-foreground: 30 10% 35%;
+    /* 음소거 색상 */
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
 
-    --accent: 42 20% 82%;
-    --accent-foreground: 30 15% 20%;
+    /* 강조 색상 */
+    --accent: 240 4% 16%;
+    --accent-foreground: 0 0% 95%;
 
-    --destructive: 0 65% 50%;
-    --destructive-foreground: 45 30% 95%;
+    /* 파괴적 액션 */
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 40 18% 72%;
-    --input: 40 18% 72%;
-    --ring: 15 60% 40%;
+    /* 테두리 (zinc-800) */
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 0 72% 51%;
 
-    --sidebar-background: 45 35% 88%;
-    --sidebar-foreground: 30 15% 20%;
-    --sidebar-primary: 15 60% 40%;
-    --sidebar-primary-foreground: 45 30% 95%;
-    --sidebar-accent: 42 20% 82%;
-    --sidebar-accent-foreground: 30 15% 20%;
-    --sidebar-border: 40 18% 72%;
-    --sidebar-ring: 15 60% 40%;
+    /* 사이드바 */
+    --sidebar-background: 240 10% 4%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 0 72% 51%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 0 72% 51%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(15 60% 40%), hsl(10 55% 35%));
-    --gradient-secondary: linear-gradient(135deg, hsl(42 20% 82%), hsl(40 22% 78%));
-    --shadow-primary: 0 4px 14px 0 rgba(110, 70, 30, 0.2);
-    --shadow-glow: 0 0 20px rgba(110, 70, 30, 0.15);
+    /* 그라디언트 및 그림자 */
+    --gradient-primary: linear-gradient(135deg, hsl(0 72% 51%), hsl(0 65% 45%));
+    --gradient-secondary: linear-gradient(135deg, hsl(240 4% 16%), hsl(240 4% 12%));
+    --shadow-primary: 0 4px 14px 0 rgba(239, 68, 68, 0.25);
+    --shadow-glow: 0 0 20px rgba(239, 68, 68, 0.2);
   }
 }
 

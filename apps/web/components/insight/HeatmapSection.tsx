@@ -418,7 +418,7 @@ const HeatmapSectionComponent = () => {
                                         {selectedVideo.peakSegment.start}% - {selectedVideo.peakSegment.end}%
                                     </Badge>
                                 </div>
-                                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                                <p className="text-xs text-muted-foreground dark:text-muted-foreground leading-relaxed">
                                     {selectedVideo.analysis.peakReason}
                                 </p>
                             </div>
@@ -433,7 +433,7 @@ const HeatmapSectionComponent = () => {
                                         {selectedVideo.lowestSegment.start}% - {selectedVideo.lowestSegment.end}%
                                     </Badge>
                                 </div>
-                                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                                <p className="text-xs text-muted-foreground dark:text-muted-foreground leading-relaxed">
                                     {selectedVideo.analysis.lowestReason}
                                 </p>
                             </div>

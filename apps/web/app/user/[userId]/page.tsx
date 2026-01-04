@@ -272,7 +272,7 @@ export default function UserProfilePage() {
     return (
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
-            <div className="border-b border-border bg-card p-4 md:p-6">
+            <div className="border-b border-border bg-background p-4 md:p-6">
                 <div className="flex items-center gap-2 min-w-0">
                     <Button
                         variant="ghost"

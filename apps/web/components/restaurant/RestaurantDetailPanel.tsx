@@ -1318,7 +1318,7 @@ export function RestaurantDetailPanel({
                                 >
                                     <div className="flex items-center gap-3 w-full py-1">
                                         <div className="w-9 h-9 bg-yellow-400 rounded-lg flex items-center justify-center flex-shrink-0">
-                                            <span className="text-gray-800 font-black text-lg">K</span>
+                                            <span className="text-foreground font-black text-lg">K</span>
                                         </div>
                                         <div className="flex-1 text-left">
                                             <div className="text-sm font-bold text-foreground mb-0.5">카카오맵</div>
