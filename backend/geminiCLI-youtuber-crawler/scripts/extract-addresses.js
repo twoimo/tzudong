@@ -907,44 +907,197 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
 
     fs.writeFileSync(tempPromptFile, promptTemplate, 'utf-8');
 
-    // GitHub Actions 환경 감지
-    const isGitHubActions = !!process.env.GITHUB_ACTIONS;
-
-    // 시도할 모델 목록
-    // GitHub Actions에서는 pro만, 로컬에서는 flash만 사용
-    const allModels = isGitHubActions
-        ? ['gemini-3-pro-preview']      // GitHub Actions: pro만
-        : ['gemini-3-flash-preview'];   // 로컬: flash만
+    // 모델 목록 (Flash -> Pro -> Flash -> Pro 순서로 재시도)
+    const allModels = ['gemini-3-flash-preview', 'gemini-3-pro-preview'];
 
     // Infinite loop until models are available
     while (true) {
-        // 사용 가능한 모델만 필터링 (블랙리스트 제외)
-        const availableModels = allModels.filter(m => !isModelBlacklisted(m));
+        // 재시도 횟수에 따라 모델 선택 (Flash -> Pro -> Flash ...)
+        const modelIndex = retryAttempt % allModels.length;
+        const model = allModels[modelIndex];
 
-        if (availableModels.length > 0) {
-            break; // 사용 가능한 모델 있음 -> 진행
+        // 선택된 모델이 블랙리스트에 있으면 대기해야 함
+        if (isModelBlacklisted(model)) {
+            const earliest = getEarliestResetTime();
+            let waitMs = 10 * 60 * 1000; // 기본 10분
+
+            if (earliest) {
+                waitMs = earliest - Date.now();
+            }
+            if (waitMs <= 0) waitMs = 60000; // 최소 1분
+
+            const waitMin = Math.ceil(waitMs / 60000);
+            log('warning', `모델 ${model} 쿼타 소진. ${waitMin}분 대기 후 재시도...`);
+
+            await sleep(waitMs + 5000); // 여유 시간
+            log('info', `대기 완료 - 모델 재확인`);
+
+            // 블랙리스트 초기화/재확인
+            blacklistedModels.clear();
+            continue; // 다시 시도
         }
 
-        // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간까지 대기 (무한 대기)
-        const earliest = getEarliestResetTime();
-        let waitMs = 10 * 60 * 1000; // 기본 10분
+        try {
+            log('debug', `Gemini 모델 시도 [${retryAttempt + 1}/${MAX_RETRY_ATTEMPTS + 1}]: ${model}`);
 
-        if (earliest) {
-            waitMs = earliest - Date.now();
+            // 프롬프트 준비 (이전과 동일)
+            let prompt = promptTemplate
+                .replace('{{transcript}}', transcript || '(자막 없음)')
+                .replace('{{video_title}}', video.title)
+                .replace('{{video_description}}', video.description)
+                .replace('{{today_date}}', new Date().toLocaleDateString('ko-KR'));
+
+            // map_urls 정보 추가
+            const mapUrlsInfo = [];
+            if (video.mapUrls) {
+                if (video.mapUrls.google && video.mapUrls.google.length > 0) mapUrlsInfo.push(`구글 지도: ${video.mapUrls.google.length}개`);
+                if (video.mapUrls.naver && video.mapUrls.naver.length > 0) mapUrlsInfo.push(`네이버 지도: ${video.mapUrls.naver.length}개`);
+                if (video.mapUrls.kakao && video.mapUrls.kakao.length > 0) mapUrlsInfo.push(`카카오 지도: ${video.mapUrls.kakao.length}개`);
+            }
+            if (mapUrlsInfo.length > 0) {
+                prompt += `\n\n[참고 정보]\n이 영상의 설명란에는 다음 지도 URL이 포함되어 있습니다: ${mapUrlsInfo.join(', ')}. 이 정보를 활용하여 정확한 맛집 정보를 추출하세요.`;
+            }
+
+            // Gemini CLI 호출 - 비동기 spawn 사용 (Event Loop 차단 방지)
+            const geminiResult = await new Promise((resolve) => {
+                // ... (spawn logic remains same) ...
+                const child = spawn('gemini', [
+                    '--output-format', 'json',
+                    '--model', model,
+                    '--yolo'
+                ], {
+                    env: envWithoutApiKey,
+                    shell: true
+                });
+
+                let stdout = '';
+                let stderr = '';
+                let timedOut = false;
+
+                // 타임아웃 처리 (5분)
+                const timeoutId = setTimeout(() => {
+                    timedOut = true;
+                    child.kill(); // 프로세스 종료
+                    resolve({
+                        status: null,
+                        stdout,
+                        stderr,
+                        error: new Error(`Spawn timed out after 300000ms`)
+                    });
+                }, 300000);
+
+                if (child.stdin) {
+                    child.stdin.write(prompt);
+                    child.stdin.end();
+                }
+
+                if (child.stdout) {
+                    child.stdout.on('data', (data) => {
+                        stdout += data.toString();
+                    });
+                }
+                if (child.stderr) {
+                    child.stderr.on('data', (data) => {
+                        stderr += data.toString();
+                    });
+                }
+
+                child.on('error', (err) => {
+                    if (!timedOut) {
+                        clearTimeout(timeoutId);
+                        resolve({
+                            status: null,
+                            stdout,
+                            stderr,
+                            error: err
+                        });
+                    }
+                });
+
+                child.on('close', (code) => {
+                    if (!timedOut) {
+                        clearTimeout(timeoutId);
+                        resolve({
+                            status: code,
+                            stdout,
+                            stderr,
+                            error: null
+                        });
+                    }
+                });
+            });
+
+            // 종료 코드가 0이 아닐 때 상세 에러 로깅
+            if (geminiResult.status !== 0 && geminiResult.status !== null) {
+                const errOutput = (geminiResult.stderr || geminiResult.stdout || '').slice(0, 500);
+                log('debug', `모델 ${model} 에러 출력: ${errOutput}`);
+            }
+
+            // 에러 확인
+            if (geminiResult.error) {
+                log('debug', `모델 ${model} 실행 에러: ${geminiResult.error.message}`);
+                lastError = geminiResult.error;
+                // 에러 발생 시 throw하여 catch 블록으로 이동, 다음 모델/재시도 처리
+                throw geminiResult.error;
+            }
+
+            // 결과 파싱
+            let output = geminiResult.stdout;
+            // JSON 파싱 시도 (다양한 방법)
+            // ... (parsing logic) ...
+            let parsedResult = null;
+
+            // 방법 1: 가장 바깥쪽 JSON 찾기
+            try {
+                const jsonStart = output.indexOf('{');
+                const jsonEnd = output.lastIndexOf('}');
+                if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                    const extracted = output.slice(jsonStart, jsonEnd + 1);
+                    parsedResult = JSON.parse(extracted);
+                    log('debug', `방법 1 성공: JSON 블록에서 추출`);
+                }
+            } catch (e) {
+                // 무시
+            }
+            // ... (other parsing attempts can be consolidated or kept as is in existing code if possible, but simpler to include standard parsing here) ...
+
+            // If simple parsing failed, try more aggressive cleanup
+            if (!parsedResult) {
+                let cleanedOutput = output.replace(/```json\n?|\n?```/g, '').trim();
+                try {
+                    parsedResult = JSON.parse(cleanedOutput);
+                    log('debug', `방법 2 성공: Markdown 제거 후 추출`);
+                } catch (e) { }
+            }
+
+            if (parsedResult) {
+                result = parsedResult;
+                log('success', `Gemini 분석 성공 (모델: ${model})`);
+                return result; // 성공 시 바로 반환
+            } else {
+                throw new Error('JSON parsing failed');
+            }
+
+        } catch (error) {
+            log('debug', `모델 ${model} 처리 실패: ${error.message}`);
+            lastError = error;
+            // 여기서는 continue 하지 않고, while loop의 다음 반복(즉, 다음 모델 재시도)을 위해 break하거나 return해야 함.
+            // 하지만 이 while(true)는 모델 선택 루프가 아니라 가용성 체크 루프였음.
+            // 구조 변경 필요:
+            // 이 전체 로직이 extractWithGemini 함수 내부임.
+            // 모델 선택 로직을 재시도 횟수에 의존하게 변경했으므로, 
+            // extractWithGemini는 "한 번의 시도"만 수행하고, 실패 시 에러를 던지면 바깥의 processVideoWithRateLimit에서 catch하여 재시도하게 됨.
+
+            // 따라서 여기서 에러를 throw하면 됨.
+            // 단, 429(Resource Exhausted) 에러인 경우 블랙리스트에 추가하고 대기해야 할 수도 있음.
+            if (error.message && (error.message.includes('429') || error.message.includes('Resource has been exhausted'))) {
+                addModelToBlacklist(model);
+                continue; // 블랙리스트 추가 후 다시 while 루프 돌면서 대기 로직 수행
+            }
+
+            // 그 외 에러(파싱 에러, 타임아웃 등)는 이번 시도 실패로 처리하고 상위로 전파
+            throw error;
         }
-        if (waitMs <= 0) waitMs = 60000; // 최소 1분
-
-        const waitMin = Math.ceil(waitMs / 60000);
-        log('warning', `모든 모델 쿼타 소진. ${waitMin}분 대기 후 재시도...`);
-
-        await sleep(waitMs + 5000); // 여유 시간
-        log('info', `대기 완료 - 모델 재확인`);
-
-        // 블랙리스트 초기화/재확인
-        blacklistedModels.clear();
-
-        // 여기서 retryAttempt를 증가시키지 않음 (쿼타 대기는 재시도 횟수 차감 X)
-        // continue to check availableModels again
     }
 
     // 사용 가능한 모델 재확인
@@ -1238,54 +1391,16 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
             } catch (error) {
                 log('debug', `모델 ${model} 실패: ${error.message}`);
                 lastError = error;
-                // 다음 모델 시도
-                continue;
+                // 에러를 던져서 상위 processVideoWithRateLimit에서 재시도하도록 함
+                throw error;
             }
         }
-
-        // 모든 모델 실패 - 리셋 시간까지 대기 후 재시도
-        if (!result) {
-            log('warning', `Gemini 분석 실패 (${video.videoId}): 모든 모델 시도 실패`);
-            if (lastError) {
-                log('debug', `마지막 오류: ${lastError.message}`);
-            }
-
-            // 재시도 가능 여부 확인
-            // 쿼타 소진(blacklist)으로 인한 실패인 경우 -> 무한 재시도 (retryAttempt 증가 X)
-            // 그 외(파싱 에러 등)인 경우 -> MAX_RETRY_ATTEMPTS까지 재시도
-            const earliest = getEarliestResetTime();
-
-            if (earliest) {
-                // 쿼타 문제로 판단 -> 무한 대기 후 재시도
-                const waitMs = earliest - Date.now();
-                const waitMin = Math.ceil(waitMs > 0 ? waitMs / 60000 : 10);
-
-                log('warning', `모든 모델 쿼타 소진으로 실패. ${waitMin}분 대기 후 무한 재시도...`);
-                await sleep((waitMs > 0 ? waitMs : 10 * 60 * 1000) + 5000);
-
-                // 블랙리스트 초기화
-                blacklistedModels.clear();
-
-                // 재귀 호출 (retryAttempt 증가시키지 않음)
-                cleanupTempFiles(tempPromptFile, tempOutputFile);
-                return await extractWithGemini(video, transcript, retryAttempt);
-            } else {
-                // 일반 에러 -> 재시도 횟수 차감
-                if (retryAttempt < 3) { // MAX_RETRY_ATTEMPTS = 3 하드코딩 (상단 변수 제거됨)
-                    log('warning', `분석 실패 - 재시도 (${retryAttempt + 1}/3)...`);
-                    await sleep(5000);
-                    cleanupTempFiles(tempPromptFile, tempOutputFile);
-                    return await extractWithGemini(video, transcript, retryAttempt + 1);
-                }
-            }
-        }
-
-        return result;
     } finally {
-        // 임시 파일 정리 (성공/실패 모두)
         cleanupTempFiles(tempPromptFile, tempOutputFile);
     }
 }
+
+
 
 /**
  * 지연 실행 (Rate Limit 방지)
