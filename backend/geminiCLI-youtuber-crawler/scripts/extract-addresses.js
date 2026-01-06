@@ -972,17 +972,77 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
 
                 // --yolo 옵션: 웹 검색(google_web_search) 등 도구 사용 자동 허용
                 // Windows 호환성: stdin으로 프롬프트 전달 (명령줄 길이 제한 회피)
-                const geminiResult = spawnSync('gemini', [
-                    '--output-format', 'json',
-                    '--model', model,
-                    '--yolo'
-                ], {
-                    input: promptTemplate,  // stdin으로 프롬프트 전달
-                    encoding: 'utf-8',
-                    maxBuffer: 50 * 1024 * 1024, // 50MB로 증가
-                    timeout: 180000, // 3분 타임아웃
-                    env: envWithoutApiKey,  // API 키 없이 OAuth만 사용
-                    shell: true  // Windows에서 gemini 명령어 찾기 위해 필요
+                // Gemini CLI 호출 - 비동기 spawn 사용 (Event Loop 차단 방지)
+                const geminiResult = await new Promise((resolve) => {
+                    const child = spawn('gemini', [
+                        '--output-format', 'json',
+                        '--model', model,
+                        '--yolo'
+                    ], {
+                        env: envWithoutApiKey,
+                        shell: true
+                    });
+
+                    let stdout = '';
+                    let stderr = '';
+                    let timedOut = false;
+
+                    // 타임아웃 처리 (3분)
+                    const timeoutId = setTimeout(() => {
+                        timedOut = true;
+                        child.kill(); // 프로세스 종료
+                        resolve({
+                            status: null,
+                            stdout,
+                            stderr,
+                            error: new Error(`Spawn timed out after 180000ms`)
+                        });
+                    }, 180000);
+
+                    // 표준 입력으로 프롬프트 전달
+                    if (child.stdin) {
+                        child.stdin.write(promptTemplate);
+                        child.stdin.end();
+                    }
+
+                    // 출력 수신
+                    if (child.stdout) {
+                        child.stdout.on('data', (data) => {
+                            stdout += data.toString();
+                        });
+                    }
+
+                    if (child.stderr) {
+                        child.stderr.on('data', (data) => {
+                            stderr += data.toString();
+                        });
+                    }
+
+                    // 에러 핸들링
+                    child.on('error', (err) => {
+                        if (!timedOut) {
+                            clearTimeout(timeoutId);
+                            resolve({
+                                status: null,
+                                stdout,
+                                stderr,
+                                error: err
+                            });
+                        }
+                    });
+
+                    // 종료 핸들링
+                    child.on('close', (code) => {
+                        if (!timedOut) {
+                            clearTimeout(timeoutId);
+                            resolve({
+                                status: code,
+                                stdout,
+                                stderr,
+                                error: null
+                            });
+                        }
+                    });
                 });
 
                 // 종료 코드가 0이 아닐 때 상세 에러 로깅
