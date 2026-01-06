@@ -209,6 +209,22 @@ export async function checkAndRefreshToken() {
 }
 
 /**
+ * 유효한 Access Token 반환 (외부 모듈용)
+ */
+export async function getValidAccessToken() {
+    // 1. 토큰 상태 체크 및 필요 시 갱신
+    await checkAndRefreshToken();
+
+    // 2. 파일에서 토큰 읽기
+    const creds = loadOAuthCreds(PROJECT_OAUTH_FILE);
+    if (!creds || !creds.access_token) {
+        throw new Error('OAuth 토큰을 찾을 수 없습니다.');
+    }
+
+    return creds.access_token;
+}
+
+/**
  * 토큰 상태 출력
  */
 export function printTokenStatus() {
