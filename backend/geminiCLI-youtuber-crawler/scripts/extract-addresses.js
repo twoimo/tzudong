@@ -1840,10 +1840,32 @@ async function main() {
         commits: 0
     };
 
+
+    // 프로세스 종료 시그널(SIGINT) 핸들러 - 내부 변수 접근을 위해 main 안에 정의
+    process.on('SIGINT', () => {
+        log('info', '');
+        log('warning', '프로세스 중단됨 (Ctrl+C) - 데이터를 저장합니다...');
+        try {
+            // 현재까지의 결과 저장
+            const allData = Array.from(allResults.values());
+            if (allData.length > 0) {
+                const content = allData.map(d => JSON.stringify(d)).join('\n') + '\n';
+                fs.writeFileSync(outputFile, content, 'utf-8');
+                log('success', `[비상 저장] ${allData.length}개 데이터 저장 완료`);
+            } else {
+                log('info', '[비상 저장] 저장할 데이터가 없습니다.');
+            }
+        } catch (e) {
+            log('error', `[비상 저장] 저장 실패: ${e.message}`);
+        }
+        rateLimiter.forceFlush();
+        process.exit(0);
+    });
+
     // 배치 설정
     let batchCount = 0;
     const LOG_BATCH_SIZE = 20;     // 20개마다 진행 상황 로그 (로그 I/O 최적화)
-    const COMMIT_BATCH_SIZE = 50;  // 50개마다 저장 (빈번한 I/O 오류 방지)
+    const COMMIT_BATCH_SIZE = 1;   // 1개마다 저장 (데이터 안전 우선)
     let lastCommitCount = 0;
 
     // GitHub Actions 관련 커밋 함수 제거됨
@@ -2153,11 +2175,6 @@ async function main() {
     }
 }
 
-// 프로세스 종료 핸들러
-process.on('SIGINT', () => {
-    log('info', '프로세스 중단됨 (Ctrl+C)');
-    rateLimiter.forceFlush();
-    process.exit(0);
-});
+
 
 main();
