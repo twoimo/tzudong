@@ -93,10 +93,11 @@ function releasePuppeteerSlot() {
     }
 }
 
-// Puppeteer 인스턴스 (재사용)
+// Puppeteer 인스턴스 (재사용) - Stealth 모드 적용
 let puppeteerBrowser = null;
 let puppeteerModule = null;
 let puppeteerChecked = false;
+let stealthApplied = false;
 
 // User-Agent 로테이션 (안티-블로킹)
 const USER_AGENTS = [
@@ -120,14 +121,30 @@ function getRandomDelay() {
  * Puppeteer로 자막 수집 (maestra.ai → tubetranscript.com fallback)
  */
 async function getTranscriptWithPuppeteer(videoId) {
-    // 모듈 캐싱
+    // 모듈 캐싱 + Stealth 플러그인 적용
     if (!puppeteerChecked) {
         puppeteerChecked = true;
         try {
-            puppeteerModule = await import('puppeteer');
-        } catch {
-            log('error', 'Puppeteer 모듈 없음');
-            puppeteerModule = null;
+            // puppeteer-extra + stealth 플러그인 로드
+            const puppeteerExtra = await import('puppeteer-extra');
+            const StealthPlugin = await import('puppeteer-extra-plugin-stealth');
+
+            // Stealth 플러그인 적용 (한 번만)
+            if (!stealthApplied) {
+                puppeteerExtra.default.use(StealthPlugin.default());
+                stealthApplied = true;
+                log('info', 'Stealth 모드 활성화됨 (봇 감지 우회)');
+            }
+
+            puppeteerModule = puppeteerExtra;
+        } catch (err) {
+            log('warning', `puppeteer-extra 로드 실패, 기본 puppeteer 사용: ${err.message}`);
+            try {
+                puppeteerModule = await import('puppeteer');
+            } catch {
+                log('error', 'Puppeteer 모듈 없음');
+                puppeteerModule = null;
+            }
         }
     }
 
