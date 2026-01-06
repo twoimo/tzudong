@@ -1,7 +1,12 @@
 /**
- * 맛집 데이터에 위도/경도 및 전화번호 보완 (Cross-Validation)
- * 1. Kakao API: 위도/경도 (WGS84 표준)
- * 2. Naver API: 전화번호 (정확도 우선)
+ * 맛집 데이터 보완 스크립트 (Cross-Validation)
+ * 
+ * 기능:
+ * 1. 좌표 보완 (Kakao API - WGS84)
+ * 2. 전화번호 교차 검증 (Naver Priority > Kakao Fallback)
+ * 3. 해외 식당 분리 처리 (API 호출 생략으로 효율화)
+ * 
+ * Note: 카테고리는 Gemini가 여러 소스를 참고해 결정하므로 API 덮어쓰기 하지 않음
  */
 
 import fs from 'fs';
@@ -23,7 +28,7 @@ for (const envPath of envPaths) {
     }
 }
 
-// 설정
+// API Keys
 const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID;
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
@@ -59,12 +64,45 @@ const TODAY_PATH = path.join(DATA_DIR, TODAY_FOLDER);
 // 로그 함수
 function log(level, msg) {
     const time = getKSTDate().toTimeString().slice(0, 8);
-    const tags = { info: '[INFO]', success: '[OK]', warning: '[WARN]', error: '[ERR]', debug: '[DBG]' };
-    console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
+    const icons = {
+        info: 'ℹ️',
+        success: '✅',
+        warning: '⚠️',
+        error: '❌',
+        debug: '🔍',
+        skip: '⏭️',
+        phone: '📞',
+        coord: '📍',
+        overseas: '🌏'
+    };
+    const tags = { info: '[INFO]', success: '[OK]', warning: '[WARN]', error: '[ERR]', debug: '[DBG]', skip: '[SKIP]', phone: '[TEL]', coord: '[GEO]', overseas: '[INTL]' };
+    const icon = icons[level] || '';
+    console.log(`[${time}] ${tags[level] || '[LOG]'} ${icon} ${msg}`);
 }
 
 /**
- * 네이버 지역 검색 API (전화번호 확보용)
+ * 한국 주소인지 판별 (해외 식당 분리용)
+ */
+function isKoreanAddress(address) {
+    if (!address) return false;
+
+    // 한글 포함 여부 확인
+    const hasKorean = /[가-힣]/.test(address);
+
+    // 한국 지역명 키워드
+    const koreanKeywords = [
+        '서울', '부산', '인천', '대구', '광주', '대전', '울산', '세종',
+        '경기', '강원', '충북', '충남', '전북', '전남', '경북', '경남', '제주',
+        '특별시', '광역시', '특별자치', '도', '시', '군', '구', '읍', '면', '동', '리'
+    ];
+
+    const hasKoreanKeyword = koreanKeywords.some(kw => address.includes(kw));
+
+    return hasKorean && hasKoreanKeyword;
+}
+
+/**
+ * 네이버 지역 검색 API (전화번호 확보용 - 한국 전용)
  */
 async function searchNaverLocal(query) {
     if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) return null;
@@ -88,7 +126,6 @@ async function searchNaverLocal(query) {
             const item = data.items[0];
             // HTML 태그 제거
             const title = item.title.replace(/<[^>]+>/g, '');
-            // 전화번호 포맷 정규화 (필요시)
             const phone = item.telephone || null;
 
             return {
@@ -133,7 +170,6 @@ async function geocodeWithKakao(address) {
                     lng,
                     road_address: firstResult.road_address?.address_name || null,
                     jibun_address: firstResult.address?.address_name || null,
-                    // 카카오는 주소 검색 결과에 바로 전화번호가 없을 수 있음 (키워드 검색 권장)
                     phone: null
                 };
             }
@@ -175,7 +211,7 @@ async function geocodeWithKeyword(query) {
                     road_address: firstResult.road_address_name || null,
                     jibun_address: firstResult.address_name || null,
                     place_name: firstResult.place_name || null,
-                    phone: firstResult.phone || null // 전화번호 확보!
+                    phone: firstResult.phone || null
                 };
             }
         }
@@ -186,18 +222,17 @@ async function geocodeWithKeyword(query) {
 }
 
 /**
- * Data Enrichment (좌표 + 전화번호)
+ * Data Enrichment (한국 식당용)
  * 전략:
  * 1. Kakao: 좌표(Lat/Lng) 메인 소스
  * 2. Naver: 전화번호(Phone) 메인 소스 (Priority)
  */
-async function enrichData(name, address) {
+async function enrichKoreanData(name, address) {
     let kakaoResult = null;
     let naverResult = null;
 
     // 1. Kakao 검색 (좌표 확보)
     if (name) {
-        // 지역명 추출하여 정확도 향상
         let searchQuery = name;
         if (address) {
             const regionMatch = address.match(/([가-힣]+구|[가-힣]+시|[가-힣]+동)/);
@@ -206,14 +241,12 @@ async function enrichData(name, address) {
         kakaoResult = await geocodeWithKeyword(searchQuery);
     }
 
-    // 이름 검색 실패 시 주소로 재시도
     if (!kakaoResult && address) {
         kakaoResult = await geocodeWithKakao(address);
     }
 
-    // 2. Naver 검색 (전화번호 확보 - 좌표 API 호출과 병렬 가능하나 순차 처리)
+    // 2. Naver 검색 (전화번호 확보)
     if (name) {
-        // 지역명 추출하여 정확도 향상
         let searchQuery = name;
         if (address) {
             const regionMatch = address.match(/([가-힣]+구|[가-힣]+시|[가-힣]+동)/);
@@ -224,12 +257,11 @@ async function enrichData(name, address) {
 
     // 결과 병합
     if (kakaoResult) {
-        // 전화번호 우선순위: Naver > Kakao
         const finalPhone = naverResult?.phone || kakaoResult.phone || null;
 
         return {
             ...kakaoResult,
-            phone: finalPhone, // 보완된 전화번호
+            phone: finalPhone,
             phone_source: naverResult?.phone ? 'naver_api' : (kakaoResult.phone ? 'kakao_api' : null),
             api_source: naverResult ? 'kakao+naver' : 'kakao_only'
         };
@@ -238,9 +270,6 @@ async function enrichData(name, address) {
     return null;
 }
 
-/**
- * sleep 함수
- */
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -249,16 +278,16 @@ function sleep(ms) {
  * 메인 실행
  */
 async function main() {
-    log('info', '╔══════════════════════════════════════════════════╗');
-    log('info', '║      데이터 보완 시작 (Coordinate & Phone)       ║');
-    log('info', '╚══════════════════════════════════════════════════╝');
+    log('info', '╔══════════════════════════════════════════════════════════╗');
+    log('info', '║      데이터 보완 시작 (Cross-Validation Engine)          ║');
+    log('info', '╚══════════════════════════════════════════════════════════╝');
+    log('info', '');
 
     const startTime = Date.now();
 
     // 입력 파일 찾기
     let inputFile = path.join(TODAY_PATH, 'meatcreator_restaurants.jsonl');
 
-    // 오늘 폴더에 없으면 가장 최근 폴더에서 찾기
     if (!fs.existsSync(inputFile)) {
         const folders = fs.readdirSync(DATA_DIR)
             .filter(f => /^\d{2}-\d{2}-\d{2}$/.test(f))
@@ -269,7 +298,7 @@ async function main() {
             const filePath = path.join(DATA_DIR, folder, 'meatcreator_restaurants.jsonl');
             if (fs.existsSync(filePath)) {
                 inputFile = filePath;
-                log('info', `최근 데이터 파일 사용: ${folder}`);
+                log('info', `📂 최근 데이터 파일 사용: ${folder}`);
                 break;
             }
         }
@@ -280,20 +309,24 @@ async function main() {
         process.exit(1);
     }
 
-    log('info', `입력 파일: ${inputFile}`);
+    log('info', `📄 입력 파일: ${inputFile}`);
 
     // 데이터 로드
     const content = fs.readFileSync(inputFile, 'utf-8');
     const lines = content.trim().split('\n').filter(line => line.trim());
     const entries = lines.map(line => JSON.parse(line));
 
-    log('info', `${entries.length}개 영상 데이터 로드`);
+    log('info', `📊 ${entries.length}개 영상 데이터 로드`);
+    log('info', '');
 
     // 통계
     const stats = {
         totalRestaurants: 0,
+        koreanRestaurants: 0,
+        overseasRestaurants: 0,
         coordsEnriched: 0,
         phoneEnriched: 0,
+        alreadyComplete: 0,
         failed: 0,
         apiUsage: {
             kakao_only: 0,
@@ -313,26 +346,37 @@ async function main() {
             const restaurant = entry.restaurants[j];
             stats.totalRestaurants++;
 
-            // 조건: 좌표가 없거나(OR) 전화번호가 없는 경우 보완 시도
+            // 해외 식당 판별
+            const isKorean = isKoreanAddress(restaurant.address);
+
+            if (!isKorean) {
+                stats.overseasRestaurants++;
+                log('overseas', `[${stats.totalRestaurants}] 해외 식당 스킵: ${restaurant.name || 'Unknown'}`);
+                continue;
+            }
+
+            stats.koreanRestaurants++;
+
+            // 보완 필요 여부 확인
             const needCoords = !restaurant.lat || !restaurant.lng;
             const needPhone = !restaurant.phone;
 
             if (!needCoords && !needPhone) {
-                continue; // 이미 완벽함
+                stats.alreadyComplete++;
+                continue;
             }
 
-            log('info', `[${stats.totalRestaurants}] 보완 시도: ${restaurant.name} (좌표:${needCoords ? 'X' : 'O'}, 전화:${needPhone ? 'X' : 'O'})`);
+            log('info', `[${stats.totalRestaurants}] 보완 시도: ${restaurant.name} (좌표:${needCoords ? '❌' : '✅'}, 전화:${needPhone ? '❌' : '✅'})`);
 
             // API 호출
-            const result = await enrichData(restaurant.name, restaurant.address);
+            const result = await enrichKoreanData(restaurant.name, restaurant.address);
 
             if (result) {
-                // 업데이트 로직
                 const updatedRestaurant = { ...restaurant };
                 let isUpdated = false;
 
                 // 1. 좌표 보완
-                if (needCoords) {
+                if (needCoords && result.lat && result.lng) {
                     updatedRestaurant.lat = result.lat;
                     updatedRestaurant.lng = result.lng;
                     updatedRestaurant.road_address = result.road_address || restaurant.road_address;
@@ -341,21 +385,21 @@ async function main() {
                     updatedRestaurant.geocoding_source = result.place_name ? 'kakao_keyword' : 'kakao_address';
                     stats.coordsEnriched++;
                     isUpdated = true;
-                    log('success', `  → 📍 좌표 확보: (${result.lat}, ${result.lng})`);
+                    log('coord', `  → 좌표 확보: (${result.lat.toFixed(6)}, ${result.lng.toFixed(6)})`);
                 }
 
                 // 2. 전화번호 보완
                 if (needPhone && result.phone) {
                     updatedRestaurant.phone = result.phone;
-                    updatedRestaurant.phone_source = result.phone_source; // naver_api or kakao_api
+                    updatedRestaurant.phone_source = result.phone_source;
                     stats.phoneEnriched++;
                     isUpdated = true;
-                    log('success', `  → 📞 전화번호 확보: ${result.phone} [${result.phone_source === 'naver_api' ? 'NAVER' : 'KAKAO'}]`);
+                    const sourceLabel = result.phone_source === 'naver_api' ? 'NAVER' : 'KAKAO';
+                    log('phone', `  → 전화번호 확보: ${result.phone} [${sourceLabel}]`);
                 }
 
                 if (isUpdated) {
                     entry.restaurants[j] = updatedRestaurant;
-                    // API 사용 통계
                     if (result.api_source === 'kakao+naver') stats.apiUsage.kakao_naver++;
                     else stats.apiUsage.kakao_only++;
                 }
@@ -366,12 +410,12 @@ async function main() {
                 }
             }
 
-            // API Rate Limit 고려 (0.1초 대기)
-            await sleep(100);
+            // API Rate Limit 
+            await sleep(120);
         }
     }
 
-    // 결과 저장 (원본 파일 덮어쓰기)
+    // 결과 저장
     const outputContent = entries.map(entry => JSON.stringify(entry)).join('\n') + '\n';
     fs.writeFileSync(inputFile, outputContent, 'utf-8');
 
@@ -379,20 +423,27 @@ async function main() {
     const duration = Date.now() - startTime;
 
     log('info', '');
-    log('info', '╔══════════════════════════════════════════════════╗');
-    log('success', '║           데이터 보완 완료 (Completed)           ║');
-    log('info', '╚══════════════════════════════════════════════════╝');
-    log('info', `📊 총 맛집: ${stats.totalRestaurants}개`);
-    log('info', `📍 좌표 보완: ${stats.coordsEnriched}개`);
-    log('info', `📞 전화번호 보완: ${stats.phoneEnriched}개`);
-    log('info', `❌ 보완 실패: ${stats.failed}개`);
+    log('info', '╔══════════════════════════════════════════════════════════╗');
+    log('success', '║              데이터 보완 완료 (Completed)                ║');
+    log('info', '╚══════════════════════════════════════════════════════════╝');
     log('info', '');
-    log('info', '🤖 API 활용 통계:');
-    log('info', `  - Kakao 단독: ${stats.apiUsage.kakao_only}회`);
-    log('info', `  - Kakao + Naver (교차검증): ${stats.apiUsage.kakao_naver}회`);
+    log('info', '📊 처리 통계:');
+    log('info', `   총 맛집: ${stats.totalRestaurants}개`);
+    log('info', `   ├─ 🇰🇷 한국 식당: ${stats.koreanRestaurants}개`);
+    log('info', `   └─ 🌏 해외 식당: ${stats.overseasRestaurants}개 (API 스킵)`);
+    log('info', '');
+    log('info', '✨ 보완 결과:');
+    log('info', `   📍 좌표 보완: ${stats.coordsEnriched}개`);
+    log('info', `   📞 전화번호 보완: ${stats.phoneEnriched}개`);
+    log('info', `   ✅ 이미 완료: ${stats.alreadyComplete}개`);
+    log('info', `   ❌ 보완 실패: ${stats.failed}개`);
+    log('info', '');
+    log('info', '🤖 API 활용:');
+    log('info', `   Kakao 단독: ${stats.apiUsage.kakao_only}회`);
+    log('info', `   Kakao + Naver (교차검증): ${stats.apiUsage.kakao_naver}회`);
     log('info', '');
     log('info', `⏱️ 소요 시간: ${Math.round(duration / 1000)}초`);
-    log('info', '='.repeat(60));
+    log('info', '═'.repeat(60));
 }
 
 main().catch(error => {
