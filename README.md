@@ -424,6 +424,30 @@ backend/geminiCLI-restaurant-crawling/data/
 
 ---
 
+## 🖥️ 서버 인프라
+
+### OCI (Oracle Cloud Infrastructure) 서버
+
+| 항목 | 사양 |
+|------|------|
+| **Provider** | Oracle Cloud Infrastructure (Free Tier) |
+| **Public IP** | `129.154.55.232` |
+| **OS** | Ubuntu 22.04.5 LTS (Jammy Jellyfish) |
+| **Architecture** | ARM64 (aarch64) |
+| **CPU** | ARM Neoverse-N1 (4 vCPU) |
+| **RAM** | 24GB |
+| **Storage** | 100GB SSD |
+| **Region** | ap-chuncheon-1 (춘천) |
+
+### 서버 용도
+- 백엔드 데이터 파이프라인 실행
+- YouTube 자막 크롤링
+- Gemini CLI 기반 AI 평가
+- 영수증 OCR 처리
+- 스케줄링 작업 (cron)
+
+---
+
 ## 🔐 API 키 발급 가이드
 
 | API | 발급 URL | 용도 |
