@@ -1010,7 +1010,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                     let stderr = '';
                     let timedOut = false;
 
-                    // 타임아웃 처리 (5분)
+                    // 타임아웃 처리 (90초)
                     const timeoutId = setTimeout(() => {
                         timedOut = true;
                         child.kill(); // 프로세스 종료
@@ -1018,9 +1018,9 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                             status: null,
                             stdout,
                             stderr,
-                            error: new Error(`Spawn timed out after 300000ms`)
+                            error: new Error(`Spawn timed out after 90000ms`)
                         });
-                    }, 300000);
+                    }, 90000);
 
                     // 표준 입력으로 프롬프트 전달
                     if (child.stdin) {
