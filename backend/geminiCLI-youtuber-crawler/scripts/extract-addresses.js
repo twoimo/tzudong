@@ -759,14 +759,18 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 delete envWithoutApiKey.GOOGLE_API_KEY;
 
                 // --yolo 옵션: 웹 검색(google_web_search) 등 도구 사용 자동 허용
-                const geminiResult = spawnSync('bash', [
-                    '-c',
-                    `gemini -p "$(cat '${tempPromptFile}')" --output-format json --model ${model} --yolo 2>&1`
+                // Windows 호환성: stdin으로 프롬프트 전달 ($(cat file) 대신)
+                const geminiResult = spawnSync('gemini', [
+                    '-p', promptTemplate,
+                    '--output-format', 'json',
+                    '--model', model,
+                    '--yolo'
                 ], {
                     encoding: 'utf-8',
                     maxBuffer: 50 * 1024 * 1024, // 50MB로 증가
                     timeout: 180000, // 3분 타임아웃
-                    env: envWithoutApiKey  // API 키 없이 OAuth만 사용
+                    env: envWithoutApiKey,  // API 키 없이 OAuth만 사용
+                    shell: true  // Windows에서 gemini 명령어 찾기 위해 필요
                 });
 
                 // 에러 확인
