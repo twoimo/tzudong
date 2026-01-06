@@ -358,7 +358,7 @@ async function collectTranscriptForVideo(video, index, total) {
                 collectedAt: getKSTDate().toISOString()
             };
         } else {
-            log('debug', `  → 자막 없음`);
+            log('debug', `→ 자막 없음`);
             return {
                 videoId: video.videoId,
                 transcript: null,

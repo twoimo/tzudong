@@ -540,7 +540,7 @@ function log(level, msg, videoId = null) {
     };
 
     // 병렬 처리 시 videoId 포함 (첫 8자)
-    const prefix = videoId ? `[${videoId.slice(0, 8)}]` : '';
+    const prefix = videoId ? `[${videoId.slice(0, 8)}] ` : '';
     const logLine = `[${time}] ${tags[level] || '[LOG]'} ${prefix}${msg}`;
 
     // 중복 메시지 필터링 (1초 내 동일 메시지)
@@ -874,14 +874,12 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
 
     // 1. 지도 URL 우선 확인
     if (video.mapUrls && video.mapUrls.length > 0) {
-        // 지도 아이콘: naver=, google=, kakao=
-        const icons = video.mapUrls.map(u => {
-            if (u.type === 'naver') return '';
-            if (u.type === 'google') return '';
-            if (u.type === 'kakao') return '';
-            return '';
-        }).join('');
-        log('debug', `  ${icons} 지도 URL 발견: ${video.mapUrls[0].url.slice(0, 60)}...`);
+        const mapTypes = video.mapUrls.reduce((acc, u) => {
+            acc[u.type] = (acc[u.type] || 0) + 1;
+            return acc;
+        }, {});
+        const typeStr = Object.entries(mapTypes).map(([t, c]) => `${t}:${c}`).join(', ');
+        log('debug', `지도 URL 발견 (${typeStr}): ${video.mapUrls[0].url.slice(0, 50)}...`);
     } else {
         log('info', '지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도');
     }
@@ -1375,7 +1373,7 @@ async function processVideo(video) {
     const mapUrls = video.mapUrls || [];
 
     if (mapUrls.length === 0) {
-        log('info', `  지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도`);
+        log('debug', `지도 URL 없음 - Gemini 분석으로 맛집 추출`);
     }
 
     for (const mapUrl of mapUrls) {
@@ -1385,16 +1383,16 @@ async function processVideo(video) {
         switch (mapUrl.type) {
             case 'naver':
                 mapInfo = await extractFromNaverMap(mapUrl.url);
-                log('debug', `  네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                log('debug', `네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 break;
             case 'google':
                 mapInfo = await extractFromGoogleMap(mapUrl.url);
                 // 구글 지도 URL에서 좌표가 직접 추출된 경우
                 if (mapInfo.lat && mapInfo.lng) {
                     coordsFromMapUrl = { lat: mapInfo.lat, lng: mapInfo.lng, source: 'google_url' };
-                    log('debug', `  구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`);
+                    log('debug', `구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`);
                 } else {
-                    log('debug', `  구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                    log('debug', `구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 }
                 break;
             case 'kakao':
@@ -1410,10 +1408,10 @@ async function processVideo(video) {
                             name: kakaoPlace.name,
                             address: kakaoPlace.address
                         };
-                        log('debug', `  카카오 지도 placeId로 좌표 조회: (${kakaoPlace.lat}, ${kakaoPlace.lng})`);
+                        log('debug', `카카오 지도 placeId로 좌표 조회: (${kakaoPlace.lat}, ${kakaoPlace.lng})`);
                     }
                 } else {
-                    log('debug', `  카카오 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                    log('debug', `카카오 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 }
                 break;
         }
@@ -2031,7 +2029,7 @@ async function main() {
                 stats.restaurantsFound += res.result.restaurants.length;
                 batchCount++;
 
-                log('success', `  🍱 ${res.result.restaurants.length}개 맛집 발견`);
+                log('success', `  ${res.result.restaurants.length}개 맛집 발견`);
             } else if (!res.success && !res.quotaExceeded && !res.allBlacklisted) {
                 stats.failed++;
             }
@@ -2110,7 +2108,7 @@ async function main() {
     if (stats.updated > 0) {
         log('info', `🔄 재처리: ${stats.updated}개 (description 변경)`);
     }
-    log('success', `🍱 성공: ${stats.success}개`);
+    log('success', `성공: ${stats.success}개`);
     if (stats.failed > 0) {
         log('error', ` 실패: ${stats.failed}개`);
     }
