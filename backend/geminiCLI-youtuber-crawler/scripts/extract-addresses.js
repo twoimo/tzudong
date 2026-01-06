@@ -926,13 +926,16 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
 
     let allModels;
 
-    if (retryAttempt % 2 === 0) {
+    // 환경 변수로 모델 강제 지정 (예: GEMINI_MODEL=gemini-3-pro-preview)
+    if (process.env.GEMINI_MODEL) {
+        allModels = [process.env.GEMINI_MODEL];
+    } else if (retryAttempt % 2 === 0) {
         allModels = ['gemini-3-flash-preview', 'gemini-3-pro-preview'];
     } else {
         allModels = ['gemini-3-pro-preview', 'gemini-3-flash-preview'];
     }
 
-    const strategyLabel = retryAttempt % 2 === 0 ? 'Flash 우선' : 'Pro 우선';
+    const strategyLabel = process.env.GEMINI_MODEL ? 'Custom' : (retryAttempt % 2 === 0 ? 'Flash 우선' : 'Pro 우선');
     log('debug', `[${strategyLabel}] 전략 (재시도 ${retryAttempt}): ${allModels.map(m => m.includes('flash') ? 'Flash' : 'Pro').join(' → ')}`, video.videoId);
 
     // Infinite loop until models are available

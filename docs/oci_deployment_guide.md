@@ -87,6 +87,9 @@ DEBUG=true bun run full
     ```bash
     # 매일 오전 6시에 실행 (로그는 crawler.log에 누적 저장)
     0 6 * * * cd /home/ubuntu/geminicli-youtuber-crawler && DEBUG=true /home/ubuntu/.bun/bin/bun run full >> /home/ubuntu/geminicli-youtuber-crawler/crawler.log 2>&1
+
+    # (옵션) 모델을 'gemini-3-pro-preview'로 고정하고 싶을 때:
+    # 0 6 * * * cd /home/ubuntu/geminicli-youtuber-crawler && GEMINI_MODEL=gemini-3-pro-preview DEBUG=true /home/ubuntu/.bun/bin/bun run full >> /home/ubuntu/geminicli-youtuber-crawler/crawler.log 2>&1
     ```
 
     *   `0 6 * * *`: 매일 06시 00분에 실행
