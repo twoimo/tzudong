@@ -1,6 +1,7 @@
 /**
- * 맛집 데이터에 위도/경도 좌표 추가
- * 카카오 지오코딩 API 사용
+ * 맛집 데이터에 위도/경도 및 전화번호 보완 (Cross-Validation)
+ * 1. Kakao API: 위도/경도 (WGS84 표준)
+ * 2. Naver API: 전화번호 (정확도 우선)
  */
 
 import fs from 'fs';
@@ -24,6 +25,8 @@ for (const envPath of envPaths) {
 
 // 설정
 const KAKAO_REST_API_KEY = process.env.KAKAO_REST_API_KEY;
+const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID;
+const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
 
 if (!KAKAO_REST_API_KEY) {
     console.error('❌ KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다.');
@@ -61,27 +64,61 @@ function log(level, msg) {
 }
 
 /**
+ * 네이버 지역 검색 API (전화번호 확보용)
+ */
+async function searchNaverLocal(query) {
+    if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) return null;
+    if (!query || query.trim() === '') return null;
+
+    try {
+        const encodedQuery = encodeURIComponent(query.trim());
+        const apiUrl = `https://openapi.naver.com/v1/search/local.json?query=${encodedQuery}&display=1&sort=random`;
+
+        const response = await fetch(apiUrl, {
+            headers: {
+                'X-Naver-Client-Id': NAVER_CLIENT_ID,
+                'X-Naver-Client-Secret': NAVER_CLIENT_SECRET
+            }
+        });
+
+        if (!response.ok) return null;
+
+        const data = await response.json();
+        if (data.items && data.items.length > 0) {
+            const item = data.items[0];
+            // HTML 태그 제거
+            const title = item.title.replace(/<[^>]+>/g, '');
+            // 전화번호 포맷 정규화 (필요시)
+            const phone = item.telephone || null;
+
+            return {
+                title,
+                phone,
+                address: item.roadAddress || item.address,
+                category: item.category
+            };
+        }
+        return null;
+    } catch (error) {
+        return null;
+    }
+}
+
+/**
  * 카카오 주소 검색 API
  */
 async function geocodeWithKakao(address) {
-    if (!address || address.trim() === '') {
-        return null;
-    }
+    if (!address || address.trim() === '') return null;
 
     try {
         const encodedAddress = encodeURIComponent(address.trim());
         const apiUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodedAddress}`;
 
         const response = await fetch(apiUrl, {
-            headers: {
-                'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}`
-            }
+            headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` }
         });
 
-        if (!response.ok) {
-            log('warning', `카카오 API 실패 (${response.status}): ${address}`);
-            return null;
-        }
+        if (!response.ok) return null;
 
         const data = await response.json();
 
@@ -96,6 +133,8 @@ async function geocodeWithKakao(address) {
                     lng,
                     road_address: firstResult.road_address?.address_name || null,
                     jibun_address: firstResult.address?.address_name || null,
+                    // 카카오는 주소 검색 결과에 바로 전화번호가 없을 수 있음 (키워드 검색 권장)
+                    phone: null
                 };
             }
         }
@@ -104,13 +143,12 @@ async function geocodeWithKakao(address) {
         return await geocodeWithKeyword(address);
 
     } catch (error) {
-        log('warning', `카카오 API 오류: ${error.message}`);
         return null;
     }
 }
 
 /**
- * 카카오 키워드 검색 API (폴백)
+ * 카카오 키워드 검색 API (폴백 + 전화번호 확보)
  */
 async function geocodeWithKeyword(query) {
     try {
@@ -118,14 +156,10 @@ async function geocodeWithKeyword(query) {
         const apiUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodedQuery}`;
 
         const response = await fetch(apiUrl, {
-            headers: {
-                'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}`
-            }
+            headers: { 'Authorization': `KakaoAK ${KAKAO_REST_API_KEY}` }
         });
 
-        if (!response.ok) {
-            return null;
-        }
+        if (!response.ok) return null;
 
         const data = await response.json();
 
@@ -141,51 +175,64 @@ async function geocodeWithKeyword(query) {
                     road_address: firstResult.road_address_name || null,
                     jibun_address: firstResult.address_name || null,
                     place_name: firstResult.place_name || null,
+                    phone: firstResult.phone || null // 전화번호 확보!
                 };
             }
         }
-
         return null;
-
     } catch (error) {
         return null;
     }
 }
 
 /**
- * 맛집 이름 + 주소로 검색 (더 정확한 결과)
+ * Data Enrichment (좌표 + 전화번호)
+ * 전략:
+ * 1. Kakao: 좌표(Lat/Lng) 메인 소스
+ * 2. Naver: 전화번호(Phone) 메인 소스 (Priority)
  */
-async function geocodeWithNameAndAddress(name, address) {
-    // 1. 맛집 이름으로 먼저 검색
+async function enrichData(name, address) {
+    let kakaoResult = null;
+    let naverResult = null;
+
+    // 1. Kakao 검색 (좌표 확보)
     if (name) {
-        const result = await geocodeWithKeyword(name);
-        if (result) {
-            log('debug', `이름으로 좌표 획득: ${name} → (${result.lat}, ${result.lng})`);
-            return result;
+        // 지역명 추출하여 정확도 향상
+        let searchQuery = name;
+        if (address) {
+            const regionMatch = address.match(/([가-힣]+구|[가-힣]+시|[가-힣]+동)/);
+            if (regionMatch) searchQuery = `${name} ${regionMatch[1]}`;
         }
+        kakaoResult = await geocodeWithKeyword(searchQuery);
     }
 
-    // 2. 주소로 검색
-    if (address) {
-        const result = await geocodeWithKakao(address);
-        if (result) {
-            log('debug', `주소로 좌표 획득: ${address} → (${result.lat}, ${result.lng})`);
-            return result;
-        }
+    // 이름 검색 실패 시 주소로 재시도
+    if (!kakaoResult && address) {
+        kakaoResult = await geocodeWithKakao(address);
     }
 
-    // 3. 맛집 이름 + 지역으로 검색
-    if (name && address) {
-        // 주소에서 지역명 추출 (예: "서울 강남구" → "강남")
-        const regionMatch = address.match(/([가-힣]+구|[가-힣]+시|[가-힣]+동)/);
-        if (regionMatch) {
-            const searchQuery = `${name} ${regionMatch[1]}`;
-            const result = await geocodeWithKeyword(searchQuery);
-            if (result) {
-                log('debug', `조합 검색으로 좌표 획득: ${searchQuery} → (${result.lat}, ${result.lng})`);
-                return result;
-            }
+    // 2. Naver 검색 (전화번호 확보 - 좌표 API 호출과 병렬 가능하나 순차 처리)
+    if (name) {
+        // 지역명 추출하여 정확도 향상
+        let searchQuery = name;
+        if (address) {
+            const regionMatch = address.match(/([가-힣]+구|[가-힣]+시|[가-힣]+동)/);
+            if (regionMatch) searchQuery = `${name} ${regionMatch[1]}`;
         }
+        naverResult = await searchNaverLocal(searchQuery);
+    }
+
+    // 결과 병합
+    if (kakaoResult) {
+        // 전화번호 우선순위: Naver > Kakao
+        const finalPhone = naverResult?.phone || kakaoResult.phone || null;
+
+        return {
+            ...kakaoResult,
+            phone: finalPhone, // 보완된 전화번호
+            phone_source: naverResult?.phone ? 'naver_api' : (kakaoResult.phone ? 'kakao_api' : null),
+            api_source: naverResult ? 'kakao+naver' : 'kakao_only'
+        };
     }
 
     return null;
@@ -202,9 +249,9 @@ function sleep(ms) {
  * 메인 실행
  */
 async function main() {
-    log('info', '='.repeat(60));
-    log('info', '  좌표 보완 시작 (지오코딩)');
-    log('info', '='.repeat(60));
+    log('info', '╔══════════════════════════════════════════════════╗');
+    log('info', '║      데이터 보완 시작 (Coordinate & Phone)       ║');
+    log('info', '╚══════════════════════════════════════════════════╝');
 
     const startTime = Date.now();
 
@@ -245,24 +292,16 @@ async function main() {
     // 통계
     const stats = {
         totalRestaurants: 0,
-        alreadyHasCoords: 0,
-        enriched: 0,
+        coordsEnriched: 0,
+        phoneEnriched: 0,
         failed: 0,
-        bySource: {
-            google_url: 0,
-            kakao_place: 0,
-            kakao_address: 0,
-            kakao_keyword: 0,
-        },
-        byMapType: {
-            google: 0,
-            naver: 0,
-            kakao: 0,
-            none: 0,
+        apiUsage: {
+            kakao_only: 0,
+            kakao_naver: 0
         }
     };
 
-    // 좌표 보완
+    // 데이터 보완 루프
     for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];
 
@@ -274,54 +313,60 @@ async function main() {
             const restaurant = entry.restaurants[j];
             stats.totalRestaurants++;
 
-            // 지도 URL 형태 통계
-            const mapType = restaurant.map_type || 'none';
-            stats.byMapType[mapType] = (stats.byMapType[mapType] || 0) + 1;
+            // 조건: 좌표가 없거나(OR) 전화번호가 없는 경우 보완 시도
+            const needCoords = !restaurant.lat || !restaurant.lng;
+            const needPhone = !restaurant.phone;
 
-            // 이미 좌표가 있는 경우 스킵
-            if (restaurant.lat && restaurant.lng) {
-                stats.alreadyHasCoords++;
-                // 좌표 출처 통계
-                if (restaurant.geocoding_source) {
-                    stats.bySource[restaurant.geocoding_source] = (stats.bySource[restaurant.geocoding_source] || 0) + 1;
-                }
-                continue;
+            if (!needCoords && !needPhone) {
+                continue; // 이미 완벽함
             }
 
-            // 주소가 없는 경우
-            if (!restaurant.address && !restaurant.name) {
-                stats.failed++;
-                continue;
-            }
+            log('info', `[${stats.totalRestaurants}] 보완 시도: ${restaurant.name} (좌표:${needCoords ? 'X' : 'O'}, 전화:${needPhone ? 'X' : 'O'})`);
 
-            log('info', `[${stats.totalRestaurants}] 지오코딩: ${restaurant.name || 'Unknown'}`);
-
-            // 지오코딩 시도
-            const result = await geocodeWithNameAndAddress(
-                restaurant.name,
-                restaurant.address
-            );
+            // API 호출
+            const result = await enrichData(restaurant.name, restaurant.address);
 
             if (result) {
-                const geocodingSource = result.place_name ? 'kakao_keyword' : 'kakao_address';
-                entry.restaurants[j] = {
-                    ...restaurant,
-                    lat: result.lat,
-                    lng: result.lng,
-                    road_address: result.road_address || restaurant.road_address,
-                    jibun_address: result.jibun_address || restaurant.jibun_address,
-                    geocoded_place_name: result.place_name,
-                    geocoding_source: geocodingSource,
-                };
-                stats.enriched++;
-                stats.bySource[geocodingSource] = (stats.bySource[geocodingSource] || 0) + 1;
-                log('success', `  → 좌표 획득: (${result.lat}, ${result.lng}) [${geocodingSource}]`);
+                // 업데이트 로직
+                const updatedRestaurant = { ...restaurant };
+                let isUpdated = false;
+
+                // 1. 좌표 보완
+                if (needCoords) {
+                    updatedRestaurant.lat = result.lat;
+                    updatedRestaurant.lng = result.lng;
+                    updatedRestaurant.road_address = result.road_address || restaurant.road_address;
+                    updatedRestaurant.jibun_address = result.jibun_address || restaurant.jibun_address;
+                    updatedRestaurant.geocoded_place_name = result.place_name;
+                    updatedRestaurant.geocoding_source = result.place_name ? 'kakao_keyword' : 'kakao_address';
+                    stats.coordsEnriched++;
+                    isUpdated = true;
+                    log('success', `  → 📍 좌표 확보: (${result.lat}, ${result.lng})`);
+                }
+
+                // 2. 전화번호 보완
+                if (needPhone && result.phone) {
+                    updatedRestaurant.phone = result.phone;
+                    updatedRestaurant.phone_source = result.phone_source; // naver_api or kakao_api
+                    stats.phoneEnriched++;
+                    isUpdated = true;
+                    log('success', `  → 📞 전화번호 확보: ${result.phone} [${result.phone_source === 'naver_api' ? 'NAVER' : 'KAKAO'}]`);
+                }
+
+                if (isUpdated) {
+                    entry.restaurants[j] = updatedRestaurant;
+                    // API 사용 통계
+                    if (result.api_source === 'kakao+naver') stats.apiUsage.kakao_naver++;
+                    else stats.apiUsage.kakao_only++;
+                }
             } else {
-                stats.failed++;
-                log('warning', `  → 좌표 획득 실패`);
+                if (needCoords) {
+                    stats.failed++;
+                    log('warning', `  → 보완 실패 (API 검색 불가)`);
+                }
             }
 
-            // API 호출 간격 (100ms)
+            // API Rate Limit 고려 (0.1초 대기)
             await sleep(100);
         }
     }
@@ -334,27 +379,19 @@ async function main() {
     const duration = Date.now() - startTime;
 
     log('info', '');
-    log('info', '='.repeat(60));
-    log('success', '좌표 보완 완료');
-    log('info', '='.repeat(60));
-    log('info', `총 맛집: ${stats.totalRestaurants}개`);
-    log('info', `이미 좌표 있음: ${stats.alreadyHasCoords}개`);
-    log('success', `좌표 보완됨: ${stats.enriched}개`);
-    log('warning', `좌표 획득 실패: ${stats.failed}개`);
+    log('info', '╔══════════════════════════════════════════════════╗');
+    log('success', '║           데이터 보완 완료 (Completed)           ║');
+    log('info', '╚══════════════════════════════════════════════════╝');
+    log('info', `📊 총 맛집: ${stats.totalRestaurants}개`);
+    log('info', `📍 좌표 보완: ${stats.coordsEnriched}개`);
+    log('info', `📞 전화번호 보완: ${stats.phoneEnriched}개`);
+    log('info', `❌ 보완 실패: ${stats.failed}개`);
     log('info', '');
-    log('info', '📍 지도 URL 형태별:');
-    log('info', `  - 구글 지도: ${stats.byMapType.google || 0}개`);
-    log('info', `  - 네이버 지도: ${stats.byMapType.naver || 0}개`);
-    log('info', `  - 카카오 지도: ${stats.byMapType.kakao || 0}개`);
-    log('info', `  - 지도 URL 없음: ${stats.byMapType.none || 0}개`);
+    log('info', '🤖 API 활용 통계:');
+    log('info', `  - Kakao 단독: ${stats.apiUsage.kakao_only}회`);
+    log('info', `  - Kakao + Naver (교차검증): ${stats.apiUsage.kakao_naver}회`);
     log('info', '');
-    log('info', '🔍 좌표 출처별:');
-    log('info', `  - 구글 URL 직접 추출: ${stats.bySource.google_url || 0}개`);
-    log('info', `  - 카카오 placeId: ${stats.bySource.kakao_place || 0}개`);
-    log('info', `  - 카카오 주소 검색: ${stats.bySource.kakao_address || 0}개`);
-    log('info', `  - 카카오 키워드 검색: ${stats.bySource.kakao_keyword || 0}개`);
-    log('info', '');
-    log('info', `소요 시간: ${Math.round(duration / 1000)}초`);
+    log('info', `⏱️ 소요 시간: ${Math.round(duration / 1000)}초`);
     log('info', '='.repeat(60));
 }
 
