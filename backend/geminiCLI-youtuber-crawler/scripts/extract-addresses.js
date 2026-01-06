@@ -870,7 +870,7 @@ function cleanupTempFiles(...files) {
  */
 async function extractWithGemini(video, transcript, retryAttempt = 0) {
     // 프롬프트 템플릿 로드
-    log('info', `🎬 [${videoIndex}/${totalVideos}] 처리 중: ${video.title.slice(0, 50)}...`, video.videoId);
+    log('debug', `Gemini 분석 시작: ${video.title.slice(0, 50)}...`, video.videoId);
 
     // 1. 지도 URL 우선 확인
     if (video.mapUrls && video.mapUrls.length > 0) {
@@ -927,43 +927,6 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
     // 재시도 시 번갈아가며 우선순위 변경 (Round-Robin)
 
     let allModels;
-
-    // retryAttempt가 짝수(0, 2...)일 때: Flash -> Pro
-    // retryAttempt가 홀수(1, 3...)일 때: Pro -> Flash (교차 시도)
-    const modelIcon = model.includes('flash') ? '⚡' : '🧠';
-    const retryLabel = retryAttempt > 0 ? `(재시도 ${retryAttempt}회)` : '(최초 시도)';
-
-    log('debug', `${modelIcon} [${retryLabel}] 모델 순서: ${allModels.map(m => m.includes('flash') ? '⚡Flash' : '🧠Pro').join(' → ')}`);
-
-    // Infinite loop until models are available
-    while (true) {
-        // ... (lines 927-955 omitted for brevity, logic remains same)
-        // 사용 가능한 모델만 필터링 (블랙리스트 제외)
-        const availableModels = allModels.filter(m => !isModelBlacklisted(m));
-
-        if (availableModels.length > 0) {
-            break;
-        }
-
-        // ... (quota wait logic) ...
-        // (This block is not being replaced, just showing context)
-        // To be safe, I will replace only the changed log lines and keep the surrounding logic intact by narrowing the scope if possible, 
-        // but since I need to inject `modelIcon` logic inside the loop, let's target the inner loop log.
-    }
-
-    // Actually, the previous 'log' call was at line 924. Let's precise the replacement there.
-    // And also the loop inside line 971.
-
-    // Let's do it in two chunks via multi_replace if needed, or just replace the big block if it's cleaner. 
-    // The instructions said "Enhance log message". 
-
-    // Replacing lines 924.
-
-    // Then replacing line 971.
-
-    // Wait, let's use multi_replace for better precision. 
-    // But I am using replace_file_content.
-    // I will replace the block from 918-924.
 
     if (retryAttempt % 2 === 0) {
         allModels = ['gemini-3-flash-preview', 'gemini-3-pro-preview'];
