@@ -128,3 +128,43 @@ tail -f crawler.log
 ```bash
 ps -ef | grep bun
 ```
+
+## 9. 🛡️ IP 차단 방지 (Anti-Blocking)
+
+> **⚠️ 중요**: OCI 등 클라우드 서버 IP는 외부 서비스에서 봇으로 의심받기 쉽습니다. 다음 사항을 준수하세요.
+
+### 적용된 안전 조치 (코드 레벨)
+
+| 스크립트 | 조치 | 세부 사항 |
+|----------|------|-----------|
+| `crawl-channel.js` | YouTube API 사용 | Puppeteer 대신 공식 API 사용 (안전) |
+| `collect-transcripts.js` | User-Agent 랜덤화 | 5개 브라우저 UA 로테이션 |
+| `collect-transcripts.js` | 요청 간격 3-5초 | 랜덤 딜레이 적용 |
+| `collect-transcripts.js` | 동시 처리 2개 제한 | 병렬 크롤링 축소 |
+| `enrich-coordinates.js` | API 요청 간격 0.5-1초 | Naver/Kakao 교차 검증 |
+
+### 추가 권장 사항
+
+1.  **매일 1회 실행만** (현재 Cron 설정 준수)
+2.  **CAPTCHA 발생 시**: 24시간 대기 후 재시도
+3.  **403 에러 반복 시**: 프록시/VPN 고려
+
+### 차단 감지 및 대응
+
+```bash
+# 로그에서 차단/에러 패턴 검색
+grep -E "(403|blocked|captcha|timeout)" crawler.log | tail -20
+
+# 특정 날짜 로그만 확인
+grep "$(date +%Y-%m-%d)" crawler.log | tail -50
+```
+
+### 차단 발생 시 복구 절차
+
+1.  Cron 작업 임시 중지:
+    ```bash
+    crontab -e
+    # 해당 라인 맨 앞에 # 추가하여 주석 처리
+    ```
+2.  24~48시간 대기
+3.  수동 테스트 후 Cron 재활성화

@@ -207,9 +207,10 @@ async function getAllVideosFromPlaylist(playlistId, maxResults = null) {
             break;
         }
 
-        // Rate limit 대응
+        // Rate limit 대응 (1-2초 랜덤 딜레이)
         if (nextPageToken) {
-            await new Promise(resolve => setTimeout(resolve, 100));
+            const delay = 1000 + Math.floor(Math.random() * 1000);
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
 
     } while (nextPageToken);
@@ -252,8 +253,9 @@ async function getVideoDetails(videoIds) {
 
         log('debug', `영상 상세 정보 ${i + batch.length}/${videoIds.length} 완료`);
 
-        // Rate limit 대응
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Rate limit 대응 (1-2초 랜덤 딜레이)
+        const delay = 1000 + Math.floor(Math.random() * 1000);
+        await new Promise(resolve => setTimeout(resolve, delay));
     }
 
     return details;

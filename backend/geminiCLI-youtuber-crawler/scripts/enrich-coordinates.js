@@ -410,8 +410,9 @@ async function main() {
                 }
             }
 
-            // API Rate Limit 
-            await sleep(120);
+            // API Rate Limit (500ms-1초 랜덤 딜레이)
+            const delay = 500 + Math.floor(Math.random() * 500);
+            await sleep(delay);
         }
     }
 

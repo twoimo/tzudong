@@ -70,9 +70,9 @@ function log(level, msg) {
     console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
 
-// Puppeteer 동시 실행 제한 (세마포어)
+// Puppeteer 동시 실행 제한 (안티-블로킹 강화)
 const isGitHubActionsEnv = !!process.env.GITHUB_ACTIONS;
-const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 3; // 로컬에서 3개 병렬
+const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 2; // 로컬에서도 2개로 제한 (차단 방지)
 let puppeteerActiveCount = 0;
 const puppeteerQueue = [];
 
@@ -97,6 +97,24 @@ function releasePuppeteerSlot() {
 let puppeteerBrowser = null;
 let puppeteerModule = null;
 let puppeteerChecked = false;
+
+// User-Agent 로테이션 (안티-블로킹)
+const USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15'
+];
+
+function getRandomUserAgent() {
+    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+// 랜덤 딜레이 (3-5초)
+function getRandomDelay() {
+    return 3000 + Math.floor(Math.random() * 2000);
+}
 
 /**
  * Puppeteer로 자막 수집 (maestra.ai → tubetranscript.com fallback)
@@ -126,7 +144,13 @@ async function getTranscriptWithPuppeteer(videoId) {
         }
 
         const page = await puppeteerBrowser.newPage();
+
+        // 안티-블로킹: 랜덤 User-Agent 설정
+        await page.setUserAgent(getRandomUserAgent());
         await page.setViewport({ width: 1280, height: 800 });
+
+        // 요청 간 랜덤 딜레이 (3-5초)
+        await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
 
         let result = null;
 
