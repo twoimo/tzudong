@@ -870,6 +870,21 @@ function cleanupTempFiles(...files) {
  */
 async function extractWithGemini(video, transcript, retryAttempt = 0) {
     // 프롬프트 템플릿 로드
+    log('info', `🎬 [${videoIndex}/${totalVideos}] 처리 중: ${video.title.slice(0, 50)}...`, video.videoId);
+
+    // 1. 지도 URL 우선 확인
+    if (video.mapUrls && video.mapUrls.length > 0) {
+        // 지도 아이콘: naver=🟢, google=🔵, kakao=🟡
+        const icons = video.mapUrls.map(u => {
+            if (u.type === 'naver') return '🟢';
+            if (u.type === 'google') return '🔵';
+            if (u.type === 'kakao') return '🟡';
+            return '🗺️';
+        }).join('');
+        log('debug', `  ${icons} 지도 URL 발견: ${video.mapUrls[0].url.slice(0, 60)}...`);
+    } else {
+        log('info', '  ⚠️ 지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도');
+    }
     let promptTemplate = fs.readFileSync(PROMPT_FILE, 'utf-8');
 
     // 지도 URL 목록 생성
@@ -915,13 +930,49 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
 
     // retryAttempt가 짝수(0, 2...)일 때: Flash -> Pro
     // retryAttempt가 홀수(1, 3...)일 때: Pro -> Flash (교차 시도)
+    const modelIcon = model.includes('flash') ? '⚡' : '🧠';
+    const retryLabel = retryAttempt > 0 ? `(재시도 ${retryAttempt}회)` : '(최초 시도)';
+
+    log('debug', `${modelIcon} [${retryLabel}] 모델 순서: ${allModels.map(m => m.includes('flash') ? '⚡Flash' : '🧠Pro').join(' → ')}`);
+
+    // Infinite loop until models are available
+    while (true) {
+        // ... (lines 927-955 omitted for brevity, logic remains same)
+        // 사용 가능한 모델만 필터링 (블랙리스트 제외)
+        const availableModels = allModels.filter(m => !isModelBlacklisted(m));
+
+        if (availableModels.length > 0) {
+            break;
+        }
+
+        // ... (quota wait logic) ...
+        // (This block is not being replaced, just showing context)
+        // To be safe, I will replace only the changed log lines and keep the surrounding logic intact by narrowing the scope if possible, 
+        // but since I need to inject `modelIcon` logic inside the loop, let's target the inner loop log.
+    }
+
+    // Actually, the previous 'log' call was at line 924. Let's precise the replacement there.
+    // And also the loop inside line 971.
+
+    // Let's do it in two chunks via multi_replace if needed, or just replace the big block if it's cleaner. 
+    // The instructions said "Enhance log message". 
+
+    // Replacing lines 924.
+
+    // Then replacing line 971.
+
+    // Wait, let's use multi_replace for better precision. 
+    // But I am using replace_file_content.
+    // I will replace the block from 918-924.
+
     if (retryAttempt % 2 === 0) {
         allModels = ['gemini-3-flash-preview', 'gemini-3-pro-preview'];
     } else {
         allModels = ['gemini-3-pro-preview', 'gemini-3-flash-preview'];
     }
 
-    log('debug', `재시도 횟수: ${retryAttempt}, 모델 순서: ${allModels.join(' -> ')}`);
+    const strategyIcon = retryAttempt % 2 === 0 ? '⚡우선' : '🧠우선';
+    log('debug', `${strategyIcon} 전략 [재시도 ${retryAttempt}]: ${allModels.map(m => m.includes('flash') ? 'Flash' : 'Pro').join(' → ')}`);
 
     // Infinite loop until models are available
     while (true) {
@@ -968,7 +1019,8 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
             const model = availableModels[i];
 
             try {
-                log('debug', `Gemini 모델 시도 [${i + 1}/${availableModels.length}]: ${model}`);
+                const icon = model.includes('flash') ? '⚡' : '🧠';
+                log('debug', `${icon} 모델 실행 [${i + 1}/${availableModels.length}]: ${model}`);
 
                 // Gemini CLI 호출 - OAuth 인증 사용
                 // 중요: GEMINI_API_KEY 환경변수를 제거해야 OAuth가 작동함
@@ -1727,9 +1779,9 @@ async function processVideo(video) {
  * 메인 실행
  */
 async function main() {
-    log('info', '='.repeat(60));
-    log('info', '  맛집 정보 추출 시작');
-    log('info', '='.repeat(60));
+    log('info', '╔══════════════════════════════════════════════════╗');
+    log('info', '║           맛집 정보 추출 시작 (Extracting)       ║');
+    log('info', '╚══════════════════════════════════════════════════╝');
 
     const startTime = Date.now();
 
@@ -2016,7 +2068,7 @@ async function main() {
                 stats.restaurantsFound += res.result.restaurants.length;
                 batchCount++;
 
-                log('success', `  → ${res.result.restaurants.length}개 맛집 발견`);
+                log('success', `  🍱 ${res.result.restaurants.length}개 맛집 발견`);
             } else if (!res.success && !res.quotaExceeded && !res.allBlacklisted) {
                 stats.failed++;
             }
@@ -2026,7 +2078,8 @@ async function main() {
         if (batchCount >= LOG_BATCH_SIZE) {
             const rateStats = rateLimiter.getStats();
             const percent = Math.round((stats.processed / videosToProcess.length) * 100);
-            log('progress', `${percent}% 완료 | ${stats.processed}/${videosToProcess.length} | 맛집: ${stats.restaurantsFound}개 | RPD: ${rateStats.rpd}`);
+            const progressBar = '[' + '▓'.repeat(Math.floor(percent / 5)) + '░'.repeat(20 - Math.floor(percent / 5)) + ']';
+            log('progress', `${progressBar} ${percent}% | ${stats.processed}/${videosToProcess.length} | 🏠맛집: ${stats.restaurantsFound}개 | 📡RPD: ${rateStats.rpd}`);
             batchCount = 0;
         }
 
@@ -2085,24 +2138,24 @@ async function main() {
     const duration = Date.now() - startTime;
 
     log('info', '');
-    log('info', '='.repeat(60));
-    log('success', '처리 완료');
-    log('info', '='.repeat(60));
-    log('info', `총 영상: ${stats.total}개`);
-    log('info', `처리됨: ${stats.processed}개`);
-    log('info', `스킵됨: ${stats.skipped}개 (이미 처리)`);
+    log('info', '╔══════════════════════════════════════════════════╗');
+    log('success', '║                처리 완료 (COMPLETED)             ║');
+    log('info', '╚══════════════════════════════════════════════════╝');
+    log('info', `📊 총 영상: ${stats.total}개`);
+    log('info', `✅ 처리됨: ${stats.processed}개`);
+    log('info', `⏩ 스킵됨: ${stats.skipped}개 (이미 처리)`);
     if (stats.updated > 0) {
-        log('info', `재처리: ${stats.updated}개 (description 변경)`);
+        log('info', `🔄 재처리: ${stats.updated}개 (description 변경)`);
     }
-    log('success', `성공: ${stats.success}개`);
+    log('success', `🍱 성공: ${stats.success}개`);
     if (stats.failed > 0) {
-        log('error', `실패: ${stats.failed}개`);
+        log('error', `❌ 실패: ${stats.failed}개`);
     }
-    log('info', `발견된 맛집: ${stats.restaurantsFound}개`);
+    log('info', `🏠 발견된 맛집: ${stats.restaurantsFound}개`);
 
-    log('info', `소요 시간: ${Math.round(duration / 1000)}초`);
+    log('info', `⏱️ 소요 시간: ${Math.round(duration / 1000)}초`);
     const finalRateStats = rateLimiter.getStats();
-    log('info', `Rate Limit: RPM ${finalRateStats.rpm}, RPD ${finalRateStats.rpd}`);
+    log('info', `📡 Rate Limit: RPM ${finalRateStats.rpm}, RPD ${finalRateStats.rpd}`);
     log('info', '='.repeat(60));
 
 
@@ -2111,7 +2164,7 @@ async function main() {
     const failedVideos = Array.from(allResults.values()).filter(v => v.is_restaurant_video === null);
     if (failedVideos.length > 0) {
         log('info', '');
-        log('warning', `분석 실패 영상 ${failedVideos.length}개 발견 - 30초 후 재시도...`);
+        log('warning', `⚠️ 분석 실패 영상 ${failedVideos.length}개 발견 - 30초 후 재시도...`);
         log('info', '(Ctrl+C로 종료 가능)');
         await sleep(30000);
 
