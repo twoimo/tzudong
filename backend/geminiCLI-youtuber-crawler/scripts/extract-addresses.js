@@ -43,12 +43,12 @@ const VALID_CATEGORIES = [
     "아시안", "야식", "도시락", "일식", "해물", "베이커리"
 ];
 
-// 층 정보 제거 (예: 3층, 지하1층, 지하 2층)
+// 층 정보 제거 (예: 3층, 지하1층, 지하 2층) - precompiled regex 사용
 function removeFloorInfo(addr) {
     if (!addr) return addr;
     return addr
-        .replace(/\s*(지하\s*)?(\d+)\s*층/g, '')
-        .replace(/\s*(B?\d+F)/gi, '')
+        .replace(PRECOMPILED_REGEX.floorInfo, '')
+        .replace(PRECOMPILED_REGEX.floorInfoEn, '')
         .trim();
 }
 
@@ -103,14 +103,77 @@ function isValidCategory(category) {
     );
 }
 
-// 주소 핵심 추출 (건물명/상호명 제거)
+// 주소 핵심 추출 (건물명/상호명 제거) - precompiled regex 사용
 function addressCore(addr) {
     if (!addr) return '';
     return addr
-        .replace(/\([^)]*\)/g, '')  // 괄호 내용 제거
-        .replace(/\s+/g, ' ')       // 공백 정규화
-        .replace(/\d+-\d+번지?/g, '') // 번지 제거
+        .replace(PRECOMPILED_REGEX.parentheses, '')
+        .replace(PRECOMPILED_REGEX.multiSpace, ' ')
+        .replace(PRECOMPILED_REGEX.lotNumber, '')
         .trim();
+}
+
+// ============================================
+// 성능 최적화: 캐싱 및 사전 컴파일
+// ============================================
+
+// API 결과 캐시 (세션 동안 유지, 메모리 효율을 위해 LRU 방식 적용)
+const apiCache = {
+    kakao: new Map(),
+    naver: new Map(),
+    maxSize: 500,  // 최대 캐시 크기
+
+    get(type, key) {
+        const cache = this[type];
+        if (cache.has(key)) {
+            const value = cache.get(key);
+            // LRU: 최근 접근한 항목을 맨 뒤로 이동
+            cache.delete(key);
+            cache.set(key, value);
+            return value;
+        }
+        return null;
+    },
+
+    set(type, key, value) {
+        const cache = this[type];
+        if (cache.size >= this.maxSize) {
+            // 가장 오래된 항목 삭제 (첫 번째 항목)
+            const firstKey = cache.keys().next().value;
+            cache.delete(firstKey);
+        }
+        cache.set(key, value);
+    }
+};
+
+// 사전 컴파일된 정규식 (반복 컴파일 방지)
+const PRECOMPILED_REGEX = {
+    floorInfo: /\s*(지하\s*)?(\d+)\s*층/g,
+    floorInfoEn: /\s*(B?\d+F)/gi,
+    parentheses: /\([^)]*\)/g,
+    multiSpace: /\s+/g,
+    lotNumber: /\d+-\d+번지?/g,
+    phone: /[^0-9]/g,
+    htmlTags: /<[^>]*>/g,
+    naverPlace: /place\.naver\.com\/restaurant\/(\d+)/,
+    naverMap: /map\.naver\.com.*place\/(\d+)/,
+    googleCoords: /@(-?\d+\.?\d*),(-?\d+\.?\d*)/,
+    googleQuery: /[?&]q=([^&]+)/,
+    quotaReset: /reset after (\d+)h(\d+)m(\d+)s/
+};
+
+// Set 기반 카테고리 조회 (O(1) 성능)
+const VALID_CATEGORIES_SET = new Set(VALID_CATEGORIES);
+
+// 빠른 카테고리 검증 (Set 사용)
+function isValidCategoryFast(category) {
+    if (!category) return false;
+    if (VALID_CATEGORIES_SET.has(category)) return true;
+    // 부분 매칭도 지원
+    for (const valid of VALID_CATEGORIES_SET) {
+        if (category.includes(valid) || valid.includes(category)) return true;
+    }
+    return false;
 }
 
 // ============================================
@@ -621,11 +684,18 @@ async function geocodeWithKakao(address) {
 }
 
 /**
- * 카카오 API로 키워드 검색
+ * 카카오 API로 키워드 검색 (캐시 적용)
  */
 async function searchPlaceWithKakao(keyword, category = null) {
     if (!KAKAO_REST_API_KEY) {
         return null;
+    }
+
+    // 캐시 확인
+    const cacheKey = `${keyword}|${category || ''}`;
+    const cached = apiCache.get('kakao', cacheKey);
+    if (cached !== null) {
+        return cached;
     }
 
     try {
@@ -653,8 +723,11 @@ async function searchPlaceWithKakao(keyword, category = null) {
                 phone: doc.phone || null,
                 category: doc.category_name
             };
+            apiCache.set('kakao', cacheKey, result);
+            return result;
         }
 
+        apiCache.set('kakao', cacheKey, null);
         return null;
     } catch (error) {
         log('warning', `카카오 장소 검색 실패: ${error.message}`);
@@ -663,11 +736,18 @@ async function searchPlaceWithKakao(keyword, category = null) {
 }
 
 /**
- * 네이버 지역 검색 API로 장소 검색
+ * 네이버 지역 검색 API로 장소 검색 (캐시 적용)
  */
 async function searchPlaceWithNaver(keyword) {
     if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) {
         return null;
+    }
+
+    // 캐시 확인
+    const cacheKey = keyword;
+    const cached = apiCache.get('naver', cacheKey);
+    if (cached !== null) {
+        return cached;
     }
 
     try {
@@ -684,21 +764,24 @@ async function searchPlaceWithNaver(keyword) {
 
         if (data.items && data.items.length > 0) {
             const item = data.items[0];
-            // HTML 태그 제거
-            const cleanName = item.title.replace(/<[^>]*>/g, '');
+            // HTML 태그 제거 (precompiled regex 사용)
+            const cleanName = item.title.replace(PRECOMPILED_REGEX.htmlTags, '');
 
-            return {
+            const result = {
                 name: cleanName,
-                address: item.address || null,        // 지번주소
-                roadAddress: item.roadAddress || null, // 도로명주소
+                address: item.address || null,
+                roadAddress: item.roadAddress || null,
                 phone: item.telephone || null,
                 category: item.category || null,
                 mapx: item.mapx || null,
                 mapy: item.mapy || null,
                 link: item.link || null
             };
+            apiCache.set('naver', cacheKey, result);
+            return result;
         }
 
+        apiCache.set('naver', cacheKey, null);
         return null;
     } catch (error) {
         log('warning', `네이버 장소 검색 실패: ${error.message}`);
