@@ -1740,9 +1740,9 @@ async function processVideo(video) {
  * 메인 실행
  */
 async function main() {
-    log('info', '╔══════════════════════════════════════════════════╗');
-    log('info', '║           맛집 정보 추출 시작 (Extracting)       ║');
-    log('info', '╚══════════════════════════════════════════════════╝');
+    log('info', '==================================================');
+    log('info', '           맛집 정보 추출 시작 (Extracting)       ');
+    log('info', '==================================================');
 
     const startTime = Date.now();
 
@@ -2040,7 +2040,7 @@ async function main() {
             const rateStats = rateLimiter.getStats();
             const percent = Math.round((stats.processed / videosToProcess.length) * 100);
             const progressBar = '[' + '▓'.repeat(Math.floor(percent / 5)) + '░'.repeat(20 - Math.floor(percent / 5)) + ']';
-            log('progress', `${progressBar} ${percent}% | ${stats.processed}/${videosToProcess.length} | 🏠맛집: ${stats.restaurantsFound}개 | 📡RPD: ${rateStats.rpd}`);
+            log('progress', `${progressBar} ${percent}% | ${stats.processed}/${videosToProcess.length} | 맛집: ${stats.restaurantsFound}개 | RPD: ${rateStats.rpd}`);
             batchCount = 0;
         }
 
@@ -2099,24 +2099,24 @@ async function main() {
     const duration = Date.now() - startTime;
 
     log('info', '');
-    log('info', '╔══════════════════════════════════════════════════╗');
-    log('success', '║                처리 완료 (COMPLETED)             ║');
-    log('info', '╚══════════════════════════════════════════════════╝');
+    log('info', '==================================================');
+    log('success', '                처리 완료 (COMPLETED)             ');
+    log('info', '==================================================');
     log('info', ` 총 영상: ${stats.total}개`);
     log('info', ` 처리됨: ${stats.processed}개`);
-    log('info', `⏩ 스킵됨: ${stats.skipped}개 (이미 처리)`);
+    log('info', `스킵됨: ${stats.skipped}개 (이미 처리)`);
     if (stats.updated > 0) {
-        log('info', `🔄 재처리: ${stats.updated}개 (description 변경)`);
+        log('info', `재처리: ${stats.updated}개 (description 변경)`);
     }
     log('success', `성공: ${stats.success}개`);
     if (stats.failed > 0) {
         log('error', ` 실패: ${stats.failed}개`);
     }
-    log('info', `🏠 발견된 맛집: ${stats.restaurantsFound}개`);
+    log('info', `발견된 맛집: ${stats.restaurantsFound}개`);
 
     log('info', ` 소요 시간: ${Math.round(duration / 1000)}초`);
     const finalRateStats = rateLimiter.getStats();
-    log('info', `📡 Rate Limit: RPM ${finalRateStats.rpm}, RPD ${finalRateStats.rpd}`);
+    log('info', `Rate Limit: RPM ${finalRateStats.rpm}, RPD ${finalRateStats.rpd}`);
     log('info', '='.repeat(60));
 
 

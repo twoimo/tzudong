@@ -228,7 +228,7 @@ async function main() {
 
         log('info', '');
         log('info', '═'.repeat(60));
-        log('success', '🎉 파이프라인 완료!');
+        log('success', '파이프라인 완료!');
         log('info', '═'.repeat(60));
         log('info', `총 소요 시간: ${formatDuration(totalDuration)}`);
         log('info', `종료 시간: ${getKSTDate().toLocaleString('ko-KR')}`);

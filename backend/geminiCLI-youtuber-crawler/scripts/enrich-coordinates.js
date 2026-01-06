@@ -276,9 +276,9 @@ function sleep(ms) {
  * 메인 실행
  */
 async function main() {
-    log('info', '╔══════════════════════════════════════════════════════════╗');
-    log('info', '║      데이터 보완 시작 (Cross-Validation Engine)          ║');
-    log('info', '╚══════════════════════════════════════════════════════════╝');
+    log('info', '==========================================================');
+    log('info', '       데이터 보완 시작 (Cross-Validation Engine)          ');
+    log('info', '==========================================================');
     log('info', '');
 
     const startTime = Date.now();
@@ -422,9 +422,9 @@ async function main() {
     const duration = Date.now() - startTime;
 
     log('info', '');
-    log('info', '╔══════════════════════════════════════════════════════════╗');
-    log('success', '║              데이터 보완 완료 (Completed)                ║');
-    log('info', '╚══════════════════════════════════════════════════════════╝');
+    log('info', '==========================================================');
+    log('success', '               데이터 보완 완료 (Completed)                ');
+    log('info', '==========================================================');
     log('info', '');
     log('info', '[처리 통계]');
     log('info', `  총 맛집: ${stats.totalRestaurants}개`);
@@ -442,7 +442,7 @@ async function main() {
     log('info', `  Kakao+Naver: ${stats.apiUsage.kakao_naver}회`);
     log('info', '');
     log('info', `소요 시간: ${Math.round(duration / 1000)}초`);
-    log('info', '═'.repeat(60));
+    log('info', '='.repeat(60));
 }
 
 main().catch(error => {

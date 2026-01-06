@@ -75,9 +75,9 @@ function isKoreanAddress(address) {
  */
 async function main() {
     log('');
-    log('╔══════════════════════════════════════════════════════════╗');
-    log('║            데이터 품질 검사 리포트                      ║');
-    log('╚══════════════════════════════════════════════════════════╝');
+    log('==========================================================');
+    log('            데이터 품질 검사 리포트                      ');
+    log('==========================================================');
     log('');
 
     // 입력 파일 찾기
@@ -223,7 +223,7 @@ async function main() {
     // 리포트 출력
     log('═'.repeat(60));
     log('');
-    log('📈 전체 요약');
+    log('전체 요약');
     log('─'.repeat(40));
     log(`   총 영상: ${stats.totalVideos}개`);
     log(`   ├─ 맛집 영상: ${stats.restaurantVideos}개`);
@@ -286,7 +286,7 @@ async function main() {
     log(' 이상 데이터 탐지');
     log('─'.repeat(40));
 
-    log(`   🔴 좌표 범위 오류 (한국 밖): ${stats.issues.invalidCoords.length}개`);
+    log(`   좌표 범위 오류 (한국 밖): ${stats.issues.invalidCoords.length}개`);
     if (stats.issues.invalidCoords.length > 0 && stats.issues.invalidCoords.length <= 10) {
         for (const item of stats.issues.invalidCoords) {
             log(`      └─ ${item.name} (${item.lat?.toFixed(2)}, ${item.lng?.toFixed(2)})`);
@@ -303,8 +303,8 @@ async function main() {
         }
     }
 
-    log(`   🟠 주소 누락: ${stats.issues.missingAddress.length}개`);
-    log(`   🟣 좌표 불일치 경고: ${stats.issues.coordsMismatch.length}개`);
+    log(`   주소 누락: ${stats.issues.missingAddress.length}개`);
+    log(`   좌표 불일치 경고: ${stats.issues.coordsMismatch.length}개`);
 
     log('');
     log('═'.repeat(60));
