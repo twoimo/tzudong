@@ -1,0 +1,14 @@
+{
+  "timestamp": "2026-01-06T06:39:23.702Z",
+  "stats": {
+    "total": 1039,
+    "processed": 2,
+    "skipped": 1037,
+    "updated": 2,
+    "success": 2,
+    "failed": 0,
+    "restaurantsFound": 0,
+    "commits": 0
+  },
+  "duration": 74
+}
