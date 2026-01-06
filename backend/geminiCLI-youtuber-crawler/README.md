@@ -195,6 +195,7 @@ GitHub Actions에서는 자동으로 OAuth 토큰을 관리합니다:
 | Puppeteer | 모듈 1회 캐싱 | 오버헤드 제거 |
 | 중복 방지 | Map 기반 저장 | 데이터 무결성 |
 | 로그 출력 | 중복 필터링 + debug 숨김 | 가독성 향상 |
+- **⚡ Async Concurrency**: `spawnSync`를 비동기 `spawn`으로 교체하여 진정한 병렬 처리 구현 (3분/5분 타임아웃 적용)
 
 ## 🎬 자막 수집
 
@@ -238,6 +239,21 @@ YouTube Data API
         ▼
     [Supabase 저장]
 ```
+
+### ⚖️ 교차 검증 (Cross-Validation)
+
+데이터 정확도를 위해 **Naver > Kakao > Gemini** 순으로 신뢰도를 부여하여 교차 검증합니다.
+
+1. **상호명**: Naver > Kakao > Gemini
+2. **주소/좌표**: Naver(TM128→WGS84 변환) > Kakao > Gemini
+3. **전화번호**: Kakao > Naver > Gemini (다수결 원칙 적용)
+4. **카테고리**: Naver > Kakao > Gemini
+
+#### 최종 데이터 필드 (Supabase)
+- **기본**: name, address, phone, category, lat, lng
+- **영업정보**: business_hours, closed_days, is_closed, parking
+- **메뉴/가격**: signature_menu, price_range
+- **검증메타**: reasoning_basis, geocoding_source, map_url
 
 ## 🔗 GitHub Actions 워크플로우
 
