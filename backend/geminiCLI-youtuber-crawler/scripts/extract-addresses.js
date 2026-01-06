@@ -880,11 +880,11 @@ async function callGeminiApi(model, promptText) {
     try {
         const accessToken = await getValidAccessToken();
 
-        // 모델명 정리 (gemini-3-flash-preview -> models/gemini-2.0-flash-exp 등)
+        // 모델명 정리 (gemini-3-flash-preview -> models/gemini-3-flash-preview 등)
         // 사용자가 지정한 모델명이 실제 API 모델명과 다를 수 있으므로 매핑 필요할 수 있음
         // 여기서는 그대로 사용하되, 필요시 매핑 로직 추가
         // Note: Gemini CLI 모델명과 API 모델명이 다를 수 있음.
-        // gemini-3-flash-preview -> models/gemini-2.0-flash-exp (추정)
+        // gemini-3-flash-preview -> models/gemini-3-flash-preview (추정)
         // 하지만 일단 사용자 설정 그대로 시도
 
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -985,13 +985,13 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
         // 현재 환경변수에 설정된 모델명을 우선 따름.
         // 만약 CLI 모델명이 API에서 동작 안 하면 수정 필요.
         // 여기선 일단 기존 로직따라 모델명 유지하되, 실패시 API 모델명으로 매핑 고려
-        allModels = ['gemini-2.0-flash-exp', 'gemini-1.5-pro-latest'];
+        allModels = ['gemini-3-flash-preview', 'gemini-1.5-pro-latest'];
     } else {
-        allModels = ['gemini-1.5-pro-latest', 'gemini-2.0-flash-exp'];
+        allModels = ['gemini-1.5-pro-latest', 'gemini-3-flash-preview'];
     }
 
     // 이전 모델명 호환성 (사용자가 설정한 모델명이 gemini-3-* 인 경우)
-    // 여기서는 확실한 API 모델명 사용: gemini-2.0-flash-exp (빠름), gemini-1.5-pro-latest (정확)
+    // 여기서는 확실한 API 모델명 사용: gemini-3-flash-preview (빠름), gemini-1.5-pro-latest (정확)
 
     const strategyLabel = retryAttempt % 2 === 0 ? 'Flash 우선' : 'Pro 우선';
     log('debug', `[${strategyLabel}] 전략 (재시도 ${retryAttempt}): ${allModels.join(' → ')}`);
