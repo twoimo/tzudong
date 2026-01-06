@@ -843,11 +843,11 @@ function getTranscript(videoId) {
     const transcript = cache.get(videoId);
 
     if (transcript) {
-        log('debug', `자막 캐시 히트: ${videoId}`);
+        log('debug', `자막 캐시 히트: ${videoId}`, videoId);
         return transcript;
     }
 
-    log('debug', `자막 없음: ${videoId}`);
+    log('debug', `자막 없음: ${videoId}`, videoId);
     return null;
 }
 
@@ -1189,9 +1189,9 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 if (jsonMatch) {
                     try {
                         parsedResult = JSON.parse(jsonMatch[1].trim());
-                        log('debug', `방법 1 성공: JSON 블록에서 추출`);
+                        log('debug', `방법 1 성공: JSON 블록에서 추출`, video.videoId);
                     } catch (e) {
-                        log('debug', `JSON 블록 파싱 실패: ${e.message}`);
+                        log('debug', `JSON 블록 파싱 실패: ${e.message}`, video.videoId);
                     }
                 }
 
@@ -1200,7 +1200,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                     try {
                         const trimmed = cleanedOutput.trim().replace(/^\uFEFF/, '');
                         parsedResult = JSON.parse(trimmed);
-                        log('debug', `방법 2 성공: 전체 출력 파싱`);
+                        log('debug', `방법 2 성공: 전체 출력 파싱`, video.videoId);
                     } catch (e) {
                         // 무시
                     }
@@ -1214,7 +1214,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                         try {
                             const extracted = cleanedOutput.slice(jsonStart, jsonEnd + 1);
                             parsedResult = JSON.parse(extracted);
-                            log('debug', `방법 3 성공: {와 } 사이 추출`);
+                            log('debug', `방법 3 성공: {와 } 사이 추출`, video.videoId);
                         } catch (e) {
                             // 무시
                         }
@@ -1229,7 +1229,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                         try {
                             const extracted = output.slice(jsonStart, jsonEnd + 1);
                             parsedResult = JSON.parse(extracted);
-                            log('debug', `방법 4 성공: 원본에서 추출`);
+                            log('debug', `방법 4 성공: 원본에서 추출`, video.videoId);
                         } catch (e) {
                             // 무시
                         }
@@ -1462,6 +1462,12 @@ async function processVideo(video) {
                     geoInfo = kakaoPlace;
                     geocodingSource = 'kakao_keyword';
                 }
+            }
+
+            if (geoInfo) {
+                log('debug', `  → 보완 성공 (좌표: ${geoInfo.lat}, ${geoInfo.lng})`, video.videoId);
+            } else {
+                log('debug', `  → 보완 실패`, video.videoId);
             }
 
             // 5. 데이터 보완 및 누락 사유 기록
