@@ -69,11 +69,11 @@ function log(level, msg) {
         success: '',
         warning: '',
         error: '',
-        debug: '🔍',
+        debug: '',
         skip: '',
-        phone: '📞',
-        coord: '📍',
-        overseas: '🌏'
+        phone: '',
+        coord: '',
+        overseas: ''
     };
     const tags = { info: '[INFO]', success: '[OK]', warning: '[WARN]', error: '[ERR]', debug: '[DBG]', skip: '[SKIP]', phone: '[TEL]', coord: '[GEO]', overseas: '[INTL]' };
     const icon = icons[level] || '';
@@ -298,7 +298,7 @@ async function main() {
             const filePath = path.join(DATA_DIR, folder, 'meatcreator_restaurants.jsonl');
             if (fs.existsSync(filePath)) {
                 inputFile = filePath;
-                log('info', `📂 최근 데이터 파일 사용: ${folder}`);
+                log('info', ` 최근 데이터 파일 사용: ${folder}`);
                 break;
             }
         }
@@ -309,7 +309,7 @@ async function main() {
         process.exit(1);
     }
 
-    log('info', `📄 입력 파일: ${inputFile}`);
+    log('info', ` 입력 파일: ${inputFile}`);
 
     // 데이터 로드
     const content = fs.readFileSync(inputFile, 'utf-8');
@@ -430,16 +430,16 @@ async function main() {
     log('info', '');
     log('info', ' 처리 통계:');
     log('info', `   총 맛집: ${stats.totalRestaurants}개`);
-    log('info', `   ├─ 🇰🇷 한국 식당: ${stats.koreanRestaurants}개`);
-    log('info', `   └─ 🌏 해외 식당: ${stats.overseasRestaurants}개 (API 스킵)`);
+    log('info', `   ├─  한국 식당: ${stats.koreanRestaurants}개`);
+    log('info', `   └─  해외 식당: ${stats.overseasRestaurants}개 (API 스킵)`);
     log('info', '');
-    log('info', '✨ 보완 결과:');
-    log('info', `   📍 좌표 보완: ${stats.coordsEnriched}개`);
-    log('info', `   📞 전화번호 보완: ${stats.phoneEnriched}개`);
+    log('info', ' 보완 결과:');
+    log('info', `    좌표 보완: ${stats.coordsEnriched}개`);
+    log('info', `    전화번호 보완: ${stats.phoneEnriched}개`);
     log('info', `    이미 완료: ${stats.alreadyComplete}개`);
     log('info', `    보완 실패: ${stats.failed}개`);
     log('info', '');
-    log('info', '🤖 API 활용:');
+    log('info', ' API 활용:');
     log('info', `   Kakao 단독: ${stats.apiUsage.kakao_only}회`);
     log('info', `   Kakao + Naver (교차검증): ${stats.apiUsage.kakao_naver}회`);
     log('info', '');

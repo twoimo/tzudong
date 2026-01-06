@@ -333,7 +333,7 @@ async function main() {
                 log('info', `지도 URL 포함: ${existingData.stats?.videosWithMapUrl || 0}개`);
             } catch { }
 
-            log('info', ' 강제 크롤링: FORCE_CRAWL=true bun run crawl');
+            log('info', 'TIP: 강제 크롤링: FORCE_CRAWL=true bun run crawl');
             return;
         } else {
             log('info', `캐시 만료 (${Math.round(ageHours)}시간 전) - 재크롤링`);

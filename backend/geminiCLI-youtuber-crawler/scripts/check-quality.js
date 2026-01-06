@@ -93,12 +93,12 @@ async function main() {
             const filePath = path.join(DATA_DIR, folder, 'meatcreator_restaurants.jsonl');
             if (fs.existsSync(filePath)) {
                 inputFile = filePath;
-                log(`📂 분석 대상: ${folder}/meatcreator_restaurants.jsonl`);
+                log(` 분석 대상: ${folder}/meatcreator_restaurants.jsonl`);
                 break;
             }
         }
     } else {
-        log(`📂 분석 대상: ${TODAY_FOLDER}/meatcreator_restaurants.jsonl`);
+        log(` 분석 대상: ${TODAY_FOLDER}/meatcreator_restaurants.jsonl`);
     }
 
     if (!fs.existsSync(inputFile)) {
@@ -230,8 +230,8 @@ async function main() {
     log(`   └─ 기타 영상: ${stats.nonRestaurantVideos}개`);
     log('');
     log(`   총 음식점: ${stats.totalRestaurants}개`);
-    log(`   ├─ 🇰🇷 한국 식당: ${stats.koreanRestaurants}개`);
-    log(`   └─ 🌏 해외 식당: ${stats.overseasRestaurants}개`);
+    log(`   ├─  한국 식당: ${stats.koreanRestaurants}개`);
+    log(`   └─  해외 식당: ${stats.overseasRestaurants}개`);
     log('');
 
     log(' 필드별 Fill Rate');
@@ -260,7 +260,7 @@ async function main() {
     }
     log('');
 
-    log('📞 전화번호 소스 분포');
+    log(' 전화번호 소스 분포');
     log('─'.repeat(40));
     if (Object.keys(stats.phoneSources).length > 0) {
         for (const [source, count] of Object.entries(stats.phoneSources)) {
@@ -271,7 +271,7 @@ async function main() {
     }
     log('');
 
-    log('📍 좌표 소스 분포');
+    log(' 좌표 소스 분포');
     log('─'.repeat(40));
     if (Object.keys(stats.geocodingSources).length > 0) {
         for (const [source, count] of Object.entries(stats.geocodingSources)) {

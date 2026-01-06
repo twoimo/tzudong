@@ -883,7 +883,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
         }).join('');
         log('debug', `  ${icons} 지도 URL 발견: ${video.mapUrls[0].url.slice(0, 60)}...`);
     } else {
-        log('info', '   지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도');
+        log('info', '지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도');
     }
     let promptTemplate = fs.readFileSync(PROMPT_FILE, 'utf-8');
 
@@ -934,8 +934,8 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
         allModels = ['gemini-3-pro-preview', 'gemini-3-flash-preview'];
     }
 
-    const strategyIcon = retryAttempt % 2 === 0 ? '우선' : '우선';
-    log('debug', `${strategyIcon} 전략 [재시도 ${retryAttempt}]: ${allModels.map(m => m.includes('flash') ? 'Flash' : 'Pro').join(' → ')}`);
+    const strategyLabel = retryAttempt % 2 === 0 ? 'Flash 우선' : 'Pro 우선';
+    log('debug', `[${strategyLabel}] 전략 (재시도 ${retryAttempt}): ${allModels.map(m => m.includes('flash') ? 'Flash' : 'Pro').join(' → ')}`);
 
     // Infinite loop until models are available
     while (true) {
@@ -982,8 +982,8 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
             const model = availableModels[i];
 
             try {
-                const icon = model.includes('flash') ? '' : '';
-                log('debug', `${icon} 모델 실행 [${i + 1}/${availableModels.length}]: ${model}`);
+                const modelType = model.includes('flash') ? '[Flash]' : '[Pro]';
+                log('debug', `${modelType} 모델 실행 [${i + 1}/${availableModels.length}]: ${model}`);
 
                 // Gemini CLI 호출 - OAuth 인증 사용
                 // 중요: GEMINI_API_KEY 환경변수를 제거해야 OAuth가 작동함

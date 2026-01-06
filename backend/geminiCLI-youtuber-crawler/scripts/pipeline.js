@@ -148,7 +148,7 @@ async function main() {
 
     log('info', '');
     log('info', '═'.repeat(60));
-    log('info', '  📺 유튜버 맛집 크롤링 파이프라인');
+    log('info', '   유튜버 맛집 크롤링 파이프라인');
     log('info', '═'.repeat(60));
     log('info', `시작 시간: ${getKSTDate().toLocaleString('ko-KR')}`);
     log('info', `데이터 폴더: ${TODAY_FOLDER}`);
