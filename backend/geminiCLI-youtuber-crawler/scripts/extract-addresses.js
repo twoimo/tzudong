@@ -881,7 +881,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
         const typeStr = Object.entries(mapTypes).map(([t, c]) => `${t}:${c}`).join(', ');
         log('debug', `지도 URL 발견 (${typeStr}): ${video.mapUrls[0].url.slice(0, 50)}...`);
     } else {
-        log('info', '지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도');
+        log('info', '지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도', video.videoId);
     }
     let promptTemplate = fs.readFileSync(PROMPT_FILE, 'utf-8');
 
@@ -933,7 +933,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
     }
 
     const strategyLabel = retryAttempt % 2 === 0 ? 'Flash 우선' : 'Pro 우선';
-    log('debug', `[${strategyLabel}] 전략 (재시도 ${retryAttempt}): ${allModels.map(m => m.includes('flash') ? 'Flash' : 'Pro').join(' → ')}`);
+    log('debug', `[${strategyLabel}] 전략 (재시도 ${retryAttempt}): ${allModels.map(m => m.includes('flash') ? 'Flash' : 'Pro').join(' → ')}`, video.videoId);
 
     // Infinite loop until models are available
     while (true) {
@@ -981,7 +981,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
 
             try {
                 const modelType = model.includes('flash') ? '[Flash]' : '[Pro]';
-                log('debug', `${modelType} 모델 실행 [${i + 1}/${availableModels.length}]: ${model}`);
+                log('debug', `${modelType} 모델 실행 [${i + 1}/${availableModels.length}]: ${model}`, video.videoId);
 
                 // Gemini CLI 호출 - OAuth 인증 사용
                 // 중요: GEMINI_API_KEY 환경변수를 제거해야 OAuth가 작동함
@@ -1068,12 +1068,12 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 // 종료 코드가 0이 아닐 때 상세 에러 로깅
                 if (geminiResult.status !== 0 && geminiResult.status !== null) {
                     const errOutput = (geminiResult.stderr || geminiResult.stdout || '').slice(0, 500);
-                    log('debug', `모델 ${model} 에러 출력: ${errOutput}`);
+                    log('debug', `모델 ${model} 에러 출력: ${errOutput}`, video.videoId);
                 }
 
                 // 에러 확인
                 if (geminiResult.error) {
-                    log('debug', `모델 ${model} 실행 에러: ${geminiResult.error.message}`);
+                    log('debug', `모델 ${model} 실행 에러: ${geminiResult.error.message}`, video.videoId);
                     lastError = geminiResult.error;
                     // 다음 모델 시도 전 3초 대기
                     await sleep(3000);
@@ -1241,18 +1241,18 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                     result = parsedResult;
                     // 결과 상세 로그
                     const restaurantCount = parsedResult.restaurants?.length || 0;
-                    log('success', `Gemini 분석 성공 (모델: ${model})`);
+                    log('success', `Gemini 분석 성공 (모델: ${model})`, video.videoId);
                     if (restaurantCount === 0) {
-                        log('debug', `파싱 결과: is_restaurant_video=${parsedResult.is_restaurant_video}, video_type=${parsedResult.video_type}`);
+                        log('debug', `파싱 결과: is_restaurant_video=${parsedResult.is_restaurant_video}, video_type=${parsedResult.video_type}`, video.videoId);
                         // 원본 응답 일부 출력 (디버깅용)
-                        log('debug', `응답 미리보기: ${output.slice(0, 300)}...`);
+                        log('debug', `응답 미리보기: ${output.slice(0, 300)}...`, video.videoId);
                     }
                     break;
                 }
 
                 // JSON 파싱 실패시 다음 모델 시도
-                log('debug', `모델 ${model} 응답 파싱 실패, 다음 모델 시도...`);
-                log('debug', `응답 미리보기: ${output.slice(0, 200)}...`);
+                log('debug', `모델 ${model} 응답 파싱 실패, 다음 모델 시도...`, video.videoId);
+                log('debug', `응답 미리보기: ${output.slice(0, 200)}...`, video.videoId);
                 lastError = new Error(`Parse error with ${model}`);
 
             } catch (error) {
@@ -1292,7 +1292,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
             } else {
                 // 일반 에러 -> 재시도 횟수 차감
                 if (retryAttempt < 3) { // MAX_RETRY_ATTEMPTS = 3 하드코딩 (상단 변수 제거됨)
-                    log('warning', `분석 실패 - 재시도 (${retryAttempt + 1}/3)...`);
+                    log('warning', `분석 실패 - 재시도 (${retryAttempt + 1}/3)...`, video.videoId);
                     await sleep(5000);
                     cleanupTempFiles(tempPromptFile, tempOutputFile);
                     return await extractWithGemini(video, transcript, retryAttempt + 1);
@@ -1373,7 +1373,7 @@ async function processVideo(video) {
     const mapUrls = video.mapUrls || [];
 
     if (mapUrls.length === 0) {
-        log('debug', `지도 URL 없음 - Gemini 분석으로 맛집 추출`);
+        log('debug', `지도 URL 없음 - Gemini 분석으로 맛집 추출`, video.videoId);
     }
 
     for (const mapUrl of mapUrls) {
@@ -1383,16 +1383,16 @@ async function processVideo(video) {
         switch (mapUrl.type) {
             case 'naver':
                 mapInfo = await extractFromNaverMap(mapUrl.url);
-                log('debug', `네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                log('debug', `네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`, video.videoId);
                 break;
             case 'google':
                 mapInfo = await extractFromGoogleMap(mapUrl.url);
                 // 구글 지도 URL에서 좌표가 직접 추출된 경우
                 if (mapInfo.lat && mapInfo.lng) {
                     coordsFromMapUrl = { lat: mapInfo.lat, lng: mapInfo.lng, source: 'google_url' };
-                    log('debug', `구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`);
+                    log('debug', `구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`, video.videoId);
                 } else {
-                    log('debug', `구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                    log('debug', `구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`, video.videoId);
                 }
                 break;
             case 'kakao':
@@ -1408,10 +1408,10 @@ async function processVideo(video) {
                             name: kakaoPlace.name,
                             address: kakaoPlace.address
                         };
-                        log('debug', `카카오 지도 placeId로 좌표 조회: (${kakaoPlace.lat}, ${kakaoPlace.lng})`);
+                        log('debug', `카카오 지도 placeId로 좌표 조회: (${kakaoPlace.lat}, ${kakaoPlace.lng})`, video.videoId);
                     }
                 } else {
-                    log('debug', `카카오 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
+                    log('debug', `카카오 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`, video.videoId);
                 }
                 break;
         }
@@ -1424,7 +1424,7 @@ async function processVideo(video) {
     if (mapUrlStats.naver > 0) urlTypes.push(`네이버 ${mapUrlStats.naver}개`);
     if (mapUrlStats.kakao > 0) urlTypes.push(`카카오 ${mapUrlStats.kakao}개`);
     if (urlTypes.length > 0) {
-        log('info', `  지도 URL: ${urlTypes.join(', ')}`);
+        log('info', `  지도 URL: ${urlTypes.join(', ')}`, video.videoId);
     }
 
     // 2. 자막 가져오기
