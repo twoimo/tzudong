@@ -136,18 +136,28 @@ function normalizeCategory(category) {
  */
 function transformRestaurant(restaurant, video) {
     return {
+        // 1. 식별 정보
         unique_id: generateUniqueId(restaurant),
-        name: restaurant.name,
-        phone: restaurant.phone || null,
-        categories: normalizeCategory(restaurant.category),
-        status: 'pending',
-        source_type: 'youtuber_crawl',
 
-        // 유튜버 정보
+        // 2. 맛집 기본 정보
+        name: restaurant.name,
+        categories: normalizeCategory(restaurant.category),
+        phone: restaurant.phone || null,
+
+        // 3. 주소 정보
+        origin_address: restaurant.address || null,
+        road_address: restaurant.road_address || restaurant.geocoded_address || null,
+        jibun_address: restaurant.jibun_address || null,
+
+        // 4. 좌표 정보
+        lat: restaurant.lat || null,
+        lng: restaurant.lng || null,
+        geocoding_success: !!(restaurant.lat && restaurant.lng),
+        geocoding_false_stage: restaurant.lat ? null : 1,
+
+        // 5. 유튜버/유튜브 정보
         youtuber_name: restaurant.youtuber_name || '정육왕',
         youtuber_channel: restaurant.youtuber_channel || '@meatcreator',
-
-        // 유튜브 정보
         youtube_link: restaurant.youtube_link,
         youtube_meta: {
             title: restaurant.video_title,
@@ -155,31 +165,31 @@ function transformRestaurant(restaurant, video) {
             duration: video?.duration,
         },
 
-        // 평가 정보
+        // 6. 리뷰/평가 정보
+        youtuber_review: restaurant.youtuber_review || null,
         reasoning_basis: restaurant.reasoning_basis || null,
-        tzuyang_review: restaurant.youtuber_review || null,
+        confidence: restaurant.confidence || 'medium',
 
-        // 주소 정보
-        origin_address: restaurant.address || null,
-        road_address: restaurant.geocoded_address || restaurant.address || null,
-        jibun_address: null,
-        address_elements: {},
+        // 7. 영업 정보 (신규)
+        business_hours: restaurant.business_hours || null,
+        closed_days: restaurant.closed_days || null,
+        is_closed: restaurant.is_closed || false,
+        parking: restaurant.parking || null,
+        signature_menu: restaurant.signature_menu || [],
+        price_range: restaurant.price_range || null,
 
-        // 지오코딩
-        lat: restaurant.lat || null,
-        lng: restaurant.lng || null,
-        geocoding_success: !!(restaurant.lat && restaurant.lng),
-        geocoding_false_stage: restaurant.lat ? null : 1,
-
-        // 상태
+        // 8. 상태 정보
+        status: 'pending',
+        source_type: 'youtuber_crawl',
         is_missing: false,
         is_not_selected: false,
 
-        // 추가 메타
+        // 9. 추가 메타
         map_url: restaurant.map_url || null,
         map_type: restaurant.map_type || null,
-        confidence: restaurant.confidence || 'medium',
+        geocoding_source: restaurant.geocoding_source || null,
         address_source: restaurant.address_source || 'inferred',
+        address_elements: {},
     };
 }
 
@@ -198,7 +208,7 @@ async function insertToSupabase(restaurants) {
     // 기존 unique_id 로드
     log('info', '기존 데이터 확인 중...');
     const { data: existingData, error: fetchError } = await supabase
-        .from('youtuber_restaurant')
+        .from('restaurant_youtuber')
         .select('unique_id, youtube_link');
 
     if (fetchError) {
@@ -230,7 +240,7 @@ async function insertToSupabase(restaurants) {
 
         try {
             const { error } = await supabase
-                .from('youtuber_restaurant')
+                .from('restaurant_youtuber')
                 .insert(restaurant);
 
             if (error) {

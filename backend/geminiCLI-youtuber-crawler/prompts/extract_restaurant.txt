@@ -76,8 +76,9 @@ web_fetch(prompt="이 URL에서 음식점 정보(상호명, 주소, 전화번호
 {
   "restaurants": [
     {
-      "name": "web_fetch 또는 검색으로 확인한 정확한 음식점명",
-      "phone": "전화번호 또는 null",
+      "name": "정확한 음식점명",
+      "phone": "전화번호 (예: 02-1234-5678, 없으면 null)",
+      "phone_source": "web_fetch | description | transcript | google_search | not_found",
       "address": "정확한 도로명 주소",
       "lat": null,
       "lng": null,
@@ -85,8 +86,16 @@ web_fetch(prompt="이 URL에서 음식점 정보(상호명, 주소, 전화번호
       "map_url": "발견된 지도 URL 또는 null",
       "map_type": "google | naver | kakao | none",
       "category": "고기 | 중식 | 한식 | 일식 | 양식 | 분식 | 카페·디저트 | 피자 | 치킨",
-      "youtuber_review": "유튜버의 리뷰/평가 요약",
-      "reasoning_basis": "[web_fetch] naver.me URL에서 상호명/주소 직접 추출, [01:30] 영상에서 언급",
+      
+      "business_hours": "영업시간 (예: 11:00-22:00, 없으면 null)",
+      "closed_days": "휴무일 (예: 매주 월요일, 연중무휴, 없으면 null)",
+      "is_closed": false,
+      "parking": "주차가능 | 주차불가 | 인근주차장 | null",
+      "signature_menu": ["대표메뉴1", "대표메뉴2"],
+      "price_range": "저렴(1만원미만) | 보통(1-3만원) | 고가(3만원이상) | null",
+      
+      "youtuber_review": "유튜버의 리뷰/평가 요약 (맛, 분위기, 서비스 등)",
+      "reasoning_basis": "[web_fetch] URL에서 추출, [01:30] 영상에서 언급. [전화번호] 찾을 수 없음",
       "confidence": "high | medium | low"
     }
   ],
@@ -94,6 +103,39 @@ web_fetch(prompt="이 URL에서 음식점 정보(상호명, 주소, 전화번호
   "video_type": "맛집탐방 | 먹방 | 리뷰 | 기타"
 }
 ```
+
+# 새로운 필드 추출 지침
+
+## 영업시간/휴무일 (business_hours, closed_days)
+1. **web_fetch**로 지도 URL에서 영업정보 확인
+2. **영상 설명**에서 "영업시간:", "휴무:" 패턴 탐색
+3. 없으면 `null`
+
+## 폐업 여부 (is_closed)
+1. **google_web_search**로 "[음식점명] 폐업" 검색
+2. 최근 리뷰나 뉴스에서 폐업 정보 확인
+3. 기본값: `false`
+
+## 주차 정보 (parking)
+1. **영상 설명/자막**에서 "주차", "발렛", "parking" 키워드 탐색
+2. **web_fetch** 결과에서 주차 정보 확인
+
+## 대표 메뉴 (signature_menu)
+1. **영상 제목/자막**에서 언급된 메뉴 추출
+2. 유튜버가 추천하거나 주문한 메뉴
+3. 최대 3개까지
+
+## 가격대 (price_range)
+1. 영상에서 가격 언급 확인
+2. 메뉴 가격 기준으로 판단
+
+# 전화번호 추출 강화 지침
+1. **영상 설명(description)에서 전화번호 패턴 탐색**:
+   - 02-XXXX-XXXX, 031-XXX-XXXX, 010-XXXX-XXXX 등
+   - "연락처:", "전화:", "☎", "📞" 다음에 오는 숫자
+2. **web_fetch 결과에서 phone 필드 확인**
+3. **google_web_search로 "[음식점명] 전화번호" 검색**
+4. **찾을 수 없으면**: `"phone": null`, `"phone_source": "not_found"`로 설정하고 `reasoning_basis`에 "[전화번호] 영상/검색에서 찾을 수 없음" 기록
 
 # 중요 주의사항
 1. **지도 URL이 있으면 web_fetch를 먼저 사용** → 직접 정보 추출이 가장 정확함

@@ -15,7 +15,7 @@
     "oauth": "bun run scripts/gemini-oauth-manager.js"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
+    "@supabase/supabase-js": "^2.89.0",
     "dotenv": "^16.3.1",
     "puppeteer": "^22.0.0"
   },
