@@ -59,7 +59,7 @@ npm install
 
 ### 전체 파이프라인 (권장)
 ```bash
-bun run full
+bun run full  # oauth → crawl → transcripts → extract → geocode → insert 순차 실행
 ```
 
 ### 개별 단계 (2-Phase 구조)
@@ -78,6 +78,12 @@ bun run geocode
 
 # 5. DB 저장
 bun run insert
+
+# 6. 데이터 품질 검사
+bun run quality
+
+# OAuth 토큰 수동 갱신
+bun run oauth
 ```
 
 ## 📁 디렉토리 구조
@@ -91,21 +97,28 @@ geminiCLI-youtuber-crawler/
 │   ├── state.json                        # CLI 상태
 │   └── installation_id                   # 설치 ID
 ├── data/
-│   └── yy-mm-dd/
+│   ├── .rate_limit_stats.json            # API Rate Limit 통계
+│   ├── transcripts.jsonl                 # 전체 자막 데이터
+│   └── yy-mm-dd/                         # 날짜별 폴더
 │       ├── meatcreator_videos.json       # 영상 목록
-│       ├── transcripts.jsonl             # 수집된 자막 (Phase 1)
-│       └── meatcreator_restaurants.jsonl # 추출된 맛집 데이터 (Phase 2)
+│       ├── meatcreator_videos_all.jsonl  # 전체 영상 데이터
+│       └── meatcreator_videos_with_map.jsonl # 지도 URL 포함 영상
 ├── prompts/
-│   └── extract_restaurant.txt            # Gemini 프롬프트
+│   └── extract_restaurant.txt            # Gemini 프롬프트 (web_fetch/검색 지침)
 ├── scripts/
-│   ├── crawl-channel.js                  # 채널 크롤링
+│   ├── crawl-channel.js                  # 채널 영상 목록 크롤링
 │   ├── collect-transcripts.js            # Phase 1: 자막 수집 (Puppeteer)
 │   ├── extract-addresses.js              # Phase 2: Gemini 분석 (자막 로드)
-│   ├── enrich-coordinates.js             # 좌표 보완 (지오코딩)
-│   ├── insert-to-supabase.js             # DB 저장
+│   ├── enrich-coordinates.js             # 좌표 보완 (카카오 지오코딩)
+│   ├── insert-to-supabase.js             # Supabase DB 저장
+│   ├── check-quality.js                  # 데이터 품질 검사 리포트
 │   ├── gemini-oauth-manager.js           # OAuth 토큰 관리
-│   └── pipeline.js                       # 전체 파이프라인
+│   └── pipeline.js                       # 전체 파이프라인 실행
+├── sql/
+│   └── add_columns.sql                   # Supabase 테이블 컬럼 추가 SQL
+├── .env                                  # 환경 변수 설정
 ├── package.json
+├── bun.lock                              # Bun 패키지 락 파일
 └── README.md
 ```
 
