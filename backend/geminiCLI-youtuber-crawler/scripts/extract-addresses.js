@@ -376,7 +376,7 @@ class RateLimiter {
         // Google AI Pro 구독자 기준
         this.RPM_LIMIT = 60;      // 안전 마진 적용 (실제 120)
         this.RPD_LIMIT = 10000;   // API 오류로 제어하므로 클라이언트 제한은 느슨하게 설정
-        this.CONCURRENCY = 3;    // 동시 3개 + 1초 딜레이
+        this.CONCURRENCY = 2;    // 동시 2개 + 1초 딜레이
 
         this.requestsThisMinute = 0;
         this.requestsToday = 0;
@@ -868,63 +868,6 @@ function cleanupTempFiles(...files) {
  * Gemini CLI로 맛집 정보 추출
  * 여러 모델을 순차적으로 시도 (fallback 지원)
  */
-// getValidAccessToken 임포트
-import { getValidAccessToken } from './gemini-oauth-manager.js';
-
-/**
- * Gemini API 직접 호출 (Direct API Call)
- * - CLI spawn 오버헤드 제거
- * - fetch 사용
- */
-async function callGeminiApi(model, promptText) {
-    try {
-        const accessToken = await getValidAccessToken();
-
-        // 모델명 정리 (gemini-3-flash-preview -> models/gemini-3-flash-preview 등)
-        // 사용자가 지정한 모델명이 실제 API 모델명과 다를 수 있으므로 매핑 필요할 수 있음
-        // 여기서는 그대로 사용하되, 필요시 매핑 로직 추가
-        // Note: Gemini CLI 모델명과 API 모델명이 다를 수 있음.
-
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{ text: promptText }]
-                }],
-                generationConfig: {
-                    responseMimeType: "application/json"
-                }
-            })
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API Error ${response.status}: ${errorText}`);
-        }
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-
-        if (!text) {
-            throw new Error('No content in response');
-        }
-
-        return text;
-
-    } catch (error) {
-        throw error;
-    }
-}
-
-/**
- * Gemini로 맛집 정보 추출 (Direct API 버전)
- */
 async function extractWithGemini(video, transcript, retryAttempt = 0) {
     // 프롬프트 템플릿 로드
     log('debug', `Gemini 분석 시작: ${video.title.slice(0, 50)}...`, video.videoId);
@@ -936,9 +879,9 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
             return acc;
         }, {});
         const typeStr = Object.entries(mapTypes).map(([t, c]) => `${t}:${c}`).join(', ');
-        log('debug', `지도 URL 발견 (${typeStr}): ${video.mapUrls[0].url.slice(0, 50)}...`, video.videoId);
+        log('debug', `지도 URL 발견 (${typeStr}): ${video.mapUrls[0].url.slice(0, 50)}...`);
     } else {
-        log('info', '지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도', video.videoId);
+        log('info', '지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도');
     }
     let promptTemplate = fs.readFileSync(PROMPT_FILE, 'utf-8');
 
@@ -971,95 +914,397 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
         .replace('<지도_URL_목록>', mapUrlsText)
         .replace('<자막>', transcript || '(자막 없음)');
 
-    // 로깅용 임시 파일 (디버깅)
+    // 임시 파일에 프롬프트 저장
     const tempPromptFile = path.join(TODAY_PATH, `temp_prompt_${video.videoId}.txt`);
+    const tempOutputFile = path.join(TODAY_PATH, `temp_output_${video.videoId}.json`);
+
     fs.writeFileSync(tempPromptFile, promptTemplate, 'utf-8');
 
-    // 모델 리스트 (API 이름으로 매핑 권장)
-    // gemini-3-* 모델명은 CLI용 별칭일 수 있음. API용 실제 모델명으로 시도
+    // GitHub Actions 관련 로직 제거됨
+    // 기본 모델: gemini-3-flash-preview
+    // 재시도 시 번갈아가며 우선순위 변경 (Round-Robin)
+
     let allModels;
+
     if (retryAttempt % 2 === 0) {
-        // API용 모델명 (2.0-flash-exp 등)으로 변경 필요할 수 있으나,
-        // 현재 환경변수에 설정된 모델명을 우선 따름.
-        // 만약 CLI 모델명이 API에서 동작 안 하면 수정 필요.
-        // 여기선 일단 기존 로직따라 모델명 유지하되, 실패시 API 모델명으로 매핑 고려
         allModels = ['gemini-3-flash-preview', 'gemini-3-pro-preview'];
     } else {
         allModels = ['gemini-3-pro-preview', 'gemini-3-flash-preview'];
     }
 
-    // 이전 모델명 호환성 (사용자가 설정한 모델명이 gemini-3-* 인 경우)
-    // 여기서는 확실한 API 모델명 사용: gemini-3-flash-preview (빠름), gemini-3-pro-preview (정확)
-
     const strategyLabel = retryAttempt % 2 === 0 ? 'Flash 우선' : 'Pro 우선';
-    log('debug', `[${strategyLabel}] 전략 (재시도 ${retryAttempt}): ${allModels.join(' → ')}`);
+    log('debug', `[${strategyLabel}] 전략 (재시도 ${retryAttempt}): ${allModels.map(m => m.includes('flash') ? 'Flash' : 'Pro').join(' → ')}`);
+
+    // Infinite loop until models are available
+    while (true) {
+        // 사용 가능한 모델만 필터링 (블랙리스트 제외)
+        const availableModels = allModels.filter(m => !isModelBlacklisted(m));
+
+        if (availableModels.length > 0) {
+            break; // 사용 가능한 모델 있음 -> 진행
+        }
+
+        // 모든 모델이 블랙리스트 - 가장 빠른 리셋 시간까지 대기 (무한 대기)
+        const earliest = getEarliestResetTime();
+        let waitMs = 10 * 60 * 1000; // 기본 10분
+
+        if (earliest) {
+            waitMs = earliest - Date.now();
+        }
+        if (waitMs <= 0) waitMs = 60000; // 최소 1분
+
+        const waitMin = Math.ceil(waitMs / 60000);
+        log('warning', `모든 모델 쿼타 소진. ${waitMin}분 대기 후 재시도...`);
+
+        await sleep(waitMs + 5000); // 여유 시간
+        log('info', `대기 완료 - 모델 재확인`);
+
+        // 블랙리스트 초기화/재확인
+        blacklistedModels.clear();
+
+        // 여기서 retryAttempt를 증가시키지 않음 (쿼타 대기는 재시도 횟수 차감 X)
+        // continue to check availableModels again
+    }
+
+    // 사용 가능한 모델 재확인
+    const availableModels = allModels.filter(m => !isModelBlacklisted(m));
+
+    // 사용 가능한 첫 번째 모델로 시작
+    log('debug', `사용 가능한 모델: ${availableModels.join(', ')}`);
 
     let lastError = null;
     let result = null;
 
-    // 모델 순회
-    for (const model of allModels) {
-        if (isModelBlacklisted(model)) continue;
-
-        try {
-            log('debug', `API 모델 실행: ${model}`, video.videoId);
-            const responseText = await callGeminiApi(model, promptTemplate);
-
-            // JSON 파싱
-            let cleanedOutput = responseText
-                .replace(/```json\s*/, '')
-                .replace(/```/, '')
-                .trim();
+    try {
+        for (let i = 0; i < availableModels.length; i++) {
+            const model = availableModels[i];
 
             try {
-                result = JSON.parse(cleanedOutput);
-            } catch (e) {
-                // 부분 파싱 시도
-                const jsonStart = cleanedOutput.indexOf('{');
-                const jsonEnd = cleanedOutput.lastIndexOf('}');
-                if (jsonStart !== -1 && jsonEnd !== -1) {
-                    try {
-                        result = JSON.parse(cleanedOutput.slice(jsonStart, jsonEnd + 1));
-                    } catch (e2) {
-                        throw new Error('JSON Parsing Failed');
+                const modelType = model.includes('flash') ? '[Flash]' : '[Pro]';
+                log('debug', `${modelType} 모델 실행 [${i + 1}/${availableModels.length}]: ${model}`);
+
+                // Gemini CLI 호출 - OAuth 인증 사용
+                // 중요: GEMINI_API_KEY 환경변수를 제거해야 OAuth가 작동함
+                const envWithoutApiKey = { ...process.env };
+                delete envWithoutApiKey.GEMINI_API_KEY;
+                delete envWithoutApiKey.GEMINI_API_KEY_BYEON;
+                delete envWithoutApiKey.GOOGLE_API_KEY;
+
+                // --yolo 옵션: 웹 검색(google_web_search) 등 도구 사용 자동 허용
+                // Windows 호환성: stdin으로 프롬프트 전달 (명령줄 길이 제한 회피)
+                // Gemini CLI 호출 - 비동기 spawn 사용 (Event Loop 차단 방지)
+                const geminiResult = await new Promise((resolve) => {
+                    const child = spawn('gemini', [
+                        '--output-format', 'json',
+                        '--model', model,
+                        '--yolo'
+                    ], {
+                        env: envWithoutApiKey,
+                        shell: true
+                    });
+
+                    let stdout = '';
+                    let stderr = '';
+                    let timedOut = false;
+
+                    // 타임아웃 처리 (5분)
+                    const timeoutId = setTimeout(() => {
+                        timedOut = true;
+                        child.kill(); // 프로세스 종료
+                        resolve({
+                            status: null,
+                            stdout,
+                            stderr,
+                            error: new Error(`Spawn timed out after 300000ms`)
+                        });
+                    }, 300000);
+
+                    // 표준 입력으로 프롬프트 전달
+                    if (child.stdin) {
+                        child.stdin.write(promptTemplate);
+                        child.stdin.end();
                     }
-                } else {
-                    throw new Error('No JSON found');
+
+                    // 출력 수신
+                    if (child.stdout) {
+                        child.stdout.on('data', (data) => {
+                            stdout += data.toString();
+                        });
+                    }
+
+                    if (child.stderr) {
+                        child.stderr.on('data', (data) => {
+                            stderr += data.toString();
+                        });
+                    }
+
+                    // 에러 핸들링
+                    child.on('error', (err) => {
+                        if (!timedOut) {
+                            clearTimeout(timeoutId);
+                            resolve({
+                                status: null,
+                                stdout,
+                                stderr,
+                                error: err
+                            });
+                        }
+                    });
+
+                    // 종료 핸들링
+                    child.on('close', (code) => {
+                        if (!timedOut) {
+                            clearTimeout(timeoutId);
+                            resolve({
+                                status: code,
+                                stdout,
+                                stderr,
+                                error: null
+                            });
+                        }
+                    });
+                });
+
+                // 종료 코드가 0이 아닐 때 상세 에러 로깅
+                if (geminiResult.status !== 0 && geminiResult.status !== null) {
+                    const errOutput = (geminiResult.stderr || geminiResult.stdout || '').slice(0, 500);
+                    log('debug', `모델 ${model} 에러 출력: ${errOutput}`);
+                }
+
+                // 에러 확인
+                if (geminiResult.error) {
+                    log('debug', `모델 ${model} 실행 에러: ${geminiResult.error.message}`);
+                    lastError = geminiResult.error;
+                    // 다음 모델 시도 전 3초 대기
+                    await sleep(3000);
+                    continue;
+                }
+
+                const output = geminiResult.stdout || '';
+                const stderr = geminiResult.stderr || '';
+                const combinedOutput = output + stderr;
+
+                // API 오류 확인
+                if (combinedOutput.includes('Error when talking to Gemini API')) {
+                    // 오류 상세 내용 추출
+                    const errorMatch = combinedOutput.match(/error.*?(\{[\s\S]*?\})/i);
+                    log('debug', `모델 ${model} API 오류, 다음 모델 시도...`);
+                    if (errorMatch) {
+                        log('debug', `상세 오류: ${errorMatch[1].slice(0, 300)}`);
+                    }
+
+                    // 쿼타 소진, 엔티티 없음, 또는 일반 API 오류 시 블랙리스트에 추가
+                    // "exhausted your daily quota" 에러도 감지
+                    if (combinedOutput.includes('exhausted your capacity') ||
+                        combinedOutput.includes('exhausted your daily quota') ||
+                        combinedOutput.includes('Requested entity was not found') ||
+                        combinedOutput.includes('quota') ||
+                        combinedOutput.includes('[object Object]')) {
+
+                        // 쿼타 리셋 시간 파싱 (예: "reset after 3h29m52s")
+                        const resetMatch = combinedOutput.match(/reset after (\d+)h(\d+)m(\d+)s/);
+                        let resetTime = null;
+
+                        if (resetMatch) {
+                            const hours = parseInt(resetMatch[1]);
+                            const minutes = parseInt(resetMatch[2]);
+                            const seconds = parseInt(resetMatch[3]);
+                            const waitMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
+                            resetTime = Date.now() + waitMs;
+
+                            log('warning', `모델 ${model} 쿼타 소진 - 리셋까지 ${hours}시간 ${minutes}분 ${seconds}초`);
+
+                            // 30분 이하면 즉시 대기, 그 이상이면 다른 모델 시도
+                            if (waitMs <= 30 * 60 * 1000) {
+                                log('info', `쿼타 리셋 대기 중... (${Math.ceil(waitMs / 60000)}분)`);
+                                await sleep(waitMs + 5000); // 5초 여유
+                                log('info', `쿼타 리셋 완료 - 재시도`);
+                                // 블랙리스트에서 제거하고 다시 시도
+                                blacklistedModels.delete(model);
+                                i--; // 같은 모델 다시 시도
+                                continue;
+                            }
+                        } else if (combinedOutput.includes('exhausted your daily quota')) {
+                            // 일일 쿼타 소진 - 리셋 시간 파싱 시도 또는 10분 대기
+                            const resetMatch = combinedOutput.match(/reset after (\d+)h(\d+)m(\d+)s/);
+                            let waitMs = 10 * 60 * 1000; // 기본 10분
+
+                            if (resetMatch) {
+                                const h = parseInt(resetMatch[1]);
+                                const m = parseInt(resetMatch[2]);
+                                const s = parseInt(resetMatch[3]);
+                                waitMs = (h * 3600 + m * 60 + s) * 1000;
+                            }
+                            resetTime = Date.now() + waitMs;
+
+                            const waitHours = Math.floor(waitMs / 3600000);
+                            const waitMins = Math.ceil((waitMs % 3600000) / 60000);
+                            log('warning', `모델 ${model} 일일 쿼타 소진 - ${waitHours}시간 ${waitMins}분 후 재시도`);
+                        }
+
+                        // 블랙리스트에 리셋 시간과 함께 저장
+                        blacklistedModels.set(model, {
+                            resetTime,
+                            reason: combinedOutput.includes('daily quota') ? 'daily_quota' : 'quota'
+                        });
+                        log('warning', `모델 ${model} 블랙리스트에 추가됨 (${combinedOutput.includes('daily quota') ? '일일 쿼타 소진' : 'API 오류'})`);
+                    }
+
+                    lastError = new Error(`API error with ${model}`);
+                    // Rate limit 방지를 위해 5초 대기
+                    await sleep(5000);
+                    continue;
+                }
+
+                // exit code 확인 (0이 아니면 실패)
+                if (geminiResult.status !== 0 && !output.includes('restaurants')) {
+                    log('debug', `모델 ${model} 종료 코드: ${geminiResult.status}`);
+                    lastError = new Error(`Exit code ${geminiResult.status} with ${model}`);
+                    await sleep(3000);
+                    continue;
+                }
+
+                // 결과에 에러 JSON이 포함되어 있는지 확인
+                if (output.includes('"error"') && output.includes('"code"') && !output.includes('restaurants')) {
+                    log('debug', `모델 ${model} 응답에 에러 포함, 다음 모델 시도...`);
+                    lastError = new Error(`Response error with ${model}`);
+                    await sleep(3000);
+                    continue;
+                }
+
+                // JSON 파싱 (여러 방법 시도)
+                let parsedResult = null;
+
+                // 먼저 이스케이프된 문자 정리 (모든 방법에 적용)
+                // 순서 중요: \\\\ → \\ 먼저, 그 다음 \\n → \n, \\" → "
+                let cleanedOutput = output
+                    .replace(/\\\\/g, '\\')      // \\\\ → \\
+                    .replace(/\\n/g, '\n')       // \\n → 줄바꿈
+                    .replace(/\\r/g, '\r')       // \\r → 캐리지리턴
+                    .replace(/\\t/g, '\t')       // \\t → 탭
+                    .replace(/\\"/g, '"');       // \\" → "
+
+                // 방법 1: ```json``` 블록에서 추출
+                const jsonMatch = cleanedOutput.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    try {
+                        parsedResult = JSON.parse(jsonMatch[1].trim());
+                        log('debug', `방법 1 성공: JSON 블록에서 추출`);
+                    } catch (e) {
+                        log('debug', `JSON 블록 파싱 실패: ${e.message}`);
+                    }
+                }
+
+                // 방법 2: 전체 출력을 JSON으로 파싱
+                if (!parsedResult) {
+                    try {
+                        const trimmed = cleanedOutput.trim().replace(/^\uFEFF/, '');
+                        parsedResult = JSON.parse(trimmed);
+                        log('debug', `방법 2 성공: 전체 출력 파싱`);
+                    } catch (e) {
+                        // 무시
+                    }
+                }
+
+                // 방법 3: { 와 } 사이의 JSON 추출
+                if (!parsedResult) {
+                    const jsonStart = cleanedOutput.indexOf('{');
+                    const jsonEnd = cleanedOutput.lastIndexOf('}');
+                    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                        try {
+                            const extracted = cleanedOutput.slice(jsonStart, jsonEnd + 1);
+                            parsedResult = JSON.parse(extracted);
+                            log('debug', `방법 3 성공: {와 } 사이 추출`);
+                        } catch (e) {
+                            // 무시
+                        }
+                    }
+                }
+
+                // 방법 4: 원본 output에서 { } 추출 (이스케이프 처리 없이)
+                if (!parsedResult) {
+                    const jsonStart = output.indexOf('{');
+                    const jsonEnd = output.lastIndexOf('}');
+                    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+                        try {
+                            const extracted = output.slice(jsonStart, jsonEnd + 1);
+                            parsedResult = JSON.parse(extracted);
+                            log('debug', `방법 4 성공: 원본에서 추출`);
+                        } catch (e) {
+                            // 무시
+                        }
+                    }
+                }
+
+                // 파싱 성공 확인
+                if (parsedResult && !parsedResult.error) {
+                    result = parsedResult;
+                    // 결과 상세 로그
+                    const restaurantCount = parsedResult.restaurants?.length || 0;
+                    log('success', `Gemini 분석 성공 (모델: ${model})`);
+                    if (restaurantCount === 0) {
+                        log('debug', `파싱 결과: is_restaurant_video=${parsedResult.is_restaurant_video}, video_type=${parsedResult.video_type}`);
+                        // 원본 응답 일부 출력 (디버깅용)
+                        log('debug', `응답 미리보기: ${output.slice(0, 300)}...`);
+                    }
+                    break;
+                }
+
+                // JSON 파싱 실패시 다음 모델 시도
+                log('debug', `모델 ${model} 응답 파싱 실패, 다음 모델 시도...`);
+                log('debug', `응답 미리보기: ${output.slice(0, 200)}...`);
+                lastError = new Error(`Parse error with ${model}`);
+
+            } catch (error) {
+                log('debug', `모델 ${model} 실패: ${error.message}`);
+                lastError = error;
+                // 다음 모델 시도
+                continue;
+            }
+        }
+
+        // 모든 모델 실패 - 리셋 시간까지 대기 후 재시도
+        if (!result) {
+            log('warning', `Gemini 분석 실패 (${video.videoId}): 모든 모델 시도 실패`);
+            if (lastError) {
+                log('debug', `마지막 오류: ${lastError.message}`);
+            }
+
+            // 재시도 가능 여부 확인
+            // 쿼타 소진(blacklist)으로 인한 실패인 경우 -> 무한 재시도 (retryAttempt 증가 X)
+            // 그 외(파싱 에러 등)인 경우 -> MAX_RETRY_ATTEMPTS까지 재시도
+            const earliest = getEarliestResetTime();
+
+            if (earliest) {
+                // 쿼타 문제로 판단 -> 무한 대기 후 재시도
+                const waitMs = earliest - Date.now();
+                const waitMin = Math.ceil(waitMs > 0 ? waitMs / 60000 : 10);
+
+                log('warning', `모든 모델 쿼타 소진으로 실패. ${waitMin}분 대기 후 무한 재시도...`);
+                await sleep((waitMs > 0 ? waitMs : 10 * 60 * 1000) + 5000);
+
+                // 블랙리스트 초기화
+                blacklistedModels.clear();
+
+                // 재귀 호출 (retryAttempt 증가시키지 않음)
+                cleanupTempFiles(tempPromptFile, tempOutputFile);
+                return await extractWithGemini(video, transcript, retryAttempt);
+            } else {
+                // 일반 에러 -> 재시도 횟수 차감
+                if (retryAttempt < 3) { // MAX_RETRY_ATTEMPTS = 3 하드코딩 (상단 변수 제거됨)
+                    log('warning', `분석 실패 - 재시도 (${retryAttempt + 1}/3)...`);
+                    await sleep(5000);
+                    cleanupTempFiles(tempPromptFile, tempOutputFile);
+                    return await extractWithGemini(video, transcript, retryAttempt + 1);
                 }
             }
-
-            if (result) {
-                log('success', `Gemini API 분석 성공 (모델: ${model})`, video.videoId);
-                break;
-            }
-
-        } catch (error) {
-            log('debug', `모델 ${model} 실패: ${error.message}`, video.videoId);
-            lastError = error;
-
-            // 429 감지
-            if (error.message.includes('429') || error.message.includes('Quota')) {
-                log('warning', `모델 ${model} 쿼타 제한 감지`, video.videoId);
-                // 블랙리스트 로직 등 추가 가능
-            }
-
-            await sleep(2000);
         }
+
+        return result;
+    } finally {
+        // 임시 파일 정리 (성공/실패 모두)
+        cleanupTempFiles(tempPromptFile, tempOutputFile);
     }
-
-    if (!result) {
-        // 재시도 로직 (기존 유지)
-        if (retryAttempt < 3) {
-            log('warning', `분석 실패 - 재시도 (${retryAttempt + 1}/3)...`, video.videoId);
-            await sleep(5000);
-            return await extractWithGemini(video, transcript, retryAttempt + 1);
-        }
-    }
-
-    // 임시 파일 정리
-    try { fs.unlinkSync(tempPromptFile); } catch { }
-
-    return result;
 }
 
 /**
@@ -1128,7 +1373,7 @@ async function processVideo(video) {
     const mapUrls = video.mapUrls || [];
 
     if (mapUrls.length === 0) {
-        log('debug', `지도 URL 없음 - Gemini 분석으로 맛집 추출`, video.videoId);
+        log('debug', `지도 URL 없음 - Gemini 분석으로 맛집 추출`);
     }
 
     for (const mapUrl of mapUrls) {
@@ -1138,16 +1383,16 @@ async function processVideo(video) {
         switch (mapUrl.type) {
             case 'naver':
                 mapInfo = await extractFromNaverMap(mapUrl.url);
-                log('debug', `네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`, video.videoId);
+                log('debug', `네이버 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 break;
             case 'google':
                 mapInfo = await extractFromGoogleMap(mapUrl.url);
                 // 구글 지도 URL에서 좌표가 직접 추출된 경우
                 if (mapInfo.lat && mapInfo.lng) {
                     coordsFromMapUrl = { lat: mapInfo.lat, lng: mapInfo.lng, source: 'google_url' };
-                    log('debug', `구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`, video.videoId);
+                    log('debug', `구글 지도 URL에서 좌표 추출: (${mapInfo.lat}, ${mapInfo.lng})`);
                 } else {
-                    log('debug', `구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`, video.videoId);
+                    log('debug', `구글 지도 URL 발견: ${mapUrl.url.slice(0, 50)}...`);
                 }
                 break;
             case 'kakao':
