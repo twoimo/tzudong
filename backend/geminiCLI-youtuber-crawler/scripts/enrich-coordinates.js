@@ -277,7 +277,7 @@ function sleep(ms) {
  */
 async function main() {
     log('info', '==========================================================');
-    log('info', '       데이터 보완 시작 (Cross-Validation Engine)          ');
+    log('info', ' 데이터 보완 시작 (Cross-Validation Engine)');
     log('info', '==========================================================');
     log('info', '');
 
@@ -423,7 +423,7 @@ async function main() {
 
     log('info', '');
     log('info', '==========================================================');
-    log('success', '               데이터 보완 완료 (Completed)                ');
+    log('success', ' 데이터 보완 완료 (Completed)');
     log('info', '==========================================================');
     log('info', '');
     log('info', '[처리 통계]');

@@ -1741,7 +1741,7 @@ async function processVideo(video) {
  */
 async function main() {
     log('info', '==================================================');
-    log('info', '           맛집 정보 추출 시작 (Extracting)       ');
+    log('info', ' 맛집 정보 추출 시작 (Extracting)');
     log('info', '==================================================');
 
     const startTime = Date.now();
@@ -2100,7 +2100,7 @@ async function main() {
 
     log('info', '');
     log('info', '==================================================');
-    log('success', '                처리 완료 (COMPLETED)             ');
+    log('success', ' 처리 완료 (COMPLETED)');
     log('info', '==================================================');
     log('info', ` 총 영상: ${stats.total}개`);
     log('info', ` 처리됨: ${stats.processed}개`);
