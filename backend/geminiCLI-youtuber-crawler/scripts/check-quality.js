@@ -76,7 +76,7 @@ function isKoreanAddress(address) {
 async function main() {
     log('');
     log('╔══════════════════════════════════════════════════════════╗');
-    log('║           📊 데이터 품질 검사 리포트                      ║');
+    log('║            데이터 품질 검사 리포트                      ║');
     log('╚══════════════════════════════════════════════════════════╝');
     log('');
 
@@ -102,7 +102,7 @@ async function main() {
     }
 
     if (!fs.existsSync(inputFile)) {
-        log('❌ 데이터 파일이 없습니다.');
+        log(' 데이터 파일이 없습니다.');
         process.exit(1);
     }
 
@@ -234,7 +234,7 @@ async function main() {
     log(`   └─ 🌏 해외 식당: ${stats.overseasRestaurants}개`);
     log('');
 
-    log('📊 필드별 Fill Rate');
+    log(' 필드별 Fill Rate');
     log('─'.repeat(40));
     const fieldOrder = ['name', 'phone', 'address', 'coords', 'category', 'business_hours', 'closed_days', 'parking', 'signature_menu', 'youtuber_review'];
     const fieldLabels = {
@@ -255,7 +255,7 @@ async function main() {
         const total = data.filled + data.empty;
         const rate = total > 0 ? ((data.filled / total) * 100).toFixed(1) : 0;
         const bar = '█'.repeat(Math.floor(rate / 5)) + '░'.repeat(20 - Math.floor(rate / 5));
-        const icon = rate >= 80 ? '✅' : rate >= 50 ? '⚠️' : '❌';
+        const icon = rate >= 80 ? '' : rate >= 50 ? '' : '';
         log(`   ${icon} ${fieldLabels[field].padEnd(12)} ${bar} ${rate}% (${data.filled}/${total})`);
     }
     log('');
@@ -283,7 +283,7 @@ async function main() {
     log('');
 
     // 이상 데이터 리포트
-    log('⚠️ 이상 데이터 탐지');
+    log(' 이상 데이터 탐지');
     log('─'.repeat(40));
 
     log(`   🔴 좌표 범위 오류 (한국 밖): ${stats.issues.invalidCoords.length}개`);
@@ -293,7 +293,7 @@ async function main() {
         }
     }
 
-    log(`   🟡 전화번호 누락 (한국 식당): ${stats.issues.missingPhone.length}개`);
+    log(`    전화번호 누락 (한국 식당): ${stats.issues.missingPhone.length}개`);
     if (stats.issues.missingPhone.length > 0 && stats.issues.missingPhone.length <= 5) {
         for (const item of stats.issues.missingPhone.slice(0, 5)) {
             log(`      └─ ${item.name}`);
@@ -308,11 +308,11 @@ async function main() {
 
     log('');
     log('═'.repeat(60));
-    log('✅ 품질 검사 완료');
+    log(' 품질 검사 완료');
     log('');
 }
 
 main().catch(error => {
-    console.error(`❌ 오류: ${error.message}`);
+    console.error(` 오류: ${error.message}`);
     process.exit(1);
 });

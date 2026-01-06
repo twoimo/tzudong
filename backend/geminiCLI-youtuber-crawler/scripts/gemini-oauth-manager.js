@@ -218,16 +218,16 @@ export function printTokenStatus() {
     const projectRemaining = getTokenRemainingMinutes(projectCreds);
     const homeRemaining = getTokenRemainingMinutes(homeCreds);
 
-    console.log('\n📊 Gemini OAuth 토큰 상태:');
+    console.log('\n Gemini OAuth 토큰 상태:');
     console.log(`   PROJECT: ${projectRemaining}분 남음`);
     console.log(`   HOME:    ${homeRemaining}분 남음`);
 
     if (projectRemaining < 0 && homeRemaining < 0) {
-        console.log('   ⚠️ 모든 토큰 만료됨 - gemini 명령어로 재로그인 필요');
+        console.log('    모든 토큰 만료됨 - gemini 명령어로 재로그인 필요');
     } else if (projectRemaining < 10 || homeRemaining < 10) {
-        console.log('   ⚠️ 토큰 만료 임박 - 갱신 권장');
+        console.log('    토큰 만료 임박 - 갱신 권장');
     } else {
-        console.log('   ✅ 토큰 유효');
+        console.log('    토큰 유효');
     }
     console.log('');
 }

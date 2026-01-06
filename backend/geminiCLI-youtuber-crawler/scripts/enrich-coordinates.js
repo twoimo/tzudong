@@ -34,7 +34,7 @@ const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID;
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
 
 if (!KAKAO_REST_API_KEY) {
-    console.error('❌ KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다.');
+    console.error(' KAKAO_REST_API_KEY 환경변수가 설정되지 않았습니다.');
     process.exit(1);
 }
 
@@ -65,12 +65,12 @@ const TODAY_PATH = path.join(DATA_DIR, TODAY_FOLDER);
 function log(level, msg) {
     const time = getKSTDate().toTimeString().slice(0, 8);
     const icons = {
-        info: 'ℹ️',
-        success: '✅',
-        warning: '⚠️',
-        error: '❌',
+        info: '',
+        success: '',
+        warning: '',
+        error: '',
         debug: '🔍',
-        skip: '⏭️',
+        skip: '',
         phone: '📞',
         coord: '📍',
         overseas: '🌏'
@@ -316,7 +316,7 @@ async function main() {
     const lines = content.trim().split('\n').filter(line => line.trim());
     const entries = lines.map(line => JSON.parse(line));
 
-    log('info', `📊 ${entries.length}개 영상 데이터 로드`);
+    log('info', ` ${entries.length}개 영상 데이터 로드`);
     log('info', '');
 
     // 통계
@@ -366,7 +366,7 @@ async function main() {
                 continue;
             }
 
-            log('info', `[${stats.totalRestaurants}] 보완 시도: ${restaurant.name} (좌표:${needCoords ? '❌' : '✅'}, 전화:${needPhone ? '❌' : '✅'})`);
+            log('info', `[${stats.totalRestaurants}] 보완 시도: ${restaurant.name} (좌표:${needCoords ? '' : ''}, 전화:${needPhone ? '' : ''})`);
 
             // API 호출
             const result = await enrichKoreanData(restaurant.name, restaurant.address);
@@ -428,7 +428,7 @@ async function main() {
     log('success', '║              데이터 보완 완료 (Completed)                ║');
     log('info', '╚══════════════════════════════════════════════════════════╝');
     log('info', '');
-    log('info', '📊 처리 통계:');
+    log('info', ' 처리 통계:');
     log('info', `   총 맛집: ${stats.totalRestaurants}개`);
     log('info', `   ├─ 🇰🇷 한국 식당: ${stats.koreanRestaurants}개`);
     log('info', `   └─ 🌏 해외 식당: ${stats.overseasRestaurants}개 (API 스킵)`);
@@ -436,14 +436,14 @@ async function main() {
     log('info', '✨ 보완 결과:');
     log('info', `   📍 좌표 보완: ${stats.coordsEnriched}개`);
     log('info', `   📞 전화번호 보완: ${stats.phoneEnriched}개`);
-    log('info', `   ✅ 이미 완료: ${stats.alreadyComplete}개`);
-    log('info', `   ❌ 보완 실패: ${stats.failed}개`);
+    log('info', `    이미 완료: ${stats.alreadyComplete}개`);
+    log('info', `    보완 실패: ${stats.failed}개`);
     log('info', '');
     log('info', '🤖 API 활용:');
     log('info', `   Kakao 단독: ${stats.apiUsage.kakao_only}회`);
     log('info', `   Kakao + Naver (교차검증): ${stats.apiUsage.kakao_naver}회`);
     log('info', '');
-    log('info', `⏱️ 소요 시간: ${Math.round(duration / 1000)}초`);
+    log('info', ` 소요 시간: ${Math.round(duration / 1000)}초`);
     log('info', '═'.repeat(60));
 }
 
