@@ -1,0 +1,31 @@
+{
+  "restaurants": [
+    {
+      "name": "만복래연탄구이",
+      "phone": null,
+      "phone_source": "not_found",
+      "address": "경기 남양주시 화도읍 마석로 98-4 1층",
+      "lat": null,
+      "lng": null,
+      "address_source": "description",
+      "map_url": "https://naver.me/FA2FUJny",
+      "map_type": "naver",
+      "category": "고기",
+      "business_hours": "11:30-23:00 (라스트오더 22:30)",
+      "closed_days": null,
+      "is_closed": false,
+      "parking": null,
+      "signature_menu": [
+        "주먹고기 (가브리살)",
+        "뒷고기",
+        "비빔국수"
+      ],
+      "price_range": "보통(1-3만원)",
+      "youtuber_review": "직접 만든 김치와 반찬 퀄리티가 훌륭하며, 주먹고기에 앞다리살 대신 특수부위인 가브리살을 사용하여 식감과 육즙이 뛰어남. 연탄불에 구워 은은한 불향이 좋고, 멜젓과 비빔국수의 맛도 일품임. 동네 토박이들이 찾는 찐 맛집 분위기.",
+      "reasoning_basis": "[description] 주소 및 상호명 확인, [01:06] 메뉴 및 가격 확인, [04:10] 맛 평가. [전화번호/주차] 검색 결과 없음",
+      "confidence": "high"
+    }
+  ],
+  "is_restaurant_video": true,
+  "video_type": "맛집탐방"
+}
