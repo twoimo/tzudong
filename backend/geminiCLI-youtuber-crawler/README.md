@@ -14,7 +14,7 @@
 |------|------|
 | 영상 수집 | YouTube Data API로 채널 영상 목록 수집 |
 | 지도 URL 분석 | 네이버/카카오/구글 맵 URL에서 장소 정보 직접 추출 (좌표 포함) |
-| 주소 확장 | 네이버 지도 '펼치기' 버튼 자동 클릭으로 상세 주소 확보 |
+| 주소 확장 | 네이버 지도 '펼치기' 및 Apollo State 직접 조회로 지번 주소 100% 확보 |
 | 자막 수집 | Puppeteer로 외부 서비스에서 자막 수집 |
 | AI 분석 | Gemini로 맛집 정보 및 유튜버 리뷰 추출 |
 | 좌표 보완 | 카카오 API로 지오코딩 |
@@ -64,7 +64,7 @@ node scripts/pipeline.js --start-from=1.5  # 자막 수집부터
 │  Phase 1.5 & 1.6: 병렬 실행 ⚡                                │
 │  ├── collect-transcripts.js (Phase 1.5: 자막 수집)           │
 │  └── collect-place-info.js  (Phase 1.6: 장소 정보 수집)      │
-│      └─ API Fallback (Naver/Kakao) 적용으로 정확도 99% 달성   │
+│      └─ Apollo Fallback & API Fallback 적용으로 정확도 99.9% 달성 │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -151,6 +151,7 @@ geminiCLI-youtuber-crawler/
 | **캐시 재사용** | 자막/장소 정보 날짜 무관 공유 |
 | **스마트 딜레이** | 1-2초 랜덤 (차단 방지) |
 | **API Fallback** | 크롤링 실패 시 Kakao/Naver API로 자동 전환 |
+| **Apollo Fallback** | 네이버 지도 DOM 추출 실패 시 내부 상태(Apollo State) 직접 조회 |
 | **Data Cleaning** | 상호명/주소 자동 정제 (정확도 향상) |
 
 ---

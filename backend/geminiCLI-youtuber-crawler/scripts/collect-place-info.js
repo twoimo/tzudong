@@ -120,7 +120,7 @@ const USER_AGENTS = [
 ];
 
 function getRandomUserAgent() {
-    // Force Desktop UA for Naver Map compatibility (.Y31Sf selector)
+    // 네이버 지도 호환성(.Y31Sf 선택자)을 위해 데스크탑 User-Agent 강제
     return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 }
 
@@ -271,16 +271,16 @@ async function collectFromNaverMap(page, mapUrl) {
             if (expandBtn) {
                 log('debug', '주소 펼치기 버튼 발견, 클릭 시도...');
 
-                // 1. Puppeteer Native Click
+                // 1. Puppeteer 네이티브 클릭
                 await expandBtn.click();
 
-                // 2. Wait for expansion (check for "지번" text availability)
+                // 2. 펼쳐질 때까지 대기 ("지번" 텍스트 확인)
                 await new Promise(resolve => setTimeout(resolve, 2000));
 
-                // 3. Verify if expanded (Simple text check)
+                // 3. 펼쳐졌는지 확인 (단순 텍스트 확인)
                 const bodyText = await page.evaluate(() => document.body.innerText);
                 if (!bodyText.includes('지번')) {
-                    log('debug', 'Click failed to reveal "지번", trying evaluate click...');
+                    log('debug', '클릭으로 "지번"이 드러나지 않음, evaluate 클릭 시도...');
                     await page.evaluate((sel) => {
                         const el = document.querySelector(sel);
                         if (el) el.click();
@@ -351,7 +351,7 @@ async function collectFromNaverMap(page, mapUrl) {
             // 펼쳐진 상세 주소 확인 (.Y31Sf 내의 정보)
             const detailContainer = document.querySelector('.Y31Sf');
             if (detailContainer) {
-                // Debugging: Log container text
+                // 디버깅: 컨테이너 텍스트 로깅
                 const containerText = detailContainer.innerText;
                 result.debug_container_text = containerText; // 반환 값에 포함하여 외부에서 확인 가능하게
 
@@ -360,7 +360,7 @@ async function collectFromNaverMap(page, mapUrl) {
                     const typeEl = row.querySelector('.TjXg1');
                     const type = typeEl?.textContent?.trim();
 
-                    // Debugging: Log exact row text
+                    // 디버깅: 정확한 행 텍스트 로깅
                     log('debug', `Row Text: "${row.innerText}", Type: "${type}"`);
 
                     // 텍스트 정제 (타입, 복사 버튼 제거)
@@ -386,7 +386,7 @@ async function collectFromNaverMap(page, mapUrl) {
                 // log('debug', '.Y31Sf container not found, trying global search for .nQ7Lh');
             }
 
-            // Global search for .nQ7Lh (in case container selector differs)
+            // .nQ7Lh 전역 검색 (컨테이너 선택자가 다를 경우 대비)
             if (!result.jibunAddress) {
                 const globalRows = document.querySelectorAll('.nQ7Lh');
                 // log('debug', `Global .nQ7Lh count: ${globalRows.length}`); // Cannot log in browser context
@@ -431,7 +431,7 @@ async function collectFromNaverMap(page, mapUrl) {
                 }
             }
 
-            // Fallback: Body Text Search (Ultimate Fallback)
+            // 대체 방법: 본문 텍스트 검색 (최후의 수단)
             if (!result.jibunAddress) {
                 const bodyText = document.body.innerText;
                 const jibunMatch = bodyText.match(/지번\s*([^\n]+?)\s*복사/);
@@ -449,7 +449,7 @@ async function collectFromNaverMap(page, mapUrl) {
                 }
             }
 
-            // Fallback: Apollo State (Hidden Data)
+            // 대체 방법: Apollo 상태 (숨겨진 데이터)
             if (!result.jibunAddress || !result.roadAddress) {
                 try {
                     // placeId는 evaluate 함수 외부에서 전달받아야 함.
@@ -461,7 +461,7 @@ async function collectFromNaverMap(page, mapUrl) {
                     if (apolloState) {
                         for (const key in apolloState) {
                             const obj = apolloState[key];
-                            // Match PlaceDetailBase:12345 or similar
+                            // PlaceDetailBase:12345 등과 일치하는 항목 확인
                             // obj.id가 문자열일 수 있으므로 String()으로 변환하여 비교
                             if (key.startsWith('PlaceDetailBase') || (obj.id && String(obj.id) === String(placeId))) {
                                 if (obj.address && !result.jibunAddress) {
@@ -477,10 +477,10 @@ async function collectFromNaverMap(page, mapUrl) {
                     // Ignore error
                 }
             }
-            // If still missing even after body text search, dump HTML
+            // 본문 텍스트 검색 후에도 없으면 HTML 덤프
             if (!result.jibunAddress) {
-                // Note: We cannot write file from browser context.
-                // We must return a flag or content to the Node.js context.
+                // 참고: 브라우저 컨텍스트에서는 파일을 쓸 수 없음.
+                // Node.js 컨텍스트로 플래그나 콘텐츠를 반환해야 함.
                 result.debug_html_dump = document.documentElement.outerHTML;
             }
 
@@ -536,9 +536,9 @@ async function collectFromNaverMap(page, mapUrl) {
             return result;
         }, placeId);
 
-        // Debug: Save HTML dump if jibun failed
+        // 디버깅: 지번 주소 실패 시 HTML 덤프 저장
         if (placeInfo.debug_html_dump) {
-            log('warning', 'Jibun address missing. Saving HTML dump to debug_naver_dump.html');
+            log('warning', '지번 주소 누락. debug_naver_dump.html에 HTML 덤프 저장');
             fs.writeFileSync('debug_naver_dump.html', placeInfo.debug_html_dump);
             delete placeInfo.debug_html_dump; // Remove from result object
         }
@@ -842,7 +842,7 @@ async function collectFromGoogleMap(page, mapUrl) {
                 const ogTitle = document.querySelector('meta[property="og:title"]');
                 if (ogTitle) {
                     const content = ogTitle.getAttribute('content');
-                    // Google Maps og:title format: "Place Name - Google Maps" or similar
+                    // 구글 지도 og:title 형식: "장소명 - Google 지도" 또는 유사 형식
                     if (content) result.name = content.replace(/ - Google 지도/g, '').replace(/ - Google Maps/g, '').trim();
                 }
             }
