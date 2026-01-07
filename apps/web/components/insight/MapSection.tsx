@@ -49,7 +49,7 @@ interface RestaurantMarker {
     // 통계 (사용자 제보)
     reportCount?: number;
     reportedAt?: string;
-    
+
     // 추가 메타 (실제 데이터)
     confidence?: string;
     addressSource?: string;
@@ -59,7 +59,7 @@ interface RestaurantMarker {
 function convertToMarker(restaurant: YoutuberRestaurant): RestaurantMarker | null {
     // 좌표가 없으면 null 반환
     if (!restaurant.lat || !restaurant.lng) return null;
-    
+
     return {
         id: restaurant.id,
         name: restaurant.name,
@@ -72,7 +72,7 @@ function convertToMarker(restaurant: YoutuberRestaurant): RestaurantMarker | nul
         youtuberChannel: restaurant.youtuber_channel || undefined,
         videoTitle: restaurant.youtube_meta?.title || undefined,
         phone: restaurant.phone || undefined,
-        description: restaurant.tzuyang_review || restaurant.reasoning_basis || undefined,
+        description: restaurant.youtuber_review || restaurant.tzuyang_review || undefined,
         youtubeUrl: restaurant.youtube_link || undefined,
         reportedAt: restaurant.created_at?.split('T')[0],
         confidence: restaurant.confidence,
@@ -113,7 +113,7 @@ const MOCK_USER_REPORTS: RestaurantMarker[] = [
 ];
 
 // [CONFIG] 목업 데이터 사용 여부 (실제 서비스 시 false로 변경)
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 
 // [COMPONENT] 맛집 리스트 아이템
 const RestaurantListItem = memo(({
@@ -128,38 +128,38 @@ const RestaurantListItem = memo(({
     <div
         onClick={onClick}
         className={cn(
-            "p-3 rounded-lg cursor-pointer transition-all duration-200 border",
+            "group w-full p-3 rounded-lg cursor-pointer transition-all duration-200 border",
             isSelected
                 ? "bg-primary/10 border-primary shadow-sm"
-                : "bg-card hover:bg-muted/50 border-transparent"
+                : "bg-card hover:bg-accent/50 border-border/50 hover:border-border"
         )}
     >
         <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                    <h4 className="font-medium text-sm truncate">{marker.name}</h4>
-                    <Badge variant="secondary" className="text-xs shrink-0">
+                <div className="flex items-center gap-2 w-full overflow-hidden">
+                    <h4 title={marker.name} className="font-medium text-sm flex-1 overflow-hidden text-ellipsis whitespace-nowrap group-hover:text-primary transition-colors">{marker.name}</h4>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 h-5 shrink-0 whitespace-nowrap font-normal bg-secondary/50 text-secondary-foreground">
                         {marker.category}
                     </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1 truncate">{marker.address}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate group-hover:text-foreground/80 transition-colors">{marker.address}</p>
                 {marker.source === 'user_report' ? (
                     <div className="flex items-center gap-2 mt-2 text-xs">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge variant="outline" className="text-[10px] px-1.5 h-5 bg-blue-50/50 text-blue-700 border-blue-200 font-normal">
                             <Users className="h-3 w-3 mr-1" />
                             {marker.reportCount}명 제보
                         </Badge>
                     </div>
                 ) : (
                     <div className="flex items-center gap-2 mt-2 text-xs">
-                        <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                        <Badge variant="outline" className="text-[10px] px-1.5 h-5 bg-red-50/50 text-red-700 border-red-200 font-normal">
                             <Youtube className="h-3 w-3 mr-1" />
                             {marker.youtuberName}
                         </Badge>
                     </div>
                 )}
             </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0" />
         </div>
     </div>
 ));
@@ -177,9 +177,12 @@ const DetailPanel = memo(({
 
     return (
         <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b">
-                <h3 className="font-semibold text-lg">{marker.name}</h3>
-                <Button variant="ghost" size="icon" onClick={onClose}>
+            <div className="flex items-start justify-between p-4 border-b gap-2">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <h3 title={marker.name} className="font-semibold text-lg truncate">{marker.name}</h3>
+                    <Badge variant="secondary" className="text-xs shrink-0">{marker.category}</Badge>
+                </div>
+                <Button variant="ghost" size="icon" className="shrink-0" onClick={onClose}>
                     <X className="h-4 w-4" />
                 </Button>
             </div>
@@ -192,7 +195,6 @@ const DetailPanel = memo(({
                             <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
                             <span className="text-sm">{marker.address}</span>
                         </div>
-                        <Badge variant="secondary">{marker.category}</Badge>
                     </div>
 
                     <Separator />
@@ -264,7 +266,7 @@ const DetailPanel = memo(({
                                     {marker.youtuberName} {marker.youtuberChannel && `(${marker.youtuberChannel})`}
                                 </p>
                             </div>
-                            
+
                             {/* 유튜버 리뷰/설명 */}
                             {marker.description && (
                                 <div className="space-y-2">
@@ -274,7 +276,7 @@ const DetailPanel = memo(({
                                     </div>
                                 </div>
                             )}
-                            
+
                             {marker.youtubeUrl && (
                                 <Button
                                     variant="outline"
@@ -286,12 +288,12 @@ const DetailPanel = memo(({
                                     유튜브에서 보기
                                 </Button>
                             )}
-                            
+
                             {/* 데이터 신뢰도 표시 */}
                             {marker.confidence && (
                                 <div className="flex items-center gap-2 text-xs text-muted-foreground pt-2 border-t">
-                                    <Badge 
-                                        variant="outline" 
+                                    <Badge
+                                        variant="outline"
                                         className={cn(
                                             "text-xs",
                                             marker.confidence === 'high' && "border-green-300 text-green-700",
@@ -537,12 +539,12 @@ const MapSectionComponent = () => {
     const [selectedYoutuber, setSelectedYoutuber] = useState<string>('all');
 
     // [DATA] 유튜버 맛집 데이터 가져오기
-    const { 
-        restaurants: youtuberRestaurants, 
-        isLoading, 
-        error, 
+    const {
+        restaurants: youtuberRestaurants,
+        isLoading,
+        error,
         refetch,
-        totalCount 
+        totalCount
     } = useYoutuberRestaurants({
         youtuberName: selectedYoutuber !== 'all' ? selectedYoutuber : undefined,
         onlyWithCoordinates: true
@@ -560,7 +562,7 @@ const MapSectionComponent = () => {
 
         // 목업 데이터 (USE_MOCK_DATA가 true일 때만)
         const mockMarkers = USE_MOCK_DATA ? MOCK_USER_REPORTS : [];
-        
+
         const allMarkers = [...mockMarkers, ...youtuberMarkers];
 
         let filtered = allMarkers;
@@ -599,37 +601,38 @@ const MapSectionComponent = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-full min-h-0">
             {/* 좌측: 맛집 목록 */}
             <Card className="lg:col-span-1 flex flex-col min-h-0">
-                <CardHeader className="pb-3">
+                <CardHeader className="p-4 space-y-3 shrink-0">
                     <div className="flex items-center justify-between">
-                        <CardTitle className="text-base">맛집 목록</CardTitle>
                         <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs">
-                                {filteredMarkers.length}개
+                            <CardTitle className="text-base font-semibold">맛집 목록</CardTitle>
+                            <Badge variant="secondary" className="px-1.5 h-5 text-xs font-normal">
+                                {filteredMarkers.length}
                             </Badge>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6"
-                                onClick={() => refetch()}
-                                disabled={isLoading}
-                            >
-                                <RefreshCw className={cn("h-3 w-3", isLoading && "animate-spin")} />
-                            </Button>
                         </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => refetch()}
+                            disabled={isLoading}
+                            title="새로고침"
+                        >
+                            <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
+                        </Button>
                     </div>
-                    <div className="space-y-2 mt-2">
+                    <div className="space-y-2">
                         <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
                             <Input
-                                placeholder="맛집, 유튜버 검색..."
+                                placeholder="맛집, 상호명, 지역 검색..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9 h-9 text-sm"
+                                className="pl-9 h-9 text-sm bg-background/50 focus:bg-background transition-colors"
                             />
                         </div>
                         <div className="flex gap-2">
                             <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
-                                <SelectTrigger className="h-9 text-xs flex-1">
+                                <SelectTrigger className="h-9 text-xs flex-1 bg-background/50 focus:bg-background transition-colors">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -640,7 +643,7 @@ const MapSectionComponent = () => {
                             </Select>
                             {youtubers.length > 0 && (
                                 <Select value={selectedYoutuber} onValueChange={setSelectedYoutuber}>
-                                    <SelectTrigger className="h-9 text-xs flex-1">
+                                    <SelectTrigger className="h-9 text-xs flex-1 bg-background/50 focus:bg-background transition-colors">
                                         <SelectValue placeholder="유튜버 선택" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -657,17 +660,13 @@ const MapSectionComponent = () => {
                     </div>
                 </CardHeader>
                 <CardContent className="flex-1 p-0 overflow-hidden">
-                    <ScrollArea className="h-full px-4 pb-4">
-                        <div className="space-y-2">
+                    <ScrollArea className="h-full w-full [&_[data-radix-scroll-area-viewport]>div]:!block">
+                        <div className="p-4 space-y-2 max-w-full">
                             {isLoading ? (
-                                // 로딩 스켈레톤
-                                Array.from({ length: 5 }).map((_, i) => (
-                                    <div key={i} className="p-3 rounded-lg border">
-                                        <Skeleton className="h-4 w-3/4 mb-2" />
-                                        <Skeleton className="h-3 w-1/2 mb-2" />
-                                        <Skeleton className="h-5 w-20" />
-                                    </div>
-                                ))
+                                // 로딩 상태
+                                <div className="text-center py-8 text-muted-foreground text-sm">
+                                    맛집 목록을 불러오는 중...
+                                </div>
                             ) : error ? (
                                 <div className="text-center py-8 text-destructive text-sm">
                                     데이터를 불러올 수 없습니다

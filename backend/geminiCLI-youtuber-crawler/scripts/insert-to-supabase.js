@@ -1,6 +1,6 @@
 /**
  * 유튜버 맛집 데이터를 Supabase에 저장
- * youtuber_restaurant 테이블에 저장
+ * restaurant_youtuber 테이블에 저장
  */
 
 import fs from 'fs';
@@ -214,7 +214,7 @@ async function insertToSupabase(restaurants) {
     if (fetchError) {
         // 테이블이 없으면 생성 필요
         if (fetchError.message.includes('does not exist')) {
-            log('warning', 'youtuber_restaurant 테이블이 없습니다. 마이그레이션을 실행하세요.');
+            log('warning', 'restaurant_youtuber 테이블이 없습니다. 마이그레이션을 실행하세요.');
             return stats;
         }
         log('error', `기존 데이터 조회 실패: ${fetchError.message}`);

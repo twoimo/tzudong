@@ -176,13 +176,25 @@ SectionSkeleton.displayName = 'SectionSkeleton';
 
 // [MAIN] 인사이트 클라이언트 컴포넌트
 const InsightClientComponent = () => {
-    const { isAdmin } = useAuth();
+    const { isAdmin, isLoading } = useAuth();
     const [activeTab, setActiveTab] = useState('chat');
 
     // [OPTIMIZATION] 탭 변경 핸들러 메모이제이션
     const handleTabChange = useCallback((value: string) => {
         setActiveTab(value);
     }, []);
+
+    // 인증 로딩 중일 때 표시
+    if (isLoading) {
+        return (
+            <div className="flex flex-col h-full bg-background items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-10 w-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
+                    <p className="text-sm text-muted-foreground">권한 확인 중...</p>
+                </div>
+            </div>
+        );
+    }
 
     // 관리자가 아닌 경우 접근 거부
     if (!isAdmin) {
