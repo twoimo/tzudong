@@ -140,12 +140,15 @@ function transformRestaurant(restaurant, video) {
         unique_id: generateUniqueId(restaurant),
 
         // 2. 맛집 기본 정보
+        // 2. 맛집 기본 정보
         name: restaurant.name,
-        categories: normalizeCategory(restaurant.category),
+        categories: restaurant.categories && restaurant.categories.length > 0 
+            ? restaurant.categories 
+            : normalizeCategory(restaurant.category),
         phone: restaurant.phone || null,
 
         // 3. 주소 정보
-        origin_address: restaurant.address || null,
+        origin_address: restaurant.origin_address || restaurant.address || null,
         road_address: restaurant.road_address || restaurant.geocoded_address || null,
         jibun_address: restaurant.jibun_address || null,
 
