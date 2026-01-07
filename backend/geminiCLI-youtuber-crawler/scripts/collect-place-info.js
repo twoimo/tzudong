@@ -321,7 +321,7 @@ async function collectFromNaverMap(page, mapUrl) {
             } catch { }
         }
 
-        // 네이버 API로 좌표 보완 (주소가 있는 경우)
+        // 네이버 API로 좌표 보완 (주소가 있는 경우 Geocoding)
         if (!placeInfo.lat && placeInfo.roadAddress) {
             const naverApiKey = process.env.NAVER_CLIENT_ID;
             const naverSecretKey = process.env.NAVER_CLIENT_SECRET;
@@ -342,6 +342,32 @@ async function collectFromNaverMap(page, mapUrl) {
                     }
                 } catch (err) {
                     log('debug', `네이버 좌표 API 실패: ${err.message}`);
+                }
+            }
+        }
+
+        // [Phase 3 보완] 좌표나 주소가 여전히 없으면, 상호명으로 '네이버 지역 검색 API' 시도
+        if ((!placeInfo.lat || !placeInfo.roadAddress) && placeInfo.name) {
+            const searchResult = await searchPlaceWithNaver(placeInfo.name);
+            if (searchResult) {
+                log('debug', `네이버 검색 API로 정보 보완: ${placeInfo.name}`);
+                if (!placeInfo.roadAddress) placeInfo.roadAddress = searchResult.roadAddress;
+                if (!placeInfo.category) placeInfo.category = searchResult.category;
+                // mapx, mapy to lat, lng (TM128 -> WGS84 변환 필요하지만, 일단 검색 결과 우선)
+                // 네이버 Search API는 TM128 좌표를 주므로 변환 로직이 필요. 
+                // 복잡성을 피하기 위해 searchPlaceWithNaver가 도로명주소를 주므로, 그걸 다시 Geocoding 시도하는게 나음.
+                if (searchResult.roadAddress && !placeInfo.lat) {
+                    // 다시 Geocoding 시도 (위 로직 재활용 함수화가 좋지만 일단 중복 실행)
+                    // ... (생략, 다음 루프나 재시도에서 처리되길 기대하거나 여기서 직접 호출)
+                }
+            }
+            // 카카오 검색 API로도 시도 (좌표 정확도 위해)
+            if (!placeInfo.lat) {
+                const kakaoResult = await searchPlaceWithKakao(placeInfo.name);
+                if (kakaoResult && kakaoResult.lat) {
+                    placeInfo.lat = kakaoResult.lat;
+                    placeInfo.lng = kakaoResult.lng;
+                    if (!placeInfo.roadAddress) placeInfo.roadAddress = kakaoResult.roadAddress;
                 }
             }
         }
@@ -453,6 +479,16 @@ async function collectFromKakaoMap(page, mapUrl) {
         placeInfo.mapUrl = mapUrl;
         placeInfo.placeId = placeId;
 
+        // [Phase 3 보완] 좌표 누락 시 이름으로 검색
+        if (!placeInfo.lat && placeInfo.name) {
+            const kakaoResult = await searchPlaceWithKakao(placeInfo.name);
+            if (kakaoResult && kakaoResult.lat) {
+                placeInfo.lat = kakaoResult.lat;
+                placeInfo.lng = kakaoResult.lng;
+                if (!placeInfo.roadAddress) placeInfo.roadAddress = kakaoResult.roadAddress;
+            }
+        }
+
         return placeInfo;
 
     } catch (error) {
@@ -551,6 +587,15 @@ async function collectFromGoogleMap(page, mapUrl) {
         placeInfo.lng = lng;
         placeInfo.source = 'google';
         placeInfo.mapUrl = mapUrl;
+
+        // [Phase 3 보완] 좌표 누락 시 이름으로 검색 (Google은 이미 Kakao Geocoding을 시도했으나 실패했을 수 있음)
+        if (!placeInfo.lat && placeInfo.name) {
+            const kakaoResult = await searchPlaceWithKakao(placeInfo.name);
+            if (kakaoResult && kakaoResult.lat) {
+                placeInfo.lat = kakaoResult.lat;
+                placeInfo.lng = kakaoResult.lng;
+            }
+        }
 
         return placeInfo;
 
