@@ -1,381 +1,188 @@
-# 📺 유튜버 맛집 크롤러 (정육왕)
+# 📺 유튜버 맛집 크롤러
 
-유튜버 채널에서 맛집 정보를 크롤링하여 데이터베이스에 저장하는 시스템입니다.
+유튜버 채널에서 맛집 정보를 자동 수집하여 데이터베이스에 저장하는 시스템입니다.
 
-## 🎯 대상 유튜버
+## 🎯 대상 채널
 
 - **정육왕 MeatCreator**: https://www.youtube.com/@meatcreator
 
-## 📋 기능
+---
 
-1. **영상 목록 수집**: YouTube Data API로 채널의 모든 영상 수집
-2. **지도 URL 추출**: 영상 description에서 구글/네이버/카카오 지도 URL 추출
-3. **자막 수집 (Phase 1)**: Puppeteer 병렬 3개로 maestra.ai / tubetranscript.com에서 자막 수집
-4. **Gemini AI 분석 (Phase 2)**: 수집된 자막으로 맛집 정보 추출 (병렬 10개)
-   - **지도 URL이 없어도** 자막/제목/설명에서 맛집 추출
-   - 웹 검색으로 정확한 상호명/주소 확인
-5. **지오코딩**: 지도 URL 형태에 맞는 API로 좌표 변환
-6. **DB 저장**: Supabase에 저장
+## 📋 주요 기능
 
-### 🗺️ 지도 URL 형태별 좌표 추출
+| 기능 | 설명 |
+|------|------|
+| 영상 수집 | YouTube Data API로 채널 영상 목록 수집 |
+| 지도 URL 분석 | 네이버/카카오/구글 맵 URL에서 장소 정보 직접 추출 |
+| 자막 수집 | Puppeteer로 외부 서비스에서 자막 수집 |
+| AI 분석 | Gemini로 맛집 정보 및 유튜버 리뷰 추출 |
+| 좌표 보완 | 카카오 API로 지오코딩 |
+| DB 저장 | Supabase에 저장 |
 
-| 지도 형태       | 좌표 추출 방법                                |
-| --------------- | --------------------------------------------- |
-| **구글 지도**   | URL에서 `@lat,lng` 패턴 직접 추출             |
-| **네이버 지도** | 카카오 키워드 검색 API (네이버 공개 API 없음) |
-| **카카오 지도** | placeId로 카카오 API 조회                     |
+---
 
-좌표 추출 우선순위:
-1. 지도 URL에서 직접 추출 (구글)
-2. 카카오 주소 검색 API
-3. 카카오 키워드 검색 API
+## 🚀 실행 방법
+
+### 전체 파이프라인 (권장)
+
+```bash
+bun run full        # 전체 파이프라인 실행
+DEBUG=true bun run full  # 상세 로그 포함
+```
+
+### 개별 단계 실행
+
+```bash
+bun run crawl       # 1. 채널 영상 목록 수집
+bun run transcripts # 1.5. 자막 수집
+bun run extract     # 2. AI 분석
+bun run geocode     # 3. 좌표 보완
+bun run insert      # 4. DB 저장
+```
+
+### 특정 단계부터 시작
+
+```bash
+node scripts/pipeline.js --start-from=2    # AI 분석부터
+node scripts/pipeline.js --start-from=1.5  # 자막 수집부터
+```
+
+---
+
+## 📦 파이프라인 구조
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 1: 채널 크롤링                                         │
+│  └── crawl-channel.js                                       │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 1.5 + 1.6: 병렬 실행 ⚡                                │
+│  ├── collect-transcripts.js (자막 수집)                      │
+│  └── collect-place-info.js (맵 URL에서 장소 정보 수집)         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 2: AI 분석                                            │
+│  └── extract-addresses.js (장소 데이터 유무에 따라 다른 프롬프트)│
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 3: 좌표 보완                                          │
+│  └── enrich-coordinates.js                                   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 4: DB 저장                                            │
+│  └── insert-to-supabase.js                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ## 🔧 환경 변수
 
-`.env` 파일에 다음 환경 변수를 설정하세요:
+`.env` 파일에 설정:
 
 ```bash
-# YouTube API
-YOUTUBE_API_KEY=your_youtube_api_key
+# YouTube
+YOUTUBE_API_KEY=your_key
 
-# 카카오 지오코딩
-KAKAO_REST_API_KEY=your_kakao_rest_api_key
+# 카카오 (지오코딩 + 장소 검색)
+KAKAO_REST_API_KEY=your_key
+
+# 네이버 (장소 검색, 선택)
+NAVER_CLIENT_ID=your_id
+NAVER_CLIENT_SECRET=your_secret
 
 # Supabase
-SUPABASE_URL=your_supabase_url
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+SUPABASE_URL=your_url
+SUPABASE_SERVICE_ROLE_KEY=your_key
 ```
 
-> ⚠️ **참고**: Gemini CLI는 OAuth 인증을 사용하므로 `GEMINI_API_KEY`가 필요하지 않습니다.
+> ⚠️ Gemini CLI는 OAuth 인증 사용 (`GEMINI_API_KEY` 불필요)
 
-## 📦 설치
-
-```bash
-cd backend/geminiCLI-youtuber-crawler
-npm install
-```
-
-## 🚀 실행
-
-### 전체 파이프라인 (권장)
-```bash
-bun run full  # oauth → crawl → transcripts → extract → geocode → insert 순차 실행
-```
-
-### 개별 단계 (2-Phase 구조)
-```bash
-# 1. 채널 영상 목록 수집
-bun run crawl
-
-# 2. Phase 1: 자막 수집 (Puppeteer 병렬 3개)
-bun run transcripts
-
-# 3. Phase 2: Gemini 분석 (병렬 10개)
-bun run extract
-
-# 4. 좌표 보완 (지오코딩)
-bun run geocode
-
-# 5. DB 저장
-bun run insert
-
-# 6. 데이터 품질 검사
-bun run quality
-
-# OAuth 토큰 수동 갱신
-bun run oauth
-```
+---
 
 ## 📁 디렉토리 구조
 
 ```
 geminiCLI-youtuber-crawler/
-├── .gemini/                              # Gemini CLI 설정
-│   ├── oauth_creds.json                  # OAuth 토큰 (자동 갱신)
-│   ├── settings.json                     # CLI 설정 (모델, previewFeatures)
-│   ├── google_accounts.json              # 로그인된 Google 계정
-│   ├── state.json                        # CLI 상태
-│   └── installation_id                   # 설치 ID
-├── data/
-│   ├── .rate_limit_stats.json            # API Rate Limit 통계
-│   ├── transcripts.jsonl                 # 전체 자막 데이터
-│   └── yy-mm-dd/                         # 날짜별 폴더
-│       ├── meatcreator_videos.json       # 영상 목록
-│       ├── meatcreator_videos_all.jsonl  # 전체 영상 데이터
-│       └── meatcreator_videos_with_map.jsonl # 지도 URL 포함 영상
-├── prompts/
-│   └── extract_restaurant.txt            # Gemini 프롬프트 (web_fetch/검색 지침)
 ├── scripts/
-│   ├── crawl-channel.js                  # 채널 영상 목록 크롤링
-│   ├── collect-transcripts.js            # Phase 1: 자막 수집 (Puppeteer)
-│   ├── extract-addresses.js              # Phase 2: Gemini 분석 (자막 로드)
-│   ├── enrich-coordinates.js             # 좌표 보완 (카카오 지오코딩)
-│   ├── insert-to-supabase.js             # Supabase DB 저장
-│   ├── check-quality.js                  # 데이터 품질 검사 리포트
-│   ├── gemini-oauth-manager.js           # OAuth 토큰 관리
-│   └── pipeline.js                       # 전체 파이프라인 실행
-├── sql/
-│   └── add_columns.sql                   # Supabase 테이블 컬럼 추가 SQL
-├── .env                                  # 환경 변수 설정
-├── package.json
-├── bun.lock                              # Bun 패키지 락 파일
-└── README.md
+│   ├── pipeline.js              # 전체 파이프라인 오케스트레이터
+│   ├── crawl-channel.js         # 채널 영상 수집
+│   ├── collect-transcripts.js   # 자막 수집 (Puppeteer)
+│   ├── collect-place-info.js    # 맵 URL에서 장소 정보 수집
+│   ├── extract-addresses.js     # Gemini AI 분석
+│   ├── enrich-coordinates.js    # 좌표 보완
+│   └── insert-to-supabase.js    # DB 저장
+├── prompts/
+│   ├── extract_with_place_data.txt     # 장소 데이터 있을 때
+│   └── extract_without_place_data.txt  # 장소 데이터 없을 때
+├── data/
+│   ├── transcripts.jsonl        # 자막 캐시 (공유)
+│   ├── place_info.jsonl         # 장소 정보 캐시 (공유)
+│   └── yy-mm-dd/                # 날짜별 데이터
+├── .env
+└── package.json
 ```
 
-## 🔐 OAuth 인증
+---
 
-### 로컬 환경
+## ⚡ 성능 최적화
 
-1. Gemini CLI 설치:
-   ```bash
-   npm install -g @google/gemini-cli
-   ```
+| 항목 | 설명 |
+|------|------|
+| **병렬 실행** | 자막 + 장소 정보 동시 수집 |
+| **동시성 3개** | Puppeteer 로컬 병렬 3개 |
+| **캐시 재사용** | 자막/장소 정보 날짜 무관 공유 |
+| **스마트 딜레이** | 1-3초 랜덤 (차단 방지) |
 
-2. 로그인:
-   ```bash
-   gemini
-   # 브라우저에서 Google 계정 로그인
-   ```
+---
 
-3. 설정 확인:
-   - `~/.gemini/oauth_creds.json` 생성됨
-   - `~/.gemini/settings.json`에서 `previewFeatures: true` 설정
-
-### GitHub Actions
-
-GitHub Actions에서는 자동으로 OAuth 토큰을 관리합니다:
-
-1. **자동 토큰 갱신**: Gemini CLI가 access_token 만료 시 자동으로 refresh_token으로 갱신
-2. **설정 복사**: `.gemini/` 폴더의 파일들을 `~/.gemini/`로 복사
-3. **커밋**: 갱신된 `oauth_creds.json`을 자동 커밋
-
-#### 토큰 수명
-
-| 토큰 종류 | 수명 | 비고 |
-| ---- | ---- | ---- |
-| `access_token` | 1시간 | CLI가 자동 갱신 |
-| `refresh_token` | 6개월 미사용 시 | 매일 실행으로 유지 |
-
-> ⚠️ **주의**: OAuth consent screen이 "Testing" 상태면 refresh_token이 7일 만료됩니다. 프로덕션으로 게시하세요.
-
-### 사용 모델
-
-| 환경 | 모델 | 비고 |
-| ---- | ---- | ---- |
-| GitHub Actions | `gemini-3-pro-preview` | 안정성 우선 |
-| 로컬 | `gemini-3-pro-preview` → `gemini-3-flash-preview` | Fallback 지원 |
-
-> 쿼타 소진 시 자동으로 다음 모델로 전환. 사용 가능한 모델만 미리 필터링.
-
-### Gemini CLI 도구
-
-| 도구 | 용도 |
-| ---- | ---- |
-| `web_fetch` | 지도 URL에서 직접 상호명/주소 추출 |
-| `google_web_search` | 웹 검색으로 정보 보완 |
-
-## ⚡ Rate Limiting & 병렬 처리
-
-### Google AI Pro 구독자 기준
-
-| 항목 | 제한 | 안전 마진 적용 |
-| ---- | ---- | -------------- |
-| RPM  | 120  | 60             |
-| RPD  | 1500 | 1000           |
-
-### 병렬 처리 (2-Phase 분리)
-
-| Phase | 환경 | 동시 처리 수 | 비고 |
-| ----- | ---- | ------------ | ---- |
-| Phase 1 (자막) | 로컬 | 3개 | Puppeteer 브라우저 재사용 |
-| Phase 1 (자막) | GitHub Actions | 1개 | 리소스 제한 |
-| Phase 2 (Gemini) | 공통 | 10개 | 자막 수집 분리 후 증가 |
-
-- **RPM 자동 조절**: 분당 60개 초과 시 대기
-- **RPD 초과 시**: 자동 종료 + 데이터 저장
-
-### 쿼타 리셋 대기
-- **30분 이하**: 즉시 대기 후 재시도
-- **1시간 이내**: 모든 모델 소진 시 대기
-- **1시간 초과**: 프로세스 종료
-
-## 🚀 성능 최적화
-
-| 영역 | 최적화 내용 | 효과 |
-| ---- | ----------- | ---- |
-| File I/O | 50개마다 저장 | **90% 감소** |
-| Rate Stats | 10개마다 저장 | **90% 감소** |
-| Puppeteer | 모듈 1회 캐싱 | 오버헤드 제거 |
-| 중복 방지 | Map 기반 저장 | 데이터 무결성 |
-| 로그 출력 | 중복 필터링 + debug 숨김 | 가독성 향상 |
-- **⚡ Async Concurrency**: `spawnSync`를 비동기 `spawn`으로 교체하여 진정한 병렬 처리 구현 (3분/5분 타임아웃 적용)
-
-## 🎬 자막 수집
-
-Puppeteer를 사용하여 외부 서비스에서 자막을 수집합니다:
-
-1. **1차**: [maestra.ai](https://maestra.ai) - YouTube 자막 추출
-2. **2차**: [tubetranscript.com](https://tubetranscript.com) - Fallback
-
-> `youtube-transcript` 패키지는 대부분의 영상에서 "Transcript is disabled" 오류가 발생하여 제거했습니다.
-
-## 📊 데이터 흐름
-
-```
-YouTube Data API
-    │
-    ▼
-[영상 목록 수집] ─────────────────────┐
-    │                                 │
-    ▼                                 │
-[Description에서 지도 URL 추출]       │
-    │                                 │
-    ▼                                 │
-┌─────────────────────────────────────┘
-│   Phase 1: 자막 수집 (Puppeteer 병렬 3개)
-│   └── transcripts.jsonl 저장
-│
-└─► Phase 2: Gemini AI 분석 (병렬 10개)
-        │
-        ├── 맛집 이름
-        ├── 주소
-        ├── 카테고리
-        ├── 유튜버 리뷰
-        └── 신뢰도
-        │
-        ▼
-    [카카오 API 지오코딩]
-        │
-        ├── 위도 (lat)
-        └── 경도 (lng)
-        │
-        ▼
-    [Supabase 저장]
-```
-
-### ⚖️ 교차 검증 (Cross-Validation)
-
-데이터 정확도를 위해 **Naver > Kakao > Gemini** 순으로 신뢰도를 부여하여 교차 검증합니다.
-
-1. **상호명**: Naver > Kakao > Gemini
-2. **주소/좌표**: Naver(TM128→WGS84 변환) > Kakao > Gemini
-3. **전화번호**: Kakao > Naver > Gemini (다수결 원칙 적용)
-4. **카테고리**: Naver > Kakao > Gemini
-
-#### 최종 데이터 필드 (Supabase)
-- **기본**: name, address, phone, category, lat, lng
-- **영업정보**: business_hours, closed_days, is_closed, parking
-- **메뉴/가격**: signature_menu, price_range
-- **검증메타**: reasoning_basis, geocoding_source, map_url
-
-## 🔗 GitHub Actions 워크플로우
-
-### 파일 구조
-
-```
-.github/workflows/
-└── daily-extract.yml    # 매일 KST 오전 6시 자동 실행
-```
-
-### 필요한 GitHub Secrets
-
-| Secret | 설명 |
-| ------ | ---- |
-| `KAKAO_REST_API_KEY` | 카카오 지도 API |
-| `SUPABASE_URL` | Supabase URL |
-| `SUPABASE_ANON_KEY` | Supabase 키 |
-
-### 최초 설정
-
-1. 로컬에서 `gemini` 명령어로 로그인
-2. `.gemini/oauth_creds.json` 커밋
-3. 이후 GitHub Actions가 자동으로 토큰 갱신 및 커밋
-
-## ⚡ 실행 모드
-
-| 모드  | 설명             | 중간 커밋 | 권장 상황   |
-| ----- | ---------------- | --------- | ----------- |
-| **1** | 영상 목록 수집만 | ✅         | 테스트용    |
-| **2** | 맛집 추출만      | ✅         | 이어서 처리 |
-| **3** | 좌표 보완만      | ✅         | 좌표만 필요 |
-| **4** | DB 저장만        | ❌         | 최종 단계만 |
-| **5** | 전체 한번에      | ❌         | ⭐ 시간 절약 |
-
-> **💡 349분 제한 상황**: Mode 5 권장 (중간 커밋 없어서 가장 빠름)
-
-## 🍞 Bun 런타임
-
-npm/Node.js 대신 **Bun**을 사용하여 3~5배 빠른 실행:
+## 🔐 Gemini OAuth 설정
 
 ```bash
-# 패키지 설치
-bun install
+# 1. CLI 설치
+npm install -g @google/gemini-cli
 
-# 전체 파이프라인
-bun run full
+# 2. 로그인
+gemini
+# 브라우저에서 Google 계정 로그인
 
-# 개별 실행
-bun run crawl    # 영상 수집
-bun run extract  # 맛집 추출
-bun run geocode  # 좌표 보완
-bun run insert   # DB 저장
+# 3. 확인
+cat ~/.gemini/oauth_creds.json
 ```
 
-## 🔄 이어서 처리 기능
+---
 
-### 중간 저장 및 커밋
+## 📊 출력 데이터 필드
 
-GitHub Actions에서 각 Phase 완료 후 자동 커밋되어 **중단 시 이어서 처리** 가능:
+| 필드 | 설명 |
+|------|------|
+| name | 맛집 이름 |
+| address | 주소 |
+| phone | 전화번호 |
+| category | 카테고리 |
+| lat, lng | 좌표 |
+| youtuber_review | 유튜버 리뷰 요약 |
+| video_type | 단일맛집/맛집투어/리스트 |
 
-| Phase | 설명           | 커밋 파일                       |
-| ----- | -------------- | ------------------------------- |
-| 1     | 영상 목록 수집 | `meatcreator_videos.json`       |
-| 2     | 맛집 정보 추출 | `meatcreator_restaurants.jsonl` |
-| 3     | 좌표 보완      | `meatcreator_restaurants.jsonl` |
-| 4     | DB 저장        | 없음 (Supabase에 직접 저장)     |
+---
 
-### 이미 처리된 영상 스킵
+## 🛠️ npm 스크립트
 
-`extract-addresses.js`에서 **이미 처리된 영상 자동 스킵**:
-
-```
-📊 기존 처리된 영상: 150개 (이어서 처리)
-[151/457] 처리 중: ...
-```
-
-### Description 변경 감지
-
-영상의 description이 변경된 경우 **자동 재처리**:
-
-```
-[100/457] 📝 description 변경 감지 - 재처리: ...
-```
-
-변경 감지 기준:
-- Description 앞 100자
-- Description 길이
-- 지도 URL 포함 여부
-
-### 수동 재처리
-
-특정 단계부터 다시 시작하려면:
-
-```bash
-# GitHub Actions에서
-- start_from: "2"  # 추출부터 시작 (영상 목록 유지)
-- start_from: "3"  # 좌표 보완부터 시작
-- start_from: "4"  # DB 저장만 실행
-```
-
-## 🌐 웹 검색 (YOLO Mode)
-
-Gemini CLI의 `--yolo` 옵션을 통해 **웹 검색 자동 활성화**:
-
-1. Gemini가 맛집 정보 분석 시 Google 웹 검색 수행
-2. 정확한 상호명/주소/전화번호 확인
-3. 지도 URL 정보(좌표, placeId 등)를 활용한 검색
-
-### YOLO Mode 설정
-
-- `settings.json`: `"tools": { "autoApprove": true }`
-- CLI 호출: `gemini ... --yolo`
+| 명령어 | 설명 |
+|--------|------|
+| `bun run full` | 전체 파이프라인 |
+| `bun run crawl` | 영상 수집 |
+| `bun run transcripts` | 자막 수집 |
+| `bun run extract` | AI 분석 |
+| `bun run geocode` | 좌표 보완 |
+| `bun run insert` | DB 저장 |
+| `bun run quality` | 품질 검사 |
