@@ -1608,9 +1608,12 @@ async function processVideo(video) {
                 }
 
                 // 5-2. 카테고리 유효성 검증
-                const categoryForValidation = restaurant.category || null;
-                if (categoryForValidation && !isValidCategory(categoryForValidation)) {
-                    augmentationNotes.push(`[경고] 비표준 카테고리: ${categoryForValidation}`);
+                // 5-2. 카테고리 유효성 검증
+                const categoriesForValidation = restaurant.categories || (restaurant.category ? [restaurant.category] : []);
+                for (const cat of categoriesForValidation) {
+                    if (!isValidCategory(cat)) {
+                        augmentationNotes.push(`[경고] 비표준 카테고리: ${cat}`);
+                    }
                 }
 
                 // 5-3. 좌표 거리 기반 검증 (geoInfo vs naverInfo)
@@ -1833,7 +1836,9 @@ async function processVideo(video) {
                     road_address: finalRoadAddress,
                     jibun_address: finalJibunAddress,
                     phone: finalPhone,
-                    category: finalCategory,
+                    category: finalCategory, // Keep for backward compatibility if needed, or derived from categories[0]
+                    categories: restaurant.categories || (finalCategory ? [finalCategory] : []),
+                    origin_address: restaurant.origin_address || null,
                     geocoding_source: coordSource,
                     reasoning_basis: finalReasoning || null,
                     map_type: video.mapUrls?.[0]?.type || null,

@@ -168,7 +168,9 @@ async function main() {
             if (r.phone) stats.fields.phone.filled++; else stats.fields.phone.empty++;
             if (r.address) stats.fields.address.filled++; else stats.fields.address.empty++;
             if (r.lat && r.lng) stats.fields.coords.filled++; else stats.fields.coords.empty++;
-            if (r.category) stats.fields.category.filled++; else stats.fields.category.empty++;
+            if (r.categories && r.categories.length > 0) stats.fields.category.filled++; 
+            else if (r.category) stats.fields.category.filled++; 
+            else stats.fields.category.empty++;
             if (r.business_hours) stats.fields.business_hours.filled++; else stats.fields.business_hours.empty++;
             if (r.closed_days) stats.fields.closed_days.filled++; else stats.fields.closed_days.empty++;
             if (r.parking) stats.fields.parking.filled++; else stats.fields.parking.empty++;
