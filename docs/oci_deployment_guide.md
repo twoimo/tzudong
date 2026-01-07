@@ -1,173 +1,285 @@
-# 🚀 OCI 서버 배포 및 자동화 가이드 (Gemini CLI 크롤러)
+# 🚀 OCI 서버 배포 가이드
 
-이 문서는 OCI(오라클 클라우드), AWS 등 리눅스 헤드리스 서버(화면 없는 서버)에 `geminicli-youtuber-crawler`를 배포하고, **매일 오전 6시에 자동으로 실행**하는 방법을 설명합니다.
+Oracle Cloud Infrastructure(OCI) Ampere A1 인스턴스에 유튜버 맛집 크롤러를 배포하는 가이드입니다.
 
-**✅ 핵심:** 이 가이드의 자동화 설정(Cron)은 **서버가 재부팅되어도 계속 유지**되므로 별도의 복구 작업이 필요 없습니다.
+---
 
-## 1. 필수 준비 사항 (초기 세팅)
+## 📋 서버 사양
 
-SSH로 서버에 접속한 상태에서 진행합니다.
+| 항목 | 권장 사양 |
+|------|----------|
+| CPU | 2 OCPU (ARM64) |
+| RAM | 12GB |
+| Storage | 50GB |
+| OS | Ubuntu 22.04 |
+
+> **Free Tier**: OCI Ampere A1은 Always Free로 4 OCPU / 24GB RAM까지 무료
+
+---
+
+## 1. 초기 환경 설정
 
 ```bash
-# 1. 시스템 업데이트
+# 시스템 업데이트
 sudo apt update && sudo apt upgrade -y
 
-# 2. Git 설치
-sudo apt install git -y
+# 필수 패키지 설치
+sudo apt install -y git curl unzip
 
-# 3. Bun 설치 (JavaScript 런타임)
+# Node.js 설치 (Gemini CLI용)
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt install -y nodejs
+
+# Bun 설치 (JavaScript 런타임)
 curl -fsSL https://bun.sh/install | bash
-# (설치 후 터미널 안내에 따라 프로필 로드)
 source ~/.bashrc
 
-# 4. Gemini CLI 전역 설치
+# Gemini CLI 설치
 npm install -g @google/gemini-cli
+
+# Chromium 설치 (Puppeteer용)
+sudo apt install -y chromium-browser
+
 # 설치 확인
+bun --version
 gemini --version
+chromium-browser --version
 ```
+
+---
 
 ## 2. 프로젝트 설치
 
 ```bash
-# 1. 저장소 클론
-git clone <레포지토리_주소_입력>
-cd geminicli-youtuber-crawler
+# 프로젝트 디렉토리로 이동
+cd ~/tzudong/backend/geminiCLI-youtuber-crawler
 
-# 2. 의존성 패키지 설치
+# 의존성 설치
 bun install
 ```
 
-## 3. 🔑 인증 (가장 중요!)
+---
 
-서버에는 브라우저가 없으므로 로컬 PC의 인증 파일을 서버로 옮겨야 합니다.
+## 3. 🔑 Gemini OAuth 인증 설정
 
-1.  **서버**: 토큰 저장 폴더 생성
-    ```bash
-    mkdir -p ~/.gemini
-    ```
+서버에는 브라우저가 없으므로 **로컬 PC의 인증 파일을 서버로 복사**합니다.
 
-2.  **로컬 PC (윈도우)**:
-    `oauth_creds.json` 파일을 서버로 전송합니다.
-    *   **내 컴퓨터**: `C:\Users\<사용자명>\.gemini\oauth_creds.json`
-    *   **서버**: `/home/ubuntu/.gemini/oauth_creds.json` (사용자명 주의: ubuntu 또는 opc)
+### 3.1 로컬 PC에서 인증
 
-    > **팁**: WinSCP 또는 `scp` 명령어 사용.
+```bash
+# 로컬 PC에서 실행
+gemini
+# 브라우저에서 Google 계정 로그인
+```
+
+### 3.2 인증 파일 서버로 전송
+
+**Linux/Mac:**
+```bash
+scp ~/.gemini/oauth_creds.json ubuntu@<서버IP>:~/.gemini/
+```
+
+**Windows (PowerShell):**
+```powershell
+scp $env:USERPROFILE\.gemini\oauth_creds.json ubuntu@<서버IP>:~/.gemini/
+```
+
+### 3.3 서버에서 확인
+
+```bash
+# 토큰 파일 확인
+cat ~/.gemini/oauth_creds.json
+
+# 프로젝트 디렉토리에도 심볼릭 링크 생성
+ln -sf ~/.gemini ~/tzudong/backend/geminiCLI-youtuber-crawler/.gemini
+```
+
+---
 
 ## 4. 환경 변수 설정
 
 ```bash
-# .env 파일 생성
+cd ~/tzudong/backend/geminiCLI-youtuber-crawler
 nano .env
-
-# 내용 붙여넣기 (로컬 .env 내용 복사)
-# NAVER_CLIENT_ID=...
-# KAKAO_REST_API_KEY=...
 ```
 
-## 5. 🚀 수동 실행 (테스트)
+필수 환경 변수:
+```bash
+# YouTube API
+YOUTUBE_API_KEY=your_api_key
 
-자동화 설정 전, 수동으로 잘 돌아가는지 확인합니다.
+# Kakao (지오코딩)
+KAKAO_REST_API_KEY=your_api_key
+
+# Naver (선택)
+NAVER_CLIENT_ID=your_client_id
+NAVER_CLIENT_SECRET=your_client_secret
+
+# Supabase
+SUPABASE_URL=your_supabase_url
+SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+
+# Puppeteer (ARM64용)
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+```
+
+---
+
+## 5. 🧪 수동 테스트
 
 ```bash
+cd ~/tzudong/backend/geminiCLI-youtuber-crawler
+
+# 전체 파이프라인 테스트
 DEBUG=true bun run full
 ```
 
-## 6. ⏰ 자동 실행 예약 (Cron) - 매일 오전 6시
+---
 
-서버가 꺼지지 않는 한 매일 설정된 시간에 실행되도록 `cron` 작업을 등록합니다.
+## 6. ⏰ 자동 실행 설정 (Cron)
 
-1.  **Crontab 편집기 열기**
-    ```bash
-    crontab -e
-    ```
-
-2.  **스케줄 추가 (맨 아랫줄에 추가)**
-    *   `bun`의 경로를 절대 경로로 적어주는 것이 안전합니다. (`which bun`으로 확인 가능, 보통 `/home/ubuntu/.bun/bin/bun`)
-
-    ```bash
-    # 매일 오전 6시에 실행 (로그는 crawler.log에 누적 저장)
-    0 6 * * * cd /home/ubuntu/geminicli-youtuber-crawler && DEBUG=true /home/ubuntu/.bun/bin/bun run full >> /home/ubuntu/geminicli-youtuber-crawler/crawler.log 2>&1
-
-    # (옵션) 모델을 'gemini-3-pro-preview'로 고정하고 싶을 때:
-    # 0 6 * * * cd /home/ubuntu/geminicli-youtuber-crawler && GEMINI_MODEL=gemini-3-pro-preview DEBUG=true /home/ubuntu/.bun/bin/bun run full >> /home/ubuntu/geminicli-youtuber-crawler/crawler.log 2>&1
-    ```
-
-    *   `0 6 * * *`: 매일 06시 00분에 실행
-    *   `cd ...`: 프로젝트 폴더로 이동 후 실행
-    *   `>> ...`: 로그 내용을 파일 끝에 계속 이어씀 (덮어쓰기 아님)
-    *   `2>&1`: 에러 메시지도 로그 파일에 함께 저장
-
-3.  **저장 및 종료**
-    *   `nano` 에디터라면: `Ctrl+O` Enter -> `Ctrl+X`
-    *   `vi` 에디터라면: `ESC` -> `:wq` Enter
-
-4.  **등록 확인**
-    ```bash
-    crontab -l
-    ```
-
-## 7. 🔌 서버 재부팅 시 자동화 확인
-
-**Cron**은 리눅스의 기본 서비스로, 서버가 재부팅되면 **자동으로 다시 시작**됩니다. 따라서 사용자가 별도로 재실행할 필요가 없습니다.
-
-만약 재부팅 직후에도 확실하게 서비스가 살아있는지 확인하고 싶다면 아래 명령어를 사용하세요:
+### 6.1 Crontab 편집
 
 ```bash
-# cron 서비스 상태 확인 (active (running)이면 정상)
-sudo service cron status
-
-# (선택 사항) 재부팅 시 자동 실행 활성화 확인
-sudo systemctl is-enabled cron
+crontab -e
 ```
 
-## 8. 📊 모니터링 및 관리
+### 6.2 스케줄 추가
 
-**실시간 로그 확인:**
 ```bash
-tail -f crawler.log
+# 매일 오전 6시(KST) 실행
+0 21 * * * cd /home/ubuntu/tzudong/backend/geminiCLI-youtuber-crawler && /home/ubuntu/.bun/bin/bun run full >> /home/ubuntu/tzudong/backend/geminiCLI-youtuber-crawler/crawler.log 2>&1
+
+# (옵션) Pro 모델 강제 사용
+# 0 21 * * * cd /home/ubuntu/tzudong/backend/geminiCLI-youtuber-crawler && GEMINI_MODEL=gemini-3-pro-preview /home/ubuntu/.bun/bin/bun run full >> crawler.log 2>&1
 ```
 
-**실행 중인 프로세스 확인:**
+> **주의**: OCI 서버 시간은 UTC. KST 06:00 = UTC 21:00
+
+### 6.3 등록 확인
+
+```bash
+crontab -l
+```
+
+---
+
+## 7. 📊 모니터링
+
+### 실시간 로그 확인
+
+```bash
+tail -f ~/tzudong/backend/geminiCLI-youtuber-crawler/crawler.log
+```
+
+### 프로세스 확인
+
 ```bash
 ps -ef | grep bun
 ```
 
-## 9. 🛡️ IP 차단 방지 (Anti-Blocking)
-
-> **⚠️ 중요**: OCI 등 클라우드 서버 IP는 외부 서비스에서 봇으로 의심받기 쉽습니다. 다음 사항을 준수하세요.
-
-### 적용된 안전 조치 (코드 레벨)
-
-| 스크립트 | 조치 | 세부 사항 |
-|----------|------|-----------|
-| `crawl-channel.js` | YouTube API 사용 | Puppeteer 대신 공식 API 사용 (안전) |
-| `collect-transcripts.js` | User-Agent 랜덤화 | 5개 브라우저 UA 로테이션 |
-| `collect-transcripts.js` | 요청 간격 3-5초 | 랜덤 딜레이 적용 |
-| `collect-transcripts.js` | 동시 처리 2개 제한 | 병렬 크롤링 축소 |
-| `enrich-coordinates.js` | API 요청 간격 0.5-1초 | Naver/Kakao 교차 검증 |
-
-### 추가 권장 사항
-
-1.  **매일 1회 실행만** (현재 Cron 설정 준수)
-2.  **CAPTCHA 발생 시**: 24시간 대기 후 재시도
-3.  **403 에러 반복 시**: 프록시/VPN 고려
-
-### 차단 감지 및 대응
+### 에러 로그 검색
 
 ```bash
-# 로그에서 차단/에러 패턴 검색
-grep -E "(403|blocked|captcha|timeout)" crawler.log | tail -20
+# 에러 패턴 검색
+grep -E "(ERR|WARN|error|failed)" crawler.log | tail -30
 
-# 특정 날짜 로그만 확인
+# 오늘 로그만
 grep "$(date +%Y-%m-%d)" crawler.log | tail -50
 ```
 
-### 차단 발생 시 복구 절차
+---
 
-1.  Cron 작업 임시 중지:
-    ```bash
-    crontab -e
-    # 해당 라인 맨 앞에 # 추가하여 주석 처리
-    ```
-2.  24~48시간 대기
-3.  수동 테스트 후 Cron 재활성화
+## 8. 🛡️ 차단 방지 설정
+
+### 적용된 안전 장치
+
+| 영역 | 설정 |
+|------|------|
+| Puppeteer 동시성 | 2개 제한 |
+| 요청 간격 | 1-3초 랜덤 딜레이 |
+| User-Agent | 5개 로테이션 |
+| Stealth 모드 | puppeteer-extra-plugin-stealth |
+| 리소스 차단 | 이미지/폰트/미디어 비활성화 |
+
+### 차단 감지
+
+```bash
+grep -E "(403|blocked|captcha|timeout)" crawler.log | tail -20
+```
+
+### 차단 시 대응
+
+1. Cron 임시 중지:
+   ```bash
+   crontab -e
+   # 해당 줄 앞에 # 추가
+   ```
+2. 24-48시간 대기
+3. 수동 테스트 후 재활성화
+
+---
+
+## 9. 🔄 서버 재부팅 후 확인
+
+Cron은 시스템 서비스로 **자동 재시작**됩니다.
+
+```bash
+# Cron 서비스 상태 확인
+sudo service cron status
+
+# 자동 시작 활성화 확인
+sudo systemctl is-enabled cron
+```
+
+---
+
+## 10. 유용한 명령어
+
+```bash
+# 강제 크롤링 (캐시 무시)
+FORCE_CRAWL=true bun run full
+
+# 특정 단계부터 시작
+node scripts/pipeline.js --start-from=2
+
+# 수동 개별 실행
+bun run crawl       # 영상 수집
+bun run transcripts # 자막 수집
+bun run places      # 장소 정보 수집
+bun run extract     # AI 분석
+bun run geocode     # 좌표 보완
+bun run insert      # DB 저장
+```
+
+---
+
+## 🐛 트러블슈팅
+
+### Chromium 실행 오류
+
+```bash
+# Chromium 경로 확인
+which chromium-browser
+
+# .env에 경로 설정
+PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+```
+
+### OAuth 토큰 만료
+
+```bash
+# 로컬에서 재인증 후 서버로 복사
+scp ~/.gemini/oauth_creds.json ubuntu@<서버IP>:~/.gemini/
+```
+
+### 메모리 부족
+
+```bash
+# 스왑 메모리 추가
+sudo fallocate -l 4G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+```

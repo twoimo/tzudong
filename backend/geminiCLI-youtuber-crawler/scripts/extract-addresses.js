@@ -2162,10 +2162,17 @@ async function main() {
                 allResults.set(res.result.videoId, res.result);
                 stats.processed++;
                 stats.success++;
-                stats.restaurantsFound += res.result.restaurants.length;
+                
+                // restaurants 배열이 없을 수 있음 (is_restaurant_video=false인 경우)
+                const restaurantCount = res.result.restaurants?.length || 0;
+                stats.restaurantsFound += restaurantCount;
                 batchCount++;
 
-                log('success', `  ${res.result.restaurants.length}개 맛집 발견`);
+                if (restaurantCount > 0) {
+                    log('success', `  ${restaurantCount}개 맛집 발견`);
+                } else {
+                    log('debug', `  맛집 없음 (is_restaurant_video: ${res.result.is_restaurant_video})`);
+                }
             } else if (!res.success && !res.quotaExceeded && !res.allBlacklisted) {
                 stats.failed++;
             }
@@ -2180,32 +2187,17 @@ async function main() {
             batchCount = 0;
         }
 
-        // 50개마다 파일 저장 + 자동 커밋 (I/O 최적화)
+        // 1개마다 파일 저장 (데이터 안전 우선)
         if (stats.processed - lastCommitCount >= COMMIT_BATCH_SIZE) {
-            // 종료 전 저장
             const allData = Array.from(allResults.values());
+            const content = allData.map(d => JSON.stringify(d)).join('\n') + '\n';
+            
             try {
-                fs.writeFileSync(outputFile, allData.map(d => JSON.stringify(d)).join('\n') + '\n', 'utf-8');
-            } catch (e) { log('error', `비상 저장 실패: ${e.message}`); }
-
-            let saved = false;
-            const content = Array.from(allResults.values()).map(d => JSON.stringify(d)).join('\n') + '\n'; // Define content here
-            for (let attempt = 1; attempt <= 3; attempt++) {
-                try {
-                    fs.writeFileSync(outputFile, content, 'utf-8');
-                    saved = true;
-                    break;
-                } catch (e) {
-                    log('warning', `파일 저장 실패(시도 ${attempt}/3): ${e.message}`);
-                    await sleep(2000 * attempt);
-                }
-            }
-
-            if (saved) {
-                // commitProgress removed
+                fs.writeFileSync(outputFile, content, 'utf-8');
                 lastCommitCount = stats.processed;
-            } else {
-                log('error', '파일 저장 최종 실패 - 다음 배치에서 재시도');
+                log('debug', `[저장] ${allData.length}개 결과 저장 완료`);
+            } catch (e) {
+                log('error', `파일 저장 실패: ${e.message}`);
             }
         }
     }
