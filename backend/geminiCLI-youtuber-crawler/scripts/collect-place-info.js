@@ -360,8 +360,7 @@ async function collectFromNaverMap(page, mapUrl) {
                     const typeEl = row.querySelector('.TjXg1');
                     const type = typeEl?.textContent?.trim();
 
-                    // 디버깅: 정확한 행 텍스트 로깅
-                    log('debug', `Row Text: "${row.innerText}", Type: "${type}"`);
+
 
                     // 텍스트 정제 (타입, 복사 버튼 제거)
                     let val = row.innerText;
