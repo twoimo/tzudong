@@ -211,6 +211,17 @@ async function collectFromNaverMap(page, mapUrl) {
             url = await resolveShortUrl(url);
         }
 
+        // [Phase 4] URL에서 좌표 즉시 추출 (입력 URL에 파라미터가 있는 경우)
+        try {
+            const urlObj = new URL(url);
+            const pLat = urlObj.searchParams.get('lat');
+            const pLng = urlObj.searchParams.get('lng');
+            if (pLat && pLng) {
+                // placeInfo 객체가 아직 없으므로 임시 저장 변수 활용,
+                // 하지만 여기서는 스코프 문제로 인해 아래 로직에서 처리됨.
+            }
+        } catch (e) { }
+
         // form.naver.com은 스킵 (설문조사/예약 페이지)
         if (url.includes('form.naver.com')) {
             log('debug', `네이버 폼 스킵: ${url}`);
@@ -250,7 +261,7 @@ async function collectFromNaverMap(page, mapUrl) {
         // 장소 정보 추출
         // 주소 펼치기 버튼 클릭 (숨겨진 지번/도로명 주소 확보)
         try {
-            const expandBtnSelector = 'a.PkgBl, ._UCia'; // user provided logic
+            const expandBtnSelector = 'a.PkgBl, ._UCia'; // 사용자 제공 로직
             const expandBtn = await page.$(expandBtnSelector);
             if (expandBtn) {
                 log('debug', '주소 펼치기 버튼 발견, 클릭 시도...');
@@ -286,7 +297,7 @@ async function collectFromNaverMap(page, mapUrl) {
                 }
             }
 
-            // 2. span.GHAhO에서 상호명 (fallback)
+            // 2. span.GHAhO에서 상호명 (대체)
             if (!result.name) {
                 const nameEl = document.querySelector('span.GHAhO');
                 if (nameEl) result.name = nameEl.textContent?.trim();
@@ -356,15 +367,36 @@ async function collectFromNaverMap(page, mapUrl) {
         });
 
         // 좌표 추출 (URL에서)
-        const coordMatch = url.match(/[?&]c=([^&]+)/);
-        if (coordMatch) {
-            try {
-                const coords = coordMatch[1].split(',');
-                if (coords.length >= 2) {
-                    placeInfo.lat = parseFloat(coords[0]);
-                    placeInfo.lng = parseFloat(coords[1]);
-                }
-            } catch { }
+        // 1. URL Query Parameter (예: ?lng=129.113...&lat=35.148...)
+        const currentUrl = page.url(); // 리다이렉트된 최종 URL 사용
+        log('debug', `Naver Current URL: ${currentUrl}`);
+
+        try {
+            const urlObj = new URL(currentUrl);
+            const urlLat = urlObj.searchParams.get('lat');
+            const urlLng = urlObj.searchParams.get('lng');
+
+            if (urlLat && urlLng) {
+                placeInfo.lat = parseFloat(urlLat);
+                placeInfo.lng = parseFloat(urlLng);
+                log('debug', `URL 파라미터 좌표 추출 성공: ${urlLat}, ${urlLng}`);
+            }
+        } catch (e) {
+            log('debug', `URL 파싱 오류: ${e.message}`);
+        }
+
+        // 2. 구형 파라미터 (?c=x,y)
+        if (!placeInfo.lat) {
+            const coordMatch = currentUrl.match(/[?&]c=([^&]+)/);
+            if (coordMatch) {
+                try {
+                    const coords = coordMatch[1].split(',');
+                    if (coords.length >= 2) {
+                        placeInfo.lat = parseFloat(coords[0]);
+                        placeInfo.lng = parseFloat(coords[1]);
+                    }
+                } catch { }
+            }
         }
 
         // 데이터 정제
@@ -420,6 +452,22 @@ async function collectFromNaverMap(page, mapUrl) {
                     }
                 }
             }
+        }
+
+        // [Phase 4] 초기 URL에서 추출한 좌표가 있다면 적용 (우선순위 높음 or 누락 시 보완)
+        // 위에서 URL 파싱을 수행했어야 하는데 구조상 evaluate 이후에 하는 것이 깔끔함.
+        // 왜냐하면 evaluate에서 가져온 값과 비교 가능하므로.
+        if (!placeInfo.lat) {
+            try {
+                const urlObj = new URL(url);
+                const pLat = urlObj.searchParams.get('lat');
+                const pLng = urlObj.searchParams.get('lng');
+                if (pLat && pLng) {
+                    placeInfo.lat = parseFloat(pLat);
+                    placeInfo.lng = parseFloat(pLng);
+                    log('debug', `입력 URL에서 좌표 복구: ${pLat}, ${pLng}`);
+                }
+            } catch (e) { }
         }
 
         placeInfo.source = 'naver';
@@ -570,24 +618,29 @@ async function collectFromGoogleMap(page, mapUrl) {
             url = await resolveShortUrl(url);
         }
 
-        // 좌표 추출
+        // 좌표 추출 (초기 URL에서 시도)
         let lat = null, lng = null;
-        const coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+        let coordMatch = url.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
         if (coordMatch) {
             lat = parseFloat(coordMatch[1]);
             lng = parseFloat(coordMatch[2]);
         }
 
-        // 장소명 추출
-        let placeName = null;
-        const placeMatch = url.match(/\/place\/([^/]+)/);
-        if (placeMatch) {
-            placeName = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
-        }
-
         // 구글 지도 페이지 접속 (타임아웃 60초)
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
         await new Promise(resolve => setTimeout(resolve, 3000));
+
+        // URL이 변경되었을 수 있으므로 다시 좌표 추출 시도 (예: e.g., goo.gl -> google.com/maps/place/...)
+        if (!lat) {
+            const currentUrl = page.url();
+            log('debug', `Google Current URL: ${currentUrl}`);
+            coordMatch = currentUrl.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
+            if (coordMatch) {
+                lat = parseFloat(coordMatch[1]);
+                lng = parseFloat(coordMatch[2]);
+                log('debug', `리다이렉트 URL에서 좌표 추출: ${lat}, ${lng}`);
+            }
+        }
 
         const placeInfo = await page.evaluate(() => {
             const result = {
@@ -598,8 +651,17 @@ async function collectFromGoogleMap(page, mapUrl) {
             };
 
             // 상호명
-            const nameEl = document.querySelector('h1.DUwDvf');
+            const nameEl = document.querySelector('h1.DUwDvf') || document.querySelector('h1');
             if (nameEl) result.name = nameEl.textContent?.trim();
+
+            if (!result.name) {
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle) {
+                    const content = ogTitle.getAttribute('content');
+                    // Google Maps og:title format: "Place Name - Google Maps" or similar
+                    if (content) result.name = content.replace(/ - Google 지도/g, '').replace(/ - Google Maps/g, '').trim();
+                }
+            }
 
             // 카테고리
             const categoryEl = document.querySelector('button[jsaction*="category"]');
@@ -608,19 +670,21 @@ async function collectFromGoogleMap(page, mapUrl) {
             // 주소 (data-item-id에 "address" 포함)
             const addressBtn = document.querySelector('button[data-item-id*="address"]');
             if (addressBtn) {
-                const addrText = addressBtn.querySelector('.Io6YTe');
+                const addrText = addressBtn.querySelector('.Io6YTe') || addressBtn.querySelector('.fontBodyMedium');
                 if (addrText) result.roadAddress = addrText.textContent?.trim();
             }
 
             // 전화번호
             const phoneBtn = document.querySelector('button[data-item-id*="phone"]');
             if (phoneBtn) {
-                const phoneText = phoneBtn.querySelector('.Io6YTe');
+                const phoneText = phoneBtn.querySelector('.Io6YTe') || phoneBtn.querySelector('.fontBodyMedium');
                 if (phoneText) result.phone = phoneText.textContent?.trim();
             }
 
             return result;
         });
+
+        log('debug', `Google Extracted: Name=${placeInfo.name}, Addr=${placeInfo.roadAddress}, Lat=${lat}, Lng=${lng}`);
 
         // 데이터 정제
         placeInfo.name = cleanText(placeInfo.name);
