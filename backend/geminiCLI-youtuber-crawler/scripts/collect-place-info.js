@@ -1164,8 +1164,11 @@ async function main() {
         );
 
         for (const result of results) {
+            // 모든 결과를 저장 (hasPlaceInfo 여부와 관계없이)
+            // 이렇게 해야 다음 실행 시 스킵됨
+            newResults.push(result);
+
             if (result.hasPlaceInfo) {
-                newResults.push(result);
                 stats.success++;
                 stats.totalPlaces += result.places.length;
             } else {
