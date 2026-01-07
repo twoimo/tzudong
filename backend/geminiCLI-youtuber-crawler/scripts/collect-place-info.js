@@ -261,6 +261,23 @@ async function collectFromNaverMap(page, mapUrl) {
         await page.goto(placeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(resolve => setTimeout(resolve, 2000));
 
+        // 404 에러 페이지 감지 ("요청하신 페이지를 찾을 수 없습니다")
+        // 이 경우 스킵 처리 - Gemini 분석에서 맛집명으로 찾아낼 수 있음
+        const isErrorPage = await page.evaluate(() => {
+            const errorText = document.body?.innerText || '';
+            const errorIndicators = [
+                '요청하신 페이지를 찾을 수 없습니다',
+                '페이지의 주소가 잘못 입력되었거나',
+                '페이지의 주소가 변경 혹은 삭제되어'
+            ];
+            return errorIndicators.some(indicator => errorText.includes(indicator));
+        });
+
+        if (isErrorPage) {
+            log('debug', `네이버 404 페이지 감지, 스킵 처리: ${mapUrl}`);
+            return { skipped: true, reason: 'naver_404_page' };
+        }
+
         // 장소 정보 추출
         // 주소 펼치기 버튼 클릭 (숨겨진 지번/도로명 주소 확보)
         // 주소 펼치기 버튼 클릭 (숨겨진 지번/도로명 주소 확보)
@@ -1237,6 +1254,9 @@ async function main() {
     log('info', `소요 시간: ${elapsed}초`);
     log('info', `저장: ${placeInfoFile}`);
     log('info', '='.repeat(60));
+
+    // 프로세스 명시적 종료 (브라우저 종료 후에도 hang 방지)
+    process.exit(0);
 }
 
 // 메인 실행 (직접 실행 시에만)
