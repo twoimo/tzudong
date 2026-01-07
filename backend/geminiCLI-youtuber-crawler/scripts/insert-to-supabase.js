@@ -319,7 +319,8 @@ async function main() {
     // 레스토랑 데이터 추출 및 변환
     const restaurants = [];
     for (const video of videos) {
-        for (const restaurant of video.restaurants || []) {
+        const places = video.analysis || video.restaurants || [];
+        for (const restaurant of places) {
             const transformed = transformRestaurant(restaurant, video);
             restaurants.push(transformed);
         }

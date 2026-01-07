@@ -361,8 +361,8 @@ async function checkModelQuotas() {
             // checkModelQuotas가 async 함수이므로 await 가능
             await new Promise(resolve => setTimeout(resolve, waitMs + 10000));
 
-            // 재귀 호출로 다시 확인
-            return checkModelQuotas();
+            // 6. 결과 저장
+            result.analysis.push(restaurant);
         }
     }
 
@@ -723,7 +723,7 @@ async function searchPlaceWithKakao(keyword, category = null) {
 
         if (data.documents && data.documents.length > 0) {
             const doc = data.documents[0];
-            return {
+            const result = {
                 name: doc.place_name,
                 lat: parseFloat(doc.y),
                 lng: parseFloat(doc.x),
@@ -1335,9 +1335,10 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 if (parsedResult && !parsedResult.error) {
                     result = parsedResult;
                     // 결과 상세 로그
-                    const restaurantCount = parsedResult.restaurants?.length || 0;
+                    // Compatibility: Handle both 'analysis' and old 'restaurants'
+                    const itemCount = (parsedResult.analysis || parsedResult.restaurants)?.length || 0;
                     log('success', `Gemini 분석 성공 (모델: ${model})`, video.videoId);
-                    if (restaurantCount === 0) {
+                    if (itemCount === 0) {
                         log('debug', `파싱 결과: is_restaurant_video=${parsedResult.is_restaurant_video}, video_type=${parsedResult.video_type}`, video.videoId);
                         // 원본 응답 일부 출력 (디버깅용)
                         log('debug', `응답 미리보기: ${output.slice(0, 300)}...`, video.videoId);
@@ -1456,7 +1457,9 @@ async function processVideo(video) {
         publishedAt: video.publishedAt,
         duration: video.duration,
         mapUrls: video.mapUrls,
-        restaurants: [],
+        description: video.description || '', // Original YouTube Description
+        analysis: [], // Renamed from restaurants
+        // restaurants: [], // Removed to avoid confusion
         processedAt: getKSTDate().toISOString()
     };
 
@@ -1529,305 +1532,315 @@ async function processVideo(video) {
     // 3. Gemini로 맛집 정보 분석
     const geminiResult = await extractWithGemini(video, transcript);
 
-    if (geminiResult && geminiResult.restaurants) {
-        for (const restaurant of geminiResult.restaurants) {
-            // 4. 좌표 보완 (우선순위: 지도URL → 카카오주소검색 → 카카오장소검색)
-            let geoInfo = null;
-            let geocodingSource = null;
+    if (geminiResult) {
+        // Description 저장
+        if (geminiResult.description) {
+            result.description_summary = geminiResult.description;
+        }
 
-            // 4-1. 지도 URL에서 추출한 좌표가 있으면 우선 사용
-            if (coordsFromMapUrl) {
-                geoInfo = coordsFromMapUrl;
-                geocodingSource = coordsFromMapUrl.source;
-            }
+        // 'analysis' comes from Gemini, 'restaurants' is for backward compatibility
+        const placesToAnalyze = geminiResult.analysis || geminiResult.restaurants;
 
-            // 4-2. 없으면 카카오 API로 주소 검색
-            if (!geoInfo && restaurant.address) {
-                const kakaoGeo = await geocodeWithKakao(restaurant.address);
-                if (kakaoGeo) {
-                    geoInfo = kakaoGeo;
-                    geocodingSource = 'kakao_address';
+        if (placesToAnalyze) {
+            for (const restaurant of placesToAnalyze) {
+                // 4. 좌표 보완 (우선순위: 지도URL → 카카오주소검색 → 카카오장소검색)
+                let geoInfo = null;
+                let geocodingSource = null;
+
+                // 4-1. 지도 URL에서 추출한 좌표가 있으면 우선 사용
+                if (coordsFromMapUrl) {
+                    geoInfo = coordsFromMapUrl;
+                    geocodingSource = coordsFromMapUrl.source;
                 }
-            }
 
-            // 4-3. 그래도 없으면 장소명으로 검색
-            if (!geoInfo && restaurant.name) {
-                const kakaoPlace = await searchPlaceWithKakao(restaurant.name, 'FD6'); // FD6: 음식점
-                if (kakaoPlace) {
-                    geoInfo = kakaoPlace;
-                    geocodingSource = 'kakao_keyword';
-                }
-            }
-
-            if (geoInfo) {
-                log('debug', `  → 보완 성공 (좌표: ${geoInfo.lat}, ${geoInfo.lng})`, video.videoId);
-            } else {
-                log('debug', `  → 보완 실패`, video.videoId);
-            }
-
-            // 5. 데이터 보완 및 누락 사유 기록
-            const augmentationNotes = [];
-
-            // 5-1. 네이버 API로 추가 검증 데이터 가져오기 (다중 쿼리 전략)
-            let naverInfo = null;
-            const cleanAddress = removeFloorInfo(restaurant.address || '');
-            const region = extractRegion(cleanAddress);
-
-            if (restaurant.name) {
-                // 전략 1: 이름만으로 검색
-                naverInfo = await searchPlaceWithNaver(restaurant.name);
-
-                // 전략 2: 이름 + 지역으로 검색 (결과 없거나 주소 불일치 시)
-                if (!naverInfo && region) {
-                    const nameRegionQuery = `${restaurant.name} ${region}`;
-                    naverInfo = await searchPlaceWithNaver(nameRegionQuery);
-                    if (naverInfo) {
-                        augmentationNotes.push(`[다중쿼리] name+region 검색으로 매칭`);
+                // 4-2. 없으면 카카오 API로 주소 검색
+                if (!geoInfo && restaurant.address) {
+                    const kakaoGeo = await geocodeWithKakao(restaurant.address);
+                    if (kakaoGeo) {
+                        geoInfo = kakaoGeo;
+                        geocodingSource = 'kakao_address';
                     }
                 }
 
-                // 전략 3: 이름 + 주소로 검색
-                if (!naverInfo && cleanAddress) {
-                    const nameAddrQuery = `${restaurant.name} ${addressCore(cleanAddress)}`;
-                    naverInfo = await searchPlaceWithNaver(nameAddrQuery);
-                    if (naverInfo) {
-                        augmentationNotes.push(`[다중쿼리] name+address 검색으로 매칭`);
+                // 4-3. 그래도 없으면 장소명으로 검색
+                if (!geoInfo && restaurant.name) {
+                    const kakaoPlace = await searchPlaceWithKakao(restaurant.name, 'FD6'); // FD6: 음식점
+                    if (kakaoPlace) {
+                        geoInfo = kakaoPlace;
+                        geocodingSource = 'kakao_keyword';
                     }
                 }
-            }
 
-            // 5-2. 카테고리 유효성 검증
-            const categoryForValidation = restaurant.category || null;
-            if (categoryForValidation && !isValidCategory(categoryForValidation)) {
-                augmentationNotes.push(`[경고] 비표준 카테고리: ${categoryForValidation}`);
-            }
-
-            // 5-3. 좌표 거리 기반 검증 (geoInfo vs naverInfo)
-            if (geoInfo?.lat && geoInfo?.lng && naverInfo?.mapx && naverInfo?.mapy) {
-                // 네이버 TM128 → WGS84 변환
-                const naverLng = (parseInt(naverInfo.mapx) / 10000000) * 0.8 + 124.5;
-                const naverLat = (parseInt(naverInfo.mapy) / 10000000) * 0.8 + 30.5;
-
-                const distance = haversineDistance(geoInfo.lat, geoInfo.lng, naverLat, naverLng);
-
-                if (distance <= 50) {
-                    augmentationNotes.push(`[좌표검증] 카카오/네이버 일치 (${Math.round(distance)}m)`);
-                } else if (distance <= 500) {
-                    augmentationNotes.push(`[좌표검증] 카카오/네이버 유사 (${Math.round(distance)}m)`);
+                if (geoInfo) {
+                    log('debug', `  → 보완 성공 (좌표: ${geoInfo.lat}, ${geoInfo.lng})`, video.videoId);
                 } else {
-                    augmentationNotes.push(`[좌표경고] 카카오/네이버 불일치 (${Math.round(distance)}m) - 확인 필요`);
+                    log('debug', `  → 보완 실패`, video.videoId);
                 }
-            }
 
-            // 전화번호 3중 교차 검증 (Gemini vs 카카오 vs 네이버)
-            const geminiPhone = restaurant.phone || null;
-            const kakaoPhone = geoInfo?.phone || null;
-            const naverPhone = naverInfo?.phone || null;
-            let finalPhone = null;
+                // 5. 데이터 보완 및 누락 사유 기록
+                const augmentationNotes = [];
 
-            // 전화번호 정규화 함수 (비교용)
-            const normalizePhone = (phone) => {
-                if (!phone) return null;
-                return phone.replace(/[^0-9]/g, ''); // 숫자만 추출
-            };
+                // 5-1. 네이버 API로 추가 검증 데이터 가져오기 (다중 쿼리 전략)
+                let naverInfo = null;
+                const cleanAddress = removeFloorInfo(restaurant.address || '');
+                const region = extractRegion(cleanAddress);
 
-            const normalizedGemini = normalizePhone(geminiPhone);
-            const normalizedKakao = normalizePhone(kakaoPhone);
-            const normalizedNaver = normalizePhone(naverPhone);
+                if (restaurant.name) {
+                    // 전략 1: 이름만으로 검색
+                    naverInfo = await searchPlaceWithNaver(restaurant.name);
 
-            // 3중 교차 검증 (다수결)
-            const phoneVotes = {};
-            if (normalizedGemini) phoneVotes[normalizedGemini] = (phoneVotes[normalizedGemini] || 0) + 1;
-            if (normalizedKakao) phoneVotes[normalizedKakao] = (phoneVotes[normalizedKakao] || 0) + 1;
-            if (normalizedNaver) phoneVotes[normalizedNaver] = (phoneVotes[normalizedNaver] || 0) + 1;
+                    // 전략 2: 이름 + 지역으로 검색 (결과 없거나 주소 불일치 시)
+                    if (!naverInfo && region) {
+                        const nameRegionQuery = `${restaurant.name} ${region}`;
+                        naverInfo = await searchPlaceWithNaver(nameRegionQuery);
+                        if (naverInfo) {
+                            augmentationNotes.push(`[다중쿼리] name+region 검색으로 매칭`);
+                        }
+                    }
 
-            const voteCounts = Object.entries(phoneVotes);
-
-            if (voteCounts.length === 0) {
-                // 아무 소스도 전화번호 없음
-                augmentationNotes.push('[누락] 전화번호: Gemini/카카오/네이버 모두 없음');
-            } else if (voteCounts.length === 1) {
-                // 하나의 전화번호만 있음
-                const [normalized, count] = voteCounts[0];
-                const sources = [];
-                if (normalizedGemini === normalized) sources.push('Gemini');
-                if (normalizedKakao === normalized) sources.push('카카오');
-                if (normalizedNaver === normalized) sources.push('네이버');
-
-                // 원본 형식 선택 (카카오 > 네이버 > Gemini)
-                if (normalizedKakao === normalized) finalPhone = kakaoPhone;
-                else if (normalizedNaver === normalized) finalPhone = naverPhone;
-                else finalPhone = geminiPhone;
-
-                if (count >= 2) {
-                    augmentationNotes.push(`[검증완료] 전화번호: ${finalPhone} (${sources.join('+')} 일치)`);
-                } else {
-                    augmentationNotes.push(`[단일소스] 전화번호: ${finalPhone} (${sources[0]}에서만 확인)`);
+                    // 전략 3: 이름 + 주소로 검색
+                    if (!naverInfo && cleanAddress) {
+                        const nameAddrQuery = `${restaurant.name} ${addressCore(cleanAddress)}`;
+                        naverInfo = await searchPlaceWithNaver(nameAddrQuery);
+                        if (naverInfo) {
+                            augmentationNotes.push(`[다중쿼리] name+address 검색으로 매칭`);
+                        }
+                    }
                 }
-            } else {
-                // 여러 다른 전화번호 존재 - 다수결 또는 API 우선
-                voteCounts.sort((a, b) => b[1] - a[1]); // 투표 수 기준 정렬
-                const [winningNormalized, winningCount] = voteCounts[0];
 
-                if (winningCount >= 2) {
-                    // 다수결 승리
-                    if (normalizedKakao === winningNormalized) finalPhone = kakaoPhone;
-                    else if (normalizedNaver === winningNormalized) finalPhone = naverPhone;
-                    else finalPhone = geminiPhone;
-                    augmentationNotes.push(`[다수결] 전화번호: ${finalPhone} (${winningCount}/3 일치)`);
-                } else {
-                    // 모두 다름 - 카카오 > 네이버 > Gemini 우선순위
-                    if (kakaoPhone) {
-                        finalPhone = kakaoPhone;
-                        augmentationNotes.push(`[불일치] 전화번호 - Gemini: ${geminiPhone || 'N/A'}, 카카오: ${kakaoPhone}, 네이버: ${naverPhone || 'N/A'} → 카카오 채택`);
-                    } else if (naverPhone) {
-                        finalPhone = naverPhone;
-                        augmentationNotes.push(`[불일치] 전화번호 - Gemini: ${geminiPhone || 'N/A'}, 네이버: ${naverPhone} → 네이버 채택`);
+                // 5-2. 카테고리 유효성 검증
+                const categoryForValidation = restaurant.category || null;
+                if (categoryForValidation && !isValidCategory(categoryForValidation)) {
+                    augmentationNotes.push(`[경고] 비표준 카테고리: ${categoryForValidation}`);
+                }
+
+                // 5-3. 좌표 거리 기반 검증 (geoInfo vs naverInfo)
+                if (geoInfo?.lat && geoInfo?.lng && naverInfo?.mapx && naverInfo?.mapy) {
+                    // 네이버 TM128 → WGS84 변환
+                    const naverLng = (parseInt(naverInfo.mapx) / 10000000) * 0.8 + 124.5;
+                    const naverLat = (parseInt(naverInfo.mapy) / 10000000) * 0.8 + 30.5;
+
+                    const distance = haversineDistance(geoInfo.lat, geoInfo.lng, naverLat, naverLng);
+
+                    if (distance <= 50) {
+                        augmentationNotes.push(`[좌표검증] 카카오/네이버 일치 (${Math.round(distance)}m)`);
+                    } else if (distance <= 500) {
+                        augmentationNotes.push(`[좌표검증] 카카오/네이버 유사 (${Math.round(distance)}m)`);
                     } else {
-                        finalPhone = geminiPhone;
-                        augmentationNotes.push(`[Gemini] 전화번호: ${finalPhone} (API 미확인)`);
+                        augmentationNotes.push(`[좌표경고] 카카오/네이버 불일치 (${Math.round(distance)}m) - 확인 필요`);
                     }
                 }
-            }
 
-            // 상호명 유사도 검증 (Gemini vs 카카오 vs 네이버)
-            const geminiName = restaurant.name || '';
-            const kakaoName = geoInfo?.name || '';
-            const naverName = naverInfo?.name || '';
-            let finalName = geminiName; // 기본값은 Gemini
+                // 전화번호 3중 교차 검증 (Gemini vs 카카오 vs 네이버)
+                const geminiPhone = restaurant.phone || null;
+                const kakaoPhone = geoInfo?.phone || null;
+                const naverPhone = naverInfo?.phone || null;
+                let finalPhone = null;
 
-            // 간단한 유사도 함수 (포함관계 체크)
-            const isSimilar = (a, b) => {
-                if (!a || !b) return false;
-                const cleanA = a.replace(/\s+/g, '').toLowerCase();
-                const cleanB = b.replace(/\s+/g, '').toLowerCase();
-                return cleanA.includes(cleanB) || cleanB.includes(cleanA) || cleanA === cleanB;
-            };
-
-            if (naverName && isSimilar(geminiName, naverName)) {
-                finalName = naverName; // 네이버 우선
-                augmentationNotes.push(`[검증완료] 상호명 일치: ${finalName} (Gemini/네이버)`);
-            } else if (kakaoName && isSimilar(geminiName, kakaoName)) {
-                finalName = kakaoName;
-                augmentationNotes.push(`[검증완료] 상호명 일치: ${finalName} (Gemini/카카오)`);
-            } else if (naverName && kakaoName && isSimilar(naverName, kakaoName)) {
-                finalName = naverName; // 네이버 우선
-                augmentationNotes.push(`[API일치] 상호명: ${finalName} (네이버/카카오)`);
-            } else if (geminiName) {
-                augmentationNotes.push(`[Gemini] 상호명: ${geminiName} (API 미확인)`);
-            }
-
-            // 주소 3중 교차검증 (우선순위: 네이버 > 카카오 > Gemini)
-            const geminiAddress = restaurant.address || null;
-            const kakaoRoadAddr = geoInfo?.roadAddress || null;
-            const kakaoJibunAddr = geoInfo?.address || null;
-            const naverRoadAddr = naverInfo?.roadAddress || null;
-            const naverJibunAddr = naverInfo?.address || null;
-
-            let finalAddress = null;
-            let finalRoadAddress = null;
-            let finalJibunAddress = null;
-
-            // 네이버 우선
-            if (naverRoadAddr) {
-                finalAddress = naverRoadAddr;
-                finalRoadAddress = naverRoadAddr;
-                finalJibunAddress = naverJibunAddr;
-                if (kakaoRoadAddr && naverRoadAddr.includes(kakaoRoadAddr.split(' ')[0])) {
-                    augmentationNotes.push(`[검증완료] 주소: ${finalAddress} (네이버/카카오 일치)`);
-                } else {
-                    augmentationNotes.push(`[네이버] 주소: ${finalAddress}`);
-                }
-            } else if (kakaoRoadAddr) {
-                finalAddress = kakaoRoadAddr;
-                finalRoadAddress = kakaoRoadAddr;
-                finalJibunAddress = kakaoJibunAddr;
-                augmentationNotes.push(`[카카오] 주소: ${finalAddress}`);
-            } else if (geminiAddress) {
-                finalAddress = geminiAddress;
-                augmentationNotes.push(`[Gemini] 주소: ${finalAddress} (API 미확인)`);
-            } else if (naverJibunAddr) {
-                finalAddress = naverJibunAddr;
-                finalJibunAddress = naverJibunAddr;
-                augmentationNotes.push(`[네이버] 지번주소: ${finalAddress}`);
-            } else if (kakaoJibunAddr) {
-                finalAddress = kakaoJibunAddr;
-                finalJibunAddress = kakaoJibunAddr;
-                augmentationNotes.push(`[카카오] 지번주소: ${finalAddress}`);
-            } else {
-                augmentationNotes.push('[누락] 주소: 모든 소스에서 없음');
-            }
-
-            // 카테고리 3중 교차검증 (우선순위: 네이버 > 카카오 > Gemini)
-            const geminiCategory = restaurant.category || null;
-            const kakaoCategory = geoInfo?.category || null;
-            const naverCategory = naverInfo?.category || null;
-            let finalCategory = null;
-
-            if (naverCategory) {
-                finalCategory = naverCategory;
-                augmentationNotes.push(`[네이버] 카테고리: ${finalCategory}`);
-            } else if (kakaoCategory) {
-                finalCategory = kakaoCategory;
-                augmentationNotes.push(`[카카오] 카테고리: ${finalCategory}`);
-            } else if (geminiCategory) {
-                finalCategory = geminiCategory;
-                augmentationNotes.push(`[Gemini] 카테고리: ${finalCategory}`);
-            }
-
-            // 좌표 교차검증 (네이버 TM128 → WGS84 변환 + 카카오)
-            let finalLat = geoInfo?.lat || null;
-            let finalLng = geoInfo?.lng || null;
-            let coordSource = geocodingSource;
-
-            // 네이버 TM128 좌표를 WGS84로 변환
-            if (naverInfo?.mapx && naverInfo?.mapy && !finalLat) {
-                // TM128 → WGS84 변환 (근사 공식)
-                const tm128ToWgs84 = (x, y) => {
-                    // 네이버 mapx, mapy는 카텍(KATEC) 좌표계
-                    // 간단한 변환 공식 (정확도 약 ~100m)
-                    const lng = (x / 10000000) * 0.8 + 124.5;
-                    const lat = (y / 10000000) * 0.8 + 30.5;
-                    return { lat, lng };
+                // 전화번호 정규화 함수 (비교용)
+                const normalizePhone = (phone) => {
+                    if (!phone) return null;
+                    return phone.replace(/[^0-9]/g, ''); // 숫자만 추출
                 };
-                const converted = tm128ToWgs84(parseInt(naverInfo.mapx), parseInt(naverInfo.mapy));
-                finalLat = converted.lat;
-                finalLng = converted.lng;
-                coordSource = 'naver_converted';
-                augmentationNotes.push(`[네이버] 좌표 변환: (${finalLat.toFixed(6)}, ${finalLng.toFixed(6)})`);
-            } else if (finalLat && finalLng) {
-                augmentationNotes.push(`[${coordSource}] 좌표: (${finalLat.toFixed(6)}, ${finalLng.toFixed(6)})`);
-            } else {
-                augmentationNotes.push('[누락] 좌표: 모든 소스에서 없음');
+
+                const normalizedGemini = normalizePhone(geminiPhone);
+                const normalizedKakao = normalizePhone(kakaoPhone);
+                const normalizedNaver = normalizePhone(naverPhone);
+
+                // 3중 교차 검증 (다수결)
+                const phoneVotes = {};
+                if (normalizedGemini) phoneVotes[normalizedGemini] = (phoneVotes[normalizedGemini] || 0) + 1;
+                if (normalizedKakao) phoneVotes[normalizedKakao] = (phoneVotes[normalizedKakao] || 0) + 1;
+                if (normalizedNaver) phoneVotes[normalizedNaver] = (phoneVotes[normalizedNaver] || 0) + 1;
+
+                const voteCounts = Object.entries(phoneVotes);
+
+                if (voteCounts.length === 0) {
+                    // 아무 소스도 전화번호 없음
+                    augmentationNotes.push('[누락] 전화번호: Gemini/카카오/네이버 모두 없음');
+                } else if (voteCounts.length === 1) {
+                    // 하나의 전화번호만 있음
+                    const [normalized, count] = voteCounts[0];
+                    const sources = [];
+                    if (normalizedGemini === normalized) sources.push('Gemini');
+                    if (normalizedKakao === normalized) sources.push('카카오');
+                    if (normalizedNaver === normalized) sources.push('네이버');
+
+                    // 원본 형식 선택 (카카오 > 네이버 > Gemini)
+                    if (normalizedKakao === normalized) finalPhone = kakaoPhone;
+                    else if (normalizedNaver === normalized) finalPhone = naverPhone;
+                    else finalPhone = geminiPhone;
+
+                    if (count >= 2) {
+                        augmentationNotes.push(`[검증완료] 전화번호: ${finalPhone} (${sources.join('+')} 일치)`);
+                    } else {
+                        augmentationNotes.push(`[단일소스] 전화번호: ${finalPhone} (${sources[0]}에서만 확인)`);
+                    }
+                } else {
+                    // 여러 다른 전화번호 존재 - 다수결 또는 API 우선
+                    voteCounts.sort((a, b) => b[1] - a[1]); // 투표 수 기준 정렬
+                    const [winningNormalized, winningCount] = voteCounts[0];
+
+                    if (winningCount >= 2) {
+                        // 다수결 승리
+                        if (normalizedKakao === winningNormalized) finalPhone = kakaoPhone;
+                        else if (normalizedNaver === winningNormalized) finalPhone = naverPhone;
+                        else finalPhone = geminiPhone;
+                        augmentationNotes.push(`[다수결] 전화번호: ${finalPhone} (${winningCount}/3 일치)`);
+                    } else {
+                        // 모두 다름 - 카카오 > 네이버 > Gemini 우선순위
+                        if (kakaoPhone) {
+                            finalPhone = kakaoPhone;
+                            augmentationNotes.push(`[불일치] 전화번호 - Gemini: ${geminiPhone || 'N/A'}, 카카오: ${kakaoPhone}, 네이버: ${naverPhone || 'N/A'} → 카카오 채택`);
+                        } else if (naverPhone) {
+                            finalPhone = naverPhone;
+                            augmentationNotes.push(`[불일치] 전화번호 - Gemini: ${geminiPhone || 'N/A'}, 네이버: ${naverPhone} → 네이버 채택`);
+                        } else {
+                            finalPhone = geminiPhone;
+                            augmentationNotes.push(`[Gemini] 전화번호: ${finalPhone} (API 미확인)`);
+                        }
+                    }
+                }
+
+                // 상호명 유사도 검증 (Gemini vs 카카오 vs 네이버)
+                const geminiName = restaurant.name || '';
+                const kakaoName = geoInfo?.name || '';
+                const naverName = naverInfo?.name || '';
+                let finalName = geminiName; // 기본값은 Gemini
+
+                // 간단한 유사도 함수 (포함관계 체크)
+                const isSimilar = (a, b) => {
+                    if (!a || !b) return false;
+                    const cleanA = a.replace(/\s+/g, '').toLowerCase();
+                    const cleanB = b.replace(/\s+/g, '').toLowerCase();
+                    return cleanA.includes(cleanB) || cleanB.includes(cleanA) || cleanA === cleanB;
+                };
+
+                if (naverName && isSimilar(geminiName, naverName)) {
+                    finalName = naverName; // 네이버 우선
+                    augmentationNotes.push(`[검증완료] 상호명 일치: ${finalName} (Gemini/네이버)`);
+                } else if (kakaoName && isSimilar(geminiName, kakaoName)) {
+                    finalName = kakaoName;
+                    augmentationNotes.push(`[검증완료] 상호명 일치: ${finalName} (Gemini/카카오)`);
+                } else if (naverName && kakaoName && isSimilar(naverName, kakaoName)) {
+                    finalName = naverName; // 네이버 우선
+                    augmentationNotes.push(`[API일치] 상호명: ${finalName} (네이버/카카오)`);
+                } else if (geminiName) {
+                    augmentationNotes.push(`[Gemini] 상호명: ${geminiName} (API 미확인)`);
+                }
+
+                // 주소 3중 교차검증 (우선순위: 네이버 > 카카오 > Gemini)
+                const geminiAddress = restaurant.address || null;
+                const kakaoRoadAddr = geoInfo?.roadAddress || null;
+                const kakaoJibunAddr = geoInfo?.address || null;
+                const naverRoadAddr = naverInfo?.roadAddress || null;
+                const naverJibunAddr = naverInfo?.address || null;
+
+                let finalAddress = null;
+                let finalRoadAddress = null;
+                let finalJibunAddress = null;
+
+                // 네이버 우선
+                if (naverRoadAddr) {
+                    finalAddress = naverRoadAddr;
+                    finalRoadAddress = naverRoadAddr;
+                    finalJibunAddress = naverJibunAddr;
+                    if (kakaoRoadAddr && naverRoadAddr.includes(kakaoRoadAddr.split(' ')[0])) {
+                        augmentationNotes.push(`[검증완료] 주소: ${finalAddress} (네이버/카카오 일치)`);
+                    } else {
+                        augmentationNotes.push(`[네이버] 주소: ${finalAddress}`);
+                    }
+                } else if (kakaoRoadAddr) {
+                    finalAddress = kakaoRoadAddr;
+                    finalRoadAddress = kakaoRoadAddr;
+                    finalJibunAddress = kakaoJibunAddr;
+                    augmentationNotes.push(`[카카오] 주소: ${finalAddress}`);
+                } else if (geminiAddress) {
+                    finalAddress = geminiAddress;
+                    augmentationNotes.push(`[Gemini] 주소: ${finalAddress} (API 미확인)`);
+                } else if (naverJibunAddr) {
+                    finalAddress = naverJibunAddr;
+                    finalJibunAddress = naverJibunAddr;
+                    augmentationNotes.push(`[네이버] 지번주소: ${finalAddress}`);
+                } else if (kakaoJibunAddr) {
+                    finalAddress = kakaoJibunAddr;
+                    finalJibunAddress = kakaoJibunAddr;
+                    augmentationNotes.push(`[카카오] 지번주소: ${finalAddress}`);
+                } else {
+                    augmentationNotes.push('[누락] 주소: 모든 소스에서 없음');
+                }
+
+                // 카테고리 3중 교차검증 (우선순위: 네이버 > 카카오 > Gemini)
+                const geminiCategory = restaurant.category || null;
+                const kakaoCategory = geoInfo?.category || null;
+                const naverCategory = naverInfo?.category || null;
+                let finalCategory = null;
+
+                if (naverCategory) {
+                    finalCategory = naverCategory;
+                    augmentationNotes.push(`[네이버] 카테고리: ${finalCategory}`);
+                } else if (kakaoCategory) {
+                    finalCategory = kakaoCategory;
+                    augmentationNotes.push(`[카카오] 카테고리: ${finalCategory}`);
+                } else if (geminiCategory) {
+                    finalCategory = geminiCategory;
+                    augmentationNotes.push(`[Gemini] 카테고리: ${finalCategory}`);
+                }
+
+                // 좌표 교차검증 (네이버 TM128 → WGS84 변환 + 카카오)
+                let finalLat = geoInfo?.lat || null;
+                let finalLng = geoInfo?.lng || null;
+                let coordSource = geocodingSource;
+
+                // 네이버 TM128 좌표를 WGS84로 변환
+                if (naverInfo?.mapx && naverInfo?.mapy && !finalLat) {
+                    // TM128 → WGS84 변환 (근사 공식)
+                    const tm128ToWgs84 = (x, y) => {
+                        // 네이버 mapx, mapy는 카텍(KATEC) 좌표계
+                        // 간단한 변환 공식 (정확도 약 ~100m)
+                        const lng = (x / 10000000) * 0.8 + 124.5;
+                        const lat = (y / 10000000) * 0.8 + 30.5;
+                        return { lat, lng };
+                    };
+                    const converted = tm128ToWgs84(parseInt(naverInfo.mapx), parseInt(naverInfo.mapy));
+                    finalLat = converted.lat;
+                    finalLng = converted.lng;
+                    coordSource = 'naver_converted';
+                    augmentationNotes.push(`[네이버] 좌표 변환: (${finalLat.toFixed(6)}, ${finalLng.toFixed(6)})`);
+                } else if (finalLat && finalLng) {
+                    augmentationNotes.push(`[${coordSource}] 좌표: (${finalLat.toFixed(6)}, ${finalLng.toFixed(6)})`);
+                } else {
+                    augmentationNotes.push('[누락] 좌표: 모든 소스에서 없음');
+                }
+
+                // reasoning_basis 통합
+                const originalReasoning = restaurant.reasoning_basis || '';
+                const augmentationLog = augmentationNotes.length > 0
+                    ? `\n--- 데이터 보완 ---\n${augmentationNotes.join('\n')}`
+                    : '';
+                const finalReasoning = originalReasoning + augmentationLog;
+
+                result.restaurants.push({
+                    ...restaurant,
+                    name: finalName,
+                    youtuber_name: '정육왕',
+                    youtuber_channel: '@meatcreator',
+                    youtube_link: video.youtube_link,
+                    video_title: video.title,
+                    lat: finalLat,
+                    lng: finalLng,
+                    address: finalAddress,
+                    geocoded_address: finalRoadAddress || finalJibunAddress || null,
+                    road_address: finalRoadAddress,
+                    jibun_address: finalJibunAddress,
+                    phone: finalPhone,
+                    category: finalCategory,
+                    geocoding_source: coordSource,
+                    reasoning_basis: finalReasoning || null,
+                    map_type: video.mapUrls?.[0]?.type || null,
+                    map_url: video.mapUrls?.[0]?.url || null
+                });
             }
-
-            // reasoning_basis 통합
-            const originalReasoning = restaurant.reasoning_basis || '';
-            const augmentationLog = augmentationNotes.length > 0
-                ? `\n--- 데이터 보완 ---\n${augmentationNotes.join('\n')}`
-                : '';
-            const finalReasoning = originalReasoning + augmentationLog;
-
-            result.restaurants.push({
-                ...restaurant,
-                name: finalName,
-                youtuber_name: '정육왕',
-                youtuber_channel: '@meatcreator',
-                youtube_link: video.youtube_link,
-                video_title: video.title,
-                lat: finalLat,
-                lng: finalLng,
-                address: finalAddress,
-                geocoded_address: finalRoadAddress || finalJibunAddress || null,
-                road_address: finalRoadAddress,
-                jibun_address: finalJibunAddress,
-                phone: finalPhone,
-                category: finalCategory,
-                geocoding_source: coordSource,
-                reasoning_basis: finalReasoning || null,
-                map_type: video.mapUrls?.[0]?.type || null,
-                map_url: video.mapUrls?.[0]?.url || null
-            });
         }
     }
 

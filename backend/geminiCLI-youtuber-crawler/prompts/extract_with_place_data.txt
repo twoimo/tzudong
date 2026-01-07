@@ -62,7 +62,7 @@
 
 ```json
 {
-  "restaurants": [
+  "analysis": [
     {
       "name": "수집된 상호명 (확인됨)",
       "phone": "수집된 전화번호 또는 null",
