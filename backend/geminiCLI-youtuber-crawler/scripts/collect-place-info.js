@@ -226,7 +226,7 @@ async function collectFromNaverMap(page, mapUrl) {
         // form.naver.com은 스킵 (설문조사/예약 페이지)
         if (url.includes('form.naver.com')) {
             log('debug', `네이버 폼 스킵: ${url}`);
-            return null;
+            return { skipped: true };
         }
 
         // place ID 추출 (여러 형식 지원)
@@ -813,7 +813,7 @@ async function collectFromGoogleMap(page, mapUrl) {
         // 네이버 폼 등 유효하지 않은 URL 체크
         if (currentUrl.includes('form.naver.com')) {
             log('debug', `네이버 폼 URL 감지 - 스킵: ${currentUrl}`);
-            return null;
+            return { skipped: true };
         }
 
         if (!lat) {
@@ -971,6 +971,8 @@ async function collectPlaceInfoForVideo(video, index, total, isRetry = false) {
             if (placeInfo && placeInfo.name) {
                 places.push(placeInfo);
                 log('success', `  → ${placeInfo.name} (${placeInfo.source})`);
+            } else if (placeInfo && placeInfo.skipped) {
+                // 스킵된 URL (재시도 안함)
             } else {
                 log('debug', `  → 정보 추출 실패: ${mapInfo.url}`);
                 failedUrls.push(mapInfo); // 실패한 URL 저장
@@ -1145,9 +1147,8 @@ async function main() {
         );
 
         for (const result of results) {
-            newResults.push(result);
-
             if (result.hasPlaceInfo) {
+                newResults.push(result);
                 stats.success++;
                 stats.totalPlaces += result.places.length;
             } else {
@@ -1195,14 +1196,20 @@ async function main() {
 
             const result = await collectPlaceInfoForVideo(video, i, allFailedVideos.length, true);
 
-            // 기존 결과 업데이트
+            // 기존 결과 업데이트 또는 신규 추가 (재시도 성공 시)
             const existingIdx = newResults.findIndex(r => r.videoId === result.videoId);
             if (existingIdx >= 0 && result.places.length > 0) {
                 // 기존 결과에 새 장소 추가
                 newResults[existingIdx].places.push(...result.places);
                 newResults[existingIdx].hasPlaceInfo = true;
                 stats.totalPlaces += result.places.length;
-                if (result.places.length > 0) stats.success++;
+
+            } else if (result.places.length > 0) {
+                // 신규 추가 (초기 수집 실패했으나 재시도 성공)
+                result.hasPlaceInfo = true;
+                newResults.push(result);
+                stats.totalPlaces += result.places.length;
+                stats.success++;
             }
         }
     }
