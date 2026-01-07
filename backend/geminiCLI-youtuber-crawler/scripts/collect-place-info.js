@@ -276,6 +276,23 @@ async function collectFromNaverMap(page, mapUrl) {
             log('debug', `주소 펼치기 실패 (무시됨): ${e.message}`);
         }
 
+        // 전화번호 보기 버튼 클릭 (숨겨진 번호 확보)
+        try {
+            const phoneBtnSelector = 'a.BfF3H'; // '전화번호 보기' 버튼
+            const phoneBtn = await page.$(phoneBtnSelector);
+            if (phoneBtn) {
+                log('debug', '전화번호 보기 버튼 발견, 클릭 시도...');
+                await page.evaluate((sel) => {
+                    const el = document.querySelector(sel);
+                    if (el) el.click();
+                }, phoneBtnSelector);
+                // 펼쳐질 때까지 잠시 대기
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        } catch (e) {
+            log('debug', `전화번호 보기 클릭 실패 (무시됨): ${e.message}`);
+        }
+
         const placeInfo = await page.evaluate(() => {
             const result = {
                 name: null,
@@ -359,6 +376,18 @@ async function collectFromNaverMap(page, mapUrl) {
                     // 전화번호 패턴 확인
                     if (phoneText && /^[\d\-+().\s]+$/.test(phoneText)) {
                         result.phone = phoneText;
+                    }
+                }
+            }
+
+            // 6. 숨겨진 전화번호 (펼쳐진 레이어) 확인
+            // <div class="_YI7T ..."><div class="J7eF_">휴대전화번호 <em>010-...</em>
+            if (!result.phone) {
+                const hiddenPhoneContainer = document.querySelector('div._YI7T .J7eF_');
+                if (hiddenPhoneContainer) {
+                    const em = hiddenPhoneContainer.querySelector('em');
+                    if (em) {
+                        result.phone = em.textContent?.trim();
                     }
                 }
             }
