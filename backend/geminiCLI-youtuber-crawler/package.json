@@ -12,7 +12,7 @@
     "insert": "bun run scripts/insert-to-supabase.js",
     "pipeline": "bun run scripts/pipeline.js",
     "quality": "bun run scripts/check-quality.js",
-    "full": "bun run oauth && bun run crawl && bun run transcripts && bun run extract && bun run geocode && bun run insert",
+    "full": "bun run scripts/pipeline.js",
     "oauth": "bun run scripts/gemini-oauth-manager.js"
   },
   "dependencies": {

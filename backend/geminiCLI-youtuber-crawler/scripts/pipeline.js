@@ -160,6 +160,8 @@ async function main() {
     const results = {
         oauth: null,
         crawl: null,
+        transcript: null,
+        placeInfo: null,
         extract: null,
         geocode: null,
         insert: null
@@ -184,16 +186,45 @@ async function main() {
             );
         }
 
+        // Phase 1.5 & 1.6: 자막 수집 + 장소 정보 수집 (병렬 실행)
+        if (parseInt(startFrom) <= 1.6) {
+            log('info', '');
+            log('info', '─'.repeat(60));
+            log('phase', 'Phase 1.5 & 1.6: 자막 + 장소 정보 수집 (병렬)');
+            log('info', '─'.repeat(60));
+
+            const parallelTasks = [];
+
+            if (parseInt(startFrom) <= 1.5) {
+                parallelTasks.push(
+                    runScript(path.join(__dirname, 'collect-transcripts.js'), '자막 수집')
+                        .then(result => { results.transcript = result; })
+                        .catch(err => { log('warning', `자막 수집 실패: ${err.message}`); })
+                );
+            }
+
+            if (parseInt(startFrom) <= 1.6) {
+                parallelTasks.push(
+                    runScript(path.join(__dirname, 'collect-place-info.js'), '장소 정보 수집')
+                        .then(result => { results.placeInfo = result; })
+                        .catch(err => { log('warning', `장소 정보 수집 실패: ${err.message}`); })
+                );
+            }
+
+            await Promise.all(parallelTasks);
+            log('success', '자막 + 장소 정보 수집 완료');
+        }
+
         // Phase 2: 주소 추출 및 Gemini 분석
         if (parseInt(startFrom) <= 2) {
             log('info', '');
             log('info', '─'.repeat(60));
-            log('phase', 'Phase 2: 주소 추출 및 AI 분석');
+            log('phase', 'Phase 2: AI 분석 (장소 데이터 + 자막 → 맛집 정보)');
             log('info', '─'.repeat(60));
 
             results.extract = await runScript(
                 path.join(__dirname, 'extract-addresses.js'),
-                '주소 추출'
+                'AI 분석'
             );
         }
 
@@ -268,13 +299,20 @@ if (process.argv.includes('--help')) {
   node pipeline.js [옵션]
 
 옵션:
-  --start-from=N    N단계부터 시작 (1: 크롤링, 2: 추출, 3: 지오코딩, 4: DB저장)
+  --start-from=N    N단계부터 시작
+                    1:   채널 크롤링
+                    1.5: 자막 수집
+                    1.6: 맛집 URL 정보 수집
+                    2:   AI 분석 (Gemini)
+                    3:   좌표 보완
+                    4:   DB 저장
   --help            도움말 표시
 
 예시:
-  node pipeline.js                  # 전체 실행
-  node pipeline.js --start-from=2   # 주소 추출부터 시작
-  node pipeline.js --start-from=3   # DB 저장만 실행
+  node pipeline.js                    # 전체 실행
+  node pipeline.js --start-from=1.5   # 자막 수집부터 시작
+  node pipeline.js --start-from=2     # AI 분석부터 시작
+  node pipeline.js --start-from=4     # DB 저장만 실행
 `);
     process.exit(0);
 }

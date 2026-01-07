@@ -520,7 +520,15 @@ function getTodayFolder() {
 const DATA_DIR = path.resolve(__dirname, '../data');
 const TODAY_FOLDER = getTodayFolder();
 const TODAY_PATH = path.join(DATA_DIR, TODAY_FOLDER);
-const PROMPT_FILE = path.resolve(__dirname, '../prompts/extract_restaurant.txt');
+
+// 프롬프트 파일 (2종류: 장소 데이터 유무에 따라)
+const PROMPT_WITH_PLACE_DATA = path.resolve(__dirname, '../prompts/extract_with_place_data.txt');
+const PROMPT_WITHOUT_PLACE_DATA = path.resolve(__dirname, '../prompts/extract_without_place_data.txt');
+const PROMPT_FILE_LEGACY = path.resolve(__dirname, '../prompts/extract_restaurant.txt');
+
+// 장소 정보 파일 (collect-place-info.js에서 수집)
+const PLACE_INFO_FILE = path.join(DATA_DIR, 'place_info.jsonl');
+let placeInfoCache = null; // videoId -> places[]
 
 // 로그 함수 (개선됨)
 const DEBUG_MODE = process.env.DEBUG === 'true';
@@ -853,6 +861,59 @@ function getTranscript(videoId) {
 }
 
 /**
+ * place_info.jsonl 파일을 메모리에 로드
+ * collect-place-info.js에서 수집된 장소 정보 사용
+ */
+function loadPlaceInfoCache() {
+    if (placeInfoCache !== null) return placeInfoCache;
+
+    placeInfoCache = new Map();
+
+    if (!fs.existsSync(PLACE_INFO_FILE)) {
+        log('info', '장소 정보 파일 없음 - Gemini가 직접 정보 추출');
+        return placeInfoCache;
+    }
+
+    try {
+        const content = fs.readFileSync(PLACE_INFO_FILE, 'utf-8');
+        const lines = content.trim().split('\n');
+
+        for (const line of lines) {
+            if (line) {
+                try {
+                    const data = JSON.parse(line);
+                    if (data.videoId && data.places) {
+                        placeInfoCache.set(data.videoId, data.places);
+                    }
+                } catch { }
+            }
+        }
+
+        log('info', `장소 정보 캐시 로드: ${placeInfoCache.size}개 영상`);
+    } catch (error) {
+        log('warning', `장소 정보 파일 로드 실패: ${error.message}`);
+    }
+
+    return placeInfoCache;
+}
+
+/**
+ * 특정 영상의 장소 정보 가져오기
+ */
+function getPlaceInfo(videoId) {
+    const cache = loadPlaceInfoCache();
+    const places = cache.get(videoId);
+
+    if (places && places.length > 0) {
+        log('debug', `장소 정보 캐시 히트: ${videoId} (${places.length}개)`, videoId);
+        return places;
+    }
+
+    log('debug', `장소 정보 없음: ${videoId}`, videoId);
+    return null;
+}
+
+/**
  * 임시 파일 정리 헬퍼
  */
 function cleanupTempFiles(...files) {
@@ -868,30 +929,59 @@ function cleanupTempFiles(...files) {
 /**
  * Gemini CLI로 맛집 정보 추출
  * 여러 모델을 순차적으로 시도 (fallback 지원)
+ * 장소 데이터 유무에 따라 다른 프롬프트 사용
  */
 async function extractWithGemini(video, transcript, retryAttempt = 0) {
-    // 프롬프트 템플릿 로드
     log('debug', `Gemini 분석 시작: ${video.title.slice(0, 50)}...`, video.videoId);
 
-    // 1. 지도 URL 우선 확인
-    if (video.mapUrls && video.mapUrls.length > 0) {
-        const mapTypes = video.mapUrls.reduce((acc, u) => {
-            acc[u.type] = (acc[u.type] || 0) + 1;
-            return acc;
-        }, {});
-        const typeStr = Object.entries(mapTypes).map(([t, c]) => `${t}:${c}`).join(', ');
-        log('debug', `지도 URL 발견 (${typeStr}): ${video.mapUrls[0].url.slice(0, 50)}...`);
-    } else {
-        log('info', '지도 URL 없음 - 자막/제목/설명에서 맛집 추출 시도', video.videoId);
-    }
-    let promptTemplate = fs.readFileSync(PROMPT_FILE, 'utf-8');
+    // 1. 수집된 장소 정보 확인 (collect-place-info.js에서 수집)
+    const collectedPlaces = getPlaceInfo(video.videoId);
+    const hasCollectedPlaceData = collectedPlaces && collectedPlaces.length > 0;
 
-    // 지도 URL 목록 생성
+    // 2. 프롬프트 파일 선택
+    let promptFile;
+    if (hasCollectedPlaceData) {
+        promptFile = PROMPT_WITH_PLACE_DATA;
+        log('info', `[장소 데이터 있음] ${collectedPlaces.length}개 장소 수집됨 - 리뷰 작성 중심 프롬프트 사용`, video.videoId);
+    } else if (fs.existsSync(PROMPT_WITHOUT_PLACE_DATA)) {
+        promptFile = PROMPT_WITHOUT_PLACE_DATA;
+        log('info', '[장소 데이터 없음] 자막/설명에서 직접 추출 프롬프트 사용', video.videoId);
+    } else {
+        // fallback: 기존 프롬프트 사용
+        promptFile = PROMPT_FILE_LEGACY;
+        log('debug', '[fallback] 기존 프롬프트 사용', video.videoId);
+    }
+
+    // 3. 프롬프트 템플릿 로드
+    let promptTemplate;
+    try {
+        promptTemplate = fs.readFileSync(promptFile, 'utf-8');
+    } catch (err) {
+        log('warning', `프롬프트 파일 로드 실패: ${err.message}, 기존 프롬프트 사용`);
+        promptTemplate = fs.readFileSync(PROMPT_FILE_LEGACY, 'utf-8');
+    }
+
+    // 4. 수집된 장소 정보 텍스트 생성
+    let collectedPlaceDataText = '(없음)';
+    if (hasCollectedPlaceData) {
+        collectedPlaceDataText = collectedPlaces.map((p, i) => {
+            const lines = [`## 장소 ${i + 1}: ${p.name || '(이름 없음)'}`];
+            if (p.roadAddress) lines.push(`- 도로명 주소: ${p.roadAddress}`);
+            if (p.jibunAddress) lines.push(`- 지번 주소: ${p.jibunAddress}`);
+            if (p.phone) lines.push(`- 전화번호: ${p.phone}`);
+            if (p.category) lines.push(`- 카테고리: ${p.category}`);
+            if (p.lat && p.lng) lines.push(`- 좌표: (${p.lat}, ${p.lng})`);
+            if (p.source) lines.push(`- 출처: ${p.source}`);
+            if (p.mapUrl) lines.push(`- 지도 URL: ${p.mapUrl}`);
+            return lines.join('\n');
+        }).join('\n\n');
+    }
+
+    // 5. 지도 URL 목록 생성 (기존 호환)
     let mapUrlsText = '(없음)';
     if (video.mapUrls && video.mapUrls.length > 0) {
         mapUrlsText = video.mapUrls.map(m => {
             let info = `- ${m.type}: ${m.url}`;
-            // 추출된 정보가 있으면 추가
             if (m.extractedInfo) {
                 if (m.extractedInfo.lat && m.extractedInfo.lng) {
                     info += ` → 좌표: (${m.extractedInfo.lat}, ${m.extractedInfo.lng})`;
@@ -907,12 +997,13 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
         }).join('\n');
     }
 
-    // 플레이스홀더 치환
+    // 6. 플레이스홀더 치환
     promptTemplate = promptTemplate
         .replace('<유튜브_링크>', video.youtube_link)
         .replace('<영상_제목>', video.title)
         .replace('<영상_설명>', video.description)
         .replace('<지도_URL_목록>', mapUrlsText)
+        .replace('<수집된_장소_정보>', collectedPlaceDataText)
         .replace('<자막>', transcript || '(자막 없음)');
 
     // 임시 파일에 프롬프트 저장

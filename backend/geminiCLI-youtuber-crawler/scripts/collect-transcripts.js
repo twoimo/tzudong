@@ -70,9 +70,9 @@ function log(level, msg) {
     console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
 
-// Puppeteer 동시 실행 제한 (안티-블로킹 강화)
+// Puppeteer 동시 실행 제한 (성능 최적화: 로컬 3개)
 const isGitHubActionsEnv = !!process.env.GITHUB_ACTIONS;
-const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 2; // 로컬에서도 2개로 제한 (차단 방지)
+const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 3;
 let puppeteerActiveCount = 0;
 const puppeteerQueue = [];
 
@@ -112,9 +112,9 @@ function getRandomUserAgent() {
     return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
-// 랜덤 딜레이 (3-5초)
+// 랜덤 딸레이 (성능 최적화: 2-3초)
 function getRandomDelay() {
-    return 3000 + Math.floor(Math.random() * 2000);
+    return 2000 + Math.floor(Math.random() * 1000);
 }
 
 /**
