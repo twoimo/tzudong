@@ -13,7 +13,7 @@ const __dirname = dirname(__filename);
 // 네이버/카카오 API 키 (환경변수에서 로드)
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID;
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET;
-const KAKAO_API_KEY = process.env.KAKAO_API_KEY; // REST API Key
+const KAKAO_API_KEY = process.env.KAKAO_REST_API_KEY; // REST API 키 (환경변수명 수정됨)
 
 /**
  * 유튜브 설명란에서 지도/맛집 URL을 추출합니다.
@@ -164,7 +164,7 @@ async function extractKakaoMap(page, url) {
     }
 }
 
-async function searchNaverApi(query) {
+export async function searchNaverApi(query) {
     if (!NAVER_CLIENT_ID || !NAVER_CLIENT_SECRET) return null;
     try {
         const apiUrl = `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=1&sort=random`;
@@ -177,9 +177,9 @@ async function searchNaverApi(query) {
         const data = await response.json();
         if (data.items && data.items.length > 0) {
             const item = data.items[0];
-            // Naver API returns katec coordinates or similar, need checking. 
-            // Actually standard API returns mapx, mapy (TM128). Need to convert or use address for geocoding separately if needed.
-            // But for "context" to Gemini, Name and Road Address are most important.
+            // 네이버 API는 KATECH 좌표 등을 반환하므로 확인이 필요합니다.
+            // 실제로 표준 API는 mapx, mapy (TM128)를 반환합니다. 필요하다면 변환하거나 주소를 사용해 별도로 지오코딩해야 합니다.
+            // 하지만 Gemini에 제공할 "컨텍스트"로는 상호명과 도로명 주소가 가장 중요합니다.
             return {
                 name: item.title.replace(/<[^>]+>/g, ''),
                 address: item.roadAddress || item.address,
@@ -194,7 +194,7 @@ async function searchNaverApi(query) {
     return null;
 }
 
-async function searchKakaoApi(query) {
+export async function searchKakaoApi(query) {
     if (!KAKAO_API_KEY) return null;
     try {
         const apiUrl = `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}`;

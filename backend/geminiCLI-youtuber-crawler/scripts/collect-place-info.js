@@ -8,6 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
+import { searchNaverApi, searchKakaoApi } from './url-extractor.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,19 @@ function log(level, msg) {
     };
 
     console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
+}
+
+/**
+ * 텍스트 정제 (제어문자 및 불필요한 공백 제거)
+ * 예: "부일숯불갈비 : 네이버\u001c" -> "부일숯불갈비"
+ */
+function cleanText(text) {
+    if (!text) return null;
+    return text
+        .replace(/[\x00-\x1F\x7F]/g, '') // 제어문자 제거
+        .replace(/\s*:\s*네이버.*$/, '') // 네이버 접미사 제거
+        .replace(/\s*\|\s*카카오맵.*$/, '') // 카카오 접미사 제거
+        .trim();
 }
 
 // Puppeteer 동시 실행 제한 (안정성 최적화: 로컬 2개)
@@ -321,53 +335,47 @@ async function collectFromNaverMap(page, mapUrl) {
             } catch { }
         }
 
-        // 네이버 API로 좌표 보완 (주소가 있는 경우 Geocoding)
-        if (!placeInfo.lat && placeInfo.roadAddress) {
-            const naverApiKey = process.env.NAVER_CLIENT_ID;
-            const naverSecretKey = process.env.NAVER_CLIENT_SECRET;
+        // 데이터 정제
+        placeInfo.name = cleanText(placeInfo.name);
+        placeInfo.roadAddress = cleanText(placeInfo.roadAddress);
 
-            if (naverApiKey && naverSecretKey) {
-                try {
-                    const geocodeUrl = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(placeInfo.roadAddress)}`;
-                    const response = await fetch(geocodeUrl, {
-                        headers: {
-                            'X-NCP-APIGW-API-KEY-ID': naverApiKey,
-                            'X-NCP-APIGW-API-KEY': naverSecretKey
-                        }
-                    });
-                    const data = await response.json();
-                    if (data.addresses && data.addresses.length > 0) {
-                        placeInfo.lat = parseFloat(data.addresses[0].y);
-                        placeInfo.lng = parseFloat(data.addresses[0].x);
-                    }
-                } catch (err) {
-                    log('debug', `네이버 좌표 API 실패: ${err.message}`);
-                }
+        // [Phase 3 보완] 좌표 누락 시 로직 개선 (User Request)
+
+        // 1. 도로명 주소(roadAddress)가 있으면 -> Kakao Geocoding (정확도 최상)
+        if (!placeInfo.lat && placeInfo.roadAddress) {
+            const kakaoResult = await searchKakaoApi(placeInfo.roadAddress);
+            if (kakaoResult && kakaoResult.lat) {
+                placeInfo.lat = kakaoResult.lat;
+                placeInfo.lng = kakaoResult.lng;
+                log('debug', `주소 기반 Geocoding 성공: ${placeInfo.roadAddress}`);
             }
         }
 
-        // [Phase 3 보완] 좌표나 주소가 여전히 없으면, 상호명으로 '네이버 지역 검색 API' 시도
-        if ((!placeInfo.lat || !placeInfo.roadAddress) && placeInfo.name) {
-            const searchResult = await searchPlaceWithNaver(placeInfo.name);
-            if (searchResult) {
-                log('debug', `네이버 검색 API로 정보 보완: ${placeInfo.name}`);
-                if (!placeInfo.roadAddress) placeInfo.roadAddress = searchResult.roadAddress;
-                if (!placeInfo.category) placeInfo.category = searchResult.category;
-                // mapx, mapy to lat, lng (TM128 -> WGS84 변환 필요하지만, 일단 검색 결과 우선)
-                // 네이버 Search API는 TM128 좌표를 주므로 변환 로직이 필요. 
-                // 복잡성을 피하기 위해 searchPlaceWithNaver가 도로명주소를 주므로, 그걸 다시 Geocoding 시도하는게 나음.
-                if (searchResult.roadAddress && !placeInfo.lat) {
-                    // 다시 Geocoding 시도 (위 로직 재활용 함수화가 좋지만 일단 중복 실행)
-                    // ... (생략, 다음 루프나 재시도에서 처리되길 기대하거나 여기서 직접 호출)
-                }
-            }
-            // 카카오 검색 API로도 시도 (좌표 정확도 위해)
-            if (!placeInfo.lat) {
-                const kakaoResult = await searchPlaceWithKakao(placeInfo.name);
-                if (kakaoResult && kakaoResult.lat) {
-                    placeInfo.lat = kakaoResult.lat;
-                    placeInfo.lng = kakaoResult.lng;
-                    if (!placeInfo.roadAddress) placeInfo.roadAddress = kakaoResult.roadAddress;
+        // 2. 여전히 좌표가 없으면 -> 상호명(name)으로 API 검색
+        if ((!placeInfo.lat) && placeInfo.name) {
+            // 카카오 키워드 검색
+            const kakaoResult = await searchKakaoApi(placeInfo.name);
+            if (kakaoResult && kakaoResult.lat) {
+                placeInfo.lat = kakaoResult.lat;
+                placeInfo.lng = kakaoResult.lng;
+                if (!placeInfo.roadAddress) placeInfo.roadAddress = kakaoResult.address;
+                log('debug', `카카오 키워드 검색 성공: ${placeInfo.name}`);
+            } else {
+                // 카카오 실패시 네이버 검색
+                const naverResult = await searchNaverApi(placeInfo.name);
+                if (naverResult) {
+                    log('debug', `네이버 검색 API 성공: ${placeInfo.name}`);
+                    if (!placeInfo.roadAddress) placeInfo.roadAddress = naverResult.address;
+                    if (!placeInfo.category) placeInfo.category = naverResult.category;
+
+                    // 네이버 주소로 다시 Kakao Geocoding
+                    if (placeInfo.roadAddress) {
+                        const kResult = await searchKakaoApi(placeInfo.roadAddress);
+                        if (kResult && kResult.lat) {
+                            placeInfo.lat = kResult.lat;
+                            placeInfo.lng = kResult.lng;
+                        }
+                    }
                 }
             }
         }
@@ -479,13 +487,25 @@ async function collectFromKakaoMap(page, mapUrl) {
         placeInfo.mapUrl = mapUrl;
         placeInfo.placeId = placeId;
 
-        // [Phase 3 보완] 좌표 누락 시 이름으로 검색
-        if (!placeInfo.lat && placeInfo.name) {
-            const kakaoResult = await searchPlaceWithKakao(placeInfo.name);
+        // 데이터 정제
+        placeInfo.name = cleanText(placeInfo.name);
+        placeInfo.roadAddress = cleanText(placeInfo.roadAddress);
+
+        // [Phase 3 보완] 좌표 누락 시 로직 개선
+        if (!placeInfo.lat && placeInfo.roadAddress) {
+            const kakaoResult = await searchKakaoApi(placeInfo.roadAddress);
             if (kakaoResult && kakaoResult.lat) {
                 placeInfo.lat = kakaoResult.lat;
                 placeInfo.lng = kakaoResult.lng;
-                if (!placeInfo.roadAddress) placeInfo.roadAddress = kakaoResult.roadAddress;
+            }
+        }
+
+        if (!placeInfo.lat && placeInfo.name) {
+            const kakaoResult = await searchKakaoApi(placeInfo.name);
+            if (kakaoResult && kakaoResult.lat) {
+                placeInfo.lat = kakaoResult.lat;
+                placeInfo.lng = kakaoResult.lng;
+                if (!placeInfo.roadAddress) placeInfo.roadAddress = kakaoResult.address;
             }
         }
 
@@ -560,26 +580,24 @@ async function collectFromGoogleMap(page, mapUrl) {
             return result;
         });
 
-        // 좌표 보완
-        if (!lat && placeInfo.roadAddress) {
-            // 카카오 API로 좌표 변환 (구글 API 키 없는 경우)
-            const kakaoApiKey = process.env.KAKAO_REST_API_KEY;
-            if (kakaoApiKey) {
-                try {
-                    const geocodeUrl = `https://dapi.kakao.com/v2/local/search/address.json?query=${encodeURIComponent(placeInfo.roadAddress)}`;
-                    const response = await fetch(geocodeUrl, {
-                        headers: {
-                            'Authorization': `KakaoAK ${kakaoApiKey}`
-                        }
-                    });
-                    const data = await response.json();
-                    if (data.documents && data.documents.length > 0) {
-                        lat = parseFloat(data.documents[0].y);
-                        lng = parseFloat(data.documents[0].x);
-                    }
-                } catch (err) {
-                    log('debug', `좌표 변환 실패: ${err.message}`);
-                }
+        // 데이터 정제
+        placeInfo.name = cleanText(placeInfo.name);
+        placeInfo.roadAddress = cleanText(placeInfo.roadAddress);
+
+        // [Phase 3 보완] 좌표 누락 시 로직 개선
+        if (!placeInfo.lat && placeInfo.roadAddress) {
+            const kakaoResult = await searchKakaoApi(placeInfo.roadAddress);
+            if (kakaoResult && kakaoResult.lat) {
+                placeInfo.lat = kakaoResult.lat;
+                placeInfo.lng = kakaoResult.lng;
+            }
+        }
+
+        if (!placeInfo.lat && placeInfo.name) {
+            const kakaoResult = await searchKakaoApi(placeInfo.name);
+            if (kakaoResult && kakaoResult.lat) {
+                placeInfo.lat = kakaoResult.lat;
+                placeInfo.lng = kakaoResult.lng;
             }
         }
 
@@ -587,15 +605,6 @@ async function collectFromGoogleMap(page, mapUrl) {
         placeInfo.lng = lng;
         placeInfo.source = 'google';
         placeInfo.mapUrl = mapUrl;
-
-        // [Phase 3 보완] 좌표 누락 시 이름으로 검색 (Google은 이미 Kakao Geocoding을 시도했으나 실패했을 수 있음)
-        if (!placeInfo.lat && placeInfo.name) {
-            const kakaoResult = await searchPlaceWithKakao(placeInfo.name);
-            if (kakaoResult && kakaoResult.lat) {
-                placeInfo.lat = kakaoResult.lat;
-                placeInfo.lng = kakaoResult.lng;
-            }
-        }
 
         return placeInfo;
 

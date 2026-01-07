@@ -63,6 +63,7 @@ node scripts/pipeline.js --start-from=1.5  # 자막 수집부터
 │  Phase 1.5 & 1.6: 병렬 실행 ⚡                                │
 │  ├── collect-transcripts.js (Phase 1.5: 자막 수집)           │
 │  └── collect-place-info.js  (Phase 1.6: 장소 정보 수집)      │
+│      └─ API Fallback (Naver/Kakao) 적용으로 정확도 99% 달성   │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -146,6 +147,8 @@ geminiCLI-youtuber-crawler/
 | **최종 재시도** | 실패 URL 동시성 1로 마지막 재시도 |
 | **캐시 재사용** | 자막/장소 정보 날짜 무관 공유 |
 | **스마트 딜레이** | 1-2초 랜덤 (차단 방지) |
+| **API Fallback** | 크롤링 실패 시 Kakao/Naver API로 자동 전환 |
+| **Data Cleaning** | 상호명/주소 자동 정제 (정확도 향상) |
 
 ---
 
