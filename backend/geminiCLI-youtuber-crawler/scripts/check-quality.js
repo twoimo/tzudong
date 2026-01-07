@@ -149,9 +149,11 @@ async function main() {
             stats.nonRestaurantVideos++;
         }
 
-        if (!entry.restaurants || entry.restaurants.length === 0) continue;
+        const places = (entry.analysis && entry.analysis.length > 0) ? entry.analysis : (entry.restaurants || []);
 
-        for (const r of entry.restaurants) {
+        if (places.length === 0) continue;
+
+        for (const r of places) {
             stats.totalRestaurants++;
 
             const isKorean = isKoreanAddress(r.address);

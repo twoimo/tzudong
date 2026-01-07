@@ -1458,8 +1458,7 @@ async function processVideo(video) {
         duration: video.duration,
         mapUrls: video.mapUrls,
         description: video.description || '', // Original YouTube Description
-        analysis: [], // Gemini 원본 응답 저장용
-        restaurants: [], // 최종 가공된 맛집 정보 저장용
+        analysis: [], // 최종 가공된 맛집 정보 저장용
         processedAt: getKSTDate().toISOString()
     };
 
@@ -1820,7 +1819,7 @@ async function processVideo(video) {
                     : '';
                 const finalReasoning = originalReasoning + augmentationLog;
 
-                result.restaurants.push({
+                result.analysis.push({
                     ...restaurant,
                     name: finalName,
                     youtuber_name: '정육왕',
