@@ -260,6 +260,7 @@ async function enrichKoreanData(name, address) {
         return {
             ...kakaoResult,
             phone: finalPhone,
+            naver_address: naverResult?.address || null,
             phone_source: naverResult?.phone ? 'naver_api' : (kakaoResult.phone ? 'kakao_api' : null),
             api_source: naverResult ? 'kakao+naver' : 'kakao_only'
         };
@@ -356,15 +357,25 @@ async function main() {
             stats.koreanRestaurants++;
 
             // 보완 필요 여부 확인
+            // 보완 필요 여부 확인
             const needCoords = !restaurant.lat || !restaurant.lng;
             const needPhone = !restaurant.phone;
+            // Naver 주소가 아니면 재검사 (User Request)
+            const needAddressUpdate = restaurant.address_source !== 'naver_api';
 
-            if (!needCoords && !needPhone) {
+            if (!needCoords && !needPhone && !needAddressUpdate) {
                 stats.alreadyComplete++;
                 continue;
             }
 
-            log('info', `[${stats.totalRestaurants}] 보완 시도: ${restaurant.name} (좌표:${needCoords ? '' : ''}, 전화:${needPhone ? '' : ''})`);
+            const statusParts = [];
+            if (needCoords) statusParts.push('좌표:없음');
+            if (needPhone) statusParts.push('전화:없음');
+            if (needAddressUpdate) statusParts.push('주소:네이버아님');
+
+            if (statusParts.length === 0) statusParts.push('재검증');
+
+            log('info', `[${stats.totalRestaurants}] 보완 시도: ${restaurant.name} (${statusParts.join(', ')})`);
 
             // API 호출
             const result = await enrichKoreanData(restaurant.name, restaurant.address);
@@ -386,7 +397,37 @@ async function main() {
                     log('coord', `  → 좌표 확보: (${result.lat.toFixed(6)}, ${result.lng.toFixed(6)})`);
                 }
 
-                // 2. 전화번호 보완
+                // 2. 주소 보완 (우선순위: Naver > Kakao)
+                if (result.naver_address) {
+                    const oldAddress = updatedRestaurant.address;
+                    if (oldAddress !== result.naver_address) {
+                        updatedRestaurant.address = result.naver_address;
+                        updatedRestaurant.address_source = 'naver_api';
+
+                        if (!updatedRestaurant.road_address && (result.naver_address.includes('길') || result.naver_address.includes('로'))) {
+                            updatedRestaurant.road_address = result.naver_address;
+                        }
+
+                        isUpdated = true;
+                        log('info', `  → 주소 업데이트 (Naver): ${result.naver_address}`);
+                    }
+                } else if (result.road_address || result.jibun_address) {
+                    // Kakao Fallback
+                    const newAddress = result.road_address || result.jibun_address;
+                    const oldAddress = updatedRestaurant.address;
+
+                    if (oldAddress !== newAddress) {
+                        updatedRestaurant.address = newAddress;
+                        updatedRestaurant.address_source = 'kakao_api';
+                        updatedRestaurant.road_address = result.road_address || updatedRestaurant.road_address;
+                        updatedRestaurant.jibun_address = result.jibun_address || updatedRestaurant.jibun_address;
+
+                        isUpdated = true;
+                        log('info', `  → 주소 업데이트 (Kakao): ${newAddress}`);
+                    }
+                }
+
+                // 3. 전화번호 보완
                 if (needPhone && result.phone) {
                     updatedRestaurant.phone = result.phone;
                     updatedRestaurant.phone_source = result.phone_source;
