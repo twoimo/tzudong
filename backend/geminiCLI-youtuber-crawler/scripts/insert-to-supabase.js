@@ -209,7 +209,7 @@ async function insertToSupabase(restaurants) {
     log('info', '기존 데이터 확인 중...');
     const { data: existingData, error: fetchError } = await supabase
         .from('restaurant_youtuber')
-        .select('unique_id, youtube_link');
+        .select('unique_id, youtube_link, name');
 
     if (fetchError) {
         // 테이블이 없으면 생성 필요
@@ -220,36 +220,47 @@ async function insertToSupabase(restaurants) {
         log('error', `기존 데이터 조회 실패: ${fetchError.message}`);
     }
 
-    const existingIds = new Set(existingData?.map(d => d.unique_id) || []);
-    const existingLinks = new Set(existingData?.map(d => d.youtube_link) || []);
+    // 기존 데이터 매핑 (YouTube Link + Name 조합)
+    const existingMap = new Map();
+    existingData?.forEach(d => {
+        const key = `${d.youtube_link}|${d.name}`;
+        existingMap.set(key, d.unique_id);
+    });
 
-    log('info', `기존 레코드: ${existingIds.size}개`);
+    log('info', `기존 레코드: ${existingMap.size}개`);
 
-    // 데이터 삽입
+    // 데이터 삽입 및 업데이트
     for (let i = 0; i < restaurants.length; i++) {
         const restaurant = restaurants[i];
 
-        // 중복 체크 (unique_id 또는 youtube_link + name)
-        if (existingIds.has(restaurant.unique_id)) {
-            stats.skipped++;
-            continue;
+        // 중복 체크 키 생성
+        const key = `${restaurant.youtube_link}|${restaurant.name}`;
+        let isUpdate = false;
+
+        if (existingMap.has(key)) {
+            // 이미 존재하면 ID를 기존 ID로 교체하여 업데이트 (Upsert)
+            restaurant.unique_id = existingMap.get(key);
+            isUpdate = true;
         }
 
-        // 같은 youtube_link에서 같은 이름의 맛집이 있는지 확인
-        const duplicateKey = `${restaurant.youtube_link}|${restaurant.name}`;
-
         try {
+            // Upsert (Insert or Update)
             const { error } = await supabase
                 .from('restaurant_youtuber')
-                .insert(restaurant);
+                .upsert(restaurant, { onConflict: 'unique_id' });
 
             if (error) {
                 stats.failed++;
                 stats.errors.push({ name: restaurant.name, error: error.message });
                 log('error', `[${i + 1}/${stats.total}] ${restaurant.name} - 실패: ${error.message}`);
             } else {
-                stats.success++;
-                log('success', `[${i + 1}/${stats.total}] ${restaurant.name} - 성공`);
+                if (isUpdate) {
+                    stats.success++; // 통계에서는 성공으로 처리하되 로그로 구분
+                    log('success', `[${i + 1}/${stats.total}] ${restaurant.name} - 업데이트 완료`);
+                } else {
+                    stats.success++;
+                    log('success', `[${i + 1}/${stats.total}] ${restaurant.name} - 신규 저장`);
+                }
             }
         } catch (error) {
             stats.failed++;
