@@ -197,14 +197,37 @@ async function collectFromNaverMap(page, mapUrl) {
             url = await resolveShortUrl(url);
         }
 
-        // place.naver.com URL인지 확인
-        const placeMatch = url.match(/place\.naver\.com\/(?:restaurant|place)\/(\d+)/);
-        if (!placeMatch) {
+        // form.naver.com은 스킵 (설문조사/예약 페이지)
+        if (url.includes('form.naver.com')) {
+            log('debug', `네이버 폼 스킵: ${url}`);
+            return null;
+        }
+
+        // place ID 추출 (여러 형식 지원)
+        // 1. place.naver.com/restaurant/12345 또는 place.naver.com/place/12345
+        // 2. map.naver.com/p/entry/place/12345
+        // 3. pcmap.place.naver.com/restaurant/12345
+        let placeId = null;
+
+        const patterns = [
+            /place\.naver\.com\/(?:restaurant|place)\/(\d+)/,
+            /map\.naver\.com\/p\/entry\/place\/(\d+)/,
+            /pcmap\.place\.naver\.com\/(?:restaurant|place)\/(\d+)/
+        ];
+
+        for (const pattern of patterns) {
+            const match = url.match(pattern);
+            if (match) {
+                placeId = match[1];
+                break;
+            }
+        }
+
+        if (!placeId) {
             log('debug', `네이버 place ID 추출 실패: ${url}`);
             return null;
         }
 
-        const placeId = placeMatch[1];
         const placeUrl = `https://pcmap.place.naver.com/restaurant/${placeId}/home`;
 
         await page.goto(placeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
