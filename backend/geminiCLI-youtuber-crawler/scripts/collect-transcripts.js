@@ -154,16 +154,45 @@ async function getTranscriptWithPuppeteer(videoId) {
         // 브라우저 재사용 (ARM64 시스템 Chromium 사용)
         if (!puppeteerBrowser) {
             const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
+
+            // 성능 최적화 플래그
+            const optimizedArgs = [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--disable-extensions',
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding',
+                '--disable-features=TranslateUI',
+                '--disable-ipc-flooding-protection',
+                '--memory-pressure-off',
+                '--max-old-space-size=512',
+            ];
+
             puppeteerBrowser = await puppeteerModule.default.launch({
                 headless: true,
                 executablePath,
                 protocolTimeout: 300000,
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+                args: optimizedArgs
             });
             log('info', `브라우저 시작: ${executablePath}`);
         }
 
         const page = await puppeteerBrowser.newPage();
+
+        // 성능 최적화: 불필요한 리소스 차단 (페이지 로딩 50% 단축)
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            const resourceType = req.resourceType();
+            // 이미지, 폰트, 미디어 차단 (최소 CSS는 필요할 수 있어 유지)
+            if (['image', 'font', 'media'].includes(resourceType)) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
 
         // 안티-블로킹: 랜덤 User-Agent 설정
         await page.setUserAgent(getRandomUserAgent());

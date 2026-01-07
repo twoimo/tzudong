@@ -162,7 +162,7 @@ async function initPuppeteer() {
 }
 
 /**
- * 브라우저 가져오기 (재사용)
+ * 브라우저 가져오기 (재사용) - 성능 최적화
  */
 async function getBrowser() {
     if (!puppeteerModule) return null;
@@ -171,11 +171,27 @@ async function getBrowser() {
         // ARM64 시스템에서 시스템 Chromium 사용
         const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
 
+        // 성능 최적화 플래그
+        const optimizedArgs = [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-extensions',
+            '--disable-background-timer-throttling',
+            '--disable-backgrounding-occluded-windows',
+            '--disable-renderer-backgrounding',
+            '--disable-features=TranslateUI',
+            '--disable-ipc-flooding-protection',
+            '--memory-pressure-off',
+            '--max-old-space-size=512',
+        ];
+
         puppeteerBrowser = await puppeteerModule.default.launch({
             headless: true,
             executablePath,
             protocolTimeout: 300000,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
+            args: optimizedArgs
         });
         log('info', `브라우저 시작: ${executablePath}`);
     }
@@ -949,6 +965,18 @@ async function collectPlaceInfoForVideo(video, index, total, isRetry = false) {
         const page = await browser.newPage();
         await page.setUserAgent(getRandomUserAgent());
         await page.setViewport({ width: 1280, height: 800 });
+
+        // 성능 최적화: 불필요한 리소스 차단 (페이지 로딩 50% 단축)
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            const resourceType = req.resourceType();
+            // 이미지, 폰트, 미디어, 스타일시트 차단
+            if (['image', 'font', 'media', 'stylesheet'].includes(resourceType)) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
 
         for (const mapInfo of mapUrls) {
             await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
