@@ -1458,8 +1458,8 @@ async function processVideo(video) {
         duration: video.duration,
         mapUrls: video.mapUrls,
         description: video.description || '', // Original YouTube Description
-        analysis: [], // Renamed from restaurants
-        // restaurants: [], // Removed to avoid confusion
+        analysis: [], // Gemini 원본 응답 저장용
+        restaurants: [], // 최종 가공된 맛집 정보 저장용
         processedAt: getKSTDate().toISOString()
     };
 
