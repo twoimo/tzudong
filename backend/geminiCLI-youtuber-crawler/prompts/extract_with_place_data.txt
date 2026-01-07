@@ -85,7 +85,7 @@
       
       "youtuber_review": "유튜버의 리뷰/평가 요약 (맛, 분위기, 서비스 등)",
       "reasoning_basis": "[puppeteer] 지도에서 수집된 정보. [자막] 확인됨.",
-      "confidence": "high"
+      "confidence": 95
     }
   ],
   "is_restaurant_video": true,

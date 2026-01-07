@@ -69,9 +69,9 @@ function log(level, msg) {
     console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
 
-// Puppeteer 동시 실행 제한 (성능 최적화: 로컬 3개)
+// Puppeteer 동시 실행 제한 (안정성 최적화: 로컬 2개)
 const isGitHubActionsEnv = !!process.env.GITHUB_ACTIONS;
-const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 3;
+const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 2;
 let puppeteerActiveCount = 0;
 const puppeteerQueue = [];
 
@@ -487,8 +487,8 @@ async function collectFromGoogleMap(page, mapUrl) {
             placeName = decodeURIComponent(placeMatch[1].replace(/\+/g, ' '));
         }
 
-        // 구글 지도 페이지 접속
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 45000 });
+        // 구글 지도 페이지 접속 (타임아웃 60초)
+        await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
         await new Promise(resolve => setTimeout(resolve, 3000));
 
         const placeInfo = await page.evaluate(() => {
@@ -561,27 +561,30 @@ async function collectFromGoogleMap(page, mapUrl) {
 }
 
 /**
- * 단일 영상의 모든 맛집 URL에서 정보 수집
+ * 단일 영상의 모든 맛집 URL에서 정보 수집 (재시도 포함)
  */
-async function collectPlaceInfoForVideo(video, index, total) {
+async function collectPlaceInfoForVideo(video, index, total, isRetry = false) {
     await acquirePuppeteerSlot();
 
     const places = [];
+    const failedUrls = []; // 실패한 URL 추적
 
     try {
         const browser = await getBrowser();
         if (!browser) {
             releasePuppeteerSlot();
-            return { videoId: video.videoId, places: [], hasPlaceInfo: false };
+            return { videoId: video.videoId, places: [], hasPlaceInfo: false, failedUrls: [] };
         }
 
         const mapUrls = video.mapUrls || [];
         if (mapUrls.length === 0) {
             releasePuppeteerSlot();
-            return { videoId: video.videoId, places: [], hasPlaceInfo: false };
+            return { videoId: video.videoId, places: [], hasPlaceInfo: false, failedUrls: [] };
         }
 
-        log('info', `[${index + 1}/${total}] 장소 정보 수집: ${video.title?.slice(0, 40) || video.videoId}... (${mapUrls.length}개 URL)`);
+        if (!isRetry) {
+            log('info', `[${index + 1}/${total}] 장소 정보 수집: ${video.title?.slice(0, 40) || video.videoId}... (${mapUrls.length}개 URL)`);
+        }
 
         const page = await browser.newPage();
         await page.setUserAgent(getRandomUserAgent());
@@ -591,17 +594,35 @@ async function collectPlaceInfoForVideo(video, index, total) {
             await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
 
             let placeInfo = null;
+            let success = false;
+            const maxRetries = isRetry ? 1 : 2; // 재시도 모드면 1회, 일반이면 2회
 
-            switch (mapInfo.type) {
-                case 'naver':
-                    placeInfo = await collectFromNaverMap(page, mapInfo.url);
-                    break;
-                case 'kakao':
-                    placeInfo = await collectFromKakaoMap(page, mapInfo.url);
-                    break;
-                case 'google':
-                    placeInfo = await collectFromGoogleMap(page, mapInfo.url);
-                    break;
+            for (let attempt = 0; attempt < maxRetries && !success; attempt++) {
+                try {
+                    switch (mapInfo.type) {
+                        case 'naver':
+                            placeInfo = await collectFromNaverMap(page, mapInfo.url);
+                            break;
+                        case 'kakao':
+                            placeInfo = await collectFromKakaoMap(page, mapInfo.url);
+                            break;
+                        case 'google':
+                            placeInfo = await collectFromGoogleMap(page, mapInfo.url);
+                            break;
+                    }
+
+                    if (placeInfo && placeInfo.name) {
+                        success = true;
+                    } else if (attempt < maxRetries - 1) {
+                        // 재시도 전 대기
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                } catch (err) {
+                    if (attempt < maxRetries - 1) {
+                        log('debug', `  → 재시도 중 (${attempt + 1}/${maxRetries}): ${mapInfo.url}`);
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                }
             }
 
             if (placeInfo && placeInfo.name) {
@@ -609,6 +630,7 @@ async function collectPlaceInfoForVideo(video, index, total) {
                 log('success', `  → ${placeInfo.name} (${placeInfo.source})`);
             } else {
                 log('debug', `  → 정보 추출 실패: ${mapInfo.url}`);
+                failedUrls.push(mapInfo); // 실패한 URL 저장
             }
         }
 
@@ -624,7 +646,8 @@ async function collectPlaceInfoForVideo(video, index, total) {
         videoId: video.videoId,
         places,
         hasPlaceInfo: places.length > 0,
-        collectedAt: getKSTDate().toISOString()
+        collectedAt: getKSTDate().toISOString(),
+        failedUrls
     };
 }
 
@@ -769,6 +792,7 @@ async function main() {
 
     let processedCount = 0;
     const newResults = [];
+    const allFailedVideos = []; // 실패한 URL이 있는 영상 수집
 
     for (let i = 0; i < videosToCollect.length; i += BATCH_SIZE) {
         const batch = videosToCollect.slice(i, i + BATCH_SIZE);
@@ -789,6 +813,17 @@ async function main() {
                 stats.noPlaceInfo++;
             }
 
+            // 실패한 URL이 있는 영상 수집
+            if (result.failedUrls && result.failedUrls.length > 0) {
+                const originalVideo = videosToCollect.find(v => v.videoId === result.videoId);
+                if (originalVideo) {
+                    allFailedVideos.push({
+                        ...originalVideo,
+                        mapUrls: result.failedUrls // 실패한 URL만
+                    });
+                }
+            }
+
             processedCount++;
 
             // 중간 저장
@@ -797,6 +832,36 @@ async function main() {
                 const content = allData.map(d => JSON.stringify(d)).join('\n');
                 fs.writeFileSync(placeInfoFile, content, 'utf-8');
                 log('info', `중간 저장: ${allData.length}개`);
+            }
+        }
+    }
+
+    // 실패한 URL 최종 재시도 (동시성 1)
+    if (allFailedVideos.length > 0) {
+        log('info', '');
+        log('info', `실패한 URL 최종 재시도: ${allFailedVideos.length}개 영상 (동시성 1)`);
+
+        // 브라우저 재시작
+        if (puppeteerBrowser) {
+            await puppeteerBrowser.close();
+            puppeteerBrowser = null;
+        }
+
+        // 동시성 1로 순차 처리
+        for (let i = 0; i < allFailedVideos.length; i++) {
+            const video = allFailedVideos[i];
+            log('info', `[재시도 ${i + 1}/${allFailedVideos.length}] ${video.title?.slice(0, 30) || video.videoId}...`);
+
+            const result = await collectPlaceInfoForVideo(video, i, allFailedVideos.length, true);
+
+            // 기존 결과 업데이트
+            const existingIdx = newResults.findIndex(r => r.videoId === result.videoId);
+            if (existingIdx >= 0 && result.places.length > 0) {
+                // 기존 결과에 새 장소 추가
+                newResults[existingIdx].places.push(...result.places);
+                newResults[existingIdx].hasPlaceInfo = true;
+                stats.totalPlaces += result.places.length;
+                if (result.places.length > 0) stats.success++;
             }
         }
     }
@@ -820,6 +885,7 @@ async function main() {
     log('info', `성공 영상: ${stats.success}개`);
     log('info', `총 장소: ${stats.totalPlaces}개`);
     log('info', `정보 없음: ${stats.noPlaceInfo}개`);
+    log('info', `재시도 영상: ${allFailedVideos.length}개`);
     log('info', `소요 시간: ${elapsed}초`);
     log('info', `저장: ${placeInfoFile}`);
     log('info', '='.repeat(60));

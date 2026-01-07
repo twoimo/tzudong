@@ -92,7 +92,7 @@
       
       "youtuber_review": "유튜버의 리뷰/평가 요약 (맛, 분위기, 서비스 등)",
       "reasoning_basis": "[자막 01:30] 언급됨. [google_search] 주소 확인",
-      "confidence": "high | medium | low"
+      "confidence": 85
     }
   ],
   "is_restaurant_video": true,
@@ -105,7 +105,7 @@
 1. **google_web_search 적극 활용**: 자막에서 상호명만 찾고, 주소/전화번호는 웹 검색으로 확인
 2. **음식점이 없는 영상**: `"restaurants": []`, `"is_restaurant_video": false`
 3. **여러 음식점**: 모두 추출
-4. **확실하지 않은 정보**: confidence를 "low"로 설정
+4. **확실하지 않은 정보**: confidence를 50 이하로 설정 (0-100 점수)
 5. **추측 금지**: 정보가 없으면 null
 6. **한국어 응답**: 모든 내용은 한국어로 작성
 7. **카테고리 엄수**: 위 목록 중 하나만 선택
