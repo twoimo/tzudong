@@ -85,7 +85,7 @@ web_fetch(prompt="이 URL에서 음식점 정보(상호명, 주소, 전화번호
       "address_source": "web_fetch | description | transcript | google_search",
       "map_url": "발견된 지도 URL 또는 null",
       "map_type": "google | naver | kakao | none",
-      "category": "고기 | 중식 | 한식 | 일식 | 양식 | 분식 | 카페·디저트 | 피자 | 치킨",
+      "category": "치킨 | 중식 | 돈까스·회 | 피자 | 패스트푸드 | 찜·탕 | 족발·보쌈 | 분식 | 카페·디저트 | 한식 | 고기 | 양식 | 아시안 | 야식 | 도시락",
       
       "business_hours": "영업시간 (예: 11:00-22:00, 없으면 null)",
       "closed_days": "휴무일 (예: 매주 월요일, 연중무휴, 없으면 null)",
@@ -146,6 +146,7 @@ web_fetch(prompt="이 URL에서 음식점 정보(상호명, 주소, 전화번호
 6. 확실하지 않은 정보는 confidence를 "low"로 설정
 7. 추측하지 말고, 정보가 없으면 null로 설정
 8. 모든 응답은 한국어로 작성
+9. **카테고리는 반드시 위 목록 중 하나만 선택** (예: "seafood_restaurant" -> "돈까스·회", "일식" -> "돈까스·회", "cafe" -> "카페·디저트")
 
 지금 분석을 시작하세요.
 
