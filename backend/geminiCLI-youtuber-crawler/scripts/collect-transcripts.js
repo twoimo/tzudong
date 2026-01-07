@@ -388,9 +388,7 @@ async function collectTranscriptForVideo(video, index, total) {
  * 메인 실행
  */
 async function main() {
-    log('info', '='.repeat(60));
-    log('info', '  Phase 1: 자막 수집 시작');
-    log('info', '='.repeat(60));
+    log('info', '▶ 자막 수집 시작 (Phase 1.5)');
 
     const startTime = Date.now();
 

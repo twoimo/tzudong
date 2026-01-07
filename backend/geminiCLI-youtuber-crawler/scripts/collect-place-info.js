@@ -707,9 +707,7 @@ function normalizeCategory(category) {
  * 메인 실행
  */
 async function main() {
-    log('info', '='.repeat(60));
-    log('info', '  Phase 1.5: 맛집 URL 정보 수집 시작');
-    log('info', '='.repeat(60));
+    log('info', '▶ 장소 정보 수집 시작 (Phase 1.6)');
 
     const startTime = Date.now();
 

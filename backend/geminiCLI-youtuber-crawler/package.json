@@ -7,6 +7,7 @@
   "scripts": {
     "crawl": "bun run scripts/crawl-channel.js",
     "transcripts": "bun run scripts/collect-transcripts.js",
+    "places": "bun run scripts/collect-place-info.js",
     "extract": "bun run scripts/extract-addresses.js",
     "geocode": "bun run scripts/enrich-coordinates.js",
     "insert": "bun run scripts/insert-to-supabase.js",

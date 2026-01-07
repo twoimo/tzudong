@@ -35,6 +35,7 @@ DEBUG=true bun run full  # 상세 로그 포함
 ```bash
 bun run crawl       # 1. 채널 영상 목록 수집
 bun run transcripts # 1.5. 자막 수집
+bun run places      # 1.6. 장소 정보 수집 (새로 추가됨)
 bun run extract     # 2. AI 분석
 bun run geocode     # 3. 좌표 보완
 bun run insert      # 4. DB 저장
@@ -59,9 +60,9 @@ node scripts/pipeline.js --start-from=1.5  # 자막 수집부터
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Phase 1.5 + 1.6: 병렬 실행 ⚡                                │
-│  ├── collect-transcripts.js (자막 수집)                      │
-│  └── collect-place-info.js (맵 URL에서 장소 정보 수집)         │
+│  Phase 1.5 & 1.6: 병렬 실행 ⚡                                │
+│  ├── collect-transcripts.js (Phase 1.5: 자막 수집)           │
+│  └── collect-place-info.js  (Phase 1.6: 장소 정보 수집)      │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
