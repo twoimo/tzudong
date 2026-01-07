@@ -248,6 +248,23 @@ async function collectFromNaverMap(page, mapUrl) {
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         // 장소 정보 추출
+        // 주소 펼치기 버튼 클릭 (숨겨진 지번/도로명 주소 확보)
+        try {
+            const expandBtnSelector = 'a.PkgBl, ._UCia'; // user provided logic
+            const expandBtn = await page.$(expandBtnSelector);
+            if (expandBtn) {
+                log('debug', '주소 펼치기 버튼 발견, 클릭 시도...');
+                await page.evaluate((sel) => {
+                    const el = document.querySelector(sel);
+                    if (el) el.click();
+                }, expandBtnSelector);
+                // 펼쳐질 때까지 잠시 대기
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+        } catch (e) {
+            log('debug', `주소 펼치기 실패 (무시됨): ${e.message}`);
+        }
+
         const placeInfo = await page.evaluate(() => {
             const result = {
                 name: null,
@@ -287,13 +304,28 @@ async function collectFromNaverMap(page, mapUrl) {
                 '.zD5Nm .pzITx',    // 상세정보 주소
             ];
 
-            for (const selector of addressSelectors) {
-                if (result.roadAddress) break;
-                const el = document.querySelector(selector);
-                if (el) {
-                    const text = el.textContent?.trim();
-                    if (text && (text.includes('로') || text.includes('길') || text.includes('동'))) {
-                        result.roadAddress = text;
+            // 펼쳐진 상세 주소 확인 (.Y31Sf 내의 정보)
+            const detailContainer = document.querySelector('.Y31Sf');
+            if (detailContainer) {
+                const rows = detailContainer.querySelectorAll('.nQ7Lh');
+                rows.forEach(row => {
+                    const type = row.querySelector('.TjXg1')?.textContent?.trim();
+                    const val = row.innerText.replace(type, '').replace('복사', '').trim();
+                    if (type === '도로명') result.roadAddress = val;
+                    if (type === '지번') result.jibunAddress = val;
+                });
+            }
+
+            // 상세 주소가 없으면 기존 방식 시도
+            if (!result.roadAddress) {
+                for (const selector of addressSelectors) {
+                    if (result.roadAddress) break;
+                    const el = document.querySelector(selector);
+                    if (el) {
+                        const text = el.textContent?.trim();
+                        if (text && (text.includes('로') || text.includes('길') || text.includes('동'))) {
+                            result.roadAddress = text;
+                        }
                     }
                 }
             }
@@ -347,7 +379,17 @@ async function collectFromNaverMap(page, mapUrl) {
             if (kakaoResult && kakaoResult.lat) {
                 placeInfo.lat = kakaoResult.lat;
                 placeInfo.lng = kakaoResult.lng;
-                log('debug', `주소 기반 Geocoding 성공: ${placeInfo.roadAddress}`);
+                log('debug', `도로명 주소 기반 Geocoding 성공: ${placeInfo.roadAddress}`);
+            }
+        }
+
+        // 1-2. 여전히 좌표가 없고 지번 주소(jibunAddress)가 있으면 -> Kakao Geocoding
+        if (!placeInfo.lat && placeInfo.jibunAddress) {
+            const kakaoResult = await searchKakaoApi(placeInfo.jibunAddress);
+            if (kakaoResult && kakaoResult.lat) {
+                placeInfo.lat = kakaoResult.lat;
+                placeInfo.lng = kakaoResult.lng;
+                log('debug', `지번 주소 기반 Geocoding 성공: ${placeInfo.jibunAddress}`);
             }
         }
 
@@ -943,8 +985,13 @@ async function main() {
     log('info', '='.repeat(60));
 }
 
-main().catch(error => {
-    log('error', `치명적 오류: ${error.message}`);
-    console.error(error);
-    process.exit(1);
-});
+// 메인 실행 (직접 실행 시에만)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+    main().catch(error => {
+        log('error', `치명적 오류: ${error.message}`);
+        console.error(error);
+        process.exit(1);
+    });
+}
+
+export { collectPlaceInfoForVideo, getBrowser, initPuppeteer };
