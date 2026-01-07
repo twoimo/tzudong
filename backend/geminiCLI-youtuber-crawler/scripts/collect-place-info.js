@@ -223,9 +223,9 @@ async function collectFromNaverMap(page, mapUrl) {
             }
         } catch (e) { }
 
-        // form.naver.com은 스킵 (설문조사/예약 페이지)
-        if (url.includes('form.naver.com')) {
-            log('debug', `네이버 폼 스킵: ${url}`);
+        // form.naver.com, smartstore.naver.com 등 유효하지 않은 URL 스킵
+        if (url.includes('form.naver.com') || url.includes('smartstore.naver.com')) {
+            log('debug', `Skip invalid URL: ${url}`);
             return { skipped: true };
         }
 
@@ -810,9 +810,9 @@ async function collectFromGoogleMap(page, mapUrl) {
         let currentUrl = page.url();
         log('debug', `Google Current URL: ${currentUrl}`);
 
-        // 네이버 폼 등 유효하지 않은 URL 체크
-        if (currentUrl.includes('form.naver.com')) {
-            log('debug', `네이버 폼 URL 감지 - 스킵: ${currentUrl}`);
+        // 네이버 폼, 스마트스토어 등 유효하지 않은 URL 체크
+        if (currentUrl.includes('form.naver.com') || currentUrl.includes('smartstore.naver.com')) {
+            log('debug', `invalid URL 감지 - 스킵: ${currentUrl}`);
             return { skipped: true };
         }
 
