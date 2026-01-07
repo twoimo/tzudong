@@ -153,11 +153,16 @@ async function getBrowser() {
     if (!puppeteerModule) return null;
 
     if (!puppeteerBrowser) {
+        // ARM64 시스템에서 시스템 Chromium 사용
+        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
+
         puppeteerBrowser = await puppeteerModule.default.launch({
             headless: true,
+            executablePath,
             protocolTimeout: 300000,
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
         });
+        log('info', `브라우저 시작: ${executablePath}`);
     }
     return puppeteerBrowser;
 }

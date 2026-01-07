@@ -151,13 +151,16 @@ async function getTranscriptWithPuppeteer(videoId) {
     if (!puppeteerModule) return null;
 
     try {
-        // 브라우저 재사용
+        // 브라우저 재사용 (ARM64 시스템 Chromium 사용)
         if (!puppeteerBrowser) {
+            const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
             puppeteerBrowser = await puppeteerModule.default.launch({
                 headless: true,
+                executablePath,
                 protocolTimeout: 300000,
-                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+                args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
             });
+            log('info', `브라우저 시작: ${executablePath}`);
         }
 
         const page = await puppeteerBrowser.newPage();
