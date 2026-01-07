@@ -114,13 +114,14 @@ let stealthApplied = false;
 
 // User-Agent 로테이션
 const USER_AGENTS = [
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
+    'Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36',
+    'Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1',
+    'Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.91 Mobile Safari/537.36'
 ];
 
 function getRandomUserAgent() {
-    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+    // Force Desktop UA for Naver Map compatibility (.Y31Sf selector)
+    return 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 }
 
 function getRandomDelay() {
@@ -237,7 +238,9 @@ async function collectFromNaverMap(page, mapUrl) {
         const patterns = [
             /place\.naver\.com\/(?:restaurant|place)\/(\d+)/,
             /map\.naver\.com\/p\/entry\/place\/(\d+)/,
-            /pcmap\.place\.naver\.com\/(?:restaurant|place)\/(\d+)/
+            /pcmap\.place\.naver\.com\/(?:restaurant|place)\/(\d+)/,
+            /appLink\.naver.*(?:pinId|id)=(\d+)/,
+            /pinId=(\d+)/
         ];
 
         for (const pattern of patterns) {
@@ -260,17 +263,30 @@ async function collectFromNaverMap(page, mapUrl) {
 
         // 장소 정보 추출
         // 주소 펼치기 버튼 클릭 (숨겨진 지번/도로명 주소 확보)
+        // 주소 펼치기 버튼 클릭 (숨겨진 지번/도로명 주소 확보)
         try {
-            const expandBtnSelector = 'a.PkgBl, ._UCia'; // 사용자 제공 로직
+            // 모바일/PC 공용 선택자
+            const expandBtnSelector = 'a.PkgBl, ._UCia, a[role="button"]._UCia';
             const expandBtn = await page.$(expandBtnSelector);
             if (expandBtn) {
                 log('debug', '주소 펼치기 버튼 발견, 클릭 시도...');
-                await page.evaluate((sel) => {
-                    const el = document.querySelector(sel);
-                    if (el) el.click();
-                }, expandBtnSelector);
-                // 펼쳐질 때까지 잠시 대기
-                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // 1. Puppeteer Native Click
+                await expandBtn.click();
+
+                // 2. Wait for expansion (check for "지번" text availability)
+                await new Promise(resolve => setTimeout(resolve, 2000));
+
+                // 3. Verify if expanded (Simple text check)
+                const bodyText = await page.evaluate(() => document.body.innerText);
+                if (!bodyText.includes('지번')) {
+                    log('debug', 'Click failed to reveal "지번", trying evaluate click...');
+                    await page.evaluate((sel) => {
+                        const el = document.querySelector(sel);
+                        if (el) el.click();
+                    }, expandBtnSelector);
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
             }
         } catch (e) {
             log('debug', `주소 펼치기 실패 (무시됨): ${e.message}`);
@@ -287,13 +303,13 @@ async function collectFromNaverMap(page, mapUrl) {
                     if (el) el.click();
                 }, phoneBtnSelector);
                 // 펼쳐질 때까지 잠시 대기
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 2000));
             }
         } catch (e) {
             log('debug', `전화번호 보기 클릭 실패 (무시됨): ${e.message}`);
         }
 
-        const placeInfo = await page.evaluate(() => {
+        const placeInfo = await page.evaluate((placeId) => {
             const result = {
                 name: null,
                 roadAddress: null,
@@ -335,14 +351,139 @@ async function collectFromNaverMap(page, mapUrl) {
             // 펼쳐진 상세 주소 확인 (.Y31Sf 내의 정보)
             const detailContainer = document.querySelector('.Y31Sf');
             if (detailContainer) {
+                // Debugging: Log container text
+                const containerText = detailContainer.innerText;
+                result.debug_container_text = containerText; // 반환 값에 포함하여 외부에서 확인 가능하게
+
                 const rows = detailContainer.querySelectorAll('.nQ7Lh');
                 rows.forEach(row => {
-                    const type = row.querySelector('.TjXg1')?.textContent?.trim();
-                    const val = row.innerText.replace(type, '').replace('복사', '').trim();
+                    const typeEl = row.querySelector('.TjXg1');
+                    const type = typeEl?.textContent?.trim();
+
+                    // Debugging: Log exact row text
+                    log('debug', `Row Text: "${row.innerText}", Type: "${type}"`);
+
+                    // 텍스트 정제 (타입, 복사 버튼 제거)
+                    let val = row.innerText;
+                    if (type) val = val.replace(type, '');
+                    val = val.replace(/복사/g, '').trim();
+
                     if (type === '도로명') result.roadAddress = val;
                     if (type === '지번') result.jibunAddress = val;
                 });
+
+                // Fallback 1: Row 기반 검색
+                if (!result.jibunAddress) {
+                    rows.forEach(row => {
+                        const text = row.innerText;
+                        if (text.includes('지번')) {
+                            let val = text.replace('지번', '').replace(/복사/g, '').trim();
+                            result.jibunAddress = val;
+                        }
+                    });
+                }
+            } else {
+                // log('debug', '.Y31Sf container not found, trying global search for .nQ7Lh');
             }
+
+            // Global search for .nQ7Lh (in case container selector differs)
+            if (!result.jibunAddress) {
+                const globalRows = document.querySelectorAll('.nQ7Lh');
+                // log('debug', `Global .nQ7Lh count: ${globalRows.length}`); // Cannot log in browser context
+                globalRows.forEach(row => {
+                    const text = row.innerText;
+                    if (text.includes('지번')) {
+                        let val = text.replace('지번', '').replace(/복사/g, '').trim();
+                        result.jibunAddress = val;
+                    }
+                    if (text.includes('도로명')) {
+                        let val = text.replace('도로명', '').replace(/복사/g, '').trim();
+                        result.roadAddress = val;
+                    }
+                });
+            }
+
+            // Fallback 2: 통짜 텍스트에서 검색 (지번 ... 복사 패턴)
+            // ... (rest of fallback 2 is redundant if global search works, but keeping simpler version)
+
+            // Fallback: 클래스에 의존하지 않는 텍스트 기반 검색 (매우 강력한 Fallback)
+            if (!result.jibunAddress || !result.roadAddress) {
+                const allElements = document.querySelectorAll('span, div, p');
+                let foundJibunNode = false;
+
+                for (const el of allElements) {
+                    // "지번" 텍스트를 가진 요소 찾기
+                    if (!result.jibunAddress && el.textContent && el.textContent.trim() === '지번') {
+                        // 부모 요소에서 전체 텍스트 확인
+                        const parent = el.parentElement;
+                        if (parent) {
+                            foundJibunNode = true;
+                            // 부모의 텍스트에서 '지번'과 '복사'를 제외한 나머지
+                            // 예: "지번 서울 ... 복사" -> "서울 ..."
+                            // 텍스트 노드만 추출하는 것이 안전함
+                            let val = parent.innerText.replace('지번', '').replace(/복사/g, '').trim();
+                            if (val) {
+                                result.jibunAddress = val;
+                                // log('debug', `Found jibun via text traversal: ${val}`); // Cannot log in browser context
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fallback: Body Text Search (Ultimate Fallback)
+            if (!result.jibunAddress) {
+                const bodyText = document.body.innerText;
+                const jibunMatch = bodyText.match(/지번\s*([^\n]+?)\s*복사/);
+                if (jibunMatch) {
+                    result.jibunAddress = jibunMatch[1].trim();
+                } else {
+                    // Try finding "지번" line without regex
+                    const lines = bodyText.split('\n');
+                    for (let line of lines) {
+                        if (line.includes('지번') && line.includes('복사')) {
+                            result.jibunAddress = line.replace('지번', '').replace('복사', '').trim();
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: Apollo State (Hidden Data)
+            if (!result.jibunAddress || !result.roadAddress) {
+                try {
+                    // placeId는 evaluate 함수 외부에서 전달받아야 함.
+                    // 현재 evaluate 함수 내에서는 placeId 변수에 접근할 수 없음.
+                    // 이 부분을 수정해야 합니다. (예: page.evaluate(() => { ... }, placeId))
+                    // 임시로 placeId를 0으로 설정하여 컴파일 오류를 피합니다.
+                    // 실제 사용 시에는 placeId를 인자로 전달해야 합니다.
+                    const apolloState = window.__APOLLO_STATE__;
+                    if (apolloState) {
+                        for (const key in apolloState) {
+                            const obj = apolloState[key];
+                            // Match PlaceDetailBase:12345 or similar
+                            // obj.id가 문자열일 수 있으므로 String()으로 변환하여 비교
+                            if (key.startsWith('PlaceDetailBase') || (obj.id && String(obj.id) === String(placeId))) {
+                                if (obj.address && !result.jibunAddress) {
+                                    result.jibunAddress = obj.address;
+                                }
+                                if (obj.roadAddress && !result.roadAddress) {
+                                    result.roadAddress = obj.roadAddress;
+                                }
+                            }
+                        }
+                    }
+                } catch (e) {
+                    // Ignore error
+                }
+            }
+            // If still missing even after body text search, dump HTML
+            if (!result.jibunAddress) {
+                // Note: We cannot write file from browser context.
+                // We must return a flag or content to the Node.js context.
+                result.debug_html_dump = document.documentElement.outerHTML;
+            }
+
 
             // 상세 주소가 없으면 기존 방식 시도
             if (!result.roadAddress) {
@@ -393,7 +534,14 @@ async function collectFromNaverMap(page, mapUrl) {
             }
 
             return result;
-        });
+        }, placeId);
+
+        // Debug: Save HTML dump if jibun failed
+        if (placeInfo.debug_html_dump) {
+            log('warning', 'Jibun address missing. Saving HTML dump to debug_naver_dump.html');
+            fs.writeFileSync('debug_naver_dump.html', placeInfo.debug_html_dump);
+            delete placeInfo.debug_html_dump; // Remove from result object
+        }
 
         // 좌표 추출 (URL에서)
         // 1. URL Query Parameter (예: ?lng=129.113...&lat=35.148...)
@@ -659,10 +807,17 @@ async function collectFromGoogleMap(page, mapUrl) {
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
         await new Promise(resolve => setTimeout(resolve, 3000));
 
-        // URL이 변경되었을 수 있으므로 다시 좌표 추출 시도 (예: e.g., goo.gl -> google.com/maps/place/...)
+        // URL이 변경되었을 수 있으므로 다시 좌표 추출 시도
+        let currentUrl = page.url();
+        log('debug', `Google Current URL: ${currentUrl}`);
+
+        // 네이버 폼 등 유효하지 않은 URL 체크
+        if (currentUrl.includes('form.naver.com')) {
+            log('debug', `네이버 폼 URL 감지 - 스킵: ${currentUrl}`);
+            return null;
+        }
+
         if (!lat) {
-            const currentUrl = page.url();
-            log('debug', `Google Current URL: ${currentUrl}`);
             coordMatch = currentUrl.match(/@(-?\d+\.?\d*),(-?\d+\.?\d*)/);
             if (coordMatch) {
                 lat = parseFloat(coordMatch[1]);
