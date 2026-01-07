@@ -942,14 +942,14 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
     let promptFile;
     if (hasCollectedPlaceData) {
         promptFile = PROMPT_WITH_PLACE_DATA;
-        log('info', `[장소 데이터 있음] ${collectedPlaces.length}개 장소 수집됨 - 리뷰 작성 중심 프롬프트 사용`, video.videoId);
+        log('info', `[프롬프트: extract_with_place_data.txt] ${collectedPlaces.length}개 장소 수집됨`, video.videoId);
     } else if (fs.existsSync(PROMPT_WITHOUT_PLACE_DATA)) {
         promptFile = PROMPT_WITHOUT_PLACE_DATA;
-        log('info', '[장소 데이터 없음] 자막/설명에서 직접 추출 프롬프트 사용', video.videoId);
+        log('info', '[프롬프트: extract_without_place_data.txt] 자막/설명에서 직접 추출', video.videoId);
     } else {
         // fallback: 기존 프롬프트 사용
         promptFile = PROMPT_FILE_LEGACY;
-        log('debug', '[fallback] 기존 프롬프트 사용', video.videoId);
+        log('debug', '[프롬프트: extract_restaurant.txt] fallback', video.videoId);
     }
 
     // 3. 프롬프트 템플릿 로드
@@ -1065,7 +1065,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
     const availableModels = allModels.filter(m => !isModelBlacklisted(m));
 
     // 사용 가능한 첫 번째 모델로 시작
-    log('debug', `사용 가능한 모델: ${availableModels.join(', ')}`);
+    log('debug', `사용 가능한 모델: ${availableModels.join(', ')}`, video.videoId);
 
     let lastError = null;
     let result = null;
@@ -1352,7 +1352,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 lastError = new Error(`Parse error with ${model}`);
 
             } catch (error) {
-                log('debug', `모델 ${model} 실패: ${error.message}`);
+                log('debug', `모델 ${model} 실패: ${error.message}`, video.videoId);
                 lastError = error;
                 // 다음 모델 시도
                 continue;
@@ -1361,9 +1361,9 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
 
         // 모든 모델 실패 - 리셋 시간까지 대기 후 재시도
         if (!result) {
-            log('warning', `Gemini 분석 실패 (${video.videoId}): 모든 모델 시도 실패`);
+            log('warning', `Gemini 분석 실패: 모든 모델 시도 실패`, video.videoId);
             if (lastError) {
-                log('debug', `마지막 오류: ${lastError.message}`);
+                log('debug', `마지막 오류: ${lastError.message}`, video.videoId);
             }
 
             // 재시도 가능 여부 확인
@@ -1376,7 +1376,7 @@ async function extractWithGemini(video, transcript, retryAttempt = 0) {
                 const waitMs = earliest - Date.now();
                 const waitMin = Math.ceil(waitMs > 0 ? waitMs / 60000 : 10);
 
-                log('warning', `모든 모델 쿼타 소진으로 실패. ${waitMin}분 대기 후 무한 재시도...`);
+                log('warning', `모든 모델 쿼타 소진. ${waitMin}분 대기 후 무한 재시도...`, video.videoId);
                 await sleep((waitMs > 0 ? waitMs : 10 * 60 * 1000) + 5000);
 
                 // 블랙리스트 초기화
@@ -2272,8 +2272,11 @@ async function main() {
 
         log('info', '');
         log('info', '='.repeat(60));
-        log('info', '  실패 영상 재분석 시작');
+        log('info', '  실패 영상 재분석 시작 (동시성 1)');
         log('info', '='.repeat(60));
+
+        // 재시도 시 동시성 1로 변경 (안정성 향상)
+        rateLimiter.CONCURRENCY = 1;
 
         // main 함수를 다시 호출하여 재시도 (null인 영상만 처리됨)
         return main();
