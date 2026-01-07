@@ -1616,21 +1616,26 @@ async function processVideo(video) {
                     }
                 }
 
-                // 5-3. 좌표 거리 기반 검증 (geoInfo vs naverInfo)
-                if (geoInfo?.lat && geoInfo?.lng && naverInfo?.mapx && naverInfo?.mapy) {
-                    // 네이버 TM128 → WGS84 변환
-                    const naverLng = (parseInt(naverInfo.mapx) / 10000000) * 0.8 + 124.5;
-                    const naverLat = (parseInt(naverInfo.mapy) / 10000000) * 0.8 + 30.5;
+                // 5-3. 좌표 교차 검증 (Puppeteer vs Kakao)
+                // Puppeteer 좌표 (Google/Naver Map URL 등에서 추출된 정확한 WGS84 좌표)
+                const puppeteerLat = restaurant.lat;
+                const puppeteerLng = restaurant.lng;
 
-                    const distance = haversineDistance(geoInfo.lat, geoInfo.lng, naverLat, naverLng);
+                // Kakao API 좌표
+                const kakaoLat = geoInfo?.lat;
+                const kakaoLng = geoInfo?.lng;
 
-                    if (distance <= 50) {
-                        augmentationNotes.push(`[좌표검증] 카카오/네이버 일치 (${Math.round(distance)}m)`);
-                    } else if (distance <= 500) {
-                        augmentationNotes.push(`[좌표검증] 카카오/네이버 유사 (${Math.round(distance)}m)`);
+                if (puppeteerLat && puppeteerLng && kakaoLat && kakaoLng) {
+                    const distance = haversineDistance(puppeteerLat, puppeteerLng, kakaoLat, kakaoLng);
+                    if (distance <= 200) {
+                        augmentationNotes.push(`[좌표검증] Puppeteer/카카오 일치 (${Math.round(distance)}m)`);
                     } else {
-                        augmentationNotes.push(`[좌표경고] 카카오/네이버 불일치 (${Math.round(distance)}m) - 확인 필요`);
+                        augmentationNotes.push(`[좌표경고] Puppeteer/카카오 불일치 (${Math.round(distance)}m) - 카카오 우선 사용`);
                     }
+                } else if (kakaoLat) {
+                    augmentationNotes.push(`[좌표] 카카오 API 사용`);
+                } else if (puppeteerLat) {
+                    augmentationNotes.push(`[좌표] Puppeteer 추출값 사용`);
                 }
 
                 // 전화번호 3중 교차 검증 (Gemini vs 카카오 vs 네이버)
@@ -1789,30 +1794,27 @@ async function processVideo(video) {
                     augmentationNotes.push(`[Gemini] 카테고리: ${finalCategory}`);
                 }
 
-                // 좌표 교차검증 (네이버 TM128 → WGS84 변환 + 카카오)
-                let finalLat = geoInfo?.lat || null;
-                let finalLng = geoInfo?.lng || null;
-                let coordSource = geocodingSource;
+                // 좌표 결정 로직 개선
+                // 우선순위:
+                // 1. 카카오 API (한국 주소 체계에 가장 최적화됨, 신뢰도 높음)
+                // 2. Puppeteer 추출 (Google/Naver 지도 URL에서 가져온 좌표)
+                
+                let finalLat = null;
+                let finalLng = null;
+                let coordSource = null;
 
-                // 네이버 TM128 좌표를 WGS84로 변환
-                if (naverInfo?.mapx && naverInfo?.mapy && !finalLat) {
-                    // TM128 → WGS84 변환 (근사 공식)
-                    const tm128ToWgs84 = (x, y) => {
-                        // 네이버 mapx, mapy는 카텍(KATEC) 좌표계
-                        // 간단한 변환 공식 (정확도 약 ~100m)
-                        const lng = (x / 10000000) * 0.8 + 124.5;
-                        const lat = (y / 10000000) * 0.8 + 30.5;
-                        return { lat, lng };
-                    };
-                    const converted = tm128ToWgs84(parseInt(naverInfo.mapx), parseInt(naverInfo.mapy));
-                    finalLat = converted.lat;
-                    finalLng = converted.lng;
-                    coordSource = 'naver_converted';
-                    augmentationNotes.push(`[네이버] 좌표 변환: (${finalLat.toFixed(6)}, ${finalLng.toFixed(6)})`);
-                } else if (finalLat && finalLng) {
-                    augmentationNotes.push(`[${coordSource}] 좌표: (${finalLat.toFixed(6)}, ${finalLng.toFixed(6)})`);
-                } else {
-                    augmentationNotes.push('[누락] 좌표: 모든 소스에서 없음');
+                if (geoInfo?.lat && geoInfo?.lng) {
+                    finalLat = geoInfo.lat;
+                    finalLng = geoInfo.lng;
+                    coordSource = geocodingSource; // 'kakao_address' or 'kakao_keyword'
+                } else if (restaurant.lat && restaurant.lng) {
+                    finalLat = restaurant.lat;
+                    finalLng = restaurant.lng;
+                    coordSource = restaurant.geocoding_source || 'puppeteer'; // 'google', 'naver', etc.
+                }
+
+                if (!finalLat) {
+                     augmentationNotes.push('[누락] 좌표: 모든 소스에서 없음');
                 }
 
                 // reasoning_basis 통합
