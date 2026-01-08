@@ -151,7 +151,7 @@ flowchart TD
 
     DB[("💾 Database Insert
     ──────────────────────
-    • OCI DB 저장
+    • Oracle Cloud DB 저장
     • trace_id 중복 체크
     • UI 데이터 반영")]
 
