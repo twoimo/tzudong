@@ -119,7 +119,7 @@ flowchart TD
     B2["BRANCH 2 · Oracle Cloud
     ──────────────────────
     • Description 맛집 URL 추출
-    • 퍼페티어 크롤링 (네이버/구글 지도)
+    • 퍼페티어 크롤링 (네이버,구글)
     • 맛집 위치 정보 보정 (지오코딩)
     • 주기적 갱신"]
 
@@ -169,11 +169,10 @@ flowchart TD
 ## 4. 브랜치별 상세
 
 ```
-pipeline/video-metadata-collector
-pipeline/restaurant-url-extractor
-pipeline/subtitle-collector
-pipeline/heatmap-marker-collector
-pipeline/subtitle-processor
-pipeline/ai-evaluator
-pipeline/db-insert
+BRANCH 1: pipeline/yotube-metadata-collector
+BRANCH 2: pipeline/restaurant-extractor
+BRANCH 3: pipeline/subtitle-collector
+BRANCH 3-1: pipeline/subtitle-processor
+BRANCH 4: pipeline/heatmap-marker-collector
+BRANCH 5: pipeline/ai-processing
 ```
