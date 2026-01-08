@@ -107,70 +107,46 @@ TIMEZONE=Asia/Seoul
 
 ```mermaid
 flowchart TD
-    subgraph Input
-        YT[("📺 YouTube Channel<br/>(채널 ID)")]
-    end
+    YT["📺 YouTube Channel"]
+    
+    B1["🔀 BRANCH 1<br/>─────────────<br/>GitHub Actions<br/>─────────────<br/>• youtube_link 수집<br/>• 메타데이터 수집<br/>• OpenAI 광고 분석"]
+    
+    M1{{"🔗 MERGE"}}
+    
+    B2["🔀 BRANCH 2<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• Description URL 추출<br/>• Puppeteer 네이버지도<br/>• 맛집 위치 정보"]
+    
+    B3["🔀 BRANCH 3<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 자막 수집<br/>• youtube-transcript<br/>• 주기적 갱신"]
+    
+    B4["🔀 BRANCH 4<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 히트맵 마커 수집<br/>• Most Replayed<br/>• 주기적 갱신"]
+    
+    M2{{"🔗 MERGE"}}
+    
+    B3_1["🔀 BRANCH 3-1<br/>─────────────<br/>GitHub Actions / Oracle<br/>─────────────<br/>• 자막 교정<br/>• BRANCH 3 트리거"]
+    
+    M3{{"🔗 MERGE"}}
+    
+    B5["🤖 BRANCH 5: AI Processing<br/>─────────────<br/>GitHub Actions / Oracle<br/>─────────────<br/>Step 1: geminiCLI 크롤링<br/>Step 2: geminiCLI 평가<br/>Step 3: Transform"]
+    
+    DB["💾 Database Insert<br/>─────────────<br/>Oracle Cloud DB<br/>─────────────<br/>• OCI DB 저장<br/>• trace_id 중복 체크<br/>• UI 데이터 반영"]
 
-    subgraph BRANCH1["🔀 BRANCH 1 (GitHub Actions)"]
-        B1_1["youtube_link 수집"]
-        B1_2["메타데이터 수집<br/>• 조회수, 좋아요, 댓글수<br/>• OpenAI API 광고 분석"]
-        B1_3["주기적 갱신 지원"]
-    end
+    YT --> B1
+    B1 --> M1
+    M1 --> B2 & B3 & B4
+    B2 & B3 & B4 --> M2
+    M2 --> B3_1
+    B3_1 --> M3
+    M3 --> B5
+    B5 --> DB
 
-    subgraph Parallel["병렬 처리 (Oracle Cloud)"]
-        subgraph BRANCH2["🔀 BRANCH 2"]
-            B2_1["Description URL 추출"]
-            B2_2["Puppeteer 네이버지도"]
-            B2_3["맛집 위치 정보 확보"]
-        end
-
-        subgraph BRANCH3["🔀 BRANCH 3"]
-            B3_1["자막 수집"]
-            B3_2["youtube-transcript"]
-            B3_3["주기적 갱신"]
-        end
-
-        subgraph BRANCH4["🔀 BRANCH 4"]
-            B4_1["히트맵 마커 수집"]
-            B4_2["Most Replayed"]
-            B4_3["주기적 갱신"]
-        end
-    end
-
-    subgraph BRANCH3_1["🔀 BRANCH 3-1 (GitHub Actions / Oracle Cloud)"]
-        B3_1_1["자막 교정"]
-        B3_1_2["BRANCH 3 merge 시 트리거"]
-    end
-
-    subgraph BRANCH5["🔀 BRANCH 5: 🤖 AI Processing (GitHub Actions / Oracle Cloud)"]
-        B5_1["Step 1: geminiCLI 크롤링<br/>• 채널 ID + 프롬프트<br/>• description 유무 분기"]
-        B5_2["Step 2: geminiCLI 평가<br/>• 채널 ID + 프롬프트<br/>• 평가 모델 개선"]
-        B5_3["Step 3: Transform<br/>• trace_id 생성<br/>• 데이터 정규화"]
-    end
-
-    subgraph Output["💾 Database Insert (Oracle Cloud DB)"]
-        DB1["OCI DB 저장"]
-        DB2["trace_id 중복 체크"]
-        DB3["UI 최신 데이터 반영"]
-    end
-
-    YT --> BRANCH1
-    BRANCH1 --> M1{{"MERGE"}}
-    M1 --> BRANCH2
-    M1 --> BRANCH3
-    M1 --> BRANCH4
-    BRANCH2 --> M2{{"MERGE"}}
-    BRANCH3 --> M2
-    BRANCH4 --> M2
-    M2 --> BRANCH3_1
-    BRANCH3_1 --> M3{{"MERGE"}}
-    M3 --> BRANCH5
-    B5_1 --> B5_2 --> B5_3
-    BRANCH5 --> Output
-
-    style YT fill:#ff6b6b,stroke:#333,stroke-width:2px,color:#fff
-    style M1 fill:#ffd93d,stroke:#333,stroke-width:2px
-    style M2 fill:#ffd93d,stroke:#333,stroke-width:2px
-    style M3 fill:#ffd93d,stroke:#333,stroke-width:2px
-    style Output fill:#6bcb77,stroke:#333,stroke-width:2px
+    style YT fill:#e74c3c,color:#fff
+    style B1 fill:#3498db,color:#fff
+    style B2 fill:#9b59b6,color:#fff
+    style B3 fill:#9b59b6,color:#fff
+    style B4 fill:#9b59b6,color:#fff
+    style B3_1 fill:#1abc9c,color:#fff
+    style B5 fill:#e67e22,color:#fff
+    style DB fill:#27ae60,color:#fff
+    style M1 fill:#f1c40f,color:#333
+    style M2 fill:#f1c40f,color:#333
+    style M3 fill:#f1c40f,color:#333
 ```
