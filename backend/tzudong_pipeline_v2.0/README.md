@@ -107,36 +107,59 @@ TIMEZONE=Asia/Seoul
 
 ```mermaid
 flowchart TD
-    subgraph INPUT[" "]
-        YT[/"📺 YouTube Channel"/]
-    end
+    YT[/"📺 YouTube Channel"/]
 
-    subgraph PHASE1["Phase 1: 메타데이터 수집"]
-        B1[["🔀 BRANCH 1<br/>GitHub Actions<br/>───<br/>영상 링크 · 메타데이터 · 광고분석"]]
-    end
+    B1["BRANCH 1 · GitHub Actions
+    ──────────────────────
+    • youtube_link 수집: 채널 ID
+    • 메타데이터 수집 (OpenAI API 광고, 주기적 수집)"]
 
-    subgraph PHASE2["Phase 2: 병렬 데이터 수집 · Oracle Cloud"]
-        direction LR
-        B2[["🔀 BRANCH 2<br/>───<br/>Description URL 추출<br/>네이버/구글 크롤링<br/>위치 보정"]]
-        B3[["🔀 BRANCH 3<br/>───<br/>자막 수집<br/>maestra.ai"]]
-        B4[["🔀 BRANCH 4<br/>───<br/>히트맵 마커<br/>수집"]]
-    end
+    M1(("MERGE"))
 
-    subgraph PHASE3["Phase 3: 자막 후처리"]
-        B3_1[["🔀 BRANCH 3-1<br/>GitHub Actions / Oracle<br/>───<br/>자막 교정 · 임베딩"]]
-    end
+    B2["BRANCH 2 · Oracle Cloud
+    ──────────────────────
+    • Description 맛집 URL 추출
+    • 네이버/구글 데이터 수집 (퍼페티어 크롤링)
+    • 맛집 위치 정보 보정 (지오코딩)
+    • 주기적 갱신"]
 
-    subgraph PHASE4["Phase 4: AI 처리"]
-        B5[["🤖 BRANCH 5<br/>───<br/>Gemini CLI 크롤링<br/>Gemini CLI 평가<br/>Transform"]]
-    end
+    B3["BRANCH 3 · Oracle Cloud
+    ──────────────────────
+    • 자막 수집 (maestra.ai 등)
+    • 주기적 갱신"]
 
-    subgraph OUTPUT[" "]
-        DB[(💾 Database<br/>Oracle Cloud)]
-    end
+    B4["BRANCH 4 · Oracle Cloud
+    ──────────────────────
+    • 히트맵 마커 수집
+    • 주기적 갱신"]
 
-    YT --> B1
-    B1 --> B2 & B3 & B4
-    B2 & B3 & B4 --> B3_1
-    B3_1 --> B5
-    B5 --> DB
+    M2(("MERGE"))
+
+    B3_1["BRANCH 3-1 · GitHub Actions / Oracle Cloud
+    ──────────────────────
+    • 자막 교정 및 임베딩
+    • BRANCH 3 트리거"]
+
+    M3(("MERGE"))
+
+    B5["BRANCH 5 · AI Processing
+    ──────────────────────
+    Step 1: Gemini CLI 크롤링 (맛집 URL 있는 경우/없는 경우)
+    Step 2: Gemini CLI 평가 (개선 필요)
+    Step 3: Transform"]
+
+    DB[("Database Insert
+    ──────────────────────
+    • Oracle Cloud DB 저장
+    • trace_id 중복 체크
+    • UI 데이터 반영")]
+
+    YT --> B1 --> M1
+    M1 --> B2
+    M1 --> B3
+    M1 --> B4
+    B2 --> M2
+    B3 --> M2
+    B4 --> M2
+    M2 --> B3_1 --> M3 --> B5 --> DB
 ```
