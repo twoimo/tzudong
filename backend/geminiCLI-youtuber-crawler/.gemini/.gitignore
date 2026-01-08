@@ -1,9 +1,0 @@
-# antigravity 관련 폴더 제외
-antigravity/
-antigravity-browser-profile/
-
-# 임시 폴더 제외
-tmp/
-
-# 원본 백업 파일 제외
-*.orig

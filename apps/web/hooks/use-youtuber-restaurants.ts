@@ -1,6 +1,6 @@
 /**
  * 유튜버 맛집 데이터 훅
- * youtuber_restaurant 테이블에서 데이터를 가져옵니다.
+ * restaurant_youtuber 테이블에서 데이터를 가져옵니다.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -30,6 +30,7 @@ export interface YoutuberRestaurant {
     // 평가 정보
     reasoning_basis: string | null;
     tzuyang_review: string | null;
+    youtuber_review: string | null;
 
     // 주소 정보
     origin_address: string | null;
@@ -90,7 +91,7 @@ export function useYoutuberRestaurants(
 
         try {
             let query = supabase
-                .from('youtuber_restaurant')
+                .from('restaurant_youtuber')
                 .select('*', { count: 'exact' })
                 .order('created_at', { ascending: false })
                 .limit(limit);
@@ -153,7 +154,7 @@ export function useYoutuberList() {
         async function fetchYoutubers() {
             try {
                 const { data, error } = await supabase
-                    .from('youtuber_restaurant')
+                    .from('restaurant_youtuber')
                     .select('youtuber_name, youtuber_channel');
 
                 if (error) throw error;

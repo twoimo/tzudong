@@ -66,12 +66,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         // 초기 세션 가져오기
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        // 초기 세션 가져오기
+        supabase.auth.getSession().then(async ({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
             if (session?.user) {
-                checkAdminRole(session.user.id);
-                checkProfileStatus(session.user.id);
+                await Promise.all([
+                    checkAdminRole(session.user.id),
+                    checkProfileStatus(session.user.id)
+                ]);
             }
             setIsLoading(false);
         });

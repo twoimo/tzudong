@@ -1,0 +1,16 @@
+{
+  "name": "geminicli-restaurant-crawling",
+  "type": "module",
+  "scripts": {
+    "enrich": "node scripts/enrich-coordinates.js"
+  },
+  "dependencies": {
+    "@types/node": "^24.10.1",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^3.3.2",
+    "puppeteer": "^24.32.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3",
+    "youtube-transcript-api": "^3.0.6"
+  }
+}

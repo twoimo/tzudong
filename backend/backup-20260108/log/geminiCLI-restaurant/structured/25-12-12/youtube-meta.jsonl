@@ -1,0 +1,47 @@
+{"timestamp": "2025-12-12T02:28:13.251412+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:13.251705+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "🚀 [YOUTUBE-META] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-12T02:28:13.251820+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "⏰ 시작 시간: 2025-12-12 02:28:13", "data": null}
+{"timestamp": "2025-12-12T02:28:13.251916+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant", "data": null}
+{"timestamp": "2025-12-12T02:28:13.252058+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "   📄 text: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/text/25-12-12", "data": null}
+{"timestamp": "2025-12-12T02:28:13.252154+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "   📊 structured: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-12", "data": null}
+{"timestamp": "2025-12-12T02:28:13.252243+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "   📋 report: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-12", "data": null}
+{"timestamp": "2025-12-12T02:28:13.252334+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:13.314246+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:13.314468+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "🚀 [YOUTUBE-META] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-12T02:28:13.314572+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "⏰ 시작 시간: 2025-12-12 02:28:13", "data": null}
+{"timestamp": "2025-12-12T02:28:13.314671+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-12", "data": null}
+{"timestamp": "2025-12-12T02:28:13.314764+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:13.314981+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:13.315094+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "  YouTube 메타데이터 추가", "data": null}
+{"timestamp": "2025-12-12T02:28:13.315185+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:13.315271+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "입력 파일: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-12/tzuyang_restaurant_results.jsonl", "data": null}
+{"timestamp": "2025-12-12T02:28:13.315364+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "출력 파일: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-12/tzuyang_restaurant_results_with_meta.jsonl", "data": null}
+{"timestamp": "2025-12-12T02:28:13.315570+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "총 1개 레코드 처리 시작", "data": null}
+{"timestamp": "2025-12-12T02:28:14.842920+09:00", "level": "SUCCESS", "phase": "youtube-meta", "step": null, "message": "완료: 1개 성공, 0개 실패", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843114+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843190+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "🏁 [YOUTUBE-META] 파이프라인 종료", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843262+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "⏰ 종료 시간: 2025-12-12 02:28:14", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843319+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "⏱️ 소요 시간: 1.6초", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843374+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843452+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843510+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843564+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "  📊 실행 요약", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843618+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843670+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "  시작 시간: 2025-12-12 02:28:13", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843724+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "  종료 시간: 2025-12-12 02:28:14", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843777+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "  총 소요 시간: 1.6초", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843838+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843893+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "  📈 통계:", "data": null}
+{"timestamp": "2025-12-12T02:28:14.843999+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - total_records: 1", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844070+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - success_count: 1", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844125+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - error_count: 0", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844176+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - reused_meta_count: 0", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844227+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - youtube_api_calls: 1", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844278+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - openai_api_calls: 1", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844327+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - youtube_api_errors: 0", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844379+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - openai_api_errors: 0", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844430+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - ads_detected: 1", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844480+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - shorts_count: 0", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844534+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "    - success_rate: 100.0%", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844590+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:28:14.844874+09:00", "level": "INFO", "phase": "youtube-meta", "step": null, "message": "📝 JSON 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-12/youtube-meta_022813.json", "data": null}

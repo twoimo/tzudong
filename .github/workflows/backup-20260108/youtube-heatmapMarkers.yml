@@ -1,0 +1,80 @@
+name: YouTube HeatmapMarkers Collection (DISABLED)
+
+on:
+  # 비활성화: GitHub Actions에서 YouTube 데이터 접근 불가 (LOGIN_REQUIRED)
+  # schedule:
+  #   - cron: '0 0 * * *'   # 00:00 UTC = 한국 09:00
+  #   - cron: '0 6 * * *'   # 06:00 UTC = 한국 15:00
+  #   - cron: '0 12 * * *'  # 12:00 UTC = 한국 21:00
+  workflow_dispatch:  # 수동 실행만 가능
+
+jobs:
+  collect-heatmap-markers:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # push 권한 필요
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: feat/crawling-youtube-heat-map
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git fetch origin feat/crawling-youtube-heat-map
+          git checkout feat/crawling-youtube-heat-map
+          git pull origin feat/crawling-youtube-heat-map
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install Chromium dependencies for Puppeteer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libatk1.0-0 \
+            libatk-bridge2.0-0 \
+            libcups2 \
+            libdrm2 \
+            libxkbcommon0 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxfixes3 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2t64 \
+            libpango-1.0-0 \
+            libcairo2 \
+            libatspi2.0-0
+      
+      - name: Install Node.js dependencies
+        working-directory: backend/youtube-heatmapMarkers
+        run: npm install
+      
+      - name: Install Python dependencies
+        working-directory: backend/youtube-heatmapMarkers
+        run: pip install -r requirements.txt
+      
+      - name: Collect YouTube URLs
+        working-directory: backend/youtube-heatmapMarkers
+        env:
+          YOUTUBE_API_KEY_BYEON: ${{ secrets.YOUTUBE_API_KEY_BYEON }}
+        run: python scripts/collect_urls.py 10000
+      
+      - name: Collect HeatmapMarkers (50개 제한)
+        working-directory: backend/youtube-heatmapMarkers
+        env:
+          MAX_URLS_PER_RUN: '50'
+        run: npm run collect
