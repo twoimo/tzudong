@@ -125,7 +125,7 @@ flowchart TD
     
     M3{{"🔗 MERGE"}}
     
-    B5["🤖 BRANCH 5: AI Processing<br/>─────────────<br/>GitHub Actions / Oracle<br/>─────────────<br/>Step 1: geminiCLI 크롤링<br/>Step 2: geminiCLI 평가<br/>Step 3: Transform"]
+    B5["🤖 BRANCH 5<br/>AI Processing<br/>─────────────<br/>GitHub Actions / Oracle<br/>─────────────<br/>Step 1: geminiCLI 크롤링<br/>Step 2: geminiCLI 평가<br/>Step 3: Transform"]
     
     DB["💾 Database Insert<br/>─────────────<br/>Oracle Cloud DB<br/>─────────────<br/>• OCI DB 저장<br/>• trace_id 중복 체크<br/>• UI 데이터 반영"]
 
