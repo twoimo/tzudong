@@ -117,7 +117,7 @@ flowchart TD
     
     B3["🔀 BRANCH 3<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 영상 자막 수집 (maestra 등)<br/>• 주기적 갱신"]
     
-    B4["🔀 BRANCH 4<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 히트맵 마커 수집<br/>• Most Replayed<br/>• 주기적 갱신"]
+    B4["🔀 BRANCH 4<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 히트맵 마커 수집<br/>• 주기적 갱신"]
     
     M2{{"🔗 MERGE"}}
     
@@ -125,7 +125,7 @@ flowchart TD
     
     M3{{"🔗 MERGE"}}
     
-    B5["🤖 BRANCH 5<br/>AI Processing<br/>─────────────<br/>GitHub Actions / Oracle<br/>─────────────<br/>Step 1: geminiCLI 크롤링<br/>Step 2: geminiCLI 평가<br/>Step 3: Transform"]
+    B5["🤖 BRANCH 5<br/>AI Processing<br/>─────────────<br/>GitHub Actions / Oracle<br/>─────────────<br/>Step 1: Gemini CLI 크롤링 및 영상 리뷰 (프롬프트 2개: description 맛집 있는 경우/없는 경우)<br/>Step 2: Gemini CLI 데이터 평가 (Rule, LAAJ)<br/>Step 3: Transform"]
     
     DB["💾 Database Insert<br/>─────────────<br/>Oracle Cloud DB<br/>─────────────<br/>• OCI DB 저장<br/>• trace_id 중복 체크<br/>• UI 데이터 반영"]
 
