@@ -1,0 +1,216 @@
+{
+  "stage": "insert-supabase",
+  "started_at": "2025-12-16 02:30:20",
+  "ended_at": "2025-12-16 02:30:20",
+  "duration_seconds": 57,
+  "duration_formatted": "57s",
+  "statistics": {
+    "total_lines": 1186,
+    "success": 2,
+    "failed": 184,
+    "skipped": 1000,
+    "success_rate": "0.2%"
+  },
+  "errors": [
+    {
+      "name": "전통춘천닭갈비",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "동춘이만두",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "중화요리 정궁",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "원조엄마네",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "은희네순대",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "큰집설농탕",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "서울떡볶이",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "꽃새우 영번지 역삼점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "송정식당",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "고기랑",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "한추",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "스시선",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "수제돈가스",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "숙성육관",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "신전떡볶이 본점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "김밥천국 신음점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "이디야커피 IBK본점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "평화김해뒷고기 건대점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "지하식당",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "전주집",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "영화장",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "푸른하늘",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "따뜻한밥상 연신내",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "고고s 빨간오뎅 길동점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "해주냉면 본점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "문배동육칼 본점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "승우네식당",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "옥자회관",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "뮌헨호프",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "마포만두 합정점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "홍제동우동국수",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "보슬보슬 압구정본점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "천하보쌈",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "옛날맛짜장",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "보글이 생태탕왕코다리 서초구청점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "남북통일",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "소소라면 닭꼬치",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "답십리별미",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "장수식당",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "빨간부산오뎅",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "등마루족발연구소",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "옛집국수",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "텍사스 데 브라질 압구정점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "뉴타운 생양고기",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "레알라면",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "진미평양냉면",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "하나우동",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "수제비먹는닭갈비 본점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "울프강 스테이크하우스 청담점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    },
+    {
+      "name": "대흥양다리바베큐 건대점",
+      "error": "duplicate key value violates unique constraint \"restaurants_unique_id_key\""
+    }
+  ]
+}

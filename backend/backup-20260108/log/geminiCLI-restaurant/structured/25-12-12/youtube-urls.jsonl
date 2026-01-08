@@ -1,0 +1,75 @@
+{"timestamp": "2025-12-12T02:24:30.493481+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:30.493668+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "🚀 [YOUTUBE-URLS] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-12T02:24:30.493760+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "⏰ 시작 시간: 2025-12-12 02:24:30", "data": null}
+{"timestamp": "2025-12-12T02:24:30.493831+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant", "data": null}
+{"timestamp": "2025-12-12T02:24:30.493899+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "   📄 text: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/text/25-12-12", "data": null}
+{"timestamp": "2025-12-12T02:24:30.493961+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "   📊 structured: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-12", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494022+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "   📋 report: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-12", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494091+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494162+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494223+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "🚀 [YOUTUBE-URLS] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494286+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "⏰ 시작 시간: 2025-12-12 02:24:30", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494342+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "📁 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-12", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494401+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494455+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494508+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "  쯔양 YouTube 채널 동영상 URL 수집", "data": null}
+{"timestamp": "2025-12-12T02:24:30.494562+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:30.495166+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "기존 URL 개수 (전체 이력): 992개", "data": null}
+{"timestamp": "2025-12-12T02:24:30.498450+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "쯔양 채널의 동영상 목록을 가져오는 중...", "data": null}
+{"timestamp": "2025-12-12T02:24:30.650545+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "업로드 플레이리스트 ID: UUfpaSruWW3S4dibonKXENjA", "data": null}
+{"timestamp": "2025-12-12T02:24:33.836136+09:00", "level": "SUCCESS", "phase": "youtube-urls", "step": null, "message": "총 993개의 동영상 URL 수집 완료", "data": null}
+{"timestamp": "2025-12-12T02:24:33.836468+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "중복 URL 제외: 992개", "data": null}
+{"timestamp": "2025-12-12T02:24:33.836648+09:00", "level": "SUCCESS", "phase": "youtube-urls", "step": null, "message": "1개의 신규 URL 저장 완료", "data": null}
+{"timestamp": "2025-12-12T02:24:33.836727+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "저장 위치: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-12/tzuyang_youtubeVideo_urls.txt", "data": null}
+{"timestamp": "2025-12-12T02:24:33.836791+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:33.836846+09:00", "level": "SUCCESS", "phase": "youtube-urls", "step": null, "message": "작업 완료!", "data": null}
+{"timestamp": "2025-12-12T02:24:33.836902+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:33.836968+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837024+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "🏁 [YOUTUBE-URLS] 파이프라인 종료", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837084+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "⏰ 종료 시간: 2025-12-12 02:24:33", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837137+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "⏱️ 소요 시간: 3.3초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837189+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837295+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837351+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837403+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "  📊 실행 요약", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837458+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837511+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "  시작 시간: 2025-12-12 02:24:30", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837563+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "  종료 시간: 2025-12-12 02:24:33", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837613+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "  총 소요 시간: 3.3초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837690+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837744+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "  📈 통계:", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837797+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - existing_urls_count: 992", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837850+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - total_videos_fetched: 993", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837901+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_calls: 21", "data": null}
+{"timestamp": "2025-12-12T02:24:33.837953+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - pages_processed: 20", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838003+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - duplicate_urls_filtered: 992", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838064+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - new_urls_added: 1", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838117+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - output_file: /home/runner/work/tzudong/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-12/tzuyang_youtubeVideo_urls.txt", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838172+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838221+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "  ⏱️ 타이머:", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838273+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - load_existing_urls: 0.0초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838324+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_channel_list: 0.2초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838375+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_1: 0.3초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838426+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_2: 0.3초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838475+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_3: 0.4초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838524+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_4: 0.2초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838574+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_5: 0.3초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838638+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_6: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838706+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_7: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838758+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_8: 0.2초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838809+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_9: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838859+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_10: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838908+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_11: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.838957+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_12: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839006+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_13: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839055+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_14: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839107+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_15: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839156+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_16: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839206+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_17: 0.2초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839260+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_18: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839312+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_19: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839362+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - youtube_api_playlist_page_20: 0.1초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839411+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - fetch_all_video_urls: 3.3초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839459+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "    - save_urls_to_file: 0.0초", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839508+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-12T02:24:33.839890+09:00", "level": "INFO", "phase": "youtube-urls", "step": null, "message": "📝 JSON 로그 저장: /home/runner/work/tzudong/tzudong/backend/log/geminiCLI-restaurant/report/25-12-12/youtube-urls_022430.json", "data": null}

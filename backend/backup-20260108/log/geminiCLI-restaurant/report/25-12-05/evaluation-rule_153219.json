@@ -1,0 +1,168 @@
+{
+  "phase": "evaluation-rule",
+  "started_at": "2025-12-05 15:32:19",
+  "ended_at": "2025-12-05 15:37:05",
+  "duration_seconds": 285.34,
+  "duration_formatted": "4분 45초",
+  "statistics": {
+    "total_records_processed": 23,
+    "skipped_records": 0,
+    "total_restaurants": 54,
+    "success_restaurants": 37,
+    "failed_restaurants": 17,
+    "naver_api_calls": 149,
+    "ncp_api_calls": 203,
+    "naver_api_errors": 0,
+    "ncp_api_errors": 0,
+    "success_rate": "68.5%"
+  },
+  "timers": {
+    "process_record_1": {
+      "count": 1,
+      "total_seconds": 19.35,
+      "avg_seconds": 19.346,
+      "formatted": "19.3초"
+    },
+    "process_record_2": {
+      "count": 1,
+      "total_seconds": 5.65,
+      "avg_seconds": 5.651,
+      "formatted": "5.7초"
+    },
+    "process_record_3": {
+      "count": 1,
+      "total_seconds": 5.21,
+      "avg_seconds": 5.206,
+      "formatted": "5.2초"
+    },
+    "process_record_4": {
+      "count": 1,
+      "total_seconds": 3.13,
+      "avg_seconds": 3.127,
+      "formatted": "3.1초"
+    },
+    "process_record_5": {
+      "count": 1,
+      "total_seconds": 31.57,
+      "avg_seconds": 31.571,
+      "formatted": "31.6초"
+    },
+    "process_record_6": {
+      "count": 1,
+      "total_seconds": 3.08,
+      "avg_seconds": 3.081,
+      "formatted": "3.1초"
+    },
+    "process_record_7": {
+      "count": 1,
+      "total_seconds": 7.84,
+      "avg_seconds": 7.839,
+      "formatted": "7.8초"
+    },
+    "process_record_8": {
+      "count": 1,
+      "total_seconds": 3.74,
+      "avg_seconds": 3.741,
+      "formatted": "3.7초"
+    },
+    "process_record_9": {
+      "count": 1,
+      "total_seconds": 7.35,
+      "avg_seconds": 7.349,
+      "formatted": "7.3초"
+    },
+    "process_record_10": {
+      "count": 1,
+      "total_seconds": 5.63,
+      "avg_seconds": 5.634,
+      "formatted": "5.6초"
+    },
+    "process_record_11": {
+      "count": 1,
+      "total_seconds": 94.46,
+      "avg_seconds": 94.463,
+      "formatted": "1분 34초"
+    },
+    "process_record_12": {
+      "count": 1,
+      "total_seconds": 5.6,
+      "avg_seconds": 5.599,
+      "formatted": "5.6초"
+    },
+    "process_record_13": {
+      "count": 1,
+      "total_seconds": 8.48,
+      "avg_seconds": 8.477,
+      "formatted": "8.5초"
+    },
+    "process_record_14": {
+      "count": 1,
+      "total_seconds": 17.63,
+      "avg_seconds": 17.632,
+      "formatted": "17.6초"
+    },
+    "process_record_15": {
+      "count": 1,
+      "total_seconds": 3.77,
+      "avg_seconds": 3.772,
+      "formatted": "3.8초"
+    },
+    "process_record_16": {
+      "count": 1,
+      "total_seconds": 7.72,
+      "avg_seconds": 7.716,
+      "formatted": "7.7초"
+    },
+    "process_record_17": {
+      "count": 1,
+      "total_seconds": 3.74,
+      "avg_seconds": 3.743,
+      "formatted": "3.7초"
+    },
+    "process_record_18": {
+      "count": 1,
+      "total_seconds": 4.85,
+      "avg_seconds": 4.854,
+      "formatted": "4.9초"
+    },
+    "process_record_19": {
+      "count": 1,
+      "total_seconds": 4.79,
+      "avg_seconds": 4.787,
+      "formatted": "4.8초"
+    },
+    "process_record_20": {
+      "count": 1,
+      "total_seconds": 5.8,
+      "avg_seconds": 5.797,
+      "formatted": "5.8초"
+    },
+    "process_record_21": {
+      "count": 1,
+      "total_seconds": 19.83,
+      "avg_seconds": 19.829,
+      "formatted": "19.8초"
+    },
+    "process_record_22": {
+      "count": 1,
+      "total_seconds": 4.78,
+      "avg_seconds": 4.782,
+      "formatted": "4.8초"
+    },
+    "process_record_23": {
+      "count": 1,
+      "total_seconds": 11.31,
+      "avg_seconds": 11.306,
+      "formatted": "11.3초"
+    },
+    "process_all_records": {
+      "count": 1,
+      "total_seconds": 285.32,
+      "avg_seconds": 285.321,
+      "formatted": "4분 45초"
+    }
+  },
+  "success_count": 2,
+  "error_count": 1,
+  "skip_count": 0
+}

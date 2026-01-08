@@ -1,0 +1,130 @@
+{"timestamp": "2025-12-03T21:59:59.745660+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T21:59:59.746352+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🚀 [TRANSCRIPT-API] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-03T21:59:59.746599+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 시작 시간: 2025-12-03 21:59:59", "data": null}
+{"timestamp": "2025-12-03T21:59:59.746920+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant", "data": null}
+{"timestamp": "2025-12-03T21:59:59.747379+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "   📄 text: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/text/25-12-03", "data": null}
+{"timestamp": "2025-12-03T21:59:59.747682+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "   📊 structured: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-03", "data": null}
+{"timestamp": "2025-12-03T21:59:59.748035+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "   📋 report: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03", "data": null}
+{"timestamp": "2025-12-03T21:59:59.748375+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T21:59:59.749048+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🚀 /collect 엔드포인트 호출 - date_folder: 25-12-03, max_urls: None, auto_commit: True", "data": null}
+{"timestamp": "2025-12-03T21:59:59.749716+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T21:59:59.750319+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🚀 [TRANSCRIPT-API] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-03T21:59:59.751576+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 시작 시간: 2025-12-03 21:59:59", "data": null}
+{"timestamp": "2025-12-03T21:59:59.752880+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03", "data": null}
+{"timestamp": "2025-12-03T21:59:59.753761+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T21:59:59.754039+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📅 날짜 폴더: 25-12-03", "data": null}
+{"timestamp": "2025-12-03T21:59:59.754314+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 출력 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json", "data": null}
+{"timestamp": "2025-12-03T22:00:01.853457+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🔢 최대 URL 제한: 15개 (IP 차단 방지)", "data": null}
+{"timestamp": "2025-12-03T22:00:01.854242+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📹 Transcript 수집 시작: 15개 URL", "data": null}
+{"timestamp": "2025-12-03T22:00:03.383352+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[1/15] su68Sm9TNys ✅ (283 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:05.172255+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[2/15] G3pQQeL47wI ✅ (229 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:06.962409+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[3/15] bxEDXFycaXw ✅ (259 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:11.740405+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[4/15] AL6cbIJzdos ✅ (198 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:13.216870+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[5/15] Su915VcW8Cc ✅ (1973 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:15.155465+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[6/15] iSb0LHcOMhs ✅ (10 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:18.648371+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[7/15] 8hWQnvVvLHQ ✅ (328 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:20.161060+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[8/15] gmWgonsj6HA ✅ (296 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:21.875562+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[9/15] FcVz29NKM-o ✅ (344 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:27.112259+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[10/15] FcblabtVQKo ✅ (16 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:28.726999+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[11/15] 2zX2zFonIEE ✅ (215 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:30.390336+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[12/15] rRAEFB6CiD0 ✅ (481 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:35.154098+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[13/15] M8whof-__nY ✅ (213 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:36.748203+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[14/15] ayjSkDH_Vtw ✅ (223 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:38.230334+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[15/15] f5SSnbtKr1Q ✅ (271 segments)", "data": null}
+{"timestamp": "2025-12-03T22:00:42.603002+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "📁 Transcript 저장 완료: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json", "data": null}
+{"timestamp": "2025-12-03T22:00:42.603464+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "✅ 수집 완료: 성공 15, 실패 0", "data": null}
+{"timestamp": "2025-12-03T22:00:42.603666+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:00:42.603819+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🏁 [TRANSCRIPT-API] 파이프라인 종료", "data": null}
+{"timestamp": "2025-12-03T22:00:42.603946+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 종료 시간: 2025-12-03 22:00:42", "data": null}
+{"timestamp": "2025-12-03T22:00:42.604054+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏱️ 소요 시간: 42.9초", "data": null}
+{"timestamp": "2025-12-03T22:00:42.604196+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:00:42.604806+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_215959.json", "data": null}
+{"timestamp": "2025-12-03T22:00:42.605465+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📤 자동 커밋 시작...", "data": null}
+{"timestamp": "2025-12-03T22:00:42.605627+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:00:42.605740+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🚀 [TRANSCRIPT-API] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-03T22:00:42.605859+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 시작 시간: 2025-12-03 21:59:59", "data": null}
+{"timestamp": "2025-12-03T22:00:42.605968+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:00:42.606076+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:00:42.606183+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📅 날짜 폴더: 25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:00:42.606329+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🎯 타겟 브랜치: github-actions-restaurant", "data": null}
+{"timestamp": "2025-12-03T22:00:42.635145+09:00", "level": "ERROR", "phase": "transcript-api", "step": null, "message": "git 명령 실패: git rev-parse --abbrev-ref HEAD", "data": {"stderr": "fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'"}}
+{"timestamp": "2025-12-03T22:00:42.635629+09:00", "level": "ERROR", "phase": "transcript-api", "step": null, "message": "현재 브랜치 확인 실패: fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'", "data": null}
+{"timestamp": "2025-12-03T22:00:42.635751+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:00:42.635837+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🏁 [TRANSCRIPT-API] 파이프라인 종료", "data": null}
+{"timestamp": "2025-12-03T22:00:42.635928+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 종료 시간: 2025-12-03 22:00:42", "data": null}
+{"timestamp": "2025-12-03T22:00:42.636007+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏱️ 소요 시간: 42.9초", "data": null}
+{"timestamp": "2025-12-03T22:00:42.636084+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:00:42.636500+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_215959.json", "data": null}
+{"timestamp": "2025-12-03T22:00:42.636663+09:00", "level": "WARNING", "phase": "transcript-api", "step": null, "message": "자동 커밋 실패: 현재 브랜치 확인 실패: fatal: ambiguous argument 'HEAD': unknown revision or path not in the working tree.\nUse '--' to separate paths from revisions, like this:\n'git <command> [<revision>...] -- [<file>...]'", "data": null}
+{"timestamp": "2025-12-03T22:00:42.636755+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "/collect 요청 완료 - 성공: 15, 실패: 0", "data": null}
+{"timestamp": "2025-12-03T22:00:42.637368+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 요약 저장됨: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_summary.json", "data": null}
+{"timestamp": "2025-12-03T22:21:46.016970+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:21:46.018491+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🚀 [TRANSCRIPT-API] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-03T22:21:46.019050+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 시작 시간: 2025-12-03 22:21:46", "data": null}
+{"timestamp": "2025-12-03T22:21:46.019317+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant", "data": null}
+{"timestamp": "2025-12-03T22:21:46.019541+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "   📄 text: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/text/25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:21:46.019767+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "   📊 structured: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/structured/25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:21:46.019963+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "   📋 report: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:21:46.020142+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:21:46.020321+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🚀 /collect 엔드포인트 호출 - date_folder: 25-12-03, max_urls: None, auto_commit: True", "data": null}
+{"timestamp": "2025-12-03T22:21:46.020815+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:21:46.021396+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🚀 [TRANSCRIPT-API] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-03T22:21:46.021943+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 시작 시간: 2025-12-03 22:21:46", "data": null}
+{"timestamp": "2025-12-03T22:21:46.022557+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:21:46.023172+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:21:46.024373+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📅 날짜 폴더: 25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:21:46.025133+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 출력 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json", "data": null}
+{"timestamp": "2025-12-03T22:21:49.641110+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🔢 최대 URL 제한: 15개 (IP 차단 방지)", "data": null}
+{"timestamp": "2025-12-03T22:21:49.648956+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📂 기존 데이터 로드: 15개", "data": null}
+{"timestamp": "2025-12-03T22:21:49.649876+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📹 Transcript 수집 시작: 15개 URL", "data": null}
+{"timestamp": "2025-12-03T22:21:54.736088+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[1/15] B9adR8DN830 ✅ (70 segments)", "data": null}
+{"timestamp": "2025-12-03T22:21:56.638125+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[2/15] MnLGiP3e714 ✅ (182 segments)", "data": null}
+{"timestamp": "2025-12-03T22:21:58.578667+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[3/15] t3Bt1ooBrnk ✅ (250 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:05.107720+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[4/15] bVNb3YIH5TI ✅ (290 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:07.235541+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[5/15] Qe5w3eSHhUE ✅ (225 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:09.078695+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[6/15] qdrjjcJE-KI ✅ (218 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:15.848149+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[7/15] OON0kwUgOlw ✅ (131 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:18.289151+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[8/15] DncejNvRvTM ✅ (299 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:20.402206+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[9/15] hjYYEklZsgM ✅ (169 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:26.321287+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[10/15] FGJdgoU5L_s ✅ (347 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:28.388436+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[11/15] aYL9E6fKNLI ✅ (316 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:30.592943+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[12/15] BFIw0bXtMq0 ✅ (256 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:36.328706+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[13/15] 0VmT9F7y81s ✅ (201 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:38.747851+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[14/15] BubHdc2NayQ ✅ (430 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:40.439525+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "[15/15] FPg95PvRbew ✅ (289 segments)", "data": null}
+{"timestamp": "2025-12-03T22:22:44.634636+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "📁 Transcript 저장 완료: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json", "data": null}
+{"timestamp": "2025-12-03T22:22:44.635119+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "✅ 수집 완료: 성공 15, 실패 0", "data": null}
+{"timestamp": "2025-12-03T22:22:44.635287+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:22:44.635398+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🏁 [TRANSCRIPT-API] 파이프라인 종료", "data": null}
+{"timestamp": "2025-12-03T22:22:44.635497+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 종료 시간: 2025-12-03 22:22:44", "data": null}
+{"timestamp": "2025-12-03T22:22:44.635586+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏱️ 소요 시간: 58.6초", "data": null}
+{"timestamp": "2025-12-03T22:22:44.635685+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:22:44.636303+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_222146.json", "data": null}
+{"timestamp": "2025-12-03T22:22:44.637776+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📤 자동 커밋 시작...", "data": null}
+{"timestamp": "2025-12-03T22:22:44.637956+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:22:44.638055+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🚀 [TRANSCRIPT-API] 파이프라인 시작", "data": null}
+{"timestamp": "2025-12-03T22:22:44.638161+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 시작 시간: 2025-12-03 22:21:46", "data": null}
+{"timestamp": "2025-12-03T22:22:44.638261+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:22:44.638352+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:22:44.638433+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📅 날짜 폴더: 25-12-03", "data": null}
+{"timestamp": "2025-12-03T22:22:44.638519+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🎯 타겟 브랜치: github-actions-restaurant", "data": null}
+{"timestamp": "2025-12-03T22:22:44.665310+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 Transcript 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json", "data": null}
+{"timestamp": "2025-12-03T22:22:44.671907+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📦 로컬 데이터 백업: 30개", "data": null}
+{"timestamp": "2025-12-03T22:22:44.672139+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📥 원격 변경사항 pull 중...", "data": null}
+{"timestamp": "2025-12-03T22:22:44.698385+09:00", "level": "ERROR", "phase": "transcript-api", "step": null, "message": "git 명령 실패: git pull --rebase origin github-actions-restaurant", "data": {"stderr": "error: cannot pull with rebase: You have unstaged changes.\nerror: please commit or stash them."}}
+{"timestamp": "2025-12-03T22:22:44.698761+09:00", "level": "WARNING", "phase": "transcript-api", "step": null, "message": "pull 실패 (새 브랜치일 수 있음): error: cannot pull with rebase: You have unstaged changes.\nerror: please commit or stash them.", "data": null}
+{"timestamp": "2025-12-03T22:22:44.704936+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📥 원격 데이터 로드: 30개", "data": null}
+{"timestamp": "2025-12-03T22:22:44.705618+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🔀 Merge 완료: 로컬 30개 + 원격 30개 → 30개", "data": null}
+{"timestamp": "2025-12-03T22:22:44.733118+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "💾 Merge된 데이터 저장 완료: 30개", "data": null}
+{"timestamp": "2025-12-03T22:22:44.783029+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📝 변경된 파일: backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json", "data": null}
+{"timestamp": "2025-12-03T22:22:44.849195+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "커밋 완료: 📝 Transcript 수집: 25-12-03 (15개)", "data": null}
+{"timestamp": "2025-12-03T22:22:46.837679+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "푸시 완료: origin/github-actions-restaurant", "data": null}
+{"timestamp": "2025-12-03T22:22:46.838324+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:22:46.838467+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "🏁 [TRANSCRIPT-API] 파이프라인 종료", "data": null}
+{"timestamp": "2025-12-03T22:22:46.838589+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏰ 종료 시간: 2025-12-03 22:22:46", "data": null}
+{"timestamp": "2025-12-03T22:22:46.838707+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "⏱️ 소요 시간: 1분 0초", "data": null}
+{"timestamp": "2025-12-03T22:22:46.838828+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2025-12-03T22:22:46.839440+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_222146.json", "data": null}
+{"timestamp": "2025-12-03T22:22:46.841195+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "자동 커밋 성공: 커밋 및 푸시 완료: 📝 Transcript 수집: 25-12-03 (15개)", "data": null}
+{"timestamp": "2025-12-03T22:22:46.841551+09:00", "level": "SUCCESS", "phase": "transcript-api", "step": null, "message": "/collect 요청 완료 - 성공: 15, 실패: 0", "data": null}
+{"timestamp": "2025-12-03T22:22:46.842634+09:00", "level": "INFO", "phase": "transcript-api", "step": null, "message": "📁 요약 저장됨: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/log/geminiCLI-restaurant/report/25-12-03/transcript-api_summary.json", "data": null}

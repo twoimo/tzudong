@@ -1,0 +1,150 @@
+name: 📹 YouTube URL 수집
+
+# 임시 비활성화 - restaurant-pipeline.yml에서 통합 관리
+on:
+  workflow_dispatch:
+    inputs:
+      disabled:
+        description: '이 워크플로우는 비활성화되었습니다'
+        required: false
+        default: 'true'
+  # schedule:
+  #   # 2일마다 KST 02:00 (UTC 17:00) 자동 실행
+  #   - cron: '0 17 */2 * *'
+
+env:
+  PYTHON_VERSION: '3.11'
+  TZ: 'Asia/Seoul'
+
+jobs:
+  collect-urls:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    permissions:
+      contents: write
+    
+    steps:
+      # ============================
+      # 1. 기본 환경 설정
+      # ============================
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: github-actions-restaurant
+      
+      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: 'backend/requirements.txt'
+      
+      # ============================
+      # 2. Python 패키지 설치
+      # ============================
+      - name: 🐍 Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install requests python-dotenv google-api-python-client
+          echo "✅ Python 패키지 설치 완료"
+      
+      # ============================
+      # 3. 환경 변수 설정
+      # ============================
+      - name: 📝 Create .env file
+        run: |
+          echo "YOUTUBE_API_KEY_BYEON=${{ secrets.YOUTUBE_API_KEY_BYEON }}" > backend/geminiCLI-restaurant-crawling/.env
+          echo "✅ .env 파일 생성 완료"
+      
+      # ============================
+      # 4. 파이프라인 날짜 폴더 설정
+      # ============================
+      - name: 📅 Set Pipeline Date Folder
+        run: |
+          PIPELINE_DATE=$(date '+%y-%m-%d')
+          echo "PIPELINE_DATE=$PIPELINE_DATE" >> $GITHUB_ENV
+          echo "📅 파이프라인 날짜 폴더: $PIPELINE_DATE"
+          
+          # 데이터 폴더 생성
+          mkdir -p backend/geminiCLI-restaurant-crawling/data/$PIPELINE_DATE
+          mkdir -p backend/log/geminiCLI-restaurant/report/$PIPELINE_DATE
+          echo "✅ 폴더 생성 완료"
+      
+      # ============================
+      # 5. YouTube URL 수집 실행
+      # ============================
+      - name: 📹 Collect YouTube URLs
+        working-directory: backend/geminiCLI-restaurant-crawling/scripts
+        env:
+          PIPELINE_DATE: ${{ env.PIPELINE_DATE }}
+        run: |
+          echo "🚀 YouTube URL 수집 시작..."
+          python3 api-youtube-urls.py
+          echo "✅ URL 수집 완료"
+      
+      # ============================
+      # 6. 결과 확인
+      # ============================
+      - name: 📊 Check Results
+        run: |
+          TODAY=$(date '+%y-%m-%d')
+          URL_FILE="backend/geminiCLI-restaurant-crawling/data/$TODAY/tzuyang_youtubeVideo_urls.txt"
+          
+          if [ -f "$URL_FILE" ]; then
+            URL_COUNT=$(wc -l < "$URL_FILE" | tr -d ' ')
+            echo "✅ 수집된 URL 수: $URL_COUNT 개"
+            echo "📁 파일: $URL_FILE"
+          else
+            echo "⚠️ URL 파일이 생성되지 않았습니다 (신규 URL 없음)"
+          fi
+      
+      # ============================
+      # 7. 결과 커밋
+      # ============================
+      - name: 📤 Commit URL results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          TODAY=$(date '+%y-%m-%d')
+          
+          # 데이터 폴더 추가
+          git add backend/geminiCLI-restaurant-crawling/data/ 2>/dev/null || true
+          git add backend/log/geminiCLI-restaurant/ 2>/dev/null || true
+          
+          if git diff --staged --quiet; then
+            echo "📭 변경사항 없음 - 커밋 스킵"
+          else
+            COMMIT_MSG="🤖 Auto: YouTube URL 수집 완료 ($TODAY)"
+            git commit -m "$COMMIT_MSG"
+            git push
+            echo "✅ 결과 커밋 완료: $COMMIT_MSG"
+          fi
+      
+      # ============================
+      # 8. Job Summary
+      # ============================
+      - name: 📝 Generate Job Summary
+        if: always()
+        run: |
+          echo "# 📹 YouTube URL 수집 결과" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📅 실행 정보" >> $GITHUB_STEP_SUMMARY
+          echo "- **실행 시간**: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M:%S KST')" >> $GITHUB_STEP_SUMMARY
+          echo "- **트리거**: ${{ github.event_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          TODAY=$(date '+%y-%m-%d')
+          URL_FILE="backend/geminiCLI-restaurant-crawling/data/$TODAY/tzuyang_youtubeVideo_urls.txt"
+          
+          echo "## 📊 결과" >> $GITHUB_STEP_SUMMARY
+          if [ -f "$URL_FILE" ]; then
+            URL_COUNT=$(wc -l < "$URL_FILE" | tr -d ' ')
+            echo "- **수집된 URL**: $URL_COUNT 개" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **결과**: 신규 URL 없음" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "---" >> $GITHUB_STEP_SUMMARY
+          echo "💡 Transcript 수집은 로컬 FastAPI를 통해 수동으로 진행하세요." >> $GITHUB_STEP_SUMMARY

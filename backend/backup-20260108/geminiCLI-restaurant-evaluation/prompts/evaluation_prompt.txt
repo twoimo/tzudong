@@ -1,0 +1,113 @@
+당신은 유튜버의 음식점 방문 관련 AI 기반 생성 데이터를 평가하는 전문가입니다.  
+입력으로 주어지는 <평가할 데이터>는 한 유튜브 영상에서 유튜버가 방문한 음식점 데이터(restaurant 리스트 포함)입니다.  
+영상 내용, reasoning_basis, tzuyang_review, category를 종합적으로 검토하여 아래의 5개 평가 항목에 대해 판단하세요.
+
+**참고: 프롬프트 끝에 <참고: YouTube 자막> 섹션이 제공될 수 있습니다. 타임스탬프([MM:SS])와 함께 제공되므로 유튜버의 실제 발언, 음식점 언급, 리뷰 내용을 검증하는 데 적극 활용하세요. 자막이 없거나 불충분한 경우 YouTube Transcript API(youtube-transcript-api)를 사용하여 추가 자막을 가져올 수 있습니다.**
+
+**중요1: 추측이나 새로운 정보 추가는 절대 금지하며, 반드시 아래 <평가 루브릭>의 평가기준·평가대상·출력형식을 그대로 따르세요.**
+**중요2: 출력 결과값은 한국어로 작성합니다. 단, 고유명사(음식점 이름 등)는 원본 그대로 유지합니다. (각 평가에서 eval_basis는 필수로 한국어 작성)**
+
+<평가할 데이터>
+{restaurant_data}
+</평가할 데이터>
+
+<평가 루브릭>
+- **평가는 새로운 항목이나 근거를 추가하지 말고, <평가할 데이터>와 <참고: YouTube 자막>을 기반으로만 판단하세요.**
+- **다른 게시물/블로그 등에서 절대로 검색하지 않습니다.(오로지 <참고: YouTube 자막>과 <평가할 데이터>만 이용)**
+- 모든 평가항목에서 eval_basis는 **자막 타임스탬프([MM:SS])를 포함하여 구체적으로** 작성합니다.
+
+[평가 항목 1] 방문 여부 정확성 (visit_authenticity)
+- 평가 목적: **자막에서** 유튜버가 실제로 해당 음식점을 방문했는지, 지점명까지 명확히 식별 가능한지, 누락된 음식점이 있는지 평가
+- 평가 기준(int 0~4):
+  0 = 자막에서 전혀 언급 없음 (데이터가 허구).
+  1 = 음식점(매장)이 맞으며(단순 지역/위치/축제이름 등은 음식점이 아님), 직접 방문했고 지점명까지 명확.
+  2 = 음식점(매장)이 맞으며, 직접 방문은 맞지만, 지점명 특정 불명확함.
+  3 = 음식점을 방문하지 않고, 해당 음식점의 음식 포장/배달임.
+  4 = 언급만 하거나(매장 안 감), 음식점(매장)이 아님.
+- 평가 대상: 각 restaurants의 name
+- 반환 형식 예시:
+  {
+    "values": [
+      {"name": "빈해원", "eval_value": 1, "eval_basis": "[01:55] 간판+내부 확인"},
+      {"name": "복성루", "eval_value": 1, "eval_basis": "[08:58] 착석 장면 존재"},
+      {"name": "지린성", "eval_value": 1, "eval_basis": "[15:06] 주문 장면 확인"}
+    ],
+    "missing": []
+  }
+
+---
+
+[평가 항목 2] reasoning_basis 추론 합리성 (rb_inference_score)
+- 평가 목적: reasoning_basis가 '방문 지역 언급 → 간판/편집자막 → 음식점 특정' 구조를 따르거나, 자막 내용과 검색정보를 조합해 합리적으로 특정했는지 평가
+- 평가 기준(int 0~2):
+  0 = 논리적 비약 있음 / 자막에서 확인 안 되는 내용으로 추측
+  1 = '방문 지역 언급 → 간판/편집자막 확인 → 음식점 특정' 순서로 자연스럽게 이어짐
+  2 = 위 구조는 아니지만, '자막 내용(음식점명, 메뉴, 위치 힌트)'과 '검색정보를 조합'하여 논리적으로 특정
+- 평가 대상: 각 restaurants의 reasoning_basis 텍스트
+- 반환 형식 예시:
+  [
+    {"name": "빈해원", "eval_value": 1, "eval_basis": "00:01:55 간판과 주소 언급을 근거로 특정"},
+    {"name": "복성루", "eval_value": 1, "eval_basis": "00:08:58 간판과 주소 언급 근거로 특정"},
+    {"name": "지린성", "eval_value": 1, "eval_basis": "00:15:06 간판 명시 및 현장 언급으로 특정"}
+  ]
+- 주의: 추측 금지, reasoning_basis 내 명시된 텍스트와 자막을 대조하여 평가
+
+---
+
+[평가 항목 3] reasoning_basis 실제 근거 일치도 (rb_grounding_TF)
+- 평가 목적: reasoning_basis에 제시된 근거(지역, 간판, 메뉴 등)가 **자막에서 확인 가능한지** 검증
+- 평가 기준(bool):
+  true = reasoning_basis의 핵심 근거가 자막에서 확인됨
+  false = 핵심 근거(매장 위치나 이름 등)가 자막에서 전혀 확인 안 됨
+- 평가 대상: 각 restaurants의 reasoning_basis
+- 반환 형식 예시:
+  [
+    {"name": "빈해원", "eval_value": true, "eval_basis": "[01:55] '빈해원' 언급 및 주소 자막 존재"},
+    {"name": "복성루", "eval_value": true, "eval_basis": "[08:58] '복성루' 간판 언급 확인"},
+    {"name": "지린성", "eval_value": true, "eval_basis": "[15:06] '지린성' 명시 및 방문 언급 확인"}
+  ]
+
+---
+
+[평가 항목 4] 음식 리뷰 충실도 (review_faithfulness_score)
+- 평가 목적: tzuyang_review가 **자막에서 확인되는** 유튜버가 먹은 메뉴와 실제 멘트(메뉴, 맛 평가 등)를 충실히 반영하는지 평가
+- 평가 기준(float 0~1):
+  0.0 = 자막에 없는 내용 지어냄, 과장/왜곡, 위험한 부정적 평가
+  1.0 = 자막의 실제 멘트 기반으로 충실하게 요약됨, 큰 누락 없음
+- 평가 대상: 각 restaurants의 tzuyang_review
+- 반환 형식 예시:
+  [
+    {"name": "빈해원", "eval_value": 1.0, "eval_basis": "[03:20] 짬뽕, [05:10] 탕수육 실제 주문 및 평가 일치"},
+    {"name": "복성루", "eval_value": 1.0, "eval_basis": "[10:30] 짬뽕과 잡채밥 실제 주문 및 평가 일치"},
+    {"name": "지린성", "eval_value": 1.0, "eval_basis": "[17:00] 고추짜장, 고추짬뽕 주문 및 매운맛 표현 일치"}
+  ]
+
+---
+
+[평가 항목 5] 카테고리 정합성 (category_TF)
+- 평가 목적: category 필드가 **자막에서 확인되는** 업장 성격과 일치하는지 평가
+- 평가 기준(bool):
+  true = 자막에서 확인되는 메뉴/업장 유형과 category가 일치
+  false = 자막에서 전혀 맞지 않음 (수정 필요)
+- 평가 대상: 각 restaurants의 category
+- 반환 형식 예시:
+  [
+    {"name": "빈해원", "eval_value": true, "category_revision": null},
+    {"name": "복성루", "eval_value": true, "category_revision": null},
+    {"name": "지린성", "eval_value": true, "category_revision": null}
+  ]
+- 카테고리 범위: ["치킨", "중식", "돈까스·회", "피자", "패스트푸드", "찜·탕", "족발·보쌈", "분식", "카페·디저트", "한식", "고기", "양식", "아시안", "야식", "도시락"]
+</평가 루브릭>
+
+<출력 형식>
+- 최종 출력은 **반드시 5개의 평가 항목(visit_authenticity, rb_inference_score, rb_grounding_TF, review_faithfulness_score, category_TF)를 key로 하고, 그 평가 결과를 값으로 하는 단일 JSON 객체만 반환(다른 설명/언급 절대 금지).**
+- 출력 예시:
+{
+  "visit_authenticity": {"values": [{"name": "빈해원", "eval_value": 1, "eval_basis": "간판+내부 확인"}, {"name": "복성루", "eval_value": 1, "eval_basis": "착석 장면 존재"}, {"name": "지린성", "eval_value": 1, "eval_basis": "주문 장면 확인"}], "missing": []},
+  "rb_inference_score": [{"name": "빈해원", "eval_value": 1, "eval_basis": "00:01:55 간판과 주소 언급을 근거로 특정"}, {"name": "복성루", "eval_value": 1, "eval_basis": "00:08:58 간판과 주소 언급 근거로 특정"}, {"name": "지린성", "eval_value": 1, "eval_basis": "00:15:06 간판 명시 및 현장 언급으로 특정"}],
+  "rb_grounding_TF": [{"name": "빈해원", "eval_value": true, "eval_basis": "1분55초 간판 장면 및 주소 자막 존재"}, {"name": "복성루", "eval_value": true, "eval_basis": "8분58초 간판 장면 확인"}, {"name": "지린성", "eval_value": true, "eval_basis": "15분6초 간판 및 내부 장면 확인"}],
+  "review_faithfulness_score": [{"name": "빈해원", "eval_value": 1.0, "eval_basis": "짬뽕, 탕수육, 짜장면 실제 주문 및 평가 일치"}, {"name": "복성루", "eval_value": 1.0, "eval_basis": "짬뽕과 잡채밥 실제 주문 및 평가 일치"}, {"name": "지린성", "eval_value": 1.0, "eval_basis": "고추짜장, 고추짬뽕 실제 주문 및 매운맛 표현 일치"}],
+  "category_TF": [{"name": "빈해원", "eval_value": true, "category_revision": null}, {"name": "복성루", "eval_value": true, "category_revision": null}, {"name": "지린성", "eval_value": true, "category_revision": null}]
+}
+(※ 위 JSON 예시는 형식 참고용이며 실제 평가값은 입력 데이터 기반으로 판단)
+</출력 형식>

@@ -1,0 +1,129 @@
+{
+  "phase": "transcript-api",
+  "started_at": "2025-12-03 21:59:59",
+  "ended_at": "2025-12-03 22:00:42",
+  "duration_seconds": 42.89,
+  "duration_formatted": "42.9초",
+  "statistics": {
+    "existing_transcripts": 0,
+    "pending_urls": 988,
+    "total_urls_to_process": 15,
+    "success_count": 15,
+    "failed_count": 0,
+    "total_transcripts_in_file": 15,
+    "output_file": "/Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/geminiCLI-restaurant-crawling/data/25-12-03/tzuyang_restaurant_transcripts.json"
+  },
+  "timers": {
+    "get_pending_urls": {
+      "count": 1,
+      "total_seconds": 2.1,
+      "avg_seconds": 2.099,
+      "formatted": "2.1초"
+    },
+    "fetch_transcript_su68Sm9TNys": {
+      "count": 1,
+      "total_seconds": 1.53,
+      "avg_seconds": 1.529,
+      "formatted": "1.5초"
+    },
+    "fetch_transcript_G3pQQeL47wI": {
+      "count": 1,
+      "total_seconds": 1.79,
+      "avg_seconds": 1.788,
+      "formatted": "1.8초"
+    },
+    "fetch_transcript_bxEDXFycaXw": {
+      "count": 1,
+      "total_seconds": 1.79,
+      "avg_seconds": 1.789,
+      "formatted": "1.8초"
+    },
+    "fetch_transcript_AL6cbIJzdos": {
+      "count": 1,
+      "total_seconds": 1.71,
+      "avg_seconds": 1.707,
+      "formatted": "1.7초"
+    },
+    "fetch_transcript_Su915VcW8Cc": {
+      "count": 1,
+      "total_seconds": 1.48,
+      "avg_seconds": 1.476,
+      "formatted": "1.5초"
+    },
+    "fetch_transcript_iSb0LHcOMhs": {
+      "count": 1,
+      "total_seconds": 1.94,
+      "avg_seconds": 1.937,
+      "formatted": "1.9초"
+    },
+    "fetch_transcript_8hWQnvVvLHQ": {
+      "count": 1,
+      "total_seconds": 1.44,
+      "avg_seconds": 1.439,
+      "formatted": "1.4초"
+    },
+    "fetch_transcript_gmWgonsj6HA": {
+      "count": 1,
+      "total_seconds": 1.51,
+      "avg_seconds": 1.511,
+      "formatted": "1.5초"
+    },
+    "fetch_transcript_FcVz29NKM-o": {
+      "count": 1,
+      "total_seconds": 1.71,
+      "avg_seconds": 1.713,
+      "formatted": "1.7초"
+    },
+    "fetch_transcript_FcblabtVQKo": {
+      "count": 1,
+      "total_seconds": 1.58,
+      "avg_seconds": 1.577,
+      "formatted": "1.6초"
+    },
+    "fetch_transcript_2zX2zFonIEE": {
+      "count": 1,
+      "total_seconds": 1.61,
+      "avg_seconds": 1.614,
+      "formatted": "1.6초"
+    },
+    "fetch_transcript_rRAEFB6CiD0": {
+      "count": 1,
+      "total_seconds": 1.66,
+      "avg_seconds": 1.662,
+      "formatted": "1.7초"
+    },
+    "fetch_transcript_M8whof-__nY": {
+      "count": 1,
+      "total_seconds": 1.45,
+      "avg_seconds": 1.45,
+      "formatted": "1.5초"
+    },
+    "fetch_transcript_ayjSkDH_Vtw": {
+      "count": 1,
+      "total_seconds": 1.59,
+      "avg_seconds": 1.593,
+      "formatted": "1.6초"
+    },
+    "fetch_transcript_f5SSnbtKr1Q": {
+      "count": 1,
+      "total_seconds": 1.48,
+      "avg_seconds": 1.48,
+      "formatted": "1.5초"
+    },
+    "save_transcripts": {
+      "count": 1,
+      "total_seconds": 0.03,
+      "avg_seconds": 0.034,
+      "formatted": "0.0초"
+    },
+    "transcript_collect": {
+      "count": 1,
+      "total_seconds": 42.86,
+      "avg_seconds": 42.856,
+      "formatted": "42.9초"
+    }
+  },
+  "success_count": 16,
+  "error_count": 2,
+  "skip_count": 0
+}

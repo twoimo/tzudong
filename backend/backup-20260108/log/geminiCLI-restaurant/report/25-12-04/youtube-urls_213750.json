@@ -1,0 +1,158 @@
+{
+  "phase": "youtube-urls",
+  "started_at": "2025-12-04 21:37:50",
+  "ended_at": "2025-12-04 21:37:53",
+  "duration_seconds": 3.02,
+  "duration_formatted": "3.0초",
+  "statistics": {
+    "existing_urls_count": 989,
+    "total_videos_fetched": 989,
+    "youtube_api_calls": 21,
+    "pages_processed": 20,
+    "duplicate_urls_filtered": 989,
+    "new_urls_added": 0
+  },
+  "timers": {
+    "load_existing_urls": {
+      "count": 1,
+      "total_seconds": 0.0,
+      "avg_seconds": 0.0,
+      "formatted": "0.0초"
+    },
+    "youtube_api_channel_list": {
+      "count": 1,
+      "total_seconds": 0.12,
+      "avg_seconds": 0.123,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_1": {
+      "count": 1,
+      "total_seconds": 0.36,
+      "avg_seconds": 0.356,
+      "formatted": "0.4초"
+    },
+    "youtube_api_playlist_page_2": {
+      "count": 1,
+      "total_seconds": 0.18,
+      "avg_seconds": 0.182,
+      "formatted": "0.2초"
+    },
+    "youtube_api_playlist_page_3": {
+      "count": 1,
+      "total_seconds": 0.25,
+      "avg_seconds": 0.25,
+      "formatted": "0.2초"
+    },
+    "youtube_api_playlist_page_4": {
+      "count": 1,
+      "total_seconds": 0.15,
+      "avg_seconds": 0.146,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_5": {
+      "count": 1,
+      "total_seconds": 0.09,
+      "avg_seconds": 0.092,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_6": {
+      "count": 1,
+      "total_seconds": 0.18,
+      "avg_seconds": 0.181,
+      "formatted": "0.2초"
+    },
+    "youtube_api_playlist_page_7": {
+      "count": 1,
+      "total_seconds": 0.11,
+      "avg_seconds": 0.114,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_8": {
+      "count": 1,
+      "total_seconds": 0.1,
+      "avg_seconds": 0.103,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_9": {
+      "count": 1,
+      "total_seconds": 0.11,
+      "avg_seconds": 0.115,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_10": {
+      "count": 1,
+      "total_seconds": 0.1,
+      "avg_seconds": 0.104,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_11": {
+      "count": 1,
+      "total_seconds": 0.12,
+      "avg_seconds": 0.115,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_12": {
+      "count": 1,
+      "total_seconds": 0.12,
+      "avg_seconds": 0.119,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_13": {
+      "count": 1,
+      "total_seconds": 0.18,
+      "avg_seconds": 0.18,
+      "formatted": "0.2초"
+    },
+    "youtube_api_playlist_page_14": {
+      "count": 1,
+      "total_seconds": 0.11,
+      "avg_seconds": 0.112,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_15": {
+      "count": 1,
+      "total_seconds": 0.18,
+      "avg_seconds": 0.182,
+      "formatted": "0.2초"
+    },
+    "youtube_api_playlist_page_16": {
+      "count": 1,
+      "total_seconds": 0.11,
+      "avg_seconds": 0.113,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_17": {
+      "count": 1,
+      "total_seconds": 0.12,
+      "avg_seconds": 0.116,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_18": {
+      "count": 1,
+      "total_seconds": 0.1,
+      "avg_seconds": 0.099,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_19": {
+      "count": 1,
+      "total_seconds": 0.1,
+      "avg_seconds": 0.104,
+      "formatted": "0.1초"
+    },
+    "youtube_api_playlist_page_20": {
+      "count": 1,
+      "total_seconds": 0.1,
+      "avg_seconds": 0.1,
+      "formatted": "0.1초"
+    },
+    "fetch_all_video_urls": {
+      "count": 1,
+      "total_seconds": 3.01,
+      "avg_seconds": 3.011,
+      "formatted": "3.0초"
+    }
+  },
+  "success_count": 2,
+  "error_count": 0,
+  "skip_count": 0
+}
