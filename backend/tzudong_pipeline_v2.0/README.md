@@ -111,42 +111,42 @@ flowchart TD
 
     B1["BRANCH 1 · GitHub Actions
     ──────────────────────
-    • youtube_link 수집
-    • 메타데이터 수집
+    • 전체 유튜브 영상 링크 수집
+    • 각 유튜브 영상 메타데이터 수집
     • OpenAI 광고 분석"]
 
     M1(("MERGE"))
 
     B2["BRANCH 2 · Oracle Cloud
     ──────────────────────
-    • Description URL 추출
-    • Puppeteer 네이버/구글 크롤링
-    • 맛집 위치 정보 보정"]
+    • 각 유튜브 영상 Description 내 맛집 URL 추출
+    • 맛집 URL 기반, 네이버/구글 데이터 수집 (Puppeteer 크롤링)
+    • 맛집 URL 기반, 맛집 위치 정보 보정 (지오코딩)
+    • 주기적 갱신"]
 
     B3["BRANCH 3 · Oracle Cloud
     ──────────────────────
-    • 영상 자막 수집
-    • maestra 등
+    • 각 유튜브 영상 자막 수집 (maestra.ai 등)
     • 주기적 갱신"]
 
     B4["BRANCH 4 · Oracle Cloud
     ──────────────────────
-    • 히트맵 마커 수집
+    • 각 유튜브 영상 히트맵 마커 수집
     • 주기적 갱신"]
 
     M2(("MERGE"))
 
     B3_1["BRANCH 3-1 · GitHub Actions / Oracle Cloud
     ──────────────────────
-    • 영상 자막 교정 및 임베딩
+    • 각 유튜브 영상 자막 교정 및 임베딩
     • BRANCH 3 트리거"]
 
     M3(("MERGE"))
 
     B5["BRANCH 5 · AI Processing
     ──────────────────────
-    Step 1: Gemini CLI 크롤링
-    Step 2: Gemini CLI 평가
+    Step 1: Gemini CLI 크롤링 (프롬프트: Description 내 맛집 URL 있는 경우/없는 경우)
+    Step 2: Gemini CLI 평가 (개선 필요)
     Step 3: Transform"]
 
     DB[("💾 Database Insert
