@@ -1,6 +1,6 @@
 # 📺 유튜버 맛집 크롤러
 
-유튜버 채널에서 맛집 정보를 자동 수집하여 Supabase에 저장하는 파이프라인입니다.
+유튜버 채널에서 맛집 정보를 자동 수집하고 **평가**하여 Supabase에 저장하는 파이프라인입니다.
 
 ## 🎯 대상 채널
 
@@ -18,8 +18,9 @@ bun run full
 DEBUG=true bun run full
 
 # 특정 단계부터 시작
-node scripts/pipeline.js --start-from=2    # AI 분석부터
-node scripts/pipeline.js --start-from=1.5  # 자막 수집부터
+node scripts/pipeline.js --start-from=2     # AI 분석부터
+node scripts/pipeline.js --start-from=3.5   # RULE 평가부터
+node scripts/pipeline.js --start-from=4     # DB 저장만
 ```
 
 ---
@@ -33,17 +34,19 @@ Phase 1: 채널 크롤링
         ▼
 Phase 1.5 & 1.6: 병렬 실행 ⚡
 ├── collect-transcripts.js (자막 수집)
-└── collect-place-info.js  (네이버/카카오/구글 맵 URL에서 장소 정보 수집)
+└── collect-place-info.js  (맵 URL에서 장소 정보 수집)
         │
         ▼
 Phase 2: AI 분석
 └── extract-addresses.js (Gemini CLI로 맛집 정보 추출)
-    ├── 장소 데이터 있음 → extract_with_place_data.txt
-    └── 장소 데이터 없음 → extract_without_place_data.txt (자막/설명에서 직접 추출)
         │
         ▼
 Phase 3: 좌표 보완
-└── enrich-coordinates.js (Kakao API 지오코딩)
+└── enrich-coordinates.js (Kakao/Naver API 지오코딩)
+        │
+        ▼
+Phase 3.5: RULE 기반 평가 ✨ NEW
+└── evaluation-rule.js (카테고리 + 위치 검증)
         │
         ▼
 Phase 4: DB 저장
@@ -56,12 +59,45 @@ Phase 4: DB 저장
 
 | 기능 | 설명 |
 |------|------|
-| 영상 수집 | YouTube Data API로 채널 영상 목록 수집 (캐시 4시간) |
+| 영상 수집 | YouTube Data API로 채널 영상 목록 수집 |
 | 자막 수집 | Puppeteer로 외부 서비스에서 자막 수집 |
-| 장소 정보 수집 | 네이버/카카오/구글 맵 URL에서 상세 정보 직접 추출 |
-| AI 분석 | Gemini CLI (OAuth)로 맛집 정보 및 리뷰 추출 |
-| 좌표 보완 | 카카오 API로 지오코딩 |
-| DB 저장 | Supabase Upsert |
+| 장소 정보 수집 | 네이버/카카오/구글 맵 URL에서 상세 정보 추출 |
+| AI 분석 | Gemini CLI로 맛집 정보 및 리뷰 추출 |
+| 좌표 보완 | 카카오/네이버 API로 지오코딩 |
+| **RULE 평가** | 카테고리 유효성 + 위치 정합성 검증 |
+| DB 저장 | Supabase restaurant_youtuber 테이블에 Upsert |
+
+---
+
+## 🔍 평가 시스템
+
+### RULE 평가 (Phase 3.5)
+
+| 항목 | 설명 | 검증 방식 |
+|------|------|----------|
+| `category_validity_TF` | 카테고리 유효성 | 15개 허용 목록과 비교 |
+| `location_match_TF` | 위치 정합성 | Naver/NCP API로 주소 검증 |
+
+### LAAJ 평가 (Phase 3.6)
+
+Gemini CLI + 자막 기반 AI 평가:
+
+| 항목 | 점수 | 설명 |
+|------|------|------|
+| `visit_authenticity` | 0~4 | 유튜버 실제 방문 여부 |
+| `rb_inference_score` | 0~2 | reasoning_basis 추론 합리성 |
+| `rb_grounding_TF` | bool | reasoning_basis 근거 일치 |
+| `review_faithfulness_score` | 0.0~1.0 | 리뷰-자막 충실도 |
+| `category_TF` | bool | 카테고리-업장 정합성 |
+
+> ⚠️ LAAJ는 Gemini CLI 필요, 5 RPM 제한으로 느릴 수 있음
+
+### 허용 카테고리 (15개)
+
+```
+치킨, 중식, 돈까스·회, 피자, 패스트푸드, 찜·탕, 족발·보쌈, 
+분식, 카페·디저트, 한식, 고기, 양식, 아시안, 야식, 도시락
+```
 
 ---
 
@@ -76,9 +112,13 @@ YOUTUBE_API_KEY=your_key
 # 카카오 (지오코딩 + 장소 검색)
 KAKAO_REST_API_KEY=your_key
 
-# 네이버 (장소 검색, 선택)
+# 네이버 (장소 검색 + 평가)
 NAVER_CLIENT_ID=your_id
 NAVER_CLIENT_SECRET=your_secret
+
+# NCP (평가용 지오코딩)
+NCP_MAPS_KEY_ID=your_id
+NCP_MAPS_KEY=your_key
 
 # Supabase
 SUPABASE_URL=your_url
@@ -101,60 +141,21 @@ geminiCLI-youtuber-crawler/
 │   ├── url-extractor.js         # URL 파싱 및 API 검색 유틸
 │   ├── extract-addresses.js     # Gemini AI 분석
 │   ├── enrich-coordinates.js    # 좌표 보완
+│   ├── evaluation-rule.js       # RULE 기반 평가 ✨
 │   ├── insert-to-supabase.js    # DB 저장
 │   ├── gemini-oauth-manager.js  # OAuth 토큰 관리
 │   └── check-quality.js         # 품질 검사
 ├── prompts/
-│   ├── extract_with_place_data.txt     # 장소 데이터 있을 때 프롬프트
-│   └── extract_without_place_data.txt  # 장소 데이터 없을 때 프롬프트
+│   ├── extract_with_place_data.txt     # 장소 데이터 있을 때
+│   └── extract_without_place_data.txt  # 장소 데이터 없을 때
 ├── data/
 │   ├── transcripts.jsonl        # 자막 캐시 (공유)
 │   ├── place_info.jsonl         # 장소 정보 캐시 (공유)
 │   └── yy-mm-dd/                # 날짜별 데이터
 ├── sql/
-│   └── create_tables.sql        # DB 스키마
+│   └── add_evaluation_column.sql  # restaurant_youtuber 테이블 생성
 ├── .env
 └── package.json
-```
-
----
-
-## ⚡ 성능 최적화
-
-| 항목 | 설명 |
-|------|------|
-| **Puppeteer 최적화** | |
-| 리소스 차단 | 이미지/폰트/미디어 차단으로 페이지 로딩 50% 단축 |
-| 브라우저 플래그 | 메모리 최적화 플래그로 메모리 사용량 20% 감소 |
-| 브라우저 재사용 | 세션당 단일 브라우저 인스턴스 공유 |
-| **파이프라인 최적화** | |
-| 병렬 실행 | 자막 + 장소 정보 동시 수집 (Phase 1.5 & 1.6) |
-| 캐시 재사용 | 자막/장소 정보 날짜 무관 공유 |
-| 스킵 로직 | 이미 수집된 영상은 자동 스킵 |
-| **데이터 수집 최적화** | |
-| URL 좌표 추출 | 맵 URL 파라미터에서 좌표 직접 추출 |
-| Apollo Fallback | 네이버 지도 DOM 추출 실패 시 내부 상태 직접 조회 |
-| API Fallback | 크롤링 실패 시 Kakao/Naver API로 자동 전환 |
-| 404 페이지 감지 | 삭제된 네이버 맵 URL 자동 스킵 |
-| **Gemini 최적화** | |
-| API 캐시 | LRU 방식 캐시 (500개) |
-| 사전 컴파일 정규식 | 반복 컴파일 방지로 CPU 절약 |
-| 재시도 로직 | 모델당 3회 재시도 + 전체 완료 후 실패 영상 재시도 (동시성 1) |
-
----
-
-## 🔐 Gemini OAuth 설정
-
-```bash
-# 1. CLI 설치
-npm install -g @google/gemini-cli
-
-# 2. 로그인
-gemini
-# 브라우저에서 Google 계정 로그인
-
-# 3. 확인
-cat ~/.gemini/oauth_creds.json
 ```
 
 ---
@@ -180,27 +181,45 @@ cat ~/.gemini/oauth_creds.json
 |------|------|
 | name | 맛집 이름 |
 | address | 도로명 주소 |
-| address_jibun | 지번 주소 |
 | phone | 전화번호 |
-| category | 카테고리 (고기, 한식, 양식 등) |
+| categories | 카테고리 배열 |
 | lat, lng | 좌표 |
 | youtuber_review | 유튜버 리뷰 요약 |
 | signature_menu | 대표 메뉴 |
-| price_range | 가격대 |
-| video_type | 맛집탐방/먹방/리뷰/기타 |
+| evaluation_results | RULE 평가 결과 (JSONB) |
+
+---
+
+## ⚡ 성능 최적화
+
+| 항목 | 설명 |
+|------|------|
+| 병렬 실행 | 자막 + 장소 정보 동시 수집 |
+| 캐시 재사용 | 자막/장소 정보 날짜 무관 공유 |
+| 스킵 로직 | 이미 수집된 영상 자동 스킵 |
+| API Fallback | 크롤링 실패 시 API로 자동 전환 |
+
+---
+
+## 🔐 Gemini OAuth 설정
+
+```bash
+# 1. CLI 설치
+npm install -g @google/gemini-cli
+
+# 2. 로그인 (브라우저 인증)
+gemini
+
+# 3. 확인
+cat ~/.gemini/oauth_creds.json
+```
 
 ---
 
 ## 🐛 트러블슈팅
 
-### 장소 정보 수집 매번 반복될 때
-- 이전 버전에서는 `hasPlaceInfo: false` 영상이 저장되지 않아 매번 재처리됨
-- 현재 버전에서는 모든 결과가 저장되어 스킵됨
-
-### Gemini CLI 타임아웃
-- 기본 타임아웃 90초 설정
-- 타임아웃 시 다른 모델로 자동 전환 (Flash → Pro)
-
-### 네이버 404 페이지
-- "요청하신 페이지를 찾을 수 없습니다" 자동 감지
-- 스킵 처리 후 Gemini가 자막/설명에서 직접 추출
+| 문제 | 해결 |
+|------|------|
+| Gemini CLI 타임아웃 | 90초 후 다른 모델로 자동 전환 |
+| 네이버 404 페이지 | 자동 스킵 후 자막에서 직접 추출 |
+| 평가 실패 | `location_match_TF.falseMessage` 확인 |

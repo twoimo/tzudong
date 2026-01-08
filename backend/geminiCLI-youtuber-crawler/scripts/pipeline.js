@@ -241,6 +241,37 @@ async function main() {
             );
         }
 
+        // Phase 3.5: RULE 기반 평가
+        if (parseInt(startFrom) <= 3.5) {
+            log('info', '');
+            log('info', '─'.repeat(60));
+            log('phase', 'Phase 3.5: RULE 기반 평가 (카테고리 + 위치 검증)');
+            log('info', '─'.repeat(60));
+
+            results.evaluation = await runScript(
+                path.join(__dirname, 'evaluation-rule.js'),
+                'RULE 평가'
+            );
+        }
+
+        // Phase 3.6: LAAJ (AI) 기반 평가
+        if (parseInt(startFrom) <= 3.6) {
+            log('info', '');
+            log('info', '─'.repeat(60));
+            log('phase', 'Phase 3.6: LAAJ 평가 (AI + 자막 기반 5개 항목)');
+            log('info', '─'.repeat(60));
+
+            try {
+                results.laajEvaluation = await runScript(
+                    path.join(__dirname, 'evaluation-laaj.js'),
+                    'LAAJ 평가'
+                );
+            } catch (error) {
+                log('warning', `LAAJ 평가 실패 (선택적): ${error.message}`);
+                // LAAJ 실패해도 계속 진행
+            }
+        }
+
         // Phase 4: DB 저장
         if (parseInt(startFrom) <= 4) {
             log('info', '');
@@ -305,6 +336,8 @@ if (process.argv.includes('--help')) {
                     1.6: 맛집 URL 정보 수집
                     2:   AI 분석 (Gemini)
                     3:   좌표 보완
+                    3.5: RULE 평가 (카테고리 + 위치)
+                    3.6: LAAJ 평가 (AI + 자막)
                     4:   DB 저장
   --help            도움말 표시
 

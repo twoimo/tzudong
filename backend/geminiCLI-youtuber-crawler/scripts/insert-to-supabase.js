@@ -193,6 +193,12 @@ function transformRestaurant(restaurant, video) {
         geocoding_source: restaurant.geocoding_source || null,
         address_source: restaurant.address_source || 'inferred',
         address_elements: {},
+
+        // 10. 평가 결과 (RULE 기반)
+        evaluation_results: restaurant.evaluation_results || {},
+
+        // 11. LAAJ 평가 결과 (AI 기반)
+        laaj_evaluation_results: restaurant.laaj_evaluation_results || {},
     };
 }
 
