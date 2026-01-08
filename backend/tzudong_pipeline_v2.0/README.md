@@ -119,26 +119,26 @@ flowchart TD
 
     B2["BRANCH 2 · Oracle Cloud
     ──────────────────────
-    • 각 유튜브 영상 Description 내 맛집 URL 추출
-    • 맛집 URL 기반, 네이버/구글 데이터 수집 (Puppeteer 크롤링)
-    • 맛집 URL 기반, 맛집 위치 정보 보정 (지오코딩)
+    • 영상 Description 맛집 URL 추출
+    • 네이버/구글 데이터 수집 (Puppeteer 크롤링)
+    • 맛집 위치 정보 보정 (지오코딩)
     • 주기적 갱신"]
 
     B3["BRANCH 3 · Oracle Cloud
     ──────────────────────
-    • 각 유튜브 영상 자막 수집 (maestra.ai 등)
+    • 영상 자막 수집 (maestra.ai 등)
     • 주기적 갱신"]
 
     B4["BRANCH 4 · Oracle Cloud
     ──────────────────────
-    • 각 유튜브 영상 히트맵 마커 수집
+    • 영상 히트맵 마커 수집
     • 주기적 갱신"]
 
     M2(("MERGE"))
 
     B3_1["BRANCH 3-1 · GitHub Actions / Oracle Cloud
     ──────────────────────
-    • 각 유튜브 영상 자막 교정 및 임베딩
+    • 영상 자막 교정 및 임베딩
     • BRANCH 3 트리거"]
 
     M3(("MERGE"))
@@ -149,7 +149,7 @@ flowchart TD
     Step 2: Gemini CLI 평가 (개선 필요)
     Step 3: Transform"]
 
-    DB[("💾 Database Insert
+    DB[("Database Insert
     ──────────────────────
     • Oracle Cloud DB 저장
     • trace_id 중복 체크
