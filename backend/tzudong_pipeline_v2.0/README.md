@@ -105,81 +105,72 @@ TIMEZONE=Asia/Seoul
 
 ## 3. 전체 파이프라인 흐름
 
-```
-                          ┌─────────────────────────────────────┐
-                          │         YouTube Channel             │
-                          │           (채널 ID)                 │
-                          └─────────────────┬───────────────────┘
-                                            │
-                          ┌─────────────────▼───────────────────┐
-                          │         🔀 BRANCH 1                 │
-                          │       (GitHub Actions)              │
-                          ├─────────────────────────────────────┤
-                          │  • youtube_link 수집 (채널 ID)      │
-                          │  • 메타데이터 수집                  │
-                          │    - 조회수, 좋아요, 댓글수         │
-                          │    - OpenAI API 광고 분석           │
-                          │  • 주기적 갱신 지원                 │
-                          └─────────────────┬───────────────────┘
-                                            │
-                                     ┌──────┴──────┐
-                                     │   MERGE     │
-                                     └──────┬──────┘
-                                            │
-              ┌─────────────────────────────┼─────────────────────────────┐
-              │                             │                             │
-              ▼                             ▼                             ▼
-┌─────────────────────────┐   ┌─────────────────────────┐   ┌─────────────────────────┐
-│     🔀 BRANCH 2         │   │     🔀 BRANCH 3         │   │     🔀 BRANCH 4         │
-│      (Oracle)           │   │      (Oracle)           │   │      (Oracle)           │
-├─────────────────────────┤   ├─────────────────────────┤   ├─────────────────────────┤
-│  • Description URL 추출 │   │  • 자막 수집            │   │  • 히트맵 마커 수집     │
-│  • Puppeteer 네이버지도 │   │  • youtube-transcript   │   │  • Most Replayed        │
-│  • 맛집 위치 정보 확보  │   │  • 주기적 갱신          │   │  • 주기적 갱신          │
-└───────────┬─────────────┘   └───────────┬─────────────┘   └───────────┬─────────────┘
-            │                             │                             │
-            └─────────────────────────────┼─────────────────────────────┘
-                                          │
-                                   ┌──────┴──────┐
-                                   │   MERGE     │
-                                   └──────┬──────┘
-                                          │
-                          ┌───────────────▼───────────────┐
-                          │       🔀 BRANCH 3-1          │
-                          │   (GitHub Actions / Oracle)   │
-                          ├───────────────────────────────┤
-                          │  • 자막 교정                  │
-                          │  • (BRANCH 3 merge 시 트리거) │
-                          └───────────────┬───────────────┘
-                                          │
-                                   ┌──────┴──────┐
-                                   │   MERGE     │
-                                   └──────┬──────┘
-                                          │
-                          ┌───────────────▼───────────────┐
-                          │         🔀 BRANCH 5           │
-                          │      🤖 AI Processing         │
-                          │   (GitHub Actions / Oracle)   │
-                          ├───────────────────────────────┤
-                          │  Step 1: geminiCLI 크롤링     │
-                          │    - 채널 ID + 프롬프트       │
-                          │    - description 유무 분기    │
-                          │                               │
-                          │  Step 2: geminiCLI 평가       │
-                          │    - 채널 ID + 프롬프트       │
-                          │    - 평가 모델 개선           │
-                          │                               │
-                          │  Step 3: Transform            │
-                          │    - trace_id 생성            │
-                          │    - 데이터 정규화            │
-                          └───────────────┬───────────────┘
-                                          │
-                          ┌───────────────▼───────────────┐
-                          │     💾 Database Insert        │
-                          │         (OCI DB)           │
-                          ├───────────────────────────────┤
-                          │  • OCI DB 저장             │
-                          │  • trace_id 중복 체크         │
-                          │  • UI 최신 데이터 반영        │
-                          └───────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Input
+        YT[("📺 YouTube Channel<br/>(채널 ID)")]
+    end
+
+    subgraph BRANCH1["🔀 BRANCH 1 (GitHub Actions)"]
+        B1_1["youtube_link 수집"]
+        B1_2["메타데이터 수집<br/>• 조회수, 좋아요, 댓글수<br/>• OpenAI API 광고 분석"]
+        B1_3["주기적 갱신 지원"]
+    end
+
+    subgraph Parallel["병렬 처리 (Oracle Cloud)"]
+        subgraph BRANCH2["🔀 BRANCH 2"]
+            B2_1["Description URL 추출"]
+            B2_2["Puppeteer 네이버지도"]
+            B2_3["맛집 위치 정보 확보"]
+        end
+
+        subgraph BRANCH3["🔀 BRANCH 3"]
+            B3_1["자막 수집"]
+            B3_2["youtube-transcript"]
+            B3_3["주기적 갱신"]
+        end
+
+        subgraph BRANCH4["🔀 BRANCH 4"]
+            B4_1["히트맵 마커 수집"]
+            B4_2["Most Replayed"]
+            B4_3["주기적 갱신"]
+        end
+    end
+
+    subgraph BRANCH3_1["🔀 BRANCH 3-1 (GitHub Actions / Oracle Cloud)"]
+        B3_1_1["자막 교정"]
+        B3_1_2["BRANCH 3 merge 시 트리거"]
+    end
+
+    subgraph BRANCH5["🔀 BRANCH 5: 🤖 AI Processing (GitHub Actions / Oracle Cloud)"]
+        B5_1["Step 1: geminiCLI 크롤링<br/>• 채널 ID + 프롬프트<br/>• description 유무 분기"]
+        B5_2["Step 2: geminiCLI 평가<br/>• 채널 ID + 프롬프트<br/>• 평가 모델 개선"]
+        B5_3["Step 3: Transform<br/>• trace_id 생성<br/>• 데이터 정규화"]
+    end
+
+    subgraph Output["💾 Database Insert (Oracle Cloud DB)"]
+        DB1["OCI DB 저장"]
+        DB2["trace_id 중복 체크"]
+        DB3["UI 최신 데이터 반영"]
+    end
+
+    YT --> BRANCH1
+    BRANCH1 --> M1{{"MERGE"}}
+    M1 --> BRANCH2
+    M1 --> BRANCH3
+    M1 --> BRANCH4
+    BRANCH2 --> M2{{"MERGE"}}
+    BRANCH3 --> M2
+    BRANCH4 --> M2
+    M2 --> BRANCH3_1
+    BRANCH3_1 --> M3{{"MERGE"}}
+    M3 --> BRANCH5
+    B5_1 --> B5_2 --> B5_3
+    BRANCH5 --> Output
+
+    style YT fill:#ff6b6b,stroke:#333,stroke-width:2px,color:#fff
+    style M1 fill:#ffd93d,stroke:#333,stroke-width:2px
+    style M2 fill:#ffd93d,stroke:#333,stroke-width:2px
+    style M3 fill:#ffd93d,stroke:#333,stroke-width:2px
+    style Output fill:#6bcb77,stroke:#333,stroke-width:2px
 ```
