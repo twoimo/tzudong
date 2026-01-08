@@ -107,46 +107,60 @@ TIMEZONE=Asia/Seoul
 
 ```mermaid
 flowchart TD
-    YT["📺 YouTube Channel"]
-    
-    B1["🔀 BRANCH 1<br/>─────────────<br/>GitHub Actions<br/>─────────────<br/>• youtube_link 수집<br/>• 메타데이터 수집<br/>• OpenAI 광고 분석"]
-    
-    M1{{"🔗 MERGE"}}
-    
-    B2["🔀 BRANCH 2<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• Description URL 추출<br/>• Puppeteer 네이버/구글 크롤링<br/>• 맛집 위치 정보 보정"]
-    
-    B3["🔀 BRANCH 3<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 영상 자막 수집 (maestra 등)<br/>• 주기적 갱신"]
-    
-    B4["🔀 BRANCH 4<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 히트맵 마커 수집<br/>• 주기적 갱신"]
-    
-    M2{{"🔗 MERGE"}}
-    
-    B3_1["🔀 BRANCH 3-1<br/>─────────────<br/>GitHub Actions / Oracle Cloud<br/>─────────────<br/>• 영상 자막 교정 및 임베딩<br/>• BRANCH 3 트리거"]
-    
-    M3{{"🔗 MERGE"}}
-    
-    B5["🤖 BRANCH 5<br/>AI Processing<br/>─────────────<br/>GitHub Actions / Oracle<br/>─────────────<br/>Step 1: Gemini CLI 크롤링 및 영상 리뷰 (프롬프트 2개: description 맛집 있는 경우/없는 경우)<br/>Step 2: Gemini CLI 데이터 평가 (Rule, LAAJ)<br/>Step 3: Transform"]
-    
-    DB["💾 Database Insert<br/>─────────────<br/>Oracle Cloud DB<br/>─────────────<br/>• OCI DB 저장<br/>• trace_id 중복 체크<br/>• UI 데이터 반영"]
+    YT[/"📺 YouTube Channel"/]
 
-    YT --> B1
-    B1 --> M1
-    M1 --> B2 & B3 & B4
-    B2 & B3 & B4 --> M2
-    M2 --> B3_1
-    B3_1 --> M3
-    M3 --> B5
-    B5 --> DB
+    B1["BRANCH 1 · GitHub Actions
+    ──────────────────────
+    • youtube_link 수집
+    • 메타데이터 수집
+    • OpenAI 광고 분석"]
 
-    style YT fill:#e74c3c,color:#fff
-    style B1 fill:#3498db,color:#fff
-    style B2 fill:#9b59b6,color:#fff
-    style B3 fill:#9b59b6,color:#fff
-    style B4 fill:#9b59b6,color:#fff
-    style B3_1 fill:#1abc9c,color:#fff
-    style B5 fill:#e67e22,color:#fff
-    style DB fill:#27ae60,color:#fff
-    style M1 fill:#f1c40f,color:#333
-    style M2 fill:#f1c40f,color:#333
-    style M3 fill:#f1c40f,color:#333
+    M1(("MERGE"))
+
+    B2["BRANCH 2 · Oracle Cloud
+    ──────────────────────
+    • Description URL 추출
+    • Puppeteer 네이버/구글 크롤링
+    • 맛집 위치 정보 보정"]
+
+    B3["BRANCH 3 · Oracle Cloud
+    ──────────────────────
+    • 영상 자막 수집
+    • maestra 등
+    • 주기적 갱신"]
+
+    B4["BRANCH 4 · Oracle Cloud
+    ──────────────────────
+    • 히트맵 마커 수집
+    • 주기적 갱신"]
+
+    M2(("MERGE"))
+
+    B3_1["BRANCH 3-1 · GitHub Actions / Oracle Cloud
+    ──────────────────────
+    • 영상 자막 교정 및 임베딩
+    • BRANCH 3 트리거"]
+
+    M3(("MERGE"))
+
+    B5["BRANCH 5 · AI Processing
+    ──────────────────────
+    Step 1: Gemini CLI 크롤링
+    Step 2: Gemini CLI 평가
+    Step 3: Transform"]
+
+    DB[("💾 Database Insert
+    ──────────────────────
+    • OCI DB 저장
+    • trace_id 중복 체크
+    • UI 데이터 반영")]
+
+    YT --> B1 --> M1
+    M1 --> B2
+    M1 --> B3
+    M1 --> B4
+    B2 --> M2
+    B3 --> M2
+    B4 --> M2
+    M2 --> B3_1 --> M3 --> B5 --> DB
 ```
