@@ -144,9 +144,9 @@ flowchart TD
 
     B5["BRANCH 5 · AI Processing
     ──────────────────────
-    Step 1: Gemini CLI 크롤링 (맛집 URL 있는 경우/없는 경우)
-    Step 2: Gemini CLI 평가 (개선 필요)
-    Step 3: Transform"]
+    • Gemini CLI 크롤링 (맛집 URL 있는 경우/없는 경우)
+    • Gemini CLI 평가 (개선 필요)
+    • Transform"]
 
     DB[("Database Insert
     ──────────────────────
