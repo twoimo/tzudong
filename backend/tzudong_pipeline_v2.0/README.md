@@ -113,15 +113,15 @@ flowchart TD
     
     M1{{"🔗 MERGE"}}
     
-    B2["🔀 BRANCH 2<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• Description URL 추출<br/>• Puppeteer 네이버지도<br/>• 맛집 위치 정보"]
+    B2["🔀 BRANCH 2<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• Description URL 추출<br/>• Puppeteer 네이버/구글 크롤링<br/>• 맛집 위치 정보 보정"]
     
-    B3["🔀 BRANCH 3<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 자막 수집<br/>• youtube-transcript<br/>• 주기적 갱신"]
+    B3["🔀 BRANCH 3<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 영상 자막 수집 (maestra 등)<br/>• 주기적 갱신"]
     
     B4["🔀 BRANCH 4<br/>─────────────<br/>Oracle Cloud<br/>─────────────<br/>• 히트맵 마커 수집<br/>• Most Replayed<br/>• 주기적 갱신"]
     
     M2{{"🔗 MERGE"}}
     
-    B3_1["🔀 BRANCH 3-1<br/>─────────────<br/>GitHub Actions / Oracle<br/>─────────────<br/>• 자막 교정<br/>• BRANCH 3 트리거"]
+    B3_1["🔀 BRANCH 3-1<br/>─────────────<br/>GitHub Actions / Oracle Cloud<br/>─────────────<br/>• 영상 자막 교정 및 임베딩<br/>• BRANCH 3 트리거"]
     
     M3{{"🔗 MERGE"}}
     
