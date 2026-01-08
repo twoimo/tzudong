@@ -360,9 +360,6 @@ async function checkModelQuotas() {
             // 비동기 함수 안이므로 Promise 기반 sleep 사용 필요하지만, 
             // checkModelQuotas가 async 함수이므로 await 가능
             await new Promise(resolve => setTimeout(resolve, waitMs + 10000));
-
-            // 6. 결과 저장
-            result.analysis.push(restaurant);
         }
     }
 
