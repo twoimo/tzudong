@@ -1,0 +1,46 @@
+# ===== YouTube =====
+YOUTUBE_API_KEY=your_youtube_api_key
+
+# ===== OpenAI (광고 분석) =====
+OPENAI_API_KEY=your_openai_api_key
+
+# ===== Kakao (지오코딩) =====
+KAKAO_REST_API_KEY=your_kakao_rest_api_key
+
+# ===== Naver Local Search =====
+NAVER_CLIENT_ID=your_naver_client_id
+NAVER_CLIENT_SECRET=your_naver_client_secret
+
+# ===== NCP Geocoding =====
+NCP_CLIENT_ID=your_ncp_client_id
+NCP_CLIENT_SECRET=your_ncp_client_secret
+
+# ===== Oracle DB =====
+ORACLE_USER=your_oracle_user
+ORACLE_PASSWORD=your_oracle_password
+ORACLE_DSN=your_oracle_dsn
+
+# ===== Supabase =====
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
+
+# ===== OAuth 2.0 =====
+OAUTH_CLIENT_ID=your_oauth_client_id
+OAUTH_CLIENT_SECRET=your_oauth_client_secret
+OAUTH_REDIRECT_URI=your_redirect_uri
+
+# ===== Pipeline Settings =====
+# 실행 환경 (local, oracle, github_actions)
+PIPELINE_ENV=local
+
+# 기본 채널 ID (쯔양)
+DEFAULT_CHANNEL_ID=UCfpaSruWW3S4zzK8lwj1dRQ
+
+# 로그 레벨 (DEBUG, INFO, WARNING, ERROR)
+LOG_LEVEL=INFO
+
+# 날짜 폴더 사용 여부
+USE_DATE_FOLDERS=true
+
+# 한국 시간대
+TIMEZONE=Asia/Seoul

@@ -145,7 +145,7 @@ TIMEZONE=Asia/Seoul
                                    └──────┬──────┘
                                           │
                           ┌───────────────▼───────────────┐
-                          │     📝 BRANCH 3-1             │
+                          │       🔀 BRANCH 3-1          │
                           │   (GitHub Actions / Oracle)   │
                           ├───────────────────────────────┤
                           │  • 자막 교정                  │
@@ -157,7 +157,8 @@ TIMEZONE=Asia/Seoul
                                    └──────┬──────┘
                                           │
                           ┌───────────────▼───────────────┐
-                          │     🤖 AI Processing          │
+                          │         🔀 BRANCH 5           │
+                          │      🤖 AI Processing         │
                           │   (GitHub Actions / Oracle)   │
                           ├───────────────────────────────┤
                           │  Step 1: geminiCLI 크롤링     │
@@ -175,9 +176,9 @@ TIMEZONE=Asia/Seoul
                                           │
                           ┌───────────────▼───────────────┐
                           │     💾 Database Insert        │
-                          │         (Oracle DB)           │
+                          │         (OCI DB)           │
                           ├───────────────────────────────┤
-                          │  • Oracle DB 저장             │
+                          │  • OCI DB 저장             │
                           │  • trace_id 중복 체크         │
                           │  • UI 최신 데이터 반영        │
                           └───────────────────────────────┘

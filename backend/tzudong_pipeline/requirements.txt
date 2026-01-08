@@ -1,0 +1,29 @@
+# ===== Core =====
+python-dotenv>=1.0.0
+requests>=2.31.0
+pydantic>=2.5.0
+
+# ===== YouTube =====
+google-api-python-client>=2.111.0
+youtube-transcript-api>=0.6.2
+
+# ===== AI =====
+openai>=1.6.0
+
+# ===== Database =====
+oracledb>=1.4.0
+supabase>=2.3.0
+
+# ===== Data Processing =====
+pandas>=2.1.0
+numpy>=1.26.0
+
+# ===== Utilities =====
+tqdm>=4.66.0
+pytz>=2024.1
+
+# ===== Logging =====
+loguru>=0.7.2
+
+# ===== Type Checking =====
+typing-extensions>=4.9.0
