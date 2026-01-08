@@ -119,7 +119,7 @@ flowchart TD
     B2["BRANCH 2 · Oracle Cloud
     ──────────────────────
     • Description 맛집 URL 추출
-    • 네이버/구글 데이터 수집 (퍼페티어 크롤링)
+    • 퍼페티어 크롤링 (네이버/구글 지도)
     • 맛집 위치 정보 보정 (지오코딩)
     • 주기적 갱신"]
 
@@ -135,7 +135,7 @@ flowchart TD
 
     M2(("MERGE"))
 
-    B3_1["BRANCH 3-1 · GitHub Actions / Oracle Cloud
+    B3_1["BRANCH 3-1 · Oracle Cloud
     ──────────────────────
     • 자막 교정 및 임베딩
     • BRANCH 3 트리거"]
@@ -162,4 +162,18 @@ flowchart TD
     B3 --> M2
     B4 --> M2
     M2 --> B3_1 --> M3 --> B5 --> DB
+```
+
+---
+
+## 4. 브랜치별 상세
+
+```
+pipeline/video-metadata-collector
+pipeline/restaurant-url-extractor
+pipeline/subtitle-collector
+pipeline/heatmap-marker-collector
+pipeline/subtitle-processor
+pipeline/ai-evaluator
+pipeline/db-insert
 ```
