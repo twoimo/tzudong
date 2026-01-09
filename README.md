@@ -4,7 +4,7 @@
 
 Next.js 16 (Turbopack) + Supabase 기반의 풀스택 맛집 정보 플랫폼입니다.
 
-🔗 **Live Demo**: [https://tzudong.vercel.app](https://tzudong.vercel.app)
+🔗 **Live Demo**: [https://tzudong.app](https://tzudong.app)
 
 ---
 
