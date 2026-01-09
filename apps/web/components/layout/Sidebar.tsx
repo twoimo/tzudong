@@ -392,7 +392,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
             title={`타이니번 데이터랩\n대표: 최연우\n사업자등록번호: 601-09-04613\n이메일: twoimo@dgu.ac.kr`}
           >
             <div className="text-xs text-muted-foreground font-serif space-y-1">
-              <p>쯔동여지도 v2.0.0</p>
+              <p>쯔동여지도 v1.0.0 (AI 분석 정보 포함)</p>
               <p className="text-muted-foreground/70">© 2026 타이니번 데이터랩</p>
             </div>
           </div>
