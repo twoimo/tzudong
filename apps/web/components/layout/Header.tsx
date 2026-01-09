@@ -668,7 +668,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   className="w-full flex items-center justify-between hover:bg-accent rounded px-1.5 py-1 transition-colors"
                 >
                   <div className="text-[10px] text-muted-foreground flex-1">
-                    <p>쯔동여지도 v2.0.0</p>
+                    <p>쯔동여지도 v1.0.0</p>
                     <p className="text-muted-foreground/70">© 2026 타이니번 데이터랩</p>
                   </div>
                   {isBusinessInfoExpanded ? (
