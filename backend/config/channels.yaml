@@ -1,0 +1,30 @@
+channels:
+  tzuyang:
+    channel_id: "UCpX8zKdmB4hphsWV06fqrDg"
+    handle: "@tzuyang6145"
+    name: "쯔양"
+    data_path: "data/tzuyang"
+
+  meatcreator:
+    channel_id: "UCifMIDFkI1Cd8ISKwNLEyDA"
+    handle: "@meatcreator"
+    name: "정육왕 MeatCreator"
+    data_path: "data/meatcreator"
+
+# API 설정
+api:
+  youtube:
+    key_env: "YOUTUBE_API_KEY_BYEON"
+  openai:
+    key_env: "OPENAI_API_KEY_BYEON"
+    model: "gpt-4o-mini"
+  gemini:
+    models:
+      - "gemini-3-flash-preview"
+      - "gemini-2.5-flash"
+
+# 수집 설정
+collection:
+  batch_size: 50
+  rate_limit_delay_ms: 1000
+  cache_hours: 6
