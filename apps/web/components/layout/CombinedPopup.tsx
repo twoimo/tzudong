@@ -208,12 +208,14 @@ const CombinedPopupComponent = () => {
     }, [isAutoPlaying, isVisible, currentSlide, banners]);
 
     // 팝업 닫기
-    const handleClose = useCallback(() => {
+    const handleClose = useCallback((e?: React.MouseEvent) => {
+        e?.stopPropagation();
         setIsVisible(false);
     }, []);
 
     // 오늘 하루 안 보기
-    const handleDismissToday = useCallback(() => {
+    const handleDismissToday = useCallback((e?: React.MouseEvent) => {
+        e?.stopPropagation();
         localStorage.setItem(DISMISSED_DATE_KEY, getTodayString());
         setIsVisible(false);
     }, []);
@@ -240,13 +242,22 @@ const CombinedPopupComponent = () => {
     const currentBanner = banners[currentSlide];
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 animate-in fade-in duration-300">
+        <div
+            data-popup-overlay
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 animate-in fade-in duration-300"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+        >
             <div
                 className={cn(
                     "relative w-[320px] mx-auto rounded-lg overflow-hidden shadow-2xl",
                     "animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
                 )}
                 style={{ backgroundColor: 'hsl(var(--background))' }}
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
             >
                 {/* 배너 슬라이드 컨텐츠 - 모든 배너를 렌더링하여 크로스페이드 */}
                 <div className="relative aspect-[4/5]">
@@ -272,17 +283,17 @@ const CombinedPopupComponent = () => {
                     onSelect={goToSlide}
                 />
 
-                {/* 하단 버튼 */}
-                <div className="flex border-t border-border">
+                {/* 하단 버튼 - 항상 클릭 가능하도록 */}
+                <div className="relative z-10 flex border-t border-border pointer-events-auto">
                     <button
-                        onClick={handleDismissToday}
+                        onClick={(e) => handleDismissToday(e)}
                         className="flex-1 py-3 text-sm text-muted-foreground hover:bg-accent transition-colors"
                     >
                         오늘 하루 안 보기
                     </button>
                     <div className="w-px bg-border" />
                     <button
-                        onClick={handleClose}
+                        onClick={(e) => handleClose(e)}
                         className="flex-1 py-3 text-sm font-medium text-foreground hover:bg-accent transition-colors"
                     >
                         닫기

@@ -388,7 +388,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                 쯔동여지도
               </DialogTitle>
             </div>
-            <DialogDescription className="text-sm">
+            <DialogDescription className="text-sm text-left">
               쯔양의 맛집을 리뷰하고 공유하세요
             </DialogDescription>
           </DialogHeader>
@@ -624,11 +624,11 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
 
       {/* 비밀번호 찾기 모달 */}
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl [&>button.absolute]:hidden">
           <DialogHeader>
             <DialogTitle>비밀번호 찾기</DialogTitle>
             <DialogDescription>
-              이메일 주소를 입력하시면 비밀번호 재설정 링크를 보내드립니다.
+              가입하신 이메일 주소를 입력하시면 <br />비밀번호 재설정 링크를 보내드립니다.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleForgotPassword} className="space-y-4">
@@ -665,9 +665,6 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
               </Button>
             </div>
           </form>
-          <p className="text-xs text-center text-muted-foreground">
-            Google로 가입하셨다면 &quot;Google로 계속하기&quot;를 이용해주세요
-          </p>
         </DialogContent>
       </Dialog>
     </>

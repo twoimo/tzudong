@@ -202,11 +202,13 @@ export function DailyRecommendationPopup() {
     // 기존 z-40 -> z-[100]으로 변경
 
     return (
-        <div className="fixed inset-0 z-[100] pointer-events-none">
+        <div className="fixed inset-0 z-[100] pointer-events-none" data-popup-overlay>
             {/* 오버레이 (선택사항 - 클릭 시 닫기) */}
             <div
                 className="absolute inset-0 bg-black/50 pointer-events-auto animate-in fade-in duration-300"
                 onClick={handleClose}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
             />
 
             {/* 광고 팝업 스타일 */}
