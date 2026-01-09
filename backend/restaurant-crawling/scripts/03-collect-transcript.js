@@ -51,6 +51,13 @@ function getKSTDate() {
     return new Date(utc + (9 * 60 * 60 * 1000));
 }
 
+// KST ISO 문자열 생성 (2025-12-04T01:37:01.799+09:00 형식)
+function getKSTISOString() {
+    const now = new Date();
+    return now.toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(' ', 'T') + 
+        '.' + String(now.getMilliseconds()).padStart(3, '0') + '+09:00';
+}
+
 // 로그 함수
 const DEBUG_MODE = process.env.DEBUG === 'true';
 
@@ -123,6 +130,67 @@ function getLatestTranscript(dataPath, videoId) {
     return getLatestData(transcriptFile);
 }
 
+// 블랙리스트 디렉토리
+const NO_TRANSCRIPT_DIR = path.resolve(__dirname, '../../data/no_transcript_link');
+const NO_TRANSCRIPT_PERMANENT = path.join(NO_TRANSCRIPT_DIR, 'no_transcript_permanent.json');
+
+// 영구 스킵 URL 로드 (retry_num >= 3)
+function loadPermanentSkipUrls() {
+    const skipUrls = new Set();
+    
+    if (fs.existsSync(NO_TRANSCRIPT_PERMANENT)) {
+        try {
+            const content = fs.readFileSync(NO_TRANSCRIPT_PERMANENT, 'utf-8');
+            const entries = JSON.parse(content);
+            
+            for (const entry of entries) {
+                if (entry.retry_num >= 3) {
+                    skipUrls.add(entry.youtube_link);
+                }
+            }
+            
+            if (skipUrls.size > 0) {
+                log('warning', `영구 스킵 URL: ${skipUrls.size}개 (retry_num >= 3)`);
+            }
+        } catch (error) {
+            log('warning', `no_transcript_permanent.json 로드 실패: ${error.message}`);
+        }
+    }
+    
+    return skipUrls;
+}
+
+// 블랙리스트 업데이트 (자막 없는 URL 기록)
+function updateNoTranscriptPermanent(youtubeUrl) {
+    try {
+        if (!fs.existsSync(NO_TRANSCRIPT_DIR)) {
+            fs.mkdirSync(NO_TRANSCRIPT_DIR, { recursive: true });
+        }
+
+        let entries = [];
+        if (fs.existsSync(NO_TRANSCRIPT_PERMANENT)) {
+            const content = fs.readFileSync(NO_TRANSCRIPT_PERMANENT, 'utf-8');
+            entries = JSON.parse(content);
+        }
+
+        const existingIndex = entries.findIndex(e => e.youtube_link === youtubeUrl);
+        if (existingIndex >= 0) {
+            entries[existingIndex].retry_num += 1;
+            log('warning', `no_transcript 업데이트: ${youtubeUrl} (retry: ${entries[existingIndex].retry_num})`);
+        } else {
+            entries.push({
+                youtube_link: youtubeUrl,
+                retry_num: 1
+            });
+            log('warning', `no_transcript 추가: ${youtubeUrl}`);
+        }
+
+        fs.writeFileSync(NO_TRANSCRIPT_PERMANENT, JSON.stringify(entries, null, 2), 'utf-8');
+    } catch (error) {
+        log('warning', `no_transcript 업데이트 실패: ${error.message}`);
+    }
+}
+
 // Puppeteer 설정
 const isGitHubActionsEnv = !!process.env.GITHUB_ACTIONS;
 const PUPPETEER_CONCURRENCY = isGitHubActionsEnv ? 1 : 3;
@@ -159,8 +227,11 @@ function getRandomUserAgent() {
     return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
+const DELAY_MIN = 1000;  // 1초
+const DELAY_MAX = 3000;  // 3초
+
 function getRandomDelay() {
-    return 2000 + Math.floor(Math.random() * 1000);
+    return Math.floor(Math.random() * (DELAY_MAX - DELAY_MIN + 1)) + DELAY_MIN;
 }
 
 /**
@@ -245,43 +316,136 @@ async function collectFromMaestra(page, videoId) {
     const url = `https://maestra.ai/tools/video-to-text/youtube-transcript-generator?v=${videoId}`;
     try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        try {
-            await Promise.race([
-                page.waitForSelector('button.mode-toggle', { timeout: 30000 }),
-                page.waitForSelector('input.search-button[type="submit"]', { timeout: 30000 })
-            ]);
-            const submitButton = await page.$('input.search-button[type="submit"]');
-            if (submitButton) {
-                await submitButton.click();
-                await page.waitForSelector('button.mode-toggle', { timeout: 30000 }).catch(() => { });
+        
+        // mode-toggle 버튼 또는 "텍스트 변환하기" 버튼 대기 (최대 60초)
+        let modeToggleFound = false;
+        const startTime = Date.now();
+        const maxWait = 60000;
+        
+        while (Date.now() - startTime < maxWait) {
+            const hasModeToggle = await page.evaluate(() => {
+                return document.querySelector('button.mode-toggle') !== null;
+            });
+            
+            if (hasModeToggle) {
+                modeToggleFound = true;
+                break;
             }
-        } catch { }
-
+            
+            // "텍스트 변환하기" 또는 "Get Transcript" 버튼 체크
+            const submitButton = await page.evaluate(() => {
+                const btn = document.querySelector('input.search-button[type="submit"]');
+                if (btn && (btn.value === '텍스트 변환하기' || btn.value === 'Get Transcript')) {
+                    return true;
+                }
+                return false;
+            });
+            
+            if (submitButton) {
+                await page.click('input.search-button[type="submit"]');
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        if (!modeToggleFound) {
+            return null;
+        }
+        
+        // 현재 모드 확인 후 caption 모드로 전환
         const currentMode = await page.evaluate(() => {
             const btn = document.querySelector('button.mode-toggle');
             return btn?.getAttribute('data-mode') || '';
         });
-
+        
         if (currentMode !== 'caption') {
             try {
                 await page.click('button.mode-toggle svg[data-icon="caption"]');
-                await new Promise(resolve => setTimeout(resolve, 2000));
             } catch { }
+            
+            // data-mode="caption"이 될 때까지 대기 (최대 10초)
+            let captionModeReady = false;
+            const modeStartTime = Date.now();
+            while (Date.now() - modeStartTime < 10000) {
+                const mode = await page.evaluate(() => {
+                    const btn = document.querySelector('button.mode-toggle');
+                    return btn?.getAttribute('data-mode') || '';
+                });
+                if (mode === 'caption') {
+                    captionModeReady = true;
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            if (!captionModeReady) {
+                return null;
+            }
         }
+        
+        // 자막 라인(.caption-line)이 나타날 때까지 대기 (최대 30초)
+        let captionLinesFound = false;
+        const captionStartTime = Date.now();
+        const captionMaxWait = 30000;
+        
+        while (Date.now() - captionStartTime < captionMaxWait) {
+            const count = await page.evaluate(() => {
+                return document.querySelectorAll('.transcript-content samp.caption-line').length;
+            });
+            
+            if (count > 0) {
+                captionLinesFound = true;
+                break;
+            }
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+        
+        if (!captionLinesFound) {
+            return null;
+        }
+        
+        // 언어 추출
+        const language = await page.evaluate(() => {
+            const langOption = document.querySelector('.language-selector select option:checked');
+            if (langOption) {
+                return langOption.textContent?.toLowerCase() || 'korean';
+            }
+            return 'korean';
+        });
 
-        try {
-            await page.waitForSelector('.transcript-content samp.caption-line', { timeout: 20000 });
-        } catch { }
-
+        // 자막 파싱
         const transcript = await page.evaluate(() => {
             const segments = [];
             const captionLines = document.querySelectorAll('.transcript-content samp.caption-line');
+            
+            const parseTimeToSeconds = (timeStr) => {
+                const parts = timeStr.split(':').map(Number);
+                if (parts.length === 2) return parts[0] * 60 + parts[1];
+                if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+                return 0;
+            };
+            
             captionLines.forEach(line => {
                 const textEl = line.querySelector('.caption-text');
+                const timeEl = line.querySelector('.caption-time') || line.querySelector('.timestamp');
                 const dataStart = line.getAttribute('data-start');
+                
                 if (textEl) {
+                    let duration = null;
+                    if (timeEl) {
+                        const timeText = timeEl.textContent?.trim() || '';
+                        const timeMatch = timeText.match(/(\d{1,2}:\d{2}(?::\d{2})?)\s*-\s*(\d{1,2}:\d{2}(?::\d{2})?)/);
+                        if (timeMatch) {
+                            const startFromRange = parseTimeToSeconds(timeMatch[1]);
+                            const endFromRange = parseTimeToSeconds(timeMatch[2]);
+                            duration = endFromRange - startFromRange;
+                        }
+                    }
+                    
                     segments.push({
                         start: dataStart ? parseFloat(dataStart) : 0,
+                        duration: duration,
                         text: textEl.textContent?.trim() || ''
                     });
                 }
@@ -290,7 +454,7 @@ async function collectFromMaestra(page, videoId) {
         });
 
         if (transcript.length === 0) return null;
-        return { transcript, language: 'korean' };
+        return { transcript, language };
     } catch {
         return null;
     }
@@ -300,9 +464,26 @@ async function collectFromTubeTranscript(page, videoId) {
     const url = `https://www.tubetranscript.com/ko/watch?v=${videoId}`;
     try {
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        
+        // main-transcript-content가 나타날 때까지 대기 (최대 60초)
         try {
-            await page.waitForSelector('#main-transcript-content .transcript-group-box', { timeout: 30000 });
-        } catch { }
+            await page.waitForFunction(
+                () => document.querySelector('#main-transcript-content') !== null,
+                { timeout: 60000, polling: 1000 }
+            );
+        } catch {
+            return null;
+        }
+        
+        // 실제 자막 콘텐츠(.transcript-group-box)가 나타날 때까지 대기 (최대 60초)
+        try {
+            await page.waitForFunction(
+                () => document.querySelector('#main-transcript-content .transcript-group-box') !== null,
+                { timeout: 60000, polling: 1000 }
+            );
+        } catch {
+            return null;
+        }
 
         const transcript = await page.evaluate(() => {
             const segments = [];
@@ -318,6 +499,7 @@ async function collectFromTubeTranscript(page, videoId) {
                     else if (parts.length === 3) startSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
                     segments.push({
                         start: startSeconds,
+                        duration: null,  // TubeTranscript은 duration 정보 없음
                         text: textEl.textContent?.trim() || ''
                     });
                 }
@@ -344,6 +526,7 @@ async function collectChannelTranscripts(channelName, channelConfig) {
     }
 
     const allVideoIds = loadVideoIdsFromTxt(dataPath);
+    const permanentSkipUrls = loadPermanentSkipUrls();  // 블랙리스트 로드
     log('info', `채널: ${channelConfig.name}`);
     log('info', `전체 URL: ${allVideoIds.length}개`);
 
@@ -359,7 +542,12 @@ async function collectChannelTranscripts(channelName, channelConfig) {
         const latestTranscript = getLatestTranscript(dataPath, videoId);
 
         if (!latestMeta) {
-            // Meta 없으면 스킵
+            continue;
+        }
+
+        // 블랙리스트 확인 (retry_num >= 3)
+        const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+        if (permanentSkipUrls.has(youtubeUrl)) {
             continue;
         }
 
@@ -372,7 +560,7 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
             // 신규 또는 duration 변경 시 수집
             if (!latestTranscript || recollectReason === "duration_changed") {
-                const reasonText = latestTranscript ? recollectReason : "new";
+                const reasonText = latestTranscript ? recollectReason : null;  // 신규는 null
                 toCollect.push({ videoId, recollectReason: reasonText, metaRecollectId });
             }
         }
@@ -386,6 +574,8 @@ async function collectChannelTranscripts(channelName, channelConfig) {
     }
 
     const stats = { success: 0, noTranscript: 0, failed: 0 };
+    const REST_INTERVAL = 100;   // 100개마다 휴식
+    const REST_DURATION = 180000; // 3분 (180초)
 
     for (let i = 0; i < toCollect.length; i++) {
         const { videoId, recollectReason, metaRecollectId } = toCollect[i];
@@ -397,14 +587,13 @@ async function collectChannelTranscripts(channelName, channelConfig) {
             const result = await getTranscriptWithPuppeteer(videoId);
 
             const outputData = {
-                video_id: videoId,
-                recollect_id: metaRecollectId,  // meta에서 가져옴
-                recollect_reason: recollectReason,
-                has_transcript: !!result,
-                segments: result ? result.segments : [],
-                text: result ? result.text : null,
+                youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
                 language: result ? result.language : null,
-                collected_at: getKSTDate().toISOString(),
+                collected_at: getKSTISOString(),
+                transcript: result ? result.segments : [],
+                // recollect 정보
+                recollect_id: metaRecollectId,
+                recollect_reason: recollectReason,
             };
 
             const outputFile = path.join(transcriptDir, `${videoId}.jsonl`);
@@ -415,6 +604,8 @@ async function collectChannelTranscripts(channelName, channelConfig) {
                 log('success', `    → ${result.segments.length}개 세그먼트`);
             } else {
                 stats.noTranscript++;
+                // 블랙리스트에 추가
+                updateNoTranscriptPermanent(`https://www.youtube.com/watch?v=${videoId}`);
                 log('debug', `    → 자막 없음`);
             }
         } catch (error) {
@@ -422,6 +613,18 @@ async function collectChannelTranscripts(channelName, channelConfig) {
             log('warning', `    → 실패: ${error.message}`);
         } finally {
             releasePuppeteerSlot();
+        }
+        
+        // 100개마다 3분 휴식 (rate limit 방지)
+        if ((i + 1) % REST_INTERVAL === 0 && i < toCollect.length - 1) {
+            log('warning', `🛑 ${i + 1}개 완료 - ${REST_DURATION / 60000}분 휴식 시작...`);
+            await new Promise(resolve => setTimeout(resolve, REST_DURATION));
+            log('success', `🚀 휴식 끝 - 수집 재개`);
+        }
+        
+        // 영상별 딜레이 (마지막 제외)
+        if (i < toCollect.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, getRandomDelay()));
         }
     }
 

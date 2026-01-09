@@ -47,6 +47,13 @@ function getKSTDate() {
     return new Date(utc + (9 * 60 * 60 * 1000));
 }
 
+// KST ISO 문자열 생성 (2025-12-04T01:37:01.799+09:00 형식)
+function getKSTISOString() {
+    const now = new Date();
+    return now.toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(' ', 'T') + 
+        '.' + String(now.getMilliseconds()).padStart(3, '0') + '+09:00';
+}
+
 // 로그 함수
 const DEBUG_MODE = process.env.DEBUG === 'true';
 
@@ -1030,10 +1037,10 @@ async function collectPlaceInfoForVideo(video, index, total, isRetry = false) {
     releasePuppeteerSlot();
 
     return {
-        videoId: video.videoId,
+        youtube_link: `https://www.youtube.com/watch?v=${video.videoId}`,
+        collected_at: getKSTISOString(),
         places,
         hasPlaceInfo: places.length > 0,
-        collectedAt: getKSTDate().toISOString(),
         failedUrls
     };
 }
@@ -1268,21 +1275,26 @@ async function main() {
     const config = loadChannelsConfig();
     const channels = config.channels;
     
-    const channelNames = channelFilter ? [channelFilter] : Object.keys(channels);
-    log('info', `대상 채널: ${channelNames.join(', ')}`);
+    // meatcreator 채널만 처리 (tzuyang은 description에 맛집 URL 없음)
+    const targetChannel = 'meatcreator';
+    
+    if (channelFilter && channelFilter !== targetChannel) {
+        log('warning', `${targetChannel} 채널만 place-info 수집 대상입니다. 스킵합니다.`);
+        process.exit(0);
+    }
+    
+    if (!channels[targetChannel]) {
+        log('error', `${targetChannel} 채널 설정이 없습니다.`);
+        process.exit(1);
+    }
+    
+    log('info', `대상 채널: ${targetChannel}`);
     log('info', `병렬 처리: 동시 ${PUPPETEER_CONCURRENCY}개`);
     
     const results = [];
     
-    for (const channelName of channelNames) {
-        if (!channels[channelName]) {
-            log('error', `알 수 없는 채널: ${channelName}`);
-            continue;
-        }
-        
-        const result = await collectChannelPlaceInfo(channelName, channels[channelName]);
-        results.push(result);
-    }
+    const result = await collectChannelPlaceInfo(targetChannel, channels[targetChannel]);
+    results.push(result);
     
     // 브라우저 종료
     if (puppeteerBrowser) {

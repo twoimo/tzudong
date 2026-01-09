@@ -212,12 +212,11 @@ def get_video_meta(
         )
 
         return {
-            "video_id": video_id,
+            "youtube_link": f"https://www.youtube.com/watch?v={video_id}",
             "channel_name": channel_name,
             "title": snippet.get("title"),
             "published_at": snippet.get("publishedAt"),
             "duration": duration_seconds,
-            "duration_ms": duration_seconds * 1000,
             "is_shorts": duration_seconds <= 180,
             "description": description[:500],
             "category": snippet.get("categoryId"),
@@ -298,8 +297,12 @@ def collect_channel_meta(
         # 변경 사항 감지
         recollect_reason = detect_changes(meta, previous_meta)
 
-        # recollect_id 증가
-        new_recollect_id = prev_recollect_id + 1
+        # recollect_id 설정: 첫 수집은 0, 재수집은 이전 +1
+        if previous_meta:
+            prev_recollect_id = previous_meta.get("recollect_id", 0)
+            new_recollect_id = prev_recollect_id + 1
+        else:
+            new_recollect_id = 0
 
         # 메타에 recollect 정보 추가
         meta["recollect_id"] = new_recollect_id
