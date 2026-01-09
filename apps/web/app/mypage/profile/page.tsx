@@ -138,6 +138,11 @@ export default function ProfilePage() {
   };
 
   const handlePasswordChange = async () => {
+    if (!user?.email) {
+      toast.error('사용자 정보를 찾을 수 없습니다');
+      return;
+    }
+
     if (!currentPassword || !newPassword || !confirmPassword) {
       toast.error('모든 비밀번호 필드를 입력해주세요');
       return;
@@ -148,13 +153,25 @@ export default function ProfilePage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      toast.error('비밀번호는 최소 6자 이상이어야 합니다');
+    if (newPassword.length < 8 || newPassword.length > 12) {
+      toast.error('비밀번호는 8자 이상 12자 이하여야 합니다');
       return;
     }
 
     setLoading(true);
     try {
+      // 현재 비밀번호 검증 (재인증)
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        toast.error('현재 비밀번호가 올바르지 않습니다');
+        return;
+      }
+
+      // 비밀번호 변경
       const { error } = await supabase.auth.updateUser({
         password: newPassword
       });

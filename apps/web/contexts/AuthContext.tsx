@@ -15,6 +15,8 @@ interface AuthContextType {
     signUp: (email: string, password: string, username: string) => Promise<{ session: Session | null }>;
     signOut: () => Promise<void>;
     completeNicknameSetup: () => void;
+    resetPassword: (email: string) => Promise<void>;
+    updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -144,6 +146,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (error) throw error;
     }, []);
 
+    const resetPassword = useCallback(async (email: string) => {
+        const redirectUrl = `${window.location.origin}/auth/reset-password`;
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: redirectUrl,
+        });
+        if (error) throw error;
+    }, []);
+
+    const updatePassword = useCallback(async (newPassword: string) => {
+        const { error } = await supabase.auth.updateUser({
+            password: newPassword,
+        });
+        if (error) throw error;
+    }, []);
+
     const value = useMemo(() => ({
         user,
         session,
@@ -155,7 +172,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signUp,
         signOut,
         completeNicknameSetup,
-    }), [user, session, isLoading, isAdmin, needsNicknameSetup, signIn, signInWithGoogle, signUp, signOut, completeNicknameSetup]);
+        resetPassword,
+        updatePassword,
+    }), [user, session, isLoading, isAdmin, needsNicknameSetup, signIn, signInWithGoogle, signUp, signOut, completeNicknameSetup, resetPassword, updatePassword]);
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
