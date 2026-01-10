@@ -100,7 +100,9 @@ def save_to_jsonl(
     youtube_link: str,
     restaurants: List[Dict[str, Any]],
     output_path: Path,
-    youtube_meta_recollect_id: Optional[int] = None,
+    meta_recollect_id: Optional[int] = None,
+    transcript_recollect_id: Optional[int] = None,
+    channel_name: Optional[str] = None,
 ) -> None:
     """
     JSONL 형식으로 저장
@@ -109,12 +111,24 @@ def save_to_jsonl(
         youtube_link: YouTube 영상 URL
         restaurants: 음식점 정보 배열
         output_path: 출력 파일 경로
-        youtube_meta_recollect_id: YouTube 메타데이터의 recollect_id (선택)
+        meta_recollect_id: YouTube 메타데이터의 recollect_id
+        transcript_recollect_id: 자막의 recollect_id
+        channel_name: 채널 이름
     """
     record = {"youtube_link": youtube_link, "restaurants": restaurants}
 
-    if youtube_meta_recollect_id is not None:
-        record["youtube_meta_recollect_id"] = youtube_meta_recollect_id
+    # channel_name 추가
+    if channel_name:
+        record["channel_name"] = channel_name
+
+    # recollect_version 딕셔너리로 저장
+    recollect_version = {}
+    if meta_recollect_id is not None:
+        recollect_version["meta"] = meta_recollect_id
+    if transcript_recollect_id is not None:
+        recollect_version["transcript"] = transcript_recollect_id
+    if recollect_version:
+        record["recollect_version"] = recollect_version
 
     # 기존 파일에 append
     with open(output_path, "a", encoding="utf-8") as f:
@@ -136,16 +150,30 @@ def main():
     response_file = Path(sys.argv[2])
     output_file = Path(sys.argv[3])
 
-    # 선택적 인자: youtube_meta_recollect_id
-    youtube_meta_recollect_id = None
+    # 선택적 인자: meta_recollect_id, transcript_recollect_id
+    meta_recollect_id = None
+    transcript_recollect_id = None
     if len(sys.argv) >= 5:
         try:
-            youtube_meta_recollect_id = int(sys.argv[4])
+            meta_recollect_id = int(sys.argv[4])
         except ValueError:
             print(
-                f"⚠️  youtube_meta_recollect_id가 정수가 아닙니다: {sys.argv[4]}",
+                f"⚠️  meta_recollect_id가 정수가 아닙니다: {sys.argv[4]}",
                 file=sys.stderr,
             )
+    if len(sys.argv) >= 6:
+        try:
+            transcript_recollect_id = int(sys.argv[5])
+        except ValueError:
+            print(
+                f"⚠️  transcript_recollect_id가 정수가 아닙니다: {sys.argv[5]}",
+                file=sys.stderr,
+            )
+
+    # 선택적 인자: channel_name (6번째)
+    channel_name = None
+    if len(sys.argv) >= 7:
+        channel_name = sys.argv[6]
 
     # Gemini CLI 응답 읽기
     if not response_file.exists():
@@ -170,7 +198,9 @@ def main():
             youtube_link=youtube_url,
             restaurants=data["restaurants"],
             output_path=output_file,
-            youtube_meta_recollect_id=youtube_meta_recollect_id,
+            meta_recollect_id=meta_recollect_id,
+            transcript_recollect_id=transcript_recollect_id,
+            channel_name=channel_name,
         )
         print(f"✅ 완료: {youtube_url}")
     except Exception as e:

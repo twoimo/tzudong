@@ -1,0 +1,4 @@
+# Naver Map Youtuber Review 추출 프롬프트
+# 정육왕 채널용 - Gemini CLI로 자막에서 youtuber_review 추출
+
+# TODO: 프롬프트 작성 필요

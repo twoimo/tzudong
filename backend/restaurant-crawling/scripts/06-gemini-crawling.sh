@@ -255,6 +255,14 @@ process_channel() {
             continue
         fi
         
+        # naver_map 파일 존재 시 스킵 (05-naver-map-crawling.js에서 처리됨)
+        NAVER_MAP_FILE="$full_data_path/naver_map/${VIDEO_ID}.jsonl"
+        if [ -f "$NAVER_MAP_FILE" ]; then
+            SKIPPED=$((SKIPPED + 1))
+            log_debug "[$INDEX/$TOTAL] naver_map에서 처리됨 - 스킵: $VIDEO_ID"
+            continue
+        fi
+        
         # 메타데이터 확인
         META_FILE="$meta_dir/${VIDEO_ID}.jsonl"
         if [ ! -f "$META_FILE" ]; then
@@ -280,6 +288,7 @@ process_channel() {
         # 자막 최신 줄 로드
         TRANSCRIPT_DATA=$(get_latest_jsonl_data "$TRANSCRIPT_FILE")
         TRANSCRIPT_LANGUAGE=$(echo "$TRANSCRIPT_DATA" | jq -r '.language // "ko"' 2>/dev/null)
+        TRANSCRIPT_RECOLLECT_ID=$(echo "$TRANSCRIPT_DATA" | jq -r '.recollect_id // 0' 2>/dev/null)
         
         # 자막을 [MM:SS] 형식으로 변환
         TRANSCRIPT=$(echo "$TRANSCRIPT_DATA" | jq -r '
@@ -353,7 +362,7 @@ $TRANSCRIPT_TRUNCATED
             # 파서 실행 (최대 2회 시도)
             PARSE_SUCCESS=false
             for PARSE_ATTEMPT in 1 2; do
-                if python3 "$PARSER_SCRIPT" "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE"; then
+                if python3 "$PARSER_SCRIPT" "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$CHANNEL"; then
                     SUCCESS=$((SUCCESS + 1))
                     PARSE_SUCCESS=true
                     
