@@ -144,7 +144,8 @@ def transform_json_object(
 
         # 1A. restaurants 리스트 기준 처리
         for restaurant_data in restaurants_list:
-            restaurant_name = restaurant_data.get("name")
+            # Gemini 출력이 origin_name 필드 사용
+            restaurant_name = restaurant_data.get("origin_name")
             if not restaurant_name:
                 continue
 
@@ -190,21 +191,21 @@ def transform_json_object(
 
             youtuber_review = restaurant_data.get("youtuber_review")
 
-            # trace_id 생성: naver_name이 있으면 naver_name 사용
+            # trace_id 생성: naver_name이 있으면 naver_name, 없으면 원본 name
             naver_name = loc_data.get("naver_name")
-            final_name = naver_name or restaurant_name
-            trace_id_name_source = "naver_name" if naver_name else "original"
+            trace_id_name = naver_name or restaurant_name
+            trace_id_name_source = "naver" if naver_name else "original"
 
             output = {
                 "youtube_link": youtube_link,
                 "trace_id": generate_trace_id(
-                    youtube_link, final_name, youtuber_review
+                    youtube_link, trace_id_name, youtuber_review
                 ),
                 "channel_name": channel_name,
                 "status": "pending",
                 "youtube_meta": youtube_meta,
-                "name": restaurant_name,
-                "naver_name": naver_name,
+                "origin_name": restaurant_name,
+                "naver_name": naver_name,  # 없으면 null 그대로
                 "trace_id_name_source": trace_id_name_source,
                 "phone": restaurant_data.get("phone"),
                 "category": restaurant_data.get("category"),
@@ -227,6 +228,7 @@ def transform_json_object(
                 "is_notSelected": not is_target,
                 "evaluation_results": new_eval_results if new_eval_results else None,
                 "source_type": "geminiCLI",
+                "description_map_url": None,  # 쯔양은 null
             }
             flattened_results.append(output)
 
@@ -241,20 +243,17 @@ def transform_json_object(
                     source_file_type=source_file_type,
                 )
 
-                # Missing 항목은 naver_name이 있을 수도 있음
-                naver_name = loc_data.get("naver_name")
-                final_name = naver_name or restaurant_name
-                trace_id_name_source = "naver_name" if naver_name else "original"
-
+                # Missing 항목은 평가 안 됐으므로 naver_name 없음
                 output = {
                     "youtube_link": youtube_link,
-                    "trace_id": generate_trace_id(youtube_link, final_name, None),
+                    "trace_id": generate_trace_id(youtube_link, restaurant_name, None),
                     "channel_name": channel_name,
                     "status": "pending",
                     "youtube_meta": youtube_meta,
-                    "name": restaurant_name,
-                    "naver_name": naver_name,
-                    "trace_id_name_source": trace_id_name_source,
+                    "origin_name": restaurant_name,
+                    "origin_name": restaurant_name,
+                    "naver_name": None,  # Missing은 항상 null
+                    "trace_id_name_source": "original",
                     "phone": None,
                     "category": None,
                     "reasoning_basis": None,
@@ -272,6 +271,7 @@ def transform_json_object(
                     "is_notSelected": not is_target,
                     "evaluation_results": None,
                     "source_type": "geminiCLI",
+                    "description_map_url": None,  # 쯔양은 null
                 }
                 flattened_results.append(output)
 
@@ -299,20 +299,17 @@ def transform_json_object(
                     source_file_type=source_file_type,
                 )
 
-                # Missing 항목은 naver_name이 있을 수도 있음
-                naver_name = loc_data.get("naver_name")
-                final_name = naver_name or missing_name
-                trace_id_name_source = "naver_name" if naver_name else "original"
-
+                # Missing 항목은 평가 안 됐으므로 naver_name 없음
                 output = {
                     "youtube_link": youtube_link,
-                    "trace_id": generate_trace_id(youtube_link, final_name, None),
+                    "trace_id": generate_trace_id(youtube_link, missing_name, None),
                     "channel_name": channel_name,
                     "status": "pending",
                     "youtube_meta": youtube_meta,
-                    "name": missing_name,
-                    "naver_name": naver_name,
-                    "trace_id_name_source": trace_id_name_source,
+                    "origin_name": missing_name,
+                    "origin_name": missing_name,
+                    "naver_name": None,  # Missing은 항상 null
+                    "trace_id_name_source": "original",
                     "phone": None,
                     "category": None,
                     "reasoning_basis": None,
@@ -330,6 +327,7 @@ def transform_json_object(
                     "is_notSelected": False,
                     "evaluation_results": None,
                     "source_type": "geminiCLI",
+                    "description_map_url": None,  # 쯔양은 null
                 }
                 flattened_results.append(output)
 
@@ -350,8 +348,8 @@ def transform_json_object(
                 "channel_name": channel_name,
                 "status": "pending",
                 "youtube_meta": youtube_meta,
-                "name": restaurant_name,
-                "naver_name": None,
+                "origin_name": restaurant_name,
+                "naver_name": None,  # notSelection은 평가 안 하므로 null
                 "trace_id_name_source": "original",
                 "phone": restaurant_data.get("phone"),
                 "category": restaurant_data.get("category"),
@@ -374,6 +372,7 @@ def transform_json_object(
                 "is_notSelected": True,
                 "evaluation_results": None,
                 "source_type": "geminiCLI",
+                "description_map_url": None,  # 쯔양은 null
             }
             flattened_results.append(output)
 
@@ -433,41 +432,45 @@ def transform_naver_map_object(
                                 pass
 
     for restaurant_data in restaurants_list:
-        restaurant_name = restaurant_data.get("name")
-        if not restaurant_name:
+        origin_name = restaurant_data.get("origin_name")  # 크롤링에서 받은 원본
+        if not origin_name:
             continue
 
         youtuber_review = restaurant_data.get("youtuber_review")
+        naver_name = restaurant_data.get("naver_name")  # 네이버 검색 결과
+
+        # trace_id 생성: naver_name 있으면 naver_name, 없으면 origin_name
+        trace_id_name = naver_name or origin_name
 
         output = {
             "youtube_link": youtube_link,
-            "trace_id": generate_trace_id(
-                youtube_link, restaurant_name, youtuber_review
-            ),
+            "trace_id": generate_trace_id(youtube_link, trace_id_name, youtuber_review),
             "channel_name": channel_name,
             "status": "pending",
             "youtube_meta": youtube_meta,
-            "name": restaurant_name,
-            "naver_name": None,
-            "trace_id_name_source": "original",
+            "origin_name": origin_name,  # 크롤링에서 받은 원본 상호명
+            "naver_name": naver_name,  # 네이버 검색 결과 상호명
+            "trace_id_name_source": "naver" if naver_name else "original",
             "phone": restaurant_data.get("phone"),
             "category": restaurant_data.get("category"),
             "reasoning_basis": None,  # naver_map은 reasoning_basis 없음
             "youtuber_review": youtuber_review,
-            "origin_address": None,  # naver_map은 origin_address 없음
+            "origin_address": None,  # naver_map은 origin_address 없음 (지오코딩 주소가 최종)
             "roadAddress": restaurant_data.get("roadAddress"),
             "jibunAddress": restaurant_data.get("jibunAddress"),
             "englishAddress": restaurant_data.get("englishAddress"),
             "addressElements": restaurant_data.get("addressElements"),
             "lat": restaurant_data.get("lat"),
             "lng": restaurant_data.get("lng"),
-            "geocoding_success": restaurant_data.get("geocoding_verified", False),
-            "geocoding_false_stage": None,  # naver_map은 항상 None
+            "geocoding_success": True,  # naver_map은 항상 성공 (검증 통과했으므로)
+            "geocoding_false_stage": None,
             "is_missing": False,
             "is_notSelected": False,
             "evaluation_results": None,  # 평가 스킵
             "source_type": "naver_map",
-            "map_url": restaurant_data.get("map_url"),  # 원본 네이버 지도 URL
+            "description_map_url": restaurant_data.get(
+                "description_map_url"
+            ),  # 원본 네이버 지도 URL
         }
         flattened_results.append(output)
 

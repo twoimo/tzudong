@@ -1,155 +1,297 @@
-# Restaurant Pipeline - 전체 흐름
+# Restaurant Evaluation Pipeline
 
-## 크롤링 (restaurant-crawling)
+맛집 데이터를 평가하고 최종 형식으로 변환하는 파이프라인입니다.
+
+---
+
+## 전체 흐름
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                                  크롤링 파이프라인                                    │
-└──────────────────────────────────────────────────────────────────────────────────────┘
-
-01-collect-urls.py          YouTube 채널에서 영상 URL 수집
-         │                  → data/{channel}/urls.txt
-         ▼
-02-collect-meta.py          영상 메타데이터 수집 (제목, 조회수, 좋아요 등)
-         │                  → data/{channel}/meta/{video_id}.jsonl
-         ▼
-03-collect-transcript.js    자막 수집
-         │                  → data/{channel}/transcript/{video_id}.jsonl
-         ▼
-04-collect-heatmap.js       히트맵 데이터 수집
-         │                  → data/{channel}/heatmap/{video_id}.jsonl
-         ▼
-05-extract-place-info.js    [정육왕 only] 영상 설명에서 가게 정보 추출
-         │                  → data/{channel}/place_info/{video_id}.jsonl
-         ▼
-06-gemini-crawling.sh       Gemini CLI로 음식점 정보 추출
-         │                  → data/{channel}/crawling/{video_id}.jsonl
-         │                     (channel_name 포함)
-         ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              입력 데이터                                     │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  crawling/{video_id}.jsonl  ← 06-gemini-crawling.sh                         │
+│  naver_map/{video_id}.jsonl ← 05-naver-map-crawling.js                      │
+└─────────────────────────────────────────────────────────────────────────────┘
+                ↓                                           ↓
+┌─────────────────────────────────┐       ┌─────────────────────────────────┐
+│     쯔양 파이프라인 (평가 포함)    │       │   정육왕 파이프라인 (평가 스킵)   │
+├─────────────────────────────────┤       ├─────────────────────────────────┤
+│                                 │       │                                 │
+│  07-target-selection.py         │       │  (평가 없음)                      │
+│         ↓                       │       │         ↓                       │
+│  08-rule-evaluation.py          │       │  10-transform.py                │
+│         ↓                       │       │    source_type: "naver_map"     │
+│  09-gemini-evaluation.sh        │       │    evaluation_results: null     │
+│         ↓                       │       │                                 │
+│  10-transform.py                │       │                                 │
+│    source_type: "geminiCLI"     │       │                                 │
+│                                 │       │                                 │
+└─────────────────────────────────┘       └─────────────────────────────────┘
+                ↓                                           ↓
+                └───────────────────┬───────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         evaluation/transforms.jsonl                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                         11-supabase-insert.py                                │
+│                                  ↓                                          │
+│                            Supabase DB                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 평가 (restaurant-evaluation)
+## 07-target-selection.py
 
 ```
-┌──────────────────────────────────────────────────────────────────────────────────────┐
-│                                  평가 파이프라인                                      │
-└──────────────────────────────────────────────────────────────────────────────────────┘
-
-         입력: data/{channel}/crawling/{video_id}.jsonl
-         │
-         ▼
-07-target-selection.py      평가 대상 선정
-         │                  - name + address 있음 → evaluation_target = True
-         │                  - name + address null → evaluation_target = False
-         │                  - name 없음 → notSelection
-         │                  
-         │                  → data/{channel}/evaluation/selection/{video_id}.jsonl
-         │                  → data/{channel}/evaluation/notSelection/{video_id}.jsonl
-         ▼
-08-rule-evaluation.py       RULE 평가 (네이버 API)
-         │                  - 네이버 검색 API로 상호명 검색
-         │                  - NCP 지오코딩으로 주소 검증
-         │                  - 1단계: 지번주소 일치
-         │                  - 2단계: 20m 거리 매칭
-         │                  
-         │                  → data/{channel}/evaluation/rule_results/{video_id}.jsonl
-         │                     (naver_name 포함)
-         ▼
-09-gemini-evaluation.sh     LAAJ 평가 (Gemini CLI)
-         │                  - visit_authenticity (방문 여부)
-         │                  - rb_inference_score (추론 합리성)
-         │                  - rb_grounding_TF (근거 일치도)
-         │                  - review_faithfulness_score (리뷰 충실도)
-         │                  - category_TF (카테고리 정합성)
-         │                  
-         │                  → data/{channel}/evaluation/laaj_results/{video_id}.jsonl
-         │
-         │  (실패 시)
-         ├──────────────────→ data/{channel}/evaluation/errors/{video_id}.jsonl
-         │
-09.5-retry-errors.sh        실패 재시도
-         │
-         ▼
-10-transform.py             결과 변환
-         │                  - trace_id = hash(youtube_link + used_name + review)
-         │                  - trace_id_name_source = "naver_name" or "original"
-         │                  
-         │                  → data/{channel}/evaluation/transforms.jsonl
-         ▼
-11-supabase-insert.py       Supabase DB 삽입
-         │                  - trace_id 기반 중복 검사
-         │
-         ▼
-                            Supabase restaurants 테이블
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  입력: crawling/{video_id}.jsonl                                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  evaluation_target 생성                                                      │
+│                                                                             │
+│  restaurants 배열 순회:                                                      │
+│    - name 있음 + address 있음 → evaluation_target[name] = true               │
+│    - name 있음 + address null → evaluation_target[name] = false              │
+│    - name null → 무시                                                        │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+            ┌───────────────────────┼───────────────────────┐
+            ↓                       ↓                       ↓
+    [음식점 있고              [모든 name null]         [음식점 0개]
+     유효한 name 존재]
+            ↓                       ↓                       ↓
+     selection/              notSelection/            notSelection/
+     {video_id}.jsonl        {video_id}.jsonl        {video_id}.jsonl
 ```
 
 ---
 
-## 정육왕 vs 쯔양 차이점
+## 08-rule-evaluation.py
 
-| 항목 | 쯔양 (tzuyang) | 정육왕 (meatcreator) |
-|------|----------------|----------------------|
-| 05-extract-place-info | ❌ 사용 안함 | ✅ 영상 설명에서 가게정보 추출 |
-| crawling 프롬프트 | crawling_prompt.txt | crawling_with_place_data.yaml (예정) |
-| place_info 폴더 | ❌ 없음 | ✅ 있음 |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  입력: evaluation/selection/{video_id}.jsonl                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  평가 항목 1: category_validity_TF                                           │
+│                                                                             │
+│  유효한 카테고리 목록:                                                        │
+│    치킨, 중식, 돈까스·회, 피자, 패스트푸드, 찜·탕,                              │
+│    족발·보쌈, 분식, 카페·디저트, 한식, 고기, 양식, 아시안, 야식, 도시락           │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  평가 항목 2: location_match_TF                                              │
+│                                                                             │
+│  네이버 지역검색 API (상위 5개 결과)                                           │
+│         ↓                                                                   │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  Step 1: 지번주소 비교                                               │    │
+│  │    - 정규화: 층 정보 제거, 공백 정리                                   │    │
+│  │    - address_core(crawling) == address_core(naver)                  │    │
+│  │         ↓ 불일치                                                     │    │
+│  │  Step 2: 도로명주소 비교                                              │    │
+│  │         ↓ 불일치                                                     │    │
+│  │  Step 3: 지역명 + 좌표 비교                                           │    │
+│  │    - NCP 지오코딩으로 좌표 획득                                        │    │
+│  │    - 50m 이내 + 같은 지역 → match                                     │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│         ↓                                                                   │
+│  결과: match = true/false, naver_name (네이버 검색 상호명)                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  출력: evaluation/rule_results/{video_id}.jsonl                              │
+│                                                                             │
+│  evaluation_results: {                                                       │
+│    "음식점명": {                                                              │
+│      "category_validity_TF": true/false,                                    │
+│      "location_match_TF": {                                                 │
+│        "match": true/false,                                                 │
+│        "jibunAddress": "...",                                               │
+│        "roadAddress": "...",                                                │
+│        "englishAddress": "...",                                             │
+│        "addressElements": [...],                                            │
+│        "lat": 37.5, "lng": 127.0,                                           │
+│        "naver_name": "네이버 검색 상호명"                                     │
+│      }                                                                      │
+│    }                                                                        │
+│  }                                                                          │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## 데이터 흐름 요약
+## 09-gemini-evaluation.sh
 
 ```
-YouTube 채널
-     │
-     ▼
-urls.txt ──→ meta/{video_id}.jsonl
-                    │
-                    ▼
-          transcript/{video_id}.jsonl
-                    │
-                    ▼
-         [정육왕] place_info/{video_id}.jsonl
-                    │
-                    ▼
-          crawling/{video_id}.jsonl  ← channel_name 포함
-                    │
-     ┌──────────────┴──────────────┐
-     │                             │
-  selection/                 notSelection/
-  {video_id}.jsonl           {video_id}.jsonl
-     │
-     ▼
-rule_results/{video_id}.jsonl  ← naver_name 포함
-     │
-     ▼
-laaj_results/{video_id}.jsonl
-     │
-     ▼
-transforms.jsonl  ← trace_id, trace_id_name_source 포함
-     │
-     ▼
-Supabase
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  입력: evaluation/rule_results/{video_id}.jsonl                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  스킵 조건:                                                                  │
+│    - laaj_results/{video_id}.jsonl 이미 존재                                 │
+│    - evaluation_target에 true인 항목 없음                                    │
+│    - 자막 없음                                                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  LAAJ 평가 (Gemini CLI)                                                      │
+│                                                                             │
+│  입력:                                                                       │
+│    - evaluation_target[name] == true인 음식점만                              │
+│    - 자막 (transcript)                                                       │
+│                                                                             │
+│  평가 항목:                                                                  │
+│    - eval_authentic: 실제 방문 여부 (0~100)                                  │
+│    - eval_ad: 광고성 여부 (0~100)                                            │
+│    - eval_journalist: 기자 리뷰 여부 (0~100)                                 │
+│    - eval_basis: 각 평가의 근거                                              │
+│    - youtuber_review: 유튜버의 음식점 리뷰 내용                               │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  출력: evaluation/laaj_results/{video_id}.jsonl                              │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 실행 순서
+## 10-transform.py
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  입력:                                                                       │
+│    - evaluation/laaj_results/{video_id}.jsonl (평가 완료)                    │
+│    - evaluation/notSelection/{video_id}.jsonl (평가 대상 제외)               │
+│    - naver_map/{video_id}.jsonl (정육왕 - 평가 스킵)                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  변환 로직:                                                                  │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  geminiCLI (laaj_results, notSelection)                             │    │
+│  │    - trace_id = hash(youtube_link + final_name + youtuber_review)   │    │
+│  │    - final_name = naver_name || name                                │    │
+│  │    - trace_id_name_source = "naver_name" or "original"              │    │
+│  │    - source_type = "geminiCLI"                                      │    │
+│  │    - description_map_url = null                                     │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+│                                                                             │
+│  ┌─────────────────────────────────────────────────────────────────────┐    │
+│  │  naver_map (정육왕)                                                  │    │
+│  │    - trace_id = hash(youtube_link + name + youtuber_review)         │    │
+│  │    - trace_id_name_source = "original"                              │    │
+│  │    - source_type = "naver_map"                                      │    │
+│  │    - evaluation_results = null (평가 스킵)                           │    │
+│  │    - description_map_url = 원본 지도 URL                             │    │
+│  └─────────────────────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  중복 검사: trace_id 기준                                                    │
+│    - 이미 존재하면 스킵                                                       │
+│    - 새로운 항목만 추가                                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  출력: evaluation/transforms.jsonl                                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 폴더 구조
+
+```
+data/{channel}/
+├── crawling/                    ← 06에서 생성
+│   └── {video_id}.jsonl
+├── naver_map/                   ← 05에서 생성
+│   └── {video_id}.jsonl
+└── evaluation/
+    ├── selection/               ← 07 출력 (평가 대상)
+    │   └── {video_id}.jsonl
+    ├── notSelection/            ← 07 출력 (평가 제외)
+    │   └── {video_id}.jsonl
+    ├── rule_results/            ← 08 출력
+    │   └── {video_id}.jsonl
+    ├── laaj_results/            ← 09 출력
+    │   └── {video_id}.jsonl
+    ├── errors/                  ← 09 에러 로그
+    │   └── {video_id}.jsonl
+    └── transforms.jsonl         ← 10 출력 (최종)
+```
+
+---
+
+## 채널별 처리
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  쯔양 (tzuyang)                                                             │
+│                                                                             │
+│  crawling/ → 07 → 08 → 09 → 10 → transforms.jsonl                           │
+│              │     │     │     │                                            │
+│           selection rule  laaj  source_type: "geminiCLI"                    │
+│                          results evaluation_results: {...}                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  정육왕 (meatcreator)                                                        │
+│                                                                             │
+│  naver_map/ ──────────────────→ 10 → transforms.jsonl                       │
+│                                  │                                          │
+│                           source_type: "naver_map"                          │
+│                           evaluation_results: null                          │
+│                           description_map_url: "https://..."                │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 실행 방법
 
 ```bash
-# 크롤링
-python 01-collect-urls.py --channel tzuyang
-python 02-collect-meta.py --channel tzuyang
-node 03-collect-transcript.js --channel tzuyang
-node 04-collect-heatmap.js --channel tzuyang
-# node 05-extract-place-info.js --channel meatcreator  # 정육왕만
-./06-gemini-crawling.sh --channel tzuyang
+# 쯔양 파이프라인 (전체 평가)
+python 07-target-selection.py -c tzuyang --data-path ../data/tzuyang
+python 08-rule-evaluation.py -c tzuyang --data-path ../data/tzuyang
+./09-gemini-evaluation.sh -c tzuyang --data-path ../data/tzuyang
+python 10-transform.py -c tzuyang
+python 11-supabase-insert.py -c tzuyang
 
-# 평가
-python 07-target-selection.py --channel tzuyang --data-path data/tzuyang
-python 08-rule-evaluation.py --channel tzuyang --data-path data/tzuyang
-./09-gemini-evaluation.sh --channel tzuyang --data-path data/tzuyang
-./09.5-retry-errors.sh --channel tzuyang --data-path data/tzuyang
-python 10-transform.py --channel tzuyang --data-path data/tzuyang
-python 11-supabase-insert.py --channel tzuyang --data-path data/tzuyang
+# 정육왕 파이프라인 (평가 스킵)
+python 10-transform.py -c meatcreator
+python 11-supabase-insert.py -c meatcreator
+```
+
+---
+
+## 환경 변수
+
+```bash
+# 네이버 API
+NAVER_CLIENT_ID_BYEON=xxx
+NAVER_CLIENT_SECRET_BYEON=xxx
+
+# NCP 지오코딩
+NCP_MAPS_KEY_ID_BYEON=xxx
+NCP_MAPS_KEY_BYEON=xxx
+
+# Gemini
+GEMINI_API_KEY=xxx
+PRIMARY_MODEL=gemini-3-flash-preview
+FALLBACK_MODEL=gemini-2.0-flash
+
+# Supabase
+SUPABASE_URL=xxx
+SUPABASE_KEY=xxx
 ```

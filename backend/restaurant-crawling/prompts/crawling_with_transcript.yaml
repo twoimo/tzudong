@@ -52,7 +52,7 @@ prompt_template: |
   {
     "restaurants": [
       {
-        "name": "음식점 이름",
+        "origin_name": "음식점 이름",
         "phone": "전화번호 또는 null",
         "address": "주소 또는 null",
         "lat": 위도 숫자 또는 null,

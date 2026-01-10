@@ -49,7 +49,7 @@ prompt_template: |
   {
     "analysis": [
       {
-        "name": "상호명",
+        "origin_name": "상호명",
         "phone": "전화번호 | null",
         "phone_source": "puppeteer | url_context | description | not_found",
         "origin_address": "발견된 원본 주소 문자열",

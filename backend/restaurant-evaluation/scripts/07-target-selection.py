@@ -54,14 +54,14 @@ def create_evaluation_targets(video_id: str, data_path: Path, channel: str) -> d
     has_valid_name = False
 
     for restaurant in restaurants:
-        name = restaurant.get("name")
+        origin_name = restaurant.get("origin_name")
         address = restaurant.get("address")
 
-        if name:
+        if origin_name:
             has_valid_name = True
             # address가 null이면 False, 아니면 True
             is_valid = address is not None
-            evaluation_target[name] = is_valid
+            evaluation_target[origin_name] = is_valid
             if not is_valid:
                 has_null_address = True
 

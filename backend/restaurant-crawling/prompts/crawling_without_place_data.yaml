@@ -53,7 +53,7 @@ prompt_template: |
   {
     "analysis": [
       {
-        "name": "음식점명",
+        "origin_name": "음식점명",
         "phone": "전화번호 | null",
         "phone_source": "description | transcript | google_search | url_context | not_found",
         "origin_address": "발견된 원본 주소 문자열",

@@ -120,7 +120,7 @@ def main():
                     "youtube_link": data.get("youtube_link"),
                     "channel_name": data.get("channel_name") or channel,
                     "status": data.get("status", "pending"),
-                    "name": data.get("name"),
+                    "origin_name": data.get("origin_name"),
                     "naver_name": data.get("naver_name"),
                     "trace_id_name_source": data.get("trace_id_name_source"),
                     "phone": data.get("phone"),

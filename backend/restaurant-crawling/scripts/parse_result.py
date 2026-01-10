@@ -83,7 +83,7 @@ def validate_restaurant_data(data: Dict[str, Any]) -> bool:
         return False
 
     # 필수 필드 검증
-    required_fields = ["name", "address", "category"]
+    required_fields = ["origin_name", "address", "category"]
     for idx, restaurant in enumerate(data["restaurants"]):
         for field in required_fields:
             if field not in restaurant:
