@@ -65,14 +65,16 @@ def create_evaluation_targets(video_id: str, data_path: Path, channel: str) -> d
             if not is_valid:
                 has_null_address = True
 
-    # 출력 데이터 구조
+    # recollect_version 가져오기
+    recollect_version = data.get("recollect_version", {})
+
+    # 출력 데이터 구조 (youtube_meta는 저장하지 않음 - 10-transform에서 recollect_version 기반으로 조회)
     new_data = {
         "youtube_link": youtube_link,
         "channel_name": channel,
         "evaluation_target": evaluation_target,
         "restaurants": restaurants,
-        "youtube_meta": data.get("youtube_meta", {}),
-        "recollect_version": data.get("recollect_version", {}),
+        "recollect_version": recollect_version,
     }
 
     # 분류 결과

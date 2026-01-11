@@ -553,10 +553,10 @@ async function enrichWithNaverSearch(placeInfo) {
     return placeInfo;
 }
 
-// 필수 필드 검증 (origin_name 또는 naver_name, jibunAddress, lat, lng)
+// 필수 필드 검증 (05에서는 naver_name 필수, jibunAddress, lat, lng)
 function hasRequiredFields(placeInfo) {
     if (!placeInfo) return false;
-    if (!placeInfo.origin_name && !placeInfo.naver_name) return false;
+    if (!placeInfo.naver_name) return false;  // 네이버 검색 통과 시 항상 있음
     if (!placeInfo.jibunAddress) return false;
     if (placeInfo.lat == null || placeInfo.lng == null) return false;
     return true;
@@ -569,7 +569,7 @@ function hasRequiredFields(placeInfo) {
 async function verifyAndGeocode(placeInfo) {
     const addressToGeocode = placeInfo.roadAddress || placeInfo.jibunAddress;
     if (!addressToGeocode) {
-        log('warning', `지오코딩할 주소 없음: ${placeInfo.name}`);
+        log('warning', `지오코딩할 주소 없음: ${placeInfo.naver_name || placeInfo.origin_name}`);
         return null; // 주소 없으면 실패
     }
 
@@ -586,10 +586,10 @@ async function verifyAndGeocode(placeInfo) {
             geocodeResult.lat, geocodeResult.lng
         );
         if (distance > 20) {
-            log('warning', `좌표 20m 초과 (실패): ${placeInfo.name} - ${distance.toFixed(1)}m`);
+            log('warning', `좌표 20m 초과 (실패): ${placeInfo.naver_name || placeInfo.origin_name} - ${distance.toFixed(1)}m`);
             return null; // 20m 초과 → 실패 (원본 유지 아님)
         }
-        log('debug', `좌표 검증 통과: ${placeInfo.name} - ${distance.toFixed(1)}m`);
+        log('debug', `좌표 검증 통과: ${placeInfo.naver_name || placeInfo.origin_name} - ${distance.toFixed(1)}m`);
     }
 
     // 지오코딩 결과로 모든 주소 정보 채우기
@@ -607,7 +607,7 @@ async function verifyAndGeocode(placeInfo) {
 
 // Gemini CLI로 youtuber_review 추출
 async function extractYoutuberReview(videoId, metaData, transcript, places) {
-    const promptPath = path.resolve(__dirname, '../prompts/naver_map_review.txt');
+    const promptPath = path.resolve(__dirname, '../prompts/map_url_crawling_review.txt');
     const tempDir = path.resolve(__dirname, '../temp');
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
@@ -734,13 +734,13 @@ async function main() {
         log('info', `=== ${channelName} 처리 시작 ===`);
 
         const channelDir = path.join(dataDir, channelName);
-        const naverMapDir = path.join(channelDir, 'naver_map');
+        const mapUrlCrawlingDir = path.join(channelDir, 'map_url_crawling');
         const crawlingDir = path.join(channelDir, 'crawling');
         const metaDir = path.join(channelDir, 'meta');
         const transcriptDir = path.join(channelDir, 'transcript');
         const urlsFile = path.join(channelDir, 'urls', 'urls.txt');
 
-        if (!fs.existsSync(naverMapDir)) fs.mkdirSync(naverMapDir, { recursive: true });
+        if (!fs.existsSync(mapUrlCrawlingDir)) fs.mkdirSync(mapUrlCrawlingDir, { recursive: true });
 
         if (!fs.existsSync(urlsFile)) {
             log('warning', `urls.txt 없음: ${urlsFile}`);
@@ -761,9 +761,9 @@ async function main() {
             const videoId = videoIdMatch[1];
 
             // 중복 검사
-            const naverMapFile = path.join(naverMapDir, `${videoId}.jsonl`);
+            const mapUrlCrawlingFile = path.join(mapUrlCrawlingDir, `${videoId}.jsonl`);
             const crawlingFile = path.join(crawlingDir, `${videoId}.jsonl`);
-            if (fs.existsSync(naverMapFile) || fs.existsSync(crawlingFile)) {
+            if (fs.existsSync(mapUrlCrawlingFile) || fs.existsSync(crawlingFile)) {
                 skipped++;
                 continue;
             }
@@ -835,8 +835,8 @@ async function main() {
                     placeInfo = await enrichWithNaverSearch(placeInfo);
                 }
 
-
-                if (placeInfo && placeInfo.name) {
+                // enrichWithNaverSearch 성공 시 origin_name/naver_name이 있음
+                if (placeInfo && (placeInfo.origin_name || placeInfo.naver_name)) {
                     placeInfo = await verifyAndGeocode(placeInfo);
                     
                     // verifyAndGeocode가 null 반환 시 실패 처리
@@ -845,12 +845,12 @@ async function main() {
                         continue;
                     }
                     
-                    // 필수 필드 검증 (name, jibunAddress, lat, lng)
+                    // 필수 필드 검증 (origin_name 또는 naver_name, jibunAddress, lat, lng)
                     if (hasRequiredFields(placeInfo)) {
                         places.push(placeInfo);
-                        log('success', `  → ${placeInfo.name} (${mapType})`);
+                        log('success', `  → ${placeInfo.naver_name || placeInfo.origin_name} (${mapType})`);
                     } else {
-                        log('warning', `  → ${placeInfo.name} 필수 필드 누락 - 06 파이프라인으로 처리`);
+                        log('warning', `  → ${placeInfo.naver_name || placeInfo.origin_name} 필수 필드 누락 - 06 파이프라인으로 처리`);
                     }
                 }
             }
@@ -865,9 +865,10 @@ async function main() {
             // Gemini CLI로 youtuber_review 추출
             const reviews = await extractYoutuberReview(videoId, metaData, transcript, places);
             
-            // 리뷰 매칭
+            // 리뷰 매칭 (naver_name 또는 origin_name으로 매칭)
             for (const place of places) {
-                const review = reviews.find(r => r.name === place.name);
+                const placeName = place.naver_name || place.origin_name;
+                const review = reviews.find(r => r.name === placeName);
                 if (review) {
                     place.youtuber_review = review.youtuber_review;
                     if (review.category && VALID_CATEGORIES.includes(review.category)) {
@@ -884,7 +885,7 @@ async function main() {
                 channel_name: channelName
             };
 
-            fs.appendFileSync(naverMapFile, JSON.stringify(record, null, 0) + '\n');
+            fs.appendFileSync(mapUrlCrawlingFile, JSON.stringify(record, null, 0) + '\n');
             success++;
             log('success', `[${videoId}] 저장 완료 (${places.length}개)`);
         }

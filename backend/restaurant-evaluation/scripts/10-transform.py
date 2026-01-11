@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
 평가 결과 변환 스크립트
-laaj_results, naver_map 데이터를 최종 형식으로 변환합니다.
+laaj_results, map_url_crawling 데이터를 최종 형식으로 변환합니다.
 
 채널별 폴더 구조:
 - 입력:
   - evaluation/laaj_results/{video_id}.jsonl
   - evaluation/notSelection/{video_id}.jsonl
-  - naver_map/{video_id}.jsonl  ← 정육왕 전용
+  - map_url_crawling/{video_id}.jsonl  ← 정육왕 전용
 - 출력:
   - evaluation/transforms.jsonl (채널별로 각각)
 
 - trace_id = hash(youtube_link + (naver_name || name) + youtuber_review)
 - trace_id_name_source: "naver_name" or "original"
-- source_type: "geminiCLI" or "naver_map"
+- source_type: "geminiCLI" or "map_url_crawling"
 """
 
 import json
@@ -125,7 +125,11 @@ def get_location_data(
 
 
 def transform_json_object(
-    original_data: dict, source_file_type: str, channel_name: str
+    original_data: dict,
+    source_file_type: str,
+    channel_name: str,
+    meta_dir: Path = None,
+    video_id: str = None,
 ) -> List[dict]:
     """
     하나의 원본 JSON 객체를 변환 (기존 backup 로직 그대로)
@@ -133,10 +137,48 @@ def transform_json_object(
     flattened_results = []
 
     youtube_link = original_data.get("youtube_link")
-    youtube_meta = original_data.get("youtube_meta")
     original_eval_results = original_data.get("evaluation_results")
     restaurants_list = original_data.get("restaurants", [])
     evaluation_targets = original_data.get("evaluation_target", {})
+
+    # recollect_version 기반으로 meta 파일에서 youtube_meta 조회
+    youtube_meta = None
+    recollect_version = original_data.get("recollect_version", {})
+    target_meta_id = recollect_version.get("meta", 0)
+
+    if meta_dir and video_id:
+        meta_file = meta_dir / f"{video_id}.jsonl"
+        if meta_file.exists():
+            with open(meta_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    try:
+                        meta_obj = json.loads(line.strip())
+                        if meta_obj.get("recollect_id", 0) == target_meta_id:
+                            youtube_meta = {
+                                "title": meta_obj.get("title"),
+                                "viewCount": meta_obj.get("viewCount"),
+                                "likeCount": meta_obj.get("likeCount"),
+                                "commentCount": meta_obj.get("commentCount"),
+                                "publishedAt": meta_obj.get("publishedAt"),
+                            }
+                            break
+                    except:
+                        pass
+            # 못 찾으면 마지막 줄 사용
+            if not youtube_meta:
+                with open(meta_file, "r", encoding="utf-8") as f:
+                    for line in f:
+                        try:
+                            meta_obj = json.loads(line.strip())
+                            youtube_meta = {
+                                "title": meta_obj.get("title"),
+                                "viewCount": meta_obj.get("viewCount"),
+                                "likeCount": meta_obj.get("likeCount"),
+                                "commentCount": meta_obj.get("commentCount"),
+                                "publishedAt": meta_obj.get("publishedAt"),
+                            }
+                        except:
+                            pass
 
     # results 파일 처리
     if source_file_type == "results":
@@ -229,6 +271,7 @@ def transform_json_object(
                 "evaluation_results": new_eval_results if new_eval_results else None,
                 "source_type": "geminiCLI",
                 "description_map_url": None,  # 쯔양은 null
+                "recollect_version": recollect_version,
             }
             flattened_results.append(output)
 
@@ -251,7 +294,6 @@ def transform_json_object(
                     "status": "pending",
                     "youtube_meta": youtube_meta,
                     "origin_name": restaurant_name,
-                    "origin_name": restaurant_name,
                     "naver_name": None,  # Missing은 항상 null
                     "trace_id_name_source": "original",
                     "phone": None,
@@ -272,6 +314,7 @@ def transform_json_object(
                     "evaluation_results": None,
                     "source_type": "geminiCLI",
                     "description_map_url": None,  # 쯔양은 null
+                    "recollect_version": recollect_version,
                 }
                 flattened_results.append(output)
 
@@ -307,7 +350,6 @@ def transform_json_object(
                     "status": "pending",
                     "youtube_meta": youtube_meta,
                     "origin_name": missing_name,
-                    "origin_name": missing_name,
                     "naver_name": None,  # Missing은 항상 null
                     "trace_id_name_source": "original",
                     "phone": None,
@@ -328,6 +370,7 @@ def transform_json_object(
                     "evaluation_results": None,
                     "source_type": "geminiCLI",
                     "description_map_url": None,  # 쯔양은 null
+                    "recollect_version": recollect_version,
                 }
                 flattened_results.append(output)
 
@@ -373,17 +416,18 @@ def transform_json_object(
                 "evaluation_results": None,
                 "source_type": "geminiCLI",
                 "description_map_url": None,  # 쯔양은 null
+                "recollect_version": recollect_version,
             }
             flattened_results.append(output)
 
     return flattened_results
 
 
-def transform_naver_map_object(
+def transform_map_url_crawling_object(
     original_data: dict, channel_name: str, meta_dir: Path
 ) -> List[dict]:
     """
-    naver_map 데이터를 변환 (정육왕 전용, 평가 스킵)
+    map_url_crawling 데이터를 변환 (정육왕 전용, 평가 스킵)
     """
     flattened_results = []
 
@@ -453,24 +497,25 @@ def transform_naver_map_object(
             "trace_id_name_source": "naver" if naver_name else "original",
             "phone": restaurant_data.get("phone"),
             "category": restaurant_data.get("category"),
-            "reasoning_basis": None,  # naver_map은 reasoning_basis 없음
+            "reasoning_basis": None,  # map_url_crawling은 reasoning_basis 없음
             "youtuber_review": youtuber_review,
-            "origin_address": None,  # naver_map은 origin_address 없음 (지오코딩 주소가 최종)
+            "origin_address": None,  # map_url_crawling은 origin_address 없음 (지오코딩 주소가 최종)
             "roadAddress": restaurant_data.get("roadAddress"),
             "jibunAddress": restaurant_data.get("jibunAddress"),
             "englishAddress": restaurant_data.get("englishAddress"),
             "addressElements": restaurant_data.get("addressElements"),
             "lat": restaurant_data.get("lat"),
             "lng": restaurant_data.get("lng"),
-            "geocoding_success": True,  # naver_map은 항상 성공 (검증 통과했으므로)
+            "geocoding_success": True,  # map_url_crawling은 항상 성공 (검증 통과했으므로)
             "geocoding_false_stage": None,
             "is_missing": False,
             "is_notSelected": False,
             "evaluation_results": None,  # 평가 스킵
-            "source_type": "naver_map",
+            "source_type": "map_url_crawling",
             "description_map_url": restaurant_data.get(
                 "description_map_url"
             ),  # 원본 네이버 지도 URL
+            "recollect_version": recollect_version,
         }
         flattened_results.append(output)
 
@@ -492,7 +537,7 @@ def main():
     # 입력 폴더
     laaj_results_dir = data_path / "evaluation" / "laaj_results"
     not_selection_dir = data_path / "evaluation" / "notSelection"
-    naver_map_dir = data_path / "naver_map"  # ← 정육왕 전용
+    map_url_crawling_dir = data_path / "map_url_crawling"  # ← 정육왕 전용
     meta_dir = data_path / "meta"
 
     # 출력 파일 (전체 합쳐서 하나)
@@ -526,11 +571,14 @@ def main():
     if laaj_results_dir.exists():
         for f in laaj_results_dir.glob("*.jsonl"):
             stats["total_files"] += 1
+            video_id = f.stem  # video_id 추출
             with open(f, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
-                        transformed = transform_json_object(data, "results", channel)
+                        transformed = transform_json_object(
+                            data, "results", channel, meta_dir, video_id
+                        )
 
                         for record in transformed:
                             stats["total_records"] += 1
@@ -550,12 +598,13 @@ def main():
     if not_selection_dir.exists():
         for f in not_selection_dir.glob("*.jsonl"):
             stats["total_files"] += 1
+            video_id = f.stem  # video_id 추출
             with open(f, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
                         transformed = transform_json_object(
-                            data, "notSelection", channel
+                            data, "notSelection", channel, meta_dir, video_id
                         )
 
                         for record in transformed:
@@ -572,15 +621,15 @@ def main():
                     except json.JSONDecodeError:
                         continue
 
-    # naver_map 처리 (정육왕 등 - 평가 스킵 데이터)
-    if naver_map_dir.exists():
-        for f in naver_map_dir.glob("*.jsonl"):
+    # map_url_crawling 처리 (정육왕 등 - 평가 스킵 데이터)
+    if map_url_crawling_dir.exists():
+        for f in map_url_crawling_dir.glob("*.jsonl"):
             stats["total_files"] += 1
             with open(f, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
                         data = json.loads(line.strip())
-                        transformed = transform_naver_map_object(
+                        transformed = transform_map_url_crawling_object(
                             data, channel, meta_dir
                         )
 

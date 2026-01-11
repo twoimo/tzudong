@@ -416,7 +416,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
     location_eval_list: List[Dict[str, Any]] = []
     for r in restaurants:
         # evaluation_target[name] == True인 것만 평가
-        name = _norm_space(str(r.get("name", "")))
+        name = _norm_space(str(r.get("origin_name", "")))
         if not evaluation_target.get(name, False):
             # address가 null인 경우 등은 평가 스킵
             location_eval_list.append(
@@ -454,7 +454,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
             "location_match_TF": location_eval_list,
         },
         "restaurants": restaurants,
-        "youtube_meta": obj.get("youtube_meta", {}),
+        "recollect_version": obj.get("recollect_version", {}),
     }
 
 

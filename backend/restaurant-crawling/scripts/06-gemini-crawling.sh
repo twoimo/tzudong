@@ -255,11 +255,11 @@ process_channel() {
             continue
         fi
         
-        # naver_map 파일 존재 시 스킵 (05-naver-map-crawling.js에서 처리됨)
-        NAVER_MAP_FILE="$full_data_path/naver_map/${VIDEO_ID}.jsonl"
-        if [ -f "$NAVER_MAP_FILE" ]; then
+        # map_url_crawling 파일 존재 시 스킵 (05-map-url-crawling.js에서 처리됨)
+        MAP_URL_CRAWLING_FILE="$full_data_path/map_url_crawling/${VIDEO_ID}.jsonl"
+        if [ -f "$MAP_URL_CRAWLING_FILE" ]; then
             SKIPPED=$((SKIPPED + 1))
-            log_debug "[$INDEX/$TOTAL] naver_map에서 처리됨 - 스킵: $VIDEO_ID"
+            log_debug "[$INDEX/$TOTAL] map_url_crawling에서 처리됨 - 스킵: $VIDEO_ID"
             continue
         fi
         
@@ -307,11 +307,15 @@ process_channel() {
         
         # 프롬프트 생성
         PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
-        PROMPT="${PROMPT_TEMPLATE//<유튜브 링크>/$YOUTUBE_LINK}"
         
         # 자막 추가 (30000자 제한)
         TRANSCRIPT_TRUNCATED=$(echo "$TRANSCRIPT" | head -c 30000)
-        PROMPT="$PROMPT
+        PROMPT="$PROMPT_TEMPLATE
+
+<영상 정보>
+영상 제목: $TITLE
+유튜브 링크: $YOUTUBE_LINK
+</영상 정보>
 
 <참고: YouTube 자막>
 아래는 해당 영상의 자막입니다. 음식점 이름, 위치 힌트, 메뉴 정보 등을 파악하는 데 참고하세요.

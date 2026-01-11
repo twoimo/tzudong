@@ -165,13 +165,21 @@ for i in "${!VIDEO_IDS[@]}"; do
     ERROR_FILE="$ERRORS_DIR/${VIDEO_ID}.jsonl"
     TRANSCRIPT_FILE="$TRANSCRIPT_DIR/${VIDEO_ID}.jsonl"
     
-    # 중복 검사: 이미 처리된 파일 (성공 또는 에러)
-    if [ -f "$OUTPUT_FILE" ] || [ -f "$ERROR_FILE" ]; then
+    # 이미 성공한 파일은 스킵
+    if [ -f "$OUTPUT_FILE" ]; then
         SKIPPED_EXISTS=$((SKIPPED_EXISTS + 1))
         if [ $((SKIPPED_EXISTS % 50)) -eq 1 ]; then
             log_warning "[$INDEX/$TOTAL] 이미 처리됨 (스킵 ${SKIPPED_EXISTS}개)"
         fi
         continue
+    fi
+    
+    # 에러 파일 있으면 재시도 대상 (에러 파일 삭제 후 진행)
+    IS_RETRY=false
+    if [ -f "$ERROR_FILE" ]; then
+        IS_RETRY=true
+        rm "$ERROR_FILE"
+        log_info "[$INDEX/$TOTAL] 에러 파일 재시도: $VIDEO_ID"
     fi
     
     # rule_results 데이터 로드
@@ -181,6 +189,25 @@ for i in "${!VIDEO_IDS[@]}"; do
     EVALUATION_TARGET=$(echo "$RULE_DATA" | jq -c '.evaluation_target // {}')
     RESTAURANTS=$(echo "$RULE_DATA" | jq -c '.restaurants // []')
     EVAL_RESULTS=$(echo "$RULE_DATA" | jq -c '.evaluation_results // {}')
+    RECOLLECT_VERSION=$(echo "$RULE_DATA" | jq -c '.recollect_version // {}')
+    TARGET_META_ID=$(echo "$RECOLLECT_VERSION" | jq -r '.meta // 0')
+    
+    # recollect_version.meta 기반으로 meta 파일에서 title 조회
+    META_FILE="$FULL_DATA_PATH/meta/${VIDEO_ID}.jsonl"
+    VIDEO_TITLE=""
+    if [ -f "$META_FILE" ]; then
+        while IFS= read -r META_LINE; do
+            META_RECOLLECT_ID=$(echo "$META_LINE" | jq -r '.recollect_id // 0')
+            if [ "$META_RECOLLECT_ID" = "$TARGET_META_ID" ]; then
+                VIDEO_TITLE=$(echo "$META_LINE" | jq -r '.title // ""' | head -c 100)
+                break
+            fi
+        done < "$META_FILE"
+        # 못 찾으면 마지막 줄 사용
+        if [ -z "$VIDEO_TITLE" ]; then
+            VIDEO_TITLE=$(tail -n 1 "$META_FILE" | jq -r '.title // ""' | head -c 100)
+        fi
+    fi
     
     # evaluation_target에 true 값이 있는 경우만 평가
     HAS_TRUE_TARGET=$(echo "$EVALUATION_TARGET" | jq 'to_entries | map(select(.value == true)) | length')
@@ -238,6 +265,11 @@ for i in "${!VIDEO_IDS[@]}"; do
     # 자막 추가
     PROMPT="$PROMPT
 
+<영상 정보>
+영상 제목: $VIDEO_TITLE
+유튜브 링크: $YOUTUBE_LINK
+</영상 정보>
+
 <참고: YouTube 자막>
 아래는 해당 영상의 자막입니다. 유튜버의 실제 발언, 음식점 언급, 리뷰 내용을 확인하는 데 참고하세요.
 [자막 언어: $TRANSCRIPT_LANGUAGE]
@@ -282,37 +314,63 @@ $TRANSCRIPT
     GEMINI_CALLS=$((GEMINI_CALLS + 1))
     
     if [ "$GEMINI_SUCCESS" = true ]; then
-        # 응답 파싱
-        if python3 "$PARSER_SCRIPT" \
-            --channel "$CHANNEL" \
-            --data-path "$DATA_PATH" \
-            --video-id "$VIDEO_ID" \
-            --response-file "$TEMP_RESPONSE" \
-            --rule-file "$RULE_FILE"; then
-            
-            SUCCESS=$((SUCCESS + 1))
-            log_success "성공 [$INDEX/$TOTAL] - ${GEMINI_DURATION}s"
-        else
+        # 파서 실행 (최대 3회 시도)
+        PARSE_SUCCESS=false
+        for PARSE_ATTEMPT in 1 2 3; do
+            if python3 "$PARSER_SCRIPT" \
+                --channel "$CHANNEL" \
+                --data-path "$DATA_PATH" \
+                --video-id "$VIDEO_ID" \
+                --response-file "$TEMP_RESPONSE" \
+                --rule-file "$RULE_FILE"; then
+                
+                SUCCESS=$((SUCCESS + 1))
+                PARSE_SUCCESS=true
+                log_success "성공 [$INDEX/$TOTAL] - ${GEMINI_DURATION}s"
+                break
+            else
+                if [ $PARSE_ATTEMPT -lt 3 ]; then
+                    log_warning "파서 실패 (${PARSE_ATTEMPT}차 시도) - Gemini 재호출 중..."
+                    sleep 12  # RPM 대기
+                    # Gemini CLI 재호출
+                    GEMINI_START=$(date +%s)
+                    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                        GEMINI_END=$(date +%s)
+                        GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
+                        TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
+                        GEMINI_CALLS=$((GEMINI_CALLS + 1))
+                        log_debug "Gemini CLI 재시도 응답 완료 (${GEMINI_DURATION}s)"
+                    else
+                        log_error "Gemini CLI 재시도 실패"
+                        break
+                    fi
+                fi
+            fi
+        done
+        
+        if [ "$PARSE_SUCCESS" = false ]; then
             FAILED=$((FAILED + 1))
             
-            # 에러 저장
+            # 에러 저장 (recollect_version 포함)
             jq -n \
                 --arg yl "$YOUTUBE_LINK" \
                 --arg vid "$VIDEO_ID" \
-                --arg err "파싱 실패" \
-                '{youtube_link: $yl, video_id: $vid, error: $err}' > "$ERROR_FILE"
+                --arg err "파싱 실패 (3회 시도 후)" \
+                --argjson rv "$RECOLLECT_VERSION" \
+                '{youtube_link: $yl, video_id: $vid, error: $err, recollect_version: $rv}' > "$ERROR_FILE"
             
-            log_error "파싱 실패 [$INDEX/$TOTAL]"
+            log_error "파서 실패 (3회 시도 후) [$INDEX/$TOTAL]"
         fi
     else
         FAILED=$((FAILED + 1))
         
-        # 에러 저장
+        # 에러 저장 (recollect_version 포함)
         jq -n \
             --arg yl "$YOUTUBE_LINK" \
             --arg vid "$VIDEO_ID" \
             --arg err "Gemini CLI 호출 실패" \
-            '{youtube_link: $yl, video_id: $vid, error: $err}' > "$ERROR_FILE"
+            --argjson rv "$RECOLLECT_VERSION" \
+            '{youtube_link: $yl, video_id: $vid, error: $err, recollect_version: $rv}' > "$ERROR_FILE"
         
         log_error "Gemini CLI 실패 [$INDEX/$TOTAL] - ${GEMINI_DURATION}s"
     fi
