@@ -54,13 +54,13 @@ def get_eval_item(eval_results: dict, rest_name: str, key: str) -> Optional[dict
         item_list = value
 
     found_item = next(
-        (item for item in item_list if item.get("name") == rest_name), None
+        (item for item in item_list if item.get("origin_name") == rest_name), None
     )
 
     if found_item:
         new_item = found_item.copy()
-        if "name" in new_item:
-            del new_item["name"]
+        if "origin_name" in new_item:
+            del new_item["origin_name"]
         return new_item
     return None
 
@@ -85,7 +85,8 @@ def get_location_data(
     if eval_results:
         loc_match_list = eval_results.get("location_match_TF", [])
         loc_match_item = next(
-            (item for item in loc_match_list if item.get("name") == rest_name), None
+            (item for item in loc_match_list if item.get("origin_name") == rest_name),
+            None,
         )
 
     if loc_match_item:
@@ -215,14 +216,14 @@ def transform_json_object(
                             (
                                 item
                                 for item in visit_auth_values
-                                if item.get("name") == restaurant_name
+                                if item.get("origin_name") == restaurant_name
                             ),
                             None,
                         )
                         if visit_auth_item:
                             new_visit_item = visit_auth_item.copy()
-                            if "name" in new_visit_item:
-                                del new_visit_item["name"]
+                            if "origin_name" in new_visit_item:
+                                del new_visit_item["origin_name"]
                             new_eval_results["visit_authenticity"] = new_visit_item
                     else:
                         eval_item = get_eval_item(
@@ -327,7 +328,7 @@ def transform_json_object(
                 if isinstance(missing_item, str):
                     missing_name = missing_item
                 elif isinstance(missing_item, dict):
-                    missing_name = missing_item.get("name")
+                    missing_name = missing_item.get("origin_name")
                 else:
                     continue
 
@@ -377,7 +378,7 @@ def transform_json_object(
     # notSelection 파일 처리
     elif source_file_type == "notSelection":
         for restaurant_data in restaurants_list:
-            restaurant_name = restaurant_data.get("name")
+            restaurant_name = restaurant_data.get("origin_name")
             if not restaurant_name:
                 continue
 

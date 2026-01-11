@@ -54,6 +54,72 @@ def convert_restaurants(restaurants: list) -> list:
     return new_restaurants
 
 
+def add_naver_name_to_eval_results(eval_results: dict) -> dict:
+    """
+    evaluation_results에 naver_name 추가
+    - location_match_TF 각 항목에 naver_name: null 추가
+    - name → origin_name 변환
+    """
+    if not eval_results:
+        return eval_results
+
+    new_results = {}
+    for key, value in eval_results.items():
+        if key == "location_match_TF" and isinstance(value, list):
+            new_list = []
+            for item in value:
+                new_item = {}
+                # name → origin_name 변환 + naver_name 추가
+                if "name" in item:
+                    new_item["origin_name"] = item["name"]
+                else:
+                    new_item["origin_name"] = item.get("origin_name")
+                new_item["eval_value"] = item.get("eval_value")
+                new_item["origin_address"] = item.get("origin_address")
+                new_item["naver_name"] = None  # ★ 추가
+                new_item["naver_address"] = item.get("naver_address")
+                if "falseMessage" in item:
+                    new_item["falseMessage"] = item["falseMessage"]
+                new_list.append(new_item)
+            new_results[key] = new_list
+        elif isinstance(value, list):
+            # 다른 배열 (category_validity_TF 등)도 name → origin_name 변환
+            new_list = []
+            for item in value:
+                if isinstance(item, dict):
+                    new_item = {}
+                    if "name" in item:
+                        new_item["origin_name"] = item["name"]
+                        for k, v in item.items():
+                            if k != "name":
+                                new_item[k] = v
+                    else:
+                        new_item = item.copy()
+                    new_list.append(new_item)
+                else:
+                    new_list.append(item)
+            new_results[key] = new_list
+        elif isinstance(value, dict):
+            # visit_authenticity 등 객체 처리
+            new_results[key] = value.copy()
+            if "values" in value and isinstance(value["values"], list):
+                new_values = []
+                for v_item in value["values"]:
+                    if isinstance(v_item, dict) and "name" in v_item:
+                        new_v = {"origin_name": v_item["name"]}
+                        for k, v in v_item.items():
+                            if k != "name":
+                                new_v[k] = v
+                        new_values.append(new_v)
+                    else:
+                        new_values.append(v_item)
+                new_results[key]["values"] = new_values
+        else:
+            new_results[key] = value
+
+    return new_results
+
+
 def migrate_urls(backup_dir: Path, output_dir: Path, channel: str = "tzuyang"):
     """
     urls.txt 마이그레이션
@@ -365,10 +431,7 @@ def migrate_selection(backup_dir: Path, output_dir: Path, channel: str = "tzuyan
                         continue
 
                     # restaurants 변환 (name → origin_name)
-                    restaurants = data.get("restaurants", [])
-                    for r in restaurants:
-                        if "name" in r:
-                            r["origin_name"] = r.pop("name")
+                    restaurants = convert_restaurants(data.get("restaurants", []))
 
                     # 출력 데이터 구성 (youtube_meta 제거)
                     output_data = {
@@ -464,14 +527,7 @@ def migrate_not_selection(backup_dir: Path, output_dir: Path, channel: str = "tz
                         continue
 
                     # restaurants 변환 (name → origin_name, 맨 앞에 배치)
-                    restaurants = data.get("restaurants", [])
-                    new_restaurants = []
-                    for r in restaurants:
-                        origin_name = r.pop("name", None)
-                        new_r = {"origin_name": origin_name}
-                        new_r.update(r)
-                        new_restaurants.append(new_r)
-                    restaurants = new_restaurants
+                    restaurants = convert_restaurants(data.get("restaurants", []))
 
                     output_data = {
                         "youtube_link": data.get("youtube_link"),
@@ -548,16 +604,18 @@ def migrate_rule_results(backup_dir: Path, output_dir: Path, channel: str = "tzu
                         continue
 
                     # restaurants 변환
-                    restaurants = data.get("restaurants", [])
-                    for r in restaurants:
-                        if "name" in r:
-                            r["origin_name"] = r.pop("name")
+                    restaurants = convert_restaurants(data.get("restaurants", []))
+
+                    # evaluation_results에 naver_name 추가
+                    eval_results = add_naver_name_to_eval_results(
+                        data.get("evaluation_results", {})
+                    )
 
                     output_data = {
                         "youtube_link": data.get("youtube_link"),
                         "channel_name": channel,
                         "evaluation_target": data.get("evaluation_target", {}),
-                        "evaluation_results": data.get("evaluation_results", {}),
+                        "evaluation_results": eval_results,
                         "restaurants": restaurants,
                         "recollect_version": {"meta": 0, "transcript": 0},
                     }
@@ -625,16 +683,18 @@ def migrate_laaj_results(backup_dir: Path, output_dir: Path, channel: str = "tzu
                         continue
 
                     # restaurants 변환
-                    restaurants = data.get("restaurants", [])
-                    for r in restaurants:
-                        if "name" in r:
-                            r["origin_name"] = r.pop("name")
+                    restaurants = convert_restaurants(data.get("restaurants", []))
+
+                    # evaluation_results에 naver_name 추가
+                    eval_results = add_naver_name_to_eval_results(
+                        data.get("evaluation_results", {})
+                    )
 
                     output_data = {
                         "youtube_link": data.get("youtube_link"),
                         "channel_name": channel,
                         "evaluation_target": data.get("evaluation_target", {}),
-                        "evaluation_results": data.get("evaluation_results", {}),
+                        "evaluation_results": eval_results,
                         "restaurants": restaurants,
                         "recollect_version": {"meta": 0, "transcript": 0},
                     }

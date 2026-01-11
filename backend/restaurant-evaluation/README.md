@@ -132,7 +132,7 @@ for restaurant in restaurants:
 
 ```json
 [
-  { "name": "상호명", "eval_value": true }
+  { "origin_name": "상호명", "eval_value": true }
 ]
 ```
 
@@ -143,7 +143,7 @@ for restaurant in restaurants:
 성공 시 출력 (코드 395-401줄):
 ```json
 {
-  "name": "원본 상호명",
+  "origin_name": "원본 상호명",
   "naver_name": "네이버 검색 상호명",
   "eval_value": true,
   "origin_address": "원본 주소",
@@ -163,7 +163,7 @@ for restaurant in restaurants:
 실패 시 (코드 357-364줄):
 ```json
 {
-  "name": "...",
+  "origin_name": "...",
   "naver_name": null,
   "eval_value": false,
   "origin_address": "...",
@@ -252,21 +252,21 @@ Gemini CLI로 LAAJ(LLM-as-a-Judge) 5개 평가 항목을 평가합니다.
 {
   "visit_authenticity": {
     "values": [
-      { "name": "상호명", "eval_value": 1, "eval_basis": "[01:55] 간판+내부 확인" }
+      { "origin_name": "상호명", "eval_value": 1, "eval_basis": "[01:55] 간판+내부 확인" }
     ],
     "missing": ["누락된 상호명"]
   },
   "rb_inference_score": [
-    { "name": "상호명", "eval_value": 1, "eval_basis": "..." }
+    { "origin_name": "상호명", "eval_value": 1, "eval_basis": "..." }
   ],
   "rb_grounding_TF": [
-    { "name": "상호명", "eval_value": true, "eval_basis": "..." }
+    { "origin_name": "상호명", "eval_value": true, "eval_basis": "..." }
   ],
   "review_faithfulness_score": [
-    { "name": "상호명", "eval_value": 1.0, "eval_basis": "..." }
+    { "origin_name": "상호명", "eval_value": 1.0, "eval_basis": "..." }
   ],
   "category_TF": [
-    { "name": "상호명", "eval_value": true, "category_revision": null }
+    { "origin_name": "상호명", "eval_value": true, "category_revision": null }
   ]
 }
 ```

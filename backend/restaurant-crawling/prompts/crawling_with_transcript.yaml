@@ -83,7 +83,7 @@ output_schema:
       items:
         type: object
         properties:
-          name:
+          origin_name:
             type: string
           phone:
             type: string

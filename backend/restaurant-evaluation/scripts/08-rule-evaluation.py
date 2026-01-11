@@ -240,10 +240,10 @@ def evaluate_category_validity(
     """카테고리 유효성 평가"""
     results = []
     for restaurant in restaurants:
-        name = _norm_space(str(restaurant.get("name", "")))
+        name = _norm_space(str(restaurant.get("origin_name", "")))
         category = restaurant.get("category")
         is_valid = category is not None and category in VALID_CATEGORIES
-        results.append({"name": name, "eval_value": is_valid})
+        results.append({"origin_name": name, "eval_value": is_valid})
     return results
 
 
@@ -252,7 +252,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     음식점 위치 검증 (기존 backup 로직 그대로)
     + naver_name 추가
     """
-    name = _norm_space(str(rec.get("name", "")))
+    name = _norm_space(str(rec.get("origin_name", "")))
     origin_address_raw = _norm_space(str(rec.get("address", "")))
     origin_address = remove_floor_info(origin_address_raw)
 
@@ -274,7 +274,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     geocoded_jibun = ncp_geocode_to_jibun_address(origin_address)
     if not geocoded_jibun:
         return {
-            "name": name,
+            "origin_name": name,
             "naver_name": None,  # ★ 추가
             "eval_value": False,
             "origin_address": origin_address,
@@ -288,7 +288,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
     all_candidates = name_cands + name_addr_cands + name_region_cands
     if not all_candidates:
         return {
-            "name": name,
+            "origin_name": name,
             "naver_name": None,  # ★ 추가
             "eval_value": False,
             "origin_address": origin_address,
@@ -329,7 +329,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
         geocoded_addresses = ncp_geocode_addresses(origin_address)
         if not geocoded_addresses or len(geocoded_addresses) == 0:
             return {
-                "name": name,
+                "origin_name": name,
                 "naver_name": None,  # ★ 추가
                 "eval_value": False,
                 "origin_address": origin_address,
@@ -355,7 +355,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
 
         if not best_cand:
             return {
-                "name": name,
+                "origin_name": name,
                 "naver_name": None,  # ★ 추가
                 "eval_value": False,
                 "origin_address": origin_address,
@@ -393,7 +393,7 @@ def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
         }
 
     return {
-        "name": name,
+        "origin_name": name,
         "naver_name": matched_result.get("title"),  # ★ 추가: 네이버 검색 결과 상호명
         "eval_value": True,
         "origin_address": origin_address,
@@ -421,7 +421,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
             # address가 null인 경우 등은 평가 스킵
             location_eval_list.append(
                 {
-                    "name": name,
+                    "origin_name": name,
                     "naver_name": None,
                     "eval_value": False,
                     "origin_address": r.get("address"),
@@ -435,7 +435,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
             res = evaluate_one_restaurant(r)
         except Exception as e:
             res = {
-                "name": name,
+                "origin_name": name,
                 "naver_name": None,
                 "eval_value": False,
                 "origin_address": _norm_space(str(r.get("address", ""))),

@@ -58,11 +58,11 @@ prompt_template: |
   최종 출력은 **반드시 5개의 평가 항목을 key로 하고, 그 평가 결과를 값으로 하는 단일 JSON 객체만 반환**:
 
   {
-    "visit_authenticity": {"values": [{"name": "음식점명", "eval_value": 1, "eval_basis": "근거"}], "missing": []},
-    "rb_inference_score": [{"name": "음식점명", "eval_value": 1, "eval_basis": "근거"}],
-    "rb_grounding_TF": [{"name": "음식점명", "eval_value": true, "eval_basis": "근거"}],
-    "review_faithfulness_score": [{"name": "음식점명", "eval_value": 1.0, "eval_basis": "근거"}],
-    "category_TF": [{"name": "음식점명", "eval_value": true, "category_revision": null}]
+    "visit_authenticity": {"values": [{"origin_name": "음식점명", "eval_value": 1, "eval_basis": "근거"}], "missing": []},
+    "rb_inference_score": [{"origin_name": "음식점명", "eval_value": 1, "eval_basis": "근거"}],
+    "rb_grounding_TF": [{"origin_name": "음식점명", "eval_value": true, "eval_basis": "근거"}],
+    "review_faithfulness_score": [{"origin_name": "음식점명", "eval_value": 1.0, "eval_basis": "근거"}],
+    "category_TF": [{"origin_name": "음식점명", "eval_value": true, "category_revision": null}]
   }
   </출력 형식>
 

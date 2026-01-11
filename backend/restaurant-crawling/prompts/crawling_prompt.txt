@@ -42,7 +42,7 @@
 5. JSONL 생성
 - **영상에서 등장하는 각 식당마다 별도의 JSON 객체를 생성합니다**.
 - 각 JSON 객체의 필드:
-  - name, phone, address, lat (latitude), lng (longitude): 3단계의 확정된 정보에서 추출 (없으면 null).
+  - origin_name, phone, address, lat (latitude), lng (longitude): 3단계의 확정된 정보에서 추출 (없으면 null).
   - youtube_link: 원본 URL 입력.
   - reasoning_basis: 추론 근거(해당 식당 정보 정리의 판단 근거) 작성. **자막 타임스탬프 포함 권장** (예: "[01:15] '산북동달구지' 언급, [01:18] 군산 소곱창 성지라고 소개").
   - youtuber_review: 4단계에서 요약한 유튜버의 해당 식당 리뷰 내용 (없으면 null).
@@ -61,7 +61,7 @@
 {
   "restaurants": [
     {
-      "name": "음식점 이름",
+      "origin_name": "음식점 이름",
       "phone": "전화번호 또는 null",
       "address": "주소 또는 null",
       "lat": 위도 숫자 또는 null,
