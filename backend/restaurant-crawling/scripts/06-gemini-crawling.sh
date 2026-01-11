@@ -189,10 +189,11 @@ process_channel() {
     local meta_dir="$full_data_path/meta"
     local transcript_dir="$full_data_path/transcript"
     local crawling_dir="$full_data_path/crawling"
+    local errors_dir="$full_data_path/crawling_errors"
     local error_log="$full_data_path/crawling_errors.log"
     
     # 폴더 생성
-    mkdir -p "$crawling_dir"
+    mkdir -p "$crawling_dir" "$errors_dir"
     
     log_info ""
     log_info "=========================================="
@@ -261,6 +262,15 @@ process_channel() {
             SKIPPED=$((SKIPPED + 1))
             log_debug "[$INDEX/$TOTAL] map_url_crawling에서 처리됨 - 스킵: $VIDEO_ID"
             continue
+        fi
+        
+        # 에러 파일 있으면 재시도 대상 (에러 파일 삭제 후 진행)
+        ERROR_FILE="$errors_dir/${VIDEO_ID}.jsonl"
+        IS_RETRY=false
+        if [ -f "$ERROR_FILE" ]; then
+            IS_RETRY=true
+            rm "$ERROR_FILE"
+            log_info "[$INDEX/$TOTAL] 에러 파일 재시도: $VIDEO_ID"
         fi
         
         # 메타데이터 확인
@@ -332,40 +342,48 @@ $TRANSCRIPT_TRUNCATED
         TEMP_STDERR="$SCRIPT_DIR/../temp/stderr_${VIDEO_ID}.log"
         echo "$PROMPT" > "$TEMP_PROMPT"
         
-        # Gemini CLI 호출
+        # Gemini CLI 호출 (최대 3회 시도)
         URL_START_TIME=$(date +%s)
-        GEMINI_START=$(date +%s)
         GEMINI_SUCCESS=false
         
-        log_debug "Gemini 모델: $CURRENT_MODEL"
-        if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
-            GEMINI_SUCCESS=true
-        else
-            # Rate limit 에러 확인 후 fallback 모델로 전환
-            ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
-            if [ -f "$ERROR_REPORT" ] && grep -q "exhausted your daily quota\|rate\|limit\|429" "$ERROR_REPORT" 2>/dev/null; then
-                if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
-                    log_warning "$PRIMARY_MODEL 할당량 소진 - $FALLBACK_MODEL 으로 전환"
-                    CURRENT_MODEL="$FALLBACK_MODEL"
-                    sleep 12  # RPM 대기
-                    if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
-                        GEMINI_SUCCESS=true
+        for GEMINI_ATTEMPT in 1 2 3; do
+            GEMINI_START=$(date +%s)
+            log_debug "Gemini 호출 시도 ${GEMINI_ATTEMPT}/3 (모델: $CURRENT_MODEL)"
+            
+            if gemini -p "$(cat "$TEMP_PROMPT")" --model "$CURRENT_MODEL" --output-format json --yolo < /dev/null > "$TEMP_RESPONSE" 2>"$TEMP_STDERR"; then
+                GEMINI_SUCCESS=true
+                GEMINI_END=$(date +%s)
+                GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
+                TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
+                GEMINI_CALLS=$((GEMINI_CALLS + 1))
+                log_debug "Gemini CLI 응답 완료 (${GEMINI_DURATION}s)"
+                break
+            else
+                GEMINI_END=$(date +%s)
+                GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
+                TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
+                GEMINI_CALLS=$((GEMINI_CALLS + 1))
+                
+                # Rate limit 에러 확인 후 fallback 모델로 전환
+                ERROR_REPORT=$(ls -t /tmp/gemini-client-error-*.json 2>/dev/null | head -1)
+                if [ -f "$ERROR_REPORT" ] && grep -q "exhausted your daily quota\|rate\|limit\|429" "$ERROR_REPORT" 2>/dev/null; then
+                    if [ "$CURRENT_MODEL" = "$PRIMARY_MODEL" ]; then
+                        log_warning "$PRIMARY_MODEL 할당량 소진 - $FALLBACK_MODEL 으로 전환"
+                        CURRENT_MODEL="$FALLBACK_MODEL"
                     fi
                 fi
+                
+                if [ $GEMINI_ATTEMPT -lt 3 ]; then
+                    log_warning "Gemini CLI 실패 (${GEMINI_ATTEMPT}차 시도) - 재시도 중..."
+                    sleep 12  # RPM 대기
+                fi
             fi
-        fi
-        
-        GEMINI_END=$(date +%s)
-        GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
-        TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
-        GEMINI_CALLS=$((GEMINI_CALLS + 1))
+        done
         
         if [ "$GEMINI_SUCCESS" = true ]; then
-            log_debug "Gemini CLI 응답 완료 (${GEMINI_DURATION}s, 모델: $CURRENT_MODEL)"
-            
-            # 파서 실행 (최대 2회 시도)
+            # 파서 실행 (최대 3회 시도)
             PARSE_SUCCESS=false
-            for PARSE_ATTEMPT in 1 2; do
+            for PARSE_ATTEMPT in 1 2 3; do
                 if python3 "$PARSER_SCRIPT" "$YOUTUBE_LINK" "$TEMP_RESPONSE" "$CRAWLING_FILE" "$META_RECOLLECT_ID" "$TRANSCRIPT_RECOLLECT_ID" "$CHANNEL"; then
                     SUCCESS=$((SUCCESS + 1))
                     PARSE_SUCCESS=true
@@ -375,8 +393,8 @@ $TRANSCRIPT_TRUNCATED
                     log_success "성공 ($SUCCESS/$TOTAL) - 총 ${URL_DURATION}s (Gemini: ${GEMINI_DURATION}s)"
                     break
                 else
-                    if [ $PARSE_ATTEMPT -eq 1 ]; then
-                        log_warning "파서 실패 (1차 시도) - 재시도 중..."
+                    if [ $PARSE_ATTEMPT -lt 3 ]; then
+                        log_warning "파서 실패 (${PARSE_ATTEMPT}차 시도) - Gemini 재호출 중..."
                         sleep 12  # RPM 대기
                         # Gemini CLI 재호출
                         GEMINI_START=$(date +%s)
@@ -396,13 +414,29 @@ $TRANSCRIPT_TRUNCATED
             
             if [ "$PARSE_SUCCESS" = false ]; then
                 FAILED=$((FAILED + 1))
-                log_error "파서 실패 (2회 시도 후) ($FAILED/$TOTAL)"
+                log_error "파서 실패 (3회 시도 후) ($FAILED/$TOTAL)"
                 echo "[$(date)] 파서 실패: $URL" >> "$error_log"
+                # 에러 JSONL 저장 (recollect_version 포함)
+                jq -n \
+                    --arg yl "$YOUTUBE_LINK" \
+                    --arg vid "$VIDEO_ID" \
+                    --arg err "파싱 실패 (3회 시도 후)" \
+                    --arg meta "$META_RECOLLECT_ID" \
+                    --arg trans "$TRANSCRIPT_RECOLLECT_ID" \
+                    '{youtube_link: $yl, video_id: $vid, error: $err, recollect_version: {meta: ($meta | tonumber), transcript: ($trans | tonumber)}}' > "$ERROR_FILE"
             fi
         else
             FAILED=$((FAILED + 1))
-            log_error "Gemini CLI 호출 실패 ($FAILED/$TOTAL) - ${GEMINI_DURATION}s"
+            log_error "Gemini CLI 호출 실패 (3회 시도 후) ($FAILED/$TOTAL)"
             echo "[$(date)] Gemini CLI 실패: $URL" >> "$error_log"
+            # 에러 JSONL 저장 (recollect_version 포함)
+            jq -n \
+                --arg yl "$YOUTUBE_LINK" \
+                --arg vid "$VIDEO_ID" \
+                --arg err "Gemini CLI 호출 실패 (3회 시도 후)" \
+                --arg meta "$META_RECOLLECT_ID" \
+                --arg trans "$TRANSCRIPT_RECOLLECT_ID" \
+                '{youtube_link: $yl, video_id: $vid, error: $err, recollect_version: {meta: ($meta | tonumber), transcript: ($trans | tonumber)}}' > "$ERROR_FILE"
             if [ -f "$TEMP_STDERR" ] && [ -s "$TEMP_STDERR" ]; then
                 cat "$TEMP_STDERR" >> "$error_log"
             fi
