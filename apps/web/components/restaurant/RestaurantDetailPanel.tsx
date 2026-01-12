@@ -1085,69 +1085,72 @@ export function RestaurantDetailPanel({
                                     </button>
                                 </div>
 
-                                {/* Photo Carousel - Instagram Style */}
-                                {selectedReview.photos.length > 0 && (
-                                    <div className="relative">
-                                        <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden">
-                                            <Image
-                                                src={supabase.storage.from('review-photos').getPublicUrl(selectedReview.photos[currentPhotoIndex].url).data.publicUrl}
-                                                alt={`음식 사진 ${currentPhotoIndex + 1}`}
-                                                fill
-                                                className="object-cover"
-                                                sizes="(max-width: 400px) 100vw, 400px"
-                                                onError={(e) => {
-                                                    console.error('이미지 로딩 실패:', selectedReview.photos[currentPhotoIndex].url);
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                }}
-                                            />
+                                {/* Photo Carousel - Instagram Style with Swipe Support */}
+                                {selectedReview.photos.length > 0 && (() => {
+                                    const minSwipeDistance = 50;
+                                    let touchStartX: number | null = null;
+                                    let touchEndX: number | null = null;
 
-                                            {/* Navigation Arrows */}
-                                            {selectedReview.photos.length > 1 && (
-                                                <>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 hover:bg-black/60 text-white rounded-full"
-                                                        onClick={handlePrevPhoto}
-                                                    >
-                                                        <ChevronLeft className="h-5 w-5" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 hover:bg-black/60 text-white rounded-full"
-                                                        onClick={handleNextPhoto}
-                                                    >
-                                                        <ChevronRight className="h-5 w-5" />
-                                                    </Button>
-                                                </>
-                                            )}
+                                    const handleSwipe = () => {
+                                        if (touchStartX === null || touchEndX === null) return;
+                                        const distance = touchStartX - touchEndX;
+                                        if (distance > minSwipeDistance) {
+                                            handleNextPhoto();
+                                        } else if (distance < -minSwipeDistance) {
+                                            handlePrevPhoto();
+                                        }
+                                    };
 
-                                            {/* Photo Counter */}
-                                            {selectedReview.photos.length > 1 && (
-                                                <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                                                    {currentPhotoIndex + 1} / {selectedReview.photos.length}
-                                                </div>
-                                            )}
+                                    return (
+                                        <div className="relative">
+                                            <div
+                                                className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden select-none cursor-grab active:cursor-grabbing"
+                                                onTouchStart={(e) => { touchEndX = null; touchStartX = e.targetTouches[0].clientX; }}
+                                                onTouchMove={(e) => { touchEndX = e.targetTouches[0].clientX; }}
+                                                onTouchEnd={handleSwipe}
+                                                onMouseDown={(e) => { touchEndX = null; touchStartX = e.clientX; }}
+                                                onMouseMove={(e) => { if (touchStartX !== null) touchEndX = e.clientX; }}
+                                                onMouseUp={() => { handleSwipe(); touchStartX = null; touchEndX = null; }}
+                                                onMouseLeave={() => { touchStartX = null; touchEndX = null; }}
+                                            >
+                                                <Image
+                                                    src={supabase.storage.from('review-photos').getPublicUrl(selectedReview.photos[currentPhotoIndex].url).data.publicUrl}
+                                                    alt={`음식 사진 ${currentPhotoIndex + 1}`}
+                                                    fill
+                                                    className="object-cover pointer-events-none"
+                                                    draggable={false}
+                                                    sizes="(max-width: 400px) 100vw, 400px"
+                                                    onError={(e) => {
+                                                        console.error('이미지 로딩 실패:', selectedReview.photos[currentPhotoIndex].url);
+                                                        (e.target as HTMLImageElement).style.display = 'none';
+                                                    }}
+                                                />
 
-                                            {/* Dot Indicators - Inside Image */}
-                                            {selectedReview.photos.length > 1 && (
-                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                                                    {selectedReview.photos.map((_, index) => (
-                                                        <button
-                                                            key={index}
-                                                            className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
-                                                                ? 'bg-white'
-                                                                : 'bg-white/40'
-                                                                }`}
-                                                            onClick={() => setCurrentPhotoIndex(index)}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
+                                                {/* Photo Counter */}
+                                                {selectedReview.photos.length > 1 && (
+                                                    <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                                                        {currentPhotoIndex + 1} / {selectedReview.photos.length}
+                                                    </div>
+                                                )}
+
+                                                {/* Dot Indicators - Inside Image */}
+                                                {selectedReview.photos.length > 1 && (
+                                                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                                                        {selectedReview.photos.map((_, index) => (
+                                                            <div
+                                                                key={index}
+                                                                className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
+                                                                    ? 'bg-white'
+                                                                    : 'bg-white/40'
+                                                                    }`}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    );
+                                })()}
 
                                 {/* Full Content */}
                                 <div>
