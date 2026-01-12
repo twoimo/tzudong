@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useMemo, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Stamp, Trophy, User } from 'lucide-react';
+import { Home, MessageSquareText, Stamp, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +17,7 @@ interface NavItem {
 // [OPTIMIZATION] 상수를 컴포넌트 외부로 이동하여 재생성 방지
 const NAV_ITEMS: NavItem[] = [
     { icon: Home, label: '홈', path: '/' },
+    { icon: MessageSquareText, label: '리뷰', path: '/feed' },
     { icon: Stamp, label: '도장', path: '/stamp' },
     { icon: Trophy, label: '랭킹', path: '/leaderboard' },
     { icon: User, label: 'MY', path: '/mypage/profile' },
@@ -203,7 +204,7 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
                 // 배경 및 테두리
                 'bg-background/95 backdrop-blur-md border-t border-border',
                 // 그리드 레이아웃
-                'grid grid-cols-4',
+                'grid grid-cols-5',
                 // iOS safe area 지원
                 'pb-[env(safe-area-inset-bottom)]',
                 // 그림자
