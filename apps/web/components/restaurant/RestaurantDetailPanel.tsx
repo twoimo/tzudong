@@ -16,6 +16,7 @@ import Image from "next/image";
 import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
 import { BookmarkButton } from "@/components/ui/bookmark-button";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
+import { useReviewLikesRealtime } from "@/hooks/use-review-likes-realtime";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -71,6 +72,9 @@ export function RestaurantDetailPanel({
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
     const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
     const [isShareCopied, setIsShareCopied] = useState(false);
+
+    // [REALTIME] 좋아요 실시간 반영
+    useReviewLikesRealtime();
 
     // [카테고리 처리] categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -212,7 +216,11 @@ export function RestaurantDetailPanel({
                 return [];
             }
         },
-        enabled: !!restaurant?.id
+        enabled: !!restaurant?.id,
+        // [FIX] 리뷰 표시 문제 수정 - 전역 설정 오버라이드
+        refetchOnMount: 'always', // 패널 열릴 때마다 항상 새로운 데이터 fetch
+        staleTime: 0, // 리뷰 데이터는 항상 최신 상태로 유지
+        gcTime: 30 * 1000, // 30초 후 캐시 정리 (패널 닫힌 후)
     });
 
     // [리뷰 필터링] 쯔양 구독자 리뷰 우선 표시 (닉네임에 '쯔양' 또는 'tzuyang'이 포함된 사용자)

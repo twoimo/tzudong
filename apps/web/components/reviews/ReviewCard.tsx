@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { User, MapPin, Heart, Calendar, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
@@ -38,6 +38,30 @@ export const ReviewCard = React.memo(function ReviewCard({
     const [isExpanded, setIsExpanded] = useState(false);
     const [api, setApi] = useState<CarouselApi>();
 
+    // [PERFORMANCE] 이미지 URL 미리 생성 - 매 렌더링마다 재계산 방지
+    const photoUrls = useMemo(() => {
+        return review.photos.map(photo =>
+            supabase.storage.from('review-photos').getPublicUrl(photo.url).data.publicUrl
+        );
+    }, [review.photos]);
+
+    // [PERFORMANCE] 인접 이미지 프리로드 (±1 인덱스)
+    useEffect(() => {
+        if (photoUrls.length <= 1) return;
+
+        const preloadIndexes = [
+            (currentPhotoIndex + 1) % photoUrls.length,
+            (currentPhotoIndex - 1 + photoUrls.length) % photoUrls.length,
+        ];
+
+        preloadIndexes.forEach(idx => {
+            if (idx !== currentPhotoIndex) {
+                const img = new window.Image();
+                img.src = photoUrls[idx];
+            }
+        });
+    }, [currentPhotoIndex, photoUrls]);
+
     useEffect(() => {
         if (!api) {
             return;
@@ -58,26 +82,22 @@ export const ReviewCard = React.memo(function ReviewCard({
         onRestaurantClick?.();
     }, [onRestaurantClick]);
 
-    const formatDateTime = (dateString: string) => {
-        const date = new Date(dateString);
-        return {
-            date: date.toLocaleDateString('ko-KR', {
+    // [PERFORMANCE] 날짜 포맷 메모이제이션
+    const { visitedDate, submittedDate } = useMemo(() => {
+        const formatDate = (dateString: string) => {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ko-KR', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
-            }),
-            full: date.toLocaleString('ko-KR', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-            })
+            });
         };
-    };
+        return {
+            visitedDate: formatDate(review.visitedAt),
+            submittedDate: formatDate(review.submittedAt),
+        };
+    }, [review.visitedAt, review.submittedAt]);
 
-    const visitedDate = formatDateTime(review.visitedAt);
-    const submittedDate = formatDateTime(review.submittedAt);
     const MAX_LENGTH = 100;
     const shouldTruncate = review.content.length > MAX_LENGTH;
 
@@ -149,14 +169,15 @@ export const ReviewCard = React.memo(function ReviewCard({
                 <div className="relative w-full aspect-square bg-muted select-none overflow-hidden group">
                     <Carousel setApi={setApi} className="w-full h-full">
                         <CarouselContent>
-                            {review.photos.map((photo, index) => (
+                            {photoUrls.map((url, index) => (
                                 <CarouselItem key={index}>
                                     <div className="relative w-full aspect-square">
                                         <img
-                                            src={supabase.storage.from('review-photos').getPublicUrl(photo.url).data.publicUrl}
+                                            src={url}
                                             alt={`리뷰 사진 ${index + 1}`}
                                             className="w-full h-full object-cover pointer-events-none"
                                             draggable="false"
+                                            loading={index === 0 ? "eager" : "lazy"}
                                         />
                                     </div>
                                 </CarouselItem>
@@ -206,9 +227,9 @@ export const ReviewCard = React.memo(function ReviewCard({
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        방문: {visitedDate.date}
+                        방문: {visitedDate}
                     </span>
-                    <span>작성: {submittedDate.date}</span>
+                    <span>작성: {submittedDate}</span>
                 </div>
             </div>
         </div>
