@@ -57,6 +57,11 @@ const ENABLE_CLUSTERING = true; // 클러스터링 전체 활성화
 const CLUSTER_MAX_ZOOM = 16; // 이 줌 레벨까지 클러스터링 (16 초과 시 모든 개별 마커 표시)
 // [OPTIMIZATION] 클러스터 반경, 최소 포인트, 애니메이션은 useMapOptimization 훅에서 동적으로 결정
 
+// [OPTIMIZATION] 서울 경계 확인 헬퍼 (최적화: 컴포넌트 외부로 이동)
+const isPointInSeoul = (lat: number, lng: number) => {
+    return (lat > 37.41 && lat < 37.71 && lng > 126.76 && lng < 127.19);
+};
+
 interface NaverMapViewProps {
     filters: FilterState;
     selectedRegion: Region | null;
@@ -1384,6 +1389,40 @@ const NaverMapView = memo(({
             setIsClusterMode(shouldCluster);
         }
 
+        // 헬퍼: 클러스터 마커 렌더링 (중복 로직 제거)
+        const renderClusterHelper = (
+            markerId: string,
+            position: { lat: number, lng: number },
+            count: number,
+            categories: string[],
+            uniqueKey: string | number,
+            onClick: () => void
+        ) => {
+            let hash: number;
+            if (typeof uniqueKey === 'string') {
+                hash = Math.abs(uniqueKey.split('').reduce((a, b) => (a * 31 + b.charCodeAt(0)) | 0, 0));
+            } else {
+                hash = uniqueKey;
+            }
+
+            clusterAnimationManager.register(hash);
+            const currentIndex = clusterAnimationManager.getCurrentIndex(hash, categories.length);
+
+            const fakeFeature = {
+                properties: { point_count: count },
+                geometry: { coordinates: [position.lng, position.lat] }
+            } as any;
+            const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
+
+            markerPool.acquire(
+                markerId,
+                new naver.maps.LatLng(position.lat, position.lng),
+                { content: html, anchor: new naver.maps.Point(24, 24) },
+                map,
+                onClick
+            );
+        };
+
         if (shouldUseRegionalCluster) {
             // ===== 17개 행정구역 중앙 클러스터 모드 =====
             if (regionalClusters.length === 0) {
@@ -1395,31 +1434,12 @@ const NaverMapView = memo(({
                 const markerId = `regional-${cluster.region}`;
                 activeIds.add(markerId);
 
-                // 카테고리 목록
-                const categories = cluster.categories;
-                // 문자열 해시 계산 (Java hashCode 알고리즘)
-                const regionHash = Math.abs(cluster.region.split('').reduce((a, b) => (a * 31 + b.charCodeAt(0)) | 0, 0));
-
-                // 애니메이션 매니저에 등록
-                clusterAnimationManager.register(regionHash);
-
-                const currentIndex = clusterAnimationManager.getCurrentIndex(
-                    regionHash,
-                    categories.length
-                );
-
-                // 클러스터 마커 HTML - Supercluster 형태와 호환되도록 가짜 feature 생성
-                const fakeFeature = {
-                    properties: { point_count: cluster.count },
-                    geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
-                } as any;
-                const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
-
-                markerPool.acquire(
+                renderClusterHelper(
                     markerId,
-                    new naver.maps.LatLng(cluster.center.lat, cluster.center.lng),
-                    { content: html, anchor: new naver.maps.Point(24, 24) },
-                    map,
+                    cluster.center,
+                    cluster.count,
+                    cluster.categories,
+                    cluster.region,
                     () => {
                         // 클릭 시 해당 지역 줌인 (줌 9로 이동)
                         map.setZoom(9);
@@ -1427,9 +1447,6 @@ const NaverMapView = memo(({
                     }
                 );
             });
-
-            // 사용하지 않는 마커 반환
-            markerPool.releaseExcept(activeIds);
 
             // 사용하지 않는 마커 반환
             markerPool.releaseExcept(activeIds);
@@ -1444,28 +1461,12 @@ const NaverMapView = memo(({
                     const markerId = `seoul-dist-${cluster.region}`;
                     activeIds.add(markerId);
 
-                    // 카테고리 목록
-                    const categories = cluster.categories;
-                    const regionHash = Math.abs(cluster.region.split('').reduce((a, b) => (a * 31 + b.charCodeAt(0)) | 0, 0));
-
-                    clusterAnimationManager.register(regionHash);
-
-                    const currentIndex = clusterAnimationManager.getCurrentIndex(
-                        regionHash,
-                        categories.length
-                    );
-
-                    const fakeFeature = {
-                        properties: { point_count: cluster.count },
-                        geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
-                    } as any;
-                    const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
-
-                    markerPool.acquire(
+                    renderClusterHelper(
                         markerId,
-                        new naver.maps.LatLng(cluster.center.lat, cluster.center.lng),
-                        { content: html, anchor: new naver.maps.Point(24, 24) },
-                        map,
+                        cluster.center,
+                        cluster.count,
+                        cluster.categories,
+                        cluster.region,
                         () => {
                             map.morph(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng), 13);
                         }
@@ -1473,10 +1474,7 @@ const NaverMapView = memo(({
                 });
             }
 
-            // 포인트가 서울 경계 내에 있는지 확인하는 헬퍼 함수 (중복 렌더링 방지)
-            const isPointInSeoul = (lat: number, lng: number) => {
-                return (lat > 37.41 && lat < 37.71 && lng > 126.76 && lng < 127.19);
-            };
+
 
             // 2. 표준 로직 (Supercluster 또는 개별 마커)
             if (shouldCluster) {
@@ -1502,16 +1500,13 @@ const NaverMapView = memo(({
                                 categories = getClusterCategories(clusterIndexRef.current!, clusterId);
                             } catch (e) { categories = []; }
 
-                            const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
-                            const html = createClusterMarkerHTML(feature, categories, currentIndex);
-
-                            markerPool.acquire(
+                            renderClusterHelper(
                                 markerId,
-                                new naver.maps.LatLng(lat, lng),
-                                { content: html, anchor: new naver.maps.Point(24, 24) },
-                                map,
+                                { lat, lng },
+                                feature.properties.point_count || 0,
+                                categories,
+                                clusterId,
                                 () => {
-                                    // ... existing zoom logic ...
                                     const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
                                     const currentZoom = map.getZoom();
                                     let targetZoom = expansionZoom;
