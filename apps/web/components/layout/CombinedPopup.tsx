@@ -5,7 +5,7 @@ import { Scroll } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useDeviceType } from '@/hooks/useDeviceType';
-import { useMobilePopupAdBanners } from '@/hooks/use-ad-banners';
+import { usePopupAdBanners } from '@/hooks/use-ad-banners';
 import { AdBanner } from '@/types/ad-banner';
 
 // 로컬 스토리지 키
@@ -167,7 +167,7 @@ const CombinedPopupComponent = () => {
     const hasShownRef = useRef(false);
 
     // 배너 데이터
-    const { data: banners = [] } = useMobilePopupAdBanners();
+    const { data: banners = [] } = usePopupAdBanners();
 
     // 오늘 이미 닫았는지 확인
     const shouldShowPopup = useCallback(() => {
@@ -179,7 +179,7 @@ const CombinedPopupComponent = () => {
 
     // 팝업 표시
     useEffect(() => {
-        if (!isMobileOrTablet || banners.length === 0 || hasShownRef.current) return;
+        if (banners.length === 0 || hasShownRef.current) return;
 
         if (shouldShowPopup()) {
             const timer = setTimeout(() => {
@@ -188,7 +188,7 @@ const CombinedPopupComponent = () => {
             }, 500);
             return () => clearTimeout(timer);
         }
-    }, [isMobileOrTablet, banners.length, shouldShowPopup]);
+    }, [banners.length, shouldShowPopup]);
 
     // 자동 슬라이드 (영상 배너가 아닐 때만)
     useEffect(() => {
@@ -235,7 +235,7 @@ const CombinedPopupComponent = () => {
     }, []);
 
     // 표시 조건 체크
-    if (!isMobileOrTablet || !isVisible || banners.length === 0) {
+    if (!isVisible || banners.length === 0) {
         return null;
     }
 
