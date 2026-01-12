@@ -613,75 +613,65 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-border font-serif">
-              <DropdownMenuItem onClick={handleMyPageClick} className="text-foreground hover:bg-accent">
+            <DropdownMenuContent align="end" className="bg-card border-border font-serif w-36">
+              <DropdownMenuItem onClick={handleMyPageClick} className="text-foreground hover:bg-accent py-1.5">
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-foreground hover:bg-accent">
+              <DropdownMenuItem onClick={handleAnnouncementListClick} className="text-foreground hover:bg-accent py-1.5">
                 <Megaphone className="mr-2 h-4 w-4" />
                 공지사항
               </DropdownMenuItem>
               {isAdmin && (
                 <>
-                  <DropdownMenuSeparator className="bg-border" />
-                  <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-foreground hover:bg-accent">
+                  <DropdownMenuSeparator className="bg-border my-1" />
+                  <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-foreground hover:bg-accent py-1.5">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
                     {pendingSubmissionCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
-                      >
+                      <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
                         {pendingSubmissionCount > 99 ? '99+' : pendingSubmissionCount}
                       </Badge>
                     )}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-foreground hover:bg-accent">
+                  <DropdownMenuItem onClick={handleAdminReviewsClick} className="text-foreground hover:bg-accent py-1.5">
                     <MessageSquare className="mr-2 h-4 w-4" />
                     리뷰관리
                     {pendingReviewCount > 0 && (
-                      <Badge
-                        variant="destructive"
-                        className="ml-2 h-5 min-w-[20px] flex items-center justify-center p-0 px-1.5 text-xs bg-red-800"
-                      >
+                      <Badge variant="destructive" className="ml-auto h-4 min-w-[16px] px-1 text-[10px] bg-red-800">
                         {pendingReviewCount > 99 ? '99+' : pendingReviewCount}
                       </Badge>
                     )}
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent">
+                  <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
                     <Image className="mr-2 h-4 w-4" />
                     배너관리
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem onClick={onLogout} className="text-foreground hover:bg-accent">
+              <DropdownMenuSeparator className="bg-border my-1" />
+              <DropdownMenuItem onClick={onLogout} className="text-foreground hover:bg-accent py-1.5">
                 <LogOut className="mr-2 h-4 w-4" />
                 로그아웃
               </DropdownMenuItem>
-              <DropdownMenuSeparator className="bg-border" />
+              <DropdownMenuSeparator className="bg-border my-1" />
               <div className="px-2 py-1">
                 <button
                   onClick={() => setIsBusinessInfoExpanded(!isBusinessInfoExpanded)}
-                  className="w-full flex items-center justify-between hover:bg-accent rounded px-1.5 py-1 transition-colors"
+                  className="w-full flex items-center justify-between hover:bg-accent rounded px-1 py-0.5 transition-colors"
                 >
-                  <div className="text-[10px] text-muted-foreground flex-1">
-                    <p>쯔동여지도 v1.0.0</p>
-                    <p className="text-muted-foreground/70">© 2026 타이니번 데이터랩</p>
-                  </div>
+                  <span className="text-[10px] text-muted-foreground">v1.0.0 © 타이니번</span>
                   {isBusinessInfoExpanded ? (
-                    <ChevronUp className="h-3 w-3 text-muted-foreground flex-shrink-0 ml-1" />
+                    <ChevronUp className="h-3 w-3 text-muted-foreground ml-1" />
                   ) : (
-                    <ChevronDown className="h-3 w-3 text-muted-foreground flex-shrink-0 ml-1" />
+                    <ChevronDown className="h-3 w-3 text-muted-foreground ml-1" />
                   )}
                 </button>
                 {isBusinessInfoExpanded && (
-                  <div className="mt-1.5 pt-1.5 border-t border-border text-[10px] text-muted-foreground space-y-0.5 px-1.5">
-                    <p className="font-semibold text-foreground">타이니번 데이터랩</p>
+                  <div className="mt-1 pt-1 border-t border-border text-[9px] text-muted-foreground space-y-0.5 px-1">
+                    <p className="font-medium text-foreground">타이니번 데이터랩</p>
                     <p>대표: 최연우</p>
-                    <p>사업자등록번호: 601-09-04613</p>
+                    <p>사업자: 601-09-04613</p>
                     <p>이메일: twoimo@dgu.ac.kr</p>
                   </div>
                 )}
