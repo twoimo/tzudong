@@ -698,6 +698,7 @@ function MobileControlOverlayComponent({
                                                 filters={filters}
                                                 selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
                                                 isKoreanOnly={mapMode === 'domestic'}
+                                                maxItems={3} // 모바일에서는 3개씩만 표시
                                             />
                                         </div>
                                     </Suspense>
