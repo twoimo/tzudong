@@ -131,7 +131,7 @@ export function useUserReviews(userId: string) {
             // 승인된 리뷰만 조회
             const { data: reviews, error: reviewsError } = await (supabase
                 .from('reviews') as any)
-                .select('id,restaurant_id,title,content,is_verified,created_at,visited_at')
+                .select('id,restaurant_id,content,is_verified,created_at,visited_at, restaurants(name)')
                 .eq('user_id', userId)
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false });
@@ -142,20 +142,6 @@ export function useUserReviews(userId: string) {
             }
 
             if (!reviews || reviews.length === 0) return [];
-
-            // 맛집 정보 별도 조회
-            const restaurantIds = [...new Set(reviews.map((r: any) => r.restaurant_id))];
-            const { data: restaurants, error: restaurantsError } = await (supabase
-                .from('restaurants') as any)
-                .select('id, name')
-                .in('id', restaurantIds);
-
-            const restaurantMap = new Map<string, string>();
-            if (!restaurantsError && restaurants) {
-                restaurants.forEach((r: any) => {
-                    restaurantMap.set(r.id, r.name);
-                });
-            }
 
             // 각 리뷰별 좋아요 수 조회
             const reviewIds = reviews.map((r: any) => r.id);
@@ -174,7 +160,7 @@ export function useUserReviews(userId: string) {
             return reviews.map((r: any) => ({
                 id: r.id,
                 restaurantId: r.restaurant_id,
-                restaurantName: restaurantMap.get(r.restaurant_id) || '알 수 없음',
+                restaurantName: r.restaurants?.name || '알 수 없음',
                 rating: 5, // 리뷰 테이블에 rating 컨럼 없음 - 기본값 5
                 content: r.content,
                 isVerified: r.is_verified,
@@ -277,7 +263,7 @@ export function useUserStamps(userId: string) {
             // 승인된 리뷰만 조회
             const { data: reviews, error: reviewsError } = await (supabase
                 .from('reviews') as any)
-                .select('restaurant_id,visited_at,created_at')
+                .select('restaurant_id,visited_at,created_at, restaurants(name)')
                 .eq('user_id', userId)
                 .eq('is_verified', true)
                 .order('created_at', { ascending: false });
@@ -289,23 +275,9 @@ export function useUserStamps(userId: string) {
 
             if (!reviews || reviews.length === 0) return [];
 
-            // 맛집 정보 별도 조회
-            const restaurantIds = [...new Set(reviews.map((r: any) => r.restaurant_id))];
-            const { data: restaurants, error: restaurantsError } = await (supabase
-                .from('restaurants') as any)
-                .select('id, name')
-                .in('id', restaurantIds);
-
-            const restaurantMap = new Map<string, string>();
-            if (!restaurantsError && restaurants) {
-                restaurants.forEach((r: any) => {
-                    restaurantMap.set(r.id, r.name);
-                });
-            }
-
             return reviews.map((r: any) => ({
                 restaurantId: r.restaurant_id,
-                restaurantName: restaurantMap.get(r.restaurant_id) || '알 수 없음',
+                restaurantName: r.restaurants?.name || '알 수 없음',
                 visitedDate: r.visited_at,
                 createdAt: r.created_at,
             }));

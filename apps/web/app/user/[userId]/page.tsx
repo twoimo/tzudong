@@ -301,18 +301,21 @@ export default function UserProfilePage() {
                 {/* 통계 카드 */}
                 <div className="grid grid-cols-3 gap-3 mt-4">
                     <StatCard
+                        key="stat-stamps"
                         icon={<Stamp className="h-4 w-4" />}
                         label="도장"
                         value={profile.verifiedReviewCount}
                         valueClassName="text-foreground"
                     />
                     <StatCard
+                        key="stat-likes"
                         icon={<Heart className="h-4 w-4 text-red-500" />}
                         label="좋아요"
                         value={profile.totalLikes}
                         valueClassName="text-red-600"
                     />
                     <StatCard
+                        key="stat-rank"
                         label="🏆 랭킹"
                         value={userRank > 0 ? `#${userRank}` : '-'}
                         valueClassName="text-primary"
@@ -361,7 +364,7 @@ export default function UserProfilePage() {
                                 <div className="divide-y divide-border">
                                     {stamps.map((stamp, index) => (
                                         <StampItem
-                                            key={`${stamp.restaurantId}-${index}`}
+                                            key={`stamp-${stamp.restaurantId || 'unknown'}-${index}`}
                                             stamp={stamp}
                                             formatDate={formatDate}
                                         />
@@ -383,9 +386,9 @@ export default function UserProfilePage() {
                                 />
                             ) : (
                                 <div className="divide-y divide-border">
-                                    {reviews.map((review) => (
+                                    {reviews.map((review, index) => (
                                         <ReviewItem
-                                            key={review.id}
+                                            key={`review-${review.id || 'unknown'}-${index}`}
                                             review={review}
                                             formatDate={formatDate}
                                         />
@@ -407,8 +410,8 @@ export default function UserProfilePage() {
                                 />
                             ) : (
                                 <div className="divide-y divide-border">
-                                    {likers.map((liker) => (
-                                        <LikerItem key={liker.userId} liker={liker} />
+                                    {likers.map((liker, index) => (
+                                        <LikerItem key={`liker-${liker.userId || 'unknown'}-${index}`} liker={liker} />
                                     ))}
                                 </div>
                             )}
