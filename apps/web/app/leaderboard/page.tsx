@@ -64,7 +64,7 @@ export default function LeaderboardPage() {
         <div className="flex flex-col h-full bg-background">
             {/* Header */}
             <div className="border-b border-border bg-background p-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between">
                     <div>
                         <div className="flex items-center gap-3">
                             <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
