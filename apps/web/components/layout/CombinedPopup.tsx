@@ -92,10 +92,7 @@ const BannerSlide = memo(({
 
     return (
         <div
-            className={cn(
-                "absolute inset-0 transition-opacity duration-500",
-                isActive ? "opacity-100" : "opacity-0 pointer-events-none"
-            )}
+            className="w-full h-full flex-shrink-0"
             onClick={onClick}
         >
             {/* 영상 배너 (우선순위 1) */}
@@ -163,8 +160,11 @@ const CombinedPopupComponent = () => {
     const [isVisible, setIsVisible] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+    const [touchStart, setTouchStart] = useState<number | null>(null);
+    const [touchEnd, setTouchEnd] = useState<number | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const hasShownRef = useRef(false);
+    const slideContainerRef = useRef<HTMLDivElement>(null);
 
     // 배너 데이터
     const { data: banners = [] } = usePopupAdBanners();
@@ -224,8 +224,47 @@ const CombinedPopupComponent = () => {
     const goToSlide = useCallback((index: number) => {
         setCurrentSlide(index);
         setIsAutoPlaying(false);
-        setTimeout(() => setIsAutoPlaying(true), 5000);
+        // 사용자 인터렉션 후 잠시 뒤 자동 재생 재개
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        const timer = setTimeout(() => setIsAutoPlaying(true), 8000);
+        return () => clearTimeout(timer);
     }, []);
+
+    // 다음/이전 슬라이드
+    const nextSlide = useCallback(() => {
+        setCurrentSlide((prev) => (prev + 1) % banners.length);
+    }, [banners.length]);
+
+    const prevSlide = useCallback(() => {
+        setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
+    }, [banners.length]);
+
+    // 터치 스와이프 핸들러
+    const minSwipeDistance = 50;
+
+    const onTouchStart = (e: React.TouchEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.targetTouches[0].clientX);
+    };
+
+    const onTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd(e.targetTouches[0].clientX);
+    };
+
+    const onTouchEnd = () => {
+        if (!touchStart || !touchEnd) return;
+        const distance = touchStart - touchEnd;
+        const isLeftSwipe = distance > minSwipeDistance;
+        const isRightSwipe = distance < -minSwipeDistance;
+
+        if (isLeftSwipe) {
+            nextSlide();
+        } else if (isRightSwipe) {
+            prevSlide();
+        }
+        setIsAutoPlaying(false);
+        setTimeout(() => setIsAutoPlaying(true), 8000);
+    };
 
     // 배너 클릭
     const handleBannerClick = useCallback((banner: AdBanner) => {
@@ -259,21 +298,32 @@ const CombinedPopupComponent = () => {
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
             >
-                {/* 배너 슬라이드 컨텐츠 - 모든 배너를 렌더링하여 크로스페이드 */}
-                <div className="relative aspect-[4/5]">
-                    {banners.map((banner, index) => (
-                        <BannerSlide
-                            key={banner.id}
-                            banner={banner}
-                            isActive={index === currentSlide}
-                            onClick={() => handleBannerClick(banner)}
-                            onVideoEnded={() => {
-                                if (banners.length > 1 && index === currentSlide) {
-                                    setCurrentSlide((prev) => (prev + 1) % banners.length);
-                                }
-                            }}
-                        />
-                    ))}
+                {/* 배너 슬라이드 컨텐츠 - 가로 슬라이딩 방식 */}
+                <div
+                    className="relative aspect-[4/5] overflow-hidden touch-pan-y"
+                    onTouchStart={onTouchStart}
+                    onTouchMove={onTouchMove}
+                    onTouchEnd={onTouchEnd}
+                >
+                    <div
+                        className="flex w-full h-full transition-transform duration-500 ease-out"
+                        style={{ transform: `translateX(-${currentSlide * 100}%)` }}
+                        ref={slideContainerRef}
+                    >
+                        {banners.map((banner, index) => (
+                            <BannerSlide
+                                key={banner.id}
+                                banner={banner}
+                                isActive={index === currentSlide}
+                                onClick={() => handleBannerClick(banner)}
+                                onVideoEnded={() => {
+                                    if (banners.length > 1 && index === currentSlide) {
+                                        nextSlide();
+                                    }
+                                }}
+                            />
+                        ))}
+                    </div>
                 </div>
 
                 {/* 슬라이드 인디케이터 */}
