@@ -7,17 +7,20 @@ Git Commit Convention:
 - Format: [Tag] message
 - Tags: Add, Fix, Change, Improve, Migrate
 - Write commit messages in Korean
+
 Git Branch Convention:
 - Always create a new branch before developing features
 - Branch naming: feat/feature-name, fix/bug-name, hotfix/urgent-fix-name
 - Examples: feat/password-reset, fix/login-validation, hotfix/auth-error
+
 Pull Request Convention (gh pr create):
 - Title: [Tag] Concise title (in Korean)
 - Body structure:
-  ## Overview
-  ## Changes
-  ## Tests
-  ## Related Issues
+  ## 개요
+  ## 변경 내용
+  ## 테스트
+  ## 관련 이슈
+
 Commit Workflow (auto-execute on "커밋해줘" request):
 1. **Check Current Branch**: `git branch --show-current`
 2. IF current branch is `develop`:
