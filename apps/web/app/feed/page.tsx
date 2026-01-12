@@ -235,7 +235,7 @@ export default function FeedPage() {
                     <div>
                         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
                             <MessageSquareText className="h-6 w-6 text-primary" />
-                            리뷰 피드
+                            쯔동여지도 리뷰
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
                             총 {allReviews.length}개의 승인된 리뷰
@@ -245,13 +245,13 @@ export default function FeedPage() {
             </div>
 
             {/* Feed */}
-            <div className="pb-24">
+            <div className="pb-8">
                 {allReviews.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                         <p>아직 승인된 리뷰가 없습니다.</p>
                     </div>
                 ) : (
-                    <div className="space-y-4 p-4">
+                    <div className="space-y-4 p-4 pb-0">
                         {allReviews.map((review) => {
                             const optimistic = optimisticLikes[review.id];
                             const likeCount = optimistic?.count ?? review.likeCount;
@@ -270,8 +270,11 @@ export default function FeedPage() {
                             );
                         })}
 
-                        {/* 무한 스크롤 트리거 */}
-                        <div ref={loadMoreRef} className="h-10 flex items-center justify-center">
+                        {/* 무한 스크롤 트리거 - 로딩 중이 아닐 때는 높이 최소화 */}
+                        <div ref={loadMoreRef} className={cn(
+                            "flex items-center justify-center transition-all duration-300",
+                            isFetchingNextPage ? "h-20" : "h-4"
+                        )}>
                             {isFetchingNextPage && (
                                 <div className="flex items-center gap-2">
                                     <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
