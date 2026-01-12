@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import AdBanner from "./AdBanner";
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState, useEffect, useTransition } from "react";
 import { useHydration } from "@/hooks/useHydration";
 
 interface SidebarProps {
@@ -22,6 +22,23 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
   const { user, isAdmin } = useAuth();
   const isHydrated = useHydration();
   const [isSubmissionsExpanded, setIsSubmissionsExpanded] = useState(true);
+  const [, startTransition] = useTransition();
+
+  // [OPTIMIZATION] 마운트 시 모든 메뉴 경로 prefetch
+  useEffect(() => {
+    const paths = [
+      '/',
+      '/stamp',
+      '/leaderboard',
+      '/mypage/profile',
+      '/mypage/submissions/new',
+      '/mypage/submissions/edit',
+      '/mypage/submissions/recommend',
+      '/mypage/reviews',
+      '/mypage/bookmarks',
+    ];
+    paths.forEach(path => router.prefetch(path));
+  }, [router]);
 
   // [최적화] 레스토랑 데이터 프리페치 함수 (useCallback으로 메모이제이션)
   const prefetchRestaurants = useCallback(async () => {
@@ -167,41 +184,41 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
     });
   }, [queryClient]);
 
-  // [메뉴 설정] 메뉴 아이템 메모이제이션
+  // [메뉴 설정] 메뉴 아이템 메모이제이션 - startTransition 적용
   const menuItems = useMemo(() => {
     // 마이페이지 모드가 아닐 때는 일반 메뉴 표시
     const baseMenuItems = [
-      { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => router.push("/") },
-      { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => router.push("/stamp") },
-      { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => router.push("/leaderboard") },
+      { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => startTransition(() => router.push("/")) },
+      { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => startTransition(() => router.push("/stamp")) },
+      { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => startTransition(() => router.push("/leaderboard")) },
     ];
 
     // [권한 관리] 관리자 메뉴 (hydration 완료 후에만 표시)
     const adminMenuItems = (isHydrated && user && isAdmin) ? [
-      { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => router.push("/costs") },
-      { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => router.push("/admin/evaluations") },
-      { icon: BarChart2, label: "쯔동여지도 인사이트", path: "/admin/insight", onClick: () => router.push("/admin/insight") },
+      { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => startTransition(() => router.push("/costs")) },
+      { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => startTransition(() => router.push("/admin/evaluations")) },
+      { icon: BarChart2, label: "쯔동여지도 인사이트", path: "/admin/insight", onClick: () => startTransition(() => router.push("/admin/insight")) },
     ] : [];
 
     return [...baseMenuItems, ...adminMenuItems];
-  }, [router, isHydrated, user, isAdmin]);
+  }, [router, isHydrated, user, isAdmin, startTransition]);
 
-  // 마이페이지 메뉴 아이템
+  // 마이페이지 메뉴 아이템 - startTransition 적용
   const myPageMenuItems = useMemo(() => [
-    { icon: User, label: "마이페이지", path: "/mypage/profile", onClick: () => router.push("/mypage/profile") },
+    { icon: User, label: "마이페이지", path: "/mypage/profile", onClick: () => startTransition(() => router.push("/mypage/profile")) },
     {
       icon: FileText,
       label: "나의 제보 내역",
       isParent: true,
       children: [
-        { icon: PlusCircle, label: "신규 맛집 제보", path: "/mypage/submissions/new", onClick: () => router.push("/mypage/submissions/new") },
-        { icon: Edit3, label: "맛집 수정 요청", path: "/mypage/submissions/edit", onClick: () => router.push("/mypage/submissions/edit") },
-        { icon: Heart, label: "쯔양 맛집 제보", path: "/mypage/submissions/recommend", onClick: () => router.push("/mypage/submissions/recommend") },
+        { icon: PlusCircle, label: "신규 맛집 제보", path: "/mypage/submissions/new", onClick: () => startTransition(() => router.push("/mypage/submissions/new")) },
+        { icon: Edit3, label: "맛집 수정 요청", path: "/mypage/submissions/edit", onClick: () => startTransition(() => router.push("/mypage/submissions/edit")) },
+        { icon: Heart, label: "쩘양 맛집 제보", path: "/mypage/submissions/recommend", onClick: () => startTransition(() => router.push("/mypage/submissions/recommend")) },
       ]
     },
-    { icon: MessageSquare, label: "나의 리뷰 내역", path: "/mypage/reviews", onClick: () => router.push("/mypage/reviews") },
-    { icon: Bookmark, label: "나의 북마크 내역", path: "/mypage/bookmarks", onClick: () => router.push("/mypage/bookmarks") },
-  ], [router]);
+    { icon: MessageSquare, label: "나의 리뷰 내역", path: "/mypage/reviews", onClick: () => startTransition(() => router.push("/mypage/reviews")) },
+    { icon: Bookmark, label: "나의 북마크 내역", path: "/mypage/bookmarks", onClick: () => startTransition(() => router.push("/mypage/bookmarks")) },
+  ], [router, startTransition]);
 
   // 마이페이지 메뉴 렌더링
   const renderMyPageMenu = () => (
