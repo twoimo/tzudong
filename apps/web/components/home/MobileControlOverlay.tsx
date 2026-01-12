@@ -166,7 +166,7 @@ function MobileControlOverlayComponent({
         // [OPTIMIZATION] requestAnimationFrame으로 DOM 직접 조작
         requestAnimationFrame(() => {
             if (sheetRef.current) {
-                sheetRef.current.style.transform = `translateY(calc(100% - ${newHeight}vh))`;
+                sheetRef.current.style.transform = `translateY(calc(100% - ${newHeight}dvh))`;
             }
         });
     }, []);
@@ -204,7 +204,7 @@ function MobileControlOverlayComponent({
             setSheetHeight(minHeight);
             currentHeightRef.current = minHeight;
             if (sheetRef.current) {
-                sheetRef.current.style.transform = `translateY(calc(100% - ${minHeight}vh))`;
+                sheetRef.current.style.transform = `translateY(calc(100% - ${minHeight}dvh))`;
             }
         } else {
             // [Fix] 드래그 종료 시 현재 높이로 state 업데이트하여 위치 유지 (리렌더링 시 스냅백 방지)
@@ -352,7 +352,7 @@ function MobileControlOverlayComponent({
 
         // DOM에 즉시 반영 (애니메이션과 함께) - 검색 시트는 transform 사용 안 함
         if (activeSheet !== 'search') {
-            sheetRef.current.style.transform = `translateY(calc(100% - ${initialHeight}vh))`;
+            sheetRef.current.style.transform = `translateY(calc(100% - ${initialHeight}dvh))`;
         } else {
             sheetRef.current.style.transform = 'none';
         }
@@ -510,10 +510,12 @@ function MobileControlOverlayComponent({
                         style={{
                             // [OPTIMIZATION] 검색 시트는 auto height, 나머지는 고정 높이 + transform
                             // [Fix] 100vh 대신 100%를 사용하여 모바일 브라우저 호환성 향상 (부모가 fixed inset-0임)
+                            // [Fix] 삼성 인터넷/사파리 대응: max-height와 dvh 단위를 사용하여 헤더(64px) 침범 방지
                             height: activeSheet === 'search' ? 'auto' : '100%',
+                            maxHeight: activeSheet === 'search' ? 'none' : 'calc(100dvh - 64px)',
                             transform: activeSheet === 'search'
                                 ? 'none'
-                                : `translateY(calc(100% - ${sheetHeight}vh))`,
+                                : `translateY(calc(100% - ${sheetHeight}dvh))`,
                             willChange: isDragging ? 'transform' : 'auto', // 드래그 중 GPU 레이어 유지
                             // 검색 시트는 네비게이션 바(약 65px) + Safe Area 위로 띄움
                             bottom: activeSheet === 'search' ? 'calc(35px + env(safe-area-inset-bottom))' : 0,
@@ -554,10 +556,10 @@ function MobileControlOverlayComponent({
                                 activeSheet === 'search' ? 'overflow-visible' : 'overflow-y-auto'
                             )}
                             style={{
-                                // 검색 시트는 핸들바 없으므로 헤더만 제외 (68px), 다른 시트는 핸들바+헤더 (120px)
+                                // [Fix] vh 대신 dvh 사용 및 헤더 오프셋 정합성 유지
                                 maxHeight: activeSheet === 'search'
                                     ? 'none' // 검색 시트는 높이 제한 없음 (컨텐츠만큼만)
-                                    : `calc(${sheetHeight}vh - 120px)`,
+                                    : `calc(${sheetHeight}dvh - 120px)`,
                             }}
                         >
                             <div className="p-4 pb-8">{/* 하단 패딩으로 스크롤 끝까지 가능 */}
