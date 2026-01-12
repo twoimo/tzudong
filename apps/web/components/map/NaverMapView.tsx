@@ -726,13 +726,20 @@ const NaverMapView = memo(({
         // 2. 목표 좌표 및 오프셋 결정
         let targetLat: number;
         let targetLng: number;
-        let targetZoom = 16;
+        // [UX 개선] 기본 줌 레벨 설정 로직 변경
+        let targetZoom: number;
         let isRestaurantSelected = false;
+
+        const currentMapZoom = map.getZoom();
 
         if (selectedRestaurant?.lat && selectedRestaurant?.lng) {
             targetLat = selectedRestaurant.lat;
             targetLng = selectedRestaurant.lng;
             isRestaurantSelected = true;
+
+            // [UX 개선] 이미 상세 뷰(13레벨 이상)라면 줌 유지, 너무 광역이라면 15로 진입
+            // 개별 마커가 보이는 시점(고사양 기기 기준 13)을 고려
+            targetZoom = currentMapZoom >= 13 ? currentMapZoom : 15;
         } else {
             const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
             const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
@@ -1412,11 +1419,17 @@ const NaverMapView = memo(({
                         () => {
                             const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
                             const currentZoom = map.getZoom();
-                            // 7레벨 등 낮은 줌에서 클릭 시 최소 9레벨까지는 확대하여 마커를 펼침
-                            const targetZoom = Math.max(expansionZoom, 9);
-                            // 애니메이션 제거: 즉시 이동
-                            map.setZoom(targetZoom);
-                            map.setCenter(new naver.maps.LatLng(lat, lng));
+
+                            // [UX 개선] 클러스터 해제를 위해 최소 1단계 이상 확대 보장
+                            let targetZoom = expansionZoom;
+                            if (targetZoom <= currentZoom) {
+                                targetZoom = currentZoom + 2;
+                            }
+                            // 최소 9레벨 보정
+                            targetZoom = Math.max(targetZoom, 9);
+
+                            // [UX] 줌과 중심 이동을 동시에 부드럽게 처리
+                            map.morph(new naver.maps.LatLng(lat, lng), targetZoom);
                         }
                     );
                 } else {
@@ -1438,17 +1451,9 @@ const NaverMapView = memo(({
                         () => {
                             const restaurant = displayRestaurants.find(r => r.id === restaurantId);
                             if (restaurant) {
-                                const currentZoom = map.getZoom();
-
-                                // 줌 차이가 적당할 때만 줌인 애니메이션 실행 (차이가 너무 크면 바로 상세 패널 오픈)
-                                const targetZoom = 15;
-                                const zoomDiff = targetZoom - currentZoom;
-
-                                // 애니메이션 제거: 즉시 이동 (마커 가운데 정렬 유지)
-                                if (currentZoom < targetZoom && zoomDiff < 5) {
-                                    map.setZoom(targetZoom);
-                                    map.setCenter(new naver.maps.LatLng(lat, lng));
-                                }
+                                // [UX] 줌 레벨 변경 없이 중심으로 부드럽게 이동
+                                // 사용자가 현재 줌 레벨에서 보고 싶어하므로 강제 줌인 제거
+                                map.panTo(new naver.maps.LatLng(lat, lng), { duration: 300 });
 
                                 if (onMarkerClick) {
                                     onMarkerClick(restaurant);
@@ -1515,16 +1520,8 @@ const NaverMapView = memo(({
                     { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
                     map,
                     () => {
-                        const currentZoom = map.getZoom();
-
-                        const targetZoom = 15;
-                        const zoomDiff = targetZoom - currentZoom;
-
-                        // 애니메이션 제거: 즉시 이동 (마커 가운데 정렬 유지)
-                        if (currentZoom < targetZoom && zoomDiff < 5) {
-                            map.setZoom(targetZoom);
-                            map.setCenter(new naver.maps.LatLng(restaurant.lat, restaurant.lng));
-                        }
+                        // [UX] 줌 레벨 변경 없이 중심으로 부드럽게 이동
+                        map.panTo(new naver.maps.LatLng(restaurant.lat, restaurant.lng), { duration: 300 });
 
                         if (onMarkerClick) {
                             onMarkerClick(restaurant);
