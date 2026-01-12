@@ -1360,48 +1360,24 @@ const NaverMapView = memo(({
         // [Fix] 사용자가 기능 동작을 원하므로 다시 활성화
         let shouldUseRegionalCluster = shouldCluster && currentZoom <= 8;
 
-        // [Logic] 서울 지역이고 줌 10-12 사이면 25개 자치구 클러스터링 사용
-        const isSeoulRegion = selectedRegion === '서울특별시' || (!selectedRegion && mapBounds && mapBounds.hasLatLng(new naver.maps.LatLng(37.5665, 126.9780))); // 대략 서울 중심 포함 여부
+        // [Logic] 서울 자치구 클러스터링 (줌 9-12에서 활성화)
+        let shouldUseSeoulDistrictCluster = !shouldUseRegionalCluster && (currentZoom >= 9 && currentZoom <= 12);
 
-        let shouldUseSeoulDistrictCluster = shouldCluster && !shouldUseRegionalCluster && (currentZoom >= 10 && currentZoom <= 12);
-
-        // 서울 관련 필터링: 만약 shouldCluster이고 zoom이 10-12인데, 
-        // 현재 뷰포트에 서울 맛집이 있다면 활성화.
-        // selectedRegion이 없어도 서울 근처면 활성화.
-        // 다만 성능을 위해 간단히 selectedRegion 체크나 줌 레벨로 판단.
-        // 여기서는 '전국' 모드일 때 서울 쪽에 오면 동작해야 함.
-        if (shouldUseSeoulDistrictCluster) {
-            // 현재 화면 중심이 서울 범위 내인지 대략 확인 (37.4 ~ 37.7, 126.7 ~ 127.2)
-            const center = map.getCenter();
-            const isInSeoul = (center.lat() > 37.4 && center.lat() < 37.75 && center.lng() > 126.75 && center.lng() < 127.25);
-            if (!isInSeoul && !selectedRegion?.includes('서울')) {
-                shouldUseSeoulDistrictCluster = false;
-            }
-        }
-
-        // [UX] 모드 전환 시 깜빡임(새로고침 현상) 방지를 위한 Seamless Transition
-        // 행정구역(8이하) -> Supercluster(9이상) 전환 시: 
-        // Supercluster 데이터(`clusters`)가 계산되어 준비될 때까지 기존 행정구역 모드를 유지합니다.
-
-        // * Seoul District Mode 추가로 인한 로직 확장 *
-        // Regional -> Standard: Regional 유지
-        // Standard -> Seoul District: Standard 유지? 아니면 즉시 전환?
-        // 보통 줌인 시에는 즉시 전환이 자연스러울 수 있음.
-
-        // 로직 단순화:
-        // 1. Regional Mode (Zoom <= 8)
-        // 2. Seoul District Mode (Zoom 10-12 & In Seoul)
-        // 3. Supercluster Mode (Otherwise)
+        // 모드 설정
 
         if (shouldUseRegionalCluster) {
             setIsRegionalClusterMode(true);
             setIsSeoulDistrictMode(false);
             setIsClusterMode(true);
-        } else {
-            // 일반적인 경우: Supercluster가 기본이지만, 서울 지역 등 일부를 덮어쓰거나 대체할 수 있습니다.
+        } else if (shouldUseSeoulDistrictCluster) {
+            // [Fix] 서울 자치구 모드: Supercluster 비활성화로 충돌 방지
             setIsRegionalClusterMode(false);
-            // 이제 둘 다 true일 수 있습니다.
-            setIsSeoulDistrictMode(shouldUseSeoulDistrictCluster);
+            setIsSeoulDistrictMode(true);
+            setIsClusterMode(false);
+        } else {
+            // 일반 Supercluster 모드 또는 개별 마커 모드
+            setIsRegionalClusterMode(false);
+            setIsSeoulDistrictMode(false);
             setIsClusterMode(shouldCluster);
         }
 
@@ -1491,9 +1467,9 @@ const NaverMapView = memo(({
             }
 
 
-
             // 2. 표준 로직 (Supercluster 또는 개별 마커)
-            if (shouldCluster) {
+            // [Fix] 서울 자치구 모드에서도 서울 외 지역은 Supercluster로 표시
+            if (shouldCluster || shouldUseSeoulDistrictCluster) {
                 if (clusters.length > 0) {
                     clusters.forEach((feature) => {
                         const [lng, lat] = feature.geometry.coordinates;
