@@ -126,11 +126,17 @@ export function RestaurantDetailPanel({
             try {
                 if (!restaurant) return [];
 
+                // 0. 모든 관련 레코드 ID 수집 (현재 ID + 병합된 ID)
+                const allIds = [restaurant.id];
+                if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
+                    allIds.push(...restaurant.mergedRestaurants.map((r: any) => r.id));
+                }
+
                 // 1. 해당 맛집의 승인된 리뷰 조회
                 const { data: reviewsData, error: reviewsError } = await (supabase
                     .from('reviews') as any)
                     .select('*')
-                    .eq('restaurant_id', restaurant.id)
+                    .in('restaurant_id', allIds)
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
                     .order('created_at', { ascending: false });
@@ -622,7 +628,7 @@ export function RestaurantDetailPanel({
                 </div>
 
                 {/* 내용 */}
-                <div className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden">
+                <div className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                     <div className="p-4 space-y-4">
                         {viewMode === 'detail' ? (
                             <>
