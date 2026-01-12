@@ -28,6 +28,7 @@ import {
     type ClusterProperties,
     type RegionalCluster,
     type SeoulDistrictCluster,
+    type SeoulDistrictClusterResult,
     getSeoulDistrictClusters,
     SEOUL_DISTRICT_CENTERS,
     getDistance
@@ -408,7 +409,9 @@ const NaverMapView = memo(({
     const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
     const [clusters, setClusters] = useState<Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>>([]);
     const [regionalClusters, setRegionalClusters] = useState<RegionalCluster[]>([]); // 17개 행정구역 클러스터
-    const [seoulDistrictClusters, setSeoulDistrictClusters] = useState<SeoulDistrictCluster[]>([]); // 25개 서울 자치구 클러스터
+    const [seoulDistrictClusters, setSeoulDistrictClusters] = useState<SeoulDistrictCluster[]>([]); // 줄 9-10: 서울 자치구 25개 모두
+    const [seoulDistrictClustersFiltered, setSeoulDistrictClustersFiltered] = useState<SeoulDistrictCluster[]>([]); // 줄 11-12: 마커 3개 이상만
+    const [seoulIndividualIds, setSeoulIndividualIds] = useState<string[]>([]); // 줄 11-12: 마커 2개 이하
     const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
     const [isRegionalClusterMode, setIsRegionalClusterMode] = useState(false); // 행정구역 클러스터 모드
     const [isSeoulDistrictMode, setIsSeoulDistrictMode] = useState(false); // 서울 자치구 모드
@@ -1264,9 +1267,15 @@ const NaverMapView = memo(({
         const newRegionalClusters = getRegionalClusters(displayRestaurants);
         setRegionalClusters(newRegionalClusters);
 
-        // 서울 25개 자치구 클러스터 계산
-        const newSeoulDistrictClusters = getSeoulDistrictClusters(displayRestaurants);
-        setSeoulDistrictClusters(newSeoulDistrictClusters);
+        // 서울 25개 자치구 클러스터 계산 (두 가지 모드)
+        // 줌 9-10: 모든 구를 클러스터로 (minClusterSize=1)
+        const seoulResultAll = getSeoulDistrictClusters(displayRestaurants, 1);
+        setSeoulDistrictClusters(seoulResultAll.clusters);
+
+        // 줌 11-12: 마커 3개 이상만 클러스터, 2개 이하는 개별 마커 (minClusterSize=3)
+        const seoulResultFiltered = getSeoulDistrictClusters(displayRestaurants, 3);
+        setSeoulDistrictClustersFiltered(seoulResultFiltered.clusters);
+        setSeoulIndividualIds(seoulResultFiltered.individualRestaurantIds);
     }, [displayRestaurants.length, selectedRegion, isMapInitialized]);
 
     // [Cluster] 지도 이동/줌 시 클러스터 업데이트
@@ -1361,7 +1370,11 @@ const NaverMapView = memo(({
         let shouldUseRegionalCluster = shouldCluster && currentZoom <= 8;
 
         // [Logic] 서울 자치구 클러스터링 (줌 9-12에서 활성화)
-        let shouldUseSeoulDistrictCluster = !shouldUseRegionalCluster && (currentZoom >= 9 && currentZoom <= 12);
+        // 줌 9-10: 모든 자치구 25개를 클러스터로 표시 (seoulDistrictClusters 사용)
+        // 줌 11-12: 마커 3개 이상만 클러스터, 2개 이하는 개별 마커 (seoulDistrictClustersFiltered 사용)
+        const shouldUseSeoulDistrictFull = !shouldUseRegionalCluster && (currentZoom >= 9 && currentZoom <= 10);
+        const shouldUseSeoulDistrictFiltered = !shouldUseRegionalCluster && (currentZoom >= 11 && currentZoom <= 12);
+        const shouldUseSeoulDistrictCluster = shouldUseSeoulDistrictFull || shouldUseSeoulDistrictFiltered;
 
         // 모드 설정
 
@@ -1448,8 +1461,14 @@ const NaverMapView = memo(({
             const activeIds = new Set<string>();
 
             // 1. 서울 자치구 클러스터 (우선 순위 레이어)
-            if (shouldUseSeoulDistrictCluster && seoulDistrictClusters.length > 0) {
-                seoulDistrictClusters.forEach((cluster) => {
+            // 줌 9-10: 모든 자치구 25개 클러스터 (seoulDistrictClusters)
+            // 줌 11-12: 마커 3개 이상인 구만 클러스터 (seoulDistrictClustersFiltered)
+            const seoulClustersToRender = shouldUseSeoulDistrictFull
+                ? seoulDistrictClusters
+                : (shouldUseSeoulDistrictFiltered ? seoulDistrictClustersFiltered : []);
+
+            if (seoulClustersToRender.length > 0) {
+                seoulClustersToRender.forEach((cluster) => {
                     const markerId = `seoul-dist-${cluster.region}`;
                     activeIds.add(markerId);
 
@@ -1461,6 +1480,35 @@ const NaverMapView = memo(({
                         cluster.region,
                         () => {
                             map.morph(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng), 13);
+                        }
+                    );
+                });
+            }
+
+            // 1-2. 서울 자치구 개별 마커 (줌 11-12에서만, 마커 2개 이하인 구)
+            if (shouldUseSeoulDistrictFiltered && seoulIndividualIds.length > 0) {
+                const seoulIndividualSet = new Set(seoulIndividualIds);
+                displayRestaurants.forEach((restaurant) => {
+                    if (!seoulIndividualSet.has(restaurant.id)) return;
+                    if (!restaurant.lat || !restaurant.lng) return;
+
+                    activeIds.add(restaurant.id);
+                    const isSelected = selectedRestaurant?.id === restaurant.id;
+                    const category = (Array.isArray(restaurant.categories) ? restaurant.categories[0] : restaurant.category || '기타') as string;
+                    const html = createIndividualMarkerHTML(category, isSelected);
+
+                    markerPool.acquire(
+                        restaurant.id,
+                        new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                        { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
+                        map,
+                        () => {
+                            map.panTo(new naver.maps.LatLng(restaurant.lat, restaurant.lng), { duration: 300 });
+                            if (onMarkerClick) onMarkerClick(restaurant);
+                            else {
+                                if (onRestaurantSelect) onRestaurantSelect(restaurant);
+                                setInternalPanelOpen(true);
+                            }
                         }
                     );
                 });
@@ -1607,7 +1655,7 @@ const NaverMapView = memo(({
             markerPool.releaseExcept(activeIds);
         }
 
-    }, [clusters, regionalClusters, seoulDistrictClusters, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
