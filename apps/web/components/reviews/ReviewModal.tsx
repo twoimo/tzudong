@@ -535,22 +535,29 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                         <div className="flex-1 overflow-y-auto px-6 py-4">
                             <div className="space-y-6">
                                 {/* 중요 공지 */}
-                                <Alert className="bg-amber-50 border-amber-200">
-                                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                                    <AlertDescription className="text-amber-800 space-y-2">
-                                        <div>
-                                            <strong>📸 영수증 인증 사진 가이드라인 (OCR 자동 인식):</strong>
+                                <Alert className="bg-amber-50 border-amber-200 p-3 md:p-4">
+                                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 md:mt-0" />
+                                    <AlertDescription className="text-amber-800">
+                                        <div className="font-semibold text-sm mb-1.5 md:mb-2 flex flex-wrap items-center gap-x-1.5">
+                                            <span>📸 영수증 인증 가이드</span>
+                                            <span className="text-xs font-normal text-amber-700 opacity-90">(OCR 자동 인식)</span>
                                         </div>
-                                        <ul className="text-sm space-y-1 ml-4 list-disc">
-                                            <li><strong>영수증 전체가 보이게</strong> 촬영해주세요 (접히거나 잘리면 인식 불가)</li>
-                                            <li><strong>밝은 곳에서 촬영</strong>하고, 그림자가 지지 않도록 해주세요</li>
-                                            <li><strong>상호명, 날짜/시간, 금액</strong>이 선명하게 보여야 합니다</li>
-                                            <li>닉네임은 영수증 <strong>하단 여백</strong>이나 <strong>옆에 메모지</strong>로 적어주세요</li>
-                                            <li>방문 날짜는 <strong className="text-red-600">3개월 이내</strong>여야 합니다</li>
+                                        <ul className="text-xs md:text-sm space-y-1 md:space-y-1.5 list-disc pl-4 text-amber-900/90 leading-relaxed marker:text-amber-400">
+                                            <li><span className="font-medium text-amber-950">영수증 전체</span>가 잘리지 않게 촬영해주세요</li>
+                                            <li><span className="font-medium text-amber-950">밝은 곳</span>에서 그림자 없이 촬영해주세요</li>
+                                            <li><span className="font-medium text-amber-950">상호명, 날짜, 금액</span>이 잘 보여야 합니다</li>
+                                            <li>닉네임은 <span className="font-medium text-amber-950">여백</span>이나 <span className="font-medium text-amber-950">메모지</span>에 적어주세요</li>
+                                            <li>방문일은 <span className="font-bold text-red-600">3개월 이내</span>여야 합니다</li>
                                         </ul>
-                                        <div className="text-xs text-amber-700 mt-2 space-y-1">
-                                            <div>⚠️ <strong>주의:</strong> 영수증 위에 닉네임을 직접 써서 중요 정보를 가리면 인식이 안 됩니다!</div>
-                                            <div>💡 <strong>팁:</strong> 영수증을 평평한 곳에 놓고 바로 위에서 촬영하면 인식률이 높아집니다</div>
+                                        <div className="mt-2.5 pt-2 border-t border-amber-200/60 flex flex-col gap-1 text-[11px] md:text-xs text-amber-700">
+                                            <p className="flex items-start gap-1.5">
+                                                <span className="shrink-0 mt-0.5">⚠️</span>
+                                                <span>글자가 가려지지 않게 주의해주세요!</span>
+                                            </p>
+                                            <p className="flex items-start gap-1.5">
+                                                <span className="shrink-0 mt-0.5">💡</span>
+                                                <span>평평한 곳에서 찍으면 인식률이 높아집니다</span>
+                                            </p>
                                         </div>
                                     </AlertDescription>
                                 </Alert>
