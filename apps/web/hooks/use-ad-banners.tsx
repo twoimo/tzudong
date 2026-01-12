@@ -91,9 +91,16 @@ export function useSidebarAdBanners() {
 }
 
 /**
- * 모바일 팝업용 광고 배너
+ * 모바일 팝업용 광고 배너 (호환성 유지 용도)
  */
 export function useMobilePopupAdBanners() {
+    return usePopupAdBanners();
+}
+
+/**
+ * 팝업형 광고 배너 (모바일/데스크탑 통합)
+ */
+export function usePopupAdBanners() {
     return useActiveAdBanners('mobile_popup');
 }
 
