@@ -9,6 +9,7 @@
 import Supercluster from 'supercluster';
 import { REGION_MAP_CONFIG } from '@/config/maps';
 import type { Restaurant, Region } from '@/types/restaurant';
+import { getPerformanceBasedClusterOptions } from './device-performance';
 
 // Supercluster 타입 정의 (패키지에서 export하지 않으므로 직접 정의)
 type BBox = [number, number, number, number];
@@ -49,16 +50,16 @@ export interface ClusterOptions {
 /**
  * 지역별 클러스터링 최대 줌 레벨 계산
  * 
- * [성능 최적화] 줌 10까지 클러스터링을 유지하여 마커 폭발 방지
+ * [성능 최적화] 줌 12까지 클러스터링을 유지하여 마커 폭발 방지
  * 
  * 특정 지역 선택 시: 해당 지역의 기본 줌 레벨 - 1로 설정하여,
  * 기본 줌 레벨 도달 시 클러스터가 해제되고 모든 개별 마커가 표시됩니다.
  * 
- * 전국 선택 시: 줌 10까지 클러스터링, 줌 11부터 개별 마커
+ * 전국 선택 시: 줌 12까지 클러스터링, 줌 13부터 개별 마커
  * 
  * @example
- * // 전국(selectedRegion = null) → maxZoom: 10 (줌 11부터 개별 마커)
- * getClusterMaxZoom(null) // 10
+ * // 전국(selectedRegion = null) → maxZoom: 12 (줌 13부터 개별 마커)
+ * getClusterMaxZoom(null) // 12
  * 
  * // 서울(zoom: 12) → maxZoom: 11 → 12레벨부터 개별 마커
  * getClusterMaxZoom('서울특별시') // 11
@@ -67,8 +68,8 @@ export interface ClusterOptions {
  * @param defaultMaxZoom 기본 최대 줌 레벨 (전국일 때 사용)
  * @returns 클러스터링 최대 줌 레벨
  */
-export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom: number = 10): number => {
-    // 전국 선택 시 기본값 사용 (줌 10까지 클러스터링)
+export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom: number = 12): number => {
+    // 전국 선택 시 기본값 사용 (줌 12까지 클러스터링)
     if (!selectedRegion) {
         return defaultMaxZoom;
     }
@@ -131,22 +132,35 @@ export const restaurantsToGeoJSON = (restaurants: Restaurant[]): RestaurantFeatu
 /**
  * Supercluster 인덱스 생성
  * 
+ * [성능 최적화] 디바이스 성능에 따라 동적으로 클러스터 옵션 조정
+ * - 저사양: maxZoom 14, radius 60px (더 공격적인 클러스터링)
+ * - 중사양: maxZoom 13, radius 50px
+ * - 고사양: maxZoom 12, radius 40px (정밀한 클러스터링)
+ * 
  * @param selectedRegion 선택된 지역 (동적 maxZoom 계산용, null이면 전국)
  * @param options 클러스터 옵션
+ * @param usePerformanceOptimization 성능 기반 최적화 사용 여부 (기본: true)
  * @returns Supercluster 인스턴스
  */
 export const createClusterIndex = (
     selectedRegion: Region | null,
-    options: ClusterOptions = {}
+    options: ClusterOptions = {},
+    usePerformanceOptimization: boolean = true
 ): Supercluster<ClusterProperties> => {
-    // maxZoom: options에 명시되어 있으면 사용, 없으면 지역별 동적 계산
-    const maxZoom = options.maxZoom ?? getClusterMaxZoom(selectedRegion);
+    // 성능 기반 옵션 가져오기
+    const performanceOptions = usePerformanceOptimization
+        ? getPerformanceBasedClusterOptions()
+        : { maxZoom: 12, radius: 40, minPoints: 2 };
+
+    // maxZoom 결정: 지역별 설정 vs 성능 기반 설정 중 더 높은 값(더 늦게 해제) 사용
+    const regionMaxZoom = getClusterMaxZoom(selectedRegion, performanceOptions.maxZoom);
+    const finalMaxZoom = options.maxZoom ?? Math.max(regionMaxZoom, performanceOptions.maxZoom);
 
     return new Supercluster<ClusterProperties>({
-        radius: options.radius ?? 40, // 17개 행정구역 분리를 위해 감소 (기존 60px)
-        maxZoom: maxZoom,
+        radius: options.radius ?? performanceOptions.radius,
+        maxZoom: finalMaxZoom,
         minZoom: options.minZoom ?? 0,
-        minPoints: options.minPoints ?? 2, // 최소 2개부터 클러스터링
+        minPoints: options.minPoints ?? performanceOptions.minPoints,
     });
 };
 
