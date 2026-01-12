@@ -1,0 +1,125 @@
+name: crawling_with_transcript
+version: "1.0"
+description: "YouTube 영상에서 음식점 정보 추출 프롬프트 (자막 포함)"
+
+system_prompt: |
+  당신은 유튜브 URL에서 맛집 정보를 추출하는 AI입니다.
+
+prompt_template: |
+  <유튜브 링크>를 방문하여 유튜버가 간 음식점에 대한 정보를 정리해야 합니다.
+  하나의 YouTube 링크에서 여러 개의 식당 정보를 추출할 수 있습니다.
+
+  **참고: 프롬프트 끝에 <참고: YouTube 자막> 섹션이 제공됩니다. 타임스탬프([MM:SS])와 함께 제공되므로 음식점 이름, 위치, 리뷰 내용을 파악하는 데 적극 활용하세요.**
+
+  <작업 순서>
+  **중요1: 이 영상에서 등장하는 모든 식당 정보를 찾아서 각각에 대해 별도의 JSON 객체를 생성해야 합니다.**
+  **중요2: 출력 결과값은 한국어로 작성합니다. 단, 고유명사(음식점 이름, 주소, 전화번호 등)는 원본 그대로 유지합니다.**
+
+  1. YouTube 자막 및 영상 분석
+  - 먼저 <참고: YouTube 자막>에서 음식점 이름, 지역, 메뉴 등의 힌트를 찾습니다.
+  - 자막에서 "[MM:SS] 음식점이름" 또는 "[MM:SS] (지역명)" 형태로 정보가 나타날 수 있습니다.
+  - 각 식당마다 다음 정보를 수집:
+    - (매우 중요) 자막에서 **식당 이름, 지역명, 메뉴 언급**을 찾아 기록합니다.
+    - (매우 중요) 타임스탬프를 기록하여 reasoning_basis에 포함합니다 (예: "[01:15] '산북동달구지' 언급").
+    - 반드시 유튜버가 해당 음식점을 방문한 것이 맞는지 여러 정보들을 '크로스체킹'하여 정확하게 파악해야 합니다.
+
+  2. Google 검색 (google_web_search) - 식당 이름 특정
+  - 1단계의 단서(예: "쯔양 군산 짬뽕")로 검색을 수행합니다.
+  - **유튜버 이름을 반드시 포함하고, 음식점명, 지역명과 함께 검색합니다.**
+  - 검색 결과에서 **'정확한 실제 상호명'과 '지역'**을 확정합니다.
+  - (중요) 영상 속 별명이나 줄임말이 아닌, 실제 지도에 등록된 정식 명칭을 찾아야 합니다.
+
+  3. 위치 확정 (지도 및 주소 검색)
+  - 각 식당마다 2단계에서 확정한 '정확한 상호명'을 기반으로 상세 정보를 수집합니다.
+  - [한국 음식점] `"[정확한 상호명] [지역명] 주소"` 키워드로 Google 검색하여 주소와 전화번호를 추출합니다.
+  - [해외 음식점] Google Maps로 확정합니다.
+
+  4. 유튜버 리뷰 요약
+  - **각 음식점마다** 유튜버가 영상에서 한 리뷰 내용을 전부 요약하여 정리합니다.
+  - 자막에서 해당 음식점 관련 발언([MM:SS] 형태)을 참고하여 요약합니다.
+
+  5. JSONL 생성
+  - **영상에서 등장하는 각 식당마다 별도의 JSON 객체를 생성합니다**.
+  </작업 순서>
+
+  <작성 규칙>
+  - **모르거나 정보 추출 실패 시 반드시 추측하지 않고, null로 두어야 함(다만, youtube_link는 반드시 작성).**
+  </작성 규칙>
+
+  <출력 규칙>
+  1) **하나의 유튜브 링크에서 여러 개의 식당이 등장할 경우, 각 식당마다 별도의 JSON 객체를 생성하여 restaurants 배열에 포함함.**
+  2) **최종 출력은 단일 JSON 객체로, 다음 구조를 따름:**
+  {
+    "restaurants": [
+      {
+        "origin_name": "음식점 이름",
+        "phone": "전화번호 또는 null",
+        "address": "주소 또는 null",
+        "lat": 위도 숫자 또는 null,
+        "lng": 경도 숫자 또는 null,
+        "category": "카테고리 또는 null",
+        "youtube_link": "유튜브 URL",
+        "reasoning_basis": "판단 근거",
+        "youtuber_review": "유튜버 리뷰 요약 또는 null"
+      }
+    ]
+  }
+  3) **다른 설명, 마크다운 태그 없이 순수 JSON 객체만 출력함.**
+  </출력 규칙>
+
+  ---
+  유튜브 링크: {{youtube_link}}
+  
+  <참고: YouTube 자막>
+  [자막 언어: {{transcript_language}}]
+  {{transcript}}
+  </참고: YouTube 자막>
+
+output_schema:
+  type: object
+  properties:
+    restaurants:
+      type: array
+      items:
+        type: object
+        properties:
+          origin_name:
+            type: string
+          phone:
+            type: string
+            nullable: true
+          address:
+            type: string
+            nullable: true
+          lat:
+            type: number
+            nullable: true
+          lng:
+            type: number
+            nullable: true
+          category:
+            type: string
+            nullable: true
+            enum:
+              - "치킨"
+              - "중식"
+              - "돈까스·회"
+              - "피자"
+              - "패스트푸드"
+              - "찜·탕"
+              - "족발·보쌈"
+              - "분식"
+              - "카페·디저트"
+              - "한식"
+              - "고기"
+              - "양식"
+              - "아시안"
+              - "야식"
+              - "도시락"
+          youtube_link:
+            type: string
+          reasoning_basis:
+            type: string
+          youtuber_review:
+            type: string
+            nullable: true
