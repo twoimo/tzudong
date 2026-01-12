@@ -381,7 +381,7 @@ const NaverMapView = memo(({
     const prevSidebarOpenRef = useRef<boolean>(true); // 이전 사이드바 열림 상태 추적
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
 
-    // [🆕 클러스터링] Supercluster 인덱스 및 클러스터 상태
+    // [Cluster] Supercluster 인덱스 및 클러스터 상태
     const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
     const [clusters, setClusters] = useState<Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>>([]);
     const [regionalClusters, setRegionalClusters] = useState<RegionalCluster[]>([]); // 17개 행정구역 클러스터
@@ -1011,8 +1011,8 @@ const NaverMapView = memo(({
 
             // 네이버 지도 중심(Center)은 mapWidth / 2 지점임.
             // 따라서 오프셋 = (mapWidth / 2) - ((mapWidth - rightPanelWidth) / 2)
-            //              = (mapWidth - (mapWidth - rightPanelWidth)) / 2
-            //              = rightPanelWidth / 2
+            //             = (mapWidth - (mapWidth - rightPanelWidth)) / 2
+            //             = rightPanelWidth / 2
 
             // 결론: 사이드바 너비는 이미 지도 컨테이너 크기에 반영되어 있으므로 계산식에서 빠져야 함!
             // 이전 로직의 targetOffsetX = (rightPanelWidth - sidebarWidth) / 2 는 
@@ -1176,7 +1176,7 @@ const NaverMapView = memo(({
         return isLoadingRestaurants && previousRestaurants.length > 0 ? previousRestaurants : restaurants;
     }, [isLoadingRestaurants, previousRestaurants, restaurants]);
 
-    // [🆕 클러스터링] 클러스터 인덱스 생성 및 업데이트
+    // [Cluster] 클러스터 인덱스 생성 및 업데이트
     useEffect(() => {
 
 
@@ -1240,7 +1240,7 @@ const NaverMapView = memo(({
         setRegionalClusters(newRegionalClusters);
     }, [displayRestaurants.length, selectedRegion, isMapInitialized]);
 
-    // [🆕 클러스터링] 지도 이동/줌 시 클러스터 업데이트
+    // [Cluster] 지도 이동/줌 시 클러스터 업데이트
     useEffect(() => {
         // [Fix] 지도가 초기화되지 않았으면 대기
         if (!isMapInitialized || !mapInstanceRef.current || !ENABLE_CLUSTERING || !clusterIndexRef.current) return;
@@ -1314,24 +1314,38 @@ const NaverMapView = memo(({
 
 
 
-    // [🆕 클러스터/마커 통합 렌더링] 줌 레벨에 따라 클러스터 또는 개별 마커 표시
+    // [Render] 줌 레벨에 따라 클러스터 또는 개별 마커 렌더링
     useEffect(() => {
-        // [Fix] 지도가 초기화되지 않았으면 대기
+        // [Init] 지도가 초기화되지 않았으면 대기
         if (!isMapInitialized || !mapInstanceRef.current || !window.naver) return;
         const { naver } = window;
         const map = mapInstanceRef.current;
         const currentZoom = Math.floor(map.getZoom());
 
-        // 🔥 전국만 클러스터링, 특정 지역은 모두 개별 마커 표시
+        // 전국 뷰일 때만 클러스터링 적용 (특정 지역 선택 시 개별 마커)
         const effectiveMaxZoom = getClusterMaxZoom(selectedRegion);
         const shouldCluster = ENABLE_CLUSTERING && !selectedRegion && currentZoom <= effectiveMaxZoom;
 
-        // 🆕 줌 8 이하에서는 17개 행정구역 중앙 클러스터링 사용 -> [Disable] 일관성 위해 Supercluster로 통합
-        // 사용자가 7->9 구간 트랜지션의 이질감(새로고침 느낌)을 지적함.
-        const shouldUseRegionalCluster = false; // shouldCluster && currentZoom <= 8;
+        // [Logic] 줌 8 이하에서는 17개 행정구역 중앙 클러스터링 사용
+        // [Fix] 사용자가 기능 동작을 원하므로 다시 활성화
+        let shouldUseRegionalCluster = shouldCluster && currentZoom <= 8;
 
-        setIsClusterMode(shouldCluster);
-        setIsRegionalClusterMode(shouldUseRegionalCluster);
+        // [UX] 모드 전환 시 깜빡임(새로고침 현상) 방지를 위한 Seamless Transition
+        // 행정구역(8이하) -> Supercluster(9이상) 전환 시: 
+        // Supercluster 데이터(`clusters`)가 계산되어 준비될 때까지 기존 행정구역 모드를 유지합니다.
+        if (!shouldUseRegionalCluster && shouldCluster && clusters.length === 0 && regionalClusters.length > 0) {
+            // [Key Fix] 로컬 변수를 true로 강제 설정하여 이번 렌더링에서 행정구역 마커를 그리도록 함
+            shouldUseRegionalCluster = true;
+
+            // 아직 Supercluster 데이터가 준비되지 않았으므로 행정구역 모드 연장
+            // 단, 백그라운드에서 Supercluster 계산이 시작되도록 isClusterMode는 true로 설정
+            setIsRegionalClusterMode(true);
+            setIsClusterMode(true);
+        } else {
+            // 정상 모드 전환
+            setIsClusterMode(shouldCluster);
+            setIsRegionalClusterMode(shouldUseRegionalCluster);
+        }
 
         if (shouldUseRegionalCluster) {
             // ===== 17개 행정구역 중앙 클러스터 모드 =====
@@ -1349,7 +1363,7 @@ const NaverMapView = memo(({
                 // 문자열 해시 계산 (Java hashCode 알고리즘)
                 const regionHash = Math.abs(cluster.region.split('').reduce((a, b) => (a * 31 + b.charCodeAt(0)) | 0, 0));
 
-                // 🆕 애니메이션 매니저에 등록
+                // 애니메이션 매니저에 등록
                 clusterAnimationManager.register(regionHash);
 
                 const currentIndex = clusterAnimationManager.getCurrentIndex(
@@ -1545,14 +1559,14 @@ const NaverMapView = memo(({
 
     }, [clusters, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isMapInitialized]);
 
-    // [🆕 클러스터 애니메이션] 카테고리 이모지 순환 업데이트
+    // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
         if (!isClusterMode && !isRegionalClusterMode) return;
 
         // 애니메이션 업데이트 시 클러스터 마커 HTML 갱신
         const cleanup = clusterAnimationManager.addListener(() => {
             if (isRegionalClusterMode) {
-                // 🆕 Regional cluster 모드 - 18개 지역 클러스터 업데이트
+                // Regional cluster 모드 - 18개 지역 클러스터 업데이트
                 regionalClusters.forEach((cluster) => {
                     const markerId = `regional-${cluster.region}`;
                     const marker = markerPool.get(markerId);
