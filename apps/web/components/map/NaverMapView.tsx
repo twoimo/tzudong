@@ -28,7 +28,9 @@ import {
     type ClusterProperties,
     type RegionalCluster,
     type SeoulDistrictCluster,
-    getSeoulDistrictClusters
+    getSeoulDistrictClusters,
+    SEOUL_DISTRICT_CENTERS,
+    getDistance
 } from "@/lib/clustering";
 import { markerPool } from "@/lib/marker-pool";
 import {
@@ -58,8 +60,22 @@ const CLUSTER_MAX_ZOOM = 16; // 이 줌 레벨까지 클러스터링 (16 초과 
 // [OPTIMIZATION] 클러스터 반경, 최소 포인트, 애니메이션은 useMapOptimization 훅에서 동적으로 결정
 
 // [OPTIMIZATION] 서울 경계 확인 헬퍼 (최적화: 컴포넌트 외부로 이동)
+// [OPTIMIZATION] 서울 경계 확인 헬퍼 (개선된 로직: 단순 BBox 대신 거리 기반 체크)
 const isPointInSeoul = (lat: number, lng: number) => {
-    return (lat > 37.41 && lat < 37.71 && lng > 126.76 && lng < 127.19);
+    // 1. 단순 BBox로 1차 필터링 (기존보다 약간 좁게 설정하여 확실히 아닌 것 제외)
+    // 서울 극단: 37.42 ~ 37.70, 126.76 ~ 127.18
+    if (lat < 37.42 || lat > 37.70 || lng < 126.76 || lng > 127.18) {
+        return false;
+    }
+
+    // 2. 서울 25개 자치구 중심과의 거리 체크 (반경 3.5km 이내면 서울로 간주)
+    // 이는 고양, 광명 등 인접 도시가 BBox에 포함되어 숨겨지는 것을 방지함
+    for (const center of Object.values(SEOUL_DISTRICT_CENTERS)) {
+        if (getDistance(lat, lng, center.lat, center.lng) < 0.035) { // 약 3.5km (1도 ≈ 111km)
+            return true;
+        }
+    }
+    return false;
 };
 
 interface NaverMapViewProps {
@@ -1347,7 +1363,7 @@ const NaverMapView = memo(({
         // [Logic] 서울 지역이고 줌 10-12 사이면 25개 자치구 클러스터링 사용
         const isSeoulRegion = selectedRegion === '서울특별시' || (!selectedRegion && mapBounds && mapBounds.hasLatLng(new naver.maps.LatLng(37.5665, 126.9780))); // 대략 서울 중심 포함 여부
 
-        let shouldUseSeoulDistrictCluster = shouldCluster && !shouldUseRegionalCluster && (currentZoom >= 10 && currentZoom <= 12);
+        let shouldUseSeoulDistrictCluster = shouldCluster && !shouldUseRegionalCluster && (currentZoom >= 9 && currentZoom <= 12);
 
         // 서울 관련 필터링: 만약 shouldCluster이고 zoom이 10-12인데, 
         // 현재 뷰포트에 서울 맛집이 있다면 활성화.
@@ -1484,8 +1500,19 @@ const NaverMapView = memo(({
 
                         // [CRITICAL Logic] Seoul District Mode가 켜져있고, 이 마커/클러스터가 서울 안에 있다면 건너뜀
                         // (이미 Seoul District Cluster로 표현되었으므로 중복 렌더링 방지)
-                        if (shouldUseSeoulDistrictCluster && isPointInSeoul(lat, lng)) {
-                            return;
+                        if (shouldUseSeoulDistrictCluster) {
+                            // 1. 주소가 있는 경우 (개별 마커) - 주소 기반 확실한 체크
+                            if (feature.properties.address) {
+                                // 주소에 '서울'이 포함되어 있으면 숨김 (이미 District Cluster로 표시됨)
+                                // 반대로 '경기', '인천' 등이면 무조건 표시 (isPointInSeoul가 true라도)
+                                if (feature.properties.address.includes('서울')) {
+                                    return;
+                                }
+                            }
+                            // 2. 주소가 없는 경우 (클러스터) 또는 주소로 판단 불가 - 좌표 기반 체크
+                            else if (isPointInSeoul(lat, lng)) {
+                                return;
+                            }
                         }
 
                         if (isCluster(feature)) {
@@ -1563,8 +1590,18 @@ const NaverMapView = memo(({
                     if (!restaurant.lat || !restaurant.lng) return;
 
                     // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
-                    if (shouldUseSeoulDistrictCluster && isPointInSeoul(restaurant.lat, restaurant.lng)) {
-                        return;
+                    if (shouldUseSeoulDistrictCluster) {
+                        // 1. 주소 확인 (개별 마커는 주소 정보가 확실하므로 우선 사용)
+                        const address = restaurant.road_address || restaurant.jibun_address || '';
+                        if (address) {
+                            if (address.includes('서울')) {
+                                return;
+                            }
+                        }
+                        // 2. 주소가 없는 경우 좌표 체크
+                        else if (isPointInSeoul(restaurant.lat, restaurant.lng)) {
+                            return;
+                        }
                     }
 
                     activeIds.add(restaurant.id);
