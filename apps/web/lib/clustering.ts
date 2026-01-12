@@ -464,8 +464,11 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[]): SeoulDistri
         categories: Set<string>;
     }>();
 
+    const districtNames = Object.keys(SEOUL_DISTRICT_CENTERS);
+    const districtEntries = Object.entries(SEOUL_DISTRICT_CENTERS);
+
     // 25개 구 초기화
-    for (const district of Object.keys(SEOUL_DISTRICT_CENTERS)) {
+    for (const district of districtNames) {
         districtMap.set(district, { restaurantIds: [], categories: new Set() });
     }
 
@@ -479,7 +482,7 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[]): SeoulDistri
 
         // 1. 주소에서 '구' 추출
         let district = null;
-        for (const d of Object.keys(SEOUL_DISTRICT_CENTERS)) {
+        for (const d of districtNames) {
             if (address.includes(d)) {
                 district = d;
                 break;
@@ -489,7 +492,7 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[]): SeoulDistri
         // 2. 주소에 구가 명시되지 않거나 매칭 안되면 거리 기반 (보조)
         if (!district) {
             let minDistance = Infinity;
-            for (const [d, center] of Object.entries(SEOUL_DISTRICT_CENTERS)) {
+            for (const [d, center] of districtEntries) {
                 const distance = getDistance(restaurant.lat, restaurant.lng, center.lat, center.lng);
                 if (distance < minDistance) {
                     minDistance = distance;
