@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useMemo, useRef, useEffect } from 'react';
+import { memo, useCallback, useMemo, useRef, useEffect, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, MessageSquareText, Stamp, Trophy, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -37,6 +37,14 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
     const navRef = useRef<HTMLElement>(null);
     const queryClient = useQueryClient();
     const { user } = useAuth();
+    const [, startTransition] = useTransition();
+
+    // [OPTIMIZATION] 마운트 시 모든 네비게이션 경로 prefetch
+    useEffect(() => {
+        NAV_ITEMS.forEach(item => {
+            router.prefetch(item.path);
+        });
+    }, [router]);
 
     // [최적화] 도장 페이지 데이터 프리페치
     const prefetchStampData = useCallback(async () => {
@@ -158,10 +166,12 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
         });
     }, [queryClient]);
 
-    // [OPTIMIZATION] useCallback으로 핸들러 메모이제이션
+    // [OPTIMIZATION] startTransition으로 UI 블로킹 방지
     const handleNavClick = useCallback((path: string) => {
-        router.push(path);
-    }, [router]);
+        startTransition(() => {
+            router.push(path);
+        });
+    }, [router, startTransition]);
 
     // [OPTIMIZATION] 현재 경로에 따른 활성 상태 계산을 useMemo로 캐싱
     const activeStates = useMemo(() => {
