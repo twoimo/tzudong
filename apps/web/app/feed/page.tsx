@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, MapPin, ChevronLeft, ChevronRight, Calendar, User, MessageSquareText } from 'lucide-react';
+import { Heart, MapPin, Calendar, User, MessageSquareText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { GlobalLoader } from "@/components/ui/global-loader";
+import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 
 interface FeedReview {
     id: string;
@@ -32,6 +33,10 @@ export default function FeedPage() {
     const queryClient = useQueryClient();
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
+
+    // [REALTIME] 좋아요 실시간 반영
+    useReviewLikesRealtime();
+
 
     // 리뷰 피드 데이터 조회 (무한 스크롤)
     const {
