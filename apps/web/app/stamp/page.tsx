@@ -72,6 +72,7 @@ interface Review {
     category: string;
     likeCount: number;
     isLikedByUser: boolean;
+    userAvatarUrl?: string | null;
 }
 
 interface UserReview {
@@ -646,9 +647,9 @@ export default function StampPage() {
                 const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
                 const { data: profilesData } = await supabase
                     .from('profiles')
-                    .select('user_id, nickname')
+                    .select('user_id, nickname, profile_picture')
                     .in('user_id', userIds);
-                const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, p.nickname]));
+                const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, { nickname: p.nickname, avatarUrl: p.profile_picture }]));
 
                 // Likes
                 const reviewIds = reviewsData.map((r: any) => r.id);
@@ -671,7 +672,8 @@ export default function StampPage() {
                         userId: review.user_id,
                         restaurantName: selectedRestaurant.name || '알 수 없음',
                         restaurantCategories: Array.isArray(selectedRestaurant.category) ? selectedRestaurant.category : [selectedRestaurant.category || '기타'],
-                        userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                        userName: profilesMap.get(review.user_id)?.nickname || '탈퇴한 사용자',
+                        userAvatarUrl: profilesMap.get(review.user_id)?.avatarUrl,
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
                         content: review.content,
@@ -726,75 +728,8 @@ export default function StampPage() {
         setSelectedRestaurant(restaurant);
 
         // 리뷰 데이터 prefetch로 바텀 시트 열리기 전에 미리 로드
-        await queryClient.prefetchInfiniteQuery({
-            queryKey: ['restaurant-reviews', restaurant.id],
-            queryFn: async ({ pageParam = 0 }) => {
-                try {
-                    const { data: reviewsData, error } = await supabase
-                        .from('reviews')
-                        .select('*')
-                        .eq('restaurant_id', restaurant.id)
-                        .eq('is_verified', true)
-                        .order('is_pinned', { ascending: false })
-                        .order('created_at', { ascending: false })
-                        .range(pageParam, pageParam + 19) as any;
-
-                    if (error) throw error;
-                    if (!reviewsData || reviewsData.length === 0) return { reviews: [], nextCursor: null };
-
-                    // User Profiles
-                    const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
-                    const { data: profilesData } = await supabase
-                        .from('profiles')
-                        .select('user_id, nickname')
-                        .in('user_id', userIds);
-                    const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, p.nickname]));
-
-                    // Likes
-                    const reviewIds = reviewsData.map((r: any) => r.id);
-                    const { data: likesData } = await supabase
-                        .from('review_likes')
-                        .select('review_id, user_id')
-                        .in('review_id', reviewIds) as any;
-
-                    const likesMap = new Map<string, { count: number; isLiked: boolean }>();
-                    reviewIds.forEach((reviewId: string) => {
-                        const likesForReview = likesData?.filter((like: any) => like.review_id === reviewId) || [];
-                        const isLiked = user ? likesForReview.some((like: any) => like.user_id === user.id) : false;
-                        likesMap.set(reviewId, { count: likesForReview.length, isLiked });
-                    });
-
-                    const reviews = reviewsData.map((review: any) => {
-                        const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
-                        return {
-                            id: review.id,
-                            userId: review.user_id,
-                            restaurantName: restaurant.name || '알 수 없음',
-                            restaurantCategories: Array.isArray(restaurant.category) ? restaurant.category : [restaurant.category || '기타'],
-                            userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
-                            visitedAt: review.visited_at,
-                            submittedAt: review.created_at || '',
-                            content: review.content,
-                            isVerified: review.is_verified || false,
-                            isPinned: review.is_pinned || false,
-                            isEditedByAdmin: review.is_edited_by_admin || false,
-                            admin_note: review.admin_note || null,
-                            photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                            category: review.categories?.[0] || review.category,
-                            likeCount: likesInfo.count,
-                            isLikedByUser: likesInfo.isLiked,
-                        };
-                    }) as Review[];
-
-                    const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
-                    return { reviews, nextCursor };
-                } catch (error) {
-                    console.error('리뷰 데이터 조회 중 오류:', error);
-                    return { reviews: [], nextCursor: null };
-                }
-            },
-            initialPageParam: 0,
-        });
+        // [FIX] prefetchInfiniteQuery causing crash on mobile/tablet. Disabled for stability.
+        // await queryClient.prefetchInfiniteQuery({...});
 
         // prefetch 완료 후 바텀 시트 열기
         setIsRightPanelVisible(true);

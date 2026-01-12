@@ -19,6 +19,7 @@ interface RestaurantSearchProps {
   filters?: FilterState; // 필터 상태 추가
   selectedRegion?: string | null; // 선택된 지역 (국가)
   isKoreanOnly?: boolean; // 한국 지역만 필터링 (홈페이지용)
+  maxItems?: number; // 표시할 최대 아이템 수 (최근 검색, 인기 검색어)
 }
 
 type SearchType = 'name' | 'youtube';
@@ -30,7 +31,8 @@ const RestaurantSearch = ({
   className,
   filters,
   selectedRegion,
-  isKoreanOnly = false
+  isKoreanOnly = false,
+  maxItems // default is undefined (no limit)
 }: RestaurantSearchProps) => {
   // [URL 동기화] 초기 로드 시 URL에서 검색어 복원
   const getInitialQuery = () => {
@@ -346,45 +348,47 @@ const RestaurantSearch = ({
                       전체 삭제
                     </Button>
                   </div>
-                  {history.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={async () => {
-                        // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
-                        const { data } = await supabase
-                          .from('restaurants')
-                          .select('*')
-                          .eq('name', item.name)
-                          .eq('status', 'approved');
+                  {history
+                    .slice(0, maxItems)
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={async () => {
+                          // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
+                          const { data } = await supabase
+                            .from('restaurants')
+                            .select('*')
+                            .eq('name', item.name)
+                            .eq('status', 'approved');
 
-                        if (data && data.length > 0) {
-                          // 병합 로직 적용
-                          const merged = mergeRestaurants(data as Restaurant[]);
-                          // 원래 선택한 레스토랑을 우선적으로 사용
-                          const selectedRestaurant = merged.find(r => r.id === item.id) || merged[0];
-                          handleSelect(selectedRestaurant);
-                        }
-                      }}
-                      className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2 group"
-                    >
-                      <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="font-medium">{item.name}</span>
-                        <span className="text-sm text-muted-foreground truncate">
-                          {item.address}
-                        </span>
-                      </div>
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          removeFromHistory(item.id);
+                          if (data && data.length > 0) {
+                            // 병합 로직 적용
+                            const merged = mergeRestaurants(data as Restaurant[]);
+                            // 원래 선택한 레스토랑을 우선적으로 사용
+                            const selectedRestaurant = merged.find(r => r.id === item.id) || merged[0];
+                            handleSelect(selectedRestaurant);
+                          }
                         }}
-                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-background rounded cursor-pointer"
+                        className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2 group"
                       >
-                        <X className="h-3 w-3" />
-                      </div>
-                    </button>
-                  ))}
+                        <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-medium">{item.name}</span>
+                          <span className="text-sm text-muted-foreground truncate">
+                            {item.address}
+                          </span>
+                        </div>
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromHistory(item.id);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-background rounded cursor-pointer"
+                        >
+                          <X className="h-3 w-3" />
+                        </div>
+                      </button>
+                    ))}
                 </div>
               )}
 
@@ -395,38 +399,40 @@ const RestaurantSearch = ({
                     <TrendingUp className="h-4 w-4" />
                     인기 검색 맛집
                   </div>
-                  {popularRestaurants.map((restaurant, index) => (
-                    <button
-                      key={restaurant.id}
-                      onClick={async () => {
-                        // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
-                        const { data } = await supabase
-                          .from('restaurants')
-                          .select('*')
-                          .eq('name', restaurant.name)
-                          .eq('status', 'approved');
+                  {popularRestaurants
+                    .slice(0, maxItems)
+                    .map((restaurant, index) => (
+                      <button
+                        key={restaurant.id}
+                        onClick={async () => {
+                          // 같은 이름의 모든 레스토랑 조회 (병합을 위해)
+                          const { data } = await supabase
+                            .from('restaurants')
+                            .select('*')
+                            .eq('name', restaurant.name)
+                            .eq('status', 'approved');
 
-                        if (data && data.length > 0) {
-                          // 병합 로직 적용
-                          const merged = mergeRestaurants(data as Restaurant[]);
-                          // 원래 선택한 레스토랑을 우선적으로 사용
-                          const selectedRestaurant = merged.find(r => r.id === restaurant.id) || merged[0];
-                          handleSelect(selectedRestaurant);
-                        }
-                      }}
-                      className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
-                    >
-                      <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex-shrink-0">
-                        {index + 1}
-                      </div>
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="font-medium">{restaurant.name}</span>
-                        <span className="text-sm text-muted-foreground truncate">
-                          {restaurant.road_address || restaurant.jibun_address || restaurant.english_address || '주소 없음'}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
+                          if (data && data.length > 0) {
+                            // 병합 로직 적용
+                            const merged = mergeRestaurants(data as Restaurant[]);
+                            // 원래 선택한 레스토랑을 우선적으로 사용
+                            const selectedRestaurant = merged.find(r => r.id === restaurant.id) || merged[0];
+                            handleSelect(selectedRestaurant);
+                          }
+                        }}
+                        className="w-full text-left p-3 hover:bg-muted border-b border-border last:border-b-0 flex items-center gap-2"
+                      >
+                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex-shrink-0">
+                          {index + 1}
+                        </div>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="font-medium">{restaurant.name}</span>
+                          <span className="text-sm text-muted-foreground truncate">
+                            {restaurant.road_address || restaurant.jibun_address || restaurant.english_address || '주소 없음'}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
                 </div>
               )}
             </>

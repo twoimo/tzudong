@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import Image from "next/image";
 import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
 import { BookmarkButton } from "@/components/ui/bookmark-button";
+import { ReviewCard } from "@/components/reviews/ReviewCard";
 
 interface RestaurantDetailPanelProps {
     restaurant: Restaurant | null;
@@ -44,6 +45,7 @@ interface Review {
     category: string;
     likeCount: number;
     isLikedByUser: boolean;
+    userAvatarUrl?: string | null;
 }
 
 export function RestaurantDetailPanel({
@@ -59,7 +61,7 @@ export function RestaurantDetailPanel({
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-    const [viewMode, setViewMode] = useState<'detail' | 'reviews' | 'review-detail'>('detail');
+    const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
@@ -148,12 +150,12 @@ export function RestaurantDetailPanel({
                 // 3. Profiles 가져오기
                 const { data: profilesData } = await (supabase
                     .from('profiles') as any)
-                    .select('user_id, nickname')
+                    .select('user_id, nickname, profile_picture')
                     .in('user_id', userIds);
 
                 // 4. Map으로 변환 (빠른 조회)
-                const profilesMap = new Map(
-                    (profilesData || []).map((p: any) => [p.user_id, p.nickname])
+                const profilesMap = new Map<string, { nickname: string; avatarUrl: string | null }>(
+                    (profilesData || []).map((p: any) => [p.user_id, { nickname: p.nickname, avatarUrl: p.profile_picture }])
                 );
 
                 // 6. 리뷰 좋아요 데이터 조회
@@ -176,12 +178,14 @@ export function RestaurantDetailPanel({
                 // 7. 리뷰 데이터 매핑
                 const reviews = reviewsData.map((review: any) => {
                     const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
+                    const userProfile = profilesMap.get(review.user_id);
                     return {
                         id: review.id,
                         userId: review.user_id,
                         restaurantName: restaurant.name,
                         restaurantCategories: categories,
-                        userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                        userName: userProfile?.nickname || '탈퇴한 사용자',
+                        userAvatarUrl: userProfile?.avatarUrl,
                         visitedAt: review.visited_at,
                         submittedAt: review.created_at || '',
                         content: review.content,
@@ -263,15 +267,7 @@ export function RestaurantDetailPanel({
     };
 
     const handleBackToDetail = () => {
-        if (viewMode === 'review-detail') {
-            // 리뷰 상세에서 돌아갈 때: 이전 화면으로
-            setSelectedReview(null);
-            setCurrentPhotoIndex(0);
-            // 전체 리뷰 목록에서 왔는지 여부에 따라 분기
-            setViewMode('detail');
-        } else {
-            setViewMode('detail');
-        }
+        setViewMode('detail');
     };
 
     const handleBackFromReviewDetail = () => {
@@ -282,9 +278,9 @@ export function RestaurantDetailPanel({
     };
 
     const handleReviewClick = (review: Review) => {
-        setSelectedReview(review);
-        setCurrentPhotoIndex(0);
-        setViewMode('review-detail');
+        // [MODIFIED] 리뷰 상세 페이지(viewMode='review-detail')로 이동하지 않음
+        // ReviewCard가 자체적으로 텍스트 확장 기능을 제공하므로 별도 페이지 이동 불필요
+        console.log("Review clicked:", review.id);
     };
 
     const handlePrevPhoto = () => {
@@ -391,7 +387,7 @@ export function RestaurantDetailPanel({
         const isCurrentlyLiked = likedReviews.has(reviewId);
         const previousState = new Set(likedReviews);
 
-        // Optimistic update: 즉시 UI 업데이트
+        // 낙관적 업데이트: 즉시 UI 업데이트
         setLikedReviews(prev => {
             const newSet = new Set(prev);
             if (isCurrentlyLiked) {
@@ -489,7 +485,7 @@ export function RestaurantDetailPanel({
         <>
             <div
                 data-panel-type="restaurant-detail"
-                className="h-full flex flex-col bg-background border-l border-border relative"
+                className="h-full w-full max-w-full flex flex-col bg-background border-l border-border relative"
             >
                 {/* 플로팅 접기/펼치기 버튼 - 패널 좌측 가장자리, 모바일에서는 숨김 */}
                 {onToggleCollapse && !isMobile && (
@@ -507,32 +503,11 @@ export function RestaurantDetailPanel({
                     </button>
                 )}
 
-                {/* Header */}
+                {/* 헤더 */}
                 <div className="p-4 border-b border-border h-[80px] flex flex-col justify-center">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
-                            {viewMode === 'review-detail' && selectedReview && (
-                                <>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={handleBackToDetail}
-                                        className="mr-2 shrink-0"
-                                    >
-                                        <ArrowLeft className="h-4 w-4" />
-                                    </Button>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="text-xl font-bold truncate">
-                                                {restaurant.name}
-                                            </h3>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground truncate">
-                                            {selectedReview.userName}님의 리뷰
-                                        </p>
-                                    </div>
-                                </>
-                            )}
+
                             {viewMode === 'reviews' && (
                                 <>
                                     <Button
@@ -646,12 +621,12 @@ export function RestaurantDetailPanel({
 
                 </div>
 
-                {/* Content */}
-                <ScrollArea className="flex-1">
+                {/* 내용 */}
+                <div className="flex-1 w-full max-w-full overflow-y-auto overflow-x-hidden">
                     <div className="p-4 space-y-4">
                         {viewMode === 'detail' ? (
                             <>
-                                {/* Contact Info */}
+                                {/* 연락처 정보 */}
                                 <div className="space-y-3">
                                     <h3 className="font-semibold text-sm flex items-center gap-2">
                                         <Store className="h-4 w-4 text-muted-foreground" />
@@ -740,7 +715,7 @@ export function RestaurantDetailPanel({
                                     </div>
                                 </div>
 
-                                {/* YouTube Links */}
+                                {/* 유튜브 링크 */}
                                 <Separator />
                                 {(restaurant.mergedYoutubeLinks && restaurant.mergedYoutubeLinks.length > 0) || restaurant.youtube_link ? (
                                     <div className="space-y-3">
@@ -901,7 +876,7 @@ export function RestaurantDetailPanel({
                                     </div>
                                 ) : null}
 
-                                {/* Recent Reviews Preview */}
+                                {/* 최근 리뷰 미리보기 */}
                                 <Separator />
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
@@ -930,381 +905,69 @@ export function RestaurantDetailPanel({
                                             리뷰가 없습니다
                                         </div>
                                     ) : (
-                                        <div className="space-y-2">
+                                        <div className="space-y-4">
                                             {recentReviews.map((review) => (
-                                                <Card
+                                                <ReviewCard
                                                     key={review.id}
-                                                    className="p-0 relative cursor-pointer hover:bg-muted/50 transition-colors overflow-hidden"
+                                                    review={{
+                                                        ...review,
+                                                        userAvatarUrl: review.userAvatarUrl || undefined,
+                                                        visitedAt: review.visitedAt,
+                                                        submittedAt: review.submittedAt,
+                                                    }}
+                                                    onLike={handleLikeReview}
                                                     onClick={() => handleReviewClick(review)}
-                                                >
-                                                    {/* 좋아요 버튼 - 이미지 우측 상단 */}
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="absolute top-2 right-2 z-10 h-8 px-2 bg-black/50 hover:bg-black/70 backdrop-blur-sm rounded-full flex items-center gap-1"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleLikeReview(review.id);
-                                                        }}
-                                                    >
-                                                        <Heart
-                                                            className={`h-4 w-4 ${likedReviews.has(review.id)
-                                                                ? 'fill-red-500 text-red-500'
-                                                                : 'text-white'
-                                                                }`}
-                                                        />
-                                                        <span className="text-xs text-white font-medium">
-                                                            {getRealtimeLikeCount(review) >= 100 ? '99+' : getRealtimeLikeCount(review)}
-                                                        </span>
-                                                    </Button>
-
-                                                    {/* 사진 먼저 (인스타그램 스타일) */}
-                                                    {review.photos.length > 0 && (
-                                                        <div className="relative w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                                                            <Image
-                                                                src={supabase.storage.from('review-photos').getPublicUrl(review.photos[cardPhotoIndexes[review.id] || 0].url).data.publicUrl}
-                                                                alt={`음식 사진`}
-                                                                fill
-                                                                className="object-cover"
-                                                                sizes="(max-width: 400px) 100vw, 200px"
-                                                                onError={(e) => {
-                                                                    console.error('이미지 로딩 실패:', review.photos[cardPhotoIndexes[review.id] || 0].url);
-                                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                                }}
-                                                            />
-                                                            {/* Navigation Arrows */}
-                                                            {review.photos.length > 1 && (
-                                                                <>
-                                                                    <button
-                                                                        className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            const currentIndex = cardPhotoIndexes[review.id] || 0;
-                                                                            const newIndex = currentIndex === 0 ? review.photos.length - 1 : currentIndex - 1;
-                                                                            setCardPhotoIndexes(prev => ({ ...prev, [review.id]: newIndex }));
-                                                                        }}
-                                                                    >
-                                                                        <ChevronLeft className="h-4 w-4" />
-                                                                    </button>
-                                                                    <button
-                                                                        className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
-                                                                            const currentIndex = cardPhotoIndexes[review.id] || 0;
-                                                                            const newIndex = currentIndex === review.photos.length - 1 ? 0 : currentIndex + 1;
-                                                                            setCardPhotoIndexes(prev => ({ ...prev, [review.id]: newIndex }));
-                                                                        }}
-                                                                    >
-                                                                        <ChevronRight className="h-4 w-4" />
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            {/* Dot Indicators */}
-                                                            {review.photos.length > 1 && (
-                                                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                                                                    {review.photos.map((_, index) => (
-                                                                        <div
-                                                                            key={index}
-                                                                            className={`w-1.5 h-1.5 rounded-full ${index === (cardPhotoIndexes[review.id] || 0)
-                                                                                ? 'bg-white'
-                                                                                : 'bg-white/40'
-                                                                                }`}
-                                                                        />
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-
-                                                    {/* 사용자 정보와 내용 */}
-                                                    <div className="p-3">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <span className="text-xs font-medium truncate">
-                                                                {review.userName}
-                                                            </span>
-                                                            {review.isVerified && (
-                                                                <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
-                                                                    <CheckCircle className="h-2 w-2 mr-0.5" />
-                                                                    인증
-                                                                </Badge>
-                                                            )}
-                                                            <span className="text-[10px] text-muted-foreground ml-auto">
-                                                                {formatDateTime(review.submittedAt)}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground line-clamp-2">
-                                                            {review.content}
-                                                        </p>
-                                                    </div>
-                                                </Card>
+                                                    onRestaurantClick={() => {
+                                                        // 이미 상세 패널 내부이므로 별도 동작 없음 (필요 시 스크롤 상단 이동 등 추가)
+                                                        // 현재는 그대로 유지
+                                                        console.log("Restaurant clicked");
+                                                    }}
+                                                />
                                             ))}
                                         </div>
                                     )}
                                 </div>
                             </>
-                        ) : viewMode === 'review-detail' && selectedReview ? (
-                            /* Review Detail View - 리뷰 상세 + 캐러셀 */
-                            <div className="space-y-4">
-                                {/* User Info - Simplified */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-sm">
-                                        {selectedReview.isPinned && (
-                                            <Pin className="h-3.5 w-3.5 text-primary fill-primary" />
-                                        )}
-                                        <span className="font-medium">{selectedReview.userName}</span>
-                                        {selectedReview.isVerified && (
-                                            <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
-                                                <CheckCircle className="h-2 w-2 mr-0.5" />
-                                                인증
-                                            </Badge>
-                                        )}
-                                        <span className="text-muted-foreground">·</span>
-                                        <span className="text-muted-foreground">
-                                            {new Date(selectedReview.submittedAt).toLocaleDateString('ko-KR')}
-                                        </span>
-                                        {selectedReview.isEditedByAdmin && (
-                                            <>
-                                                <span className="text-muted-foreground">·</span>
-                                                <span className="text-orange-500 text-xs">수정됨</span>
-                                            </>
-                                        )}
-                                    </div>
-                                    <button
-                                        className="flex items-center gap-1 text-sm"
-                                        onClick={() => handleLikeReview(selectedReview.id)}
-                                    >
-                                        <Heart
-                                            className={`h-4 w-4 ${likedReviews.has(selectedReview.id)
-                                                ? 'fill-red-500 text-red-500'
-                                                : 'text-muted-foreground'
-                                                }`}
-                                        />
-                                        <span className="text-muted-foreground text-xs">
-                                            {getRealtimeLikeCount(selectedReview) >= 100 ? '99+' : getRealtimeLikeCount(selectedReview)}
-                                        </span>
-                                    </button>
-                                </div>
-
-                                {/* Photo Carousel - Instagram Style */}
-                                {selectedReview.photos.length > 0 && (
-                                    <div className="relative">
-                                        <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden">
-                                            <Image
-                                                src={supabase.storage.from('review-photos').getPublicUrl(selectedReview.photos[currentPhotoIndex].url).data.publicUrl}
-                                                alt={`음식 사진 ${currentPhotoIndex + 1}`}
-                                                fill
-                                                className="object-cover"
-                                                sizes="(max-width: 400px) 100vw, 400px"
-                                                onError={(e) => {
-                                                    console.error('이미지 로딩 실패:', selectedReview.photos[currentPhotoIndex].url);
-                                                    (e.target as HTMLImageElement).style.display = 'none';
-                                                }}
-                                            />
-
-                                            {/* Navigation Arrows */}
-                                            {selectedReview.photos.length > 1 && (
-                                                <>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 hover:bg-black/60 text-white rounded-full"
-                                                        onClick={handlePrevPhoto}
-                                                    >
-                                                        <ChevronLeft className="h-5 w-5" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 bg-black/40 hover:bg-black/60 text-white rounded-full"
-                                                        onClick={handleNextPhoto}
-                                                    >
-                                                        <ChevronRight className="h-5 w-5" />
-                                                    </Button>
-                                                </>
-                                            )}
-
-                                            {/* Photo Counter */}
-                                            {selectedReview.photos.length > 1 && (
-                                                <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                                                    {currentPhotoIndex + 1} / {selectedReview.photos.length}
-                                                </div>
-                                            )}
-
-                                            {/* Dot Indicators - Inside Image */}
-                                            {selectedReview.photos.length > 1 && (
-                                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                                                    {selectedReview.photos.map((_, index) => (
-                                                        <button
-                                                            key={index}
-                                                            className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
-                                                                ? 'bg-white'
-                                                                : 'bg-white/40'
-                                                                }`}
-                                                            onClick={() => setCurrentPhotoIndex(index)}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Full Content */}
-                                <div>
-                                    <p className="text-sm whitespace-pre-wrap leading-relaxed">
-                                        {selectedReview.content}
-                                    </p>
-                                </div>
-
-                                {/* Rejection Note */}
-                                {selectedReview.admin_note && selectedReview.admin_note.includes('거부') && (
-                                    <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded">
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <XCircle className="h-4 w-4 text-red-600" />
-                                            <span className="text-sm font-medium text-red-700 dark:text-red-300">
-                                                거부 사유
-                                            </span>
-                                        </div>
-                                        <p className="text-sm text-red-600 dark:text-red-400">
-                                            {selectedReview.admin_note.startsWith('거부: ') ? selectedReview.admin_note.substring(4) : selectedReview.admin_note}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
                         ) : viewMode === 'reviews' ? (
-                            /* Reviews View - 모든 리뷰 표시 */
+                            /* Reviews View - 모든 리뷰 표시 (ReviewCard 사용) */
                             <div className="space-y-4">
                                 {reviewsLoading ? (
-                                    <div className="text-sm text-muted-foreground text-center py-8">
+                                    <div className="text-sm text-muted-foreground text-center py-4">
                                         리뷰를 불러오는 중...
                                     </div>
                                 ) : safeReviewsData.length === 0 ? (
-                                    <div className="text-sm text-muted-foreground text-center py-8">
+                                    <div className="text-sm text-muted-foreground text-center py-4">
                                         리뷰가 없습니다
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
                                         {safeReviewsData.map((review) => (
-                                            <Card
+                                            <ReviewCard
                                                 key={review.id}
-                                                className={`p-0 relative cursor-pointer hover:bg-muted/50 transition-colors overflow-hidden ${review.isPinned ? "border-primary border-2" : ""}`}
-                                                onClick={() => handleReviewClick(review)}
-                                            >
-                                                {/* 좋아요 버튼 - 이미지 우측 상단 */}
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="absolute top-2 right-2 z-10 h-8 px-2 bg-black/50 hover:bg-black/70 backdrop-blur-sm rounded-full flex items-center gap-1"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleLikeReview(review.id);
-                                                    }}
-                                                >
-                                                    <Heart
-                                                        className={`h-4 w-4 ${likedReviews.has(review.id)
-                                                            ? 'fill-red-500 text-red-500'
-                                                            : 'text-white'
-                                                            }`}
-                                                    />
-                                                    <span className="text-xs text-white font-medium">
-                                                        {getRealtimeLikeCount(review) >= 100 ? '99+' : getRealtimeLikeCount(review)}
-                                                    </span>
-                                                </Button>
-
-                                                {/* 사진 먼저 (인스타그램 스타일) */}
-                                                {review.photos.length > 0 && (
-                                                    <div className="relative w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                                                        <Image
-                                                            src={supabase.storage.from('review-photos').getPublicUrl(review.photos[cardPhotoIndexes[review.id] || 0].url).data.publicUrl}
-                                                            alt={`음식 사진`}
-                                                            fill
-                                                            className="object-cover"
-                                                            sizes="(max-width: 400px) 100vw, 400px"
-                                                            onError={(e) => {
-                                                                console.error('이미지 로딩 실패:', review.photos[cardPhotoIndexes[review.id] || 0].url);
-                                                                (e.target as HTMLImageElement).style.display = 'none';
-                                                            }}
-                                                        />
-                                                        {/* Navigation Arrows */}
-                                                        {review.photos.length > 1 && (
-                                                            <>
-                                                                <button
-                                                                    className="absolute left-1 top-1/2 -translate-y-1/2 h-6 w-6 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const currentIndex = cardPhotoIndexes[review.id] || 0;
-                                                                        const newIndex = currentIndex === 0 ? review.photos.length - 1 : currentIndex - 1;
-                                                                        setCardPhotoIndexes(prev => ({ ...prev, [review.id]: newIndex }));
-                                                                    }}
-                                                                >
-                                                                    <ChevronLeft className="h-4 w-4" />
-                                                                </button>
-                                                                <button
-                                                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        const currentIndex = cardPhotoIndexes[review.id] || 0;
-                                                                        const newIndex = currentIndex === review.photos.length - 1 ? 0 : currentIndex + 1;
-                                                                        setCardPhotoIndexes(prev => ({ ...prev, [review.id]: newIndex }));
-                                                                    }}
-                                                                >
-                                                                    <ChevronRight className="h-4 w-4" />
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                        {/* Dot Indicators */}
-                                                        {review.photos.length > 1 && (
-                                                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                                                                {review.photos.map((_, index) => (
-                                                                    <div
-                                                                        key={index}
-                                                                        className={`w-1.5 h-1.5 rounded-full ${index === (cardPhotoIndexes[review.id] || 0)
-                                                                            ? 'bg-white'
-                                                                            : 'bg-white/40'
-                                                                            }`}
-                                                                    />
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-
-                                                {/* 사용자 정보와 내용 */}
-                                                <div className="p-4">
-                                                    <div className="flex items-center gap-2 mb-2">
-                                                        {review.isPinned && (
-                                                            <Pin className="h-4 w-4 text-primary fill-primary" />
-                                                        )}
-                                                        <span className="text-sm font-semibold">{review.userName}</span>
-                                                        {review.isVerified && (
-                                                            <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
-                                                                <CheckCircle className="h-2 w-2 mr-0.5" />
-                                                                인증
-                                                            </Badge>
-                                                        )}
-                                                        <span className="text-xs text-muted-foreground ml-auto">
-                                                            {formatDateTime(review.submittedAt)}
-                                                        </span>
-                                                    </div>
-
-                                                    {review.isEditedByAdmin && (
-                                                        <Badge variant="outline" className="mb-2 border-orange-500 text-orange-500 text-xs">
-                                                            ⚠️ 관리자가 수정함
-                                                        </Badge>
-                                                    )}
-
-                                                    <p className="text-sm line-clamp-3">{review.content}</p>
-                                                </div>
-                                            </Card>
+                                                review={{
+                                                    ...review,
+                                                    userAvatarUrl: review.userAvatarUrl || undefined,
+                                                    visitedAt: review.visitedAt,
+                                                    submittedAt: review.submittedAt,
+                                                }}
+                                                onLike={handleLikeReview}
+                                                onClick={() => {
+                                                    // 클릭 시 별도 상세 페이지로 이동하지 않고
+                                                    // ReviewCard 내부의 더보기 버튼으로 내용 확인
+                                                }}
+                                                onRestaurantClick={() => {
+                                                    // 이미 패널 내부에 있으므로 스크롤 등 동작 정의 가능
+                                                }}
+                                            />
                                         ))}
                                     </div>
                                 )}
                             </div>
                         ) : null}
                     </div>
-                </ScrollArea>
+                </div>
 
-                {/* Footer Actions */}
+                {/* 하단 액션 (네이버/카카오/구글 지도 선택) */}
                 {viewMode === 'detail' && (
                     <div className="border-t border-border">
                         {/* Direction Options - 확장 시 표시 */}
