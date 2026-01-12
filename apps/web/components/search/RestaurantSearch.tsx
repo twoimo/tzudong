@@ -32,7 +32,13 @@ const RestaurantSearch = ({
   selectedRegion,
   isKoreanOnly = false
 }: RestaurantSearchProps) => {
-  const [searchQuery, setSearchQuery] = useState("");
+  // [URL 동기화] 초기 로드 시 URL에서 검색어 복원
+  const getInitialQuery = () => {
+    if (typeof window === 'undefined') return '';
+    const params = new URLSearchParams(window.location.search);
+    return params.get('q') || '';
+  };
+  const [searchQuery, setSearchQuery] = useState(getInitialQuery);
   const debouncedSearchQuery = useDeferredValue(searchQuery); // [OPTIMIZATION] 디바운싱
   const [isFocused, setIsFocused] = useState(false);
   const [searchType, setSearchType] = useState<SearchType>('name');
@@ -186,6 +192,11 @@ const RestaurantSearch = ({
     // 인기 검색어 쿼리 무효화하여 즉시 업데이트
     queryClient.invalidateQueries({ queryKey: ["popular-searches"] });
 
+    // [URL 동기화] 검색어를 URL 파라미터에 추가
+    const newParams = new URLSearchParams(window.location.search);
+    newParams.set('q', restaurant.name);
+    window.history.replaceState({}, '', `?${newParams.toString()}`);
+
     // 검색 시에는 별도 콜백 호출 (지도 재조정용)
     if (onRestaurantSearch) {
       onRestaurantSearch(restaurant);
@@ -201,6 +212,10 @@ const RestaurantSearch = ({
   const clearSearch = useCallback(() => {
     setSearchQuery("");
     setIsFocused(false);
+    // [URL 동기화] 검색어 제거
+    const newParams = new URLSearchParams(window.location.search);
+    newParams.delete('q');
+    window.history.replaceState({}, '', `?${newParams.toString()}`);
   }, []);
 
   const toggleSearchType = useCallback(() => {

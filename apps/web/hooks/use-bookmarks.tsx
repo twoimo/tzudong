@@ -182,3 +182,25 @@ export function useToggleBookmark() {
         isLoading: addBookmark.isPending || removeBookmark.isPending,
     };
 }
+
+/**
+ * 특정 맛집의 북마크 카운트를 가져오는 훅
+ * [성능 최적화] 북마크 카운트는 실시간성이 낮으므로 staleTime 5분
+ */
+export function useBookmarkCount(restaurantId: string) {
+    return useQuery({
+        queryKey: ['bookmark-count', restaurantId],
+        queryFn: async () => {
+            const { count, error } = await (supabase as any)
+                .from('user_bookmarks')
+                .select('*', { count: 'exact', head: true })
+                .eq('restaurant_id', restaurantId);
+
+            if (error) throw error;
+            return count || 0;
+        },
+        enabled: !!restaurantId,
+        staleTime: 5 * 60 * 1000, // 5분 (북마크 카운트는 자주 변하지 않음)
+        gcTime: BOOKMARK_GC_TIME,
+    });
+}
