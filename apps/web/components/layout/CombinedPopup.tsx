@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, memo, useRef, useMemo } from 'react';
-import { Scroll } from 'lucide-react';
+import { Scroll, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useDeviceType } from '@/hooks/useDeviceType';
@@ -162,6 +162,7 @@ const CombinedPopupComponent = () => {
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const hasShownRef = useRef(false);
     const slideContainerRef = useRef<HTMLDivElement>(null);
@@ -300,13 +301,35 @@ const CombinedPopupComponent = () => {
             >
                 {/* 배너 슬라이드 컨텐츠 - 가로 슬라이딩 방식 */}
                 <div
-                    className="relative aspect-[4/5] overflow-hidden touch-pan-y"
+                    className="relative aspect-[4/5] overflow-hidden group"
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
+                    onMouseDown={(e) => {
+                        setIsDragging(true);
+                        setTouchStart(e.clientX);
+                    }}
+                    onMouseMove={(e) => {
+                        if (!isDragging) return;
+                        setTouchEnd(e.clientX);
+                    }}
+                    onMouseUp={() => {
+                        if (isDragging) {
+                            onTouchEnd();
+                            setIsDragging(false);
+                        }
+                    }}
+                    onMouseLeave={() => {
+                        if (isDragging) {
+                            setIsDragging(false);
+                        }
+                    }}
                 >
                     <div
-                        className="flex w-full h-full transition-transform duration-500 ease-out"
+                        className={cn(
+                            "flex w-full h-full transition-transform duration-500 ease-out",
+                            isDragging ? "cursor-grabbing" : "cursor-grab"
+                        )}
                         style={{ transform: `translateX(-${currentSlide * 100}%)` }}
                         ref={slideContainerRef}
                     >
@@ -315,7 +338,7 @@ const CombinedPopupComponent = () => {
                                 key={banner.id}
                                 banner={banner}
                                 isActive={index === currentSlide}
-                                onClick={() => handleBannerClick(banner)}
+                                onClick={() => !isDragging && handleBannerClick(banner)}
                                 onVideoEnded={() => {
                                     if (banners.length > 1 && index === currentSlide) {
                                         nextSlide();
@@ -324,6 +347,24 @@ const CombinedPopupComponent = () => {
                             />
                         ))}
                     </div>
+
+                    {/* 데스크탑 네비게이션 버튼 (마우스 오버 시 표시) */}
+                    {banners.length > 1 && (
+                        <>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); prevSlide(); }}
+                                className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
+                            >
+                                <ChevronLeft className="w-5 h-5" />
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); nextSlide(); }}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/30 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/50"
+                            >
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 {/* 슬라이드 인디케이터 */}
