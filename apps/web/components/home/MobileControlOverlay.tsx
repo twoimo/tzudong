@@ -159,7 +159,7 @@ function MobileControlOverlayComponent({
         // [OPTIMIZATION] requestAnimationFrame으로 DOM 직접 조작
         requestAnimationFrame(() => {
             if (sheetRef.current) {
-                sheetRef.current.style.transform = `translateY(calc(85vh - ${newHeight}vh))`;
+                sheetRef.current.style.transform = `translateY(calc(100% - ${newHeight}vh))`;
             }
         });
     }, []); // 의존성 배열 비움 - ref만 사용하므로 안정적
@@ -189,8 +189,11 @@ function MobileControlOverlayComponent({
             setSheetHeight(minHeight);
             currentHeightRef.current = minHeight;
             if (sheetRef.current) {
-                sheetRef.current.style.transform = `translateY(calc(85vh - ${minHeight}vh))`;
+                sheetRef.current.style.transform = `translateY(calc(100% - ${minHeight}vh))`;
             }
+        } else {
+            // [Fix] 드래그 종료 시 현재 높이로 state 업데이트하여 위치 유지 (리렌더링 시 스냅백 방지)
+            setSheetHeight(currentHeight);
         }
         // 스냅 없음 - 현재 위치 그대로 유지
     }, [handleClose]);
@@ -311,7 +314,7 @@ function MobileControlOverlayComponent({
 
         // DOM에 즉시 반영 (애니메이션과 함께) - 검색 시트는 transform 사용 안 함
         if (activeSheet !== 'search') {
-            sheetRef.current.style.transform = `translateY(calc(85vh - ${initialHeight}vh))`;
+            sheetRef.current.style.transform = `translateY(calc(100% - ${initialHeight}vh))`;
         } else {
             sheetRef.current.style.transform = 'none';
         }
@@ -468,10 +471,11 @@ function MobileControlOverlayComponent({
                         )}
                         style={{
                             // [OPTIMIZATION] 검색 시트는 auto height, 나머지는 고정 높이 + transform
-                            height: activeSheet === 'search' ? 'auto' : '85vh',
+                            // [Fix] 100vh 대신 100%를 사용하여 모바일 브라우저 호환성 향상 (부모가 fixed inset-0임)
+                            height: activeSheet === 'search' ? 'auto' : '100%',
                             transform: activeSheet === 'search'
                                 ? 'none'
-                                : `translateY(calc(85vh - ${sheetHeight}vh))`,
+                                : `translateY(calc(100% - ${sheetHeight}vh))`,
                             willChange: isDragging ? 'transform' : 'auto', // 드래그 중 GPU 레이어 유지
                             // 검색 시트는 네비게이션 바(약 65px) + Safe Area 위로 띄움
                             bottom: activeSheet === 'search' ? 'calc(35px + env(safe-area-inset-bottom))' : 0,
