@@ -208,6 +208,7 @@ export function useToggleBookmark() {
 /**
  * 특정 맛집의 북마크 카운트를 가져오는 훅
  * [성능 최적화] 북마크 카운트는 실시간성이 낮으므로 staleTime 5분
+ * [주의] user_bookmarks 테이블의 RLS 정책이 "Anyone can view bookmarks" (FOR SELECT USING (true))로 설정되어 있어야 정확한 전체 카운트가 표시됩니다.
  */
 export function useBookmarkCount(restaurantId: string) {
     return useQuery({
