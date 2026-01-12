@@ -14,6 +14,22 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { RefreshCw } from "lucide-react";
+
+// 쯔양 테마 랜덤 닉네임 생성
+const generateRandomNickname = (): string => {
+  const prefixes = [
+    '위장이2개', '블랙홀위장', '쯔동민턴', '냉면빨대', '짜장면통째로',
+    '라면8봉', '삼겹살산맥', '치킨흡입기', '쩝쩝박사', '대왕카스테라',
+    '국밥말아먹어', '쯔양제자', '먹방견습생', '위장무한대', '풀코스다먹어',
+    '5인분혼밥러', '배터지기직전', '밥도둑잡아라', '냠냠폭격기', '칼로리는숫자',
+    '야식은기본', '다이어트내일부터'
+  ];
+  const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const randomSuffix = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+  return `${randomPrefix}_${randomSuffix}`;
+};
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -248,12 +264,16 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [isSendingReset, setIsSendingReset] = useState(false);
 
-  // 이전에 동의한 적 있으면 localStorage에서 불러오기
+  // 이전에 동의한 적 있으면 localStorage에서 불러오기 + 랜덤 닉네임 설정
   useEffect(() => {
     if (!isOpen) return;
     const hasAgreed = localStorage.getItem('privacy_policy_agreed');
     if (hasAgreed === 'true') {
       setPrivacyAgreed(true);
+    }
+    // 모달이 열릴 때 랜덤 닉네임 설정 (비어있을 경우)
+    if (!username) {
+      setUsername(generateRandomNickname());
     }
   }, [isOpen]);
 
@@ -261,7 +281,12 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
     setEmail("");
     setPassword("");
     setConfirmPassword("");
-    setUsername("");
+    setUsername(generateRandomNickname());
+  }, []);
+
+  // 랜덤 닉네임 새로고침
+  const refreshNickname = useCallback(() => {
+    setUsername(generateRandomNickname());
   }, []);
 
   const handleGoogleLogin = useCallback(async () => {
@@ -308,6 +333,10 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
       toast.error("개인정보 처리방침에 동의해주세요");
       return;
     }
+    if (username.length < 2 || username.length > 20) {
+      toast.error("닉네임은 2-20자 사이여야 합니다");
+      return;
+    }
     if (password.length < 8 || password.length > 12) {
       toast.error("비밀번호는 8자 이상 12자 이하여야 합니다");
       return;
@@ -319,6 +348,19 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
 
     setIsLoading(true);
     try {
+      // 닉네임 중복 체크
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('nickname')
+        .eq('nickname', username.trim())
+        .maybeSingle();
+
+      if (existingProfile) {
+        toast.error("이미 사용 중인 닉네임입니다. 다른 닉네임을 선택해주세요.");
+        setIsLoading(false);
+        return;
+      }
+
       const { session } = await signUp(email, password, username);
       if (session) {
         toast.success("회원가입 완료! 환영합니다.");
@@ -472,16 +514,30 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="signup-username" className="text-sm">닉네임</Label>
-                  <Input
-                    id="signup-username"
-                    placeholder="닉네임을 입력하세요"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    autoComplete="username"
-                    enterKeyHint="next"
-                    className="h-10 sm:h-11"
-                  />
+                  <div className="flex items-baseline gap-2">
+                    <Label htmlFor="signup-username" className="text-sm">닉네임</Label>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      id="signup-username"
+                      placeholder="닉네임을 입력하세요"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      autoComplete="username"
+                      enterKeyHint="next"
+                      className="h-10 sm:h-11 flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={refreshNickname}
+                      className="h-10 sm:h-11 w-10 sm:w-11 shrink-0"
+                      title="다른 랜덤 닉네임"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="signup-email" className="text-sm">이메일</Label>
@@ -497,7 +553,9 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="text-sm">비밀번호</Label>
+                  <div className="flex items-baseline gap-2">
+                    <Label htmlFor="signup-password" className="text-sm">비밀번호</Label>
+                  </div>
                   <Input
                     id="signup-password"
                     type="password"
@@ -508,7 +566,6 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
                     enterKeyHint="next"
                     className="h-10 sm:h-11"
                   />
-                  <p className="text-xs text-muted-foreground">8자 이상 12자 이하</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="confirm-password" className="text-sm">비밀번호 확인</Label>
