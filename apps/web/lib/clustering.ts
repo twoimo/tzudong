@@ -454,14 +454,28 @@ export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[
 };
 
 /**
- * 서울시 25개 자치구 기준 클러스터링 (줌 10-12)
- * 
- * 서울 맛집을 가장 가까운 자치구(구) 중심에 할당
+ * 서울 자치구 클러스터링 결과 인터페이스
+ * clusters: 마커 3개 이상인 구 (클러스터로 표시)
+ * individualRestaurants: 마커 2개 이하인 구의 맛집들 (개별 마커로 표시)
  */
-export const getSeoulDistrictClusters = (restaurants: Restaurant[]): SeoulDistrictCluster[] => {
+export interface SeoulDistrictClusterResult {
+    clusters: SeoulDistrictCluster[];
+    individualRestaurantIds: string[];
+}
+
+/**
+ * 서울시 25개 자치구 기준 클러스터링
+ * 
+ * @param restaurants 레스토랑 목록
+ * @param minClusterSize 클러스터로 표시할 최소 마커 수 (기본값: 1)
+ *   - minClusterSize=1: 마커가 1개 이상이면 모두 클러스터로 표시 (줌 9-10)
+ *   - minClusterSize=3: 마커가 3개 이상일 때만 클러스터, 2개 이하는 개별 마커 (줌 11-12)
+ */
+export const getSeoulDistrictClusters = (restaurants: Restaurant[], minClusterSize: number = 1): SeoulDistrictClusterResult => {
     const districtMap = new Map<string, {
         restaurantIds: string[];
         categories: Set<string>;
+        positions: Array<{ lat: number; lng: number }>;
     }>();
 
     const districtNames = Object.keys(SEOUL_DISTRICT_CENTERS);
@@ -469,14 +483,13 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[]): SeoulDistri
 
     // 25개 구 초기화
     for (const district of districtNames) {
-        districtMap.set(district, { restaurantIds: [], categories: new Set() });
+        districtMap.set(district, { restaurantIds: [], categories: new Set(), positions: [] });
     }
 
     restaurants.forEach((restaurant) => {
         if (!restaurant.lat || !restaurant.lng) return;
 
         // 서울 지역만 처리 (주소 체크)
-        // 간단한 주소 필터링
         const address = restaurant.road_address || restaurant.jibun_address || '';
         if (!address.includes('서울')) return;
 
@@ -505,6 +518,7 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[]): SeoulDistri
             const group = districtMap.get(district);
             if (group) {
                 group.restaurantIds.push(restaurant.id);
+                group.positions.push({ lat: restaurant.lat, lng: restaurant.lng });
                 const category = Array.isArray(restaurant.categories)
                     ? restaurant.categories[0]
                     : (restaurant.category || '기타');
@@ -516,16 +530,26 @@ export const getSeoulDistrictClusters = (restaurants: Restaurant[]): SeoulDistri
     });
 
     const clusters: SeoulDistrictCluster[] = [];
+    const individualRestaurantIds: string[] = [];
+
     for (const [district, group] of districtMap.entries()) {
-        if (group.restaurantIds.length > 0) {
+        if (group.restaurantIds.length >= minClusterSize) {
+            // minClusterSize 이상: 실제 마커들의 중심점 계산
+            const centerLat = group.positions.reduce((sum, p) => sum + p.lat, 0) / group.positions.length;
+            const centerLng = group.positions.reduce((sum, p) => sum + p.lng, 0) / group.positions.length;
+
             clusters.push({
                 region: district,
-                center: SEOUL_DISTRICT_CENTERS[district],
+                center: { lat: centerLat, lng: centerLng },
                 count: group.restaurantIds.length,
                 restaurantIds: group.restaurantIds,
                 categories: Array.from(group.categories),
             });
+        } else if (group.restaurantIds.length > 0) {
+            // minClusterSize 미만: 개별 마커로 표시
+            individualRestaurantIds.push(...group.restaurantIds);
         }
     }
-    return clusters;
+
+    return { clusters, individualRestaurantIds };
 };
