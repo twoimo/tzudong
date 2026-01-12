@@ -118,21 +118,32 @@ export function useToggleBookmark() {
 
             if (error) throw error;
         },
-        // [성능 최적화] Optimistic Update 적용
+        // [실시간 업데이트] Optimistic Update 적용 - 북마크 추가 시 카운트 +1
         onMutate: async (restaurantId) => {
             await queryClient.cancelQueries({ queryKey: ['bookmark-ids', user?.id] });
+            await queryClient.cancelQueries({ queryKey: ['bookmark-count', restaurantId] });
+
             const previousIds = queryClient.getQueryData(['bookmark-ids', user?.id]) as string[] | undefined;
+            const previousCount = queryClient.getQueryData(['bookmark-count', restaurantId]) as number | undefined;
+
+            // Optimistic Update: ID 추가 및 카운트 +1
             queryClient.setQueryData(['bookmark-ids', user?.id], [...(previousIds || []), restaurantId]);
-            return { previousIds };
+            queryClient.setQueryData(['bookmark-count', restaurantId], (previousCount || 0) + 1);
+
+            return { previousIds, previousCount, restaurantId };
         },
         onError: (err, restaurantId, context) => {
             if (context?.previousIds) {
                 queryClient.setQueryData(['bookmark-ids', user?.id], context.previousIds);
             }
+            if (context?.previousCount !== undefined) {
+                queryClient.setQueryData(['bookmark-count', restaurantId], context.previousCount);
+            }
         },
-        onSettled: () => {
+        onSettled: (data, error, restaurantId) => {
             queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
             queryClient.invalidateQueries({ queryKey: ['bookmark-ids'] });
+            queryClient.invalidateQueries({ queryKey: ['bookmark-count', restaurantId] });
         },
     });
 
@@ -148,24 +159,35 @@ export function useToggleBookmark() {
 
             if (error) throw error;
         },
-        // [성능 최적화] Optimistic Update 적용
+        // [실시간 업데이트] Optimistic Update 적용 - 북마크 삭제 시 카운트 -1
         onMutate: async (restaurantId) => {
             await queryClient.cancelQueries({ queryKey: ['bookmark-ids', user?.id] });
+            await queryClient.cancelQueries({ queryKey: ['bookmark-count', restaurantId] });
+
             const previousIds = queryClient.getQueryData(['bookmark-ids', user?.id]) as string[] | undefined;
+            const previousCount = queryClient.getQueryData(['bookmark-count', restaurantId]) as number | undefined;
+
+            // Optimistic Update: ID 제거 및 카운트 -1
             queryClient.setQueryData(
                 ['bookmark-ids', user?.id],
                 (previousIds || []).filter(id => id !== restaurantId)
             );
-            return { previousIds };
+            queryClient.setQueryData(['bookmark-count', restaurantId], Math.max(0, (previousCount || 1) - 1));
+
+            return { previousIds, previousCount, restaurantId };
         },
         onError: (err, restaurantId, context) => {
             if (context?.previousIds) {
                 queryClient.setQueryData(['bookmark-ids', user?.id], context.previousIds);
             }
+            if (context?.previousCount !== undefined) {
+                queryClient.setQueryData(['bookmark-count', restaurantId], context.previousCount);
+            }
         },
-        onSettled: () => {
+        onSettled: (data, error, restaurantId) => {
             queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
             queryClient.invalidateQueries({ queryKey: ['bookmark-ids'] });
+            queryClient.invalidateQueries({ queryKey: ['bookmark-count', restaurantId] });
         },
     });
 
