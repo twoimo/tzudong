@@ -22,12 +22,19 @@ Pull Request Convention (gh pr create):
   ## 관련 이슈
 
 Commit Workflow (auto-execute on "커밋해줘" request):
-1. git status - check changes
-2. git add . && git commit -m "[Tag] message"
-3. git push origin <current-branch>
-4. If current branch is develop:
-   - gh pr create --base main --head develop
-   - gh pr merge <PR#> --merge (auto-merge)
-5. If current branch is feat/*, fix/*, hotfix/*:
-   - gh pr create --base develop --head <current-branch>
-   - gh pr merge <PR#> --merge (auto-merge to develop)
+1. **Check Current Branch**: `git branch --show-current`
+2. IF current branch is `develop`:
+   - **Scenario A (Merged Feature & Ready to Release)**:
+     - `git pull origin develop` (Sync latest changes)
+     - `gh pr create --base main --head develop`
+     - `gh pr merge <PR#> --merge`
+   - **Scenario B (New Changes present on develop)**:
+     - 🛑 STOP. Do not commit directly to develop.
+     - `git checkout -b feat/<context-based-name>`
+     - Go to step 3.
+3. IF current branch is `feat/*`, `fix/*`, `hotfix/*`:
+   - `git status` (Check changes)
+   - `git add . && git commit -m "[Tag] message"`
+   - `git push origin <current-branch>`
+   - `gh pr create --base develop --head <current-branch>`
+   - `gh pr merge <PR#> --merge` (Auto-merge to develop)
