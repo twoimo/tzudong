@@ -303,6 +303,11 @@ export const injectClusterCSS = (): void => {
       transform: scale(1.1);
       box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4), 0 0 0 3px rgba(255, 255, 255, 0.3);
     }
+    
+    .marker-fade-out {
+      opacity: 0 !important;
+      transition: opacity 0.3s ease-out !important;
+    }
   `;
 
   document.head.appendChild(style);
