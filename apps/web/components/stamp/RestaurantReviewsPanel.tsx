@@ -181,67 +181,71 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                             </button>
                         </div>
 
-                        {/* 이미지 캐러셀 */}
-                        {selectedReview.photos && selectedReview.photos.length > 0 && (
-                            <div className="relative">
-                                <div className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden">
-                                    <img
-                                        src={supabase.storage.from('review-photos').getPublicUrl(selectedReview.photos[currentPhotoIndex].url).data.publicUrl}
-                                        alt={`음식 사진 ${currentPhotoIndex + 1}`}
-                                        className="w-full h-full object-cover"
-                                        loading="lazy"
-                                        onError={(e) => {
-                                            (e.target as HTMLImageElement).style.display = 'none';
-                                        }}
-                                    />
+                        {/* 이미지 캐러셀 - 스와이프 지원 */}
+                        {selectedReview.photos && selectedReview.photos.length > 0 && (() => {
+                            // 스와이프 상태 관리를 위한 IIFE
+                            const minSwipeDistance = 50;
+                            let touchStartX: number | null = null;
+                            let touchEndX: number | null = null;
 
-                                    {/* 화살표 */}
-                                    {selectedReview.photos.length > 1 && (
-                                        <>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 md:h-10 md:w-10 bg-black/40 hover:bg-black/60 text-white rounded-full"
-                                                onClick={onPrevPhoto}
-                                            >
-                                                <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 md:h-10 md:w-10 bg-black/40 hover:bg-black/60 text-white rounded-full"
-                                                onClick={onNextPhoto}
-                                            >
-                                                <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
-                                            </Button>
-                                        </>
-                                    )}
+                            const handleSwipe = () => {
+                                if (touchStartX === null || touchEndX === null) return;
+                                const distance = touchStartX - touchEndX;
+                                if (distance > minSwipeDistance) {
+                                    onNextPhoto();
+                                } else if (distance < -minSwipeDistance) {
+                                    onPrevPhoto();
+                                }
+                            };
 
-                                    {/* 사진 카운터 */}
-                                    {selectedReview.photos.length > 1 && (
-                                        <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
-                                            {currentPhotoIndex + 1} / {selectedReview.photos.length}
-                                        </div>
-                                    )}
+                            return (
+                                <div className="relative">
+                                    <div
+                                        className="relative w-full aspect-square bg-muted rounded-lg overflow-hidden select-none cursor-grab active:cursor-grabbing"
+                                        onTouchStart={(e) => { touchEndX = null; touchStartX = e.targetTouches[0].clientX; }}
+                                        onTouchMove={(e) => { touchEndX = e.targetTouches[0].clientX; }}
+                                        onTouchEnd={handleSwipe}
+                                        onMouseDown={(e) => { touchEndX = null; touchStartX = e.clientX; }}
+                                        onMouseMove={(e) => { if (touchStartX !== null) touchEndX = e.clientX; }}
+                                        onMouseUp={() => { handleSwipe(); touchStartX = null; touchEndX = null; }}
+                                        onMouseLeave={() => { touchStartX = null; touchEndX = null; }}
+                                    >
+                                        <img
+                                            src={supabase.storage.from('review-photos').getPublicUrl(selectedReview.photos[currentPhotoIndex].url).data.publicUrl}
+                                            alt={`음식 사진 ${currentPhotoIndex + 1}`}
+                                            className="w-full h-full object-cover pointer-events-none"
+                                            draggable={false}
+                                            loading="lazy"
+                                            onError={(e) => {
+                                                (e.target as HTMLImageElement).style.display = 'none';
+                                            }}
+                                        />
 
-                                    {/* 점 인디케이터 */}
-                                    {selectedReview.photos.length > 1 && (
-                                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-                                            {selectedReview.photos.map((_, index) => (
-                                                <button
-                                                    key={index}
-                                                    className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
-                                                        ? 'bg-white'
-                                                        : 'bg-white/40'
-                                                        }`}
-                                                    onClick={() => onPhotoIndexChange(index)}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
+                                        {/* 사진 카운터 */}
+                                        {selectedReview.photos.length > 1 && (
+                                            <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full">
+                                                {currentPhotoIndex + 1} / {selectedReview.photos.length}
+                                            </div>
+                                        )}
+
+                                        {/* 점 인디케이터 */}
+                                        {selectedReview.photos.length > 1 && (
+                                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                                                {selectedReview.photos.map((_, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className={`w-2 h-2 rounded-full transition-colors ${index === currentPhotoIndex
+                                                            ? 'bg-white'
+                                                            : 'bg-white/40'
+                                                            }`}
+                                                    />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
+                            );
+                        })()}
 
                         {/* 리뷰 내용 */}
                         <div>
@@ -280,61 +284,64 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                                     </span>
                                 </Button>
 
-                                {/* 사진 */}
-                                {review.photos && review.photos.length > 0 && (
-                                    <div className="relative w-full aspect-square bg-muted flex items-center justify-center overflow-hidden">
-                                        <img
-                                            src={supabase.storage.from('review-photos').getPublicUrl(review.photos[cardPhotoIndexes[review.id] || 0].url).data.publicUrl}
-                                            alt="리뷰 사진"
-                                            className="w-full h-full object-cover"
-                                            loading="lazy"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                            }}
-                                        />
-                                        {/* 화살표 */}
-                                        {review.photos.length > 1 && (
-                                            <>
-                                                <button
-                                                    className="absolute left-1 top-1/2 -translate-y-1/2 h-7 w-7 md:h-8 md:w-8 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const currentIndex = cardPhotoIndexes[review.id] || 0;
-                                                        const newIndex = currentIndex === 0 ? review.photos.length - 1 : currentIndex - 1;
-                                                        onCardPhotoChange(review.id, newIndex);
-                                                    }}
-                                                >
-                                                    <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
-                                                </button>
-                                                <button
-                                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 md:h-8 md:w-8 bg-black/40 hover:bg-black/60 text-white rounded-full flex items-center justify-center"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const currentIndex = cardPhotoIndexes[review.id] || 0;
-                                                        const newIndex = currentIndex === review.photos.length - 1 ? 0 : currentIndex + 1;
-                                                        onCardPhotoChange(review.id, newIndex);
-                                                    }}
-                                                >
-                                                    <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
-                                                </button>
-                                            </>
-                                        )}
-                                        {/* 점 인디케이터 */}
-                                        {review.photos.length > 1 && (
-                                            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                                                {review.photos.map((_, index) => (
-                                                    <div
-                                                        key={index}
-                                                        className={`w-1.5 h-1.5 rounded-full ${index === (cardPhotoIndexes[review.id] || 0)
-                                                            ? 'bg-white'
-                                                            : 'bg-white/40'
-                                                            }`}
-                                                    />
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                {/* 사진 - 스와이프 지원 */}
+                                {review.photos && review.photos.length > 0 && (() => {
+                                    const minSwipeDistance = 50;
+                                    let touchStartX: number | null = null;
+                                    let touchEndX: number | null = null;
+                                    const currentIndex = cardPhotoIndexes[review.id] || 0;
+
+                                    const handleSwipe = (e: React.TouchEvent | React.MouseEvent) => {
+                                        e.stopPropagation();
+                                        if (touchStartX === null || touchEndX === null) return;
+                                        const distance = touchStartX - touchEndX;
+                                        if (distance > minSwipeDistance) {
+                                            const newIndex = currentIndex === review.photos.length - 1 ? 0 : currentIndex + 1;
+                                            onCardPhotoChange(review.id, newIndex);
+                                        } else if (distance < -minSwipeDistance) {
+                                            const newIndex = currentIndex === 0 ? review.photos.length - 1 : currentIndex - 1;
+                                            onCardPhotoChange(review.id, newIndex);
+                                        }
+                                    };
+
+                                    return (
+                                        <div
+                                            className="relative w-full aspect-square bg-muted flex items-center justify-center overflow-hidden select-none cursor-grab active:cursor-grabbing"
+                                            onTouchStart={(e) => { e.stopPropagation(); touchEndX = null; touchStartX = e.targetTouches[0].clientX; }}
+                                            onTouchMove={(e) => { e.stopPropagation(); touchEndX = e.targetTouches[0].clientX; }}
+                                            onTouchEnd={handleSwipe}
+                                            onMouseDown={(e) => { e.stopPropagation(); touchEndX = null; touchStartX = e.clientX; }}
+                                            onMouseMove={(e) => { if (touchStartX !== null) { e.stopPropagation(); touchEndX = e.clientX; } }}
+                                            onMouseUp={(e) => { handleSwipe(e); touchStartX = null; touchEndX = null; }}
+                                            onMouseLeave={() => { touchStartX = null; touchEndX = null; }}
+                                        >
+                                            <img
+                                                src={supabase.storage.from('review-photos').getPublicUrl(review.photos[currentIndex].url).data.publicUrl}
+                                                alt="리뷰 사진"
+                                                className="w-full h-full object-cover pointer-events-none"
+                                                draggable={false}
+                                                loading="lazy"
+                                                onError={(e) => {
+                                                    (e.target as HTMLImageElement).style.display = 'none';
+                                                }}
+                                            />
+                                            {/* 점 인디케이터 */}
+                                            {review.photos.length > 1 && (
+                                                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
+                                                    {review.photos.map((_, index) => (
+                                                        <div
+                                                            key={index}
+                                                            className={`w-1.5 h-1.5 rounded-full ${index === currentIndex
+                                                                ? 'bg-white'
+                                                                : 'bg-white/40'
+                                                                }`}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })()}
 
                                 {/* 사용자 정보와 내용 */}
                                 <div className="p-3">
