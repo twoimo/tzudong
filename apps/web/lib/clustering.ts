@@ -322,7 +322,7 @@ export type SeoulDistrictCluster = RegionalCluster;
 /**
  * 두 좌표 간의 거리 계산 (Haversine formula 간소화)
  */
-const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+export const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const dLat = lat2 - lat1;
     const dLng = lng2 - lng1;
     return Math.sqrt(dLat * dLat + dLng * dLng);
