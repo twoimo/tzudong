@@ -149,7 +149,7 @@ interface RestaurantCardProps {
     visited: boolean;
     isSelected: boolean;
     currentThumbnailIndex: number;
-    onThumbnailChange: (index: number) => void;
+    onThumbnailChange: (id: string, index: number) => void;
     onClick: (restaurant: Restaurant) => void;
 }
 
@@ -167,13 +167,13 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnail
     const handlePrevThumbnail = (e: React.MouseEvent) => {
         e.stopPropagation();
         const newIndex = currentIndex === 0 ? youtubeLinks.length - 1 : currentIndex - 1;
-        onThumbnailChange(newIndex);
+        onThumbnailChange(restaurant.id, newIndex);
     };
 
     const handleNextThumbnail = (e: React.MouseEvent) => {
         e.stopPropagation();
         const newIndex = currentIndex === youtubeLinks.length - 1 ? 0 : currentIndex + 1;
-        onThumbnailChange(newIndex);
+        onThumbnailChange(restaurant.id, newIndex);
     };
 
     return (
@@ -481,7 +481,7 @@ export default function StampPage() {
                 return { restaurants: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
         initialPageParam: 0,
         enabled: !searchQuery.trim(),
     });
@@ -695,7 +695,7 @@ export default function StampPage() {
                 return { reviews: [], nextCursor: null };
             }
         },
-        getNextPageParam: (lastPage) => lastPage?.nextCursor ?? null,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
         initialPageParam: 0,
         enabled: !!selectedRestaurant?.id,
     });
@@ -837,6 +837,14 @@ export default function StampPage() {
         }
     }, [selectedReview]);
 
+    const handleCardThumbnailChange = useCallback((id: string, index: number) => {
+        setCardThumbnailIndexes(prev => ({ ...prev, [id]: index }));
+    }, []);
+
+    const handleReviewCardPhotoChange = useCallback((reviewId: string, index: number) => {
+        setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }));
+    }, []);
+
     // --- Helpers ---
     const getSortIcon = useCallback((column: SortColumn) => {
         if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4" />;
@@ -871,9 +879,9 @@ export default function StampPage() {
         <>
             <PanelGroup direction="horizontal" className="h-full bg-background">
                 {/* Left Panel - Main Content */}
-                <Panel defaultSize={isRightPanelVisible ? 70 : 100} minSize={30} className="overflow-hidden">
+                <Panel id="main-list-panel" order={1} defaultSize={isRightPanelVisible ? 70 : 100} minSize={30} className="overflow-hidden">
                     {/* Scroll Container */}
-                    <div className="h-full overflow-y-auto flex flex-col">
+                    <div className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                         {/* Header */}
                         <div className="border-b border-border bg-background p-6 shrink-0">
                             <div className="flex items-center justify-between">
@@ -1101,9 +1109,7 @@ export default function StampPage() {
                                             visited={isVisited(restaurant.id)}
                                             isSelected={selectedRestaurant?.id === restaurant.id}
                                             currentThumbnailIndex={cardThumbnailIndexes[restaurant.id] || 0}
-                                            onThumbnailChange={(newIndex) =>
-                                                setCardThumbnailIndexes(prev => ({ ...prev, [restaurant.id]: newIndex }))
-                                            }
+                                            onThumbnailChange={handleCardThumbnailChange}
                                             onClick={handleRestaurantClick}
                                         />
                                     ))}
@@ -1175,7 +1181,7 @@ export default function StampPage() {
                 {isRightPanelVisible && isDesktop && (
                     <>
                         <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
-                        <Panel defaultSize={30} minSize={20} maxSize={50} className="flex flex-col border-l border-border bg-card">
+                        <Panel id="review-detail-panel" order={2} defaultSize={30} minSize={20} maxSize={50} className="flex flex-col border-l border-border bg-card">
                             <RestaurantReviewsPanel
                                 restaurant={selectedRestaurant}
                                 reviews={restaurantReviews}
@@ -1189,7 +1195,7 @@ export default function StampPage() {
                                 onPrevPhoto={handlePrevPhoto}
                                 onNextPhoto={handleNextPhoto}
                                 onPhotoIndexChange={setCurrentPhotoIndex}
-                                onCardPhotoChange={(reviewId, index) => setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }))}
+                                onCardPhotoChange={handleReviewCardPhotoChange}
                                 onClose={handleCloseRightPanel}
                                 showHeader={true}
                                 isLoading={reviewsLoading}
@@ -1221,7 +1227,7 @@ export default function StampPage() {
                         onPrevPhoto={handlePrevPhoto}
                         onNextPhoto={handleNextPhoto}
                         onPhotoIndexChange={setCurrentPhotoIndex}
-                        onCardPhotoChange={(reviewId, index) => setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }))}
+                        onCardPhotoChange={handleReviewCardPhotoChange}
                         showHeader={true}
                         isLoading={reviewsLoading}
                     />

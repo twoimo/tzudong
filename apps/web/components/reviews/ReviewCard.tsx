@@ -9,7 +9,7 @@ export interface ReviewCardProps {
         id: string;
         userId: string;
         userName: string;
-        userAvatarUrl?: string; // 선택적 속성, Review 인터페이스에 아직 포함되지 않았을 수 있음
+        userAvatarUrl?: string; // 선택적 속성
         restaurantName: string;
         content: string;
         photos: { url: string; type: string }[];
