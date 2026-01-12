@@ -1326,8 +1326,9 @@ const NaverMapView = memo(({
         const effectiveMaxZoom = getClusterMaxZoom(selectedRegion);
         const shouldCluster = ENABLE_CLUSTERING && !selectedRegion && currentZoom <= effectiveMaxZoom;
 
-        // 🆕 줌 8 이하에서는 17개 행정구역 중앙 클러스터링 사용
-        const shouldUseRegionalCluster = shouldCluster && currentZoom <= 8;
+        // 🆕 줌 8 이하에서는 17개 행정구역 중앙 클러스터링 사용 -> [Disable] 일관성 위해 Supercluster로 통합
+        // 사용자가 7->9 구간 트랜지션의 이질감(새로고침 느낌)을 지적함.
+        const shouldUseRegionalCluster = false; // shouldCluster && currentZoom <= 8;
 
         setIsClusterMode(shouldCluster);
         setIsRegionalClusterMode(shouldUseRegionalCluster);
