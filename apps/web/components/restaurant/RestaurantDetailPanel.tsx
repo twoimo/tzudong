@@ -627,8 +627,8 @@ export function RestaurantDetailPanel({
                                     )}
                                 </Button>
                             )}
-                            {/* 북마크 버튼 */}
-                            {user && viewMode === 'detail' && (
+                            {/* 북마크 버튼 - 모든 사용자에게 표시 */}
+                            {viewMode === 'detail' && (
                                 <BookmarkButton restaurantId={restaurant.id} />
                             )}
                             {isAdmin && onEditRestaurant && viewMode === 'detail' && (
