@@ -941,25 +941,13 @@ export default function StampPage() {
                     <div className="h-full overflow-y-auto flex flex-col">
                         {/* Header */}
                         <div className="border-b border-border bg-background p-6 shrink-0">
-                            <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center justify-between">
                                 <div>
                                     <div className="flex items-center gap-3">
                                         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
                                             <Trophy className="h-6 w-6 text-primary" />
                                             쯔동여지도 도장
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 ml-1 rounded-full hover:bg-muted"
-                                                onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
-                                                title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
-                                            >
-                                                {filters.showUnvisitedOnly ? (
-                                                    <EyeOff className="h-5 w-5 text-muted-foreground" />
-                                                ) : (
-                                                    <Eye className="h-5 w-5 text-muted-foreground" />
-                                                )}
-                                            </Button>
+
                                         </h1>
                                     </div>
                                     <p className="text-sm text-muted-foreground mt-1">
@@ -967,6 +955,37 @@ export default function StampPage() {
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
+                                    {/* Unvisited Only Toggle */}
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-full hover:bg-muted"
+                                        onClick={() => setFilters(prev => ({ ...prev, showUnvisitedOnly: !prev.showUnvisitedOnly }))}
+                                        title={filters.showUnvisitedOnly ? "모든 맛집 보기" : "안 가본 곳만 보기"}
+                                    >
+                                        {filters.showUnvisitedOnly ? (
+                                            <EyeOff className="h-5 w-5 text-muted-foreground" />
+                                        ) : (
+                                            <Eye className="h-5 w-5 text-muted-foreground" />
+                                        )}
+                                    </Button>
+                                    {/* Filter Toggle - 모바일/태블릿에서만 헤더에 표시 */}
+                                    {isMobileOrTablet && (
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                                            className="relative"
+                                            title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
+                                        >
+                                            <Filter className="h-4 w-4" />
+                                            {activeFilterCount > 0 && (
+                                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium rounded-full flex items-center justify-center">
+                                                    {activeFilterCount}
+                                                </span>
+                                            )}
+                                        </Button>
+                                    )}
                                     {/* View Toggle - 데스크톱에서만 표시 */}
                                     {!isMobileOrTablet && (
                                         <Button
@@ -983,21 +1002,7 @@ export default function StampPage() {
 
                             {/* Filter Controls */}
                             {/* 모바일/태블릿: 필터 토글 버튼 */}
-                            {isMobileOrTablet && (
-                                <Button
-                                    variant="outline"
-                                    onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                                    className="w-full mb-3 justify-between"
-                                >
-                                    <span className="flex items-center gap-2">
-                                        <Filter className="h-4 w-4" />
-                                        필터 {activeFilterCount > 0 && `(${activeFilterCount}개 선택됨)`}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                        {isFilterExpanded ? '접기' : '펼치기'}
-                                    </span>
-                                </Button>
-                            )}
+
 
                             {/* 필터 컨트롤 그리드 - 데스크톱에서는 항상 표시, 모바일/태블릿에서는 확장시에만 표시 */}
                             <div className={cn(
