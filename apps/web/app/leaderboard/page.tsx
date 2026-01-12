@@ -9,11 +9,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { cn } from "@/lib/utils";
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 export default function LeaderboardPage() {
     const { user: currentUser } = useAuth();
     const { isMobileOrTablet } = useDeviceType();
-    const { data: leaderboardData = [] } = useLeaderboard();
+    const { data: leaderboardData = [], isLoading } = useLeaderboard();
     const userItemRef = useRef<HTMLDivElement>(null);
 
     const sortedLeaderboard = [...leaderboardData].sort((a, b) => b.verifiedReviewCount - a.verifiedReviewCount);
@@ -49,6 +50,15 @@ export default function LeaderboardPage() {
             }, 500);
         }
     }, [currentUser, sortedLeaderboard]);
+
+    if (isLoading) {
+        return (
+            <GlobalLoader
+                message="랭킹 데이터를 불러오는 중..."
+                subMessage="사용자들이 열심히 쌓아올린 기록을 확인하고 있습니다"
+            />
+        );
+    }
 
     return (
         <div className="flex flex-col h-full bg-background">

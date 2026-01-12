@@ -10,6 +10,7 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 interface FeedReview {
     id: string;
@@ -219,10 +220,10 @@ export default function FeedPage() {
 
     if (isLoading) {
         return (
-            <div className="flex flex-col h-full bg-background items-center justify-center">
-                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                <p className="text-sm text-muted-foreground mt-3">리뷰를 불러오는 중...</p>
-            </div>
+            <GlobalLoader
+                message="리뷰 데이터를 불러오는 중..."
+                subMessage="팬들의 맛집 방문 후기를 확인하고 있습니다"
+            />
         );
     }
 
@@ -461,19 +462,17 @@ function FeedCard({ review, likeCount, isLiked, onToggleLike, onGoToRestaurant, 
             <div className="p-3 space-y-2">
                 <div>
                     {isExpanded ? (
-                        <>
-                            <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                {review.content}
-                            </p>
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                            {review.content}
                             {isLongContent && (
                                 <button
                                     onClick={() => setIsExpanded(false)}
-                                    className="text-xs text-muted-foreground hover:text-primary mt-1"
+                                    className="text-xs text-muted-foreground hover:text-primary ml-1 inline-block"
                                 >
                                     접기
                                 </button>
                             )}
-                        </>
+                        </p>
                     ) : (
                         <div className="flex items-baseline gap-1">
                             <p className="text-sm leading-relaxed truncate flex-1">
