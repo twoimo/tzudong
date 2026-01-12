@@ -1397,11 +1397,15 @@ const NaverMapView = memo(({
             setIsRegionalClusterMode(true);
             setIsSeoulDistrictMode(false);
             setIsClusterMode(true);
-        } else {
-            // 일반적인 경우: Supercluster가 기본이지만, 서울 지역 등 일부를 덮어쓰거나 대체할 수 있습니다.
+        } else if (shouldUseSeoulDistrictCluster) {
+            // [FIX] 서울 자치구 모드: Supercluster를 비활성화하여 충돌 방지
             setIsRegionalClusterMode(false);
-            // 이제 둘 다 true일 수 있습니다.
-            setIsSeoulDistrictMode(shouldUseSeoulDistrictCluster);
+            setIsSeoulDistrictMode(true);
+            setIsClusterMode(false); // 서울 자치구 모드에서는 Supercluster 비활성화
+        } else {
+            // 일반 Supercluster 모드
+            setIsRegionalClusterMode(false);
+            setIsSeoulDistrictMode(false);
             setIsClusterMode(shouldCluster);
         }
 
@@ -1491,9 +1495,9 @@ const NaverMapView = memo(({
             }
 
 
-
             // 2. 표준 로직 (Supercluster 또는 개별 마커)
-            if (shouldCluster) {
+            // [FIX] 서울 자치구 모드에서도 서울 외 지역은 Supercluster로 표시
+            if (shouldCluster || shouldUseSeoulDistrictCluster) {
                 if (clusters.length > 0) {
                     clusters.forEach((feature) => {
                         const [lng, lat] = feature.geometry.coordinates;
