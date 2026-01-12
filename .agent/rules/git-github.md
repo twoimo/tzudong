@@ -7,9 +7,10 @@ Git Commit Convention:
 - Format: [Tag] message
 - Tags: Add, Fix, Change, Improve, Migrate
 - **Write commit messages ONLY in Korean (한국어로만 작성)**
-- **CRITICAL: NEVER use \`\\n\` string in commit message. Use actual line breaks.**
-  - Correct: \`git commit -m "[Tag] 제목
+- **CRITICAL: NEVER use \`\\n\` string in commit message. Use actual line breaks or multiple -m flags.**
+  - Correct (Newline): \`git commit -m "[Tag] 제목
     내용"\`
+  - Correct (Multiple -m): \`git commit -m "[Tag] 제목" -m "본문 내용"\`
   - Incorrect: \`git commit -m "[Tag] 제목\\n내용"\`
 
 Git Branch Convention:
