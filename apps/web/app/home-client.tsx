@@ -110,6 +110,7 @@ export default function HomeClient() {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
         const restaurantId = searchParams.get('r');
+        const restaurantName = searchParams.get('q'); // 공유 URL에서 맛집 이름
 
         if (panelParam === 'announcement' && announcementId) {
             const announcement = DUMMY_ANNOUNCEMENTS.find(a => a.id === announcementId);
@@ -162,6 +163,40 @@ export default function HomeClient() {
                             // URL 정리
                             router.replace('/', { scroll: false });
                         }, 300);
+                    }
+                } catch (err) {
+                    console.error('맛집 조회 실패:', err);
+                }
+            })();
+        }
+
+        // [공유 URL] 맛집 이름(q)으로 맛집 자동 선택
+        if (restaurantName && !restaurantId) {
+            (async () => {
+                try {
+                    const { supabase } = await import('@/integrations/supabase/client');
+                    const { mergeRestaurants } = await import('@/hooks/use-restaurants');
+
+                    // 맛집 이름으로 검색
+                    const { data: restaurants, error } = await supabase
+                        .from('restaurants')
+                        .select('*')
+                        .eq('name', restaurantName)
+                        .eq('status', 'approved');
+
+                    if (error || !restaurants || restaurants.length === 0) {
+                        console.error('맛집 조회 실패:', error);
+                        return;
+                    }
+
+                    // 병합 로직 적용
+                    const merged = mergeRestaurants(restaurants as any);
+                    const restaurant = merged[0];
+
+                    if (restaurant) {
+                        setTimeout(() => {
+                            openDetailPanel(restaurant);
+                        }, 500);
                     }
                 } catch (err) {
                     console.error('맛집 조회 실패:', err);

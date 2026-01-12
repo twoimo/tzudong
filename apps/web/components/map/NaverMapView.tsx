@@ -23,8 +23,10 @@ import {
     isCluster,
     getClusterCount,
     getClusterMaxZoom,
+    getRegionalClusters,
     type RestaurantFeature,
-    type ClusterProperties
+    type ClusterProperties,
+    type RegionalCluster
 } from "@/lib/clustering";
 import { markerPool } from "@/lib/marker-pool";
 import {
@@ -382,7 +384,9 @@ const NaverMapView = memo(({
     // [🆕 클러스터링] Supercluster 인덱스 및 클러스터 상태
     const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
     const [clusters, setClusters] = useState<Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>>([]);
+    const [regionalClusters, setRegionalClusters] = useState<RegionalCluster[]>([]); // 17개 행정구역 클러스터
     const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
+    const [isRegionalClusterMode, setIsRegionalClusterMode] = useState(false); // 행정구역 클러스터 모드
     const clusterMarkersRef = useRef<Map<number | string, any>>(new Map()); // 클러스터 마커 Map
 
     // 사이드바 상태 가져오기
@@ -863,17 +867,9 @@ const NaverMapView = memo(({
                 map.setZoom(targetZoom);
                 map.setCenter(newCenterLatLng);
             } else {
-                if (currentZoom !== targetZoom) {
-                    map.morph(newCenterLatLng, targetZoom, {
-                        duration: 400,
-                        easing: 'easeOutCubic'
-                    });
-                } else {
-                    map.panTo(newCenterLatLng, {
-                        duration: 300,
-                        easing: 'easeOutCubic'
-                    });
-                }
+                // 애니메이션 제거: 즉시 이동 (마커 가운데 정렬 유지)
+                map.setZoom(targetZoom);
+                map.setCenter(newCenterLatLng);
             }
         };
 
@@ -1231,6 +1227,10 @@ const NaverMapView = memo(({
 
         const newClusters = getClusters(index, bbox, zoom);
         setClusters(newClusters);
+
+        // 17개 행정구역 클러스터도 계산
+        const newRegionalClusters = getRegionalClusters(displayRestaurants);
+        setRegionalClusters(newRegionalClusters);
     }, [displayRestaurants.length, selectedRegion, isMapInitialized]);
 
     // [🆕 클러스터링] 지도 이동/줌 시 클러스터 업데이트
@@ -1319,12 +1319,61 @@ const NaverMapView = memo(({
         const effectiveMaxZoom = getClusterMaxZoom(selectedRegion);
         const shouldCluster = ENABLE_CLUSTERING && !selectedRegion && currentZoom <= effectiveMaxZoom;
 
+        // 🆕 줌 8 이하에서는 17개 행정구역 중앙 클러스터링 사용
+        const shouldUseRegionalCluster = shouldCluster && currentZoom <= 8;
+
         setIsClusterMode(shouldCluster);
+        setIsRegionalClusterMode(shouldUseRegionalCluster);
 
+        if (shouldUseRegionalCluster) {
+            // ===== 17개 행정구역 중앙 클러스터 모드 =====
+            if (regionalClusters.length === 0) {
+                return;
+            }
+            const activeIds = new Set<string>();
 
+            regionalClusters.forEach((cluster) => {
+                const markerId = `regional-${cluster.region}`;
+                activeIds.add(markerId);
 
-        if (shouldCluster) {
-            // ===== 클러스터 모드 =====
+                // 카테고리 목록
+                const categories = cluster.categories;
+                // 문자열 해시 계산 (Java hashCode 알고리즘)
+                const regionHash = Math.abs(cluster.region.split('').reduce((a, b) => (a * 31 + b.charCodeAt(0)) | 0, 0));
+
+                // 🆕 애니메이션 매니저에 등록
+                clusterAnimationManager.register(regionHash);
+
+                const currentIndex = clusterAnimationManager.getCurrentIndex(
+                    regionHash,
+                    categories.length
+                );
+
+                // 클러스터 마커 HTML - Supercluster 형태와 호환되도록 가짜 feature 생성
+                const fakeFeature = {
+                    properties: { point_count: cluster.count },
+                    geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
+                } as any;
+                const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
+
+                markerPool.acquire(
+                    markerId,
+                    new naver.maps.LatLng(cluster.center.lat, cluster.center.lng),
+                    { content: html, anchor: new naver.maps.Point(24, 24) },
+                    map,
+                    () => {
+                        // 클릭 시 해당 지역 줌인 (줌 9로 이동)
+                        map.setZoom(9);
+                        map.setCenter(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng));
+                    }
+                );
+            });
+
+            // 사용하지 않는 마커 반환
+            markerPool.releaseExcept(activeIds);
+
+        } else if (shouldCluster) {
+            // ===== 기존 Supercluster 클러스터 모드 (줌 9 이상) =====
             if (clusters.length === 0) {
                 return;
             }
@@ -1365,10 +1414,9 @@ const NaverMapView = memo(({
                             const currentZoom = map.getZoom();
                             // 7레벨 등 낮은 줌에서 클릭 시 최소 9레벨까지는 확대하여 마커를 펼침
                             const targetZoom = Math.max(expansionZoom, 9);
-                            map.morph(new naver.maps.LatLng(lat, lng), targetZoom, {
-                                duration: 400,
-                                easing: 'easeOutCubic',
-                            });
+                            // 애니메이션 제거: 즉시 이동
+                            map.setZoom(targetZoom);
+                            map.setCenter(new naver.maps.LatLng(lat, lng));
                         }
                     );
                 } else {
@@ -1396,11 +1444,10 @@ const NaverMapView = memo(({
                                 const targetZoom = 15;
                                 const zoomDiff = targetZoom - currentZoom;
 
+                                // 애니메이션 제거: 즉시 이동 (마커 가운데 정렬 유지)
                                 if (currentZoom < targetZoom && zoomDiff < 5) {
-                                    map.morph(new naver.maps.LatLng(lat, lng), targetZoom, {
-                                        duration: 400,
-                                        easing: 'easeOutCubic',
-                                    });
+                                    map.setZoom(targetZoom);
+                                    map.setCenter(new naver.maps.LatLng(lat, lng));
                                 }
 
                                 if (onMarkerClick) {
@@ -1473,12 +1520,10 @@ const NaverMapView = memo(({
                         const targetZoom = 15;
                         const zoomDiff = targetZoom - currentZoom;
 
-                        // 줌 차이가 적당할 때만 줌인 애니메이션 실행
+                        // 애니메이션 제거: 즉시 이동 (마커 가운데 정렬 유지)
                         if (currentZoom < targetZoom && zoomDiff < 5) {
-                            map.morph(new naver.maps.LatLng(restaurant.lat, restaurant.lng), targetZoom, {
-                                duration: 400,
-                                easing: 'easeOutCubic',
-                            });
+                            map.setZoom(targetZoom);
+                            map.setCenter(new naver.maps.LatLng(restaurant.lat, restaurant.lng));
                         }
 
                         if (onMarkerClick) {
@@ -1504,32 +1549,58 @@ const NaverMapView = memo(({
 
     // [🆕 클러스터 애니메이션] 카테고리 이모지 순환 업데이트
     useEffect(() => {
-        if (!isClusterMode) return;
+        if (!isClusterMode && !isRegionalClusterMode) return;
 
         // 애니메이션 업데이트 시 클러스터 마커 HTML 갱신
         const cleanup = clusterAnimationManager.addListener(() => {
-            clusters.forEach((feature) => {
-                if (isCluster(feature)) {
-                    const clusterId = feature.properties.cluster_id!;
-                    const markerId = `cluster-${clusterId}`;
+            if (isRegionalClusterMode) {
+                // 🆕 Regional cluster 모드 - 18개 지역 클러스터 업데이트
+                regionalClusters.forEach((cluster) => {
+                    const markerId = `regional-${cluster.region}`;
                     const marker = markerPool.get(markerId);
 
-                    if (marker && clusterIndexRef.current) {
-                        const categories = getClusterCategories(clusterIndexRef.current, clusterId);
-                        const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
-                        const html = createClusterMarkerHTML(feature, categories, currentIndex);
+                    if (marker) {
+                        const categories = cluster.categories;
+                        const regionHash = Math.abs(cluster.region.split('').reduce((a, b) => (a * 31 + b.charCodeAt(0)) | 0, 0));
+                        const currentIndex = clusterAnimationManager.getCurrentIndex(regionHash, categories.length);
+
+                        const fakeFeature = {
+                            properties: { point_count: cluster.count },
+                            geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
+                        } as any;
+                        const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
 
                         marker.setIcon({
                             content: html,
                             anchor: new window.naver.maps.Point(24, 24),
                         });
                     }
-                }
-            });
+                });
+            } else {
+                // 기존 Supercluster 클러스터 모드
+                clusters.forEach((feature) => {
+                    if (isCluster(feature)) {
+                        const clusterId = feature.properties.cluster_id!;
+                        const markerId = `cluster-${clusterId}`;
+                        const marker = markerPool.get(markerId);
+
+                        if (marker && clusterIndexRef.current) {
+                            const categories = getClusterCategories(clusterIndexRef.current, clusterId);
+                            const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
+                            const html = createClusterMarkerHTML(feature, categories, currentIndex);
+
+                            marker.setIcon({
+                                content: html,
+                                anchor: new window.naver.maps.Point(24, 24),
+                            });
+                        }
+                    }
+                });
+            }
         });
 
         return cleanup;
-    }, [isClusterMode, clusters]);
+    }, [isClusterMode, isRegionalClusterMode, clusters, regionalClusters]);
 
     // [OPTIMIZATION] 선택 상태 변경에 따른 마커 스타일 업데이트 (O(N) → O(1) 최적화)
     // 이전 선택 마커 ID 추적
@@ -1713,12 +1784,50 @@ const NaverMapView = memo(({
             mapInstanceRef.current = map;
             setIsMapInitialized(true);
 
+            // [URL 라우팅] 초기 로드 시 URL에서 상태 복원
+            const params = new URLSearchParams(window.location.search);
+            // 신규 형식: z (줌), 구 형식: c (하위 호환)
+            const zParam = params.get('z');
+            const cParam = params.get('c');
+            const urlLat = parseFloat(params.get('lat') || '');
+            const urlLng = parseFloat(params.get('lng') || '');
+
+            // 줌 레벨 파싱 (신규 형식 우선, 구 형식 하위 호환)
+            let urlZoom: number | undefined;
+            if (zParam) {
+                urlZoom = parseFloat(zParam);
+            } else if (cParam) {
+                urlZoom = parseFloat(cParam.split(',')[0]); // 구 형식 하위 호환
+            }
+
+            if (urlZoom && !isNaN(urlZoom)) {
+                map.setZoom(urlZoom);
+                if (!isNaN(urlLat) && !isNaN(urlLng)) {
+                    map.setCenter(new naver.maps.LatLng(urlLat, urlLng));
+                }
+            }
+
             // [Fix] 지도 초기화 후 idle 이벤트 강제 트리거 - 클러스터 초기화 보장
             setTimeout(() => {
                 if (map) {
                     naver.maps.Event.trigger(map, 'idle');
                 }
             }, 100);
+
+            // [URL 라우팅] 지도 이동 시 URL 동기화 (idle 이벤트)
+            naver.maps.Event.addListener(map, 'idle', () => {
+                const center = map.getCenter();
+                const zoom = map.getZoom();
+                if (center && !isNaN(zoom)) {
+                    const newParams = new URLSearchParams(window.location.search);
+                    // 단순화된 형식: z=줌레벨 (소수점 2자리)
+                    newParams.set('z', zoom.toFixed(2));
+                    newParams.delete('c'); // 구 형식 제거
+                    newParams.set('lat', center.lat().toFixed(6));
+                    newParams.set('lng', center.lng().toFixed(6));
+                    window.history.replaceState({}, '', `?${newParams.toString()}`);
+                }
+            });
         } catch (error) {
             console.error("네이버 지도 초기화 오류:", error);
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');

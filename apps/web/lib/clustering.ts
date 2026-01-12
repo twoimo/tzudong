@@ -49,27 +49,26 @@ export interface ClusterOptions {
 /**
  * 지역별 클러스터링 최대 줌 레벨 계산
  * 
+ * [성능 최적화] 줌 10까지 클러스터링을 유지하여 마커 폭발 방지
+ * 
  * 특정 지역 선택 시: 해당 지역의 기본 줌 레벨 - 1로 설정하여,
  * 기본 줌 레벨 도달 시 클러스터가 해제되고 모든 개별 마커가 표시됩니다.
  * 
- * 전국 선택 시: 기본 maxZoom(16) 사용하여 계속 클러스터링
+ * 전국 선택 시: 줌 10까지 클러스터링, 줌 11부터 개별 마커
  * 
  * @example
- * // 전국(selectedRegion = null) → maxZoom: 8 (기본값, 9레벨부터 개별 마커)
- * getClusterMaxZoom(null) // 8
+ * // 전국(selectedRegion = null) → maxZoom: 10 (줌 11부터 개별 마커)
+ * getClusterMaxZoom(null) // 10
  * 
  * // 서울(zoom: 12) → maxZoom: 11 → 12레벨부터 개별 마커
  * getClusterMaxZoom('서울특별시') // 11
- * 
- * // 욕지도(zoom: 14) → maxZoom: 13 → 14레벨부터 개별 마커
- * getClusterMaxZoom('욕지도') // 13
  * 
  * @param selectedRegion 선택된 지역 (null이면 전국)
  * @param defaultMaxZoom 기본 최대 줌 레벨 (전국일 때 사용)
  * @returns 클러스터링 최대 줌 레벨
  */
-export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom: number = 8): number => {
-    // 전국 선택 시 기본값 사용 (계속 클러스터링)
+export const getClusterMaxZoom = (selectedRegion: Region | null, defaultMaxZoom: number = 10): number => {
+    // 전국 선택 시 기본값 사용 (줌 10까지 클러스터링)
     if (!selectedRegion) {
         return defaultMaxZoom;
     }
@@ -144,7 +143,7 @@ export const createClusterIndex = (
     const maxZoom = options.maxZoom ?? getClusterMaxZoom(selectedRegion);
 
     return new Supercluster<ClusterProperties>({
-        radius: options.radius ?? 60, // 기본 60픽셀
+        radius: options.radius ?? 40, // 17개 행정구역 분리를 위해 감소 (기존 60px)
         maxZoom: maxZoom,
         minZoom: options.minZoom ?? 0,
         minPoints: options.minPoints ?? 2, // 최소 2개부터 클러스터링
@@ -228,4 +227,178 @@ export const getClusterCount = (
     feature: Supercluster.ClusterFeature<ClusterProperties>
 ): number => {
     return feature.properties.point_count || 0;
+};
+
+/**
+ * 18개 지역 중심 좌표 (행정구역 클러스터링용 - 17개 행정구역 + 울릉도)
+ */
+export const REGIONAL_CENTERS: Record<string, { lat: number; lng: number }> = {
+    "서울특별시": { lat: 37.5512, lng: 126.9882 },
+    "부산광역시": { lat: 35.1152, lng: 129.0000 },
+    "대구광역시": { lat: 35.8714, lng: 128.6014 },
+    "인천광역시": { lat: 37.4496, lng: 126.6231 },
+    "광주광역시": { lat: 35.1595, lng: 126.8526 },
+    "대전광역시": { lat: 36.3504, lng: 127.3845 },
+    "울산광역시": { lat: 35.5384, lng: 129.3114 },
+    "세종특별자치시": { lat: 36.4800, lng: 127.2890 },
+    "경기도": { lat: 37.4492, lng: 127.1739 },
+    "충청북도": { lat: 36.6357, lng: 127.4915 },
+    "충청남도": { lat: 36.5184, lng: 126.8000 },
+    "전라남도": { lat: 34.8161, lng: 126.4629 },
+    "경상북도": { lat: 36.2419, lng: 128.8889 },
+    "경상남도": { lat: 35.4606, lng: 128.2132 },
+    "전북특별자치도": { lat: 35.7175, lng: 127.1530 },
+    "강원특별자치도": { lat: 37.8228, lng: 128.1555 },
+    "제주특별자치도": { lat: 33.3625, lng: 126.5339 },
+    "울릉도": { lat: 37.4918, lng: 130.8616 },
+};
+
+/**
+ * 행정구역 클러스터 인터페이스
+ */
+export interface RegionalCluster {
+    /** 행정구역 이름 */
+    region: string;
+    /** 중심 좌표 */
+    center: { lat: number; lng: number };
+    /** 해당 지역 맛집 수 */
+    count: number;
+    /** 해당 지역 맛집 ID 배열 */
+    restaurantIds: string[];
+    /** 해당 지역 카테고리 배열 (중복 제거) */
+    categories: string[];
+}
+
+/**
+ * 두 좌표 간의 거리 계산 (Haversine formula 간소화)
+ */
+const getDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+    const dLat = lat2 - lat1;
+    const dLng = lng2 - lng1;
+    return Math.sqrt(dLat * dLat + dLng * dLng);
+};
+
+/**
+ * 맛집의 주소에서 행정구역 추출
+ */
+const extractRegionFromAddress = (restaurant: Restaurant): string | null => {
+    const address = restaurant.road_address || restaurant.jibun_address || '';
+
+    for (const region of Object.keys(REGIONAL_CENTERS)) {
+        if (address.includes(region)) {
+            return region;
+        }
+    }
+
+    // 약어 매핑
+    const shortNames: Record<string, string> = {
+        "서울": "서울특별시",
+        "부산": "부산광역시",
+        "대구": "대구광역시",
+        "인천": "인천광역시",
+        "광주": "광주광역시",
+        "대전": "대전광역시",
+        "울산": "울산광역시",
+        "세종": "세종특별자치시",
+        "경기": "경기도",
+        "충북": "충청북도",
+        "충남": "충청남도",
+        "전남": "전라남도",
+        "경북": "경상북도",
+        "경남": "경상남도",
+        "전북": "전북특별자치도",
+        "강원": "강원특별자치도",
+        "제주": "제주특별자치도",
+        "울릉": "울릉도",
+    };
+
+    for (const [short, full] of Object.entries(shortNames)) {
+        if (address.startsWith(short)) {
+            return full;
+        }
+    }
+
+    return null;
+};
+
+/**
+ * 가장 가까운 행정구역 중심 찾기
+ */
+const findNearestRegion = (lat: number, lng: number): string => {
+    let nearestRegion = "서울특별시";
+    let minDistance = Infinity;
+
+    for (const [region, center] of Object.entries(REGIONAL_CENTERS)) {
+        const distance = getDistance(lat, lng, center.lat, center.lng);
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearestRegion = region;
+        }
+    }
+
+    return nearestRegion;
+};
+
+/**
+ * 17개 행정구역 중앙 기준 클러스터링 (줌 레벨 8 이하)
+ * 
+ * 각 맛집을 가장 가까운 행정구역 중심에 할당하여 17개 클러스터 생성
+ * 
+ * @param restaurants 레스토랑 목록
+ * @returns 행정구역별 클러스터 배열
+ */
+export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[] => {
+    // 각 행정구역별로 맛집 그룹화
+    const regionMap = new Map<string, {
+        restaurantIds: string[];
+        categories: Set<string>;
+    }>();
+
+    // 모든 17개 행정구역 초기화
+    for (const region of Object.keys(REGIONAL_CENTERS)) {
+        regionMap.set(region, { restaurantIds: [], categories: new Set() });
+    }
+
+    // 각 맛집을 행정구역에 할당
+    restaurants.forEach((restaurant) => {
+        if (!restaurant.lat || !restaurant.lng) return;
+
+        // 1. 주소에서 행정구역 추출 시도
+        let region = extractRegionFromAddress(restaurant);
+
+        // 2. 주소에서 찾지 못하면 좌표로 가장 가까운 행정구역 찾기
+        if (!region) {
+            region = findNearestRegion(restaurant.lat, restaurant.lng);
+        }
+
+        const group = regionMap.get(region);
+        if (group) {
+            group.restaurantIds.push(restaurant.id);
+
+            // 카테고리 추가
+            const category = Array.isArray(restaurant.categories)
+                ? restaurant.categories[0]
+                : (restaurant.category || '기타');
+            if (category) {
+                group.categories.add(category as string);
+            }
+        }
+    });
+
+    // 맛집이 있는 행정구역만 클러스터로 반환
+    const clusters: RegionalCluster[] = [];
+
+    for (const [region, group] of regionMap.entries()) {
+        if (group.restaurantIds.length > 0) {
+            clusters.push({
+                region,
+                center: REGIONAL_CENTERS[region],
+                count: group.restaurantIds.length,
+                restaurantIds: group.restaurantIds,
+                categories: Array.from(group.categories),
+            });
+        }
+    }
+
+    return clusters;
 };
