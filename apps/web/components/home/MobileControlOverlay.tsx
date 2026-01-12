@@ -119,34 +119,41 @@ function MobileControlOverlayComponent({
         }
     }, [activeSheet]);
 
-    // [OPTIMIZATION] 드래그 시작 - ref 기반으로 리렌더링 최소화
-    const handleDragStart = useCallback((e: TouchEvent) => {
+    // [OPTIMIZATION] 드래그 시작 - ref 기반으로 리렌더링 최소화 (터치 + 마우스 통합)
+    const handleDragStart = useCallback((clientY: number) => {
         isDraggingRef.current = true;
         setIsDragging(true); // will-change 적용용
-        const touchY = e.touches[0].clientY;
-        startYRef.current = touchY;
+        startYRef.current = clientY;
         startHeightRef.current = currentHeightRef.current;
-        lastYRef.current = touchY;
+        lastYRef.current = clientY;
         lastTimeRef.current = Date.now();
         velocityRef.current = 0;
     }, []);
 
-    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음)
-    const handleDragMove = useCallback((e: TouchEvent) => {
+    const handleTouchStart = useCallback((e: TouchEvent) => {
+        handleDragStart(e.touches[0].clientY);
+    }, [handleDragStart]);
+
+    const handleMouseDown = useCallback((e: MouseEvent) => {
+        e.preventDefault(); // 텍스트 선택 방지
+        handleDragStart(e.clientY);
+    }, [handleDragStart]);
+
+    // [OPTIMIZATION] 드래그 중 - ref로 직접 DOM 조작 (리렌더링 없음, 터치 + 마우스 통합)
+    const handleDragMove = useCallback((clientY: number) => {
         if (!isDraggingRef.current) return;
 
-        const currentY = e.touches[0].clientY;
         const currentTime = Date.now();
 
         // 속도 계산 (양수면 아래로 드래그)
         const deltaTime = currentTime - lastTimeRef.current;
         if (deltaTime > 0) {
-            velocityRef.current = (currentY - lastYRef.current) / deltaTime;
+            velocityRef.current = (clientY - lastYRef.current) / deltaTime;
         }
-        lastYRef.current = currentY;
+        lastYRef.current = clientY;
         lastTimeRef.current = currentTime;
 
-        const deltaY = startYRef.current - currentY;
+        const deltaY = startYRef.current - clientY;
         const viewportHeight = window.innerHeight;
         const deltaVh = (deltaY / viewportHeight) * 100;
 
@@ -162,7 +169,15 @@ function MobileControlOverlayComponent({
                 sheetRef.current.style.transform = `translateY(calc(100% - ${newHeight}vh))`;
             }
         });
-    }, []); // 의존성 배열 비움 - ref만 사용하므로 안정적
+    }, []);
+
+    const handleTouchMove = useCallback((e: TouchEvent) => {
+        handleDragMove(e.touches[0].clientY);
+    }, [handleDragMove]);
+
+    const handleMouseMove = useCallback((e: MouseEvent) => {
+        handleDragMove(e.clientY);
+    }, [handleDragMove]);
 
     // [OPTIMIZATION] 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
     const handleDragEnd = useCallback(() => {
@@ -277,7 +292,7 @@ function MobileControlOverlayComponent({
         };
     }, [activeSheet]);
 
-    // [OPTIMIZATION] Passive 이벤트 리스너 등록 (검색 시트는 제외)
+    // [OPTIMIZATION] 이벤트 리스너 등록 (터치 + 마우스 지원)
     // Pull-to-Refresh 방지를 위해 touchmove는 passive: false로 설정
     useEffect(() => {
         const handleEl = handleRef.current;
@@ -290,19 +305,42 @@ function MobileControlOverlayComponent({
             }
         };
 
-        handleEl.addEventListener('touchstart', handleDragStart as any, { passive: true });
-        // touchmove는 passive: false로 설정하여 preventDefault 가능하게 함
-        handleEl.addEventListener('touchmove', handleDragMove as any, { passive: false });
+        // 터치 이벤트
+        handleEl.addEventListener('touchstart', handleTouchStart as any, { passive: true });
+        handleEl.addEventListener('touchmove', handleTouchMove as any, { passive: false });
         handleEl.addEventListener('touchmove', preventPullToRefresh, { passive: false });
         handleEl.addEventListener('touchend', handleDragEnd as any, { passive: true });
 
+        // 마우스 이벤트 (핸들에서 시작)
+        handleEl.addEventListener('mousedown', handleMouseDown as any);
+
+        // 마우스 move/up은 window에 등록 (핸들 밖으로 드래그해도 동작)
+        const handleWindowMouseMove = (e: MouseEvent) => {
+            if (isDraggingRef.current) {
+                e.preventDefault();
+                handleMouseMove(e);
+            }
+        };
+
+        const handleWindowMouseUp = () => {
+            if (isDraggingRef.current) {
+                handleDragEnd();
+            }
+        };
+
+        window.addEventListener('mousemove', handleWindowMouseMove);
+        window.addEventListener('mouseup', handleWindowMouseUp);
+
         return () => {
-            handleEl.removeEventListener('touchstart', handleDragStart as any);
-            handleEl.removeEventListener('touchmove', handleDragMove as any);
+            handleEl.removeEventListener('touchstart', handleTouchStart as any);
+            handleEl.removeEventListener('touchmove', handleTouchMove as any);
             handleEl.removeEventListener('touchmove', preventPullToRefresh);
             handleEl.removeEventListener('touchend', handleDragEnd as any);
+            handleEl.removeEventListener('mousedown', handleMouseDown as any);
+            window.removeEventListener('mousemove', handleWindowMouseMove);
+            window.removeEventListener('mouseup', handleWindowMouseUp);
         };
-    }, [activeSheet, handleDragStart, handleDragMove, handleDragEnd]);
+    }, [activeSheet, handleTouchStart, handleTouchMove, handleMouseDown, handleMouseMove, handleDragEnd]);
 
     // [CRITICAL] activeSheet 변경 시 초기 높이 설정
     useEffect(() => {
