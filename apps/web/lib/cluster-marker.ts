@@ -159,23 +159,27 @@ export const createClusterMarkerHTML = (
   const displayCategory = categories[currentIndex % categories.length] || '기타';
   const icon = getCategoryIcon(displayCategory);
 
-  // 개수에 따라 크기 동적 조정 (32px ~ 64px)
+  // 개수에 따라 크기 동적 조정 (32px ~ 72px) - 확대된 범위
   let size: number;
-  if (count < 5) {
+  if (count < 3) {
     size = 32;
-  } else if (count < 10) {
+  } else if (count < 5) {
     size = 36;
+  } else if (count < 10) {
+    size = 42;
   } else if (count < 20) {
-    size = 40;
-  } else if (count < 50) {
     size = 48;
-  } else if (count < 100) {
+  } else if (count < 50) {
     size = 56;
-  } else {
+  } else if (count < 100) {
     size = 64;
+  } else {
+    size = 72;
   }
-  const iconSize = Math.floor(size * 0.6);
+  const iconSize = Math.floor(size * 0.65);
 
+  // z-index 계산: 마커 개수가 많을수록 위에 표시 (100 ~ 200)
+  const zIndex = Math.min(100 + Math.floor(count / 5), 200);
 
   return `
     <div 
@@ -190,6 +194,7 @@ export const createClusterMarkerHTML = (
         display: flex;
         align-items: center;
         justify-content: center;
+        z-index: ${zIndex};
       "
     >
       <!-- 카테고리 이모지 (애니메이션) -->

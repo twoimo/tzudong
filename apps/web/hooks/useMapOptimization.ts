@@ -181,11 +181,21 @@ export function useMapOptimization(): MapOptimizationSettings {
     const settings = useMemo((): MapOptimizationSettings => {
         const preset = OPTIMIZATION_PRESETS[tier];
 
-        // 모바일/태블릿에서는 추가 최적화 적용
+        // [성능 최적화] 모바일/태블릿에서는 추가 최적화 적용
         const adjustedPreset: OptimizationPreset = isMobileOrTablet ? {
             ...preset,
-            // 모바일에서는 디바운스 약간 증가
-            idleDebounceMs: Math.max(preset.idleDebounceMs, 200),
+            // 모바일에서는 더 적극적인 클러스터링
+            clusterMinPoints: Math.max(2, preset.clusterMinPoints - 1),
+            // 모바일에서는 배치 크기 감소 (50% 축소)
+            markerBatchSize: Math.max(10, Math.floor(preset.markerBatchSize * 0.5)),
+            // 모바일에서는 디바운스 증가 (더 적은 업데이트)
+            idleDebounceMs: Math.max(preset.idleDebounceMs + 100, 300),
+            mapUpdateDebounceMs: Math.max(preset.mapUpdateDebounceMs + 50, 250),
+            // 모바일에서는 애니메이션 비활성화 (성능 우선)
+            clusterAnimationEnabled: false,
+            clusterAnimationInterval: 0,
+            // 모바일에서는 부드러운 팬 비활성화 (LOW 티어와 동일)
+            enableSmoothPan: tier === 'HIGH',
             // 모바일에서는 항상 GPU 가속 바텀시트 사용
             useGpuAcceleratedBottomSheet: true,
         } : preset;

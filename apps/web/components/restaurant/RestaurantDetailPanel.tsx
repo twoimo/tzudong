@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, BadgeCheck } from "lucide-react";
+import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, BadgeCheck, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Image from "next/image";
@@ -68,6 +68,7 @@ export function RestaurantDetailPanel({
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
     const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
+    const [isShareCopied, setIsShareCopied] = useState(false);
 
     // [카테고리 처리] categories 배열로 저장됨
     const categories: string[] = restaurant && Array.isArray(restaurant.categories)
@@ -311,6 +312,23 @@ export function RestaurantDetailPanel({
             console.error('주소 복사 실패:', err);
         }
     };
+
+    // [성능 최적화] 공유하기 URL 복사 핸들러 - useCallback으로 메모이제이션
+    const handleShareUrl = useCallback(async () => {
+        if (!restaurant) return;
+        const url = new URL(window.location.href);
+        url.searchParams.set('q', restaurant.name);
+        url.searchParams.set('lat', restaurant.lat?.toString() || '');
+        url.searchParams.set('lng', restaurant.lng?.toString() || '');
+        url.searchParams.set('z', '16.00');
+        try {
+            await navigator.clipboard.writeText(url.toString());
+            setIsShareCopied(true);
+            setTimeout(() => setIsShareCopied(false), 2000);
+        } catch {
+            console.error('URL 복사 실패');
+        }
+    }, [restaurant]);
 
     const extractYouTubeVideoId = (url: string) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
@@ -593,6 +611,22 @@ export function RestaurantDetailPanel({
                             )}
                         </div>
                         <div className="flex gap-1 shrink-0">
+                            {/* 공유하기 버튼 */}
+                            {viewMode === 'detail' && (
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    onClick={handleShareUrl}
+                                    title={isShareCopied ? "복사됨!" : "공유하기"}
+                                    className={isShareCopied ? "bg-green-50 border-green-300 text-green-600" : ""}
+                                >
+                                    {isShareCopied ? (
+                                        <Check className="h-4 w-4" />
+                                    ) : (
+                                        <Share2 className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            )}
                             {/* 북마크 버튼 */}
                             {user && viewMode === 'detail' && (
                                 <BookmarkButton restaurantId={restaurant.id} />
