@@ -204,6 +204,30 @@ export const createClusterMarkerHTML = (
           font-size: ${iconSize}px;
         "
       >${icon}</div>
+      
+      <!-- 맛집 개수 배지 (우측 하단) -->
+      ${count > 0 ? `
+      <div
+        class="cluster-count-badge"
+        style="
+          position: absolute;
+          bottom: -4px;
+          right: -4px;
+          background-color: rgba(0, 0, 0, 0.75);
+          color: white;
+          font-size: 11px;
+          font-weight: bold;
+          padding: 2px 6px;
+          border-radius: 12px;
+          min-width: 18px;
+          text-align: center;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          z-index: ${zIndex + 1};
+          backdrop-filter: blur(2px);
+          border: 1px solid rgba(255,255,255,0.2);
+        "
+      >${count >= 1000 ? '999+' : count}</div>
+      ` : ''}
     </div>
   `;
 };

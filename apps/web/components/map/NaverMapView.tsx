@@ -26,7 +26,9 @@ import {
     getRegionalClusters,
     type RestaurantFeature,
     type ClusterProperties,
-    type RegionalCluster
+    type RegionalCluster,
+    type SeoulDistrictCluster,
+    getSeoulDistrictClusters
 } from "@/lib/clustering";
 import { markerPool } from "@/lib/marker-pool";
 import {
@@ -385,8 +387,10 @@ const NaverMapView = memo(({
     const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
     const [clusters, setClusters] = useState<Array<Supercluster.ClusterFeature<ClusterProperties> | Supercluster.PointFeature<ClusterProperties>>>([]);
     const [regionalClusters, setRegionalClusters] = useState<RegionalCluster[]>([]); // 17개 행정구역 클러스터
+    const [seoulDistrictClusters, setSeoulDistrictClusters] = useState<SeoulDistrictCluster[]>([]); // 25개 서울 자치구 클러스터
     const [isClusterMode, setIsClusterMode] = useState(false); // 클러스터 모드 활성화 여부
     const [isRegionalClusterMode, setIsRegionalClusterMode] = useState(false); // 행정구역 클러스터 모드
+    const [isSeoulDistrictMode, setIsSeoulDistrictMode] = useState(false); // 서울 자치구 모드
     const clusterMarkersRef = useRef<Map<number | string, any>>(new Map()); // 클러스터 마커 Map
 
     // 사이드바 상태 가져오기
@@ -1238,6 +1242,10 @@ const NaverMapView = memo(({
         // 17개 행정구역 클러스터도 계산
         const newRegionalClusters = getRegionalClusters(displayRestaurants);
         setRegionalClusters(newRegionalClusters);
+
+        // 서울 25개 자치구 클러스터 계산
+        const newSeoulDistrictClusters = getSeoulDistrictClusters(displayRestaurants);
+        setSeoulDistrictClusters(newSeoulDistrictClusters);
     }, [displayRestaurants.length, selectedRegion, isMapInitialized]);
 
     // [Cluster] 지도 이동/줌 시 클러스터 업데이트
@@ -1321,6 +1329,7 @@ const NaverMapView = memo(({
         const { naver } = window;
         const map = mapInstanceRef.current;
         const currentZoom = Math.floor(map.getZoom());
+        const mapBounds = map.getBounds();
 
         // 전국 뷰일 때만 클러스터링 적용 (특정 지역 선택 시 개별 마커)
         const effectiveMaxZoom = getClusterMaxZoom(selectedRegion);
@@ -1330,21 +1339,49 @@ const NaverMapView = memo(({
         // [Fix] 사용자가 기능 동작을 원하므로 다시 활성화
         let shouldUseRegionalCluster = shouldCluster && currentZoom <= 8;
 
+        // [Logic] 서울 지역이고 줌 10-12 사이면 25개 자치구 클러스터링 사용
+        const isSeoulRegion = selectedRegion === '서울특별시' || (!selectedRegion && mapBounds && mapBounds.hasLatLng(new naver.maps.LatLng(37.5665, 126.9780))); // 대략 서울 중심 포함 여부
+
+        let shouldUseSeoulDistrictCluster = shouldCluster && !shouldUseRegionalCluster && (currentZoom >= 10 && currentZoom <= 12);
+
+        // 서울 관련 필터링: 만약 shouldCluster이고 zoom이 10-12인데, 
+        // 현재 뷰포트에 서울 맛집이 있다면 활성화.
+        // selectedRegion이 없어도 서울 근처면 활성화.
+        // 다만 성능을 위해 간단히 selectedRegion 체크나 줌 레벨로 판단.
+        // 여기서는 '전국' 모드일 때 서울 쪽에 오면 동작해야 함.
+        if (shouldUseSeoulDistrictCluster) {
+            // 현재 화면 중심이 서울 범위 내인지 대략 확인 (37.4 ~ 37.7, 126.7 ~ 127.2)
+            const center = map.getCenter();
+            const isInSeoul = (center.lat() > 37.4 && center.lat() < 37.75 && center.lng() > 126.75 && center.lng() < 127.25);
+            if (!isInSeoul && !selectedRegion?.includes('서울')) {
+                shouldUseSeoulDistrictCluster = false;
+            }
+        }
+
         // [UX] 모드 전환 시 깜빡임(새로고침 현상) 방지를 위한 Seamless Transition
         // 행정구역(8이하) -> Supercluster(9이상) 전환 시: 
         // Supercluster 데이터(`clusters`)가 계산되어 준비될 때까지 기존 행정구역 모드를 유지합니다.
-        if (!shouldUseRegionalCluster && shouldCluster && clusters.length === 0 && regionalClusters.length > 0) {
-            // [Key Fix] 로컬 변수를 true로 강제 설정하여 이번 렌더링에서 행정구역 마커를 그리도록 함
-            shouldUseRegionalCluster = true;
 
-            // 아직 Supercluster 데이터가 준비되지 않았으므로 행정구역 모드 연장
-            // 단, 백그라운드에서 Supercluster 계산이 시작되도록 isClusterMode는 true로 설정
+        // * Seoul District Mode 추가로 인한 로직 확장 *
+        // Regional -> Standard: Regional 유지
+        // Standard -> Seoul District: Standard 유지? 아니면 즉시 전환?
+        // 보통 줌인 시에는 즉시 전환이 자연스러울 수 있음.
+
+        // 로직 단순화:
+        // 1. Regional Mode (Zoom <= 8)
+        // 2. Seoul District Mode (Zoom 10-12 & In Seoul)
+        // 3. Supercluster Mode (Otherwise)
+
+        if (shouldUseRegionalCluster) {
             setIsRegionalClusterMode(true);
+            setIsSeoulDistrictMode(false);
             setIsClusterMode(true);
         } else {
-            // 정상 모드 전환
+            // 일반적인 경우: Supercluster가 기본이지만, 서울 지역 등 일부를 덮어쓰거나 대체할 수 있습니다.
+            setIsRegionalClusterMode(false);
+            // 이제 둘 다 true일 수 있습니다.
+            setIsSeoulDistrictMode(shouldUseSeoulDistrictCluster);
             setIsClusterMode(shouldCluster);
-            setIsRegionalClusterMode(shouldUseRegionalCluster);
         }
 
         if (shouldUseRegionalCluster) {
@@ -1394,179 +1431,184 @@ const NaverMapView = memo(({
             // 사용하지 않는 마커 반환
             markerPool.releaseExcept(activeIds);
 
-        } else if (shouldCluster) {
-            // ===== 기존 Supercluster 클러스터 모드 (줌 9 이상) =====
-            if (clusters.length === 0) {
-                return;
-            }
-            const activeIds = new Set<string>();
-
-            clusters.forEach((feature) => {
-                if (isCluster(feature)) {
-                    // 클러스터 마커
-                    const clusterId = feature.properties.cluster_id!;
-                    const count = getClusterCount(feature);
-                    const [lng, lat] = feature.geometry.coordinates;
-                    const markerId = `cluster-${clusterId}`;
-
-                    activeIds.add(markerId);
-
-                    // 애니메이션 등록
-                    clusterAnimationManager.register(clusterId);
-
-                    // 카테고리 목록 (에러 방지)
-                    let categories: string[];
-                    try {
-                        categories = getClusterCategories(clusterIndexRef.current!, clusterId);
-                    } catch (error) {
-                        // 클러스터 ID가 유효하지 않을 경우 빈 배열
-                        categories = [];
-                    }
-                    const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
-                    const html = createClusterMarkerHTML(feature, categories, currentIndex);
-
-                    // [최적화] acquire 한 번으로 생성/업데이트/이벤트 바인딩 모두 해결
-                    markerPool.acquire(
-                        markerId,
-                        new naver.maps.LatLng(lat, lng),
-                        { content: html, anchor: new naver.maps.Point(24, 24) },
-                        map,
-                        () => {
-                            const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
-                            const currentZoom = map.getZoom();
-
-                            // [UX 개선] 클러스터 해제를 위해 최소 1단계 이상 확대 보장
-                            let targetZoom = expansionZoom;
-                            if (targetZoom <= currentZoom) {
-                                targetZoom = currentZoom + 2;
-                            }
-                            // 최소 9레벨 보정
-                            targetZoom = Math.max(targetZoom, 9);
-
-                            // [UX] 줌과 중심 이동을 동시에 부드럽게 처리
-                            map.morph(new naver.maps.LatLng(lat, lng), targetZoom);
-                        }
-                    );
-                } else {
-                    // 개별 포인트 (클러스터 모드 내)
-                    const restaurantId = feature.properties.restaurantId;
-                    const [lng, lat] = feature.geometry.coordinates;
-                    const category = feature.properties.category;
-                    const isSelected = selectedRestaurant?.id === restaurantId;
-
-                    activeIds.add(restaurantId);
-
-                    const html = createIndividualMarkerHTML(category, isSelected);
-
-                    markerPool.acquire(
-                        restaurantId,
-                        new naver.maps.LatLng(lat, lng),
-                        { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
-                        map,
-                        () => {
-                            const restaurant = displayRestaurants.find(r => r.id === restaurantId);
-                            if (restaurant) {
-                                // [UX] 줌 레벨 변경 없이 중심으로 부드럽게 이동
-                                // 사용자가 현재 줌 레벨에서 보고 싶어하므로 강제 줌인 제거
-                                map.panTo(new naver.maps.LatLng(lat, lng), { duration: 300 });
-
-                                if (onMarkerClick) {
-                                    onMarkerClick(restaurant);
-                                } else {
-                                    if (onRestaurantSelect) {
-                                        onRestaurantSelect(restaurant);
-                                    }
-                                    setInternalPanelOpen(true);
-                                }
-                            }
-                        }
-                    );
-                }
-            });
-
             // 사용하지 않는 마커 반환
             markerPool.releaseExcept(activeIds);
 
         } else {
-            // ===== 개별 마커 모드 =====
-            const restaurantsToShow = [...displayRestaurants];
-
-            // 검색된 맛집 추가
-            if (searchedRestaurant) {
-                let alreadyExists = false;
-                if (searchedRestaurant.mergedRestaurants && searchedRestaurant.mergedRestaurants.length > 0) {
-                    const mergedIds = searchedRestaurant.mergedRestaurants.map(r => r.id);
-                    alreadyExists = displayRestaurants.some(r => mergedIds.includes(r.id));
-                } else {
-                    alreadyExists = displayRestaurants.some(r => r.id === searchedRestaurant.id);
-                }
-                if (!alreadyExists) {
-                    restaurantsToShow.push(searchedRestaurant);
-                }
-            }
-
-            // 가시영역 필터링
-            const visibleRestaurants = VIEWPORT_FILTER_ENABLED
-                ? restaurantsToShow.filter(r => {
-                    if (r.id === selectedRestaurant?.id || r.id === searchedRestaurant?.id) {
-                        return true;
-                    }
-                    return isRestaurantInViewport(r, map);
-                })
-                : restaurantsToShow;
-
+            // ===== 복합 모드: 서울 자치구 (선택적) + Supercluster/개별 마커 =====
             const activeIds = new Set<string>();
 
-            visibleRestaurants.forEach(restaurant => {
-                if (!restaurant.lat || !restaurant.lng) return;
+            // 1. 서울 자치구 클러스터 (우선 순위 레이어)
+            if (shouldUseSeoulDistrictCluster && seoulDistrictClusters.length > 0) {
+                seoulDistrictClusters.forEach((cluster) => {
+                    const markerId = `seoul-dist-${cluster.region}`;
+                    activeIds.add(markerId);
 
-                activeIds.add(restaurant.id);
+                    // 카테고리 목록
+                    const categories = cluster.categories;
+                    const regionHash = Math.abs(cluster.region.split('').reduce((a, b) => (a * 31 + b.charCodeAt(0)) | 0, 0));
 
-                const isSelected = selectedRestaurant?.id === restaurant.id;
-                const category = (Array.isArray(restaurant.categories)
-                    ? restaurant.categories[0]
-                    : restaurant.category || '기타') as string;
+                    clusterAnimationManager.register(regionHash);
 
-                const html = createIndividualMarkerHTML(category, isSelected);
+                    const currentIndex = clusterAnimationManager.getCurrentIndex(
+                        regionHash,
+                        categories.length
+                    );
 
-                markerPool.acquire(
-                    restaurant.id,
-                    new naver.maps.LatLng(restaurant.lat, restaurant.lng),
-                    { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
-                    map,
-                    () => {
-                        // [UX] 줌 레벨 변경 없이 중심으로 부드럽게 이동
-                        map.panTo(new naver.maps.LatLng(restaurant.lat, restaurant.lng), { duration: 300 });
+                    const fakeFeature = {
+                        properties: { point_count: cluster.count },
+                        geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
+                    } as any;
+                    const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
 
-                        if (onMarkerClick) {
-                            onMarkerClick(restaurant);
-                        } else {
-                            if (onRestaurantSelect) {
-                                onRestaurantSelect(restaurant);
-                            }
-                            setInternalPanelOpen(true);
+                    markerPool.acquire(
+                        markerId,
+                        new naver.maps.LatLng(cluster.center.lat, cluster.center.lng),
+                        { content: html, anchor: new naver.maps.Point(24, 24) },
+                        map,
+                        () => {
+                            map.morph(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng), 13);
                         }
+                    );
+                });
+            }
+
+            // 포인트가 서울 경계 내에 있는지 확인하는 헬퍼 함수 (중복 렌더링 방지)
+            const isPointInSeoul = (lat: number, lng: number) => {
+                return (lat > 37.41 && lat < 37.71 && lng > 126.76 && lng < 127.19);
+            };
+
+            // 2. 표준 로직 (Supercluster 또는 개별 마커)
+            if (shouldCluster) {
+                if (clusters.length > 0) {
+                    clusters.forEach((feature) => {
+                        const [lng, lat] = feature.geometry.coordinates;
+
+                        // [CRITICAL Logic] Seoul District Mode가 켜져있고, 이 마커/클러스터가 서울 안에 있다면 건너뜀
+                        // (이미 Seoul District Cluster로 표현되었으므로 중복 렌더링 방지)
+                        if (shouldUseSeoulDistrictCluster && isPointInSeoul(lat, lng)) {
+                            return;
+                        }
+
+                        if (isCluster(feature)) {
+                            const clusterId = feature.properties.cluster_id!;
+                            const markerId = `cluster-${clusterId}`;
+                            activeIds.add(markerId);
+
+                            clusterAnimationManager.register(clusterId);
+
+                            let categories: string[];
+                            try {
+                                categories = getClusterCategories(clusterIndexRef.current!, clusterId);
+                            } catch (e) { categories = []; }
+
+                            const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
+                            const html = createClusterMarkerHTML(feature, categories, currentIndex);
+
+                            markerPool.acquire(
+                                markerId,
+                                new naver.maps.LatLng(lat, lng),
+                                { content: html, anchor: new naver.maps.Point(24, 24) },
+                                map,
+                                () => {
+                                    // ... existing zoom logic ...
+                                    const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
+                                    const currentZoom = map.getZoom();
+                                    let targetZoom = expansionZoom;
+                                    if (targetZoom <= currentZoom) targetZoom = currentZoom + 2;
+                                    targetZoom = Math.max(targetZoom, 9);
+                                    map.morph(new naver.maps.LatLng(lat, lng), targetZoom);
+                                }
+                            );
+                        } else {
+                            // 클러스터 모드 내의 개별 마커
+                            const restaurantId = feature.properties.restaurantId;
+                            activeIds.add(restaurantId);
+                            const category = feature.properties.category;
+                            const isSelected = selectedRestaurant?.id === restaurantId;
+                            const html = createIndividualMarkerHTML(category, isSelected);
+
+                            markerPool.acquire(
+                                restaurantId,
+                                new naver.maps.LatLng(lat, lng),
+                                { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
+                                map,
+                                () => {
+                                    // ... existing click logic ...
+                                    const restaurant = displayRestaurants.find(r => r.id === restaurantId);
+                                    if (restaurant) {
+                                        map.panTo(new naver.maps.LatLng(lat, lng), { duration: 300 });
+                                        if (onMarkerClick) onMarkerClick(restaurant);
+                                        else {
+                                            if (onRestaurantSelect) onRestaurantSelect(restaurant);
+                                            setInternalPanelOpen(true);
+                                        }
+                                    }
+                                }
+                            );
+                        }
+                    });
+                }
+            } else {
+                // 개별 마커 모드 (클러스터링 없음)
+                // 참고: 서울 자치구 모드가 활성화된 경우, 서울 내의 개별 마커를 숨겨야 할까요?
+                // 아마도 네, 클러스터링을 강제하기 위해서입니다.
+
+                const restaurantsToShow = [...displayRestaurants];
+                // ... (search logic) ...
+                if (searchedRestaurant && !displayRestaurants.some(r => r.id === searchedRestaurant.id)) {
+                    restaurantsToShow.push(searchedRestaurant);
+                }
+
+                const visibleRestaurants = VIEWPORT_FILTER_ENABLED
+                    ? restaurantsToShow.filter(r => r.id === selectedRestaurant?.id || isRestaurantInViewport(r, map))
+                    : restaurantsToShow;
+
+                visibleRestaurants.forEach(restaurant => {
+                    if (!restaurant.lat || !restaurant.lng) return;
+
+                    // [Logic] Seoul District Mode가 켜져있다면, 서울 내부의 개별 마커는 숨김 (District Cluster가 대신함)
+                    if (shouldUseSeoulDistrictCluster && isPointInSeoul(restaurant.lat, restaurant.lng)) {
+                        return;
                     }
-                );
-            });
 
-            // 사용하지 않는 마커 반환
+                    activeIds.add(restaurant.id);
+                    const isSelected = selectedRestaurant?.id === restaurant.id;
+                    const category = (Array.isArray(restaurant.categories) ? restaurant.categories[0] : restaurant.category || '기타') as string;
+                    const html = createIndividualMarkerHTML(category, isSelected);
+
+                    markerPool.acquire(
+                        restaurant.id,
+                        new naver.maps.LatLng(restaurant.lat, restaurant.lng),
+                        { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
+                        map,
+                        () => {
+                            map.panTo(new naver.maps.LatLng(restaurant.lat, restaurant.lng), { duration: 300 });
+                            if (onMarkerClick) onMarkerClick(restaurant);
+                            else {
+                                if (onRestaurantSelect) onRestaurantSelect(restaurant);
+                                setInternalPanelOpen(true);
+                            }
+                        }
+                    );
+                });
+                restaurantsRef.current = restaurantsToShow;
+            }
+
+            // Cleanup
             markerPool.releaseExcept(activeIds);
-
-            // restaurantsRef 업데이트
-            restaurantsRef.current = restaurantsToShow;
         }
 
-    }, [clusters, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isMapInitialized]);
+    }, [clusters, regionalClusters, seoulDistrictClusters, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized]);
 
     // [Animation] 카테고리 이모지 순환 업데이트
     useEffect(() => {
-        if (!isClusterMode && !isRegionalClusterMode) return;
+        if (!isClusterMode && !isRegionalClusterMode && !isSeoulDistrictMode) return;
 
         // 애니메이션 업데이트 시 클러스터 마커 HTML 갱신
         const cleanup = clusterAnimationManager.addListener(() => {
             if (isRegionalClusterMode) {
-                // Regional cluster 모드 - 18개 지역 클러스터 업데이트
+                // ... (기존 코드)
                 regionalClusters.forEach((cluster) => {
                     const markerId = `regional-${cluster.region}`;
                     const marker = markerPool.get(markerId);
@@ -1580,7 +1622,7 @@ const NaverMapView = memo(({
                             properties: { point_count: cluster.count },
                             geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
                         } as any;
-                        const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
+                        const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex); // 이제 여기서 배지도 포함됨
 
                         marker.setIcon({
                             content: html,
@@ -1588,7 +1630,32 @@ const NaverMapView = memo(({
                         });
                     }
                 });
-            } else {
+            }
+            // 복합 모드: 서울 자치구 모드가 활성화된 경우, 해당 애니메이션 로직 실행
+            if (isSeoulDistrictMode) {
+                // Seoul District 모드 - 25개 자치구 클러스터 업데이트
+                seoulDistrictClusters.forEach((cluster) => {
+                    const markerId = `seoul-dist-${cluster.region}`;
+                    const marker = markerPool.get(markerId);
+
+                    if (marker) {
+                        // ... same logic ...
+                        const categories = cluster.categories;
+                        const regionHash = Math.abs(cluster.region.split('').reduce((a, b) => (a * 31 + b.charCodeAt(0)) | 0, 0));
+                        const currentIndex = clusterAnimationManager.getCurrentIndex(regionHash, categories.length);
+
+                        const fakeFeature = {
+                            properties: { point_count: cluster.count },
+                            geometry: { coordinates: [cluster.center.lng, cluster.center.lat] }
+                        } as any;
+                        const html = createClusterMarkerHTML(fakeFeature, categories, currentIndex);
+                        marker.setIcon({ content: html, anchor: new window.naver.maps.Point(24, 24) });
+                    }
+                });
+            }
+
+            // 복합 모드: 클러스터 모드가 활성화된 경우, 표준 애니메이션 로직도 실행
+            if (isClusterMode) {
                 // 기존 Supercluster 클러스터 모드
                 clusters.forEach((feature) => {
                     if (isCluster(feature)) {
@@ -1597,7 +1664,13 @@ const NaverMapView = memo(({
                         const marker = markerPool.get(markerId);
 
                         if (marker && clusterIndexRef.current) {
-                            const categories = getClusterCategories(clusterIndexRef.current, clusterId);
+                            let categories: string[] = [];
+                            try {
+                                categories = getClusterCategories(clusterIndexRef.current, clusterId);
+                            } catch (e) {
+                                // ignore
+                            }
+
                             const currentIndex = clusterAnimationManager.getCurrentIndex(clusterId, categories.length);
                             const html = createClusterMarkerHTML(feature, categories, currentIndex);
 
@@ -1612,7 +1685,7 @@ const NaverMapView = memo(({
         });
 
         return cleanup;
-    }, [isClusterMode, isRegionalClusterMode, clusters, regionalClusters]);
+    }, [isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, clusters, regionalClusters, seoulDistrictClusters]);
 
     // [OPTIMIZATION] 선택 상태 변경에 따른 마커 스타일 업데이트 (O(N) → O(1) 최적화)
     // 이전 선택 마커 ID 추적

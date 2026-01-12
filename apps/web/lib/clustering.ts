@@ -268,6 +268,37 @@ export const REGIONAL_CENTERS: Record<string, { lat: number; lng: number }> = {
 };
 
 /**
+ * 서울특별시 25개 자치구 중심 좌표 (줌 10-12 최적화용)
+ */
+export const SEOUL_DISTRICT_CENTERS: Record<string, { lat: number; lng: number }> = {
+    "강남구": { lat: 37.5172, lng: 127.0473 },
+    "강동구": { lat: 37.5301, lng: 127.1238 },
+    "강북구": { lat: 37.6396, lng: 127.0257 },
+    "강서구": { lat: 37.5509, lng: 126.8497 },
+    "관악구": { lat: 37.4784, lng: 126.9516 },
+    "광진구": { lat: 37.5385, lng: 127.0823 },
+    "구로구": { lat: 37.4954, lng: 126.8874 },
+    "금천구": { lat: 37.4568, lng: 126.8952 },
+    "노원구": { lat: 37.6542, lng: 127.0568 },
+    "도봉구": { lat: 37.6688, lng: 127.0471 },
+    "동대문구": { lat: 37.5744, lng: 127.0400 },
+    "동작구": { lat: 37.5124, lng: 126.9393 },
+    "마포구": { lat: 37.5665, lng: 126.9018 },
+    "서대문구": { lat: 37.5791, lng: 126.9368 },
+    "서초구": { lat: 37.4837, lng: 127.0324 },
+    "성동구": { lat: 37.5633, lng: 127.0371 },
+    "성북구": { lat: 37.5891, lng: 127.0182 },
+    "송파구": { lat: 37.5145, lng: 127.1066 },
+    "양천구": { lat: 37.5169, lng: 126.8660 },
+    "영등포구": { lat: 37.5264, lng: 126.8962 },
+    "용산구": { lat: 37.5326, lng: 126.9904 },
+    "은평구": { lat: 37.6027, lng: 126.9291 },
+    "종로구": { lat: 37.5730, lng: 126.9794 },
+    "중구": { lat: 37.5641, lng: 126.9970 },
+    "중랑구": { lat: 37.6066, lng: 127.0927 },
+};
+
+/**
  * 행정구역 클러스터 인터페이스
  */
 export interface RegionalCluster {
@@ -282,6 +313,11 @@ export interface RegionalCluster {
     /** 해당 지역 카테고리 배열 (중복 제거) */
     categories: string[];
 }
+
+/**
+ * 서울 자치구 클러스터 인터페이스 (RegionalCluster 구조 상속)
+ */
+export type SeoulDistrictCluster = RegionalCluster;
 
 /**
  * 두 좌표 간의 거리 계산 (Haversine formula 간소화)
@@ -414,5 +450,79 @@ export const getRegionalClusters = (restaurants: Restaurant[]): RegionalCluster[
         }
     }
 
+    return clusters;
+};
+
+/**
+ * 서울시 25개 자치구 기준 클러스터링 (줌 10-12)
+ * 
+ * 서울 맛집을 가장 가까운 자치구(구) 중심에 할당
+ */
+export const getSeoulDistrictClusters = (restaurants: Restaurant[]): SeoulDistrictCluster[] => {
+    const districtMap = new Map<string, {
+        restaurantIds: string[];
+        categories: Set<string>;
+    }>();
+
+    // 25개 구 초기화
+    for (const district of Object.keys(SEOUL_DISTRICT_CENTERS)) {
+        districtMap.set(district, { restaurantIds: [], categories: new Set() });
+    }
+
+    restaurants.forEach((restaurant) => {
+        if (!restaurant.lat || !restaurant.lng) return;
+
+        // 서울 지역만 처리 (주소 체크)
+        // 간단한 주소 필터링
+        const address = restaurant.road_address || restaurant.jibun_address || '';
+        if (!address.includes('서울')) return;
+
+        // 1. 주소에서 '구' 추출
+        let district = null;
+        for (const d of Object.keys(SEOUL_DISTRICT_CENTERS)) {
+            if (address.includes(d)) {
+                district = d;
+                break;
+            }
+        }
+
+        // 2. 주소에 구가 명시되지 않거나 매칭 안되면 거리 기반 (보조)
+        if (!district) {
+            let minDistance = Infinity;
+            for (const [d, center] of Object.entries(SEOUL_DISTRICT_CENTERS)) {
+                const distance = getDistance(restaurant.lat, restaurant.lng, center.lat, center.lng);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    district = d;
+                }
+            }
+        }
+
+        if (district) {
+            const group = districtMap.get(district);
+            if (group) {
+                group.restaurantIds.push(restaurant.id);
+                const category = Array.isArray(restaurant.categories)
+                    ? restaurant.categories[0]
+                    : (restaurant.category || '기타');
+                if (category) {
+                    group.categories.add(category as string);
+                }
+            }
+        }
+    });
+
+    const clusters: SeoulDistrictCluster[] = [];
+    for (const [district, group] of districtMap.entries()) {
+        if (group.restaurantIds.length > 0) {
+            clusters.push({
+                region: district,
+                center: SEOUL_DISTRICT_CENTERS[district],
+                count: group.restaurantIds.length,
+                restaurantIds: group.restaurantIds,
+                categories: Array.from(group.categories),
+            });
+        }
+    }
     return clusters;
 };
