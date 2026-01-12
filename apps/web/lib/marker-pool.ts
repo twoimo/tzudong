@@ -144,19 +144,35 @@ export class MarkerPool {
         const marker = this.active.get(id);
         if (!marker) return;
 
-        // 지도에서 제거
-        marker.setMap(null);
-
-        // 풀 크기 제한 체크
-        if (this.pool.length < this.MAX_POOL_SIZE) {
-            this.pool.push(marker);
-        } else {
-            // 풀이 가득 차면 마커 완전 삭제
-            // Naver Maps API에는 명시적 destroy가 없으므로 참조만 제거
+        // [UX] 즉시 삭제 대신 페이드아웃 적용
+        // 깜빡임 없는 전환(Seamless Transition)을 위해 300ms 동안 유지
+        const element = marker.getElement();
+        if (element) {
+            element.classList.add('marker-fade-out');
         }
 
         this.active.delete(id);
-        this.stats.released++;
+
+        // CSS Transition 시간(300ms) 후 실제 제거 및 풀 반환
+        setTimeout(() => {
+            // 지도에서 제거
+            marker.setMap(null);
+
+            // 다음 재사용을 위해 상태 초기화
+            if (element) {
+                element.classList.remove('marker-fade-out');
+                element.style.opacity = '';
+            }
+
+            // 풀 크기 제한 체크
+            if (this.pool.length < this.MAX_POOL_SIZE) {
+                this.pool.push(marker);
+            } else {
+                // 풀이 가득 차면 마커 완전 삭제(참조 제거)
+            }
+
+            this.stats.released++;
+        }, 300);
     }
 
     /**
