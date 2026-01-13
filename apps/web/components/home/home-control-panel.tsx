@@ -1,6 +1,6 @@
 'use client'; // [CSR] 사용자 입력 및 상호작용 처리
 
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useState, useCallback, memo } from 'react';
 import { Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,7 +36,8 @@ interface HomeControlPanelProps {
 }
 
 // [CSR] 지역/국가 선택, 카테고리 필터, 검색 통합 패널 - 모든 사용자 입력 처리
-export default function HomeControlPanel({
+// [OPTIMIZATION] React.memo로 불필요한 리렌더링 방지
+const HomeControlPanelComponent = ({
     mapMode,
     selectedRegion,
     selectedCountry,
@@ -57,26 +58,33 @@ export default function HomeControlPanel({
     onModeChange,
     user,
     onSubmissionClick,
-}: HomeControlPanelProps) {
+}: HomeControlPanelProps) => {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
     const [leftPosition, setLeftPosition] = useState<string>('50%');
     const panelRef = useRef<HTMLDivElement>(null);
+
+    // [OPTIMIZATION] useCallback으로 메모이제이션
+    const updateLayout = useCallback(() => {
+        const windowWidth = window.innerWidth;
+        const availableWidth = windowWidth - leftSidebarWidth - rightPanelWidth;
+        const centerOfVisibleArea = leftSidebarWidth + (availableWidth / 2);
+        setLeftPosition(`${centerOfVisibleArea}px`);
+    }, [leftSidebarWidth, rightPanelWidth]);
 
     // 데스크탑에서만 위치 계산
     useEffect(() => {
         if (!isDesktop) return;
 
-        const updateLayout = () => {
-            const windowWidth = window.innerWidth;
-            const availableWidth = windowWidth - leftSidebarWidth - rightPanelWidth;
-            const centerOfVisibleArea = leftSidebarWidth + (availableWidth / 2);
-            setLeftPosition(`${centerOfVisibleArea}px`);
-        };
-
         updateLayout();
         window.addEventListener('resize', updateLayout, { passive: true });
         return () => window.removeEventListener('resize', updateLayout, { passive: true } as any);
-    }, [leftSidebarWidth, rightPanelWidth, isDesktop]);
+    }, [isDesktop, updateLayout]);
+
+    // [OPTIMIZATION] 클릭 핸들러 메모이제이션
+    const handlePanelClick = useCallback((e: React.MouseEvent) => {
+        e.stopPropagation();
+        onPanelClick?.('control');
+    }, [onPanelClick]);
 
     // 모바일/태블릿에서는 MobileControlOverlay 사용
     if (isMobileOrTablet) {
@@ -111,10 +119,7 @@ export default function HomeControlPanel({
                 left: leftPosition,
                 transform: 'translateX(-50%)'
             }}
-            onClick={(e) => {
-                e.stopPropagation();
-                onPanelClick?.('control');
-            }}
+            onClick={handlePanelClick}
         >
             <div className="flex items-center gap-3 bg-background/95 backdrop-blur-sm rounded-lg border border-border shadow-lg p-3 hover:shadow-xl hover:border-primary/50 transition-all duration-300">
                 {/* [CSR] 지역/국가 선택 - 드롭다운 인터랙션 */}
@@ -163,4 +168,10 @@ export default function HomeControlPanel({
             </div>
         </div>
     );
-}
+};
+
+// [OPTIMIZATION] React.memo로 래핑하여 props 변경 시에만 리렌더링
+const HomeControlPanel = memo(HomeControlPanelComponent);
+HomeControlPanel.displayName = 'HomeControlPanel';
+
+export default HomeControlPanel;
