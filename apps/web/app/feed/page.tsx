@@ -233,7 +233,7 @@ export default function FeedPage() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-y-auto">
+        <div className="flex flex-col h-full bg-background overflow-y-auto" data-testid="feed-page-container">
             {/* Header */}
             <div className="border-b border-border bg-background p-6 shrink-0">
                 <div className="flex items-center justify-between">

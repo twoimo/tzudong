@@ -498,6 +498,7 @@ export function RestaurantDetailPanel({
     return (
         <>
             <div
+                data-testid="restaurant-detail-panel"
                 data-panel-type="restaurant-detail"
                 className="h-full w-full max-w-full flex flex-col bg-background border-l border-border relative"
             >

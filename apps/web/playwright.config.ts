@@ -31,32 +31,90 @@ export default defineConfig({
         trace: 'on-first-retry',
     },
 
-    /* 주요 브라우저 프로젝트 설정 */
+    /* 주요 브라우저 및 기기 프로젝트 설정 */
     projects: [
+        // === 데스크탑 브라우저 ===
+        { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+        { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
+        { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+
+        // === 모바일 - iPhone ===
+        { name: 'iPhone SE', use: { ...devices['iPhone SE'] } },
+        { name: 'iPhone XR', use: { ...devices['iPhone XR'] } },
+        { name: 'iPhone 11', use: { ...devices['iPhone 11'] } },
+        { name: 'iPhone 12', use: { ...devices['iPhone 12'] } },
+        { name: 'iPhone 12 Pro', use: { ...devices['iPhone 12 Pro'] } },
+        { name: 'iPhone 12 Pro Max', use: { ...devices['iPhone 12 Pro Max'] } },
+        { name: 'iPhone 13', use: { ...devices['iPhone 13'] } },
+        { name: 'iPhone 13 Pro', use: { ...devices['iPhone 13 Pro'] } },
+        { name: 'iPhone 13 Pro Max', use: { ...devices['iPhone 13 Pro Max'] } },
+        { name: 'iPhone 14', use: { ...devices['iPhone 14'] } },
+        { name: 'iPhone 14 Pro', use: { ...devices['iPhone 14 Pro'] } },
+        { name: 'iPhone 14 Pro Max', use: { ...devices['iPhone 14 Pro Max'] } },
+
+        // === 모바일 - Android ===
+        { name: 'Pixel 3', use: { ...devices['Pixel 3'] } },
+        { name: 'Pixel 4', use: { ...devices['Pixel 4'] } },
+        { name: 'Pixel 5', use: { ...devices['Pixel 5'] } },
+        { name: 'Pixel 7', use: { ...devices['Pixel 7'] } },
+        { name: 'Moto G4', use: { ...devices['Moto G4'] } },
+        { name: 'Galaxy S5', use: { ...devices['Galaxy S5'] } },
+        { name: 'Galaxy S8', use: { ...devices['Galaxy S8'] } },
+        { name: 'Galaxy S9+', use: { ...devices['Galaxy S9+'] } },
+
+        // === 최신 Galaxy (커스텀 뷰포트) ===
         {
-            name: 'chromium',
-            use: { ...devices['Desktop Chrome'] },
+            name: 'Galaxy S21',
+            use: {
+                viewport: { width: 360, height: 800 },
+                userAgent: 'Mozilla/5.0 (Linux; Android 12; SM-G991B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                deviceScaleFactor: 3,
+                isMobile: true,
+                hasTouch: true,
+            },
+        },
+        {
+            name: 'Galaxy S22',
+            use: {
+                viewport: { width: 360, height: 780 },
+                userAgent: 'Mozilla/5.0 (Linux; Android 13; SM-S901B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                deviceScaleFactor: 3,
+                isMobile: true,
+                hasTouch: true,
+            },
+        },
+        {
+            name: 'Galaxy S23',
+            use: {
+                viewport: { width: 360, height: 780 },
+                userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                deviceScaleFactor: 3,
+                isMobile: true,
+                hasTouch: true,
+            },
+        },
+        {
+            name: 'Galaxy Z Fold 5',
+            use: {
+                viewport: { width: 373, height: 841 },
+                userAgent: 'Mozilla/5.0 (Linux; Android 14; SM-F946B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36',
+                deviceScaleFactor: 3,
+                isMobile: true,
+                hasTouch: true,
+            },
         },
 
-        {
-            name: 'firefox',
-            use: { ...devices['Desktop Firefox'] },
-        },
+        // === 태블릿 - iPad ===
+        { name: 'iPad Mini', use: { ...devices['iPad Mini'] } },
+        { name: 'iPad', use: { ...devices['iPad (gen 7)'] } },
+        { name: 'iPad Pro 11', use: { ...devices['iPad Pro 11'] } },
 
-        {
-            name: 'webkit',
-            use: { ...devices['Desktop Safari'] },
-        },
+        // === 태블릿 - Android ===
+        { name: 'Galaxy Tab S4', use: { ...devices['Galaxy Tab S4'] } },
 
-        /* 모바일 뷰포트 테스트 */
-        {
-            name: 'Mobile Chrome',
-            use: { ...devices['Pixel 5'] },
-        },
-        {
-            name: 'Mobile Safari',
-            use: { ...devices['iPhone 12'] },
-        },
+        // === 기타 ===
+        { name: 'Kindle Fire HDX', use: { ...devices['Kindle Fire HDX'] } },
+        { name: 'Blackberry PlayBook', use: { ...devices['Blackberry PlayBook'] } },
     ],
 
     /* 테스트 시작 전 로컬 개발 서버 실행 */
