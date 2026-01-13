@@ -41,21 +41,16 @@ except ImportError:
     print("   pip install google-api-python-client openai python-dotenv")
     sys.exit(1)
 
-# .env 파일 로드 (backend/.env 우선)
-env_paths = [
-    Path(__file__).parent.parent.parent / ".env",
-    Path(__file__).parent.parent.parent / ".env",
-]
-for env_path in env_paths:
-    if env_path.exists():
-        load_dotenv(env_path)
-        break
+# .env 파일 로드
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
 
 # 한국 시간대 (KST, UTC+9)
 KST = timezone(timedelta(hours=9))
 
-# 로그 디렉토리
-LOG_DIR = Path(__file__).parent.parent.parent / "log" / "restaurant-crawling"
+# 로그 디렉토리 (restaurant-crawling-test/log/)
+LOG_DIR = Path(__file__).parent.parent / "log"
 
 
 def extract_video_id(url: str) -> Optional[str]:

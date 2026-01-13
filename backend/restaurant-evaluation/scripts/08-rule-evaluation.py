@@ -34,7 +34,9 @@ from dotenv import load_dotenv
 KST = timezone(timedelta(hours=9))
 
 # 환경변수 로드
-load_dotenv()
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
 
 # API 설정
 NAVER_CLIENT_ID = os.getenv("NAVER_CLIENT_ID_BYEON", "")

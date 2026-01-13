@@ -24,15 +24,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // .env 로드
-const envPaths = [
-    path.resolve(__dirname, '../../.env'),
-    path.resolve(__dirname, '../.env'),
-];
-for (const envPath of envPaths) {
-    if (fs.existsSync(envPath)) {
-        config({ path: envPath });
-        break;
-    }
+const envPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+    config({ path: envPath });
 }
 
 // 카테고리 매핑
@@ -617,8 +611,6 @@ async function extractYoutuberReview(videoId, metaData, transcript, places) {
     // 프롬프트 생성
     const placeNames = places.map(p => p.name).filter(Boolean);
     const prompt = `
-당신은 유튜브 영상에서 음식점 리뷰를 추출하는 전문가입니다.
-
 <영상 정보>
 제목: ${metaData?.title || ''}
 설명: ${metaData?.description?.substring(0, 500) || ''}
@@ -632,23 +624,22 @@ ${transcript?.substring(0, 5000) || '자막 없음'}
 ${placeNames.join('\n')}
 </음식점 목록>
 
-위 음식점들에 대해 유튜버의 리뷰를 추출하세요.
-각 음식점마다 맛, 분위기, 추천 메뉴 등을 요약하세요.
-자막에서 해당 음식점 관련 발언을 참고하세요.
-
-그리고 각 음식점의 카테고리를 다음 중 하나로 매핑하세요:
-치킨, 중식, 돈까스·회, 피자, 패스트푸드, 찜·탕, 족발·보쌈, 분식, 카페·디저트, 한식, 고기, 양식, 아시안, 야식, 도시락
-
-JSON 형식으로 출력하세요:
+<출력 규칙>
+1) **하나의 유튜브 링크에서 여러 개의 식당이 등장할 경우, 각 식당마다 별도의 JSON 객체를 생성하여 reviews 배열에 포함함.**
+2) **최종 출력은 단일 JSON 객체로, 다음 구조를 따름:**
 {
   "reviews": [
     {
-      "name": "음식점명",
+      "origin_name": "음식점명",
       "youtuber_review": "리뷰 요약",
       "category": "카테고리 (위 목록 중 하나)"
-    }
+      "reasoning_basis": 추론 근거(해당 식당에 대한 리뷰, 카테고리 정리한 근거) 작성(자막 타임스탬프 포함 권장).
+    }, ...
   ]
 }
+3) **다른 설명, 마크다운 태그 없이 순수 JSON 객체만 출력함.**
+4) **<작업 순서>에서 '예.'는 예시일 뿐이므로 출력 결과값으로 사용하지 않으며, 반드시 <작업 순서>에 따라 정리한 결과를 사용합니다.**
+</출력 규칙>
 `;
 
     fs.writeFileSync(tempPromptPath, prompt);
@@ -868,9 +859,10 @@ async function main() {
             // 리뷰 매칭 (naver_name 또는 origin_name으로 매칭)
             for (const place of places) {
                 const placeName = place.naver_name || place.origin_name;
-                const review = reviews.find(r => r.name === placeName);
+                const review = reviews.find(r => r.origin_name === placeName);
                 if (review) {
                     place.youtuber_review = review.youtuber_review;
+                    place.reasoning_basis = review.reasoning_basis;
                     if (review.category && VALID_CATEGORIES.includes(review.category)) {
                         place.category = review.category;
                     }

@@ -24,9 +24,10 @@ import yaml from 'js-yaml';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// config 로드
+// config 로드 (CHANNELS_CONFIG 환경변수로 지정 가능)
 function loadChannelsConfig() {
-    const configPath = path.resolve(__dirname, '../../config/channels.yaml');
+    const configName = process.env.CHANNELS_CONFIG || 'channels.yaml';
+    const configPath = path.resolve(__dirname, '../../config', configName);
     if (!fs.existsSync(configPath)) {
         throw new Error(`설정 파일 없음: ${configPath}`);
     }

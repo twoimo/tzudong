@@ -23,21 +23,16 @@ import yaml from 'js-yaml';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// .env 로드 (backend/.env 우선)
-const envPaths = [
-    path.resolve(__dirname, '../../.env'),
-    path.resolve(__dirname, '../.env'),
-];
-for (const envPath of envPaths) {
-    if (fs.existsSync(envPath)) {
-        config({ path: envPath });
-        break;
-    }
+// .env 로드
+const envPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+    config({ path: envPath });
 }
 
-// config 로드
+// config 로드 (CHANNELS_CONFIG 환경변수로 지정 가능)
 function loadChannelsConfig() {
-    const configPath = path.resolve(__dirname, '../../config/channels.yaml');
+    const configName = process.env.CHANNELS_CONFIG || 'channels.yaml';
+    const configPath = path.resolve(__dirname, '../../config', configName);
     if (!fs.existsSync(configPath)) {
         throw new Error(`설정 파일 없음: ${configPath}`);
     }
@@ -131,7 +126,7 @@ function getLatestTranscript(dataPath, videoId) {
 }
 
 // 블랙리스트 디렉토리
-const NO_TRANSCRIPT_DIR = path.resolve(__dirname, '../../data/no_transcript_link');
+const NO_TRANSCRIPT_DIR = path.resolve(__dirname, '../data/no_transcript_link');
 const NO_TRANSCRIPT_PERMANENT = path.join(NO_TRANSCRIPT_DIR, 'no_transcript_permanent.json');
 
 // 영구 스킵 URL 로드 (retry_num >= 3)
@@ -261,10 +256,8 @@ async function getTranscriptWithPuppeteer(videoId) {
 
     try {
         if (!puppeteerBrowser) {
-            const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
-            puppeteerBrowser = await puppeteerModule.default.launch({
+            const launchOptions = {
                 headless: true,
-                executablePath,
                 protocolTimeout: 300000,
                 args: [
                     '--no-sandbox',
@@ -273,7 +266,12 @@ async function getTranscriptWithPuppeteer(videoId) {
                     '--disable-gpu',
                     '--disable-extensions',
                 ]
-            });
+            };
+            // GitHub Actions에서만 executablePath 설정
+            if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+                launchOptions.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+            }
+            puppeteerBrowser = await puppeteerModule.default.launch(launchOptions);
         }
 
         const page = await puppeteerBrowser.newPage();
@@ -552,9 +550,9 @@ async function collectChannelTranscripts(channelName, channelConfig) {
         }
 
         const metaRecollectId = latestMeta.recollect_id || 0;
-        const transcriptRecollectId = latestTranscript?.recollect_id || 0;
+        const transcriptRecollectId = latestTranscript?.recollect_id ?? -1;  // 없으면 -1로 설정
 
-        // 수집 조건: meta.recollect_id > transcript.recollect_id
+        // 수집 조건: meta.recollect_id > transcript.recollect_id (신규는 -1이므로 항상 수집)
         if (metaRecollectId > transcriptRecollectId) {
             const recollectReason = latestMeta.recollect_reason;
 

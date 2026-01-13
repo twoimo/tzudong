@@ -23,16 +23,10 @@ import yaml from 'js-yaml';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// .env 로드 (backend/.env 우선)
-const envPaths = [
-    path.resolve(__dirname, '../../.env'),
-    path.resolve(__dirname, '../.env'),
-];
-for (const envPath of envPaths) {
-    if (fs.existsSync(envPath)) {
-        config({ path: envPath });
-        break;
-    }
+// .env 로드
+const envPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(envPath)) {
+    config({ path: envPath });
 }
 
 // config 로드

@@ -37,21 +37,16 @@ except ImportError:
     print("   pip install google-api-python-client python-dotenv")
     sys.exit(1)
 
-# .env 파일 로드 (backend/.env 우선)
-env_paths = [
-    Path(__file__).parent.parent.parent.parent / ".env",  # backend/.env
-    Path(__file__).parent.parent.parent / ".env",  # restaurant-crawling/.env
-]
-for env_path in env_paths:
-    if env_path.exists():
-        load_dotenv(env_path)
-        break
+# .env 파일 로드
+env_path = Path(__file__).parent.parent / ".env"
+if env_path.exists():
+    load_dotenv(env_path)
 
 # 한국 시간대 (KST, UTC+9)
 KST = timezone(timedelta(hours=9))
 
-# 로그 디렉토리 (backend/log/restaurant-crawling/)
-LOG_DIR = Path(__file__).parent.parent.parent.parent / "log" / "restaurant-crawling"
+# 로그 디렉토리 (restaurant-crawling-test/log/)
+LOG_DIR = Path(__file__).parent.parent / "log"
 
 
 def load_existing_urls(urls_file: Path) -> Set[str]:

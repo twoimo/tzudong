@@ -3,16 +3,16 @@
 
 channels:
   tzuyang:
-    channel_id: "UCpX8zKdmB4hphsWV06fqrDg"
+    channel_id: "UCfpaSruWW3S4dibonKXENjA"
     handle: "@tzuyang6145"
     name: "쯔양"
-    data_path: "../restaurant-crawling-test/data/tzuyang"
+    data_path: "restaurant-crawling-test/data/tzuyang"
 
   meatcreator:
-    channel_id: "UCifMIDFkI1Cd8ISKwNLEyDA"
+    channel_id: "UC1oXmhvYHVI2bApphh3IzuQ"
     handle: "@meatcreator"
     name: "정육왕 MeatCreator"
-    data_path: "../restaurant-crawling-test/data/meatcreator"
+    data_path: "restaurant-crawling-test/data/meatcreator"
 
 # API 설정
 api:

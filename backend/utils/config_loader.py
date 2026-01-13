@@ -16,8 +16,9 @@ def get_config_path() -> Path:
 
 
 def load_channels_config() -> Dict[str, Any]:
-    """channels.yaml 로드"""
-    config_file = get_config_path() / "channels.yaml"
+    """channels.yaml 로드 (CHANNELS_CONFIG 환경변수로 파일 지정 가능)"""
+    config_name = os.environ.get("CHANNELS_CONFIG", "channels.yaml")
+    config_file = get_config_path() / config_name
 
     if not config_file.exists():
         raise FileNotFoundError(f"설정 파일을 찾을 수 없습니다: {config_file}")

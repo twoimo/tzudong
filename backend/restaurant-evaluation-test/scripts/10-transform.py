@@ -498,7 +498,9 @@ def transform_map_url_crawling_object(
             "trace_id_name_source": "naver" if naver_name else "original",
             "phone": restaurant_data.get("phone"),
             "category": restaurant_data.get("category"),
-            "reasoning_basis": None,  # map_url_crawling은 reasoning_basis 없음
+            "reasoning_basis": restaurant_data.get(
+                "reasoning_basis"
+            ),  # map_url_crawling에서 추출
             "youtuber_review": youtuber_review,
             "origin_address": None,  # map_url_crawling은 origin_address 없음 (지오코딩 주소가 최종)
             "roadAddress": restaurant_data.get("roadAddress"),

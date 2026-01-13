@@ -40,18 +40,10 @@ def main():
     dry_run = args.dry_run
 
     # .env 로드
-    env_files = [
-        data_path.parent.parent / ".env",
-        Path(__file__).parent.parent / ".env",
-    ]
-
-    for env_file in env_files:
-        if env_file.exists():
-            load_dotenv(env_file)
-            print(
-                f"[{datetime.now(KST).strftime('%H:%M:%S')}] ✅ .env 로드: {env_file}"
-            )
-            break
+    env_path = Path(__file__).parent.parent / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+        print(f"[{datetime.now(KST).strftime('%H:%M:%S')}] ✅ .env 로드: {env_path}")
 
     # Supabase 설정
     supabase_url = os.getenv("SUPABASE_URL") or os.getenv("VITE_SUPABASE_URL")
