@@ -877,7 +877,7 @@ export default function StampPage() {
 
     return (
         <>
-            <PanelGroup direction="horizontal" className="h-full bg-background">
+            <PanelGroup direction="horizontal" className="h-full bg-background" data-testid="stamp-page-container">
                 {/* Left Panel - Main Content */}
                 <Panel id="main-list-panel" order={1} defaultSize={isRightPanelVisible ? 70 : 100} minSize={30} className="overflow-hidden">
                     {/* Scroll Container */}

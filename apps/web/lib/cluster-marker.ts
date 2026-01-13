@@ -273,6 +273,7 @@ export const createIndividualMarkerHTML = (
         -webkit-tap-highlight-color: transparent;
       "
       role="button"
+      data-testid="marker"
     >${icon}</div>
   `;
 };
