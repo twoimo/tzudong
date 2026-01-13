@@ -1479,7 +1479,15 @@ const NaverMapView = memo(({
                         cluster.categories,
                         cluster.region,
                         () => {
-                            map.morph(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng), 13);
+                            // [Fix] 단계별 줌인: 9→11→13 (한 번에 13으로 점프하지 않음)
+                            const currentZoom = map.getZoom();
+                            let targetZoom = 13;
+                            if (currentZoom <= 10) {
+                                targetZoom = 11;
+                            } else if (currentZoom <= 12) {
+                                targetZoom = 13;
+                            }
+                            map.morph(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng), targetZoom);
                         }
                     );
                 });
