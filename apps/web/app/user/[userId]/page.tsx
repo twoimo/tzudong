@@ -29,49 +29,7 @@ import { useLeaderboard, LeaderboardUser } from "@/hooks/useLeaderboard";
 import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
-
-// [최적화] 로딩 스피너 컴포넌트 - memo로 래핑
-const LoadingSpinner = memo(function LoadingSpinner() {
-    return (
-        <div className="flex items-center justify-center h-full min-h-[200px]">
-            <div className="text-center">
-                <div className="relative mx-auto mb-6 w-16 h-16">
-                    <div
-                        className="absolute inset-0 rounded-full border-4 animate-spin"
-                        style={{
-                            borderColor: 'hsl(var(--primary)/0.2)',
-                            borderTopColor: 'hsl(var(--primary))'
-                        }}
-                    />
-                    <div
-                        className="absolute inset-0 rounded-full border-4 border-transparent animate-spin"
-                        style={{
-                            borderRightColor: 'hsl(var(--secondary))',
-                            animationDuration: '1.5s'
-                        }}
-                    />
-                </div>
-                <h2
-                    className="text-lg font-bold mb-2"
-                    style={{
-                        background: 'linear-gradient(to right, hsl(var(--primary)), hsl(var(--secondary)))',
-                        WebkitBackgroundClip: 'text',
-                        backgroundClip: 'text',
-                        color: 'transparent'
-                    }}
-                >
-                    로딩 중...
-                </h2>
-                <p className="text-muted-foreground text-sm mb-3">잠시만 기다려주세요</p>
-                <div className="flex justify-center gap-1">
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                </div>
-            </div>
-        </div>
-    );
-});
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 // [최적화] 빈 상태 컴포넌트 - memo로 래핑
 interface EmptyStateProps {
@@ -244,9 +202,10 @@ export default function UserProfilePage() {
 
     if (profileLoading) {
         return (
-            <div className="flex flex-col h-full bg-background">
-                <LoadingSpinner />
-            </div>
+            <GlobalLoader
+                message="프로필 불러오는 중..."
+                subMessage="사용자 정보를 확인하고 있습니다"
+            />
         );
     }
 
@@ -354,7 +313,7 @@ export default function UserProfilePage() {
                     <TabsContent value="stamps" className="h-full m-0">
                         <ScrollArea className="h-full">
                             {stampsLoading ? (
-                                <LoadingSpinner />
+                                <GlobalLoader message="도장 불러오는 중..." />
                             ) : stamps.length === 0 ? (
                                 <EmptyState
                                     icon={<Stamp className="h-8 w-8 mb-2 opacity-50" />}
@@ -378,7 +337,7 @@ export default function UserProfilePage() {
                     <TabsContent value="reviews" className="h-full m-0">
                         <ScrollArea className="h-full">
                             {reviewsLoading ? (
-                                <LoadingSpinner />
+                                <GlobalLoader message="리뷰 불러오는 중..." />
                             ) : reviews.length === 0 ? (
                                 <EmptyState
                                     icon={<MessageSquare className="h-8 w-8 mb-2 opacity-50" />}
@@ -402,7 +361,7 @@ export default function UserProfilePage() {
                     <TabsContent value="likers" className="h-full m-0">
                         <ScrollArea className="h-full">
                             {likersLoading ? (
-                                <LoadingSpinner />
+                                <GlobalLoader message="좋아요 불러오는 중..." />
                             ) : likers.length === 0 ? (
                                 <EmptyState
                                     icon={<Heart className="h-8 w-8 mb-2 opacity-50" />}
