@@ -765,9 +765,8 @@ const NaverMapView = memo(({
             targetLng = selectedRestaurant.lng;
             isRestaurantSelected = true;
 
-            // [UX 개선] 이미 상세 뷰(13레벨 이상)라면 줌 유지, 너무 광역이라면 15로 진입
-            // 개별 마커가 보이는 시점(고사양 기기 기준 13)을 고려
-            targetZoom = currentMapZoom >= 13 ? currentMapZoom : 15;
+            // [Fix] 마커 클릭 시 기존 줌 레벨 유지 (줌 변경 없이 패널만 열기)
+            targetZoom = currentMapZoom;
         } else {
             const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
             const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
