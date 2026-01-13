@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback, memo, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { Scroll, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { useDeviceType } from '@/hooks/useDeviceType';
 import { usePopupAdBanners } from '@/hooks/use-ad-banners';
 import { AdBanner } from '@/types/ad-banner';
 
@@ -156,13 +155,14 @@ const BannerSlide = memo(({
 BannerSlide.displayName = 'BannerSlide';
 
 const CombinedPopupComponent = () => {
-    const { isMobileOrTablet } = useDeviceType();
     const [isVisible, setIsVisible] = useState(false);
     const [currentSlide, setCurrentSlide] = useState(0);
     const [isAutoPlaying, setIsAutoPlaying] = useState(true);
-    const [touchStart, setTouchStart] = useState<number | null>(null);
-    const [touchEnd, setTouchEnd] = useState<number | null>(null);
     const [isDragging, setIsDragging] = useState(false);
+
+    // [OPTIMIZATION] useRef for drag coordinates to avoid re-renders on every move
+    const dragStartRef = useRef<number | null>(null);
+    const dragEndRef = useRef<number | null>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const hasShownRef = useRef(false);
     const slideContainerRef = useRef<HTMLDivElement>(null);
@@ -240,32 +240,61 @@ const CombinedPopupComponent = () => {
         setCurrentSlide((prev) => (prev - 1 + banners.length) % banners.length);
     }, [banners.length]);
 
-    // 터치 스와이프 핸들러
+    // [OPTIMIZATION] Memoized swipe config
     const minSwipeDistance = 50;
 
-    const onTouchStart = (e: React.TouchEvent) => {
-        setTouchEnd(null);
-        setTouchStart(e.targetTouches[0].clientX);
-    };
+    // [OPTIMIZATION] Touch handlers using refs to avoid re-renders
+    const onTouchStart = useCallback((e: React.TouchEvent) => {
+        dragEndRef.current = null;
+        dragStartRef.current = e.targetTouches[0].clientX;
+    }, []);
 
-    const onTouchMove = (e: React.TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    };
+    const onTouchMove = useCallback((e: React.TouchEvent) => {
+        dragEndRef.current = e.targetTouches[0].clientX;
+    }, []);
 
-    const onTouchEnd = () => {
-        if (!touchStart || !touchEnd) return;
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
+    const handleSwipeEnd = useCallback(() => {
+        const start = dragStartRef.current;
+        const end = dragEndRef.current;
+        if (start === null || end === null) return;
 
-        if (isLeftSwipe) {
+        const distance = start - end;
+        if (distance > minSwipeDistance) {
             nextSlide();
-        } else if (isRightSwipe) {
+        } else if (distance < -minSwipeDistance) {
             prevSlide();
         }
         setIsAutoPlaying(false);
         setTimeout(() => setIsAutoPlaying(true), 8000);
-    };
+    }, [nextSlide, prevSlide]);
+
+    const onTouchEnd = useCallback(() => {
+        handleSwipeEnd();
+    }, [handleSwipeEnd]);
+
+    // [OPTIMIZATION] Mouse handlers using refs
+    const onMouseDown = useCallback((e: React.MouseEvent) => {
+        setIsDragging(true);
+        dragStartRef.current = e.clientX;
+    }, []);
+
+    const onMouseMove = useCallback((e: React.MouseEvent) => {
+        if (!isDragging) return;
+        dragEndRef.current = e.clientX;
+    }, [isDragging]);
+
+    const onMouseUp = useCallback(() => {
+        if (isDragging) {
+            handleSwipeEnd();
+            setIsDragging(false);
+        }
+    }, [isDragging, handleSwipeEnd]);
+
+    const onMouseLeave = useCallback(() => {
+        if (isDragging) {
+            setIsDragging(false);
+        }
+    }, [isDragging]);
 
     // 배너 클릭
     const handleBannerClick = useCallback((banner: AdBanner) => {
@@ -305,25 +334,10 @@ const CombinedPopupComponent = () => {
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
-                    onMouseDown={(e) => {
-                        setIsDragging(true);
-                        setTouchStart(e.clientX);
-                    }}
-                    onMouseMove={(e) => {
-                        if (!isDragging) return;
-                        setTouchEnd(e.clientX);
-                    }}
-                    onMouseUp={() => {
-                        if (isDragging) {
-                            onTouchEnd();
-                            setIsDragging(false);
-                        }
-                    }}
-                    onMouseLeave={() => {
-                        if (isDragging) {
-                            setIsDragging(false);
-                        }
-                    }}
+                    onMouseDown={onMouseDown}
+                    onMouseMove={onMouseMove}
+                    onMouseUp={onMouseUp}
+                    onMouseLeave={onMouseLeave}
                 >
                     <div
                         className={cn(
