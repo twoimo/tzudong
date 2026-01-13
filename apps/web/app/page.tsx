@@ -10,7 +10,7 @@ const HomeClient = dynamic(() => import('./home-client'), {
 
 // [SSR] 메타데이터 생성 - 검색 엔진 최적화
 export const metadata: Metadata = {
-    title: '쯔동여지도 - 쯔양이 다녀간 맛집 지도',
+    title: '쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에! 전국 맛집 지도 플랫폼',
     description: '쯔양이 방문한 전국 및 해외 맛집을 지도에서 확인하세요. 지역별, 카테고리별로 맛집을 검색하고 리뷰를 확인할 수 있습니다.',
     keywords: ['쯔양', '맛집', '맛집지도', '음식', '레스토랑', '쯔양맛집'],
     openGraph: {
