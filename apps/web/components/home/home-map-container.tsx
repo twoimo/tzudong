@@ -136,15 +136,13 @@ function HomeMapContainerComponent({
         }
     }, [isPanelOpen, isMobileOrTablet]);
 
-    // [PERFORMANCE] 드래그 시작 - Ref 기반으로 리렌더링 최소화
-    const handleDragStart = useCallback((e: React.TouchEvent) => {
-        const touchY = e.touches[0].clientY;
-
+    // [PERFORMANCE] 드래그 시작 공통 로직
+    const handleDragStartCore = useCallback((clientY: number) => {
         // Ref로 상태 저장 (리렌더링 없음)
         isDraggingRef.current = true;
-        startYRef.current = touchY;
+        startYRef.current = clientY;
         startHeightRef.current = sheetHeight;
-        lastYRef.current = touchY;
+        lastYRef.current = clientY;
         lastTimeRef.current = Date.now();
         velocityRef.current = 0;
 
@@ -152,11 +150,21 @@ function HomeMapContainerComponent({
         setIsDragging(true);
     }, [sheetHeight]);
 
-    // [PERFORMANCE] 드래그 중 - RAF 기반 최적화, 상태 업데이트 최소화
-    const handleDragMove = useCallback((e: React.TouchEvent) => {
+    // 터치 드래그 시작
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        handleDragStartCore(e.touches[0].clientY);
+    }, [handleDragStartCore]);
+
+    // 마우스 드래그 시작
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        handleDragStartCore(e.clientY);
+    }, [handleDragStartCore]);
+
+    // [PERFORMANCE] 드래그 중 공통 로직 - RAF 기반 최적화, 상태 업데이트 최소화
+    const handleDragMoveCore = useCallback((currentY: number) => {
         if (!isDraggingRef.current) return;
 
-        const currentY = e.touches[0].clientY;
         const currentTime = Date.now();
 
         // 속도 계산
@@ -184,6 +192,11 @@ function HomeMapContainerComponent({
             setSheetHeight(newHeight);
         });
     }, []);
+
+    // 터치 드래그 중
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        handleDragMoveCore(e.touches[0].clientY);
+    }, [handleDragMoveCore]);
 
     // [PERFORMANCE] 드래그 종료 - 조건부 로직 최적화
     const handleDragEnd = useCallback(() => {
@@ -226,7 +239,7 @@ function HomeMapContainerComponent({
         };
     }, [isMobileOrTablet, isPanelOpen]);
 
-    // 드래그 핸들에서 Pull-to-Refresh 방지 (passive: false 필요)
+    // 드래그 핸들에서 Pull-to-Refresh 방지 및 마우스 이벤트 등록 (passive: false 필요)
     useEffect(() => {
         const handle = handleRef.current;
         if (!handle || !isPanelOpen || !isMobileOrTablet) return;
@@ -236,12 +249,30 @@ function HomeMapContainerComponent({
             e.preventDefault();
         };
 
+        // 마우스 이벤트 핸들러 (window에 등록하여 핸들 밖으로 드래그해도 동작)
+        const handleWindowMouseMove = (e: MouseEvent) => {
+            if (isDraggingRef.current) {
+                e.preventDefault();
+                handleDragMoveCore(e.clientY);
+            }
+        };
+
+        const handleWindowMouseUp = () => {
+            if (isDraggingRef.current) {
+                handleDragEnd();
+            }
+        };
+
         handle.addEventListener('touchmove', preventPullToRefresh, { passive: false });
+        window.addEventListener('mousemove', handleWindowMouseMove);
+        window.addEventListener('mouseup', handleWindowMouseUp);
 
         return () => {
             handle.removeEventListener('touchmove', preventPullToRefresh);
+            window.removeEventListener('mousemove', handleWindowMouseMove);
+            window.removeEventListener('mouseup', handleWindowMouseUp);
         };
-    }, [isPanelOpen, isMobileOrTablet]);
+    }, [isPanelOpen, isMobileOrTablet, handleDragMoveCore, handleDragEnd]);
 
     return (
         <div className="relative w-full h-full">
@@ -338,11 +369,12 @@ function HomeMapContainerComponent({
                                 {/* 핸들 바 - 드래그 가능, 항상 상단 고정, touch-action: none으로 Pull-to-Refresh 방지 */}
                                 <div
                                     ref={handleRef}
-                                    className="sticky top-0 z-20 flex justify-center py-4 bg-background cursor-grab active:cursor-grabbing"
+                                    className="sticky top-0 z-20 flex justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none"
                                     style={{ touchAction: 'none' }}
-                                    onTouchStart={handleDragStart}
-                                    onTouchMove={handleDragMove}
+                                    onTouchStart={handleTouchStart}
+                                    onTouchMove={handleTouchMove}
                                     onTouchEnd={handleDragEnd}
+                                    onMouseDown={handleMouseDown}
                                 >
                                     <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
                                 </div>

@@ -526,7 +526,7 @@ function MobileControlOverlayComponent({
                         {activeSheet !== 'search' && (
                             <div
                                 ref={handleRef}
-                                className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing border-b border-border/50"
+                                className="sticky top-0 z-20 flex justify-center py-3 bg-background cursor-grab active:cursor-grabbing select-none border-b border-border/50"
                                 style={{ touchAction: 'none' }}
                             >
                                 <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
