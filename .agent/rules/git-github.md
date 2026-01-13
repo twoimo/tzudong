@@ -1,5 +1,5 @@
 ---
-trigger: model_decision
+trigger: manual
 description: Git 커밋/브랜치/PR 작업 시 적용: 커밋 태그 형식, 브랜치 네이밍, PR 본문 구조
 ---
 
