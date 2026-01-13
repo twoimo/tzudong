@@ -208,6 +208,7 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
     return (
         <nav
             ref={navRef}
+            data-testid="bottom-nav"
             className={cn(
                 // 기본 스타일 및 고정 위치
                 'fixed bottom-0 left-0 right-0 z-50',
@@ -231,6 +232,7 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
                 return (
                     <button
                         key={item.path}
+                        data-testid={`bottom-nav-${item.path === '/' ? 'home' : item.path.replace('/', '').replace('/profile', '')}`}
                         onClick={() => handleNavClick(item.path)}
                         onTouchStart={() => {
                             // [성능 최적화] 터치 시작 시 해당 페이지 데이터 미리 로드
