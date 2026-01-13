@@ -909,10 +909,9 @@ const NaverMapView = memo(({
 
         moveMap();
 
-        // 트랜지션 완료 후 보정 (300ms 후)
+        // [FIX] 트랜지션 완료 후 resize만 트리거 (moveMap 중복 호출 제거 - ResizeObserver가 처리함)
         const transitionTimer = setTimeout(() => {
             naver.maps.Event.trigger(map, 'resize');
-            moveMap();
         }, 320);
 
         // 사용자 상호작용 감지 리스너 추가
@@ -1068,14 +1067,31 @@ const NaverMapView = memo(({
             map.setCenter(newCenterLatLng);
         };
 
+        // [FIX] 디바운스 추가: CSS 트랜지션(300ms) 완료 후에만 중심 재조정
+        let resizeDebounceTimer: NodeJS.Timeout | null = null;
+
         const resizeObserver = new ResizeObserver(() => {
-            requestAnimationFrame(handleResize);
+            // 기존 타이머가 있으면 취소
+            if (resizeDebounceTimer) {
+                clearTimeout(resizeDebounceTimer);
+            }
+
+            // 즉시 resize 이벤트 트리거 (지도 타일 로딩을 위해)
+            naver.maps.Event.trigger(map, 'resize');
+
+            // 중심 재조정은 트랜지션 완료 후에만 수행 (320ms 후)
+            resizeDebounceTimer = setTimeout(() => {
+                requestAnimationFrame(handleResize);
+            }, 320);
         });
 
         resizeObserver.observe(mapRef.current);
 
         return () => {
             resizeObserver.disconnect();
+            if (resizeDebounceTimer) {
+                clearTimeout(resizeDebounceTimer);
+            }
         };
     }, [isMapInitialized, selectedRestaurant, selectedRegion]);
 
@@ -2270,8 +2286,8 @@ const NaverMapView = memo(({
             {/* 레스토랑 상세 패널 - 외부 onMarkerClick이 없을 때만 렌더링 (외부 패널 관리가 아닌 경우에만) */}
             {selectedRestaurant && !onMarkerClick && (
                 <div
-                    className={`h-full relative shadow-xl bg-background transition-all duration-300 ease-in-out ${internalPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
-                    style={{ overflow: 'visible' }}
+                    className={`h-full relative shadow-xl bg-background transition-[width] duration-300 ${internalPanelOpen ? 'w-[400px]' : 'w-0'} ${activePanel === 'detail' ? 'z-[50]' : 'z-20'} hover:z-[60]`}
+                    style={{ overflow: 'visible', transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
                     onClick={(e) => {
                         // 이벤트 버블링 방지 (지도 클릭으로 전파되지 않도록)
                         e.stopPropagation();
