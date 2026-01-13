@@ -46,8 +46,8 @@ export function BottomSheet({
     const lastTimeRef = useRef(0);
     const velocityRef = useRef(0);
 
-    // 드래그 시작
-    const handleDragStart = useCallback((e: React.TouchEvent) => {
+    // 터치 드래그 시작
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
         setIsDragging(true);
         const touchY = e.touches[0].clientY;
         setStartY(touchY);
@@ -57,11 +57,22 @@ export function BottomSheet({
         velocityRef.current = 0;
     }, [height]);
 
-    // 드래그 중 - 완전히 자유로운 드래그
-    const handleDragMove = useCallback((e: React.TouchEvent) => {
+    // 마우스 드래그 시작
+    const handleMouseDown = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+        const mouseY = e.clientY;
+        setStartY(mouseY);
+        setStartHeight(height);
+        lastYRef.current = mouseY;
+        lastTimeRef.current = Date.now();
+        velocityRef.current = 0;
+    }, [height]);
+
+    // 공통 드래그 이동 로직
+    const handleMove = useCallback((currentY: number) => {
         if (!isDragging) return;
 
-        const currentY = e.touches[0].clientY;
         const currentTime = Date.now();
 
         // 속도 계산 (양수면 아래로 드래그)
@@ -85,6 +96,11 @@ export function BottomSheet({
         });
     }, [isDragging, startY, startHeight, maxHeight]);
 
+    // 터치 드래그 중
+    const handleTouchMove = useCallback((e: React.TouchEvent) => {
+        handleMove(e.touches[0].clientY);
+    }, [handleMove]);
+
     // 드래그 종료 - 닫기만 처리, 스냅 없이 현재 위치 유지
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
@@ -107,6 +123,27 @@ export function BottomSheet({
         }
         // 스냅 없음 - 현재 위치 그대로 유지
     }, [height, closeThreshold, minHeight, onClose]);
+
+    // 마우스 이벤트는 window에서 처리해야 핸들 영역을 벗어나도 드래그가 유지됨
+    useEffect(() => {
+        if (!isDragging) return;
+
+        const handleMouseMove = (e: MouseEvent) => {
+            handleMove(e.clientY);
+        };
+
+        const handleMouseUp = () => {
+            handleDragEnd();
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isDragging, handleMove, handleDragEnd]);
 
     // isOpen이 변경되면 기본 높이로 리셋
     useEffect(() => {
@@ -187,11 +224,12 @@ export function BottomSheet({
                 {showHandle && (
                     <div
                         ref={handleRef}
-                        className="flex-shrink-0 flex justify-center py-4 bg-background cursor-grab active:cursor-grabbing"
+                        className="flex-shrink-0 flex justify-center py-4 bg-background cursor-grab active:cursor-grabbing select-none"
                         style={{ touchAction: 'none' }}
-                        onTouchStart={handleDragStart}
-                        onTouchMove={handleDragMove}
+                        onTouchStart={handleTouchStart}
+                        onTouchMove={handleTouchMove}
                         onTouchEnd={handleDragEnd}
+                        onMouseDown={handleMouseDown}
                     >
                         <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
                     </div>
