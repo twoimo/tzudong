@@ -358,9 +358,11 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 hover:z-[60] bg-sidebar border-r border-sidebar-border transition-all duration-300 ease-in-out flex flex-col h-screen shadow-xl",
+        "fixed left-0 top-0 z-40 hover:z-[60] bg-sidebar border-r border-sidebar-border flex flex-col h-screen shadow-xl",
+        "transition-[width] duration-300",
         isOpen ? "w-64" : "w-16"
       )}
+      style={{ transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
     >
       {/* [배경 효과] 한지 질감 오버레이 - 다크모드에서 숨김 */}
       <div className="absolute inset-0 opacity-40 dark:opacity-0 pointer-events-none z-0 transition-opacity"
