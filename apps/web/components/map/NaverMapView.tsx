@@ -2228,6 +2228,7 @@ const NaverMapView = memo(({
                 {/* 지도 컨테이너 - 모바일 터치 성능 최적화 */}
                 <div
                     ref={mapRef}
+                    data-testid="map-container"
                     className="w-full h-full touch-pan-y touch-pan-x transform-gpu"
                     style={{
                         willChange: 'transform',
