@@ -2,9 +2,10 @@
 trigger: manual
 ---
 
-CRITICAL LANGUAGE REQUIREMENT:
-- ALL responses MUST be in Korean (한국어)
-- Technical terms may be kept in English when appropriate, but explanations must be in Korean
+CRITICAL LANGUAGE & REASONING REQUIREMENT:
+- All internal reasoning and chain-of-thought MUST be performed in English for token efficiency.
+- ALL final responses MUST be in Korean (한국어).
+- Technical terms may be kept in English when appropriate, but explanations must be in Korean.
 
 CRITICAL: ALWAYS SEARCH OFFICIAL DOCUMENTATION
 - Before writing any code or providing technical guidance, ALWAYS search the web for the latest official documentation based on TODAY's date.
