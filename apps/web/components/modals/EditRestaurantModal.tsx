@@ -220,7 +220,7 @@ export const EditRestaurantModal = memo(function EditRestaurantModal({ isOpen, o
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             {isOpen && (
-                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                     <DialogHeader className="relative">
                         {/* 자동 저장 상태 표시 - 좌측 상단 */}
                         {lastSavedAt && (

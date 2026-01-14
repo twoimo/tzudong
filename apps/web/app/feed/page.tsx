@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Heart, MapPin, Calendar, User, MessageSquareText } from 'lucide-react';
+import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,6 +14,7 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
+import { ReviewModal } from '@/components/reviews/ReviewModal';
 
 interface FeedReview {
     id: string;
@@ -33,9 +36,28 @@ export default function FeedPage() {
     const queryClient = useQueryClient();
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
+    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [showMyReviewsOnly, setShowMyReviewsOnly] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+
+    const isLoggedIn = !!user;
 
     // [REALTIME] 좋아요 실시간 반영
     useReviewLikesRealtime();
+
+    // 리뷰 작성 핸들러
+    const handleWriteReview = useCallback(() => {
+        if (!user) {
+            toast({
+                title: '로그인이 필요합니다',
+                description: '리뷰를 작성하려면 로그인이 필요합니다.',
+                variant: 'destructive',
+            });
+            return;
+        }
+        setIsReviewModalOpen(true);
+    }, [user]);
 
 
     // 리뷰 피드 데이터 조회 (무한 스크롤)
@@ -121,8 +143,22 @@ export default function FeedPage() {
     });
 
     const allReviews = useMemo(() => {
-        return feedPages?.pages.flatMap(page => page.reviews) || [];
-    }, [feedPages]);
+        let reviews = feedPages?.pages.flatMap(page => page.reviews) || [];
+        // 내 리뷰만 보기 필터
+        if (showMyReviewsOnly && user?.id) {
+            reviews = reviews.filter(review => review.userId === user.id);
+        }
+        // 검색어 필터
+        if (searchQuery.trim()) {
+            const query = searchQuery.trim().toLowerCase();
+            reviews = reviews.filter(review =>
+                review.restaurantName.toLowerCase().includes(query) ||
+                review.userName.toLowerCase().includes(query) ||
+                review.content.toLowerCase().includes(query)
+            );
+        }
+        return reviews;
+    }, [feedPages, showMyReviewsOnly, user?.id, searchQuery]);
 
     // 무한 스크롤
     const loadMore = useCallback(() => {
@@ -241,12 +277,66 @@ export default function FeedPage() {
                         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
                             <MessageSquareText className="h-6 w-6 text-primary" />
                             쯔동여지도 리뷰
+                            <span className="text-sm font-normal text-muted-foreground">
+                                ({allReviews.length}개)
+                            </span>
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            총 {allReviews.length}개의 승인된 리뷰
+                            {isLoggedIn
+                                ? "맛집 방문 후기를 공유해보세요!"
+                                : "로그인하여 리뷰를 작성해보세요!"
+                            }
                         </p>
                     </div>
+                    <div className="flex items-center gap-2">
+                        {/* 내 리뷰만 보기 토글 */}
+                        {isLoggedIn && (
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full hover:bg-muted"
+                                onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
+                                title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                            >
+                                {showMyReviewsOnly ? (
+                                    <EyeOff className="h-5 w-5 text-primary" />
+                                ) : (
+                                    <Eye className="h-5 w-5 text-muted-foreground" />
+                                )}
+                            </Button>
+                        )}
+                        {/* 필터 토글 버튼 */}
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                            className="relative"
+                            title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
+                        >
+                            <Filter className="h-4 w-4" />
+                            {searchQuery && (
+                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium rounded-full flex items-center justify-center">
+                                    1
+                                </span>
+                            )}
+                        </Button>
+                    </div>
                 </div>
+
+                {/* 검색 필터 영역 */}
+                {isFilterExpanded && (
+                    <div className="mt-4">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="맛집명, 작성자, 내용 검색..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9"
+                            />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Feed */}
@@ -290,11 +380,34 @@ export default function FeedPage() {
                     </div>
                 )}
             </div>
+
+            {/* Floating Write Button - Portal로 body에 직접 렌더링 */}
+            {isLoggedIn && typeof document !== 'undefined' && createPortal(
+                <Button
+                    onClick={handleWriteReview}
+                    className="fixed right-4 bottom-20 z-50 h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90"
+                    size="icon"
+                >
+                    <Plus className="h-6 w-6" />
+                </Button>,
+                document.body
+            )}
+
+            {/* Review Modal */}
+            <ReviewModal
+                isOpen={isReviewModalOpen}
+                onClose={() => setIsReviewModalOpen(false)}
+                restaurant={null}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['review-feed'] });
+                    queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+                }}
+            />
         </div>
     );
 }
 
-// 리뷰 카드 컴포넌트
+// 리뷰 카드 컴포넌트 (memo로 불필요한 리렌더링 방지)
 interface FeedCardProps {
     review: FeedReview;
     likeCount: number;
@@ -304,7 +417,7 @@ interface FeedCardProps {
     formatDate: (date: string) => string;
 }
 
-function FeedCard({ review, likeCount, isLiked, onToggleLike, onGoToRestaurant, formatDate }: FeedCardProps) {
+const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLike, onGoToRestaurant, formatDate }: FeedCardProps) {
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -509,4 +622,4 @@ function FeedCard({ review, likeCount, isLiked, onToggleLike, onGoToRestaurant, 
             </div>
         </Card>
     );
-}
+});

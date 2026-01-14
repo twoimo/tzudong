@@ -267,7 +267,7 @@ export default function RestaurantSubmissionModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+            <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
                 <DialogHeader className="relative">
                     {/* 자동 저장 상태 표시 - 좌측 상단 */}
                     {lastSavedAt && (
@@ -295,8 +295,8 @@ export default function RestaurantSubmissionModal({
                             </DialogTitle>
                             <DialogDescription>
                                 {submissionMode === 'new'
-                                    ? '쯔양이 이미 다녀간 맛집 정보와 유튜브 영상 링크를 알려주세요'
-                                    : '쯔양에게 방문을 추천하고 싶은 맛집 정보를 알려주세요'
+                                    ? '쯔양의 맛집 정보와 유튜브 영상 링크를 알려주세요!'
+                                    : '쯔양에게 방문을 추천하고 싶은 맛집 정보를 알려주세요!'
                                 }
                             </DialogDescription>
                         </div>
