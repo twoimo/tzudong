@@ -115,7 +115,6 @@ def main():
                     "origin_name": data.get("origin_name"),
                     "naver_name": data.get("naver_name"),
                     "trace_id_name_source": data.get("trace_id_name_source"),
-                    "phone": data.get("phone"),
                     "category": data.get("category"),
                     "reasoning_basis": data.get("reasoning_basis"),
                     "youtuber_review": data.get("youtuber_review"),

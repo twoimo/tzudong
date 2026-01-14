@@ -250,7 +250,6 @@ def transform_json_object(
                 "origin_name": restaurant_name,
                 "naver_name": naver_name,  # 없으면 null 그대로
                 "trace_id_name_source": trace_id_name_source,
-                "phone": restaurant_data.get("phone"),
                 "category": restaurant_data.get("category"),
                 "reasoning_basis": restaurant_data.get("reasoning_basis"),
                 "youtuber_review": youtuber_review,
@@ -297,7 +296,6 @@ def transform_json_object(
                     "origin_name": restaurant_name,
                     "naver_name": None,  # Missing은 항상 null
                     "trace_id_name_source": "original",
-                    "phone": None,
                     "category": None,
                     "reasoning_basis": None,
                     "youtuber_review": None,
@@ -353,7 +351,6 @@ def transform_json_object(
                     "origin_name": missing_name,
                     "naver_name": None,  # Missing은 항상 null
                     "trace_id_name_source": "original",
-                    "phone": None,
                     "category": None,
                     "reasoning_basis": None,
                     "youtuber_review": None,
@@ -395,7 +392,6 @@ def transform_json_object(
                 "origin_name": restaurant_name,
                 "naver_name": None,  # notSelection은 평가 안 하므로 null
                 "trace_id_name_source": "original",
-                "phone": restaurant_data.get("phone"),
                 "category": restaurant_data.get("category"),
                 "reasoning_basis": restaurant_data.get("reasoning_basis"),
                 "youtuber_review": youtuber_review,
@@ -496,7 +492,6 @@ def transform_map_url_crawling_object(
             "origin_name": origin_name,  # 크롤링에서 받은 원본 상호명
             "naver_name": naver_name,  # 네이버 검색 결과 상호명
             "trace_id_name_source": "naver" if naver_name else "original",
-            "phone": restaurant_data.get("phone"),
             "category": restaurant_data.get("category"),
             "reasoning_basis": restaurant_data.get(
                 "reasoning_basis"

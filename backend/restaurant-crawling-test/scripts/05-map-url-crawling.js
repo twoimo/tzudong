@@ -42,10 +42,9 @@ function log(level, msg) {
     console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
 }
 
-// config 로드 (CHANNELS_CONFIG 환경변수로 지정 가능)
+// config 로드
 function loadChannelsConfig() {
-    const configName = process.env.CHANNELS_CONFIG || 'channels.yaml';
-    const configPath = path.resolve(__dirname, '../../config', configName);
+    const configPath = path.resolve(__dirname, '../../config/channels.yaml');
     if (!fs.existsSync(configPath)) throw new Error(`설정 파일 없음: ${configPath}`);
     return yaml.load(fs.readFileSync(configPath, 'utf-8'));
 }
@@ -292,17 +291,11 @@ async function collectFromNaverMap(page, mapUrl) {
                 const buttons = document.querySelectorAll('a[role="button"]');
                 for (const btn of buttons) {
                     const text = btn.textContent || "";
-                    // "주소" 텍스트가 포함된 버튼이나, 그 근처 버튼 찾기
-                    // 혹은 펼치기/접기 아이콘이 있는 버튼 (보통 aria-expanded 속성 가짐)
                     if (btn.getAttribute('aria-expanded') === 'false') {
-                        // 버튼 내부나 형제 요소에 "주소" 텍스트가 있는지 확인은 어렵지만,
-                        // 보통 상세 정보 펼치기는 aria-expanded를 씀. 일단 다 눌러본다? -> 위험.
-                        // "주소" 텍스트를 가진 strong 태그의 부모의 형제 div 안에 있는 버튼 찾기
                         const addressLabel = Array.from(document.querySelectorAll('strong')).find(el => el.textContent.includes('주소'));
                         if (addressLabel) {
-                            const parent = addressLabel.parentElement; // div
+                            const parent = addressLabel.parentElement;
                             if (parent) {
-                                // parent의 형제의 자식 중 버튼 찾기
                                 const sibling = parent.nextElementSibling;
                                 if (sibling) {
                                     const targetBtn = sibling.querySelector('a[role="button"][aria-expanded="false"]');
@@ -316,40 +309,26 @@ async function collectFromNaverMap(page, mapUrl) {
             await new Promise(r => setTimeout(r, 1000));
         } catch {}
 
-        // 정보 추출 (구조/텍스트 기반)
-        const extraction = await page.evaluate(() => {
-            const result = { name: null, roadAddress: null, jibunAddress: null };
-            let debugLog = [];
+        // 정보 추출
+        const placeInfo = await page.evaluate(() => {
+            const result = { origin_name: null, roadAddress: null, jibunAddress: null }; 
 
             // 1. 상호명 (ID: _title 내부)
             const titleEl = document.querySelector('#_title');
             if (titleEl) {
                 const spans = titleEl.querySelectorAll('span');
-                debugLog.push(`#_title 찾음. span수: ${spans.length}`);
-                
-                if (spans.length > 0) {
-                    result.name = spans[0].textContent.trim();
-                    debugLog.push(`상호명(span0): ${result.name}`);
-                } else {
-                    result.name = titleEl.textContent.trim();
-                    debugLog.push(`상호명(text): ${result.name}`);
-                }
-                
-                if (spans.length > 1) {
-                    result.category = spans[1].textContent.trim();
-                    debugLog.push(`카테고리(span1): ${result.category}`);
-                } else {
-                    debugLog.push("카테고리 span 없음");
-                }
-            } else {
-                debugLog.push("#_title 없음");
+                if (spans.length > 0) result.origin_name = spans[0].textContent.trim();
+                else result.origin_name = titleEl.textContent.trim();
+            }
+            if (!result.origin_name) {
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle) result.origin_name = ogTitle.getAttribute('content')?.replace(/\s*:\s*네이버$/, '').trim();
             }
 
-            if (!result.name) {
-                // 백업: og:title
-                const ogTitle = document.querySelector('meta[property="og:title"]');
-                if (ogTitle) result.name = ogTitle.getAttribute('content')?.replace(/\s*:\s*네이버$/, '').trim();
-                else debugLog.push("og:title 없음");
+            // 2. 카테고리
+            if (titleEl) {
+                const spans = titleEl.querySelectorAll('span');
+                if (spans.length > 1) result.category = spans[1].textContent.trim();
             }
 
             // 3. 주소 (도로명/지번 라벨 기반)
@@ -370,9 +349,6 @@ async function collectFromNaverMap(page, mapUrl) {
 
             result.roadAddress = findAddress('도로명');
             result.jibunAddress = findAddress('지번');
-            
-            if (!result.roadAddress) debugLog.push("도로명 주소 못찾음");
-            if (!result.jibunAddress) debugLog.push("지번 주소 못찾음");
 
             if (!result.roadAddress && !result.jibunAddress) {
                 const addressLabel = Array.from(document.querySelectorAll('strong')).find(el => el.textContent.includes('주소'));
@@ -380,43 +356,29 @@ async function collectFromNaverMap(page, mapUrl) {
                     const contentDiv = addressLabel.parentElement.nextElementSibling;
                     let text = contentDiv.textContent.replace(/주소/g, '').replace(/복사/g, '').trim();
                     if (text.length > 5) result.roadAddress = text; 
-                } else {
-                    debugLog.push("주소 strong 태그 접근 실패");
                 }
             }
 
-            return { 
-                result, 
-                debugLog: debugLog.join(', '), 
-                bodyDump: document.body.innerText.substring(0, 300).replace(/\n/g, ' ') 
-            };
+            return result;
         });
 
-        let placeInfo = extraction.result;
-        if (extraction.debugLog && (!placeInfo.name || !placeInfo.roadAddress)) {
-             log('debug', `[DEBUG] 요소 찾기 실패: ${extraction.debugLog}`);
-             log('debug', `[DEBUG] 페이지 텍스트 요약: ${extraction.bodyDump}`);
-        }
-
-        // URL 좌표 추출 (기존 유지)
+        // URL에서 좌표 추출
         const currentUrl = page.url();
         try {
             const urlObj = new URL(currentUrl);
             const lat = urlObj.searchParams.get('lat');
             const lng = urlObj.searchParams.get('lng');
             if (lat && lng) {
-                if (!placeInfo) placeInfo = {}; 
                 placeInfo.originalLat = parseFloat(lat);
                 placeInfo.originalLng = parseFloat(lng);
             }
         } catch {}
 
-        if (!placeInfo) placeInfo = {};
         placeInfo.description_map_url = mapUrl;
-        if (placeInfo.name) placeInfo.name = cleanText(placeInfo.name);
-
-        // 여전히 실패하면
-        if (!placeInfo.name || (!placeInfo.jibunAddress && !placeInfo.roadAddress)) {
+        placeInfo.origin_name = cleanText(placeInfo.origin_name);
+        // category는 LLM이 자막 분석해서 설정함
+        // 음식점명 또는 주소 없으면 실패
+        if (!placeInfo.origin_name || (!placeInfo.jibunAddress && !placeInfo.roadAddress)) {
             log('debug', `네이버 지도: 음식점명/주소 없음 - 실패`);
             return null;
         }
@@ -445,14 +407,14 @@ async function collectFromKakaoMap(page, mapUrl) {
         await new Promise(r => setTimeout(r, 2000));
 
         const placeInfo = await page.evaluate(() => {
-            const result = { name: null, address: null };
+            const result = { origin_name: null, address: null };
             
             // OG 태그에서 추출
             const ogTitle = document.querySelector('meta[property="og:title"]');
             if (ogTitle) {
                 let name = ogTitle.getAttribute('content');
                 if (name && name.includes('|')) name = name.split('|')[0].trim();
-                result.name = name;
+                result.origin_name = name;
             }
             
             const ogDesc = document.querySelector('meta[property="og:description"]');
@@ -462,11 +424,11 @@ async function collectFromKakaoMap(page, mapUrl) {
         });
 
         placeInfo.description_map_url = mapUrl;
-        placeInfo.name = cleanText(placeInfo.name);
+        placeInfo.origin_name = cleanText(placeInfo.origin_name);
         placeInfo.mapType = 'kakao';
 
         // 음식점명 또는 주소 없으면 실패
-        if (!placeInfo.name || !placeInfo.address) {
+        if (!placeInfo.origin_name || !placeInfo.address) {
             log('debug', `카카오 지도: 음식점명/주소 없음 - 실패`);
             return null;
         }
@@ -504,18 +466,18 @@ async function collectFromGoogleMap(page, mapUrl) {
         }
 
         const placeInfo = await page.evaluate(() => {
-            const result = { name: null, address: null };
+            const result = { origin_name: null, address: null };
             
             // 상호명
             const nameEl = document.querySelector('h1.DUwDvf') || document.querySelector('h1');
-            if (nameEl) result.name = nameEl.textContent?.trim();
+            if (nameEl) result.origin_name = nameEl.textContent?.trim();
             
-            if (!result.name) {
+            if (!result.origin_name) {
                 const ogTitle = document.querySelector('meta[property="og:title"]');
                 if (ogTitle) {
                     let name = ogTitle.getAttribute('content');
                     if (name) name = name.replace(/ - Google 지도/g, '').replace(/ - Google Maps/g, '').trim();
-                    result.name = name;
+                    result.origin_name = name;
                 }
             }
             
@@ -530,13 +492,13 @@ async function collectFromGoogleMap(page, mapUrl) {
         });
 
         placeInfo.description_map_url = mapUrl;
-        placeInfo.name = cleanText(placeInfo.name);
+        placeInfo.origin_name = cleanText(placeInfo.origin_name);
         placeInfo.originalLat = lat;
         placeInfo.originalLng = lng;
         placeInfo.mapType = 'google';
 
         // 음식점명 또는 주소 없으면 실패
-        if (!placeInfo.name || !placeInfo.address) {
+        if (!placeInfo.origin_name || !placeInfo.address) {
             log('debug', `구글 지도: 음식점명/주소 없음 - 실패`);
             return null;
         }
@@ -561,19 +523,19 @@ function normalizeAddressForCompare(address) {
 // 네이버 검색 3개 결과 중 시군구 일치하는 것 선택
 // 검색 실패 또는 시군구 불일치시 null 반환 (실패 처리)
 async function enrichWithNaverSearch(placeInfo) {
-    if (!placeInfo || !placeInfo.name) return null;
+    if (!placeInfo || !placeInfo.origin_name) return null;
     
     // 검색 쿼리: 상호명 + 시군구 (있으면)
-    let query = placeInfo.name;
+    let query = placeInfo.origin_name;
     if (placeInfo.address) {
         const sigungu = extractSigungu(placeInfo.address);
-        if (sigungu) query = `${placeInfo.name} ${sigungu.split(' ')[0]}`;
+        if (sigungu) query = `${placeInfo.origin_name} ${sigungu.split(' ')[0]}`;
     }
     
     // 네이버 검색 결과 3개 받아오기
     const naverResults = await searchNaverApi(query);
     if (!naverResults || naverResults.length === 0) {
-        log('warning', `네이버 검색 실패 (폐업 등): ${placeInfo.name}`);
+        log('warning', `네이버 검색 실패 (폐업 등): ${placeInfo.origin_name}`);
         return null;
     }
     
@@ -610,11 +572,9 @@ async function enrichWithNaverSearch(placeInfo) {
         return null;
     }
     
-    // origin_name 저장 (크롤링에서 받은 원본 상호명)
-    placeInfo.origin_name = placeInfo.name;
-    delete placeInfo.name;  // name 필드 삭제
+    // origin_name은 이미 설정되어 있으므로 복사/삭제 불필요
     
-    // 선택된 결과로 덮어쓰기 (category는 LLM이 처리하므로 여기서 설정 안 함)
+    // 선택된 결과로 네이버 정보 추가 (category는 LLM이 처리하므로 여기서 설정 안 함)
     placeInfo.naver_name = matched.name;          // 네이버 검색 결과 상호명
     placeInfo.jibunAddress = matched.address;     // 지번주소
     placeInfo.roadAddress = matched.roadAddress;  // 도로명주소

@@ -7,8 +7,9 @@
  * - published_at 기반 주기적 수집
  * 
  * 수집 조건:
- * - meta.recollect_id > heatmap.recollect_id
- * - AND (신규 OR title_changed OR duration_changed OR 주기적 수집)
+ * 수집 조건:
+ * - (신규 OR title_changed OR duration_changed OR 주기적 수집)
+ * - AND (업로드 5일 경과)
  * 
  * 사용법:
  *   node 04-collect-heatmap.js --channel tzuyang
@@ -101,7 +102,7 @@ function getLatestData(filePath) {
         if (lines.length > 0 && lines[lines.length - 1]) {
             return JSON.parse(lines[lines.length - 1]);
         }
-    } catch { }
+    } catch (e) { log('debug', `[Error] ${path.basename(filePath)} 파싱 실패: ${e.message}`); }
     return null;
 }
 
@@ -212,7 +213,9 @@ async function collectHeatmap(videoId) {
 
         // YouTube 접속 (autoplay=1)
         const url = `https://www.youtube.com/watch?v=${videoId}&autoplay=1`;
+        log('debug', `페이지 이동 시작: ${url}`);
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
+        log('debug', '페이지 로드 완료');
         await new Promise(r => setTimeout(r, 3000));
 
         // 팝업 닫기
@@ -258,6 +261,7 @@ async function collectHeatmap(videoId) {
             const player = document.querySelector('.html5-video-player');
             return player?.classList.contains('ad-showing') || false;
         });
+        log('debug', `초기 광고 상태: ${isAdPlaying ? '광고 중' : '광고 없음'}`);
 
         if (isAdPlaying) {
             const maxWait = 60000;
@@ -301,6 +305,7 @@ async function collectHeatmap(videoId) {
         const maxProgressWait = 10000;
         const progressStart = Date.now();
         let progressBarEnabled = false;
+        log('debug', '프로그레스 바 활성화 대기 중...');
 
         while (Date.now() - progressStart < maxProgressWait) {
             const state = await page.evaluate(() => {
@@ -337,6 +342,7 @@ async function collectHeatmap(videoId) {
         }
 
         // 히트맵 데이터 추출
+        log('debug', '히트맵 SVG 데이터 추출 시도...');
         const heatmapData = await page.evaluate(() => {
             // SVG path 데이터 추출 (핵심!)
             let svgPathData = null;
@@ -399,37 +405,56 @@ async function collectChannelHeatmaps(channelName, channelConfig) {
         const latestMeta = getLatestMeta(dataPath, videoId);
         const latestHeatmap = getLatestHeatmap(dataPath, videoId);
 
+        log('debug', `[Check] ${videoId} - Meta: ${!!latestMeta}, Heatmap: ${!!latestHeatmap}, MetaID: ${latestMeta?.recollect_id}, HeatmapID: ${latestHeatmap?.recollect_id}, Reason: ${latestMeta?.recollect_reason}`);
+
         if (!latestMeta) {
+            log('debug', `[Skip] ${videoId} - 메타데이터 없음. Path: ${path.join(dataPath, 'meta', `${videoId}.jsonl`)}`);
+            continue;
+        }
+
+        // 업로드 5일 미만 체크
+        const publishedAt = new Date(latestMeta.published_at);
+        const now = new Date();
+        const diffDays = (now - publishedAt) / (1000 * 60 * 60 * 24);
+
+        if (diffDays < 5) {
+            log('debug', `[Skip] ${videoId} - 업로드 5일 미만 (${diffDays.toFixed(1)}일)`);
             continue;
         }
 
         const metaRecollectId = latestMeta.recollect_id || 0;
         const heatmapRecollectId = latestHeatmap?.recollect_id || 0;
 
-        // 수집 조건: meta.recollect_id > heatmap.recollect_id
-        if (metaRecollectId > heatmapRecollectId) {
-            const recollectReason = latestMeta.recollect_reason;
+        let shouldCollect = false;
+        let pReason = null;
 
-            // 신규
-            if (!latestHeatmap) {
-                toCollect.push({ videoId, recollectReason: null, metaRecollectId });
-                continue;
-            }
+        // 1. 신규
+        if (!latestHeatmap) {
+            shouldCollect = true;
+            pReason = null;
+        } else {
+            // 2. 메타데이터 변경 (제목/길이)
+            const metaUpdated = (metaRecollectId > heatmapRecollectId) &&
+                (latestMeta.recollect_reason === "title_changed" || latestMeta.recollect_reason === "duration_changed");
 
-            // title 또는 duration 변경
-            if (recollectReason === "title_changed" || recollectReason === "duration_changed") {
-                toCollect.push({ videoId, recollectReason, metaRecollectId });
-                continue;
-            }
-
-            // 주기적 수집 체크
+            // 3. 주기적 수집
             const scheduleReason = shouldCollectBySchedule(
                 latestMeta.published_at,
                 latestHeatmap.collected_at
             );
-            if (scheduleReason) {
-                toCollect.push({ videoId, recollectReason: scheduleReason, metaRecollectId });
+
+            if (metaUpdated) {
+                shouldCollect = true;
+                pReason = latestMeta.recollect_reason;
+            } else if (scheduleReason) {
+                shouldCollect = true;
+                pReason = scheduleReason;
             }
+        }
+
+        if (shouldCollect) {
+            log('debug', `[Collect] ${videoId} - Reason: ${pReason}`);
+            toCollect.push({ videoId, recollectReason: pReason, metaRecollectId });
         }
     }
 
@@ -437,7 +462,7 @@ async function collectChannelHeatmaps(channelName, channelConfig) {
 
     if (toCollect.length === 0) {
         log('success', '수집 대상 없음');
-        return { channel: channelName, processed: 0, success: 0, skipped: allVideoIds.length };
+        return { channel: channelName, processed: 0, success: 0, failed: 0, skipped: allVideoIds.length };
     }
 
     const stats = { success: 0, failed: 0 };

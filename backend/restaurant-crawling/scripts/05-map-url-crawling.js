@@ -311,18 +311,18 @@ async function collectFromNaverMap(page, mapUrl) {
 
         // 정보 추출
         const placeInfo = await page.evaluate(() => {
-            const result = { name: null, roadAddress: null, jibunAddress: null }; 
+            const result = { origin_name: null, roadAddress: null, jibunAddress: null }; 
 
             // 1. 상호명 (ID: _title 내부)
             const titleEl = document.querySelector('#_title');
             if (titleEl) {
                 const spans = titleEl.querySelectorAll('span');
-                if (spans.length > 0) result.name = spans[0].textContent.trim();
-                else result.name = titleEl.textContent.trim();
+                if (spans.length > 0) result.origin_name = spans[0].textContent.trim();
+                else result.origin_name = titleEl.textContent.trim();
             }
-            if (!result.name) {
+            if (!result.origin_name) {
                 const ogTitle = document.querySelector('meta[property="og:title"]');
-                if (ogTitle) result.name = ogTitle.getAttribute('content')?.replace(/\s*:\s*네이버$/, '').trim();
+                if (ogTitle) result.origin_name = ogTitle.getAttribute('content')?.replace(/\s*:\s*네이버$/, '').trim();
             }
 
             // 2. 카테고리
@@ -375,10 +375,10 @@ async function collectFromNaverMap(page, mapUrl) {
         } catch {}
 
         placeInfo.description_map_url = mapUrl;
-        placeInfo.name = cleanText(placeInfo.name);
+        placeInfo.origin_name = cleanText(placeInfo.origin_name);
         // category는 LLM이 자막 분석해서 설정함
         // 음식점명 또는 주소 없으면 실패
-        if (!placeInfo.name || (!placeInfo.jibunAddress && !placeInfo.roadAddress)) {
+        if (!placeInfo.origin_name || (!placeInfo.jibunAddress && !placeInfo.roadAddress)) {
             log('debug', `네이버 지도: 음식점명/주소 없음 - 실패`);
             return null;
         }
@@ -407,14 +407,14 @@ async function collectFromKakaoMap(page, mapUrl) {
         await new Promise(r => setTimeout(r, 2000));
 
         const placeInfo = await page.evaluate(() => {
-            const result = { name: null, address: null };
+            const result = { origin_name: null, address: null };
             
             // OG 태그에서 추출
             const ogTitle = document.querySelector('meta[property="og:title"]');
             if (ogTitle) {
                 let name = ogTitle.getAttribute('content');
                 if (name && name.includes('|')) name = name.split('|')[0].trim();
-                result.name = name;
+                result.origin_name = name;
             }
             
             const ogDesc = document.querySelector('meta[property="og:description"]');
@@ -424,11 +424,11 @@ async function collectFromKakaoMap(page, mapUrl) {
         });
 
         placeInfo.description_map_url = mapUrl;
-        placeInfo.name = cleanText(placeInfo.name);
+        placeInfo.origin_name = cleanText(placeInfo.origin_name);
         placeInfo.mapType = 'kakao';
 
         // 음식점명 또는 주소 없으면 실패
-        if (!placeInfo.name || !placeInfo.address) {
+        if (!placeInfo.origin_name || !placeInfo.address) {
             log('debug', `카카오 지도: 음식점명/주소 없음 - 실패`);
             return null;
         }
@@ -466,18 +466,18 @@ async function collectFromGoogleMap(page, mapUrl) {
         }
 
         const placeInfo = await page.evaluate(() => {
-            const result = { name: null, address: null };
+            const result = { origin_name: null, address: null };
             
             // 상호명
             const nameEl = document.querySelector('h1.DUwDvf') || document.querySelector('h1');
-            if (nameEl) result.name = nameEl.textContent?.trim();
+            if (nameEl) result.origin_name = nameEl.textContent?.trim();
             
-            if (!result.name) {
+            if (!result.origin_name) {
                 const ogTitle = document.querySelector('meta[property="og:title"]');
                 if (ogTitle) {
                     let name = ogTitle.getAttribute('content');
                     if (name) name = name.replace(/ - Google 지도/g, '').replace(/ - Google Maps/g, '').trim();
-                    result.name = name;
+                    result.origin_name = name;
                 }
             }
             
@@ -492,13 +492,13 @@ async function collectFromGoogleMap(page, mapUrl) {
         });
 
         placeInfo.description_map_url = mapUrl;
-        placeInfo.name = cleanText(placeInfo.name);
+        placeInfo.origin_name = cleanText(placeInfo.origin_name);
         placeInfo.originalLat = lat;
         placeInfo.originalLng = lng;
         placeInfo.mapType = 'google';
 
         // 음식점명 또는 주소 없으면 실패
-        if (!placeInfo.name || !placeInfo.address) {
+        if (!placeInfo.origin_name || !placeInfo.address) {
             log('debug', `구글 지도: 음식점명/주소 없음 - 실패`);
             return null;
         }
@@ -523,19 +523,19 @@ function normalizeAddressForCompare(address) {
 // 네이버 검색 3개 결과 중 시군구 일치하는 것 선택
 // 검색 실패 또는 시군구 불일치시 null 반환 (실패 처리)
 async function enrichWithNaverSearch(placeInfo) {
-    if (!placeInfo || !placeInfo.name) return null;
+    if (!placeInfo || !placeInfo.origin_name) return null;
     
     // 검색 쿼리: 상호명 + 시군구 (있으면)
-    let query = placeInfo.name;
+    let query = placeInfo.origin_name;
     if (placeInfo.address) {
         const sigungu = extractSigungu(placeInfo.address);
-        if (sigungu) query = `${placeInfo.name} ${sigungu.split(' ')[0]}`;
+        if (sigungu) query = `${placeInfo.origin_name} ${sigungu.split(' ')[0]}`;
     }
     
     // 네이버 검색 결과 3개 받아오기
     const naverResults = await searchNaverApi(query);
     if (!naverResults || naverResults.length === 0) {
-        log('warning', `네이버 검색 실패 (폐업 등): ${placeInfo.name}`);
+        log('warning', `네이버 검색 실패 (폐업 등): ${placeInfo.origin_name}`);
         return null;
     }
     
@@ -572,11 +572,9 @@ async function enrichWithNaverSearch(placeInfo) {
         return null;
     }
     
-    // origin_name 저장 (크롤링에서 받은 원본 상호명)
-    placeInfo.origin_name = placeInfo.name;
-    delete placeInfo.name;  // name 필드 삭제
+    // origin_name은 이미 설정되어 있으므로 복사/삭제 불필요
     
-    // 선택된 결과로 덮어쓰기 (category는 LLM이 처리하므로 여기서 설정 안 함)
+    // 선택된 결과로 네이버 정보 추가 (category는 LLM이 처리하므로 여기서 설정 안 함)
     placeInfo.naver_name = matched.name;          // 네이버 검색 결과 상호명
     placeInfo.jibunAddress = matched.address;     // 지번주소
     placeInfo.roadAddress = matched.roadAddress;  // 도로명주소

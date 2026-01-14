@@ -109,8 +109,7 @@ def detect_changes(current: Dict, previous: Dict) -> Optional[str]:
     if current.get("duration") != previous.get("duration"):
         return "duration_changed"
 
-    # stats는 항상 변경되므로 별도 추적
-    return "stats_update"
+    return None
 
 
 def analyze_ad_content(
@@ -291,6 +290,10 @@ def collect_channel_meta(
 
         # 변경 사항 감지
         recollect_reason = detect_changes(meta, previous_meta)
+
+        # 변경 사항 없으면 스킵
+        if previous_meta and not recollect_reason:
+            continue
 
         # recollect_id 설정: 첫 수집은 0, 재수집은 이전 +1
         if previous_meta:

@@ -327,7 +327,6 @@ trace_id = sha256(youtube_link + trace_id_name + youtuber_review)
   "origin_name": "Gemini가 추출한 상호명",
   "naver_name": "네이버 검색 상호명" | null,
   "trace_id_name_source": "naver" | "original",
-  "phone": "..." | null,
   "category": "..." | null,
   "reasoning_basis": "..." | null,
   "youtuber_review": "...",
@@ -406,7 +405,6 @@ LAAJ 평가 결과의 `visit_authenticity.missing`에 있는 항목
   "origin_name": "크롤링 원본 상호명",
   "naver_name": "네이버 검색 상호명",
   "trace_id_name_source": "naver" | "original",
-  "phone": "...",
   "category": "...",
   "reasoning_basis": "LLM이 추출한 추론 근거",
   "youtuber_review": "LLM이 추출한 유튜버 리뷰",
@@ -464,7 +462,6 @@ if trace_id in existing_ids:
 | origin_name | origin_name |
 | naver_name | naver_name |
 | trace_id_name_source | trace_id_name_source |
-| phone | phone |
 | category | category |
 | reasoning_basis | reasoning_basis |
 | youtuber_review | youtuber_review |
