@@ -164,6 +164,7 @@ const HomeControlPanelComponent = ({
                     filters={filters}
                     selectedRegion={mapMode === 'domestic' ? selectedRegion : (selectedCountry as any)}
                     isKoreanOnly={mapMode === 'domestic'}
+                    maxItems={3}
                 />
             </div>
         </div>
