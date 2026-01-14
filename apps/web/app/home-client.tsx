@@ -70,6 +70,11 @@ const ReviewModal = dynamic(
     { ssr: false }
 );
 
+const FeedPanel = dynamic(
+    () => import('@/components/home/FeedPanel'),
+    { ssr: false }
+);
+
 import { Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
@@ -84,7 +89,7 @@ export default function HomeClient() {
 
     // 통합 패널 상태 관리
     // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
-    type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
+    type PanelType = 'mypage' | 'adminReviews' | 'announcement' | 'feed' | null;
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
@@ -105,11 +110,22 @@ export default function HomeClient() {
         return () => clearTimeout(timer);
     }, []);
 
+    // [Desktop] 데스크톱 모드에서 초기 접속 시 피드 패널 자동 표시
+    useEffect(() => {
+        if (isDesktop && !state.isPanelOpen && activeRightPanel === null) {
+            // 맛집이 선택되지 않은 상태로 데스크톱 접속 시 피드 패널 표시
+            const timer = setTimeout(() => {
+                setActiveRightPanel('feed');
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+    }, [isDesktop]); // 의도적으로 state.isPanelOpen, activeRightPanel 의존성 제외 (초기 로드 시에만 실행)
+
 
     useEffect(() => {
         const panelParam = searchParams.get('panel');
         const announcementId = searchParams.get('announcementId');
-        const restaurantId = searchParams.get('r');
+        const restaurantId = searchParams.get('r') || searchParams.get('restaurant'); // 피드에서 restaurant 파라미터 사용
         const restaurantName = searchParams.get('q'); // 공유 URL에서 맛집 이름
 
         if (panelParam === 'announcement' && announcementId) {
@@ -565,6 +581,21 @@ export default function HomeClient() {
                     initialAnnouncement={selectedAnnouncement}
                 />
             </RightPanelWrapper>
+
+            {/* 피드 패널 (데스크톱 모드) */}
+            {isDesktop && (
+                <RightPanelWrapper
+                    isOpen={activeRightPanel === 'feed'}
+                    isCollapsed={isPanelCollapsed}
+                >
+                    <FeedPanel
+                        isOpen={!isPanelCollapsed}
+                        onClose={closeAllPanels}
+                        onToggleCollapse={togglePanelCollapse}
+                        isCollapsed={isPanelCollapsed}
+                    />
+                </RightPanelWrapper>
+            )}
         </>
     );
 }

@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { User, MapPin, Heart, Calendar, CheckCircle, Edit } from 'lucide-react';
+import { User, MapPin, Heart, Calendar, CheckCircle, Edit, Share2, Check } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface ReviewCardProps {
@@ -10,6 +12,7 @@ export interface ReviewCardProps {
         userId: string;
         userName: string;
         userAvatarUrl?: string; // 선택적 속성
+        restaurantId?: string; // optional for share URL
         restaurantName: string;
         content: string;
         photos: { url: string; type: string }[];
@@ -48,9 +51,11 @@ export const ReviewCard = React.memo(function ReviewCard({
     currentUserId,
     onEditReview
 }: ReviewCardProps) {
+    const router = useRouter();
     const isOwnReview = currentUserId && review.userId === currentUserId;
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isShareCopied, setIsShareCopied] = useState(false);
     const [api, setApi] = useState<CarouselApi>();
 
     // [PERFORMANCE] 이미지 URL 미리 생성 - 매 렌더링마다 재계산 방지
@@ -94,8 +99,30 @@ export const ReviewCard = React.memo(function ReviewCard({
 
     const handleRestaurantClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        onRestaurantClick?.();
-    }, [onRestaurantClick]);
+        // Navigate to home with restaurant selected on map
+        if (review.restaurantId) {
+            router.push(`/?restaurant=${review.restaurantId}`);
+        } else {
+            onRestaurantClick?.();
+        }
+    }, [router, review.restaurantId, onRestaurantClick]);
+
+    // Share link copy handler
+    const handleShareClick = useCallback(async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        const url = new URL(window.location.origin);
+        url.searchParams.set('q', review.restaurantName);
+        if (review.restaurantId) {
+            url.searchParams.set('restaurant', review.restaurantId);
+        }
+        try {
+            await navigator.clipboard.writeText(url.toString());
+            setIsShareCopied(true);
+            setTimeout(() => setIsShareCopied(false), 2000);
+        } catch {
+            console.error('URL 복사 실패');
+        }
+    }, [review.restaurantName, review.restaurantId]);
 
     // [PERFORMANCE] 날짜 포맷 메모이제이션
     const { visitedDate, submittedDate } = useMemo(() => {
@@ -139,7 +166,13 @@ export const ReviewCard = React.memo(function ReviewCard({
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <p className="text-sm font-semibold">{review.userName}</p>
+                            <Link
+                                href={`/user/${review.userId}`}
+                                className="text-sm font-semibold hover:text-primary hover:underline transition-colors"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {review.userName}
+                            </Link>
                             {review.isVerified && (
                                 <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600">
                                     <CheckCircle className="h-2 w-2 mr-0.5" />
@@ -157,8 +190,20 @@ export const ReviewCard = React.memo(function ReviewCard({
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* 본인 리뷰: 수정 버튼, 타인 리뷰: 맛집 보기 버튼 */}
-                    {isOwnReview && onEditReview ? (
+                    {/* 공유 버튼 - 모든 사용자에게 표시 */}
+                    <button
+                        className={`inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 ${isShareCopied ? 'text-green-600' : 'text-muted-foreground hover:text-primary'}`}
+                        title={isShareCopied ? "복사됨!" : "리뷰 공유"}
+                        onClick={handleShareClick}
+                    >
+                        {isShareCopied ? (
+                            <Check className="h-4 w-4" />
+                        ) : (
+                            <Share2 className="h-4 w-4" />
+                        )}
+                    </button>
+                    {/* 본인 리뷰: 수정 버튼 */}
+                    {isOwnReview && onEditReview && (
                         <button
                             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 text-muted-foreground hover:text-primary"
                             title="리뷰 수정"
@@ -178,25 +223,20 @@ export const ReviewCard = React.memo(function ReviewCard({
                         >
                             <Edit className="h-4 w-4" />
                         </button>
-                    ) : (
-                        <button
-                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 text-muted-foreground hover:text-primary"
-                            title="맛집 보기"
-                            onClick={handleRestaurantClick}
-                        >
-                            <MapPin className="h-4 w-4" />
-                        </button>
                     )}
                     <button
-                        className="flex items-center gap-1 group"
+                        className="relative flex items-center justify-center group"
                         onClick={handleLike}
+                        title={`좋아요 ${review.likeCount}개`}
                     >
                         <Heart
-                            className={`w-5 h-5 transition-all ${review.isLikedByUser ? 'fill-red-500 text-red-500 scale-110' : 'text-muted-foreground group-hover:text-red-500'}`}
+                            className={`w-6 h-6 transition-all ${review.isLikedByUser ? 'fill-red-500 text-red-500 scale-110' : 'text-muted-foreground group-hover:text-red-500'}`}
                         />
-                        <span className={`text-xs font-medium ${review.isLikedByUser ? 'text-red-500' : 'text-muted-foreground'}`}>
-                            {review.likeCount}
-                        </span>
+                        {review.likeCount > 0 && (
+                            <span className={`absolute inset-0 flex items-center justify-center text-[9px] font-bold pointer-events-none ${review.isLikedByUser ? 'text-white' : 'text-muted-foreground'}`}>
+                                {review.likeCount > 999 ? '999+' : review.likeCount}
+                            </span>
+                        )}
                     </button>
                 </div>
             </div>

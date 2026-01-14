@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
-import { createPortal } from 'react-dom';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search, Edit, Share2, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Heart, MapPin, Calendar, User, MessageSquareText, Eye, EyeOff, Filter, Search, ChevronRight, ChevronLeft, Share2, Check, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,10 +12,15 @@ import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { GlobalLoader } from "@/components/ui/global-loader";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
-import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
+
+interface FeedPanelProps {
+    isOpen: boolean;
+    onClose: () => void;
+    onToggleCollapse?: () => void;
+    isCollapsed?: boolean;
+}
 
 interface FeedReview {
     id: string;
@@ -33,57 +37,63 @@ interface FeedReview {
     isLikedByUser: boolean;
 }
 
-export default function FeedPage() {
+// 리뷰 수정 데이터 타입
+interface ReviewEditData {
+    id: string;
+    restaurantId: string;
+    restaurantName: string;
+    content: string;
+    categories: string[];
+    foodPhotos: string[];
+    isVerified: boolean;
+    adminNote: string | null;
+}
+
+// 사진 URL 생성 유틸리티 (캐싱용)
+const getPhotoUrl = (photoPath: string): string => {
+    return supabase.storage.from('review-photos').getPublicUrl(photoPath).data.publicUrl;
+};
+
+// 날짜 포맷 유틸리티 (컴포넌트 외부로 이동하여 재생성 방지)
+const formatDateKR = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+    });
+};
+
+export default function FeedPanel({
+    isOpen,
+    onClose,
+    onToggleCollapse,
+    isCollapsed,
+}: FeedPanelProps) {
     const { user } = useAuth();
     const router = useRouter();
     const queryClient = useQueryClient();
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const [optimisticLikes, setOptimisticLikes] = useState<Record<string, { count: number; isLiked: boolean }>>({});
-    const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [showMyReviewsOnly, setShowMyReviewsOnly] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
-    const [editingReview, setEditingReview] = useState<{
-        id: string;
-        restaurantId: string;
-        restaurantName: string;
-        content: string;
-        categories: string[];
-        foodPhotos: string[];
-        isVerified: boolean;
-        adminNote: string | null;
-    } | null>(null);
+    const [editingReview, setEditingReview] = useState<ReviewEditData | null>(null);
 
     const isLoggedIn = !!user;
 
-    // [REALTIME] 좋아요 실시간 반영
     useReviewLikesRealtime();
-
-    // 리뷰 작성 핸들러
-    const handleWriteReview = useCallback(() => {
-        if (!user) {
-            toast({
-                title: '로그인이 필요합니다',
-                description: '리뷰를 작성하려면 로그인이 필요합니다.',
-                variant: 'destructive',
-            });
-            return;
-        }
-        setIsReviewModalOpen(true);
-    }, [user]);
-
 
     // 리뷰 피드 데이터 조회 (무한 스크롤)
     const {
         data: feedPages,
         fetchNextPage,
         hasNextPage,
-        isLoading,
         isFetchingNextPage,
     } = useInfiniteQuery({
-        queryKey: ['review-feed', user?.id],
+        queryKey: ['review-feed-panel', user?.id],
         queryFn: async ({ pageParam = 0 }) => {
-            // 1. 승인된 리뷰 조회
+            // 리뷰 데이터 조회
             const { data: reviewsData, error: reviewsError } = await supabase
                 .from('reviews')
                 .select('*')
@@ -91,38 +101,34 @@ export default function FeedPage() {
                 .order('created_at', { ascending: false })
                 .range(pageParam, pageParam + 19) as any;
 
-            if (reviewsError) {
-                console.error('리뷰 조회 실패:', reviewsError);
+            if (reviewsError || !reviewsData?.length) {
                 return { reviews: [], nextCursor: null };
             }
 
-            if (!reviewsData || reviewsData.length === 0) {
-                return { reviews: [], nextCursor: null };
-            }
-
-            // 2. 사용자 정보 조회
-            const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
+            // 사용자 ID 목록 추출
+            const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))] as string[];
             const { data: profilesData } = await supabase
                 .from('profiles')
                 .select('user_id, nickname')
                 .in('user_id', userIds) as any;
             const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.nickname]));
 
-            // 3. 맛집 정보 조회
-            const restaurantIds = [...new Set(reviewsData.map((r: any) => r.restaurant_id))];
+            // 맛집 ID 목록 추출
+            const restaurantIds = [...new Set(reviewsData.map((r: any) => r.restaurant_id))] as string[];
             const { data: restaurantsData } = await supabase
                 .from('restaurants')
                 .select('id, name')
                 .in('id', restaurantIds) as any;
             const restaurantsMap = new Map((restaurantsData || []).map((r: any) => [r.id, r.name]));
 
-            // 4. 좋아요 정보 조회
+            // 좋아요 데이터 조회
             const reviewIds = reviewsData.map((r: any) => r.id);
             const { data: likesData } = await supabase
                 .from('review_likes')
                 .select('review_id, user_id')
                 .in('review_id', reviewIds) as any;
 
+            // 좋아요 맵 생성
             const likesMap = new Map<string, { count: number; isLiked: boolean }>();
             reviewIds.forEach((reviewId: string) => {
                 const likesForReview = likesData?.filter((like: any) => like.review_id === reviewId) || [];
@@ -130,7 +136,7 @@ export default function FeedPage() {
                 likesMap.set(reviewId, { count: likesForReview.length, isLiked });
             });
 
-            // 5. 리뷰 데이터 매핑
+            // 리뷰 데이터 매핑
             const reviews: FeedReview[] = reviewsData.map((review: any) => {
                 const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
                 return {
@@ -143,7 +149,7 @@ export default function FeedPage() {
                     createdAt: review.created_at,
                     content: review.content,
                     photos: review.food_photos || [],
-                    categories: (Array.isArray(review.categories) && review.categories.length > 0)
+                    categories: Array.isArray(review.categories) && review.categories.length > 0
                         ? review.categories
                         : (review.category ? [review.category] : []),
                     likeCount: likesInfo.count,
@@ -158,12 +164,15 @@ export default function FeedPage() {
         initialPageParam: 0,
     });
 
+    // 필터링된 리뷰 목록 (메모이제이션)
     const allReviews = useMemo(() => {
         let reviews = feedPages?.pages.flatMap(page => page.reviews) || [];
-        // 내 리뷰만 보기 필터
+
+        // 내 리뷰만 필터
         if (showMyReviewsOnly && user?.id) {
             reviews = reviews.filter(review => review.userId === user.id);
         }
+
         // 검색어 필터
         if (searchQuery.trim()) {
             const query = searchQuery.trim().toLowerCase();
@@ -173,16 +182,18 @@ export default function FeedPage() {
                 review.content.toLowerCase().includes(query)
             );
         }
+
         return reviews;
     }, [feedPages, showMyReviewsOnly, user?.id, searchQuery]);
 
-    // 무한 스크롤
+    // 무한 스크롤 로드
     const loadMore = useCallback(() => {
         if (hasNextPage && !isFetchingNextPage) {
             fetchNextPage();
         }
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
+    // IntersectionObserver로 무한 스크롤 감지
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
@@ -193,15 +204,25 @@ export default function FeedPage() {
             { threshold: 0.1 }
         );
 
-        if (loadMoreRef.current) {
-            observer.observe(loadMoreRef.current);
+        const currentRef = loadMoreRef.current;
+        if (currentRef) {
+            observer.observe(currentRef);
         }
 
-        return () => observer.disconnect();
+        return () => {
+            if (currentRef) {
+                observer.unobserve(currentRef);
+            }
+        };
     }, [loadMore]);
 
-    // 좋아요 토글
-    const toggleLike = useCallback(async (reviewId: string, currentIsLiked: boolean, currentCount: number, reviewUserId: string) => {
+    // 좋아요 토글 핸들러
+    const toggleLike = useCallback(async (
+        reviewId: string,
+        currentIsLiked: boolean,
+        currentCount: number,
+        reviewUserId: string
+    ) => {
         if (!user) {
             toast({
                 title: '로그인 필요',
@@ -211,7 +232,7 @@ export default function FeedPage() {
             return;
         }
 
-        // Optimistic update
+        // 낙관적 업데이트
         setOptimisticLikes(prev => ({
             ...prev,
             [reviewId]: {
@@ -222,21 +243,20 @@ export default function FeedPage() {
 
         try {
             if (currentIsLiked) {
+                // 좋아요 취소
                 await supabase.from('review_likes').delete().eq('review_id', reviewId).eq('user_id', user.id);
             } else {
+                // 좋아요 추가
                 await supabase.from('review_likes').insert({ review_id: reviewId, user_id: user.id } as any);
 
-                // 리뷰 작성자에게 알림 (자기 자신 제외)
+                // 알림 생성 (본인 리뷰가 아닌 경우)
                 if (reviewUserId && reviewUserId !== user.id) {
                     try {
-                        const { data: profileData } = await (supabase
-                            .from('profiles') as any)
+                        const { data: profileData } = await (supabase.from('profiles') as any)
                             .select('nickname')
                             .eq('user_id', user.id)
                             .single();
-
                         const likerName = (profileData as any)?.nickname || '누군가';
-
                         await (supabase as any).rpc('create_user_notification', {
                             p_user_id: reviewUserId,
                             p_type: 'review_like',
@@ -244,15 +264,14 @@ export default function FeedPage() {
                             p_message: `${likerName}님이 당신의 리뷰에 좋아요를 눌렀습니다.`,
                             p_data: { reviewId }
                         });
-                    } catch (notifError) {
-                        console.error('알림 생성 실패:', notifError);
+                    } catch {
+                        // 알림 실패 무시
                     }
                 }
             }
-            queryClient.invalidateQueries({ queryKey: ['review-feed'] });
-        } catch (error) {
-            console.error('좋아요 토글 실패:', error);
-            // Rollback optimistic update
+            queryClient.invalidateQueries({ queryKey: ['review-feed-panel'] });
+        } catch {
+            // 실패 시 롤백
             setOptimisticLikes(prev => ({
                 ...prev,
                 [reviewId]: { count: currentCount, isLiked: currentIsLiked }
@@ -260,33 +279,64 @@ export default function FeedPage() {
         }
     }, [user, queryClient]);
 
-    // 맛집으로 이동
+    // 맛집 이동 핸들러
     const goToRestaurant = useCallback((restaurantId: string) => {
         router.push(`/?restaurant=${restaurantId}`);
     }, [router]);
 
-    // 날짜 포맷
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ko-KR', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-        });
-    };
+    // 리뷰 수정 핸들러
+    const handleEditReview = useCallback((reviewData: ReviewEditData) => {
+        setEditingReview(reviewData);
+    }, []);
 
-    if (isLoading) {
-        return (
-            <GlobalLoader
-                message="리뷰 데이터를 불러오는 중..."
-                subMessage="팬들의 맛집 방문 후기를 확인하고 있습니다"
-            />
-        );
-    }
+    // 리뷰 수정 모달 닫기
+    const handleCloseEditModal = useCallback(() => {
+        setEditingReview(null);
+    }, []);
+
+    // 리뷰 수정 성공 핸들러
+    const handleEditSuccess = useCallback(() => {
+        queryClient.invalidateQueries({ queryKey: ['review-feed-panel'] });
+        setEditingReview(null);
+    }, [queryClient]);
+
+    // 필터 토글 핸들러
+    const toggleMyReviews = useCallback(() => {
+        setShowMyReviewsOnly(prev => !prev);
+    }, []);
+
+    // 필터 확장 토글 핸들러
+    const toggleFilterExpanded = useCallback(() => {
+        setIsFilterExpanded(prev => !prev);
+    }, []);
+
+    // 검색어 변경 핸들러
+    const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value);
+    }, []);
+
+    // 패널이 닫혀있으면 렌더링 안함
+    if (!isOpen) return null;
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-y-auto" data-testid="feed-page-container">
-            {/* Header */}
+        <div className="h-full w-full flex flex-col bg-background border-l border-border relative">
+            {/* 플로팅 접기/펼치기 버튼 */}
+            {onToggleCollapse && (
+                <button
+                    onClick={onToggleCollapse}
+                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex items-center justify-center w-6 h-12 bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group"
+                    title={!isCollapsed ? "패널 접기" : "패널 펼치기"}
+                    aria-label={!isCollapsed ? "패널 접기" : "패널 펼치기"}
+                >
+                    {!isCollapsed ? (
+                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                    ) : (
+                        <ChevronLeft className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+                    )}
+                </button>
+            )}
+
+            {/* 헤더 */}
             <div className="border-b border-border bg-background p-6 shrink-0">
                 <div className="flex items-center justify-between">
                     <div>
@@ -305,13 +355,12 @@ export default function FeedPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        {/* 내 리뷰만 보기 토글 */}
                         {isLoggedIn && (
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 rounded-full hover:bg-muted"
-                                onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
+                                onClick={toggleMyReviews}
                                 title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
                             >
                                 {showMyReviewsOnly ? (
@@ -321,11 +370,10 @@ export default function FeedPage() {
                                 )}
                             </Button>
                         )}
-                        {/* 필터 토글 버튼 */}
                         <Button
                             variant="outline"
                             size="icon"
-                            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                            onClick={toggleFilterExpanded}
                             className="relative"
                             title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
                         >
@@ -339,7 +387,7 @@ export default function FeedPage() {
                     </div>
                 </div>
 
-                {/* 검색 필터 영역 */}
+                {/* 검색 필터 */}
                 {isFilterExpanded && (
                     <div className="mt-4">
                         <div className="relative">
@@ -347,7 +395,7 @@ export default function FeedPage() {
                             <Input
                                 placeholder="맛집명, 작성자, 내용 검색..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={handleSearchChange}
                                 className="pl-9"
                             />
                         </div>
@@ -355,8 +403,8 @@ export default function FeedPage() {
                 )}
             </div>
 
-            {/* Feed */}
-            <div className="pb-8">
+            {/* 피드 목록 */}
+            <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-8">
                 {allReviews.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                         <p>아직 승인된 리뷰가 없습니다.</p>
@@ -369,21 +417,20 @@ export default function FeedPage() {
                             const isLiked = optimistic?.isLiked ?? review.isLikedByUser;
 
                             return (
-                                <FeedCard
+                                <FeedPanelCard
                                     key={review.id}
                                     review={review}
                                     likeCount={likeCount}
                                     isLiked={isLiked}
                                     onToggleLike={() => toggleLike(review.id, isLiked, likeCount, review.userId)}
                                     onGoToRestaurant={() => goToRestaurant(review.restaurantId)}
-                                    formatDate={formatDate}
                                     currentUserId={user?.id}
-                                    onEditReview={(reviewData) => setEditingReview(reviewData)}
+                                    onEditReview={handleEditReview}
                                 />
                             );
                         })}
 
-                        {/* 무한 스크롤 트리거 - 로딩 중이 아닐 때는 높이 최소화 */}
+                        {/* 무한 스크롤 트리거 */}
                         <div ref={loadMoreRef} className={cn(
                             "flex items-center justify-center transition-all duration-300",
                             isFetchingNextPage ? "h-20" : "h-4"
@@ -399,79 +446,57 @@ export default function FeedPage() {
                 )}
             </div>
 
-            {/* Floating Write Button - Portal로 body에 직접 렌더링 */}
-            {isLoggedIn && typeof document !== 'undefined' && createPortal(
-                <Button
-                    onClick={handleWriteReview}
-                    className="fixed right-4 bottom-20 z-50 h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90"
-                    size="icon"
-                >
-                    <Plus className="h-6 w-6" />
-                </Button>,
-                document.body
-            )}
-
-            {/* Review Modal */}
-            <ReviewModal
-                isOpen={isReviewModalOpen}
-                onClose={() => setIsReviewModalOpen(false)}
-                restaurant={null}
-                onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ['review-feed'] });
-                    queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
-                }}
-            />
-
-            {/* Review Edit Modal */}
+            {/* 리뷰 수정 모달 */}
             <ReviewEditModal
                 isOpen={!!editingReview}
-                onClose={() => setEditingReview(null)}
+                onClose={handleCloseEditModal}
                 review={editingReview}
-                onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ['review-feed'] });
-                    setEditingReview(null);
-                }}
+                onSuccess={handleEditSuccess}
             />
         </div>
     );
 }
 
-// 리뷰 카드 컴포넌트 (memo로 불필요한 리렌더링 방지)
-// 리뷰 카드 컴포넌트 (memo로 불필요한 리렌더링 방지)
-interface FeedCardProps {
+// 피드 카드 Props
+interface FeedPanelCardProps {
     review: FeedReview;
     likeCount: number;
     isLiked: boolean;
     onToggleLike: () => void;
     onGoToRestaurant: () => void;
-    formatDate: (date: string) => string;
     currentUserId?: string;
-    onEditReview?: (reviewData: {
-        id: string;
-        restaurantId: string;
-        restaurantName: string;
-        content: string;
-        categories: string[];
-        foodPhotos: string[];
-        isVerified: boolean;
-        adminNote: string | null;
-    }) => void;
+    onEditReview?: (reviewData: ReviewEditData) => void;
 }
 
-const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLike, onGoToRestaurant, formatDate, currentUserId, onEditReview }: FeedCardProps) {
+// 피드 카드 컴포넌트 (메모이제이션)
+const FeedPanelCard = memo(function FeedPanelCard({
+    review,
+    likeCount,
+    isLiked,
+    onToggleLike,
+    onGoToRestaurant,
+    currentUserId,
+    onEditReview
+}: FeedPanelCardProps) {
     const isOwnReview = currentUserId && review.userId === currentUserId;
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
     const hasPhotos = review.photos.length > 0;
     const hasMultiplePhotos = review.photos.length > 1;
     const isLongContent = review.content.length > 50;
-
     const minSwipeDistance = 50;
 
-    // Share link copy handler
+    // 현재 사진 URL (메모이제이션)
+    const currentPhotoUrl = useMemo(() => {
+        if (!hasPhotos) return '';
+        return getPhotoUrl(review.photos[currentPhotoIndex]);
+    }, [hasPhotos, review.photos, currentPhotoIndex]);
+
+    // 공유 클릭 핸들러
     const handleShareClick = useCallback(async () => {
         const url = new URL(window.location.origin);
         url.searchParams.set('q', review.restaurantName);
@@ -485,66 +510,62 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
         }
     }, [review.restaurantName, review.restaurantId]);
 
-    const nextPhoto = () => {
+    // 다음 사진
+    const nextPhoto = useCallback(() => {
         setCurrentPhotoIndex((prev) => (prev + 1) % review.photos.length);
-    };
+    }, [review.photos.length]);
 
-    const prevPhoto = () => {
+    // 이전 사진
+    const prevPhoto = useCallback(() => {
         setCurrentPhotoIndex((prev) => (prev - 1 + review.photos.length) % review.photos.length);
-    };
+    }, [review.photos.length]);
 
-    const onTouchStart = (e: React.TouchEvent) => {
+    // 터치 시작
+    const onTouchStart = useCallback((e: React.TouchEvent) => {
         setTouchEnd(null);
         setTouchStart(e.targetTouches[0].clientX);
-    };
+    }, []);
 
-    const onTouchMove = (e: React.TouchEvent) => {
+    // 터치 이동
+    const onTouchMove = useCallback((e: React.TouchEvent) => {
         setTouchEnd(e.targetTouches[0].clientX);
-    };
+    }, []);
 
-    const onTouchEnd = () => {
+    // 터치 종료 (스와이프 감지)
+    const onTouchEnd = useCallback(() => {
         if (!touchStart || !touchEnd) return;
         const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-        if (isLeftSwipe) nextPhoto();
-        if (isRightSwipe) prevPhoto();
-    };
+        if (distance > minSwipeDistance) nextPhoto();
+        if (distance < -minSwipeDistance) prevPhoto();
+    }, [touchStart, touchEnd, nextPhoto, prevPhoto]);
 
-    // 마우스 드래그 지원 (데스크탑)
-    const onMouseDown = (e: React.MouseEvent) => {
-        setTouchEnd(null);
-        setTouchStart(e.clientX);
-    };
+    // 수정 버튼 클릭 핸들러
+    const handleEditClick = useCallback(() => {
+        onEditReview?.({
+            id: review.id,
+            restaurantId: review.restaurantId,
+            restaurantName: review.restaurantName,
+            content: review.content,
+            categories: review.categories || [],
+            foodPhotos: review.photos,
+            isVerified: true,
+            adminNote: null,
+        });
+    }, [onEditReview, review]);
 
-    const onMouseMove = (e: React.MouseEvent) => {
-        if (touchStart !== null) {
-            setTouchEnd(e.clientX);
-        }
-    };
+    // 내용 펼치기/접기
+    const toggleExpanded = useCallback(() => {
+        setIsExpanded(prev => !prev);
+    }, []);
 
-    const onMouseUp = () => {
-        if (!touchStart || !touchEnd) {
-            setTouchStart(null);
-            return;
-        }
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
-        if (isLeftSwipe) nextPhoto();
-        if (isRightSwipe) prevPhoto();
-        setTouchStart(null);
-        setTouchEnd(null);
-    };
-
-    const onMouseLeave = () => {
-        setTouchStart(null);
-        setTouchEnd(null);
-    };
+    // 이미지 로드 에러 핸들러
+    const handleImageError = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+        e.currentTarget.style.display = 'none';
+    }, []);
 
     return (
         <Card className="overflow-hidden">
-            {/* 헤더: 사용자 정보 + 좋아요/맛집 버튼 */}
+            {/* 헤더: 사용자 정보 + 버튼 영역 */}
             <div className="flex items-center justify-between p-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
@@ -554,7 +575,6 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                         <Link
                             href={`/user/${review.userId}`}
                             className="text-sm font-semibold hover:text-primary hover:underline transition-colors"
-                            onClick={(e) => e.stopPropagation()}
                         >
                             {review.userName}
                         </Link>
@@ -568,9 +588,9 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                     </div>
                 </div>
 
-                {/* 맛집/좋아요 버튼 - 헤더 오른쪽 */}
+                {/* 버튼 영역 */}
                 <div className="flex items-center gap-2">
-                    {/* 공유 버튼 - 모든 사용자에게 표시 */}
+                    {/* 공유 버튼 */}
                     <Button
                         variant="ghost"
                         size="icon"
@@ -584,27 +604,19 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                             <Share2 className="h-4 w-4" />
                         )}
                     </Button>
-                    {/* 본인 리뷰: 수정 버튼 */}
+                    {/* 수정 버튼 (본인 리뷰) */}
                     {isOwnReview && onEditReview && (
                         <Button
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8 text-muted-foreground hover:text-primary"
-                            onClick={() => onEditReview({
-                                id: review.id,
-                                restaurantId: review.restaurantId,
-                                restaurantName: review.restaurantName,
-                                content: review.content,
-                                categories: review.categories || [],
-                                foodPhotos: review.photos,
-                                isVerified: true,
-                                adminNote: null,
-                            })}
+                            onClick={handleEditClick}
                             title="리뷰 수정"
                         >
                             <Edit className="h-4 w-4" />
                         </Button>
                     )}
+                    {/* 좋아요 버튼 */}
                     <button
                         onClick={onToggleLike}
                         className="relative flex items-center justify-center group"
@@ -630,29 +642,23 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                 </div>
             </div>
 
-            {/* 사진 캐러셀 - 스와이프 지원 */}
+            {/* 사진 캐러셀 */}
             {hasPhotos && (
                 <div
                     className="relative aspect-square bg-muted select-none cursor-grab active:cursor-grabbing"
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
-                    onMouseDown={onMouseDown}
-                    onMouseMove={onMouseMove}
-                    onMouseUp={onMouseUp}
-                    onMouseLeave={onMouseLeave}
                 >
                     <img
-                        src={supabase.storage.from('review-photos').getPublicUrl(review.photos[currentPhotoIndex]).data.publicUrl}
+                        src={currentPhotoUrl}
                         alt={`리뷰 사진 ${currentPhotoIndex + 1}`}
                         className="w-full h-full object-cover pointer-events-none"
                         draggable={false}
-                        onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                        }}
+                        onError={handleImageError}
                     />
 
-                    {/* 인디케이터 */}
+                    {/* 사진 인디케이터 */}
                     {hasMultiplePhotos && (
                         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                             {review.photos.map((_, idx) => (
@@ -669,7 +675,7 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                 </div>
             )}
 
-            {/* 내용 */}
+            {/* 리뷰 내용 */}
             <div className="p-3 space-y-2">
                 <div>
                     {isExpanded ? (
@@ -677,7 +683,7 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                             {review.content}
                             {isLongContent && (
                                 <button
-                                    onClick={() => setIsExpanded(false)}
+                                    onClick={toggleExpanded}
                                     className="text-xs text-muted-foreground hover:text-primary ml-1 inline-block"
                                 >
                                     접기
@@ -691,7 +697,7 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                             </p>
                             {isLongContent && (
                                 <button
-                                    onClick={() => setIsExpanded(true)}
+                                    onClick={toggleExpanded}
                                     className="text-xs text-muted-foreground hover:text-primary shrink-0"
                                 >
                                     더보기
@@ -701,13 +707,13 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                     )}
                 </div>
 
-                {/* 날짜 */}
+                {/* 날짜 정보 */}
                 <div className="flex items-center gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
-                        방문: {formatDate(review.visitedAt)}
+                        방문: {formatDateKR(review.visitedAt)}
                     </span>
-                    <span>작성: {formatDate(review.createdAt)}</span>
+                    <span>작성: {formatDateKR(review.createdAt)}</span>
                 </div>
             </div>
         </Card>
