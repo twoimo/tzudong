@@ -420,7 +420,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <DialogHeader className="space-y-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-primary rounded-lg flex items-center justify-center flex-shrink-0">
@@ -658,7 +658,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
 
       {/* 개인정보 처리방침 모달 */}
       <Dialog open={isPrivacyModalOpen} onOpenChange={setIsPrivacyModalOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[85vh] overflow-hidden p-4 sm:p-6 rounded-xl">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-hidden p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           <DialogHeader>
             <DialogTitle>개인정보 처리방침</DialogTitle>
             <DialogDescription>
@@ -681,7 +681,7 @@ const AuthModal = memo(({ isOpen, onClose }: AuthModalProps) => {
 
       {/* 비밀번호 찾기 모달 */}
       <Dialog open={showForgotPassword} onOpenChange={setShowForgotPassword}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6 rounded-xl [&>button.absolute]:hidden">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-[calc(100vw-2rem)] sm:max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] [&>button.absolute]:hidden">
           <DialogHeader>
             <DialogTitle>비밀번호 찾기</DialogTitle>
             <DialogDescription>

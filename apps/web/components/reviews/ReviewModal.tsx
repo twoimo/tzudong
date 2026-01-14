@@ -75,7 +75,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Calendar, Upload, X as XIcon, AlertCircle, CheckCircle2, Image, Trash2, Plus } from "lucide-react";
+import { Calendar, Upload, X as XIcon, AlertCircle, CheckCircle2, Image, Trash2, Plus, Search } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
@@ -117,6 +117,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+    // 맛집 검색 상태
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchResults, setSearchResults] = useState<{ id: string; name: string }[]>([]);
+    const [isSearching, setIsSearching] = useState(false);
+    const [selectedRestaurant, setSelectedRestaurant] = useState<{ id: string; name: string } | null>(restaurant);
 
     // 드래그 앤 드롭을 위한 ref들
     const verificationDropRef = useRef<HTMLDivElement>(null);
@@ -165,7 +171,15 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
 
     const handleFoodPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const files = Array.from(e.target.files || []);
-        setFoodPhotos(prev => [...prev, ...files]);
+        if (files.length === 0) return;
+
+        // requestAnimationFrame을 사용하여 UI 블로킹 방지
+        requestAnimationFrame(() => {
+            setFoodPhotos(prev => [...prev, ...files]);
+        });
+
+        // input 초기화 (같은 파일 재선택 가능하도록)
+        e.target.value = '';
     }, []);
 
     const removeFoodPhoto = useCallback((index: number) => {
@@ -237,9 +251,50 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         foodPhotosFileInputRef.current?.click();
     }, []);
 
+    // 맛집 검색 핸들러
+    const handleSearchRestaurant = useCallback(async (query: string) => {
+        if (query.trim().length < 2) {
+            setSearchResults([]);
+            return;
+        }
+
+        setIsSearching(true);
+        try {
+            const { data, error } = await supabase
+                .from('restaurants')
+                .select('id, name')
+                .ilike('name', `%${query}%`)
+                .limit(10) as any;
+
+            if (error) throw error;
+            setSearchResults(data || []);
+        } catch (error) {
+            console.error('맛집 검색 실패:', error);
+            setSearchResults([]);
+        } finally {
+            setIsSearching(false);
+        }
+    }, []);
+
+    // 검색어 디바운스
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            handleSearchRestaurant(searchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery, handleSearchRestaurant]);
+
+    // restaurant prop이 변경되면 selectedRestaurant 업데이트
+    useEffect(() => {
+        if (restaurant) {
+            setSelectedRestaurant(restaurant);
+        }
+    }, [restaurant]);
+
     const handleSubmit = async () => {
+        const targetRestaurant = selectedRestaurant || restaurant;
         // 필수 항목 검증
-        if (!visitedDate || !visitedTime || !restaurant?.id || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
+        if (!visitedDate || !visitedTime || !targetRestaurant?.id || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
             toast({
                 title: "필수 항목 누락",
                 description: "모든 필수 항목을 입력해주세요",
@@ -267,10 +322,10 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             return;
         }
 
-        if (!restaurant) {
+        if (!targetRestaurant) {
             toast({
                 title: "맛집 정보 오류",
-                description: "맛집 정보를 찾을 수 없습니다. 맛집 상세 페이지에서 리뷰 작성 버튼을 눌러주세요.",
+                description: "맛집을 선택해주세요.",
                 variant: "destructive",
             });
             return;
@@ -349,8 +404,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 .from('reviews') as any)
                 .insert({
                     user_id: user.id,
-                    restaurant_id: restaurant.id,
-                    title: `${restaurant.name} 방문 후기`,
+                    restaurant_id: targetRestaurant.id,
+                    title: `${targetRestaurant.name} 방문 후기`,
                     content: content.trim(),
                     visited_at: visitedAtDateTime,
                     verification_photo: verificationPhotoPath,
@@ -400,15 +455,17 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
 
     // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
     const isFormValid = useMemo(() => {
-        return visitedDate && visitedTime && restaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
-    }, [visitedDate, visitedTime, restaurant?.id, categories.length, content, verificationPhoto, foodPhotos.length]);
+        const targetRestaurant = selectedRestaurant || restaurant;
+        return visitedDate && visitedTime && targetRestaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
+    }, [visitedDate, visitedTime, selectedRestaurant, restaurant, categories.length, content, verificationPhoto, foodPhotos.length]);
 
     // 임시 저장된 데이터 불러오기 (IndexedDB)
     const loadDraft = useCallback(async () => {
-        if (!user?.id || !restaurant?.id) return;
+        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
+        if (!user?.id || !targetRestaurantId) return;
 
         try {
-            const draft = await getDraft(user.id, restaurant.id);
+            const draft = await getDraft(user.id, targetRestaurantId);
             if (draft) {
                 setVisitedDate(draft.visitedDate);
                 setVisitedTime(draft.visitedTime);
@@ -434,14 +491,17 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         } catch (error) {
             console.error('임시 저장 데이터 로드 실패:', error);
         }
-    }, [user?.id, restaurant?.id]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
 
     // 자동 저장 (IndexedDB)
     const autoSave = useCallback(async () => {
-        if (!user?.id || !restaurant?.id) return;
+        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
+        if (!user?.id || !targetRestaurantId) return;
 
-        // 내용이 하나라도 있을 때만 저장
-        if (!visitedDate && !visitedTime && categories.length === 0 && !content && !verificationPhoto && foodPhotos.length === 0) {
+        // 내용이 하나라도 있을 때만 저장 (빈 문자열이라도 저장 - 지운 경우 대응)
+        // 모든 필드가 초기값인 경우에만 저장 스킵
+        const hasAnyContent = visitedDate || visitedTime || categories.length > 0 || content || verificationPhoto || foodPhotos.length > 0;
+        if (!hasAnyContent) {
             return;
         }
 
@@ -449,7 +509,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
             setIsSaving(true);
             await saveDraft({
                 userId: user.id,
-                restaurantId: restaurant.id,
+                restaurantId: targetRestaurantId,
                 visitedDate,
                 visitedTime,
                 categories,
@@ -463,30 +523,33 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
         } finally {
             setIsSaving(false);
         }
-    }, [user?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos]);
 
     // 임시 저장 데이터 삭제 (IndexedDB)
     const clearDraft = useCallback(async () => {
-        if (!user?.id || !restaurant?.id) return;
+        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
+        if (!user?.id || !targetRestaurantId) return;
 
         try {
-            await deleteDraft(user.id, restaurant.id);
+            await deleteDraft(user.id, targetRestaurantId);
             setLastSavedAt(null);
         } catch (error) {
             console.error('임시 저장 데이터 삭제 실패:', error);
         }
-    }, [user?.id, restaurant?.id]);
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
 
     // 디바운스된 자동 저장 (500ms)
     useEffect(() => {
         if (!isOpen) return;
+        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
+        if (!targetRestaurantId) return;
 
         const timer = setTimeout(() => {
             autoSave();
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [isOpen, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, autoSave]);
+    }, [isOpen, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, autoSave]);
 
     // 모달이 열릴 때 임시 저장된 데이터 확인
     useEffect(() => {
@@ -498,12 +561,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
             {isOpen && (
-                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[90vh] overflow-hidden p-0 rounded-xl">
-                    <div className="flex flex-col h-full max-h-[90vh]">
-                        <DialogHeader className="px-6 pt-6 pb-4 border-b relative">
+                <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-3xl max-h-[calc(100dvh-2rem)] overflow-hidden p-0 rounded-xl">
+                    <div className="flex flex-col h-full max-h-[calc(100dvh-2rem)]">
+                        <DialogHeader className="px-6 pt-6 pb-4 border-b relative shrink-0">
                             {/* 자동 저장 상태 표시 - 좌측 상단 */}
                             {lastSavedAt && (
-                                <div className="absolute -top-1 left-0 flex items-center gap-1 text-[10px] text-muted-foreground">
+                                <div className="absolute top-1.5 left-6 flex items-center gap-1 text-[10px] text-muted-foreground">
                                     {isSaving ? (
                                         <>
                                             <div className="animate-spin h-2.5 w-2.5 border border-primary border-t-transparent rounded-full" />
@@ -526,7 +589,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         쯔동여지도 리뷰 작성
                                     </DialogTitle>
                                     <DialogDescription>
-                                        쯔양이 방문한 맛집에 대한 방문 후기를 공유해주세요
+                                        맛집 방문 후기를 공유해주세요
                                     </DialogDescription>
                                 </div>
                             </div>
@@ -534,49 +597,90 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
 
                         <div className="flex-1 overflow-y-auto px-6 py-4">
                             <div className="space-y-6">
-                                {/* 중요 공지 */}
-                                <Alert className="bg-amber-50 border-amber-200 p-3 md:p-4">
-                                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 md:mt-0" />
+                                {/* 중요 공지 - 컴팩트 버전 */}
+                                <Alert className="bg-amber-50 border-amber-200 p-2.5">
                                     <AlertDescription className="text-amber-800">
-                                        <div className="font-semibold text-sm mb-1.5 md:mb-2 flex flex-wrap items-center gap-x-1.5">
+                                        <div className="font-semibold text-xs mb-1.5 flex items-center gap-1.5">
                                             <span>📸 영수증 인증 가이드</span>
-                                            <span className="text-xs font-normal text-amber-700 opacity-90">(OCR 자동 인식)</span>
                                         </div>
-                                        <ul className="text-xs md:text-sm space-y-1 md:space-y-1.5 list-disc pl-4 text-amber-900/90 leading-relaxed marker:text-amber-400">
-                                            <li><span className="font-medium text-amber-950">영수증 전체</span>가 잘리지 않게 촬영해주세요</li>
-                                            <li><span className="font-medium text-amber-950">밝은 곳</span>에서 그림자 없이 촬영해주세요</li>
-                                            <li><span className="font-medium text-amber-950">상호명, 날짜, 금액</span>이 잘 보여야 합니다</li>
-                                            <li>닉네임은 <span className="font-medium text-amber-950">여백</span>이나 <span className="font-medium text-amber-950">메모지</span>에 적어주세요</li>
-                                            <li>방문일은 <span className="font-bold text-red-600">3개월 이내</span>여야 합니다</li>
+                                        <ul className="text-[11px] space-y-0.5 list-disc pl-3.5 text-amber-900/90 leading-snug marker:text-amber-400">
+                                            <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
+                                            <li><b>상호명, 날짜, 금액</b>이 잘 보여야 합니다</li>
+                                            <li>닉네임은 <b>여백</b>이나 <b>메모지</b>에 적어주세요</li>
+                                            <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
                                         </ul>
-                                        <div className="mt-2.5 pt-2 border-t border-amber-200/60 flex flex-col gap-1 text-[11px] md:text-xs text-amber-700">
-                                            <p className="flex items-start gap-1.5">
-                                                <span className="shrink-0 mt-0.5">⚠️</span>
-                                                <span>글자가 가려지지 않게 주의해주세요!</span>
-                                            </p>
-                                            <p className="flex items-start gap-1.5">
-                                                <span className="shrink-0 mt-0.5">💡</span>
-                                                <span>평평한 곳에서 찍으면 인식률이 높아집니다</span>
-                                            </p>
-                                        </div>
                                     </AlertDescription>
                                 </Alert>
 
-                                {/* 방문 맛집 정보 (읽기 전용) */}
+                                {/* 방문 맛집 정보 */}
                                 <div className="space-y-2">
                                     <Label>
                                         방문한 쯔양 맛집 <span className="text-red-500">*</span>
                                     </Label>
-                                    {restaurant ? (
+                                    {(selectedRestaurant || restaurant) ? (
                                         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
                                             <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                            <span className="font-medium text-green-800">{restaurant.name}</span>
+                                            <span className="font-medium text-green-800 flex-1">
+                                                {(selectedRestaurant || restaurant)?.name}
+                                            </span>
+                                            {!restaurant && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedRestaurant(null);
+                                                        setSearchQuery("");
+                                                    }}
+                                                    className="h-6 px-2 text-xs"
+                                                >
+                                                    변경
+                                                </Button>
+                                            )}
                                         </div>
                                     ) : (
-                                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                                            <p className="text-sm text-red-600">
-                                                맛집 정보가 없습니다. 맛집 상세 페이지에서 리뷰 작성 버튼을 눌러주세요.
-                                            </p>
+                                        <div className="space-y-2">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="맛집 이름을 검색하세요..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    className="pl-9"
+                                                />
+                                            </div>
+                                            {isSearching && (
+                                                <div className="flex items-center gap-2 text-sm text-muted-foreground p-2">
+                                                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                                                    검색 중...
+                                                </div>
+                                            )}
+                                            {!isSearching && searchQuery.length >= 2 && searchResults.length === 0 && (
+                                                <div className="text-sm text-muted-foreground p-2">
+                                                    검색 결과가 없습니다.
+                                                </div>
+                                            )}
+                                            {searchResults.length > 0 && (
+                                                <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                                                    {searchResults.map((result) => (
+                                                        <button
+                                                            key={result.id}
+                                                            onClick={() => {
+                                                                setSelectedRestaurant(result);
+                                                                setSearchQuery("");
+                                                                setSearchResults([]);
+                                                            }}
+                                                            className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors border-b last:border-b-0 text-sm"
+                                                        >
+                                                            {result.name}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                            {searchQuery.length < 2 && (
+                                                <p className="text-xs text-muted-foreground">
+                                                    2글자 이상 입력하면 검색됩니다.
+                                                </p>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -902,9 +1006,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                                         />
                                     </Card>
 
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
                                         <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
-                                        <span>업로드된 사진: {foodPhotos.length}장</span>
+                                        <span className="font-medium">업로드된 사진: {foodPhotos.length}장</span>
                                     </div>
                                 </div>
 
@@ -945,8 +1049,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                         </div>
 
                         {/* 푸터 */}
-                        <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-muted/50">
-                            <div className="flex items-center gap-4">
+                        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-between px-6 py-4 border-t border-border bg-muted/50 gap-3 sm:gap-0 shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))]">
+                            <div className="flex items-center justify-center sm:justify-start gap-4">
                                 {/* 폼 유효성 상태 */}
                                 <div className="text-xs text-muted-foreground">
                                     {isFormValid ? (
@@ -964,13 +1068,18 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                             </div>
 
                             <div className="flex gap-2">
-                                <Button variant="outline" onClick={handleClose} disabled={isSubmitting}>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleClose}
+                                    disabled={isSubmitting}
+                                    className="flex-1 sm:flex-none"
+                                >
                                     취소
                                 </Button>
                                 <Button
                                     onClick={handleSubmit}
                                     disabled={!isFormValid || isSubmitting}
-                                    className="bg-gradient-primary"
+                                    className="bg-gradient-primary flex-1 sm:flex-none"
                                 >
                                     {isSubmitting ? "등록 중..." : "리뷰 등록"}
                                 </Button>
