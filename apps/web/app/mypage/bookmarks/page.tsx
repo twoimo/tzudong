@@ -1,5 +1,7 @@
 'use client';
 
+import { useCallback } from "react";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,54 +12,41 @@ import {
     MapPin,
     ExternalLink,
 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
 import { useBookmarks, useToggleBookmark } from "@/hooks/use-bookmarks";
-import { useRouter } from "next/navigation";
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 export default function BookmarksPage() {
-    const { user } = useAuth();
-    const router = useRouter();
     const { data: bookmarks = [], isLoading } = useBookmarks();
     const { toggleBookmark, isLoading: isToggling } = useToggleBookmark();
 
-    const extractYouTubeVideoId = (url: string) => {
+    // [최적화] 유틸 함수 메모이제이션
+    const extractYouTubeVideoId = useCallback((url: string) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
-    };
+    }, []);
 
-    const getYouTubeThumbnailUrl = (url: string) => {
+    const getYouTubeThumbnailUrl = useCallback((url: string) => {
         const videoId = extractYouTubeVideoId(url);
         return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-    };
+    }, [extractYouTubeVideoId]);
 
-    // 날짜 포맷
-    const formatDate = (dateString: string) => {
+    const formatDate = useCallback((dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString("ko-KR", {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
         });
-    };
+    }, []);
 
     // 로딩 상태
     if (isLoading) {
         return (
-            <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold flex items-center gap-2">
-                        <Bookmark className="h-6 w-6" />
-                        북마크 내역
-                    </h1>
-                    <p className="text-muted-foreground text-sm mt-1">
-                        내가 저장한 맛집 목록입니다
-                    </p>
-                </div>
-                <div className="text-center py-12 text-muted-foreground">
-                    로딩 중...
-                </div>
-            </div>
+            <GlobalLoader
+                message="북마크를 불러오는 중..."
+                subMessage="저장한 맛집 목록을 확인하고 있습니다"
+            />
         );
     }
 
@@ -85,17 +74,15 @@ export default function BookmarksPage() {
                         <p className="text-sm mt-2">
                             맛집을 탐색하고 북마크에 저장해 보세요!
                         </p>
-                        <Button
-                            variant="outline"
-                            className="mt-4"
-                            onClick={() => router.push('/')}
-                        >
-                            맛집 탐색하기
-                        </Button>
+                        <Link href="/">
+                            <Button variant="outline" className="mt-4">
+                                맛집 탐색하기
+                            </Button>
+                        </Link>
                     </CardContent>
                 </Card>
             ) : (
-                <ScrollArea className="h-[calc(100vh-250px)]">
+                <ScrollArea className="h-[calc(100vh-250px)] min-[1600px]:h-[calc(100vh-170px)]">
                     <div className="space-y-4">
                         {bookmarks.map((bookmark) => {
                             // 병합된 YouTube 링크 배열 처리

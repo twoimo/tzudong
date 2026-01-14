@@ -340,6 +340,22 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   const currentBanner = useMemo(() => bannerAnnouncements[currentBannerIndex], [bannerAnnouncements, currentBannerIndex]);
 
+  const handleNotificationClick = (notification: any) => {
+    markAsRead(notification.id);
+
+    // 리뷰 관련 알림인 경우 마이페이지 리뷰 목록으로 이동
+    if (notification.type === 'review_approved' || notification.type === 'review_rejected') {
+      const reviewId = notification.data?.reviewId;
+      const status = notification.type === 'review_approved' ? 'approved' : 'rejected';
+
+      if (reviewId) {
+        router.push(`/mypage/reviews?reviewId=${reviewId}&status=${status}`);
+      } else {
+        router.push(`/mypage/reviews?status=${status}`);
+      }
+    }
+  };
+
   return (
     <header
       className="border-b border-border bg-background flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
@@ -483,7 +499,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                           "flex items-center gap-2 p-3 cursor-pointer hover:bg-accent",
                           !notification.isRead && "bg-accent/50"
                         )}
-                        onClick={() => markAsRead(notification.id)}
+                        onClick={() => handleNotificationClick(notification)}
                       >
                         {/* 타입별 컬러 인디케이터 */}
                         <div className={cn(

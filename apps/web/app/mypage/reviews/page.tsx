@@ -20,12 +20,16 @@ import {
   XCircle,
   Trash2,
   AlertCircle,
-  Image as ImageIcon,
+  Edit,
+  RefreshCw,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useSearchParams } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
+import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 // 리뷰 데이터 타입 정의
 interface MyReview {
@@ -47,7 +51,11 @@ interface MyReview {
 export default function ReviewsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [editingReview, setEditingReview] = useState<MyReview | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [highlightedReviewId, setHighlightedReviewId] = useState<string | null>(null);
 
   // 내 리뷰 조회 - 무한 스크롤
   const {
@@ -107,7 +115,9 @@ export default function ReviewsPage() {
           isPinned: review.is_pinned || false,
           isEditedByAdmin: review.is_edited_by_admin || false,
           foodPhotos: review.food_photos || [],
-          categories: review.categories || [],
+          categories: (Array.isArray(review.categories) && review.categories.length > 0)
+            ? review.categories
+            : (review.category ? [review.category] : []),
         }));
 
         const nextCursor = reviewsData.length === 20 ? pageParam + 20 : null;
@@ -159,6 +169,39 @@ export default function ReviewsPage() {
 
     return () => observer.disconnect();
   }, [loadMoreReviews]);
+
+  // URL 쿼리 파라미터 처리
+  useEffect(() => {
+    const status = searchParams.get('status');
+    const reviewId = searchParams.get('reviewId');
+
+    if (status && ['all', 'approved', 'pending', 'rejected'].includes(status)) {
+      setFilterStatus(status);
+    }
+
+    if (reviewId) {
+      setHighlightedReviewId(reviewId);
+    }
+  }, [searchParams]);
+
+  // 하이라이트된 리뷰로 스크롤
+  useEffect(() => {
+    if (highlightedReviewId && reviewsPages) {
+      // 렌더링이 완료된 후 실행하기 위해 requestAnimationFrame 사용
+      requestAnimationFrame(() => {
+        const element = document.getElementById(`review-${highlightedReviewId}`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // 하이라이트 효과를 위해 클래스 추가 및 일정 시간 후 제거
+          element.classList.add('ring-2', 'ring-primary', 'ring-offset-2');
+          setTimeout(() => {
+            element.classList.remove('ring-2', 'ring-primary', 'ring-offset-2');
+            setHighlightedReviewId(null); // 하이라이트 상태 초기화
+          }, 3000);
+        }
+      });
+    }
+  }, [highlightedReviewId, reviewsPages, filterStatus]);
 
   // 리뷰 삭제
   const handleDeleteReview = async (reviewId: string) => {
@@ -223,20 +266,10 @@ export default function ReviewsPage() {
   // 로딩 상태
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <MessageSquare className="h-6 w-6" />
-            리뷰 내역
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            내가 작성한 리뷰 목록입니다
-          </p>
-        </div>
-        <div className="text-center py-12 text-muted-foreground">
-          로딩 중...
-        </div>
-      </div>
+      <GlobalLoader
+        message="리뷰를 불러오는 중..."
+        subMessage="작성하신 리뷰 목록을 확인하고 있습니다"
+      />
     );
   }
 
@@ -280,13 +313,14 @@ export default function ReviewsPage() {
           </CardContent>
         </Card>
       ) : (
-        <ScrollArea className="h-[calc(100vh-250px)]">
+        <ScrollArea className="h-[calc(100vh-250px)] min-[1600px]:h-[calc(100vh-170px)]">
           <div className="space-y-4">
             {filteredReviews.map((review, index) => (
               <Card
                 key={review.id}
+                id={`review-${review.id}`}
                 ref={index === filteredReviews.length - 1 ? loadMoreRef : null}
-                className={`overflow-hidden ${review.isPinned ? "border-primary border-2" : ""}`}
+                className={`overflow-hidden transition-all duration-500 ${review.isPinned ? "border-primary border-2" : ""}`}
               >
                 <CardContent className="p-4">
                   {/* 헤더: 맛집명 + 상태 */}
@@ -313,15 +347,44 @@ export default function ReviewsPage() {
                       )}
                     </div>
 
-                    {/* 삭제 버튼 */}
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteReview(review.id)}
-                      className="text-muted-foreground hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {/* 수정/삭제 버튼 */}
+                    <div className="flex gap-1">
+                      {/* 수정 또는 재제출 버튼 */}
+                      {review.adminNote?.includes("거부") ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingReview(review);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="text-amber-600 hover:text-amber-700 gap-1"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          <span className="hidden sm:inline">재제출</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingReview(review);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="text-muted-foreground hover:text-foreground"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteReview(review.id)}
+                        className="text-muted-foreground hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
 
                   {/* 리뷰 내용 */}
@@ -398,6 +461,20 @@ export default function ReviewsPage() {
           </div>
         </ScrollArea>
       )}
+
+      {/* Review Edit Modal */}
+      <ReviewEditModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setEditingReview(null);
+        }}
+        review={editingReview}
+        onSuccess={() => {
+          refetch();
+          queryClient.invalidateQueries({ queryKey: ["user-reviews"] });
+        }}
+      />
     </div>
   );
 }

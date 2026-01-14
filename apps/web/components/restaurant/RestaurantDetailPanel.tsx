@@ -16,6 +16,7 @@ import Image from "next/image";
 import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
 import { BookmarkButton } from "@/components/ui/bookmark-button";
 import { ReviewCard } from "@/components/reviews/ReviewCard";
+import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useReviewLikesRealtime } from "@/hooks/use-review-likes-realtime";
 
 interface RestaurantDetailPanelProps {
@@ -44,6 +45,7 @@ interface Review {
     admin_note: string | null;
     photos: { url: string; type: string }[];
     category: string;
+    categories: string[];
     likeCount: number;
     isLikedByUser: boolean;
     userAvatarUrl?: string | null;
@@ -72,6 +74,16 @@ export function RestaurantDetailPanel({
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
     const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
     const [isShareCopied, setIsShareCopied] = useState(false);
+    const [editingReview, setEditingReview] = useState<{
+        id: string;
+        restaurantId: string;
+        restaurantName: string;
+        content: string;
+        categories: string[];
+        foodPhotos: string[];
+        isVerified: boolean;
+        adminNote: string | null;
+    } | null>(null);
 
     // [REALTIME] 좋아요 실시간 반영
     useReviewLikesRealtime();
@@ -189,6 +201,7 @@ export function RestaurantDetailPanel({
                 const reviews = reviewsData.map((review: any) => {
                     const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
                     const userProfile = profilesMap.get(review.user_id);
+
                     return {
                         id: review.id,
                         userId: review.user_id,
@@ -204,7 +217,10 @@ export function RestaurantDetailPanel({
                         isEditedByAdmin: review.is_edited_by_admin || false,
                         admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                        category: review.categories?.[0] || '',
+                        category: (Array.isArray(review.categories) && review.categories.length > 0) ? review.categories[0] : (review.category || ''),
+                        categories: (Array.isArray(review.categories) && review.categories.length > 0)
+                            ? review.categories
+                            : (review.category ? [review.category] : []),
                         likeCount: likesInfo.count,
                         isLikedByUser: likesInfo.isLiked,
                     };
@@ -932,11 +948,12 @@ export function RestaurantDetailPanel({
                                                     }}
                                                     onLike={handleLikeReview}
                                                     onClick={() => handleReviewClick(review)}
-                                                    onRestaurantClick={() => {
-                                                        // 이미 상세 패널 내부이므로 별도 동작 없음 (필요 시 스크롤 상단 이동 등 추가)
-                                                        // 현재는 그대로 유지
-                                                        console.log("Restaurant clicked");
-                                                    }}
+                                                    onRestaurantClick={() => { }}
+                                                    currentUserId={user?.id}
+                                                    onEditReview={(reviewData) => setEditingReview({
+                                                        ...reviewData,
+                                                        restaurantId: restaurant.id,
+                                                    })}
                                                 />
                                             ))}
                                         </div>
@@ -966,13 +983,13 @@ export function RestaurantDetailPanel({
                                                     submittedAt: review.submittedAt,
                                                 }}
                                                 onLike={handleLikeReview}
-                                                onClick={() => {
-                                                    // 클릭 시 별도 상세 페이지로 이동하지 않고
-                                                    // ReviewCard 내부의 더보기 버튼으로 내용 확인
-                                                }}
-                                                onRestaurantClick={() => {
-                                                    // 이미 패널 내부에 있으므로 스크롤 등 동작 정의 가능
-                                                }}
+                                                onClick={() => { }}
+                                                onRestaurantClick={() => { }}
+                                                currentUserId={user?.id}
+                                                onEditReview={(reviewData) => setEditingReview({
+                                                    ...reviewData,
+                                                    restaurantId: restaurant.id,
+                                                })}
                                             />
                                         ))}
                                     </div>
@@ -1109,6 +1126,16 @@ export function RestaurantDetailPanel({
             <AuthModal
                 isOpen={isAuthModalOpen}
                 onClose={() => setIsAuthModalOpen(false)}
+            />
+
+            <ReviewEditModal
+                isOpen={!!editingReview}
+                onClose={() => setEditingReview(null)}
+                review={editingReview}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', restaurant?.id] });
+                    setEditingReview(null);
+                }}
             />
         </>
     );

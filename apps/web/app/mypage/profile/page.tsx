@@ -42,7 +42,7 @@ import {
   Edit,
   Youtube,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useBookmarks } from "@/hooks/use-bookmarks";
 
 interface Profile {
@@ -52,7 +52,6 @@ interface Profile {
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
-  const router = useRouter();
   const { data: bookmarks = [] } = useBookmarks();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
@@ -439,94 +438,104 @@ export default function ProfilePage() {
       </Card>
 
       {/* 북마크 */}
-      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/bookmarks')}>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Bookmark className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">나의 북마크 내역</p>
-                <p className="text-sm text-muted-foreground">
-                  저장한 맛집 {bookmarks.length}개
-                </p>
+      <Link href="/mypage/bookmarks" className="block">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Bookmark className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">나의 북마크 내역</p>
+                  <p className="text-sm text-muted-foreground">
+                    저장한 맛집 {bookmarks.length}개
+                  </p>
+                </div>
               </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* 리뷰 내역 */}
-      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/reviews')}>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <MessageSquare className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">나의 리뷰 내역</p>
-                <p className="text-sm text-muted-foreground">
-                  작성한 리뷰 확인
-                </p>
+      <Link href="/mypage/reviews" className="block">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">나의 리뷰 내역</p>
+                  <p className="text-sm text-muted-foreground">
+                    작성한 리뷰 확인
+                  </p>
+                </div>
               </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* 제보 내역 */}
-      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/submissions/new')}>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <MapPin className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">신규 맛집 제보</p>
-                <p className="text-sm text-muted-foreground">
-                  새로운 맛집 알려주기
-                </p>
+      <Link href="/mypage/submissions/new" className="block">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">신규 맛집 제보</p>
+                  <p className="text-sm text-muted-foreground">
+                    새로운 맛집 알려주기
+                  </p>
+                </div>
               </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* 맛집 수정 요청 */}
-      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/submissions/edit')}>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Edit className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">맛집 수정 요청</p>
-                <p className="text-sm text-muted-foreground">
-                  기존 맛집 정보 수정
-                </p>
+      <Link href="/mypage/submissions/edit" className="block">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Edit className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">맛집 수정 요청</p>
+                  <p className="text-sm text-muted-foreground">
+                    기존 맛집 정보 수정
+                  </p>
+                </div>
               </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* 쯔양 맛집 제보 */}
-      <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => router.push('/mypage/submissions/recommend')}>
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Youtube className="h-5 w-5 text-muted-foreground" />
-              <div>
-                <p className="font-medium">쯔양 맛집 제보</p>
-                <p className="text-sm text-muted-foreground">
-                  쯔양이 방문한 맛집 제보
-                </p>
+      <Link href="/mypage/submissions/recommend" className="block">
+        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Youtube className="h-5 w-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium">쯔양 맛집 제보</p>
+                  <p className="text-sm text-muted-foreground">
+                    쯔양이 방문한 맛집 제보
+                  </p>
+                </div>
               </div>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </div>
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </Link>
 
       {/* 로그아웃 */}
       <Card>

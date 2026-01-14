@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { User, MapPin, Heart, Calendar, CheckCircle } from 'lucide-react';
+import { User, MapPin, Heart, Calendar, CheckCircle, Edit } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,10 +20,22 @@ export interface ReviewCardProps {
         isPinned?: boolean; // 고정된 리뷰 여부
         isEditedByAdmin?: boolean; // 관리자 수정 여부
         isVerified?: boolean;
+        categories?: string[];
     };
     onLike: (reviewId: string) => void;
     onClick?: () => void;
-    onRestaurantClick?: () => void; // 맛집 이름/핀 버튼 클릭 시
+    onRestaurantClick?: () => void;
+    currentUserId?: string;
+    onEditReview?: (review: {
+        id: string;
+        restaurantId: string;
+        restaurantName: string;
+        content: string;
+        categories: string[];
+        foodPhotos: string[];
+        isVerified: boolean;
+        adminNote: string | null;
+    }) => void;
 }
 
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
@@ -32,8 +44,11 @@ export const ReviewCard = React.memo(function ReviewCard({
     review,
     onLike,
     onClick,
-    onRestaurantClick
+    onRestaurantClick,
+    currentUserId,
+    onEditReview
 }: ReviewCardProps) {
+    const isOwnReview = currentUserId && review.userId === currentUserId;
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [api, setApi] = useState<CarouselApi>();
@@ -142,14 +157,36 @@ export const ReviewCard = React.memo(function ReviewCard({
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    {/* 선택사항: '맛집 보기' 핀 버튼 - 위에서 이름 클릭으로 대체 가능하지만, 디자인 일관성을 위해 유지 */}
-                    <button
-                        className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 text-muted-foreground hover:text-primary"
-                        title="맛집 보기"
-                        onClick={handleRestaurantClick}
-                    >
-                        <MapPin className="h-4 w-4" />
-                    </button>
+                    {/* 본인 리뷰: 수정 버튼, 타인 리뷰: 맛집 보기 버튼 */}
+                    {isOwnReview && onEditReview ? (
+                        <button
+                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 text-muted-foreground hover:text-primary"
+                            title="리뷰 수정"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onEditReview({
+                                    id: review.id,
+                                    restaurantId: '',
+                                    restaurantName: review.restaurantName,
+                                    content: review.content,
+                                    categories: review.categories || [],
+                                    foodPhotos: review.photos.map(p => p.url),
+                                    isVerified: review.isVerified || false,
+                                    adminNote: null,
+                                });
+                            }}
+                        >
+                            <Edit className="h-4 w-4" />
+                        </button>
+                    ) : (
+                        <button
+                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:bg-accent h-8 w-8 text-muted-foreground hover:text-primary"
+                            title="맛집 보기"
+                            onClick={handleRestaurantClick}
+                        >
+                            <MapPin className="h-4 w-4" />
+                        </button>
+                    )}
                     <button
                         className="flex items-center gap-1 group"
                         onClick={handleLike}
@@ -165,39 +202,41 @@ export const ReviewCard = React.memo(function ReviewCard({
             </div>
 
             {/* 사진 영역 */}
-            {review.photos && review.photos.length > 0 && (
-                <div className="relative w-full aspect-square bg-muted select-none overflow-hidden group">
-                    <Carousel setApi={setApi} className="w-full h-full">
-                        <CarouselContent>
-                            {photoUrls.map((url, index) => (
-                                <CarouselItem key={index}>
-                                    <div className="relative w-full aspect-square">
-                                        <img
-                                            src={url}
-                                            alt={`리뷰 사진 ${index + 1}`}
-                                            className="w-full h-full object-cover pointer-events-none"
-                                            draggable="false"
-                                            loading={index === 0 ? "eager" : "lazy"}
-                                        />
-                                    </div>
-                                </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                    </Carousel>
+            {
+                review.photos && review.photos.length > 0 && (
+                    <div className="relative w-full aspect-square bg-muted select-none overflow-hidden group">
+                        <Carousel setApi={setApi} className="w-full h-full">
+                            <CarouselContent>
+                                {photoUrls.map((url, index) => (
+                                    <CarouselItem key={index}>
+                                        <div className="relative w-full aspect-square">
+                                            <img
+                                                src={url}
+                                                alt={`리뷰 사진 ${index + 1}`}
+                                                className="w-full h-full object-cover pointer-events-none"
+                                                draggable="false"
+                                                loading={index === 0 ? "eager" : "lazy"}
+                                            />
+                                        </div>
+                                    </CarouselItem>
+                                ))}
+                            </CarouselContent>
+                        </Carousel>
 
-                    {/* 인디케이터 */}
-                    {review.photos.length > 1 && (
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
-                            {review.photos.map((_, index) => (
-                                <div
-                                    key={index}
-                                    className={`h-1.5 rounded-full transition-all ${index === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'}`}
-                                ></div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
+                        {/* 인디케이터 */}
+                        {review.photos.length > 1 && (
+                            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                                {review.photos.map((_, index) => (
+                                    <div
+                                        key={index}
+                                        className={`h-1.5 rounded-full transition-all ${index === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'}`}
+                                    ></div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )
+            }
 
             {/* 내용 영역 */}
             <div className="p-3 space-y-2">
@@ -232,6 +271,6 @@ export const ReviewCard = React.memo(function ReviewCard({
                     <span>작성: {submittedDate}</span>
                 </div>
             </div>
-        </div>
+        </div >
     );
 });
