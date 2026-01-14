@@ -44,7 +44,7 @@ function log(level, msg) {
 
 // config 로드
 function loadChannelsConfig() {
-    const configPath = path.resolve(__dirname, '../../config/channels.yaml');
+    const configPath = path.resolve(__dirname, '../../config/channels-test.yaml');
     if (!fs.existsSync(configPath)) throw new Error(`설정 파일 없음: ${configPath}`);
     return yaml.load(fs.readFileSync(configPath, 'utf-8'));
 }
@@ -861,9 +861,10 @@ async function main() {
                 }
             }
 
-            // Puppeteer로 수집
-            const page = await browser.newPage();
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+            // Puppeteer로 수집 (incognito 모드로 차단 우회)
+            const context = await browser.createBrowserContext();
+            const page = await context.newPage();
+            await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
             const places = [];
             for (const mapUrl of mapUrls) {
@@ -909,6 +910,7 @@ async function main() {
             }
 
             await page.close();
+            await context.close();  // incognito 컨텍스트 정리
 
             if (places.length === 0) {
                 log('debug', `[${videoId}] 수집된 장소 없음`);
