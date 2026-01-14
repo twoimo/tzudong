@@ -233,9 +233,12 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnail
 
                         {visited && (
                             <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="text-red-500 font-bold text-5xl sm:text-6xl transform -rotate-12 border-4 border-red-500 rounded-lg px-3 py-2 opacity-90">
-                                    CLEAR
-                                </div>
+                                <img
+                                    src="/images/stamp-clear.png"
+                                    alt="방문 완료"
+                                    className="w-44 h-44 sm:w-52 sm:h-52 object-contain opacity-90 drop-shadow-lg"
+                                    style={{ transform: 'rotate(-45deg)' }}
+                                />
                             </div>
                         )}
                     </>
@@ -890,11 +893,13 @@ export default function StampPage() {
                                         <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
                                             <Trophy className="h-6 w-6 text-primary" />
                                             쯔동여지도 도장
-
+                                            <span className="text-sm font-normal text-muted-foreground">
+                                                ({totalRestaurantCount.toLocaleString()}개)
+                                            </span>
                                         </h1>
                                     </div>
                                     <p className="text-sm text-muted-foreground mt-1">
-                                        전체 {totalRestaurantCount.toLocaleString()}개
+                                        맛집을 찾아 도장을 찍어보세요!
                                     </p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -949,7 +954,7 @@ export default function StampPage() {
 
                             {/* 필터 컨트롤 그리드 - 데스크톱에서는 항상 표시, 모바일/태블릿에서는 확장시에만 표시 */}
                             <div className={cn(
-                                "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 transition-all duration-300 overflow-hidden",
+                                "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 mt-4 transition-all duration-300 overflow-hidden",
                                 isMobileOrTablet && !isFilterExpanded && "hidden"
                             )}>
                                 {/* 검색 */}

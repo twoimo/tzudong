@@ -73,7 +73,7 @@ export default function LeaderboardPage() {
                             </h1>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
-                            리뷰를 작성하고 랭킹을 올려보세요!
+                            맛집 리뷰를 작성하고 랭킹을 올려보세요!
                         </p>
                     </div>
                     <div className="flex gap-8 text-right">
