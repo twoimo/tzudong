@@ -310,7 +310,7 @@ export default function UserProfilePage() {
 
                 <div className="flex-1 overflow-hidden">
                     {/* 도장 탭 */}
-                    <TabsContent value="stamps" className="h-full m-0">
+                    <TabsContent value="stamps" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
                         <ScrollArea className="h-full">
                             {stampsLoading ? (
                                 <GlobalLoader message="도장 불러오는 중..." />
@@ -334,7 +334,7 @@ export default function UserProfilePage() {
                     </TabsContent>
 
                     {/* 리뷰 탭 */}
-                    <TabsContent value="reviews" className="h-full m-0">
+                    <TabsContent value="reviews" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
                         <ScrollArea className="h-full">
                             {reviewsLoading ? (
                                 <GlobalLoader message="리뷰 불러오는 중..." />
@@ -358,7 +358,7 @@ export default function UserProfilePage() {
                     </TabsContent>
 
                     {/* 좋아요 탭 */}
-                    <TabsContent value="likers" className="h-full m-0">
+                    <TabsContent value="likers" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
                         <ScrollArea className="h-full">
                             {likersLoading ? (
                                 <GlobalLoader message="좋아요 불러오는 중..." />
