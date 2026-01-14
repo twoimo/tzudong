@@ -13,13 +13,13 @@ import { incrementSearchCount } from "@/lib/search-count";
 
 interface RestaurantSearchProps {
   onRestaurantSelect: (restaurant: Restaurant) => void;
-  onSearchExecute?: () => void; // 그리드 모드에서 검색 실행 시 호출
-  onRestaurantSearch?: (restaurant: Restaurant) => void; // 검색 시 별도 처리
+  onSearchExecute?: () => void; // [OPTIMIZATION] 그리드 모드에서 검색 실행 시 호출
+  onRestaurantSearch?: (restaurant: Restaurant) => void; // [OPTIMIZATION] 검색 시 별도 처리
   className?: string;
-  filters?: FilterState; // 필터 상태 추가
-  selectedRegion?: string | null; // 선택된 지역 (국가)
-  isKoreanOnly?: boolean; // 한국 지역만 필터링 (홈페이지용)
-  maxItems?: number; // 표시할 최대 아이템 수 (최근 검색, 인기 검색어)
+  filters?: FilterState; // [OPTIMIZATION] 필터 상태 추가
+  selectedRegion?: string | null; // [OPTIMIZATION] 선택된 지역 (국가)
+  isKoreanOnly?: boolean; // [OPTIMIZATION] 한국 지역만 필터링 (홈페이지용)
+  maxItems?: number; // [OPTIMIZATION] 표시할 최대 아이템 수 (최근 검색, 인기 검색어)
 }
 
 type SearchType = 'name' | 'youtube';
@@ -32,7 +32,7 @@ const RestaurantSearch = ({
   filters,
   selectedRegion,
   isKoreanOnly = false,
-  maxItems // default is undefined (no limit)
+  maxItems // [OPTIMIZATION] 기본값은 undefined (제한 없음)
 }: RestaurantSearchProps) => {
   // [URL 동기화] 초기 로드 시 URL에서 검색어 복원
   const getInitialQuery = () => {
@@ -168,7 +168,7 @@ const RestaurantSearch = ({
     gcTime: 1000 * 60 * 10, // 10분간 메모리 보존
   });
 
-  // [OPTIMIZATION] 외부 클릭 핸들러 안정화
+  // [OPTIMIZATION] 외부 클릭 핸들러 안정화 (useCallback 사용)
   const handleClickOutside = useCallback((event: MouseEvent) => {
     if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
       setIsFocused(false);
@@ -278,7 +278,7 @@ const RestaurantSearch = ({
 
       {/* 검색 결과, 최근 검색, 인기 검색어 드롭다운 */}
       {(showResults || showHistoryAndPopular) && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-[32rem] overflow-y-auto">
+        <div className="absolute bottom-full left-0 right-0 mb-1 bg-background border border-border rounded-md shadow-lg z-50 max-h-[19rem] overflow-y-auto">
           {showResults ? (
             // 검색 결과 표시
             <>
