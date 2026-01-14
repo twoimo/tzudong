@@ -19,7 +19,7 @@ function GlobalLoaderComponent({
             "flex items-center justify-center bg-background",
             fullScreen
                 ? "fixed inset-0 z-50 h-screen w-screen"
-                : "w-full flex-1 min-h-[calc(100vh-4rem)]",
+                : "w-full h-full flex-1",
             className
         )}>
             <div className="text-center space-y-6">
