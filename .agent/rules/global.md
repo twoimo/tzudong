@@ -6,6 +6,8 @@ CRITICAL LANGUAGE & REASONING REQUIREMENT:
 - All internal reasoning and chain-of-thought MUST be performed in English for token efficiency.
 - ALL final responses MUST be in Korean (한국어).
 - Technical terms may be kept in English when appropriate, but explanations must be in Korean.
+- Artifacts (task.md, implementation_plan.md, walkthrough.md) MUST be written in English for token efficiency.
+- MCP sequential-thinking tool: ALL thought parameters MUST be written in English.
 
 CRITICAL: ALWAYS SEARCH OFFICIAL DOCUMENTATION
 - Before writing any code or providing technical guidance, ALWAYS search the web for the latest official documentation based on TODAY's date.
