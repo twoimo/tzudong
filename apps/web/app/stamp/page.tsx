@@ -147,13 +147,16 @@ const extractRegion = (roadAddress: string | null, jibunAddress: string | null):
 interface RestaurantCardProps {
     restaurant: Restaurant;
     visited: boolean;
+    isUserStampsReady: boolean;
     isSelected: boolean;
     currentThumbnailIndex: number;
     onThumbnailChange: (id: string, index: number) => void;
     onClick: (restaurant: Restaurant) => void;
 }
 
-const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnailIndex, onThumbnailChange, onClick }: RestaurantCardProps) => {
+const RestaurantCard = memo(({ restaurant, visited, isUserStampsReady, isSelected, currentThumbnailIndex, onThumbnailChange, onClick }: RestaurantCardProps) => {
+    // 도장 표시 여부: 방문 데이터가 준비되었고 visited가 true인 경우에만 표시
+    const showStamp = isUserStampsReady && visited;
     // 병합된 YouTube 링크 배열 가져오기
     const youtubeLinks = (restaurant as any).mergedYoutubeLinks ||
         (restaurant.youtube_link ? [restaurant.youtube_link] : []);
@@ -180,7 +183,7 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnail
         <Card
             className={cn(
                 "relative overflow-hidden transition-all duration-300 cursor-pointer group",
-                visited ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg",
+                showStamp ? "ring-2 ring-green-500 ring-opacity-50" : "hover:shadow-lg",
                 isSelected ? "ring-2 ring-primary" : ""
             )}
             onClick={() => onClick(restaurant)}
@@ -193,7 +196,7 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnail
                             alt={`${restaurant.name} 썸네일`}
                             className={cn(
                                 "w-full h-full object-cover transition-all duration-300",
-                                visited ? "grayscale opacity-60" : "group-hover:brightness-110"
+                                showStamp ? "grayscale opacity-60" : "group-hover:brightness-110"
                             )}
                             loading="lazy"
                         />
@@ -231,7 +234,7 @@ const RestaurantCard = memo(({ restaurant, visited, isSelected, currentThumbnail
                             </>
                         )}
 
-                        {visited && (
+                        {showStamp && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <img
                                     src="/images/stamp-clear.png"
@@ -362,7 +365,7 @@ export default function StampPage() {
     const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
 
     // --- Data Fetching: User Stamps ---
-    const { data: userReviewData = [] } = useQuery({
+    const { data: userReviewData = [], isLoading: isUserStampsLoading } = useQuery({
         queryKey: ['user-stamp-reviews', user?.id],
         queryFn: async () => {
             if (!user?.id) return [];
@@ -376,6 +379,9 @@ export default function StampPage() {
         },
         enabled: !!user?.id,
     });
+
+    // 사용자 방문 데이터 준비 완료 상태 (비로그인 또는 로딩 완료)
+    const isUserStampsReady = !user?.id || !isUserStampsLoading;
 
     useEffect(() => {
         if (userReviewData.length > 0) {
@@ -396,7 +402,7 @@ export default function StampPage() {
     const totalRestaurantCount = allMergedRestaurants.length;
 
     // 검색 시 사용할 전체 맛집 데이터 조회 (RPC 함수 사용)
-    const { data: allRestaurants = [], isLoading: isLoadingAllRestaurants } = useQuery({
+    const { data: allRestaurants = [] } = useQuery({
         queryKey: ['all-restaurants', searchQuery],
         queryFn: async () => {
             if (!searchQuery.trim()) return [];
@@ -438,11 +444,7 @@ export default function StampPage() {
 
     // 기본 맛집 데이터 무한 스크롤 조회 (검색어가 없을 때만)
     const {
-        data: restaurantsData,
-        fetchNextPage: fetchNextRestaurants,
-        hasNextPage: hasNextRestaurantPage,
         isLoading: isRestaurantsLoading,
-        isFetchingNextPage: isFetchingNextRestaurantPage,
     } = useInfiniteQuery({
         queryKey: ['restaurants-stamp'],
         queryFn: async ({ pageParam = 0 }) => {
@@ -489,12 +491,6 @@ export default function StampPage() {
         enabled: !searchQuery.trim(),
     });
 
-    // 데이터 병합 및 필터링 로직 (hooks의 mergeRestaurants 사용)
-    const rawRestaurants = useMemo(() => {
-        return restaurantsData?.pages.flatMap(page => page.restaurants) || [];
-    }, [restaurantsData]);
-
-    const restaurants = useMemo(() => mergeRestaurants(rawRestaurants as any), [rawRestaurants]);
     const mergedAllRestaurants = useMemo(() => mergeRestaurants(allRestaurants as any), [allRestaurants]);
 
     const filteredAndSortedRestaurants = useMemo(() => {
@@ -579,7 +575,7 @@ export default function StampPage() {
         }
 
         return result;
-    }, [restaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
+    }, [allMergedRestaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
     // --- 클라이언트 측 페이지네이션: 20개씩 표시 (성능 최적화) ---
     const [displayLimit, setDisplayLimit] = useState(20);
@@ -736,7 +732,7 @@ export default function StampPage() {
 
         // prefetch 완료 후 바텀 시트 열기
         setIsRightPanelVisible(true);
-    }, [queryClient, user]);
+    }, []);
 
     const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
@@ -1112,6 +1108,7 @@ export default function StampPage() {
                                             key={`${restaurant.id}-${index}`}
                                             restaurant={restaurant}
                                             visited={isVisited(restaurant.id)}
+                                            isUserStampsReady={isUserStampsReady}
                                             isSelected={selectedRestaurant?.id === restaurant.id}
                                             currentThumbnailIndex={cardThumbnailIndexes[restaurant.id] || 0}
                                             onThumbnailChange={handleCardThumbnailChange}
