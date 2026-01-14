@@ -23,6 +23,7 @@ interface Review {
     category: string;
     likeCount: number;
     isLikedByUser: boolean;
+    categories: string[];
 }
 
 interface RestaurantReviewsPanelProps {
@@ -43,6 +44,17 @@ interface RestaurantReviewsPanelProps {
     showHeader?: boolean;
     loadMoreRef?: React.RefObject<HTMLDivElement>;
     isLoading?: boolean;
+    currentUserId?: string;
+    onEditReview?: (review: {
+        id: string;
+        restaurantId: string;
+        restaurantName: string;
+        content: string;
+        categories: string[];
+        foodPhotos: string[];
+        isVerified: boolean;
+        adminNote: string | null;
+    }) => void;
 }
 
 const parseCategory = (categoryData: any): string | null => {
@@ -68,6 +80,8 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
     onClose,
     showHeader = true,
     isLoading = false,
+    currentUserId,
+    onEditReview,
 }: RestaurantReviewsPanelProps) {
     if (!restaurant) {
         return (
@@ -137,17 +151,18 @@ export const RestaurantReviewsPanel = React.memo(function RestaurantReviewsPanel
                                 key={review.id}
                                 review={{
                                     ...review,
-                                    userAvatarUrl: undefined, // Add if available
+                                    userAvatarUrl: undefined,
                                     visitedAt: review.visitedAt,
                                     submittedAt: review.submittedAt,
                                 }}
                                 onLike={(reviewId) => onToggleLike(reviewId, review.isLikedByUser)}
                                 onClick={() => onReviewClick(review)}
-                                onRestaurantClick={() => {
-                                    // 이미 "맛집 리뷰" 패널에 있으므로 상점 이름을 클릭했을 때
-                                    // 특정 동작(지도 포커스 등)이 필요하지 않을 수 있습니다.
-                                    // 현재는 별도 동작 없이 유지하거나 요청 시 추가합니다.
-                                }}
+                                onRestaurantClick={() => { }}
+                                currentUserId={currentUserId}
+                                onEditReview={onEditReview ? (reviewData) => onEditReview({
+                                    ...reviewData,
+                                    restaurantId: restaurant.id,
+                                }) : undefined}
                             />
                         ))}
                     </div>

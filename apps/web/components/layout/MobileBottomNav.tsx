@@ -44,6 +44,15 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
         NAV_ITEMS.forEach(item => {
             router.prefetch(item.path);
         });
+        // [최적화] 마이페이지 하위 경로도 prefetch
+        const mypagePaths = [
+            '/mypage/bookmarks',
+            '/mypage/reviews',
+            '/mypage/submissions/new',
+            '/mypage/submissions/edit',
+            '/mypage/submissions/recommend',
+        ];
+        mypagePaths.forEach(path => router.prefetch(path));
     }, [router]);
 
     // [최적화] 도장 페이지 데이터 프리페치
@@ -241,6 +250,9 @@ function MobileBottomNavComponent({ className }: MobileBottomNavProps) {
                                     prefetchStampData();
                                 } else if (item.path === "/leaderboard") {
                                     prefetchLeaderboardData();
+                                } else if (item.path === "/mypage/profile") {
+                                    // 마이페이지 하위 경로 prefetch
+                                    ['/mypage/bookmarks', '/mypage/reviews', '/mypage/submissions/new'].forEach(p => router.prefetch(p));
                                 }
                             }
                         }}

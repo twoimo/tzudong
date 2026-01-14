@@ -332,7 +332,7 @@ export const createReviewApprovedNotification = async (
     customData?: Record<string, unknown>
 ) => {
     const title = '리뷰 승인 완료';
-    const message = `"${restaurantName}" 리뷰가 관리자에 의해 승인되었습니다!`;
+    const message = `"${restaurantName}" 리뷰가 승인되었습니다.`;
 
     try {
         const { error } = await (supabase as any).rpc('create_user_notification', {
@@ -356,7 +356,7 @@ export const createReviewRejectedNotification = async (
     customData?: Record<string, unknown>
 ) => {
     const title = '리뷰가 반려되었습니다';
-    const message = `"${restaurantName}" 리뷰가 다음 사유로 반려되었습니다: ${rejectionReason}`;
+    const message = `"${restaurantName}" 리뷰가 반려되었습니다: ${rejectionReason}`;
 
     try {
         const { error } = await (supabase as any).rpc('create_user_notification', {
