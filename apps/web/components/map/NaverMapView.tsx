@@ -1461,9 +1461,10 @@ const NaverMapView = memo(({
                     cluster.categories,
                     cluster.region,
                     () => {
-                        // 클릭 시 해당 지역 줌인 (줌 9로 이동)
-                        map.setZoom(9);
-                        map.setCenter(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng));
+                        // [Fix] 서울 자치구처럼 단계별 줌인 (현재 줌 +2)
+                        const currentZoom = map.getZoom();
+                        const targetZoom = Math.min(currentZoom + 2, 9);
+                        map.morph(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng), targetZoom);
                     }
                 );
             });
