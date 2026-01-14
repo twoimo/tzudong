@@ -107,6 +107,10 @@ def main():
                     continue
 
                 # 데이터 변환 (필요한 필드만)
+                # category → categories 배열로 변환
+                category = data.get("category")
+                categories = [category] if category else []
+
                 record = {
                     "trace_id": trace_id,
                     "youtube_link": data.get("youtube_link"),
@@ -115,13 +119,14 @@ def main():
                     "origin_name": data.get("origin_name"),
                     "naver_name": data.get("naver_name"),
                     "trace_id_name_source": data.get("trace_id_name_source"),
-                    "category": data.get("category"),
+                    "categories": categories,
                     "reasoning_basis": data.get("reasoning_basis"),
                     "youtuber_review": data.get("youtuber_review"),
                     "origin_address": data.get("origin_address"),
                     "road_address": data.get("roadAddress"),
                     "jibun_address": data.get("jibunAddress"),
                     "english_address": data.get("englishAddress"),
+                    "address_elements": data.get("addressElements") or {},
                     "lat": data.get("lat"),
                     "lng": data.get("lng"),
                     "geocoding_success": data.get("geocoding_success", False),
@@ -131,6 +136,7 @@ def main():
                     "evaluation_results": data.get("evaluation_results"),
                     "youtube_meta": data.get("youtube_meta"),
                     "source_type": data.get("source_type"),
+                    "review_count": 0,
                     "created_at": datetime.now(KST).isoformat(),
                 }
 
