@@ -481,12 +481,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess }: ReviewMo
                 }
 
                 setLastSavedAt(new Date(draft.savedAt));
-
-                const photoCount = (draft.verificationPhoto ? 1 : 0) + draft.foodPhotos.length;
-                toast({
-                    title: "임시 저장된 내용을 불러왔습니다",
-                    description: `저장 시간: ${new Date(draft.savedAt).toLocaleString('ko-KR')}${photoCount > 0 ? ` (사진 ${photoCount}장 포함)` : ''}`,
-                });
             }
         } catch (error) {
             console.error('임시 저장 데이터 로드 실패:', error);

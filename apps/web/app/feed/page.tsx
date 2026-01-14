@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search } from 'lucide-react';
+import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
+import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
 
 interface FeedReview {
     id: string;
@@ -26,6 +27,7 @@ interface FeedReview {
     createdAt: string;
     content: string;
     photos: string[];
+    categories: string[];
     likeCount: number;
     isLikedByUser: boolean;
 }
@@ -40,6 +42,16 @@ export default function FeedPage() {
     const [showMyReviewsOnly, setShowMyReviewsOnly] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
+    const [editingReview, setEditingReview] = useState<{
+        id: string;
+        restaurantId: string;
+        restaurantName: string;
+        content: string;
+        categories: string[];
+        foodPhotos: string[];
+        isVerified: boolean;
+        adminNote: string | null;
+    } | null>(null);
 
     const isLoggedIn = !!user;
 
@@ -130,6 +142,9 @@ export default function FeedPage() {
                     createdAt: review.created_at,
                     content: review.content,
                     photos: review.food_photos || [],
+                    categories: (Array.isArray(review.categories) && review.categories.length > 0)
+                        ? review.categories
+                        : (review.category ? [review.category] : []),
                     likeCount: likesInfo.count,
                     isLikedByUser: likesInfo.isLiked,
                 };
@@ -361,6 +376,8 @@ export default function FeedPage() {
                                     onToggleLike={() => toggleLike(review.id, isLiked, likeCount, review.userId)}
                                     onGoToRestaurant={() => goToRestaurant(review.restaurantId)}
                                     formatDate={formatDate}
+                                    currentUserId={user?.id}
+                                    onEditReview={(reviewData) => setEditingReview(reviewData)}
                                 />
                             );
                         })}
@@ -403,10 +420,22 @@ export default function FeedPage() {
                     queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
                 }}
             />
+
+            {/* Review Edit Modal */}
+            <ReviewEditModal
+                isOpen={!!editingReview}
+                onClose={() => setEditingReview(null)}
+                review={editingReview}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['review-feed'] });
+                    setEditingReview(null);
+                }}
+            />
         </div>
     );
 }
 
+// 리뷰 카드 컴포넌트 (memo로 불필요한 리렌더링 방지)
 // 리뷰 카드 컴포넌트 (memo로 불필요한 리렌더링 방지)
 interface FeedCardProps {
     review: FeedReview;
@@ -415,9 +444,21 @@ interface FeedCardProps {
     onToggleLike: () => void;
     onGoToRestaurant: () => void;
     formatDate: (date: string) => string;
+    currentUserId?: string;
+    onEditReview?: (reviewData: {
+        id: string;
+        restaurantId: string;
+        restaurantName: string;
+        content: string;
+        categories: string[];
+        foodPhotos: string[];
+        isVerified: boolean;
+        adminNote: string | null;
+    }) => void;
 }
 
-const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLike, onGoToRestaurant, formatDate }: FeedCardProps) {
+const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLike, onGoToRestaurant, formatDate, currentUserId, onEditReview }: FeedCardProps) {
+    const isOwnReview = currentUserId && review.userId === currentUserId;
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -507,15 +548,36 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
 
                 {/* 맛집/좋아요 버튼 - 헤더 오른쪽 */}
                 <div className="flex items-center gap-2">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-primary"
-                        onClick={onGoToRestaurant}
-                        title="맛집 보기"
-                    >
-                        <MapPin className="h-4 w-4" />
-                    </Button>
+                    {isOwnReview && onEditReview ? (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => onEditReview({
+                                id: review.id,
+                                restaurantId: review.restaurantId,
+                                restaurantName: review.restaurantName,
+                                content: review.content,
+                                categories: review.categories || [],
+                                foodPhotos: review.photos,
+                                isVerified: true,
+                                adminNote: null,
+                            })}
+                            title="리뷰 수정"
+                        >
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={onGoToRestaurant}
+                            title="맛집 보기"
+                        >
+                            <MapPin className="h-4 w-4" />
+                        </Button>
+                    )}
                     <button
                         onClick={onToggleLike}
                         className="flex items-center gap-1 group"

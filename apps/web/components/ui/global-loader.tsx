@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 
 interface GlobalLoaderProps {
@@ -7,7 +8,7 @@ interface GlobalLoaderProps {
     fullScreen?: boolean;
 }
 
-export function GlobalLoader({
+function GlobalLoaderComponent({
     message = "로딩 중...",
     subMessage = "잠시만 기다려주세요",
     className,
@@ -15,8 +16,10 @@ export function GlobalLoader({
 }: GlobalLoaderProps) {
     return (
         <div className={cn(
-            "flex items-center justify-center bg-gradient-to-br from-background to-muted",
-            fullScreen ? "fixed inset-0 z-50 h-screen w-screen" : "h-full w-full",
+            "flex items-center justify-center bg-background",
+            fullScreen
+                ? "fixed inset-0 z-50 h-screen w-screen"
+                : "w-full h-full",
             className
         )}>
             <div className="text-center space-y-6">
@@ -41,3 +44,7 @@ export function GlobalLoader({
         </div>
     );
 }
+
+// [최적화] React.memo로 리렌더링 방지
+export const GlobalLoader = memo(GlobalLoaderComponent);
+GlobalLoader.displayName = "GlobalLoader";

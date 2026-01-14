@@ -22,6 +22,7 @@ import {
   Tag,
   PlusCircle,
 } from "lucide-react";
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 type SubmissionStatus = 'pending' | 'approved' | 'partially_approved' | 'rejected';
 type ItemStatus = 'pending' | 'approved' | 'rejected';
@@ -240,6 +241,15 @@ export default function NewSubmissionsPage() {
     </Card>
   );
 
+  if (isLoading) {
+    return (
+      <GlobalLoader
+        message="제보 내역을 불러오는 중..."
+        subMessage="잠시만 기다려주세요"
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -257,11 +267,7 @@ export default function NewSubmissionsPage() {
         </Badge>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : submissions.length === 0 ? (
+      {submissions.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <PlusCircle className="h-12 w-12 mx-auto mb-4 opacity-50" />

@@ -203,6 +203,43 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
     return [...baseMenuItems, ...adminMenuItems];
   }, [router, isHydrated, user, isAdmin, startTransition]);
 
+  // [최적화] 마이페이지 데이터 프리페치 함수
+  const prefetchMyReviews = useCallback(async () => {
+    if (!user?.id) return;
+    await queryClient.prefetchInfiniteQuery({
+      queryKey: ["my-reviews", user.id, "all"],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("reviews")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false })
+          .range(0, 19);
+        if (error) throw error;
+        return { reviews: data || [], nextCursor: data?.length === 20 ? 20 : null };
+      },
+      initialPageParam: 0,
+      staleTime: 2 * 60 * 1000,
+    });
+  }, [queryClient, user?.id]);
+
+  const prefetchMyBookmarks = useCallback(async () => {
+    if (!user?.id) return;
+    await queryClient.prefetchQuery({
+      queryKey: ["bookmarks", user.id],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("bookmarks")
+          .select("*, restaurant:restaurants(*)")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: false });
+        if (error) throw error;
+        return data || [];
+      },
+      staleTime: 2 * 60 * 1000,
+    });
+  }, [queryClient, user?.id]);
+
   // 마이페이지 메뉴 아이템 - startTransition 적용
   const myPageMenuItems = useMemo(() => [
     { icon: User, label: "마이페이지", path: "/mypage/profile", onClick: () => startTransition(() => router.push("/mypage/profile")) },
@@ -213,12 +250,12 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
       children: [
         { icon: PlusCircle, label: "신규 맛집 제보", path: "/mypage/submissions/new", onClick: () => startTransition(() => router.push("/mypage/submissions/new")) },
         { icon: Edit3, label: "맛집 수정 요청", path: "/mypage/submissions/edit", onClick: () => startTransition(() => router.push("/mypage/submissions/edit")) },
-        { icon: Heart, label: "쩘양 맛집 제보", path: "/mypage/submissions/recommend", onClick: () => startTransition(() => router.push("/mypage/submissions/recommend")) },
+        { icon: Heart, label: "쯔양 맛집 제보", path: "/mypage/submissions/recommend", onClick: () => startTransition(() => router.push("/mypage/submissions/recommend")) },
       ]
     },
-    { icon: MessageSquare, label: "나의 리뷰 내역", path: "/mypage/reviews", onClick: () => startTransition(() => router.push("/mypage/reviews")) },
-    { icon: Bookmark, label: "나의 북마크 내역", path: "/mypage/bookmarks", onClick: () => startTransition(() => router.push("/mypage/bookmarks")) },
-  ], [router, startTransition]);
+    { icon: MessageSquare, label: "나의 리뷰 내역", path: "/mypage/reviews", onClick: () => startTransition(() => router.push("/mypage/reviews")), onHover: prefetchMyReviews },
+    { icon: Bookmark, label: "나의 북마크 내역", path: "/mypage/bookmarks", onClick: () => startTransition(() => router.push("/mypage/bookmarks")), onHover: prefetchMyBookmarks },
+  ], [router, startTransition, prefetchMyReviews, prefetchMyBookmarks]);
 
   // 마이페이지 메뉴 렌더링
   const renderMyPageMenu = () => (
@@ -293,6 +330,11 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
               onClick={item.onClick}
+              onMouseEnter={() => {
+                if (!isActive && (item as any).onHover) {
+                  (item as any).onHover();
+                }
+              }}
             >
               <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-muted-foreground")} />
               {isOpen && (

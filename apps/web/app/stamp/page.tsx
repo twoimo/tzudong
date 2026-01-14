@@ -31,6 +31,7 @@ import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -73,6 +74,7 @@ interface Review {
     likeCount: number;
     isLikedByUser: boolean;
     userAvatarUrl?: string | null;
+    categories: string[];
 }
 
 interface UserReview {
@@ -352,6 +354,16 @@ export default function StampPage() {
 
     // Review Modal State
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
+    const [editingReview, setEditingReview] = useState<{
+        id: string;
+        restaurantId: string;
+        restaurantName: string;
+        content: string;
+        categories: string[];
+        foodPhotos: string[];
+        isVerified: boolean;
+        adminNote: string | null;
+    } | null>(null);
 
     // Review Detail State
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
@@ -681,7 +693,10 @@ export default function StampPage() {
                         isEditedByAdmin: review.is_edited_by_admin || false,
                         admin_note: review.admin_note || null,
                         photos: review.food_photos ? review.food_photos.map((url: string) => ({ url, type: 'food' })) : [],
-                        category: review.categories?.[0] || review.category,
+                        category: (Array.isArray(review.categories) && review.categories.length > 0) ? review.categories[0] : (review.category || ''),
+                        categories: (Array.isArray(review.categories) && review.categories.length > 0)
+                            ? review.categories
+                            : (review.category ? [review.category] : []),
                         likeCount: likesInfo.count,
                         isLikedByUser: likesInfo.isLiked,
                     };
@@ -1201,6 +1216,11 @@ export default function StampPage() {
                                 onClose={handleCloseRightPanel}
                                 showHeader={true}
                                 isLoading={reviewsLoading}
+                                currentUserId={user?.id}
+                                onEditReview={(reviewData) => setEditingReview({
+                                    ...reviewData,
+                                    restaurantId: selectedRestaurant?.id || '',
+                                })}
                             />
                         </Panel>
                     </>
@@ -1232,6 +1252,11 @@ export default function StampPage() {
                         onCardPhotoChange={handleReviewCardPhotoChange}
                         showHeader={true}
                         isLoading={reviewsLoading}
+                        currentUserId={user?.id}
+                        onEditReview={(reviewData) => setEditingReview({
+                            ...reviewData,
+                            restaurantId: selectedRestaurant?.id || '',
+                        })}
                     />
                 </BottomSheet>
             )}
@@ -1244,6 +1269,17 @@ export default function StampPage() {
                 onSuccess={() => {
                     queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
                     queryClient.invalidateQueries({ queryKey: ['user-stamp-reviews', user?.id] });
+                }}
+            />
+
+            {/* Review Edit Modal */}
+            <ReviewEditModal
+                isOpen={!!editingReview}
+                onClose={() => setEditingReview(null)}
+                review={editingReview}
+                onSuccess={() => {
+                    queryClient.invalidateQueries({ queryKey: ['restaurant-reviews', selectedRestaurant?.id] });
+                    setEditingReview(null);
                 }}
             />
         </>

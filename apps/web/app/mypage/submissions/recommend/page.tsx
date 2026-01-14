@@ -21,6 +21,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 interface RestaurantRequest {
   id: string;
@@ -181,6 +182,15 @@ export default function RecommendSubmissionsPage() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <GlobalLoader
+        message="추천 내역을 불러오는 중..."
+        subMessage="잠시만 기다려주세요"
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -198,11 +208,7 @@ export default function RecommendSubmissionsPage() {
         </Badge>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : requests.length === 0 ? (
+      {requests.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />

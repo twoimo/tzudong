@@ -23,6 +23,7 @@ import {
   Edit3,
   ArrowRight,
 } from "lucide-react";
+import { GlobalLoader } from "@/components/ui/global-loader";
 
 type SubmissionStatus = 'pending' | 'approved' | 'partially_approved' | 'rejected';
 type ItemStatus = 'pending' | 'approved' | 'rejected';
@@ -128,7 +129,7 @@ export default function EditSubmissionsPage() {
         const submissionItems = (items || []).filter((item: any) => item.submission_id === submission.id) as SubmissionItem[];
         // 첫 번째 아이템의 target_restaurant 정보를 submission 수준에서 표시
         const firstItemTarget = submissionItems.length > 0 ? submissionItems[0].target_restaurant_id : null;
-        
+
         return {
           ...submission,
           items: submissionItems,
@@ -291,6 +292,15 @@ export default function EditSubmissionsPage() {
     </Card>
   );
 
+  if (isLoading) {
+    return (
+      <GlobalLoader
+        message="수정 요청 내역을 불러오는 중..."
+        subMessage="잠시만 기다려주세요"
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -308,11 +318,7 @@ export default function EditSubmissionsPage() {
         </Badge>
       </div>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : submissions.length === 0 ? (
+      {submissions.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Edit3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
