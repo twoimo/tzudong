@@ -4,12 +4,18 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Trophy, Medal, Award, Stamp } from "lucide-react";
+import { Trophy, Medal, Award, Stamp, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { useDeviceType } from "@/hooks/useDeviceType";
 import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 
 export default function LeaderboardPage() {
     const { user: currentUser } = useAuth();
@@ -70,6 +76,27 @@ export default function LeaderboardPage() {
                             <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
                                 <Trophy className="h-6 w-6 text-primary" />
                                 쯔동여지도 랭킹
+                                {/* Info Icon with Popover */}
+                                <Popover>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 rounded-full hover:bg-muted"
+                                            title="랭킹 산정 기준 보기"
+                                        >
+                                            <Info className="h-4 w-4 text-muted-foreground" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-auto max-w-sm">
+                                        <div className="space-y-1">
+                                            <h4 className="font-medium text-sm whitespace-nowrap">📊 랭킹 산정 기준</h4>
+                                            <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                                인증된 리뷰(도장) 수가 많을수록 높은 순위를 받습니다.
+                                            </p>
+                                        </div>
+                                    </PopoverContent>
+                                </Popover>
                             </h1>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
