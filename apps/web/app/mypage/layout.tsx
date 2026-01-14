@@ -24,7 +24,7 @@ export default function MyPageLayout({
 
   return (
     <div className="h-full overflow-y-auto bg-background">
-      <div className="container mx-auto py-6 px-4 max-w-4xl">
+      <div className="container mx-auto py-6 px-4 max-w-4xl min-h-full flex flex-col">
         {children}
       </div>
     </div>

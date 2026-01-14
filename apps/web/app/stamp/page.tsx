@@ -238,10 +238,18 @@ const RestaurantCard = memo(({ restaurant, visited, isUserStampsReady, isSelecte
 
                         {showStamp && (
                             <div className="absolute inset-0 flex items-center justify-center">
+                                {/* [라이트 모드] */}
                                 <img
                                     src="/images/stamp-clear.png"
                                     alt="방문 완료"
-                                    className="w-44 h-44 sm:w-52 sm:h-52 object-contain opacity-90 drop-shadow-lg"
+                                    className="w-44 h-44 sm:w-52 sm:h-52 object-contain opacity-90 drop-shadow-lg dark:hidden"
+                                    style={{ transform: 'rotate(-45deg)' }}
+                                />
+                                {/* [다크 모드] */}
+                                <img
+                                    src="/images/stamp-clear-dark.png"
+                                    alt="방문 완료"
+                                    className="w-44 h-44 sm:w-52 sm:h-52 object-contain opacity-90 drop-shadow-lg hidden dark:block"
                                     style={{ transform: 'rotate(-45deg)' }}
                                 />
                             </div>
