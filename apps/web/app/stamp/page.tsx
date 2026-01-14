@@ -82,7 +82,7 @@ interface UserReview {
     is_verified: boolean;
 }
 
-// 유틸리티 함수들을 컴포넌트 외부로 이동
+// 유틸리티 함수들을 컴포넌트 외부로 이동 (성능 최적화: 불필요한 재생성 방지)
 const parseCategory = (categoryData: any): string | null => {
     if (Array.isArray(categoryData) && categoryData.length > 0) return categoryData[0];
     if (typeof categoryData === 'string') {
@@ -145,7 +145,7 @@ const extractRegion = (roadAddress: string | null, jibunAddress: string | null):
     return "";
 };
 
-// 리스트 아이템 컴포넌트 메모이제이션
+// 리스트 아이템 컴포넌트 메모이제이션 (성능 최적화)
 interface RestaurantCardProps {
     restaurant: Restaurant;
     visited: boolean;
@@ -340,7 +340,7 @@ export default function StampPage() {
     const queryClient = useQueryClient();
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
-    // --- State ---
+    // --- 상태 (State) ---
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
     const [searchQuery, setSearchQuery] = useState("");
     const [filters, setFilters] = useState<FilterState>({
@@ -356,11 +356,11 @@ export default function StampPage() {
     // 모바일/태블릿 필터 확장 상태
     const [isFilterExpanded, setIsFilterExpanded] = useState(false);
 
-    // Right Panel State
+    // 우측 패널 상태
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isRightPanelVisible, setIsRightPanelVisible] = useState(false);
 
-    // Review Modal State
+    // 리뷰 모달 상태
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [editingReview, setEditingReview] = useState<{
         id: string;
@@ -373,18 +373,18 @@ export default function StampPage() {
         adminNote: string | null;
     } | null>(null);
 
-    // Review Detail State
+    // 리뷰 상세 상태
     const [selectedReview, setSelectedReview] = useState<Review | null>(null);
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
 
-    // User Stamp Data
+    // 사용자 도장 데이터 상태
     const [userReviews, setUserReviews] = useState<Set<string>>(new Set());
 
     // 카드별 썸네일 인덱스 상태 (병합된 맛집의 여러 썸네일 중 현재 표시 중인 인덱스)
     const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
 
-    // --- Data Fetching: User Stamps ---
+    // --- 데이터 패칭: 사용자 도장 정보 ---
     const { data: userReviewData = [], isLoading: isUserStampsLoading } = useQuery({
         queryKey: ['user-stamp-reviews', user?.id],
         queryFn: async () => {
@@ -416,7 +416,7 @@ export default function StampPage() {
         return userReviews.has(restaurantId);
     }, [userReviews]);
 
-    // --- Data Fetching: Restaurants ---
+    // --- 데이터 패칭: 맛집 정보 ---
     // 병합된 전체 맛집 수 조회 (useRestaurants 훅 사용 - 병합 로직 적용됨)
     const { data: allMergedRestaurants = [] } = useRestaurants({ enabled: true });
     const totalRestaurantCount = allMergedRestaurants.length;
@@ -597,7 +597,7 @@ export default function StampPage() {
         return result;
     }, [allMergedRestaurants, mergedAllRestaurants, searchQuery, filters, sortColumn, sortDirection, isVisited]);
 
-    // --- 클라이언트 측 페이지네이션: 20개씩 표시 (성능 최적화) ---
+    // --- 클라이언트 측 페이지네이션: 20개씩 표시 (성능 최적화: 렌더링 부하 감소) ---
     const [displayLimit, setDisplayLimit] = useState(20);
 
     // 필터 변경 시 표시 개수 리셋
@@ -613,7 +613,7 @@ export default function StampPage() {
     // 더 불러올 데이터가 있는지 확인
     const hasMoreToDisplay = displayLimit < filteredAndSortedRestaurants.length;
 
-    // --- Infinite Scroll Observer ---
+    // --- 무한 스크롤 옵저버 (Infinite Scroll Observer) ---
     const loadMoreRef = useRef<HTMLDivElement>(null);
     const loadMoreTableRef = useRef<HTMLTableRowElement>(null);
 
@@ -637,7 +637,7 @@ export default function StampPage() {
         return () => observer.disconnect();
     }, [loadMoreRestaurants, viewMode]);
 
-    // --- Data Fetching: Reviews for Selected Restaurant ---
+    // --- 데이터 패칭: 선택된 맛집의 리뷰 ---
     const {
         data: restaurantReviewsData,
         fetchNextPage: fetchNextRestaurantReviews,
@@ -662,7 +662,7 @@ export default function StampPage() {
                 if (error) throw error;
                 if (!reviewsData || reviewsData.length === 0) return { reviews: [], nextCursor: null };
 
-                // User Profiles
+                // 사용자 프로필 정보 조회
                 const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
                 const { data: profilesData } = await supabase
                     .from('profiles')
@@ -670,7 +670,7 @@ export default function StampPage() {
                     .in('user_id', userIds);
                 const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, { nickname: p.nickname, avatarUrl: p.profile_picture }]));
 
-                // Likes
+                // 좋아요 정보 조회
                 const reviewIds = reviewsData.map((r: any) => r.id);
                 const { data: likesData } = await supabase
                     .from('review_likes')
@@ -745,7 +745,7 @@ export default function StampPage() {
     }, [loadMoreRestaurantReviews]);
 
 
-    // --- Handlers ---
+    // --- 핸들러 (Handlers) ---
     const handleRestaurantClick = useCallback(async (restaurant: Restaurant) => {
         setSelectedRestaurant(restaurant);
 
@@ -867,7 +867,7 @@ export default function StampPage() {
         setCardPhotoIndexes(prev => ({ ...prev, [reviewId]: index }));
     }, []);
 
-    // --- Helpers ---
+    // --- 헬퍼 함수 (Helpers) ---
     const getSortIcon = useCallback((column: SortColumn) => {
         if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4" />;
         if (sortDirection === "asc") return <ArrowUp className="h-4 w-4" />;
@@ -882,7 +882,7 @@ export default function StampPage() {
         (filters.showUnvisitedOnly ? 1 : 0) +
         (filters.fanVisitsMin > 0 ? 1 : 0);
 
-    // Sync search query
+    // 검색어 동기화 (Sync search query)
     useEffect(() => {
         setSearchQuery(filters.searchQuery);
     }, [filters.searchQuery]);
@@ -900,9 +900,9 @@ export default function StampPage() {
     return (
         <>
             <PanelGroup direction="horizontal" className="h-full bg-background" data-testid="stamp-page-container">
-                {/* Left Panel - Main Content */}
+                {/* 왼쪽 패널 - 메인 콘텐츠 */}
                 <Panel id="main-list-panel" order={1} defaultSize={isRightPanelVisible ? 70 : 100} minSize={30} className="overflow-hidden">
-                    {/* Scroll Container */}
+                    {/* 스크롤 컨테이너 */}
                     <div className="h-full overflow-y-auto flex flex-col [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
                         {/* Header */}
                         <div className="border-b border-border bg-background p-6 shrink-0">
@@ -967,7 +967,7 @@ export default function StampPage() {
                                 </div>
                             </div>
 
-                            {/* Filter Controls */}
+                            {/* 필터 컨트롤 (Filter Controls) */}
                             {/* 모바일/태블릿: 필터 토글 버튼 */}
 
 
@@ -1121,10 +1121,10 @@ export default function StampPage() {
                             </div>
                         </div>
 
-                        {/* Content Area */}
+                        {/* 콘텐츠 영역 (Content Area) */}
                         <div className="flex-1 min-h-0 p-6 bg-background">
                             {viewMode === 'grid' ? (
-                                /* Grid View */
+                                /* 그리드 뷰 (Grid View) */
                                 <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
                                     {displayedRestaurants.map((restaurant, index) => (
                                         <RestaurantCard
@@ -1148,7 +1148,7 @@ export default function StampPage() {
                                     </div>
                                 </div>
                             ) : (
-                                /* List View */
+                                /* 리스트 뷰 (List View) */
                                 <div className="border rounded-lg">
                                     <Table>
                                         <TableHeader className="sticky top-0 bg-background z-20">
@@ -1202,7 +1202,7 @@ export default function StampPage() {
                     </div>{/* End Scroll Container */}
                 </Panel>
 
-                {/* Right Panel - Reviews (Desktop only) */}
+                {/* 오른쪽 패널 - 리뷰 (데스크톱 전용) */}
                 {isRightPanelVisible && isDesktop && (
                     <>
                         <PanelResizeHandle className="w-1 bg-border hover:bg-primary/50 transition-colors" />
@@ -1235,7 +1235,7 @@ export default function StampPage() {
                 )}
             </PanelGroup>
 
-            {/* Bottom Sheet - Reviews (Mobile/Tablet only) */}
+            {/* 바텀 시트 - 리뷰 (모바일/태블릿 전용) */}
             {isMobileOrTablet && (
                 <BottomSheet
                     isOpen={isRightPanelVisible}
@@ -1269,7 +1269,7 @@ export default function StampPage() {
                 </BottomSheet>
             )}
 
-            {/* Review Modal */}
+            {/* 리뷰 모달 (Review Modal) */}
             <ReviewModal
                 isOpen={isReviewModalOpen}
                 onClose={() => setIsReviewModalOpen(false)}
@@ -1280,7 +1280,7 @@ export default function StampPage() {
                 }}
             />
 
-            {/* Review Edit Modal */}
+            {/* 리뷰 수정 모달 (Review Edit Modal) */}
             <ReviewEditModal
                 isOpen={!!editingReview}
                 onClose={() => setEditingReview(null)}
