@@ -20,7 +20,9 @@ set -e  # 에러 발생 시 즉시 종료
 # ================================
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-CONFIG_FILE="$PROJECT_ROOT/config/channels.yaml"
+# CHANNELS_CONFIG 환경변수로 설정 파일 지정 가능 (테스트용)
+CONFIG_NAME="${CHANNELS_CONFIG:-channels.yaml}"
+CONFIG_FILE="$PROJECT_ROOT/config/$CONFIG_NAME"
 PROMPT_FILE="$SCRIPT_DIR/../prompts/crawling_prompt.txt"
 PARSER_SCRIPT="$SCRIPT_DIR/parse_result.py"
 

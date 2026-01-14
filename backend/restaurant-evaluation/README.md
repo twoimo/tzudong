@@ -24,7 +24,7 @@
 │  08-rule-evaluation.py          │       │  10-transform.py                │
 │         ↓                       │       │    source_type: "map_url_crawling"│
 │  09-laaj-evaluation.sh           │       │    evaluation_results: null     │
-│    • 파싱 실패 시 3회 재시도       │       │                                 │
+│    • Enum 검증 실패 시 3회 재시도   │       │                                 │
 │    • 실패 → errors/ 저장         │       │                                 │
 │    • 다음 실행 시 재시도          │       │                                 │
 │         ↓                       │       │                                 │
@@ -53,7 +53,7 @@
 ### 기능
 crawling 데이터에서 평가 대상을 선정합니다.
 
-### 입력 (코드 33-42줄)
+### 입력
 | 파일 |
 |------|
 | `crawling/{video_id}.jsonl` |
@@ -64,7 +64,7 @@ crawling 데이터에서 평가 대상을 선정합니다.
 | 평가 대상 | `evaluation/selection/{video_id}.jsonl` |
 | 평가 제외 | `evaluation/notSelection/{video_id}.jsonl` |
 
-### evaluation_target 생성 로직 (코드 50-66줄)
+### evaluation_target 생성 로직
 ```python
 for restaurant in restaurants:
     origin_name = restaurant.get("origin_name")
@@ -75,14 +75,14 @@ for restaurant in restaurants:
         evaluation_target[origin_name] = is_valid
 ```
 
-### 분류 조건 (코드 124-134줄)
+### 분류 조건
 | 조건 | 파일 위치 | notSelected_reason |
 |------|----------|------------------|
 | 음식점 0개 | notSelection/ | `no_restaurants` |
 | 모든 origin_name이 null | notSelection/ | `all_names_null` |
 | 유효한 음식점 존재 | selection/ | - |
 
-### 출력 구조 (코드 70-77줄)
+### 출력 구조
 ```json
 {
   "youtube_link": "...",
@@ -98,7 +98,7 @@ for restaurant in restaurants:
 
 > **Note**: youtube_meta는 저장하지 않음. 10-transform에서 recollect_version 기반으로 meta 파일에서 조회.
 
-### notSelection 추가 필드 (코드 128-134줄)
+### notSelection 추가 필드
 ```json
 {
   "is_notSelected": true,
@@ -123,8 +123,8 @@ for restaurant in restaurants:
 |------|
 | `evaluation/rule_results/{video_id}.jsonl` |
 
-### 평가 1: category_validity_TF (코드 237-247줄)
-유효한 카테고리 목록 (코드 58-74줄):
+### 평가 1: category_validity_TF
+유효한 카테고리 목록:
 ```
 치킨, 중식, 돈까스·회, 피자, 패스트푸드, 찜·탕, 족발·보쌈,
 분식, 카페·디저트, 한식, 고기, 양식, 아시안, 야식, 도시락
@@ -136,11 +136,11 @@ for restaurant in restaurants:
 ]
 ```
 
-### 평가 2: location_match_TF (코드 250-400줄)
+### 평가 2: location_match_TF
 1단계: 네이버 지역검색 API → 지번주소 비교
 2단계: 20m 이내 + 시군구 일치
 
-성공 시 출력 (코드 395-401줄):
+성공 시 출력:
 ```json
 {
   "origin_name": "원본 상호명",
@@ -160,7 +160,7 @@ for restaurant in restaurants:
 }
 ```
 
-실패 시 (코드 357-364줄):
+실패 시:
 ```json
 {
   "origin_name": "...",
@@ -172,7 +172,7 @@ for restaurant in restaurants:
 }
 ```
 
-### 출력 구조 (코드 448-458줄)
+### 출력 구조
 ```json
 {
   "youtube_link": "...",
@@ -213,12 +213,12 @@ Gemini CLI로 LAAJ(LLM-as-a-Judge) 5개 평가 항목을 평가합니다.
 2. evaluation_target에 true인 항목 없음
 3. 자막 없음
 
-### 재시도 로직 (코드 284-350줄)
+### 재시도 로직
 - 파싱 실패 시 Gemini 재호출 + 재파싱 (최대 3회)
 - 3회 실패 → errors/ 저장
 - 다음 실행 시 errors/ 파일 자동 재시도 (에러 파일 삭제 후 진행)
 
-### errors 출력 구조 (코드 354-372줄)
+### errors 출력 구조
 ```json
 {
   "youtube_link": "...",
@@ -278,7 +278,7 @@ Gemini CLI로 LAAJ(LLM-as-a-Judge) 5개 평가 항목을 평가합니다.
 ### 기능
 모든 데이터를 최종 형식으로 변환합니다.
 
-### 입력 (코드 491-494줄)
+### 입력
 | 소스 | 파일 |
 |------|------|
 | laaj_results | `evaluation/laaj_results/*.jsonl` |
@@ -291,7 +291,7 @@ Gemini CLI로 LAAJ(LLM-as-a-Judge) 5개 평가 항목을 평가합니다.
 |------|
 | `evaluation/transforms.jsonl` |
 
-### 중복 검사 (코드 500-512줄)
+### 중복 검사
 ```python
 existing_trace_ids = set()
 if output_file.exists():
@@ -316,7 +316,7 @@ trace_id = sha256(youtube_link + trace_id_name + youtuber_review)
 
 ---
 
-### 케이스 1: geminiCLI - laaj_results (코드 199-233줄)
+### 케이스 1: geminiCLI - laaj_results
 ```json
 {
   "youtube_link": "...",
@@ -353,47 +353,37 @@ trace_id = sha256(youtube_link + trace_id_name + youtuber_review)
 }
 ```
 
-### 케이스 2: geminiCLI - evaluation_target에만 있는 항목 (코드 235-275줄)
+### 케이스 2: geminiCLI - evaluation_target에만 있는 항목
 `evaluation_target`에 있지만 `restaurants` 리스트에 없는 항목
 ```json
 {
-  ...
   "origin_name": "상호명",
   "naver_name": null,
   "trace_id_name_source": "original",
-  "phone": null,
-  "category": null,
-  "reasoning_basis": null,
-  "youtuber_review": null,
-  "origin_address": null,
   "is_missing": true,
   "is_notSelected": false | true,
   "evaluation_results": null,
-  "source_type": "geminiCLI",
-  ...
+  "source_type": "geminiCLI"
 }
 ```
 
-### 케이스 3: geminiCLI - visit_authenticity.missing 항목 (코드 277-330줄)
+### 케이스 3: geminiCLI - visit_authenticity.missing 항목
 LAAJ 평가 결과의 `visit_authenticity.missing`에 있는 항목
 ```json
 {
-  ...
   "origin_name": "LAAJ에서 missing으로 보고된 상호명",
   "naver_name": null,
   "trace_id_name_source": "original",
   "is_missing": true,
   "is_notSelected": false,
   "evaluation_results": null,
-  "source_type": "geminiCLI",
-  ...
+  "source_type": "geminiCLI"
 }
 ```
 
-### 케이스 4: geminiCLI - notSelection (코드 332-375줄)
+### 케이스 4: geminiCLI - notSelection
 ```json
 {
-  ...
   "naver_name": null,
   "trace_id_name_source": "original",
   "geocoding_success": false,
@@ -401,12 +391,11 @@ LAAJ 평가 결과의 `visit_authenticity.missing`에 있는 항목
   "is_missing": false,
   "is_notSelected": true,
   "evaluation_results": null,
-  "source_type": "geminiCLI",
-  ...
+  "source_type": "geminiCLI"
 }
 ```
 
-### 케이스 5: map_url_crawling (코드 440-472줄)
+### 케이스 5: map_url_crawling
 ```json
 {
   "youtube_link": "...",
@@ -419,8 +408,8 @@ LAAJ 평가 결과의 `visit_authenticity.missing`에 있는 항목
   "trace_id_name_source": "naver" | "original",
   "phone": "...",
   "category": "...",
-  "reasoning_basis": null,
-  "youtuber_review": "...",
+  "reasoning_basis": "LLM이 추출한 추론 근거",
+  "youtuber_review": "LLM이 추출한 유튜버 리뷰",
   "origin_address": null,
   "roadAddress": "...",
   "jibunAddress": "...",
@@ -455,7 +444,7 @@ transforms.jsonl 데이터를 Supabase에 삽입합니다.
 |------|
 | Supabase `restaurants` 테이블 |
 
-### 중복 검사 (코드 90-100줄)
+### 중복 검사
 ```python
 existing = supabase.table("restaurants").select("trace_id").execute()
 existing_ids = {row["trace_id"] for row in existing.data}
@@ -465,7 +454,7 @@ if trace_id in existing_ids:
     continue
 ```
 
-### 필드 매핑 (코드 118-144줄)
+### 필드 매핑
 | transforms 필드 | DB 필드 |
 |----------------|--------|
 | trace_id | trace_id |
@@ -528,7 +517,7 @@ data/{channel}/
 # geminiCLI 파이프라인 (전체 평가)
 python 07-target-selection.py -c tzuyang --data-path ../data/tzuyang
 python 08-rule-evaluation.py -c tzuyang --data-path ../data/tzuyang
-./09-gemini-evaluation.sh -c tzuyang --data-path data/tzuyang
+./09-laaj-evaluation.sh -c tzuyang --data-path data/tzuyang
 python 10-transform.py -c tzuyang --data-path ../data/tzuyang
 python 11-supabase-insert.py -c tzuyang
 
@@ -552,7 +541,7 @@ NCP_MAPS_KEY_BYEON=xxx
 
 # Gemini
 GEMINI_API_KEY=xxx
-PRIMARY_MODEL=gemini-3-flash-preview
+PRIMARY_MODEL=gemini-2.5-flash
 FALLBACK_MODEL=gemini-2.5-flash
 
 # Supabase

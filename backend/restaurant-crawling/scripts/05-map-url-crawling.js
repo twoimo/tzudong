@@ -29,19 +29,6 @@ if (fs.existsSync(envPath)) {
     config({ path: envPath });
 }
 
-// 카테고리 매핑
-const CATEGORY_MAP = {
-    '한식': '한식', '고기': '고기', '고깃집': '고기', '삼겹살': '고기',
-    '갈비': '고기', '곱창': '고기', '스테이크': '양식', '양식': '양식',
-    '이탈리안': '양식', '중식': '중식', '중국집': '중식', '일식': '돈까스·회',
-    '초밥': '돈까스·회', '회': '돈까스·회', '돈까스': '돈까스·회',
-    '치킨': '치킨', '피자': '피자', '패스트푸드': '패스트푸드', '햄버거': '패스트푸드',
-    '찜': '찜·탕', '탕': '찜·탕', '찌개': '찜·탕', '족발': '족발·보쌈',
-    '보쌈': '족발·보쌈', '분식': '분식', '떡볶이': '분식', '카페': '카페·디저트',
-    '디저트': '카페·디저트', '베이커리': '카페·디저트', '아시안': '아시안',
-    '태국': '아시안', '베트남': '아시안', '야식': '야식', '도시락': '도시락'
-};
-
 const VALID_CATEGORIES = [
     '치킨', '중식', '돈까스·회', '피자', '패스트푸드', '찜·탕',
     '족발·보쌈', '분식', '카페·디저트', '한식', '고기', '양식', '아시안', '야식', '도시락'
@@ -66,15 +53,6 @@ function loadChannelsConfig() {
 function cleanText(text) {
     if (!text) return null;
     return text.replace(/[\x00-\x1F\x7F]/g, '').replace(/\s*:\s*네이버.*$/, '').trim();
-}
-
-// 카테고리 정규화
-function normalizeCategory(category) {
-    if (!category) return null;
-    for (const [key, value] of Object.entries(CATEGORY_MAP)) {
-        if (category.includes(key)) return value;
-    }
-    return null;
 }
 
 // 거리 계산 (Haversine)
@@ -197,12 +175,26 @@ async function initPuppeteer() {
 async function getBrowser() {
     if (!puppeteerModule) return null;
     if (!puppeteerBrowser) {
-        const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser';
-        puppeteerBrowser = await puppeteerModule.default.launch({
+        // OS별 Chrome/Chromium 경로 자동 감지
+        let executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+        if (!executablePath) {
+            const macChrome = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+            const linuxChromium = '/usr/bin/chromium-browser';
+            if (fs.existsSync(macChrome)) {
+                executablePath = macChrome;
+            } else if (fs.existsSync(linuxChromium)) {
+                executablePath = linuxChromium;
+            } else {
+                // Puppeteer 내장 브라우저 사용 시도
+                executablePath = undefined;
+            }
+        }
+        const launchOptions = {
             headless: true,
-            executablePath,
             args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu']
-        });
+        };
+        if (executablePath) launchOptions.executablePath = executablePath;
+        puppeteerBrowser = await puppeteerModule.default.launch(launchOptions);
     }
     return puppeteerBrowser;
 }
@@ -217,24 +209,30 @@ async function closeBrowser() {
 // 지도 URL 추출 (네이버, 카카오, 구글)
 function extractMapUrls(text) {
     if (!text) return [];
+    
+    // 텍스트 내의 literal \n을 실제 공백으로 치환하여 안전하게 처리
+    const cleanText = text.replace(/\\n/g, ' ').replace(/\n/g, ' ');
+
     const patterns = [
-        // 네이버 지도
-        /https?:\/\/(?:m\.|map\.|place\.)?naver\.(?:com|me)\/[^\s\)\}\]"'<>]+/gi,
-        /https?:\/\/naver\.me\/[^\s\)\}\]"'<>]+/gi,
+        // 네이버 지도 (백슬래시 \ 제외 추가)
+        /https?:\/\/(?:m\.|map\.|place\.)?naver\.(?:com|me)\/[^\s\)\}\]"'<>\\]+/gi,
+        /https?:\/\/naver\.me\/[^\s\)\}\]"'<>\\]+/gi,
         // 카카오 지도
-        /https?:\/\/(?:map|place\.map)\.kakao\.com\/[^\s\)\}\]"'<>]+/gi,
-        /https?:\/\/kko\.to\/[^\s\)\}\]"'<>]+/gi,
+        /https?:\/\/(?:map|place\.map)\.kakao\.com\/[^\s\)\}\]"'<>\\]+/gi,
+        /https?:\/\/kko\.to\/[^\s\)\}\]"'<>\\]+/gi,
         // 구글 지도
-        /https?:\/\/(?:www\.)?google\.com\/maps\/[^\s\)\}\]"'<>]+/gi,
-        /https?:\/\/maps\.app\.goo\.gl\/[^\s\)\}\]"'<>]+/gi,
-        /https?:\/\/goo\.gl\/maps\/[^\s\)\}\]"'<>]+/gi,
+        /https?:\/\/(?:www\.)?google\.com\/maps\/[^\s\)\}\]"'<>\\]+/gi,
+        /https?:\/\/maps\.app\.goo\.gl\/[^\s\)\}\]"'<>\\]+/gi,
+        /https?:\/\/goo\.gl\/maps\/[^\s\)\}\]"'<>\\]+/gi,
     ];
     const urls = [];
     for (const pattern of patterns) {
-        const matches = text.match(pattern) || [];
+        const matches = cleanText.match(pattern) || [];
         urls.push(...matches);
     }
-    return [...new Set(urls)];
+    
+    // URL 정제 (끝에 붙은 점, 콤마 등 제거)
+    return [...new Set(urls)].map(url => url.replace(/[\.,;]+$/, '').trim());
 }
 
 // URL 타입 판별
@@ -248,13 +246,18 @@ function getMapType(url) {
 // 네이버 지도에서 장소 정보 수집
 async function collectFromNaverMap(page, mapUrl) {
     try {
-        // 단축 URL 처리
+        // 단축 URL이면 먼저 페이지 방문하여 리다이렉트된 URL 가져오기
         let url = mapUrl;
         if (url.includes('naver.me')) {
             try {
-                const response = await fetch(url, { method: 'HEAD', redirect: 'follow' });
-                url = response.url;
-            } catch {}
+                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+                await new Promise(r => setTimeout(r, 2000));
+                url = page.url();  // 리다이렉트된 URL
+                log('debug', `단축 URL 리다이렉트: ${url}`);
+            } catch (e) {
+                log('debug', `단축 URL 리다이렉트 실패: ${e.message}`);
+                return null;
+            }
         }
 
         // 유효하지 않은 URL 스킵
@@ -273,51 +276,87 @@ async function collectFromNaverMap(page, mapUrl) {
             const match = url.match(pattern);
             if (match) { placeId = match[1]; break; }
         }
-        if (!placeId) return null;
+        if (!placeId) {
+            log('debug', `네이버 지도: place ID 추출 실패 - ${url}`);
+            return null;
+        }
 
         const placeUrl = `https://pcmap.place.naver.com/restaurant/${placeId}/home`;
         await page.goto(placeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 2000));
 
-        // 주소/전화번호 펼치기 클릭
+        // 주소 펼치기 (Role/Text 기반)
         try {
-            await page.click('a.PkgBl, ._UCia');
-            await new Promise(r => setTimeout(r, 1000));
-        } catch {}
-        try {
-            await page.click('a.BfF3H');
+            await page.evaluate(() => {
+                const buttons = document.querySelectorAll('a[role="button"]');
+                for (const btn of buttons) {
+                    const text = btn.textContent || "";
+                    if (btn.getAttribute('aria-expanded') === 'false') {
+                        const addressLabel = Array.from(document.querySelectorAll('strong')).find(el => el.textContent.includes('주소'));
+                        if (addressLabel) {
+                            const parent = addressLabel.parentElement;
+                            if (parent) {
+                                const sibling = parent.nextElementSibling;
+                                if (sibling) {
+                                    const targetBtn = sibling.querySelector('a[role="button"][aria-expanded="false"]');
+                                    if (targetBtn) targetBtn.click();
+                                }
+                            }
+                        }
+                    }
+                }
+            });
             await new Promise(r => setTimeout(r, 1000));
         } catch {}
 
         // 정보 추출
         const placeInfo = await page.evaluate(() => {
-            const result = { name: null, roadAddress: null, jibunAddress: null, phone: null, category: null };
-            
-            // 상호명
-            const ogTitle = document.querySelector('meta[property="og:title"]');
-            if (ogTitle) result.name = ogTitle.getAttribute('content')?.replace(/\s*:\s*네이버$/, '').trim();
+            const result = { name: null, roadAddress: null, jibunAddress: null }; 
+
+            // 1. 상호명 (ID: _title 내부)
+            const titleEl = document.querySelector('#_title');
+            if (titleEl) {
+                const spans = titleEl.querySelectorAll('span');
+                if (spans.length > 0) result.name = spans[0].textContent.trim();
+                else result.name = titleEl.textContent.trim();
+            }
             if (!result.name) {
-                const nameEl = document.querySelector('span.GHAhO');
-                if (nameEl) result.name = nameEl.textContent?.trim();
+                const ogTitle = document.querySelector('meta[property="og:title"]');
+                if (ogTitle) result.name = ogTitle.getAttribute('content')?.replace(/\s*:\s*네이버$/, '').trim();
             }
 
-            // 카테고리
-            const categoryEl = document.querySelector('span.lnJFt');
-            if (categoryEl) result.category = categoryEl.textContent?.trim();
+            // 2. 카테고리
+            if (titleEl) {
+                const spans = titleEl.querySelectorAll('span');
+                if (spans.length > 1) result.category = spans[1].textContent.trim();
+            }
 
-            // 주소
-            const rows = document.querySelectorAll('.nQ7Lh');
-            rows.forEach(row => {
-                const text = row.innerText;
-                if (text.includes('도로명')) result.roadAddress = text.replace('도로명', '').replace(/복사/g, '').trim();
-                if (text.includes('지번')) result.jibunAddress = text.replace('지번', '').replace(/복사/g, '').trim();
-            });
+            // 3. 주소 (도로명/지번 라벨 기반)
+            const findAddress = (label) => {
+                const spans = Array.from(document.querySelectorAll('span'));
+                const targetSpan = spans.find(s => s.textContent.includes(label));
+                if (targetSpan && targetSpan.parentElement) {
+                    let text = targetSpan.parentElement.innerText;
+                    text = text.replace(label, '')
+                               .replace(/복사/g, '')
+                               .replace(/우편번호\s*[\d-]+/g, '')
+                               .replace(/우편번호/g, '')
+                               .trim();
+                    return text;
+                }
+                return null;
+            };
 
-            // 전화번호
-            const phoneEl = document.querySelector('span.xlx7Q') || document.querySelector('a[href^="tel:"]');
-            if (phoneEl) {
-                let phone = phoneEl.textContent?.trim() || phoneEl.href?.replace('tel:', '');
-                if (/^[\d\-+().\s]+$/.test(phone)) result.phone = phone;
+            result.roadAddress = findAddress('도로명');
+            result.jibunAddress = findAddress('지번');
+
+            if (!result.roadAddress && !result.jibunAddress) {
+                const addressLabel = Array.from(document.querySelectorAll('strong')).find(el => el.textContent.includes('주소'));
+                if (addressLabel && addressLabel.parentElement && addressLabel.parentElement.nextElementSibling) {
+                    const contentDiv = addressLabel.parentElement.nextElementSibling;
+                    let text = contentDiv.textContent.replace(/주소/g, '').replace(/복사/g, '').trim();
+                    if (text.length > 5) result.roadAddress = text; 
+                }
             }
 
             return result;
@@ -337,8 +376,7 @@ async function collectFromNaverMap(page, mapUrl) {
 
         placeInfo.description_map_url = mapUrl;
         placeInfo.name = cleanText(placeInfo.name);
-        placeInfo.category = normalizeCategory(placeInfo.category);
-
+        // category는 LLM이 자막 분석해서 설정함
         // 음식점명 또는 주소 없으면 실패
         if (!placeInfo.name || (!placeInfo.jibunAddress && !placeInfo.roadAddress)) {
             log('debug', `네이버 지도: 음식점명/주소 없음 - 실패`);
@@ -538,11 +576,11 @@ async function enrichWithNaverSearch(placeInfo) {
     placeInfo.origin_name = placeInfo.name;
     delete placeInfo.name;  // name 필드 삭제
     
-    // 선택된 결과로 덮어쓰기
+    // 선택된 결과로 덮어쓰기 (category는 LLM이 처리하므로 여기서 설정 안 함)
     placeInfo.naver_name = matched.name;          // 네이버 검색 결과 상호명
     placeInfo.jibunAddress = matched.address;     // 지번주소
     placeInfo.roadAddress = matched.roadAddress;  // 도로명주소
-    placeInfo.category = normalizeCategory(matched.category);
+    // category는 LLM이 자막 분석해서 설정함
     
     return placeInfo;
 }
@@ -608,8 +646,12 @@ async function extractYoutuberReview(videoId, metaData, transcript, places) {
     const tempPromptPath = path.join(tempDir, `prompt_${videoId}.txt`);
     const tempResponsePath = path.join(tempDir, `response_${videoId}.json`);
 
-    // 프롬프트 생성
-    const placeNames = places.map(p => p.name).filter(Boolean);
+    // naver_name이 있는 장소만 필터링
+    const naverPlaces = places.filter(p => p.naver_name);
+    const placeNames = naverPlaces.map(p => p.naver_name);
+
+    if (placeNames.length === 0) return [];
+
     const prompt = `
 <영상 정보>
 제목: ${metaData?.title || ''}
@@ -630,15 +672,15 @@ ${placeNames.join('\n')}
 {
   "reviews": [
     {
-      "origin_name": "음식점명",
+      "naver_name": "음식점명 (위 목록에서 그대로 복사)",
       "youtuber_review": "리뷰 요약",
-      "category": "카테고리 (위 목록 중 하나)"
-      "reasoning_basis": 추론 근거(해당 식당에 대한 리뷰, 카테고리 정리한 근거) 작성(자막 타임스탬프 포함 권장).
+      "category": "카테고리 (위 목록 중 하나)",
+      "reasoning_basis": "추론 근거(해당 식당에 대한 리뷰, 카테고리 정리한 근거) 작성(자막 타임스탬프 포함 권장)."
     }, ...
   ]
 }
 3) **다른 설명, 마크다운 태그 없이 순수 JSON 객체만 출력함.**
-4) **<작업 순서>에서 '예.'는 예시일 뿐이므로 출력 결과값으로 사용하지 않으며, 반드시 <작업 순서>에 따라 정리한 결과를 사용합니다.**
+4) **<음식점 목록>에 제공된 이름을 naver_name 필드에 정확히(글자 하나 틀리지 않게) 복사해야 합니다.**
 </출력 규칙>
 `;
 
@@ -666,15 +708,31 @@ ${placeNames.join('\n')}
                 parsed = JSON.parse(jsonText);
             }
 
-            // Enum 검증
-            if (parsed.reviews && Array.isArray(parsed.reviews)) {
-                for (const review of parsed.reviews) {
-                    if (review.category && !VALID_CATEGORIES.includes(review.category)) {
-                        review.category = normalizeCategory(review.category);
-                    }
-                }
-                return parsed.reviews;
+            // 파싱 및 Enum 검증
+            if (!parsed.reviews || !Array.isArray(parsed.reviews)) {
+                throw new Error('리뷰 목록 형식이 올바르지 않습니다.');
             }
+
+            const validatedReviews = [];
+            for (const review of parsed.reviews) {
+                // naver_name이 입력한 목록에 있는지 확인 (Enum 검증)
+                if (!review.naver_name || !placeNames.includes(review.naver_name)) {
+                    throw new Error(`naver_name Enum 검증 실패: ${review.naver_name}`);
+                }
+
+                // category가 VALID_CATEGORIES에 있는지 확인 (Enum 검증)
+                if (review.category && !VALID_CATEGORIES.includes(review.category)) {
+                    throw new Error(`category Enum 검증 실패: ${review.category}`);
+                }
+
+                validatedReviews.push(review);
+            }
+
+            if (validatedReviews.length === 0 && placeNames.length > 0) {
+                throw new Error('유효한 리뷰가 하나도 추출되지 않았습니다 (Enum 매칭 실패).');
+            }
+
+            return validatedReviews;
         } catch (err) {
             log('warning', `Gemini CLI 시도 ${attempt}/${maxRetries} 실패: ${err.message}`);
             if (attempt < maxRetries) {
@@ -719,17 +777,23 @@ async function main() {
         process.exit(1);
     }
 
-    const dataDir = path.resolve(__dirname, '../../data');
+    const backendDir = path.resolve(__dirname, '../..');
 
     for (const channelName of channels) {
         log('info', `=== ${channelName} 처리 시작 ===`);
 
-        const channelDir = path.join(dataDir, channelName);
+        // config에서 채널별 data_path 사용
+        const channelConfig = config.channels?.[channelName];
+        if (!channelConfig || !channelConfig.data_path) {
+            log('warning', `채널 설정 없음: ${channelName}`);
+            continue;
+        }
+        const channelDir = path.join(backendDir, channelConfig.data_path);
         const mapUrlCrawlingDir = path.join(channelDir, 'map_url_crawling');
         const crawlingDir = path.join(channelDir, 'crawling');
         const metaDir = path.join(channelDir, 'meta');
         const transcriptDir = path.join(channelDir, 'transcript');
-        const urlsFile = path.join(channelDir, 'urls', 'urls.txt');
+        const urlsFile = path.join(channelDir, 'urls.txt');
 
         if (!fs.existsSync(mapUrlCrawlingDir)) fs.mkdirSync(mapUrlCrawlingDir, { recursive: true });
 
@@ -853,13 +917,19 @@ async function main() {
                 continue;
             }
 
+            // naver_name이 있는 것만 제미나이 태우기
+            const naverPlaces = places.filter(p => p.naver_name);
+            if (naverPlaces.length === 0) {
+                log('debug', `[${videoId}] naver_name 있는 장소 없음`);
+                continue;
+            }
+
             // Gemini CLI로 youtuber_review 추출
-            const reviews = await extractYoutuberReview(videoId, metaData, transcript, places);
+            const reviews = await extractYoutuberReview(videoId, metaData, transcript, naverPlaces);
             
-            // 리뷰 매칭 (naver_name 또는 origin_name으로 매칭)
-            for (const place of places) {
-                const placeName = place.naver_name || place.origin_name;
-                const review = reviews.find(r => r.origin_name === placeName);
+            // 리뷰 매칭 (naver_name으로만 매칭)
+            for (const place of naverPlaces) {
+                const review = reviews.find(r => r.naver_name === place.naver_name);
                 if (review) {
                     place.youtuber_review = review.youtuber_review;
                     place.reasoning_basis = review.reasoning_basis;
@@ -873,7 +943,7 @@ async function main() {
             const record = {
                 youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
                 recollect_version: recollectVersion,
-                restaurants: places,
+                restaurants: naverPlaces,
                 channel_name: channelName
             };
 
