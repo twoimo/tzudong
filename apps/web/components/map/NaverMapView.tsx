@@ -10,7 +10,6 @@ import { Restaurant, Region } from "@/types/restaurant";
 import { REGION_MAP_CONFIG } from "@/config/maps";
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
-import { toast } from "sonner";
 import { MapSkeleton } from "@/components/skeletons/MapSkeleton";
 import { useLayout } from "@/contexts/LayoutContext";
 import { useDeviceType } from "@/hooks/useDeviceType";
