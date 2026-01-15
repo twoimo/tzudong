@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { X, MapPin, Phone, Users, MessageSquare, Youtube, Calendar, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, BadgeCheck, Share2 } from "lucide-react";
+import { X, MapPin, Users, MessageSquare, Youtube, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, BadgeCheck, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -125,13 +125,12 @@ export function RestaurantDetailPanel({
         const roadAddress = primaryRecord.road_address;
         const jibunAddress = primaryRecord.jibun_address;
         const englishAddress = primaryRecord.english_address;
-        const phone = primaryRecord.phone;
+
 
         return {
             roadAddresses: roadAddress ? [roadAddress] : [],
             jibunAddresses: jibunAddress ? [jibunAddress] : [],
             englishAddresses: englishAddress ? [englishAddress] : [],
-            phones: phone ? [phone] : [],
         };
     }, [restaurant]);
 
@@ -721,29 +720,7 @@ export function RestaurantDetailPanel({
                                         </div>
                                     ))}
 
-                                    {uniqueData?.phones.map((phone, index) => (
-                                        <div key={index} className="flex gap-3">
-                                            <Phone className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                            <a
-                                                href={`tel:${phone}`}
-                                                className="text-sm text-primary hover:underline"
-                                            >
-                                                {phone}
-                                            </a>
-                                        </div>
-                                    ))}
 
-                                    <div className="flex gap-3">
-                                        <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                                        <div className="flex-1">
-                                            <p className="text-xs text-muted-foreground">등록일</p>
-                                            <p className="text-sm">
-                                                {restaurant.created_at
-                                                    ? new Date(restaurant.created_at).toLocaleDateString('ko-KR')
-                                                    : '-'}
-                                            </p>
-                                        </div>
-                                    </div>
                                 </div>
 
                                 {/* 유튜브 링크 */}
