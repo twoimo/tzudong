@@ -172,12 +172,12 @@ export function RestaurantDetailPanel({
                 // 3. Profiles 가져오기
                 const { data: profilesData } = await (supabase
                     .from('profiles') as any)
-                    .select('user_id, nickname, profile_picture')
+                    .select('user_id, nickname, avatar_url')
                     .in('user_id', userIds);
 
                 // 4. Map으로 변환 (빠른 조회)
                 const profilesMap = new Map<string, { nickname: string; avatarUrl: string | null }>(
-                    (profilesData || []).map((p: any) => [p.user_id, { nickname: p.nickname, avatarUrl: p.profile_picture }])
+                    (profilesData || []).map((p: any) => [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }])
                 );
 
                 // 6. 리뷰 좋아요 데이터 조회

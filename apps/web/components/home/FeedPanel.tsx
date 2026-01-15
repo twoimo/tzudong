@@ -3,9 +3,10 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Heart, MapPin, Calendar, User, MessageSquareText, Eye, EyeOff, Filter, Search, ChevronRight, ChevronLeft, Share2, Check, Edit } from 'lucide-react';
+import { Heart, MapPin, Calendar, User, MessageSquareText, Eye, EyeOff, Filter, Search, ChevronRight, ChevronLeft, Share2, Check, Edit, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +15,7 @@ import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
+import { GlobalLoader } from '@/components/ui/global-loader';
 
 interface FeedPanelProps {
     isOpen: boolean;
@@ -28,6 +30,7 @@ interface FeedReview {
     restaurantId: string;
     restaurantName: string;
     userName: string;
+    userAvatarUrl?: string;
     visitedAt: string;
     createdAt: string;
     content: string;
@@ -89,6 +92,7 @@ export default function FeedPanel({
         data: feedPages,
         fetchNextPage,
         hasNextPage,
+        isLoading,
         isFetchingNextPage,
     } = useInfiniteQuery({
         queryKey: ['review-feed-panel', user?.id],
@@ -109,9 +113,12 @@ export default function FeedPanel({
             const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))] as string[];
             const { data: profilesData } = await supabase
                 .from('profiles')
-                .select('user_id, nickname')
+                .select('user_id, nickname, avatar_url')
                 .in('user_id', userIds) as any;
-            const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.nickname]));
+            // 프로필 맵: { nickname, avatarUrl }
+            const profilesMap = new Map((profilesData || []).map((p: any) =>
+                [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }]
+            ));
 
             // 맛집 ID 목록 추출
             const restaurantIds = [...new Set(reviewsData.map((r: any) => r.restaurant_id))] as string[];
@@ -139,12 +146,14 @@ export default function FeedPanel({
             // 리뷰 데이터 매핑
             const reviews: FeedReview[] = reviewsData.map((review: any) => {
                 const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
+                const profileInfo = (profilesMap.get(review.user_id) || { nickname: '탈퇴한 사용자', avatarUrl: undefined }) as { nickname: string; avatarUrl?: string };
                 return {
                     id: review.id,
                     userId: review.user_id,
                     restaurantId: review.restaurant_id,
                     restaurantName: restaurantsMap.get(review.restaurant_id) || '알 수 없음',
-                    userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                    userName: profileInfo.nickname || '탈퇴한 사용자',
+                    userAvatarUrl: profileInfo.avatarUrl,
                     visitedAt: review.visited_at,
                     createdAt: review.created_at,
                     content: review.content,
@@ -162,6 +171,8 @@ export default function FeedPanel({
         },
         getNextPageParam: (lastPage) => lastPage?.nextCursor,
         initialPageParam: 0,
+        staleTime: 1000 * 60 * 2, // 2분간 캐시 유지
+        gcTime: 1000 * 60 * 5, // 5분간 가비지 컬렉션 방지
     });
 
     // 필터링된 리뷰 목록 (메모이제이션)
@@ -405,7 +416,13 @@ export default function FeedPanel({
 
             {/* 피드 목록 */}
             <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none'] pb-8">
-                {allReviews.length === 0 ? (
+                {isLoading ? (
+                    // 글로벌 로더
+                    <GlobalLoader
+                        message="리뷰 불러오는 중..."
+                        subMessage="잠시만 기다려주세요"
+                    />
+                ) : allReviews.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                         <p>아직 승인된 리뷰가 없습니다.</p>
                     </div>
@@ -496,19 +513,55 @@ const FeedPanelCard = memo(function FeedPanelCard({
         return getPhotoUrl(review.photos[currentPhotoIndex]);
     }, [hasPhotos, review.photos, currentPhotoIndex]);
 
-    // 공유 클릭 핸들러
+    // 다음 사진 URL 프리로딩
+    const nextPhotoUrl = useMemo(() => {
+        if (!hasMultiplePhotos) return '';
+        const nextIndex = (currentPhotoIndex + 1) % review.photos.length;
+        return getPhotoUrl(review.photos[nextIndex]);
+    }, [hasMultiplePhotos, currentPhotoIndex, review.photos]);
+
+    // 다음 이미지 프리로드
+    useEffect(() => {
+        if (nextPhotoUrl) {
+            const img = new Image();
+            img.src = nextPhotoUrl;
+        }
+    }, [nextPhotoUrl]);
+
+    // 공유 클릭 핸들러 (단축 URL 사용)
     const handleShareClick = useCallback(async () => {
-        const url = new URL(window.location.origin);
-        url.searchParams.set('q', review.restaurantName);
-        url.searchParams.set('restaurant', review.restaurantId);
+        setIsShareCopied(true); // 로딩 표시
+
+        const targetUrl = `/?restaurant=${review.restaurantId}`;
+
         try {
-            await navigator.clipboard.writeText(url.toString());
-            setIsShareCopied(true);
+            // 단축 URL API 호출
+            const response = await fetch('/api/shorten', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    targetUrl,
+                    restaurantId: review.restaurantId,
+                    restaurantName: review.restaurantName,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await navigator.clipboard.writeText(data.shortUrl);
+            } else {
+                // API 실패 시 기존 URL 사용
+                const url = new URL(window.location.origin);
+                url.searchParams.set('restaurant', review.restaurantId);
+                await navigator.clipboard.writeText(url.toString());
+            }
+
             setTimeout(() => setIsShareCopied(false), 2000);
         } catch {
             console.error('URL 복사 실패');
+            setIsShareCopied(false);
         }
-    }, [review.restaurantName, review.restaurantId]);
+    }, [review.restaurantId, review.restaurantName]);
 
     // 다음 사진
     const nextPhoto = useCallback(() => {
@@ -539,6 +592,35 @@ const FeedPanelCard = memo(function FeedPanelCard({
         if (distance < -minSwipeDistance) prevPhoto();
     }, [touchStart, touchEnd, nextPhoto, prevPhoto]);
 
+    // 마우스 드래그 지원 (데스크톱)
+    const onMouseDown = useCallback((e: React.MouseEvent) => {
+        setTouchEnd(null);
+        setTouchStart(e.clientX);
+    }, []);
+
+    const onMouseMove = useCallback((e: React.MouseEvent) => {
+        if (touchStart !== null) {
+            setTouchEnd(e.clientX);
+        }
+    }, [touchStart]);
+
+    const onMouseUp = useCallback(() => {
+        if (!touchStart || !touchEnd) {
+            setTouchStart(null);
+            return;
+        }
+        const distance = touchStart - touchEnd;
+        if (distance > minSwipeDistance) nextPhoto();
+        if (distance < -minSwipeDistance) prevPhoto();
+        setTouchStart(null);
+        setTouchEnd(null);
+    }, [touchStart, touchEnd, nextPhoto, prevPhoto]);
+
+    const onMouseLeave = useCallback(() => {
+        setTouchStart(null);
+        setTouchEnd(null);
+    }, []);
+
     // 수정 버튼 클릭 핸들러
     const handleEditClick = useCallback(() => {
         onEditReview?.({
@@ -568,8 +650,16 @@ const FeedPanelCard = memo(function FeedPanelCard({
             {/* 헤더: 사용자 정보 + 버튼 영역 */}
             <div className="flex items-center justify-between p-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-4 h-4 text-primary" />
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                        {review.userAvatarUrl ? (
+                            <img
+                                src={review.userAvatarUrl}
+                                alt={review.userName}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <User className="w-4 h-4 text-primary" />
+                        )}
                     </div>
                     <div>
                         <Link
@@ -578,6 +668,10 @@ const FeedPanelCard = memo(function FeedPanelCard({
                         >
                             {review.userName}
                         </Link>
+                        <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600 ml-1">
+                            <CheckCircle className="h-2 w-2 mr-0.5" />
+                            인증
+                        </Badge>
                         <button
                             onClick={onGoToRestaurant}
                             className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
@@ -649,6 +743,10 @@ const FeedPanelCard = memo(function FeedPanelCard({
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
+                    onMouseDown={onMouseDown}
+                    onMouseMove={onMouseMove}
+                    onMouseUp={onMouseUp}
+                    onMouseLeave={onMouseLeave}
                 >
                     <img
                         src={currentPhotoUrl}

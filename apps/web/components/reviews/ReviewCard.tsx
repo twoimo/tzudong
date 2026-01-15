@@ -97,9 +97,10 @@ export const ReviewCard = React.memo(function ReviewCard({
         onLike(review.id);
     }, [onLike, review.id]);
 
+    // 맛집 클릭 핸들러 (지도에서 맛집 선택)
     const handleRestaurantClick = useCallback((e: React.MouseEvent) => {
         e.stopPropagation();
-        // Navigate to home with restaurant selected on map
+        // 홈 페이지로 이동하여 지도에서 맛집 선택
         if (review.restaurantId) {
             router.push(`/?restaurant=${review.restaurantId}`);
         } else {
@@ -107,22 +108,39 @@ export const ReviewCard = React.memo(function ReviewCard({
         }
     }, [router, review.restaurantId, onRestaurantClick]);
 
-    // Share link copy handler
+    // 공유 클릭 핸들러 (단축 URL 사용)
     const handleShareClick = useCallback(async (e: React.MouseEvent) => {
         e.stopPropagation();
-        const url = new URL(window.location.origin);
-        url.searchParams.set('q', review.restaurantName);
-        if (review.restaurantId) {
-            url.searchParams.set('restaurant', review.restaurantId);
-        }
+        setIsShareCopied(true); // 로딩 표시
+
+        const targetUrl = `/?restaurant=${review.restaurantId}`;
+
         try {
-            await navigator.clipboard.writeText(url.toString());
-            setIsShareCopied(true);
+            const response = await fetch('/api/shorten', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    targetUrl,
+                    restaurantId: review.restaurantId,
+                    restaurantName: review.restaurantName,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await navigator.clipboard.writeText(data.shortUrl);
+            } else {
+                const url = new URL(window.location.origin);
+                url.searchParams.set('restaurant', review.restaurantId || '');
+                await navigator.clipboard.writeText(url.toString());
+            }
+
             setTimeout(() => setIsShareCopied(false), 2000);
         } catch {
             console.error('URL 복사 실패');
+            setIsShareCopied(false);
         }
-    }, [review.restaurantName, review.restaurantId]);
+    }, [review.restaurantId, review.restaurantName]);
 
     // [PERFORMANCE] 날짜 포맷 메모이제이션
     const { visitedDate, submittedDate } = useMemo(() => {
