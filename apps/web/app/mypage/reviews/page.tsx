@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, memo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -48,6 +48,64 @@ interface MyReview {
   categories: string[];
 }
 
+interface ReviewData {
+  id: string;
+  restaurant_id: string;
+  title: string;
+  content: string;
+  visited_at: string;
+  created_at: string;
+  is_verified: boolean;
+  admin_note: string | null;
+  is_pinned: boolean;
+  is_edited_by_admin: boolean;
+  food_photos: string[] | null;
+  categories: string[] | null;
+  category: string | null;
+}
+
+interface RestaurantData {
+  id: string;
+  name: string;
+}
+
+// 날짜 포맷 함수 (컴포넌트 외부로 이동)
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+};
+
+// 상태 배지 컴포넌트 (Memoization)
+const ReviewStatusBadge = memo(({ review }: { review: MyReview }) => {
+  if (review.isVerified) {
+    return (
+      <Badge variant="default" className="gap-1 bg-green-600">
+        <CheckCircle className="h-3 w-3" />
+        승인
+      </Badge>
+    );
+  }
+  if (review.adminNote?.includes("거부")) {
+    return (
+      <Badge variant="destructive" className="gap-1">
+        <XCircle className="h-3 w-3" />
+        거부
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="secondary" className="gap-1">
+      <Clock className="h-3 w-3" />
+      대기
+    </Badge>
+  );
+});
+ReviewStatusBadge.displayName = "ReviewStatusBadge";
+
 export default function ReviewsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -72,14 +130,13 @@ export default function ReviewsPage() {
 
       try {
         // 1. 현재 사용자의 모든 리뷰 조회
-        let query = supabase
+        const { data: reviewsData, error: reviewsError } = await supabase
           .from("reviews")
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
-          .range(pageParam, pageParam + 19); // 페이지당 20개
-
-        const { data: reviewsData, error: reviewsError } = await query as any;
+          .range(pageParam, pageParam + 19) // 페이지당 20개
+          .returns<ReviewData[]>();
 
         if (reviewsError) {
           console.error("리뷰 조회 실패:", reviewsError);
@@ -91,18 +148,19 @@ export default function ReviewsPage() {
         }
 
         // 2. 레스토랑 정보 조회
-        const restaurantIds = [...new Set(reviewsData.map((r: any) => r.restaurant_id))];
+        const restaurantIds = [...new Set(reviewsData.map((r) => r.restaurant_id))];
         const { data: restaurantsData } = await supabase
           .from("restaurants")
           .select("id, name")
-          .in("id", restaurantIds) as any;
+          .in("id", restaurantIds)
+          .returns<RestaurantData[]>();
 
         const restaurantsMap = new Map<string, string>(
-          (restaurantsData || []).map((r: any) => [r.id, r.name])
+          (restaurantsData || []).map((r) => [r.id, r.name])
         );
 
         // 3. 리뷰 데이터 매핑
-        const reviews: MyReview[] = reviewsData.map((review: any) => ({
+        const reviews: MyReview[] = reviewsData.map((review) => ({
           id: review.id,
           restaurantId: review.restaurant_id,
           restaurantName: restaurantsMap.get(review.restaurant_id) || "알 수 없음",
@@ -132,17 +190,21 @@ export default function ReviewsPage() {
     enabled: !!user?.id,
   });
 
-  // 모든 페이지 데이터 평탄화
-  const allReviews = reviewsPages?.pages.flatMap((page) => page.reviews) || [];
+  // 모든 페이지 데이터 평탄화 (Memoization)
+  const allReviews = useMemo(() =>
+    reviewsPages?.pages.flatMap((page) => page.reviews) || [],
+    [reviewsPages?.pages]);
 
-  // 상태별 필터링
-  const filteredReviews = allReviews.filter((review) => {
-    if (filterStatus === "all") return true;
-    if (filterStatus === "approved") return review.isVerified;
-    if (filterStatus === "rejected") return !review.isVerified && review.adminNote?.includes("거부");
-    if (filterStatus === "pending") return !review.isVerified && (!review.adminNote || !review.adminNote.includes("거부"));
-    return true;
-  });
+  // 상태별 필터링 (Memoization)
+  const filteredReviews = useMemo(() => {
+    return allReviews.filter((review) => {
+      if (filterStatus === "all") return true;
+      if (filterStatus === "approved") return review.isVerified;
+      if (filterStatus === "rejected") return !review.isVerified && review.adminNote?.includes("거부");
+      if (filterStatus === "pending") return !review.isVerified && (!review.adminNote || !review.adminNote.includes("거부"));
+      return true;
+    });
+  }, [allReviews, filterStatus]);
 
   // 무한 스크롤 Intersection Observer
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -201,7 +263,7 @@ export default function ReviewsPage() {
         }
       });
     }
-  }, [highlightedReviewId, reviewsPages, filterStatus]);
+  }, [highlightedReviewId, reviewsPages]); // FilterStatus dependency removed as it might cause unwanted scrolling
 
   // 리뷰 삭제
   const handleDeleteReview = async (reviewId: string) => {
@@ -225,42 +287,6 @@ export default function ReviewsPage() {
       refetch();
       queryClient.invalidateQueries({ queryKey: ["user-reviews"] });
     }
-  };
-
-  // 날짜 포맷
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("ko-KR", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-  };
-
-  // 상태 Badge 렌더링
-  const renderStatusBadge = (review: MyReview) => {
-    if (review.isVerified) {
-      return (
-        <Badge variant="default" className="gap-1 bg-green-600">
-          <CheckCircle className="h-3 w-3" />
-          승인
-        </Badge>
-      );
-    }
-    if (review.adminNote?.includes("거부")) {
-      return (
-        <Badge variant="destructive" className="gap-1">
-          <XCircle className="h-3 w-3" />
-          거부
-        </Badge>
-      );
-    }
-    return (
-      <Badge variant="secondary" className="gap-1">
-        <Clock className="h-3 w-3" />
-        대기
-      </Badge>
-    );
   };
 
   // 로딩 상태
@@ -328,7 +354,7 @@ export default function ReviewsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-lg">{review.restaurantName}</h3>
-                        {renderStatusBadge(review)}
+                        <ReviewStatusBadge review={review} />
                         {review.isEditedByAdmin && (
                           <Badge variant="outline" className="border-orange-500 text-orange-500 text-xs">
                             관리자 수정됨
@@ -393,9 +419,9 @@ export default function ReviewsPage() {
                   </p>
 
                   {/* 음식 사진 섬네일 */}
-                  {review.foodPhotos.length > 0 && (
+                  {(review.foodPhotos || []).length > 0 && (
                     <div className="flex gap-2 mb-3">
-                      {review.foodPhotos.slice(0, 4).map((photo, idx) => (
+                      {(review.foodPhotos || []).slice(0, 4).map((photo, idx) => (
                         <div
                           key={idx}
                           className="w-16 h-16 bg-muted rounded overflow-hidden"
@@ -410,9 +436,9 @@ export default function ReviewsPage() {
                           />
                         </div>
                       ))}
-                      {review.foodPhotos.length > 4 && (
+                      {(review.foodPhotos || []).length > 4 && (
                         <div className="w-16 h-16 bg-muted rounded flex items-center justify-center text-xs text-muted-foreground">
-                          +{review.foodPhotos.length - 4}
+                          +{(review.foodPhotos || []).length - 4}
                         </div>
                       )}
                     </div>
@@ -429,7 +455,7 @@ export default function ReviewsPage() {
                       </div>
                       <p className="text-sm text-red-600 dark:text-red-400">
                         {review.adminNote.startsWith("거부: ")
-                          ? review.adminNote.substring(4) // "거부: " 제거 (한글2 + 콜론1 + 공백1 = 4글자)
+                          ? review.adminNote.substring(4)
                           : review.adminNote}
                       </p>
                     </div>
