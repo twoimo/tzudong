@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,8 @@ import {
   MapPin,
   Edit,
   Youtube,
+  Camera,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useBookmarks } from "@/hooks/use-bookmarks";
@@ -52,7 +56,9 @@ interface Profile {
 
 export default function ProfilePage() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const { data: bookmarks = [] } = useBookmarks();
+  const queryClient = useQueryClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -72,6 +78,9 @@ export default function ProfilePage() {
 
   // 계정 완전 삭제
   const [deleteConfirmationEmail, setDeleteConfirmationEmail] = useState("");
+
+  // 아바타 업로드
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -133,6 +142,162 @@ export default function ProfilePage() {
       toast.error(err.message || '닉네임 변경에 실패했습니다');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 이미지 압축 함수 (200x200 최대, JPEG 80% 품질)
+  const compressImage = useCallback(async (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      img.onload = () => {
+        const MAX_SIZE = 200;
+        let { width, height } = img;
+
+        // 비율 유지하며 최대 크기 제한
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = (height * MAX_SIZE) / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = (width * MAX_SIZE) / height;
+            height = MAX_SIZE;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('이미지 압축 실패'));
+          },
+          'image/jpeg',
+          0.8
+        );
+      };
+
+      img.onerror = () => reject(new Error('이미지 로드 실패'));
+      img.src = URL.createObjectURL(file);
+    });
+  }, []);
+
+  // 아바타 업로드 핸들러
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+
+    // 파일 크기 체크 (2MB 제한)
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('이미지 크기는 2MB 이하여야 합니다');
+      return;
+    }
+
+    // 이미지 타입 체크
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드 가능합니다');
+      return;
+    }
+
+    setAvatarUploading(true);
+    try {
+      // 이미지 압축 (200x200, JPEG 80%)
+      const compressedBlob = await compressImage(file);
+      const filePath = `${user.id}/avatar.jpg`;
+
+      // 기존 아바타 삭제 (있다면 - 스토리지에 업로드된 경우만)
+      const oldAvatarUrl = profile?.avatar_url;
+      if (oldAvatarUrl?.includes('profile-avatars')) {
+        const oldPath = oldAvatarUrl.split('profile-avatars/').pop();
+        if (oldPath) {
+          await supabase.storage.from('profile-avatars').remove([oldPath]);
+        }
+      }
+
+      // 압축된 아바타 업로드
+      const { error: uploadError } = await supabase.storage
+        .from('profile-avatars')
+        .upload(filePath, compressedBlob, { upsert: true, contentType: 'image/jpeg' });
+
+      if (uploadError) throw uploadError;
+
+      // 공개 URL 생성 (캐시 버스팅을 위한 타임스탬프 추가)
+      const baseUrl = supabase.storage.from('profile-avatars').getPublicUrl(filePath).data.publicUrl;
+      const publicUrl = `${baseUrl}?t=${Date.now()}`;
+
+      // 프로필 업데이트 (avatar_url 컬럼 사용)
+      const { error: updateError } = await (supabase.from('profiles') as any)
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      // 로컬 상태 업데이트
+      setProfile(prev => prev ? { ...prev, avatar_url: publicUrl } : null);
+
+      // 모든 관련 쿼리 무효화 (즉각 반영)
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['review-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['review-feed-panel'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurant-reviews'] });
+      router.refresh();
+
+      toast.success('프로필 사진이 변경되었습니다');
+    } catch (error) {
+      console.error('아바타 업로드 오류:', error);
+      toast.error('프로필 사진 업로드에 실패했습니다');
+    } finally {
+      setAvatarUploading(false);
+      // 같은 파일 재선택 가능하도록 초기화
+      e.target.value = '';
+    }
+  };
+
+  // 아바타 삭제 핸들러
+  const handleAvatarDelete = async () => {
+    if (!user || !profile?.avatar_url) return;
+
+    setAvatarUploading(true);
+    try {
+      // 스토리지에 업로드된 이미지면 스토리지에서도 삭제
+      if (profile.avatar_url.includes('profile-avatars')) {
+        // URL에서 타임스탬프 쿼리 파라미터 제거
+        const urlWithoutQuery = profile.avatar_url.split('?')[0];
+        const filePath = urlWithoutQuery.split('profile-avatars/').pop();
+        if (filePath) {
+          await supabase.storage.from('profile-avatars').remove([filePath]);
+        }
+      }
+
+      // 프로필 업데이트 (avatar_url 널로)
+      const { error: updateError } = await (supabase.from('profiles') as any)
+        .update({ avatar_url: null })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      // 로컬 상태 업데이트
+      setProfile(prev => prev ? { ...prev, avatar_url: undefined } : null);
+
+      // 모든 관련 쿼리 무효화 (즉각 반영)
+      queryClient.invalidateQueries({ queryKey: ['user-profile'] });
+      queryClient.invalidateQueries({ queryKey: ['review-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['review-feed-panel'] });
+      queryClient.invalidateQueries({ queryKey: ['restaurant-reviews'] });
+      router.refresh();
+
+      toast.success('프로필 사진이 삭제되었습니다');
+    } catch (error) {
+      console.error('아바타 삭제 오류:', error);
+      toast.error('프로필 사진 삭제에 실패했습니다');
+    } finally {
+      setAvatarUploading(false);
     }
   };
 
@@ -281,7 +446,8 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const displayName = profile?.nickname || user.user_metadata?.full_name || user.email?.split("@")[0] || "사용자";
-  const avatarUrl = profile?.avatar_url || user.user_metadata?.avatar_url;
+  // 프로필 사진 URL (avatar_url 컬럼만 사용 - 삭제 시 완전히 제거됨)
+  const avatarUrl = profile?.avatar_url;
   const isAdmin = user.user_metadata?.is_admin === true;
   const createdAt = user.created_at ? new Date(user.created_at) : new Date();
 
@@ -294,6 +460,62 @@ export default function ProfilePage() {
           <CardDescription>계정 정보를 확인하고 수정할 수 있습니다</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+
+          {/* 프로필 사진 - 반응형 UI */}
+          <div className="space-y-4">
+            <Label className="flex items-center gap-2">
+              <Camera className="h-4 w-4" />
+              프로필 사진
+            </Label>
+            {/* 모바일: 중앙 정렬, 태블릿/데스크탑: 가로 배치 */}
+            <div className="flex flex-col items-center gap-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:py-0">
+              <div className="relative group shrink-0">
+                {/* 모바일: 20x20, 태블릿: 18x18, 데스크탑: 16x16 */}
+                <Avatar className="h-20 w-20 sm:h-18 sm:w-18 md:h-16 md:w-16 ring-2 sm:ring-2 ring-muted group-hover:ring-primary/30 transition-all">
+                  <AvatarImage src={avatarUrl} alt={displayName} className="object-cover" />
+                  <AvatarFallback className="bg-primary/10">
+                    <User className="h-8 w-8 sm:h-7 sm:w-7 md:h-6 md:w-6 text-primary" />
+                  </AvatarFallback>
+                </Avatar>
+                {/* 편집 배지 - 모바일에서 더 크게 */}
+                <div className="absolute -bottom-1 -right-1 sm:-bottom-0.5 sm:-right-0.5 w-7 h-7 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center shadow border-2 border-background">
+                  <Camera className="h-3.5 w-3.5 sm:h-3 sm:w-3 text-primary-foreground" />
+                </div>
+                {/* 호버/터치 오버레이 */}
+                <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity cursor-pointer rounded-full">
+                  {avatarUploading ? (
+                    <Loader2 className="h-6 w-6 sm:h-5 sm:w-5 text-white animate-spin" />
+                  ) : (
+                    <Camera className="h-6 w-6 sm:h-5 sm:w-5 text-white" />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                    disabled={avatarUploading}
+                  />
+                </label>
+              </div>
+              {/* 안내 텍스트 + 삭제 버튼 */}
+              <div className="text-sm text-muted-foreground text-center sm:text-left">
+                <p>이미지 클릭하여 변경</p>
+                <p className="text-xs">최대 2MB, JPG/PNG 권장</p>
+                {profile?.avatar_url && (
+                  <button
+                    onClick={handleAvatarDelete}
+                    disabled={avatarUploading}
+                    className="text-xs text-destructive hover:underline mt-1 flex items-center gap-1 mx-auto sm:mx-0"
+                  >
+                    <X className="h-3 w-3" />
+                    사진 삭제
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <Separator />
 
           {/* 이메일 */}
           <div className="space-y-2">

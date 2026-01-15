@@ -666,9 +666,9 @@ export default function StampPage() {
                 const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
                 const { data: profilesData } = await supabase
                     .from('profiles')
-                    .select('user_id, nickname, profile_picture')
+                    .select('user_id, nickname, avatar_url')
                     .in('user_id', userIds);
-                const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, { nickname: p.nickname, avatarUrl: p.profile_picture }]));
+                const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }]));
 
                 // 좋아요 정보 조회
                 const reviewIds = reviewsData.map((r: any) => r.id);

@@ -4,9 +4,10 @@ import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search, Edit, Share2, Check } from 'lucide-react';
+import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search, Edit, Share2, Check, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
@@ -24,6 +25,7 @@ interface FeedReview {
     restaurantId: string;
     restaurantName: string;
     userName: string;
+    userAvatarUrl?: string;
     visitedAt: string;
     createdAt: string;
     content: string;
@@ -104,9 +106,12 @@ export default function FeedPage() {
             const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
             const { data: profilesData } = await supabase
                 .from('profiles')
-                .select('user_id, nickname')
+                .select('user_id, nickname, avatar_url')
                 .in('user_id', userIds) as any;
-            const profilesMap = new Map((profilesData || []).map((p: any) => [p.user_id, p.nickname]));
+            // 프로필 맵: { nickname, avatarUrl }
+            const profilesMap = new Map((profilesData || []).map((p: any) =>
+                [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }]
+            ));
 
             // 3. 맛집 정보 조회
             const restaurantIds = [...new Set(reviewsData.map((r: any) => r.restaurant_id))];
@@ -133,12 +138,14 @@ export default function FeedPage() {
             // 5. 리뷰 데이터 매핑
             const reviews: FeedReview[] = reviewsData.map((review: any) => {
                 const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
+                const profileInfo = (profilesMap.get(review.user_id) || { nickname: '탈퇴한 사용자', avatarUrl: undefined }) as { nickname: string; avatarUrl?: string };
                 return {
                     id: review.id,
                     userId: review.user_id,
                     restaurantId: review.restaurant_id,
                     restaurantName: restaurantsMap.get(review.restaurant_id) || '알 수 없음',
-                    userName: profilesMap.get(review.user_id) || '탈퇴한 사용자',
+                    userName: profileInfo.nickname || '탈퇴한 사용자',
+                    userAvatarUrl: profileInfo.avatarUrl,
                     visitedAt: review.visited_at,
                     createdAt: review.created_at,
                     content: review.content,
@@ -471,19 +478,38 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
 
     const minSwipeDistance = 50;
 
-    // Share link copy handler
+    // 공유 클릭 핸들러 (단축 URL 사용)
     const handleShareClick = useCallback(async () => {
-        const url = new URL(window.location.origin);
-        url.searchParams.set('q', review.restaurantName);
-        url.searchParams.set('restaurant', review.restaurantId);
+        setIsShareCopied(true); // 로딩 표시
+
+        const targetUrl = `/?restaurant=${review.restaurantId}`;
+
         try {
-            await navigator.clipboard.writeText(url.toString());
-            setIsShareCopied(true);
+            const response = await fetch('/api/shorten', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    targetUrl,
+                    restaurantId: review.restaurantId,
+                    restaurantName: review.restaurantName,
+                }),
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                await navigator.clipboard.writeText(data.shortUrl);
+            } else {
+                const url = new URL(window.location.origin);
+                url.searchParams.set('restaurant', review.restaurantId);
+                await navigator.clipboard.writeText(url.toString());
+            }
+
             setTimeout(() => setIsShareCopied(false), 2000);
         } catch {
             console.error('URL 복사 실패');
+            setIsShareCopied(false);
         }
-    }, [review.restaurantName, review.restaurantId]);
+    }, [review.restaurantId, review.restaurantName]);
 
     const nextPhoto = () => {
         setCurrentPhotoIndex((prev) => (prev + 1) % review.photos.length);
@@ -547,8 +573,16 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
             {/* 헤더: 사용자 정보 + 좋아요/맛집 버튼 */}
             <div className="flex items-center justify-between p-3 border-b border-border/50">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-4 h-4 text-primary" />
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                        {review.userAvatarUrl ? (
+                            <img
+                                src={review.userAvatarUrl}
+                                alt={review.userName}
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <User className="w-4 h-4 text-primary" />
+                        )}
                     </div>
                     <div>
                         <Link
@@ -558,6 +592,10 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                         >
                             {review.userName}
                         </Link>
+                        <Badge variant="default" className="h-4 px-1 text-[10px] bg-green-600 ml-1">
+                            <CheckCircle className="h-2 w-2 mr-0.5" />
+                            인증
+                        </Badge>
                         <button
                             onClick={onGoToRestaurant}
                             className="text-xs text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
