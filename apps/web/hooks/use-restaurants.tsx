@@ -73,6 +73,8 @@ function normalizeAddress(address: string): string {
         .toLowerCase();
 }
 
+import { perfMonitor } from "@/lib/performance-monitor";
+
 type IntermediateRestaurant = DBRestaurant & {
     mergedRestaurants?: DBRestaurant[];
     mergedYoutubeLinks?: string[];
@@ -84,138 +86,154 @@ type IntermediateRestaurant = DBRestaurant & {
  * 레스토랑 데이터 병합 함수
  * 이름과 주소가 유사한 중복 데이터들을 하나로 병합합니다.
  * 
+ * [OPTIMIZATION] O(N) 수준의 grouping 및 Union-Find를 이용한 최적화
+ * 기존 O(N^2) 루프를 제거하여 대량의 데이터 처리 시 성능 대폭 개선
+ * 
  * @param restaurants DB에서 조회된 레스토랑 목록
  * @returns 병합된 레스토랑 목록
  */
 export function mergeRestaurants(restaurants: DBRestaurant[]): Restaurant[] {
-    const restaurantMap = new Map<string, IntermediateRestaurant>();
+    if (!restaurants.length) return [];
 
-    restaurants.forEach((restaurant: DBRestaurant) => {
-        const currentName = restaurant.name || '';
-        const currentAddress = normalizeAddress(restaurant.jibun_address || restaurant.road_address || '');
+    perfMonitor.startMeasure('mergeRestaurants');
 
-        // 이미 처리된 레스토랑 중에서 유사한 것 찾기
-        let merged = false;
+    const n = restaurants.length;
+    const parent = Array.from({ length: n }, (_, i) => i);
+    const find = (i: number): number => {
+        if (parent[i] === i) return i;
+        parent[i] = find(parent[i]);
+        return parent[i];
+    };
+    const union = (i: number, j: number) => {
+        const rootI = find(i);
+        const rootJ = find(j);
+        if (rootI !== rootJ) parent[rootI] = rootJ;
+    };
 
-        for (const [existingKey, existingRestaurant] of restaurantMap.entries()) {
-            const existingName = existingRestaurant.name || '';
-            const existingAddress = normalizeAddress(existingRestaurant.jibun_address || existingRestaurant.road_address || '');
+    const nameToIndices = new Map<string, number[]>();
+    const addressToIndices = new Map<string, number[]>();
 
-            // 이름 유사도 계산
-            const nameSimilarity = calculateSimilarity(currentName, existingName);
+    // 1. 데이터 정규화 및 인덱싱 (O(N))
+    const normalizedData = restaurants.map((r, i) => {
+        const name = r.name || '';
+        const addr = normalizeAddress(r.jibun_address || r.road_address || '');
 
-            // 동일한 이름 (100% 일치) 또는 주소가 같고 이름이 95% 이상 유사하면 병합
-            const isSameName = currentName === existingName;
-            const isSimilarNameAndAddress = currentAddress === existingAddress && nameSimilarity >= 0.95;
+        if (name) {
+            if (!nameToIndices.has(name)) nameToIndices.set(name, []);
+            nameToIndices.get(name)!.push(i);
+        }
 
-            if (isSameName || isSimilarNameAndAddress) {
-                const mergedRestaurants = existingRestaurant.mergedRestaurants || [existingRestaurant];
-                mergedRestaurants.push(restaurant);
+        if (addr) {
+            if (!addressToIndices.has(addr)) addressToIndices.set(addr, []);
+            addressToIndices.get(addr)!.push(i);
+        }
 
-                // 이름 길이순으로 정렬
-                const sortedByNameLength = [...mergedRestaurants].sort((a, b) =>
-                    (b.name?.length || 0) - (a.name?.length || 0)
-                );
+        return { name, addr };
+    });
 
-                // 가장 긴 이름
-                const longestName = sortedByNameLength[0]?.name || currentName;
+    // 2. 동일 이름 병합 (O(N))
+    for (const indices of nameToIndices.values()) {
+        for (let k = 1; k < indices.length; k++) {
+            union(indices[0], indices[k]);
+        }
+    }
 
-                // 가장 긴 이름의 좌표 (없으면 다음으로 긴 이름의 좌표)
-                let coordinates = { latitude: 0, longitude: 0 };
-                for (const r of sortedByNameLength) {
-                    if (r.lat && r.lng) {
-                        coordinates = { latitude: r.lat, longitude: r.lng };
-                        break;
-                    }
+    // 3. 동일 주소 내 유사 이름 병합 (O(N * M^2), M은 동일 주소 맛집 수 - 대개 매우 작음)
+    for (const indices of addressToIndices.values()) {
+        if (indices.length < 2) continue;
+        for (let j = 0; j < indices.length; j++) {
+            for (let k = j + 1; k < indices.length; k++) {
+                const idx1 = indices[j];
+                const idx2 = indices[k];
+                if (find(idx1) === find(idx2)) continue;
+
+                // 이름 유사도 체크 (이 부분은 주소가 같을 때만 실행되므로 매우 효율적)
+                if (calculateSimilarity(normalizedData[idx1].name, normalizedData[idx2].name) >= 0.95) {
+                    union(idx1, idx2);
                 }
+            }
+        }
+    }
 
-                // 모든 카테고리 수집 (중복 제거) - 모든 배열을 펼쳐서 Set으로 중복 제거
-                const allCategories = Array.from(new Set(
-                    mergedRestaurants.flatMap(r => r.categories || [])
-                ));
+    // 4. 그룹별 데이터 실제 병합 (O(N))
+    const groups = new Map<number, number[]>();
+    for (let i = 0; i < n; i++) {
+        const root = find(i);
+        if (!groups.has(root)) groups.set(root, []);
+        groups.get(root)!.push(i);
+    }
 
-                // 날짜순 정렬을 위해 restaurant와 youtube_meta를 페어로 관리
-                const restaurantPairs = mergedRestaurants.map(r => ({
-                    restaurant: r,
-                    publishedAt: (r.youtube_meta as YoutubeMeta | null)?.publishedAt || ''
-                }));
+    const mergedResults: Restaurant[] = Array.from(groups.values()).map(indices => {
+        const groupRestaurants = indices.map(idx => restaurants[idx]);
 
-                // publishedAt 날짜 기준 내림차순 정렬 (최신 영상이 먼저)
-                restaurantPairs.sort((a, b) => {
-                    if (!a.publishedAt) return 1;
-                    if (!b.publishedAt) return -1;
-                    return b.publishedAt.localeCompare(a.publishedAt);
-                });
+        // 이름 길이순으로 정렬하여 가장 긴 이름을 메인으로 사용
+        const sortedByNameLength = [...groupRestaurants].sort((a, b) =>
+            (b.name?.length || 0) - (a.name?.length || 0)
+        );
 
-                const sortedRestaurants = restaurantPairs.map(p => p.restaurant);
+        const mainRestaurant = sortedByNameLength[0];
 
-                // youtube_link 병합 (중복 제거) - 정렬된 순서로 수집
-                const mergedYoutubeLinks = sortedRestaurants
-                    .map(r => r.youtube_link)
-                    .filter((link): link is string => link != null)
-                    .filter((link, index, self) => self.indexOf(link) === index);
-
-                // tzuyang_review 병합 - 정렬된 순서로 수집
-                const mergedTzuyangReviews = sortedRestaurants
-                    .map(r => r.tzuyang_review)
-                    .filter((review): review is string => review != null);
-
-                // youtube_meta는 각 레코드에 하나씩만 있으므로 정렬된 순서로 수집
-                const mergedYoutubeMetas = sortedRestaurants
-                    .map(r => r.youtube_meta as YoutubeMeta | null)
-                    .filter((meta): meta is YoutubeMeta => meta != null);
-
-                // 병합된 데이터로 업데이트
-                const updatedRestaurant = {
-                    ...existingRestaurant,
-                    name: longestName,
-                    lat: coordinates.latitude,
-                    lng: coordinates.longitude,
-                    categories: allCategories, // 모든 카테고리 배열
-                    youtube_link: mergedYoutubeLinks[0] || null, // 첫 번째 링크 (DB 저장용)
-                    tzuyang_review: mergedTzuyangReviews[0] || null, // 첫 번째 리뷰 (DB 저장용)
-                    youtube_meta: (mergedYoutubeMetas[0] || null) as any, // 가장 첫 번째 메타 (DB 저장용)
-                    // 병합된 전체 배열 (UI 표시용)
-                    mergedYoutubeLinks: mergedYoutubeLinks,
-                    mergedTzuyangReviews: mergedTzuyangReviews,
-                    mergedYoutubeMetas: mergedYoutubeMetas,
-                    review_count: mergedRestaurants.reduce((sum, r) => sum + (r.review_count || 0), 0),
-                    mergedRestaurants: mergedRestaurants,
-                };
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                restaurantMap.set(existingKey, updatedRestaurant);
-
-                merged = true;
+        // 유효한 좌표 찾기
+        let lat = 0, lng = 0;
+        for (const r of sortedByNameLength) {
+            if (r.lat && r.lng) {
+                lat = r.lat;
+                lng = r.lng;
                 break;
             }
         }
 
-        // [리팩토링] 명시적인 더티 체크 대신 의존성 체크 접근 방식
-        // 선택된 맛집이나 지역이 실제로 변경되었는지 확인해야 합니다.
-        // 이전 props를 추적하기 위해 ref를 사용하는 것은 표준 패턴입니다.
+        // 카테고리 병합
+        const allCategories = Array.from(new Set(
+            groupRestaurants.flatMap(r => r.categories || [])
+        ));
 
-        // 여기서는 로직 단순화를 위해:
-        // 만약 사용자가 이동했다면(hasUserMovedMapRef.current), 새로운 항목으로 추가
-        if (!merged) {
-            const key = `${currentName}_${currentAddress}_${restaurantMap.size}`;
-            restaurantMap.set(key, restaurant);
-        }
+        // 최신 영상 순으로 정렬
+        const sortedByDate = [...groupRestaurants].sort((a, b) => {
+            const dateA = (a.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
+            const dateB = (b.youtube_meta as YoutubeMeta | null)?.publishedAt || '';
+            return dateB.localeCompare(dateA);
+        });
+
+        // 유튜브 링크 중복 제거 수집
+        const mergedYoutubeLinks = Array.from(new Set(
+            sortedByDate.map(r => r.youtube_link).filter((l): l is string => !!l)
+        ));
+
+        // 리뷰 수집
+        const mergedTzuyangReviews = sortedByDate
+            .map(r => r.tzuyang_review)
+            .filter((rev): rev is string => !!rev);
+
+        // 유튜브 메타 수집
+        const mergedYoutubeMetas = sortedByDate
+            .map(r => r.youtube_meta as YoutubeMeta | null)
+            .filter((m): m is YoutubeMeta => !!m);
+
+        return {
+            ...mainRestaurant,
+            lat,
+            lng,
+            categories: allCategories,
+            address: mainRestaurant.road_address || mainRestaurant.jibun_address || '',
+            category: allCategories,
+            youtube_link: mergedYoutubeLinks[0] || null,
+            tzuyang_review: mergedTzuyangReviews[0] || null,
+            youtube_meta: (mergedYoutubeMetas[0] || null) as any,
+            mergedYoutubeLinks,
+            mergedTzuyangReviews,
+            mergedYoutubeMetas,
+            review_count: groupRestaurants.reduce((sum, r) => sum + (r.review_count || 0), 0),
+            mergedRestaurants: groupRestaurants,
+        } as Restaurant;
     });
 
-    // Map을 배열로 변환하고 호환성 속성 추가
-    const mergedRestaurants = Array.from(restaurantMap.values()).map((restaurant: IntermediateRestaurant) => ({
-        ...restaurant,
-        // 호환성 속성 추가
-        address: restaurant.road_address || restaurant.jibun_address || '',
-        category: restaurant.categories,
-        // 병합된 데이터 명시적으로 포함
-        mergedRestaurants: restaurant.mergedRestaurants,
-        mergedYoutubeLinks: restaurant.mergedYoutubeLinks,
-        mergedTzuyangReviews: restaurant.mergedTzuyangReviews,
-        mergedYoutubeMetas: restaurant.mergedYoutubeMetas,
-    })) as Restaurant[];
+    perfMonitor.endMeasure('mergeRestaurants');
+    if (process.env.NODE_ENV === 'development' && restaurants.length > 50) {
+        perfMonitor.report();
+    }
 
-    return mergedRestaurants;
+    return mergedResults;
 }
 
 

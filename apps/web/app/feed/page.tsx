@@ -218,7 +218,7 @@ export default function FeedPage() {
             return;
         }
 
-        // Optimistic update
+        // 낙관적 업데이트
         setOptimisticLikes(prev => ({
             ...prev,
             [reviewId]: {
@@ -259,7 +259,7 @@ export default function FeedPage() {
             queryClient.invalidateQueries({ queryKey: ['review-feed'] });
         } catch (error) {
             console.error('좋아요 토글 실패:', error);
-            // Rollback optimistic update
+            // 낙관적 업데이트 롤백
             setOptimisticLikes(prev => ({
                 ...prev,
                 [reviewId]: { count: currentCount, isLiked: currentIsLiked }
@@ -272,15 +272,15 @@ export default function FeedPage() {
         router.push(`/?restaurant=${restaurantId}`);
     }, [router]);
 
-    // 날짜 포맷
-    const formatDate = (dateString: string) => {
+    // [최적화] 날짜 포맷 함수 메모이제이션
+    const formatDate = useCallback((dateString: string) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('ko-KR', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
         });
-    };
+    }, []);
 
     if (isLoading) {
         return (
@@ -292,159 +292,160 @@ export default function FeedPage() {
     }
 
     return (
-        <div className="flex flex-col h-full bg-background overflow-y-auto" data-testid="feed-page-container">
-            {/* Header */}
-            <div className="border-b border-border bg-background p-6 shrink-0">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
-                            <MessageSquareText className="h-6 w-6 text-primary" />
-                            쯔동여지도 리뷰
-                            <span className="text-sm font-normal text-muted-foreground">
-                                ({allReviews.length}개)
-                            </span>
-                        </h1>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {isLoggedIn
-                                ? "맛집 방문 후기를 공유해보세요!"
-                                : "로그인하여 리뷰를 작성해보세요!"
-                            }
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {/* 내 리뷰만 보기 토글 */}
-                        {isLoggedIn && (
+        <div className="flex flex-col h-full bg-muted/30 overflow-y-auto" data-testid="feed-page-container">
+            <div className="w-full max-w-2xl mx-auto bg-background md:border-x md:border-border md:shadow-sm">
+                {/* 헤더 */}
+                <div className="border-b border-border bg-background p-6 shrink-0">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
+                                <MessageSquareText className="h-6 w-6 text-primary" />
+                                쯔동여지도 리뷰
+                                <span className="text-sm font-normal text-muted-foreground">
+                                    ({allReviews.length}개)
+                                </span>
+                            </h1>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                {isLoggedIn
+                                    ? "맛집 방문 후기를 공유해보세요!"
+                                    : "로그인하여 리뷰를 작성해보세요!"
+                                }
+                            </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {/* 내 리뷰만 보기 토글 */}
+                            {isLoggedIn && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-full hover:bg-muted"
+                                    onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
+                                    title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                                >
+                                    {showMyReviewsOnly ? (
+                                        <EyeOff className="h-5 w-5 text-primary" />
+                                    ) : (
+                                        <Eye className="h-5 w-5 text-muted-foreground" />
+                                    )}
+                                </Button>
+                            )}
+                            {/* 필터 토글 버튼 */}
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="icon"
-                                className="h-8 w-8 rounded-full hover:bg-muted"
-                                onClick={() => setShowMyReviewsOnly(!showMyReviewsOnly)}
-                                title={showMyReviewsOnly ? "모든 리뷰 보기" : "내 리뷰만 보기"}
+                                onClick={() => setIsFilterExpanded(!isFilterExpanded)}
+                                className="relative"
+                                title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
                             >
-                                {showMyReviewsOnly ? (
-                                    <EyeOff className="h-5 w-5 text-primary" />
-                                ) : (
-                                    <Eye className="h-5 w-5 text-muted-foreground" />
+                                <Filter className="h-4 w-4" />
+                                {searchQuery && (
+                                    <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium rounded-full flex items-center justify-center">
+                                        1
+                                    </span>
                                 )}
                             </Button>
-                        )}
-                        {/* 필터 토글 버튼 */}
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => setIsFilterExpanded(!isFilterExpanded)}
-                            className="relative"
-                            title={isFilterExpanded ? "필터 접기" : "필터 펼치기"}
-                        >
-                            <Filter className="h-4 w-4" />
-                            {searchQuery && (
-                                <span className="absolute -top-1 -right-1 h-4 w-4 bg-primary text-primary-foreground text-[10px] font-medium rounded-full flex items-center justify-center">
-                                    1
-                                </span>
-                            )}
-                        </Button>
+                        </div>
                     </div>
+
+                    {/* 검색 필터 영역 */}
+                    {isFilterExpanded && (
+                        <div className="mt-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="맛집명, 작성자, 내용 검색..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-9"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* 검색 필터 영역 */}
-                {isFilterExpanded && (
-                    <div className="mt-4">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="맛집명, 작성자, 내용 검색..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-9"
-                            />
+                {/* 피드 목록 */}
+                <div className="pb-8">
+                    {allReviews.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
+                            <p>아직 승인된 리뷰가 없습니다.</p>
                         </div>
-                    </div>
-                )}
-            </div>
+                    ) : (
+                        <div className="space-y-4 p-4 pb-0">
+                            {allReviews.map((review) => {
+                                const optimistic = optimisticLikes[review.id];
+                                const likeCount = optimistic?.count ?? review.likeCount;
+                                const isLiked = optimistic?.isLiked ?? review.isLikedByUser;
 
-            {/* Feed */}
-            <div className="pb-8">
-                {allReviews.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                        <p>아직 승인된 리뷰가 없습니다.</p>
-                    </div>
-                ) : (
-                    <div className="space-y-4 p-4 pb-0">
-                        {allReviews.map((review) => {
-                            const optimistic = optimisticLikes[review.id];
-                            const likeCount = optimistic?.count ?? review.likeCount;
-                            const isLiked = optimistic?.isLiked ?? review.isLikedByUser;
+                                return (
+                                    <FeedCard
+                                        key={review.id}
+                                        review={review}
+                                        likeCount={likeCount}
+                                        isLiked={isLiked}
+                                        onToggleLike={() => toggleLike(review.id, isLiked, likeCount, review.userId)}
+                                        onGoToRestaurant={() => goToRestaurant(review.restaurantId)}
+                                        formatDate={formatDate}
+                                        currentUserId={user?.id}
+                                        onEditReview={(reviewData) => setEditingReview(reviewData)}
+                                    />
+                                );
+                            })}
 
-                            return (
-                                <FeedCard
-                                    key={review.id}
-                                    review={review}
-                                    likeCount={likeCount}
-                                    isLiked={isLiked}
-                                    onToggleLike={() => toggleLike(review.id, isLiked, likeCount, review.userId)}
-                                    onGoToRestaurant={() => goToRestaurant(review.restaurantId)}
-                                    formatDate={formatDate}
-                                    currentUserId={user?.id}
-                                    onEditReview={(reviewData) => setEditingReview(reviewData)}
-                                />
-                            );
-                        })}
-
-                        {/* 무한 스크롤 트리거 - 로딩 중이 아닐 때는 높이 최소화 */}
-                        <div ref={loadMoreRef} className={cn(
-                            "flex items-center justify-center transition-all duration-300",
-                            isFetchingNextPage ? "h-20" : "h-4"
-                        )}>
-                            {isFetchingNextPage && (
-                                <div className="flex items-center gap-2">
-                                    <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
-                                    <span className="text-sm text-muted-foreground">더 불러오는 중...</span>
-                                </div>
-                            )}
+                            {/* 무한 스크롤 트리거 - 로딩 중이 아닐 때는 높이 최소화 */}
+                            <div ref={loadMoreRef} className={cn(
+                                "flex items-center justify-center transition-all duration-300",
+                                isFetchingNextPage ? "h-20" : "h-4"
+                            )}>
+                                {isFetchingNextPage && (
+                                    <div className="flex items-center gap-2">
+                                        <div className="animate-spin h-5 w-5 border-2 border-primary border-t-transparent rounded-full" />
+                                        <span className="text-sm text-muted-foreground">더 불러오는 중...</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
+                </div>
+
+                {/* 플로팅 리뷰 작성 버튼 - Portal로 body에 직접 렌더링 */}
+                {isLoggedIn && typeof document !== 'undefined' && createPortal(
+                    <Button
+                        onClick={handleWriteReview}
+                        className="fixed right-4 bottom-20 md:right-8 md:bottom-8 z-50 h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90"
+                        size="icon"
+                    >
+                        <Plus className="h-6 w-6" />
+                    </Button>,
+                    document.body
                 )}
+
+                {/* 리뷰 작성 모달 */}
+                <ReviewModal
+                    isOpen={isReviewModalOpen}
+                    onClose={() => setIsReviewModalOpen(false)}
+                    restaurant={null}
+                    onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['review-feed'] });
+                        queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+                    }}
+                />
+
+                {/* 리뷰 수정 모달 */}
+                <ReviewEditModal
+                    isOpen={!!editingReview}
+                    onClose={() => setEditingReview(null)}
+                    review={editingReview}
+                    onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['review-feed'] });
+                        setEditingReview(null);
+                    }}
+                />
             </div>
-
-            {/* Floating Write Button - Portal로 body에 직접 렌더링 */}
-            {isLoggedIn && typeof document !== 'undefined' && createPortal(
-                <Button
-                    onClick={handleWriteReview}
-                    className="fixed right-4 bottom-20 z-50 h-14 w-14 rounded-full shadow-lg bg-gradient-primary hover:opacity-90"
-                    size="icon"
-                >
-                    <Plus className="h-6 w-6" />
-                </Button>,
-                document.body
-            )}
-
-            {/* Review Modal */}
-            <ReviewModal
-                isOpen={isReviewModalOpen}
-                onClose={() => setIsReviewModalOpen(false)}
-                restaurant={null}
-                onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ['review-feed'] });
-                    queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
-                }}
-            />
-
-            {/* Review Edit Modal */}
-            <ReviewEditModal
-                isOpen={!!editingReview}
-                onClose={() => setEditingReview(null)}
-                review={editingReview}
-                onSuccess={() => {
-                    queryClient.invalidateQueries({ queryKey: ['review-feed'] });
-                    setEditingReview(null);
-                }}
-            />
         </div>
     );
 }
 
-// 리뷰 카드 컴포넌트 (memo로 불필요한 리렌더링 방지)
-// 리뷰 카드 컴포넌트 (memo로 불필요한 리렌더링 방지)
+// [최적화] 리뷰 카드 컴포넌트 - memo로 불필요한 리렌더링 방지
 interface FeedCardProps {
     review: FeedReview;
     likeCount: number;
@@ -476,7 +477,8 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
     const hasMultiplePhotos = review.photos.length > 1;
     const isLongContent = review.content.length > 50;
 
-    const minSwipeDistance = 50;
+    // [상수] 스와이프 최소 거리
+    const MIN_SWIPE_DISTANCE = 50;
 
     // 공유 클릭 핸들러 (단축 URL 사용)
     const handleShareClick = useCallback(async () => {
@@ -511,62 +513,64 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
         }
     }, [review.restaurantId, review.restaurantName]);
 
-    const nextPhoto = () => {
+    // [최적화] 사진 내비게이션 핸들러 메모이제이션
+    const nextPhoto = useCallback(() => {
         setCurrentPhotoIndex((prev) => (prev + 1) % review.photos.length);
-    };
+    }, [review.photos.length]);
 
-    const prevPhoto = () => {
+    const prevPhoto = useCallback(() => {
         setCurrentPhotoIndex((prev) => (prev - 1 + review.photos.length) % review.photos.length);
-    };
+    }, [review.photos.length]);
 
-    const onTouchStart = (e: React.TouchEvent) => {
+    // [최적화] 터치 이벤트 핸들러 메모이제이션
+    const onTouchStart = useCallback((e: React.TouchEvent) => {
         setTouchEnd(null);
         setTouchStart(e.targetTouches[0].clientX);
-    };
+    }, []);
 
-    const onTouchMove = (e: React.TouchEvent) => {
+    const onTouchMove = useCallback((e: React.TouchEvent) => {
         setTouchEnd(e.targetTouches[0].clientX);
-    };
+    }, []);
 
-    const onTouchEnd = () => {
+    const onTouchEnd = useCallback(() => {
         if (!touchStart || !touchEnd) return;
         const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
+        const isLeftSwipe = distance > MIN_SWIPE_DISTANCE;
+        const isRightSwipe = distance < -MIN_SWIPE_DISTANCE;
         if (isLeftSwipe) nextPhoto();
         if (isRightSwipe) prevPhoto();
-    };
+    }, [touchStart, touchEnd, nextPhoto, prevPhoto]);
 
-    // 마우스 드래그 지원 (데스크탑)
-    const onMouseDown = (e: React.MouseEvent) => {
+    // [최적화] 마우스 드래그 핸들러 메모이제이션 (데스크탑)
+    const onMouseDown = useCallback((e: React.MouseEvent) => {
         setTouchEnd(null);
         setTouchStart(e.clientX);
-    };
+    }, []);
 
-    const onMouseMove = (e: React.MouseEvent) => {
+    const onMouseMove = useCallback((e: React.MouseEvent) => {
         if (touchStart !== null) {
             setTouchEnd(e.clientX);
         }
-    };
+    }, [touchStart]);
 
-    const onMouseUp = () => {
+    const onMouseUp = useCallback(() => {
         if (!touchStart || !touchEnd) {
             setTouchStart(null);
             return;
         }
         const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > minSwipeDistance;
-        const isRightSwipe = distance < -minSwipeDistance;
+        const isLeftSwipe = distance > MIN_SWIPE_DISTANCE;
+        const isRightSwipe = distance < -MIN_SWIPE_DISTANCE;
         if (isLeftSwipe) nextPhoto();
         if (isRightSwipe) prevPhoto();
         setTouchStart(null);
         setTouchEnd(null);
-    };
+    }, [touchStart, touchEnd, nextPhoto, prevPhoto]);
 
-    const onMouseLeave = () => {
+    const onMouseLeave = useCallback(() => {
         setTouchStart(null);
         setTouchEnd(null);
-    };
+    }, []);
 
     return (
         <Card className="overflow-hidden">
@@ -671,7 +675,7 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
             {/* 사진 캐러셀 - 스와이프 지원 */}
             {hasPhotos && (
                 <div
-                    className="relative aspect-square bg-muted select-none cursor-grab active:cursor-grabbing"
+                    className="relative aspect-square bg-muted select-none cursor-grab active:cursor-grabbing group"
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
@@ -689,6 +693,32 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                             e.currentTarget.style.display = 'none';
                         }}
                     />
+
+                    {/* 이전/다음 버튼 */}
+                    {hasMultiplePhotos && currentPhotoIndex > 0 && (
+                        <button
+                            aria-label="돌아가기"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                prevPhoto();
+                            }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
+                        </button>
+                    )}
+                    {hasMultiplePhotos && currentPhotoIndex < review.photos.length - 1 && (
+                        <button
+                            aria-label="다음"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                nextPhoto();
+                            }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                        </button>
+                    )}
 
                     {/* 인디케이터 */}
                     {hasMultiplePhotos && (

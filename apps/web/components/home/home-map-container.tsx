@@ -277,22 +277,24 @@ function HomeMapContainerComponent({
     return (
         <div className="relative w-full h-full">
             {mapMode === 'domestic' ? (
-                <NaverMapView
-                    filters={filters}
-                    selectedRegion={selectedRegion}
-                    searchedRestaurant={searchedRestaurant}
-                    selectedRestaurant={selectedRestaurant}
-                    refreshTrigger={refreshTrigger}
-                    onAdminEditRestaurant={onAdminEditRestaurant}
-                    onRequestEditRestaurant={onRequestEditRestaurant}
-                    onRestaurantSelect={onRestaurantSelect}
-                    activePanel={activePanel}
-                    onPanelClick={onPanelClick}
-                    onMarkerClick={onMarkerClick}
-                    externalPanelOpen={externalPanelOpen}
-                    isPanelCollapsed={isPanelCollapsed}
-                    isPanelOpen={isPanelOpen}
-                />
+                <Suspense fallback={<MapSkeleton />}>
+                    <NaverMapView
+                        filters={filters}
+                        selectedRegion={selectedRegion}
+                        searchedRestaurant={searchedRestaurant}
+                        selectedRestaurant={selectedRestaurant}
+                        refreshTrigger={refreshTrigger}
+                        onAdminEditRestaurant={onAdminEditRestaurant}
+                        onRequestEditRestaurant={onRequestEditRestaurant}
+                        onRestaurantSelect={onRestaurantSelect}
+                        activePanel={activePanel}
+                        onPanelClick={onPanelClick}
+                        onMarkerClick={onMarkerClick}
+                        externalPanelOpen={externalPanelOpen}
+                        isPanelCollapsed={isPanelCollapsed}
+                        isPanelOpen={isPanelOpen}
+                    />
+                </Suspense>
             ) : (
                 <Suspense fallback={<MapSkeleton />}>
                     <MapView

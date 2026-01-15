@@ -340,40 +340,34 @@ const debounce = <T extends (...args: any[]) => any>(func: T, delay: number): ((
 };
 
 /**
- * 주어진 레스토랑이 현재 지도의 가시 영역 내에 있는지 확인합니다.
- * @param restaurant 확인할 레스토랑 객체
- * @param map 현재 Naver Map 인스턴스
- * @param padding 가시 영역을 확장할 비율 (예: 0.05는 5% 확장)
- * @returns 가시 영역 내에 있으면 true, 아니면 false
+ * 가시영역 확장 계산 (필터링 성능 최적화를 위해 한 번만 수행)
  */
-const isRestaurantInViewport = (restaurant: Restaurant, map: any, padding: number = VIEWPORT_PADDING): boolean => {
-    if (!map || !restaurant.lat || !restaurant.lng) return false;
-
+const getExtendedBounds = (map: any, padding: number = VIEWPORT_PADDING) => {
+    if (!map) return null;
     const bounds = map.getBounds();
-    // [Fix] 초기 로딩 시 bounds가 없으면 가시 영역으로 간주하여 필터링하지 않음
-    if (!bounds) return true;
+    if (!bounds || typeof bounds.getSW !== 'function') return null;
 
+    const sw = bounds.getSW();
+    const ne = bounds.getNE();
+    const latDiff = ne.lat() - sw.lat();
+    const lngDiff = ne.lng() - sw.lng();
+
+    return {
+        sw: new window.naver.maps.LatLng(sw.lat() - latDiff * padding, sw.lng() - lngDiff * padding),
+        ne: new window.naver.maps.LatLng(ne.lat() + latDiff * padding, ne.lng() + lngDiff * padding)
+    };
+};
+
+/**
+ * 주어진 레스토랑이 현재 지도의 가시 영역 내에 있는지 확인합니다.
+ */
+const isRestaurantInViewport = (restaurant: Restaurant, extendedBounds: any): boolean => {
+    if (!extendedBounds || !restaurant.lat || !restaurant.lng) return true;
+
+    // Naver Maps LatLngBounds.hasLatLng 사용 (또는 단순 수치 비교로 최적화 가능)
     const latLng = new window.naver.maps.LatLng(restaurant.lat, restaurant.lng);
-
-    // 가시 영역을 확장하여 마커가 가장자리에 있을 때도 포함되도록 합니다.
-    const southWest = bounds.getSW();
-    const northEast = bounds.getNE();
-
-    const latDiff = northEast.lat() - southWest.lat();
-    const lngDiff = northEast.lng() - southWest.lng();
-
-    const paddedSouthWest = new window.naver.maps.LatLng(
-        southWest.lat() - latDiff * padding,
-        southWest.lng() - lngDiff * padding
-    );
-    const paddedNorthEast = new window.naver.maps.LatLng(
-        northEast.lat() + latDiff * padding,
-        northEast.lng() + lngDiff * padding
-    );
-
-    const paddedBounds = new window.naver.maps.LatLngBounds(paddedSouthWest, paddedNorthEast);
-
-    return paddedBounds.hasLatLng(latLng);
+    const bounds = new window.naver.maps.LatLngBounds(extendedBounds.sw, extendedBounds.ne);
+    return bounds.hasLatLng(latLng);
 };
 
 const NaverMapView = memo(({
@@ -1395,7 +1389,12 @@ const NaverMapView = memo(({
         const { naver } = window;
         const map = mapInstanceRef.current;
         const currentZoom = Math.floor(map.getZoom());
-        const mapBounds = map.getBounds();
+
+        // [OPTIMIZATION] 가시영역 확장 계산 (한 번만 수행)
+        const extendedBounds = getExtendedBounds(map);
+
+        // [PERFORMANCE] 렌더링 시작 시간 측정
+        perfMonitor.startMeasure('RenderMarkers');
 
         // 전국 뷰일 때만 클러스터링 적용 (특정 지역 선택 시 개별 마커)
         const effectiveMaxZoom = getClusterMaxZoom(selectedRegion);
@@ -1653,7 +1652,7 @@ const NaverMapView = memo(({
                 }
 
                 const visibleRestaurants = VIEWPORT_FILTER_ENABLED
-                    ? restaurantsToShow.filter(r => r.id === selectedRestaurant?.id || isRestaurantInViewport(r, map))
+                    ? restaurantsToShow.filter(r => r.id === selectedRestaurant?.id || isRestaurantInViewport(r, extendedBounds))
                     : restaurantsToShow;
 
                 visibleRestaurants.forEach(restaurant => {
@@ -1699,6 +1698,12 @@ const NaverMapView = memo(({
 
             // Cleanup
             markerPool.releaseExcept(activeIds);
+
+            // [PERFORMANCE] 렌더링 종료 시간 측정 및 로그 (개발 모드)
+            perfMonitor.endMeasure('RenderMarkers');
+            if (process.env.NODE_ENV === 'development' && activeIds.size > 50) {
+                perfMonitor.report();
+            }
         }
 
     }, [clusters, regionalClusters, seoulDistrictClusters, seoulDistrictClustersFiltered, seoulIndividualIds, displayRestaurants.length, selectedRegion, selectedRestaurant?.id, searchedRestaurant?.id, isClusterMode, isRegionalClusterMode, isSeoulDistrictMode, isMapInitialized]);
@@ -2049,11 +2054,12 @@ const NaverMapView = memo(({
 
             const perfStart = PERFORMANCE_LOG_ENABLED ? performance.now() : 0;
 
+            const extendedBounds = getExtendedBounds(map);
             const visibleRestaurants = restaurantsToShow.filter(r => {
                 if (r.id === selectedRestaurant?.id || r.id === searchedRestaurant?.id) {
                     return true;
                 }
-                return isRestaurantInViewport(r, map);
+                return isRestaurantInViewport(r, extendedBounds);
             });
 
 
@@ -2144,6 +2150,16 @@ const NaverMapView = memo(({
         setInternalPanelOpen(true);
         // 현재 searchedRestaurant 저장
         previousSearchedRestaurantRef.current = searchedRestaurant;
+
+        // [검색 시 줌 레벨 15로 즉시 이동]
+        const map = mapInstanceRef.current;
+        const targetLat = actualSearchedRestaurant.lat;
+        const targetLng = actualSearchedRestaurant.lng;
+        if (map && targetLat && targetLng && window.naver) {
+            const targetZoom = 15;
+            map.setZoom(targetZoom);
+            map.setCenter(new window.naver.maps.LatLng(targetLat, targetLng));
+        }
     }, [searchedRestaurant]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
@@ -2190,51 +2206,61 @@ const NaverMapView = memo(({
                 />
 
                 {/* 로딩 상태 표시 */}
-                {(isLoadingRestaurants || !isLoaded) && (
-                    <MapLoadingIndicator
-                        isLoaded={isLoaded}
-                        style={centerOffsetStyle}
-                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
-                    />
-                )}
+                {
+                    (isLoadingRestaurants || !isLoaded) && (
+                        <MapLoadingIndicator
+                            isLoaded={isLoaded}
+                            style={centerOffsetStyle}
+                            className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                        />
+                    )
+                }
 
                 {/* 레스토랑 개수 표시 (3초 후 fade-out) */}
-                {!isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
-                    <RestaurantCountBadge
-                        count={restaurants.length}
-                        style={centerOffsetStyle}
-                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
-                    />
-                )}
+                {
+                    !isLoadingRestaurants && isLoaded && restaurants.length > 0 && showRestaurantCount && (
+                        <RestaurantCountBadge
+                            count={restaurants.length}
+                            style={centerOffsetStyle}
+                            className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                        />
+                    )
+                }
 
                 {/* 동시 접속자 표시 (주기적으로 표시) */}
-                {showOnlineUsers && !showRestaurantCount && (
-                    <OnlineUsersBadge
-                        count={onlineUsersCount}
-                        style={centerOffsetStyle}
-                        className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
-                    />
-                )}
+                {
+                    showOnlineUsers && !showRestaurantCount && (
+                        <OnlineUsersBadge
+                            count={onlineUsersCount}
+                            style={centerOffsetStyle}
+                            className="absolute top-4 -translate-x-1/2 transition-[left] duration-300 ease-in-out"
+                        />
+                    )
+                }
 
                 {/* 빈 상태 UI - 맛집이 없을 때 표시 */}
-                {!isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
-                    <div style={centerOffsetStyle} className="absolute top-4 -translate-x-1/2 z-10 transition-[left] duration-300 ease-in-out">
-                        <EmptyStateIndicator />
-                    </div>
-                )}
+                {
+                    !isLoadingRestaurants && isLoaded && restaurants.length === 0 && (
+                        <div style={centerOffsetStyle} className="absolute top-4 -translate-x-1/2 z-10 transition-[left] duration-300 ease-in-out">
+                            <EmptyStateIndicator />
+                        </div>
+                    )
+                }
 
                 {/* [커스텀 토스트] 메시지 표시 */}
-                {mapToast && mapToast.isVisible && (
-                    <div
-                        style={centerOffsetStyle}
-                        className="absolute top-4 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-20 flex items-center gap-2 animate-in fade-in zoom-in duration-300 transition-[left] ease-in-out"
-                    >
-                        <span className="text-sm font-medium">
-                            {mapToast.message}
-                        </span>
-                    </div>
-                )}
-            </div>
+                {
+                    mapToast && mapToast.isVisible && (
+                        <div
+                            style={centerOffsetStyle}
+                            className="absolute top-4 -translate-x-1/2 bg-card border border-border rounded-lg px-4 py-2 shadow-lg z-20 flex items-center gap-2 animate-in fade-in zoom-in duration-300 transition-[left] ease-in-out"
+                        >
+                            <span className="text-sm font-medium">
+                                {mapToast.message}
+                            </span>
+                        </div>
+                    )
+                }
+            </div >
         );
     }
 

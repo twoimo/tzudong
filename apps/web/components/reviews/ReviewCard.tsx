@@ -41,7 +41,7 @@ export interface ReviewCardProps {
     }) => void;
 }
 
-import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
+import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
 
 export const ReviewCard = React.memo(function ReviewCard({
     review,
@@ -279,6 +279,13 @@ export const ReviewCard = React.memo(function ReviewCard({
                                     </CarouselItem>
                                 ))}
                             </CarouselContent>
+                            {/* Instagram-style overlay navigation buttons */}
+                            {review.photos.length > 1 && (
+                                <>
+                                    <CarouselOverlayPrevious />
+                                    <CarouselOverlayNext />
+                                </>
+                            )}
                         </Carousel>
 
                         {/* 인디케이터 */}
