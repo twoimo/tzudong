@@ -1,4 +1,4 @@
-import { Home, Trophy, Stamp, DollarSign, ClipboardCheck, User, FileText, MessageSquare, PlusCircle, Edit3, Heart, ChevronDown, BarChart2, Bookmark } from "lucide-react";
+import { Home, Trophy, Stamp, DollarSign, ClipboardCheck, User, MessageSquare, PlusCircle, Edit3, Heart, BarChart2, Bookmark } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useRouter, usePathname } from "next/navigation";
@@ -7,12 +7,37 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Image from "next/image";
 import AdBanner from "./AdBanner";
-import { memo, useCallback, useMemo, useState, useEffect, useTransition } from "react";
+import { memo, useCallback, useMemo, useEffect, useTransition } from "react";
 import { useHydration } from "@/hooks/useHydration";
 
 interface SidebarProps {
   isOpen: boolean;
   isMyPageMode?: boolean;
+}
+
+interface MenuItem {
+  icon: React.ElementType;
+  label: string;
+  path: string;
+  onClick: () => void;
+  onHover?: () => void;
+  isParent?: boolean; // Kept for potential future use or legacy compatibility if needed, though removed from logic
+  children?: MenuItem[];
+}
+
+interface ProfileData {
+  user_id: string;
+  nickname: string;
+}
+
+interface ReviewData {
+  id: string;
+  user_id: string;
+  is_verified: boolean;
+}
+
+interface ReviewLikeData {
+  review_id: string;
 }
 
 const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
@@ -21,7 +46,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
   const queryClient = useQueryClient();
   const { user, isAdmin } = useAuth();
   const isHydrated = useHydration();
-  const [isSubmissionsExpanded, setIsSubmissionsExpanded] = useState(true);
+
   const [, startTransition] = useTransition();
 
   // [OPTIMIZATION] 마운트 시 모든 메뉴 경로 prefetch
@@ -103,28 +128,31 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
             .from('profiles')
             .select('user_id, nickname')
             .not('nickname', 'is', null)
-            .neq('nickname', '탈퇴한 사용자');
+            .neq('nickname', '탈퇴한 사용자')
+            .returns<ProfileData[]>();
 
           if (profilesError) throw new Error(`프로필 데이터 조회 실패: ${profilesError.message}`);
           if (!profilesData || profilesData.length === 0) return [];
 
           // 해당 사용자들의 모든 리뷰 조회
-          const userIds = profilesData.map((profile: any) => profile.user_id);
+          const userIds = profilesData.map((profile) => profile.user_id);
           const { data: allReviewsData } = await supabase
             .from('reviews')
             .select('id, user_id, is_verified')
-            .in('user_id', userIds);
+            .in('user_id', userIds)
+            .returns<ReviewData[]>();
 
           // 모든 리뷰의 좋아요 데이터 조회
           let reviewIds: string[] = [];
           if (allReviewsData) {
-            reviewIds = allReviewsData.map((review: any) => review.id);
+            reviewIds = allReviewsData.map((review) => review.id);
           }
 
           const { data: likesData } = await supabase
             .from('review_likes')
             .select('review_id')
-            .in('review_id', reviewIds);
+            .in('review_id', reviewIds)
+            .returns<ReviewLikeData[]>();
 
           // 통계 계산
           const reviewCountMap = new Map<string, number>();
@@ -133,14 +161,14 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
           const reviewLikesMap = new Map<string, number>();
 
           if (likesData) {
-            likesData.forEach((like: any) => {
+            likesData.forEach((like) => {
               const current = reviewLikesMap.get(like.review_id) || 0;
               reviewLikesMap.set(like.review_id, current + 1);
             });
           }
 
           if (allReviewsData && allReviewsData.length > 0) {
-            allReviewsData.forEach((review: any) => {
+            allReviewsData.forEach((review) => {
               const currentReviewCount = reviewCountMap.get(review.user_id) || 0;
               reviewCountMap.set(review.user_id, currentReviewCount + 1);
 
@@ -155,7 +183,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
             });
           }
 
-          const users = profilesData.map((profile: any) => {
+          const users = profilesData.map((profile) => {
             const reviewCount = reviewCountMap.get(profile.user_id) || 0;
             const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
             const totalLikes = totalLikesMap.get(profile.user_id) || 0;
@@ -170,8 +198,8 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
           });
 
           return users
-            .sort((a: any, b: any) => b.verifiedReviewCount - a.verifiedReviewCount)
-            .map((user: any, index: number) => ({
+            .sort((a, b) => b.verifiedReviewCount - a.verifiedReviewCount)
+            .map((user, index: number) => ({
               ...user,
               rank: index + 1,
             }));
@@ -186,8 +214,8 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
 
   // [메뉴 설정] 메뉴 아이템 메모이제이션 - startTransition 적용
   // 모바일 바텀 네비게이션의 5개 항목과 동일하게 구성
-  const menuItems = useMemo(() => {
-    const baseMenuItems = [
+  const menuItems = useMemo<MenuItem[]>(() => {
+    const baseMenuItems: MenuItem[] = [
       { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => startTransition(() => router.push("/")) },
       { icon: MessageSquare, label: "쯔동여지도 리뷰", path: "/feed", onClick: () => startTransition(() => router.push("/feed")) },
       { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => startTransition(() => router.push("/stamp")) },
@@ -196,7 +224,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
     ];
 
     // [권한 관리] 관리자 메뉴 (hydration 완료 후에만 표시)
-    const adminMenuItems = (isHydrated && user && isAdmin) ? [
+    const adminMenuItems: MenuItem[] = (isHydrated && user && isAdmin) ? [
       { icon: DollarSign, label: "월 서버 운영 비용", path: "/costs", onClick: () => startTransition(() => router.push("/costs")) },
       { icon: ClipboardCheck, label: "관리자 데이터 검수", path: "/admin/evaluations", onClick: () => startTransition(() => router.push("/admin/evaluations")) },
       { icon: BarChart2, label: "쯔동여지도 인사이트", path: "/admin/insight", onClick: () => startTransition(() => router.push("/admin/insight")) },
@@ -243,18 +271,11 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
   }, [queryClient, user?.id]);
 
   // 마이페이지 메뉴 아이템 - startTransition 적용
-  const myPageMenuItems = useMemo(() => [
+  const myPageMenuItems = useMemo<MenuItem[]>(() => [
     { icon: User, label: "마이페이지", path: "/mypage/profile", onClick: () => startTransition(() => router.push("/mypage/profile")) },
-    {
-      icon: FileText,
-      label: "나의 제보 내역",
-      isParent: true,
-      children: [
-        { icon: PlusCircle, label: "신규 맛집 제보", path: "/mypage/submissions/new", onClick: () => startTransition(() => router.push("/mypage/submissions/new")) },
-        { icon: Edit3, label: "맛집 수정 요청", path: "/mypage/submissions/edit", onClick: () => startTransition(() => router.push("/mypage/submissions/edit")) },
-        { icon: Heart, label: "쯔양 맛집 제보", path: "/mypage/submissions/recommend", onClick: () => startTransition(() => router.push("/mypage/submissions/recommend")) },
-      ]
-    },
+    { icon: PlusCircle, label: "신규 맛집 제보", path: "/mypage/submissions/new", onClick: () => startTransition(() => router.push("/mypage/submissions/new")) },
+    { icon: Edit3, label: "맛집 수정 요청", path: "/mypage/submissions/edit", onClick: () => startTransition(() => router.push("/mypage/submissions/edit")) },
+    { icon: Heart, label: "쯔양 맛집 제보", path: "/mypage/submissions/recommend", onClick: () => startTransition(() => router.push("/mypage/submissions/recommend")) },
     { icon: MessageSquare, label: "나의 리뷰 내역", path: "/mypage/reviews", onClick: () => startTransition(() => router.push("/mypage/reviews")), onHover: prefetchMyReviews },
     { icon: Bookmark, label: "나의 북마크 내역", path: "/mypage/bookmarks", onClick: () => startTransition(() => router.push("/mypage/bookmarks")), onHover: prefetchMyBookmarks },
   ], [router, startTransition, prefetchMyReviews, prefetchMyBookmarks]);
@@ -264,60 +285,6 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
     <>
       <nav className={cn("flex-1 space-y-1 overflow-y-auto relative z-10", isOpen ? "p-4" : "p-2")}>
         {myPageMenuItems.map((item, index) => {
-          if (item.isParent && item.children) {
-            const isParentActive = pathname?.includes('/submissions');
-            return (
-              <div key={index} className="space-y-1">
-                <Button
-                  variant="ghost"
-                  title={!isOpen ? item.label : undefined}
-                  className={cn(
-                    "w-full font-serif text-base h-11 transition-all duration-200",
-                    isOpen ? "justify-between gap-3" : "justify-center p-0",
-                    isParentActive
-                      ? "bg-accent text-foreground"
-                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                  )}
-                  onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className={cn("h-5 w-5", isParentActive ? "text-foreground" : "text-muted-foreground")} />
-                    {isOpen && <span>{item.label}</span>}
-                  </div>
-                  {isOpen && (
-                    <ChevronDown className={cn(
-                      "h-4 w-4 transition-transform",
-                      isSubmissionsExpanded ? "rotate-180" : ""
-                    )} />
-                  )}
-                </Button>
-                {isOpen && isSubmissionsExpanded && (
-                  <div className="ml-4 pl-4 border-l border-border space-y-1">
-                    {item.children.map((child, childIndex) => {
-                      const isActive = pathname === child.path;
-                      return (
-                        <Button
-                          key={childIndex}
-                          variant="ghost"
-                          className={cn(
-                            "w-full font-serif text-sm h-9 justify-start gap-2",
-                            isActive
-                              ? "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:text-primary-foreground"
-                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-                          )}
-                          onClick={child.onClick}
-                        >
-                          <child.icon className={cn("h-4 w-4", isActive ? "text-white" : "text-muted-foreground")} />
-                          <span>{child.label}</span>
-                        </Button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          }
-
           const isActive = pathname === item.path;
           return (
             <Button
