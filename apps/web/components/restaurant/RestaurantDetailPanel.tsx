@@ -1,12 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { X, MapPin, Users, MessageSquare, Youtube, Navigation, CheckCircle, Settings, Store, Quote, Star, Edit, ArrowLeft, Clock, Heart, Pin, XCircle, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, BadgeCheck, Share2 } from "lucide-react";
+import { MapPin, MessageSquare, Youtube, Navigation, Settings, Store, Quote, Star, Edit, ArrowLeft, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Restaurant } from "@/types/restaurant";
-import { Card } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -65,14 +62,11 @@ export function RestaurantDetailPanel({
     const queryClient = useQueryClient();
     const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'detail' | 'reviews'>('detail');
-    const [selectedReview, setSelectedReview] = useState<Review | null>(null);
-    const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [likedReviews, setLikedReviews] = useState<Set<string>>(new Set());
     const [copiedAddress, setCopiedAddress] = useState<'road' | 'jibun' | 'english' | null>(null);
     const [isYoutubeExpanded, setIsYoutubeExpanded] = useState(false);
     const [isReviewExpanded, setIsReviewExpanded] = useState(false);
     const [isDirectionSheetOpen, setIsDirectionSheetOpen] = useState(false);
-    const [cardPhotoIndexes, setCardPhotoIndexes] = useState<Record<string, number>>({});
     const [isShareCopied, setIsShareCopied] = useState(false);
     const [editingReview, setEditingReview] = useState<{
         id: string;
@@ -85,7 +79,7 @@ export function RestaurantDetailPanel({
         adminNote: string | null;
     } | null>(null);
 
-    // [REALTIME] 좋아요 실시간 반영
+    // [실시간] 좋아요 실시간 반영
     useReviewLikesRealtime();
 
     // [카테고리 처리] categories 배열로 저장됨
@@ -232,7 +226,7 @@ export function RestaurantDetailPanel({
             }
         },
         enabled: !!restaurant?.id,
-        // [FIX] 리뷰 표시 문제 수정 - 전역 설정 오버라이드
+        // [수정] 리뷰 표시 문제 수정 - 전역 설정 오버라이드
         refetchOnMount: 'always', // 패널 열릴 때마다 항상 새로운 데이터 fetch
         staleTime: 0, // 리뷰 데이터는 항상 최신 상태로 유지
         gcTime: 30 * 1000, // 30초 후 캐시 정리 (패널 닫힌 후)
@@ -266,69 +260,20 @@ export function RestaurantDetailPanel({
         }
     }, [reviewsData]);
 
-    // [상태 계산] 실시간 좋아요 수 계산 (서버 데이터 + 로컬 변경사항)
-    const getRealtimeLikeCount = (review: Review) => {
-        const serverLikeCount = review.likeCount;
-        const isLikedOnServer = review.isLikedByUser;
-        const isLikedLocally = likedReviews.has(review.id);
-
-        // 서버 상태와 로컬 상태가 다르면 조정
-        if (isLikedOnServer !== isLikedLocally) {
-            return isLikedLocally ? serverLikeCount + 1 : Math.max(0, serverLikeCount - 1);
-        }
-
-        return serverLikeCount;
-    };
-
-    const formatDateTime = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleString('ko-KR', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-        });
-    };
-
-    const handleViewAllReviews = () => {
+    // [핸들러] 전체 리뷰 보기
+    const handleViewAllReviews = useCallback(() => {
         setViewMode('reviews');
-    };
+    }, []);
 
-    const handleBackToDetail = () => {
+    // [핸들러] 상세 정보로 돌아가기
+    const handleBackToDetail = useCallback(() => {
         setViewMode('detail');
-    };
+    }, []);
 
-    const handleBackFromReviewDetail = () => {
-        setSelectedReview(null);
-        setCurrentPhotoIndex(0);
-        // 전체 보기 목록에서 왔으면 reviews로, 아니면 detail로
-        setViewMode('reviews');
-    };
 
-    const handleReviewClick = (review: Review) => {
-        // [MODIFIED] 리뷰 상세 페이지(viewMode='review-detail')로 이동하지 않음
-        // ReviewCard가 자체적으로 텍스트 확장 기능을 제공하므로 별도 페이지 이동 불필요
-        console.log("Review clicked:", review.id);
-    };
 
-    const handlePrevPhoto = () => {
-        if (selectedReview && selectedReview.photos.length > 0) {
-            setCurrentPhotoIndex(prev =>
-                prev === 0 ? selectedReview.photos.length - 1 : prev - 1
-            );
-        }
-    };
-
-    const handleNextPhoto = () => {
-        if (selectedReview && selectedReview.photos.length > 0) {
-            setCurrentPhotoIndex(prev =>
-                prev === selectedReview.photos.length - 1 ? 0 : prev + 1
-            );
-        }
-    };
-
-    const handleCopyAddress = async (address: string, type: 'road' | 'jibun' | 'english') => {
+    // [핸들러] 주소 복사
+    const handleCopyAddress = useCallback(async (address: string, type: 'road' | 'jibun' | 'english') => {
         try {
             await navigator.clipboard.writeText(address);
             setCopiedAddress(type);
@@ -336,9 +281,9 @@ export function RestaurantDetailPanel({
         } catch (err) {
             console.error('주소 복사 실패:', err);
         }
-    };
+    }, []);
 
-    // [성능 최적화] 공유하기 URL 복사 핸들러 - useCallback으로 메모이제이션
+    // [핸들러] 공유하기 URL 복사 - useCallback으로 메모이제이션
     const handleShareUrl = useCallback(async () => {
         if (!restaurant) return;
         const url = new URL(window.location.href);
@@ -355,57 +300,65 @@ export function RestaurantDetailPanel({
         }
     }, [restaurant]);
 
-    const extractYouTubeVideoId = (url: string) => {
+    // [유틸] 유튜브 비디오 ID 추출
+    const extractYouTubeVideoId = useCallback((url: string) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
         const match = url.match(regExp);
         return (match && match[2].length === 11) ? match[2] : null;
-    };
+    }, []);
 
-    const getYouTubeThumbnailUrl = (url: string) => {
+    // [유틸] 유튜브 썸네일 URL 생성
+    const getYouTubeThumbnailUrl = useCallback((url: string) => {
         const videoId = extractYouTubeVideoId(url);
         return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-    };
+    }, [extractYouTubeVideoId]);
 
     // [예외 처리] restaurant가 없으면 null 반환 (모든 Hook 호출 후)
     if (!restaurant) return null;
 
-    const handleGetDirections = () => {
+    // [핸들러] 길찾기 시트 열기
+    const handleGetDirections = useCallback(() => {
         setIsDirectionSheetOpen(true);
-    };
+    }, []);
 
-    const handleNaverMap = () => {
+    // [핸들러] 네이버 지도 열기
+    const handleNaverMap = useCallback(() => {
         const url = `https://map.naver.com/v5/search/${encodeURIComponent(restaurant.name)}`;
         window.open(url, '_blank');
         setIsDirectionSheetOpen(false);
-    };
+    }, [restaurant.name]);
 
-    const handleGoogleMap = () => {
+    // [핸들러] 구글 지도 열기
+    const handleGoogleMap = useCallback(() => {
         const url = `https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`;
         window.open(url, '_blank');
         setIsDirectionSheetOpen(false);
-    };
+    }, [restaurant.lat, restaurant.lng]);
 
-    const handleKakaoMap = () => {
+    // [핸들러] 카카오맵 열기
+    const handleKakaoMap = useCallback(() => {
         const url = `https://map.kakao.com/link/to/${encodeURIComponent(restaurant.name)},${restaurant.lat},${restaurant.lng}`;
         window.open(url, '_blank');
         setIsDirectionSheetOpen(false);
-    };
+    }, [restaurant.name, restaurant.lat, restaurant.lng]);
 
-    const handleRequestEditRestaurant = () => {
+    // [핸들러] 수정 요청
+    const handleRequestEditRestaurant = useCallback(() => {
         if (!user) {
             setIsAuthModalOpen(true);
             return;
         }
         onRequestEditRestaurant?.(restaurant);
-    };
+    }, [user, onRequestEditRestaurant, restaurant]);
 
-    const handleWriteReview = () => {
+    // [핸들러] 리뷰 작성
+    const handleWriteReview = useCallback(() => {
         if (!user) {
             setIsAuthModalOpen(true);
             return;
         }
         onWriteReview?.();
-    };
+    }, [user, onWriteReview]);
 
     const handleLikeReview = async (reviewId: string) => {
         if (!user) {
@@ -507,7 +460,7 @@ export function RestaurantDetailPanel({
             '야식': '🌙',
             '도시락': '🍱'
         };
-        return emojiMap[category] || '⭐'; // 기본값은 별표
+        return emojiMap[category] || '⭐'; // 기본값은 별
     };
 
     return (
@@ -924,7 +877,7 @@ export function RestaurantDetailPanel({
                                                         submittedAt: review.submittedAt,
                                                     }}
                                                     onLike={handleLikeReview}
-                                                    onClick={() => handleReviewClick(review)}
+                                                    onClick={() => { }}
                                                     onRestaurantClick={() => { }}
                                                     currentUserId={user?.id}
                                                     onEditReview={(reviewData) => setEditingReview({
