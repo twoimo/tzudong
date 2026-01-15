@@ -1547,7 +1547,7 @@ const NaverMapView = memo(({
                         { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
                         map,
                         () => {
-                            map.panTo(new naver.maps.LatLng(restaurant.lat, restaurant.lng), { duration: 300 });
+                            hasUserMovedMapRef.current = false;
                             if (onMarkerClick) onMarkerClick(restaurant);
                             else {
                                 if (onRestaurantSelect) onRestaurantSelect(restaurant);
@@ -1628,7 +1628,7 @@ const NaverMapView = memo(({
                                     // ... existing click logic ...
                                     const restaurant = displayRestaurants.find(r => r.id === restaurantId);
                                     if (restaurant) {
-                                        map.panTo(new naver.maps.LatLng(lat, lng), { duration: 300 });
+                                        hasUserMovedMapRef.current = false;
                                         if (onMarkerClick) onMarkerClick(restaurant);
                                         else {
                                             if (onRestaurantSelect) onRestaurantSelect(restaurant);
@@ -1684,7 +1684,7 @@ const NaverMapView = memo(({
                         { content: html, anchor: new naver.maps.Point(isSelected ? 18 : 14, isSelected ? 18 : 14) },
                         map,
                         () => {
-                            map.panTo(new naver.maps.LatLng(restaurant.lat, restaurant.lng), { duration: 300 });
+                            hasUserMovedMapRef.current = false;
                             if (onMarkerClick) onMarkerClick(restaurant);
                             else {
                                 if (onRestaurantSelect) onRestaurantSelect(restaurant);

@@ -153,14 +153,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         setMoveToRestaurant(() => moveFunction);
     };
 
-    const handleMarkerClick = (restaurant: Restaurant) => {
-        console.log('[HomeClient] handleMarkerClick 호출:', restaurant.name);
-        setPanelRestaurant(restaurant);
-        setSelectedRestaurant(restaurant);
-        setSearchedRestaurant(restaurant);
-        setIsPanelOpen(true);
-        console.log('[HomeClient] 패널 상태 업데이트 완료');
-    };
+
 
     const handlePanelClose = () => {
         setIsPanelOpen(false);
@@ -182,7 +175,7 @@ export function useHomeHandlers(props: UseHomeHandlersProps) {
         handleRestaurantSearch,
         switchToSingleMap,
         handleMapReady,
-        handleMarkerClick,
+
         handlePanelClose,
     };
 }
