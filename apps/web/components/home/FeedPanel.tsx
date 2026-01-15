@@ -739,7 +739,7 @@ const FeedPanelCard = memo(function FeedPanelCard({
             {/* 사진 캐러셀 */}
             {hasPhotos && (
                 <div
-                    className="relative aspect-square bg-muted select-none cursor-grab active:cursor-grabbing"
+                    className="relative aspect-square bg-muted select-none cursor-grab active:cursor-grabbing group"
                     onTouchStart={onTouchStart}
                     onTouchMove={onTouchMove}
                     onTouchEnd={onTouchEnd}
@@ -755,6 +755,32 @@ const FeedPanelCard = memo(function FeedPanelCard({
                         draggable={false}
                         onError={handleImageError}
                     />
+
+                    {/* 이전/다음 버튼 */}
+                    {hasMultiplePhotos && currentPhotoIndex > 0 && (
+                        <button
+                            aria-label="돌아가기"
+                            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                prevPhoto();
+                            }}
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                        </button>
+                    )}
+                    {hasMultiplePhotos && currentPhotoIndex < review.photos.length - 1 && (
+                        <button
+                            aria-label="다음"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                nextPhoto();
+                            }}
+                        >
+                            <ChevronRight className="h-4 w-4" />
+                        </button>
+                    )}
 
                     {/* 사진 인디케이터 */}
                     {hasMultiplePhotos && (

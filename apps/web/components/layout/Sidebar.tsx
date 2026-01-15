@@ -185,12 +185,14 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
   }, [queryClient]);
 
   // [메뉴 설정] 메뉴 아이템 메모이제이션 - startTransition 적용
+  // 모바일 바텀 네비게이션의 5개 항목과 동일하게 구성
   const menuItems = useMemo(() => {
-    // 마이페이지 모드가 아닐 때는 일반 메뉴 표시
     const baseMenuItems = [
       { icon: Home, label: "쯔동여지도 홈", path: "/", onClick: () => startTransition(() => router.push("/")) },
+      { icon: MessageSquare, label: "쯔동여지도 리뷰", path: "/feed", onClick: () => startTransition(() => router.push("/feed")) },
       { icon: Stamp, label: "쯔동여지도 도장", path: "/stamp", onClick: () => startTransition(() => router.push("/stamp")) },
       { icon: Trophy, label: "쯔동여지도 랭킹", path: "/leaderboard", onClick: () => startTransition(() => router.push("/leaderboard")) },
+      { icon: User, label: "마이페이지 (MY)", path: "/mypage/profile", onClick: () => startTransition(() => router.push("/mypage/profile")) },
     ];
 
     // [권한 관리] 관리자 메뉴 (hydration 완료 후에만 표시)
@@ -201,7 +203,7 @@ const SidebarComponent = ({ isOpen, isMyPageMode = false }: SidebarProps) => {
     ] : [];
 
     return [...baseMenuItems, ...adminMenuItems];
-  }, [router, isHydrated, user, isAdmin, startTransition]);
+  }, [router, pathname, isHydrated, user, isAdmin, startTransition]);
 
   // [최적화] 마이페이지 데이터 프리페치 함수
   const prefetchMyReviews = useCallback(async () => {
