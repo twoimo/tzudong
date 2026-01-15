@@ -18,6 +18,7 @@ import { GlobalLoader } from "@/components/ui/global-loader";
 import { useReviewLikesRealtime } from '@/hooks/use-review-likes-realtime';
 import { ReviewModal } from '@/components/reviews/ReviewModal';
 import { ReviewEditModal } from '@/components/reviews/ReviewEditModal';
+import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
 
 interface FeedReview {
     id: string;
@@ -382,7 +383,7 @@ export default function FeedPage() {
                                         review={review}
                                         likeCount={likeCount}
                                         isLiked={isLiked}
-                                        onToggleLike={() => toggleLike(review.id, isLiked, likeCount, review.userId)}
+                                        onToggleLike={toggleLike}
                                         onGoToRestaurant={() => goToRestaurant(review.restaurantId)}
                                         formatDate={formatDate}
                                         currentUserId={user?.id}
@@ -450,7 +451,7 @@ interface FeedCardProps {
     review: FeedReview;
     likeCount: number;
     isLiked: boolean;
-    onToggleLike: () => void;
+    onToggleLike: (reviewId: string, currentIsLiked: boolean, currentCount: number, reviewUserId: string) => void;
     onGoToRestaurant: () => void;
     formatDate: (date: string) => string;
     currentUserId?: string;
@@ -471,14 +472,23 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
     const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isShareCopied, setIsShareCopied] = useState(false);
-    const [touchStart, setTouchStart] = useState<number | null>(null);
-    const [touchEnd, setTouchEnd] = useState<number | null>(null);
+    const [api, setApi] = useState<CarouselApi>();
     const hasPhotos = review.photos.length > 0;
     const hasMultiplePhotos = review.photos.length > 1;
     const isLongContent = review.content.length > 50;
 
-    // [상수] 스와이프 최소 거리
-    const MIN_SWIPE_DISTANCE = 50;
+
+
+    // Carousel API 연동
+    useEffect(() => {
+        if (!api) {
+            return;
+        }
+
+        api.on("select", () => {
+            setCurrentPhotoIndex(api.selectedScrollSnap());
+        });
+    }, [api]);
 
     // 공유 클릭 핸들러 (단축 URL 사용)
     const handleShareClick = useCallback(async () => {
@@ -512,65 +522,6 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
             setIsShareCopied(false);
         }
     }, [review.restaurantId, review.restaurantName]);
-
-    // [최적화] 사진 내비게이션 핸들러 메모이제이션
-    const nextPhoto = useCallback(() => {
-        setCurrentPhotoIndex((prev) => (prev + 1) % review.photos.length);
-    }, [review.photos.length]);
-
-    const prevPhoto = useCallback(() => {
-        setCurrentPhotoIndex((prev) => (prev - 1 + review.photos.length) % review.photos.length);
-    }, [review.photos.length]);
-
-    // [최적화] 터치 이벤트 핸들러 메모이제이션
-    const onTouchStart = useCallback((e: React.TouchEvent) => {
-        setTouchEnd(null);
-        setTouchStart(e.targetTouches[0].clientX);
-    }, []);
-
-    const onTouchMove = useCallback((e: React.TouchEvent) => {
-        setTouchEnd(e.targetTouches[0].clientX);
-    }, []);
-
-    const onTouchEnd = useCallback(() => {
-        if (!touchStart || !touchEnd) return;
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > MIN_SWIPE_DISTANCE;
-        const isRightSwipe = distance < -MIN_SWIPE_DISTANCE;
-        if (isLeftSwipe) nextPhoto();
-        if (isRightSwipe) prevPhoto();
-    }, [touchStart, touchEnd, nextPhoto, prevPhoto]);
-
-    // [최적화] 마우스 드래그 핸들러 메모이제이션 (데스크탑)
-    const onMouseDown = useCallback((e: React.MouseEvent) => {
-        setTouchEnd(null);
-        setTouchStart(e.clientX);
-    }, []);
-
-    const onMouseMove = useCallback((e: React.MouseEvent) => {
-        if (touchStart !== null) {
-            setTouchEnd(e.clientX);
-        }
-    }, [touchStart]);
-
-    const onMouseUp = useCallback(() => {
-        if (!touchStart || !touchEnd) {
-            setTouchStart(null);
-            return;
-        }
-        const distance = touchStart - touchEnd;
-        const isLeftSwipe = distance > MIN_SWIPE_DISTANCE;
-        const isRightSwipe = distance < -MIN_SWIPE_DISTANCE;
-        if (isLeftSwipe) nextPhoto();
-        if (isRightSwipe) prevPhoto();
-        setTouchStart(null);
-        setTouchEnd(null);
-    }, [touchStart, touchEnd, nextPhoto, prevPhoto]);
-
-    const onMouseLeave = useCallback(() => {
-        setTouchStart(null);
-        setTouchEnd(null);
-    }, []);
 
     return (
         <Card className="overflow-hidden">
@@ -648,7 +599,7 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                         </Button>
                     )}
                     <button
-                        onClick={onToggleLike}
+                        onClick={() => onToggleLike(review.id, isLiked, likeCount, review.userId)}
                         className="relative flex items-center justify-center group"
                         title={`좋아요 ${likeCount}개`}
                     >
@@ -672,63 +623,46 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                 </div>
             </div>
 
-            {/* 사진 캐러셀 - 스와이프 지원 */}
+            {/* 사진 캐러셀 - Embla Carousel 적용 */}
             {hasPhotos && (
-                <div
-                    className="relative aspect-square bg-muted select-none cursor-grab active:cursor-grabbing group"
-                    onTouchStart={onTouchStart}
-                    onTouchMove={onTouchMove}
-                    onTouchEnd={onTouchEnd}
-                    onMouseDown={onMouseDown}
-                    onMouseMove={onMouseMove}
-                    onMouseUp={onMouseUp}
-                    onMouseLeave={onMouseLeave}
-                >
-                    <img
-                        src={supabase.storage.from('review-photos').getPublicUrl(review.photos[currentPhotoIndex]).data.publicUrl}
-                        alt={`리뷰 사진 ${currentPhotoIndex + 1}`}
-                        className="w-full h-full object-cover pointer-events-none"
-                        draggable={false}
-                        onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                        }}
-                    />
-
-                    {/* 이전/다음 버튼 */}
-                    {hasMultiplePhotos && currentPhotoIndex > 0 && (
-                        <button
-                            aria-label="돌아가기"
-                            className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                prevPhoto();
-                            }}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6" /></svg>
-                        </button>
-                    )}
-                    {hasMultiplePhotos && currentPhotoIndex < review.photos.length - 1 && (
-                        <button
-                            aria-label="다음"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-8 w-8 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm flex items-center justify-center text-white/90 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus:outline-none focus:ring-2 focus:ring-white/50"
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                nextPhoto();
-                            }}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                        </button>
-                    )}
+                <div className="relative aspect-square bg-muted select-none group">
+                    <Carousel setApi={setApi} className="w-full h-full">
+                        <CarouselContent>
+                            {review.photos.map((photo, index) => (
+                                <CarouselItem key={index}>
+                                    <div className="relative w-full aspect-square">
+                                        <img
+                                            src={supabase.storage.from('review-photos').getPublicUrl(photo).data.publicUrl}
+                                            alt={`리뷰 사진 ${index + 1}`}
+                                            className="w-full h-full object-cover pointer-events-none"
+                                            draggable={false}
+                                            loading={index === 0 ? "eager" : "lazy"}
+                                            onError={(e) => {
+                                                e.currentTarget.style.display = 'none';
+                                            }}
+                                        />
+                                    </div>
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        {/* Instagram-style overlay navigation buttons */}
+                        {hasMultiplePhotos && (
+                            <>
+                                <CarouselOverlayPrevious />
+                                <CarouselOverlayNext />
+                            </>
+                        )}
+                    </Carousel>
 
                     {/* 인디케이터 */}
                     {hasMultiplePhotos && (
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
                             {review.photos.map((_, idx) => (
                                 <div
                                     key={idx}
                                     className={cn(
-                                        'w-1.5 h-1.5 rounded-full transition-all',
-                                        idx === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50'
+                                        'h-1.5 rounded-full transition-all',
+                                        idx === currentPhotoIndex ? 'bg-white w-3' : 'bg-white/50 w-1.5'
                                     )}
                                 />
                             ))}
