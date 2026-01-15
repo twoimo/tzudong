@@ -18,6 +18,7 @@ interface TierInfo {
 export interface UserProfile {
     userId: string;
     nickname: string;
+    avatarUrl?: string;
     reviewCount: number;
     verifiedReviewCount: number;
     totalLikes: number;
@@ -106,6 +107,7 @@ function buildLikesCountMap(likes: Array<{ review_id: string }> | null): Map<str
 interface ProfileRow {
     user_id: string;
     nickname: string;
+    avatar_url?: string | null;
 }
 
 interface ReviewRow {
@@ -153,7 +155,7 @@ export function useUserProfile(userId: string) {
             const [profileResult, reviewsResult] = await Promise.all([
                 supabase
                     .from('profiles')
-                    .select('user_id, nickname')
+                    .select('user_id, nickname, avatar_url')
                     .eq('user_id', userId)
                     .single(),
                 supabase
@@ -185,6 +187,7 @@ export function useUserProfile(userId: string) {
             return {
                 userId: typedProfile.user_id,
                 nickname: typedProfile.nickname,
+                avatarUrl: typedProfile.avatar_url || undefined,
                 reviewCount: verifiedReviewCount,
                 verifiedReviewCount,
                 totalLikes,

@@ -15,8 +15,10 @@ import {
     CheckCircle2,
     Calendar,
     Users,
-    MapPin
+    MapPin,
+    User
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
     useUserProfile,
     useUserReviews,
@@ -241,6 +243,13 @@ export default function UserProfilePage() {
                     >
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
+                    {/* 프로필 아바타 */}
+                    <Avatar className="h-10 w-10 ring-2 ring-muted flex-shrink-0">
+                        <AvatarImage src={profile.avatarUrl} alt={profile.nickname} className="object-cover" />
+                        <AvatarFallback className="bg-primary/10">
+                            <User className="h-5 w-5 text-primary" />
+                        </AvatarFallback>
+                    </Avatar>
                     <h1 className="text-xl md:text-2xl font-bold truncate">
                         {profile.nickname}
                     </h1>

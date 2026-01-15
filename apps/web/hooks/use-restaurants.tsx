@@ -308,11 +308,17 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             // 병합 로직 적용
             const restaurants = mergeRestaurants(data || []);
 
-            // 승인된 리뷰 수 추가
-            return restaurants.map(r => ({
-                ...r,
-                verified_review_count: verifiedCountMap.get(r.id) || 0
-            })) as Restaurant[];
+            // 승인된 리뷰 수 추가 (병합된 모든 레스토랑 ID의 리뷰 합산)
+            return restaurants.map(r => {
+                // 병합된 레스토랑들의 모든 ID에 대한 verified_review_count 합산
+                const mergedIds = r.mergedRestaurants?.map((mr: any) => mr.id) || [r.id];
+                const totalVerifiedCount = mergedIds.reduce((sum: number, id: string) =>
+                    sum + (verifiedCountMap.get(id) || 0), 0);
+                return {
+                    ...r,
+                    verified_review_count: totalVerifiedCount
+                };
+            }) as Restaurant[];
         },
         enabled,
         refetchOnWindowFocus: false, // 윈도우 포커스 시 재요청 안 함
