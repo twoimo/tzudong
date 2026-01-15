@@ -49,11 +49,7 @@ const RestaurantSubmissionModal = dynamic(
     { ssr: false }
 );
 
-// MyPagePanel은 별도 라우트(/mypage)로 처리됨
-// const MyPagePanel = dynamic(
-//     () => import('@/components/profile/MyPagePanel'),
-//     { ssr: false }
-// );
+
 
 const AdminReviewPanel = dynamic(
     () => import('@/components/admin/AdminReviewPanel'),
@@ -70,15 +66,11 @@ const ReviewModal = dynamic(
     { ssr: false }
 );
 
-const FeedPanel = dynamic(
-    () => import('@/components/home/FeedPanel'),
-    { ssr: false }
-);
+
 
 import { Announcement, DUMMY_ANNOUNCEMENTS } from '@/types/announcement';
 
 import RightPanelWrapper from '@/components/layout/RightPanelWrapper';
-
 export default function HomeClient() {
     const { isAdmin, user } = useAuth();
     const { isSidebarOpen } = useLayout();
@@ -89,7 +81,7 @@ export default function HomeClient() {
 
     // 통합 패널 상태 관리
     // 'detail'은 맛집 상세 패널(state.isPanelOpen으로 관리), 나머지는 activeRightPanel로 관리
-    type PanelType = 'mypage' | 'adminReviews' | 'announcement' | 'feed' | null;
+    type PanelType = 'mypage' | 'adminReviews' | 'announcement' | null;
     const [activeRightPanel, setActiveRightPanel] = useState<PanelType>(null);
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
@@ -110,16 +102,7 @@ export default function HomeClient() {
         return () => clearTimeout(timer);
     }, []);
 
-    // [Desktop] 데스크톱 모드에서 초기 접속 시 피드 패널 자동 표시
-    useEffect(() => {
-        if (isDesktop && !state.isPanelOpen && activeRightPanel === null) {
-            // 맛집이 선택되지 않은 상태로 데스크톱 접속 시 피드 패널 표시
-            const timer = setTimeout(() => {
-                setActiveRightPanel('feed');
-            }, 500);
-            return () => clearTimeout(timer);
-        }
-    }, [isDesktop]); // 의도적으로 state.isPanelOpen, activeRightPanel 의존성 제외 (초기 로드 시에만 실행)
+
 
 
     useEffect(() => {
@@ -258,18 +241,7 @@ export default function HomeClient() {
         }
     }, [state.isPanelOpen]);
 
-    // [Desktop] 사이드바에서 리뷰 클릭 시 피드 패널 열기
-    useEffect(() => {
-        const handleOpenFeedPanel = () => {
-            state.setIsPanelOpen(false);
-            state.setPanelRestaurant(null);
-            setActiveRightPanel('feed');
-            setIsPanelCollapsed(false);
-        };
 
-        window.addEventListener('openFeedPanel', handleOpenFeedPanel);
-        return () => window.removeEventListener('openFeedPanel', handleOpenFeedPanel);
-    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
 
     // 우측 패널 너비 계산 (접힌 상태면 0)
     const rightPanelWidth = (state.isPanelOpen || activeRightPanel) && !isPanelCollapsed ? 400 : 0;
@@ -304,11 +276,20 @@ export default function HomeClient() {
         // 그 다음 상세 패널 열기
         state.setPanelRestaurant(restaurant);
         state.setSelectedRestaurant(restaurant);
-        // 주의: 마커 클릭 시에는 searchedRestaurant를 설정하지 않음
-        // searchedRestaurant가 설정되면 setCenter/setZoom이 즉시 호출되어 화면 깜빡임 발생
-        // 대신 selectedRestaurant 변경으로 애니메이션 있는 panTo가 호출됨
+
+        // [Fix] 마커 클릭 시 검색 상태 초기화 (스티키 현상 방지)
+        // searchedRestaurant가 남아있으면 네이버 지도의 효과 등으로 인해 다시 검색된 맛집으로 되돌아갈 수 있음
+        state.setSearchedRestaurant(null);
+
         state.setIsPanelOpen(true);
-    }, [state.setPanelRestaurant, state.setSelectedRestaurant, state.setIsPanelOpen]);
+
+        // [Fix] 마커 클릭 시 URL의 restaurant 파라미터 제거하여 스티키 현상 방지
+        const currentParams = new URLSearchParams(window.location.search);
+        if (currentParams.has('r') || currentParams.has('restaurant') || currentParams.has('q')) {
+            // 파라미터가 있을 때만 replace 실행
+            router.replace('/', { scroll: false });
+        }
+    }, [state.setPanelRestaurant, state.setSelectedRestaurant, state.setSearchedRestaurant, state.setIsPanelOpen, router]);
 
     // 팝업 이벤트 리스너
     useRestaurantPopupListener({
@@ -552,18 +533,7 @@ export default function HomeClient() {
                 />
             )}
 
-            {/* 마이페이지 패널 - 별도 라우트(/mypage)로 처리됨 */}
-            {/* <RightPanelWrapper
-                isOpen={activeRightPanel === 'mypage'}
-                isCollapsed={isPanelCollapsed}
-            >
-                <MyPagePanel
-                    isOpen={!isPanelCollapsed}
-                    onClose={closeAllPanels}
-                    onToggleCollapse={togglePanelCollapse}
-                    isCollapsed={isPanelCollapsed}
-                />
-            </RightPanelWrapper> */}
+
 
             {/* 관리자 리뷰관리 패널 */}
             {isAdmin && (
@@ -595,20 +565,7 @@ export default function HomeClient() {
                 />
             </RightPanelWrapper>
 
-            {/* 피드 패널 (데스크톱 모드) */}
-            {isDesktop && (
-                <RightPanelWrapper
-                    isOpen={activeRightPanel === 'feed'}
-                    isCollapsed={isPanelCollapsed}
-                >
-                    <FeedPanel
-                        isOpen={!isPanelCollapsed}
-                        onClose={closeAllPanels}
-                        onToggleCollapse={togglePanelCollapse}
-                        isCollapsed={isPanelCollapsed}
-                    />
-                </RightPanelWrapper>
-            )}
+
         </>
     );
 }
