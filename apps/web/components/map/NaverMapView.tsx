@@ -2010,14 +2010,31 @@ const NaverMapView = memo(({
             naver.maps.Event.addListener(map, 'idle', () => {
                 const center = map.getCenter();
                 const zoom = map.getZoom();
+
                 if (center && !isNaN(zoom)) {
-                    const newParams = new URLSearchParams(window.location.search);
-                    // 단순화된 형식: z=줌레벨 (소수점 2자리)
-                    newParams.set('z', zoom.toFixed(2));
-                    newParams.delete('c'); // 구 형식 제거
-                    newParams.set('lat', center.lat().toFixed(6));
-                    newParams.set('lng', center.lng().toFixed(6));
-                    window.history.replaceState({}, '', `?${newParams.toString()}`);
+                    const currentParams = new URLSearchParams(window.location.search);
+                    const currentZ = parseFloat(currentParams.get('z') || '0');
+                    const currentLat = parseFloat(currentParams.get('lat') || '0');
+                    const currentLng = parseFloat(currentParams.get('lng') || '0');
+
+                    const newZ = parseFloat(zoom.toFixed(2));
+                    const newLat = parseFloat(center.lat().toFixed(6));
+                    const newLng = parseFloat(center.lng().toFixed(6));
+
+                    // 값이 변경되었을 때만 업데이트 (미세한 떨림 방지)
+                    // 줌: 0.01 차이, 좌표: 0.000001 차이 (약 10cm)
+                    const isZoomChanged = Math.abs(currentZ - newZ) > 0.01;
+                    const isLatChanged = Math.abs(currentLat - newLat) > 0.000001;
+                    const isLngChanged = Math.abs(currentLng - newLng) > 0.000001;
+
+                    if (isZoomChanged || isLatChanged || isLngChanged) {
+                        const newParams = new URLSearchParams(window.location.search);
+                        newParams.set('z', newZ.toString());
+                        newParams.delete('c'); // 구 형식 제거
+                        newParams.set('lat', newLat.toString());
+                        newParams.set('lng', newLng.toString());
+                        window.history.replaceState({}, '', `?${newParams.toString()}`);
+                    }
                 }
             });
         } catch (error) {
