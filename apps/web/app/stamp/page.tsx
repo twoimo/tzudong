@@ -670,22 +670,23 @@ export default function StampPage() {
                     .in('user_id', userIds);
                 const profilesMap = new Map((profilesData as any[] || []).map(p => [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }]));
 
-                // 좋아요 정보 조회
+                // 좋아요 정보 조회 (최적화)
                 const reviewIds = reviewsData.map((r: any) => r.id);
-                const { data: likesData } = await supabase
-                    .from('review_likes')
-                    .select('review_id, user_id')
-                    .in('review_id', reviewIds) as any;
+                let userLikesMap = new Map<string, boolean>();
 
-                const likesMap = new Map<string, { count: number; isLiked: boolean }>();
-                reviewIds.forEach((reviewId: string) => {
-                    const likesForReview = likesData?.filter((like: any) => like.review_id === reviewId) || [];
-                    const isLiked = user ? likesForReview.some((like: any) => like.user_id === user.id) : false;
-                    likesMap.set(reviewId, { count: likesForReview.length, isLiked });
-                });
+                if (user) {
+                    const { data: userLikesData } = await supabase
+                        .from('review_likes')
+                        .select('review_id')
+                        .in('review_id', reviewIds)
+                        .eq('user_id', user.id) as any;
+
+                    userLikesMap = new Map(
+                        (userLikesData || []).map((like: any) => [like.review_id, true])
+                    );
+                }
 
                 const reviews = reviewsData.map((review: any) => {
-                    const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
                     return {
                         id: review.id,
                         userId: review.user_id,
@@ -705,8 +706,8 @@ export default function StampPage() {
                         categories: (Array.isArray(review.categories) && review.categories.length > 0)
                             ? review.categories
                             : (review.category ? [review.category] : []),
-                        likeCount: likesInfo.count,
-                        isLikedByUser: likesInfo.isLiked,
+                        likeCount: review.like_count || 0, // 캐시된 값 사용
+                        isLikedByUser: userLikesMap.get(review.id) || false,
                     };
                 }) as Review[];
 
