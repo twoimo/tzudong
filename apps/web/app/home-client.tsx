@@ -258,6 +258,19 @@ export default function HomeClient() {
         }
     }, [state.isPanelOpen]);
 
+    // [Desktop] 사이드바에서 리뷰 클릭 시 피드 패널 열기
+    useEffect(() => {
+        const handleOpenFeedPanel = () => {
+            state.setIsPanelOpen(false);
+            state.setPanelRestaurant(null);
+            setActiveRightPanel('feed');
+            setIsPanelCollapsed(false);
+        };
+
+        window.addEventListener('openFeedPanel', handleOpenFeedPanel);
+        return () => window.removeEventListener('openFeedPanel', handleOpenFeedPanel);
+    }, [state.setIsPanelOpen, state.setPanelRestaurant]);
+
     // 우측 패널 너비 계산 (접힌 상태면 0)
     const rightPanelWidth = (state.isPanelOpen || activeRightPanel) && !isPanelCollapsed ? 400 : 0;
 

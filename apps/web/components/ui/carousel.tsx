@@ -221,4 +221,76 @@ const CarouselNext = React.forwardRef<HTMLButtonElement, React.ComponentProps<ty
 );
 CarouselNext.displayName = "CarouselNext";
 
-export { type CarouselApi, Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext };
+/**
+ * Instagram-style overlay navigation buttons
+ * - Positioned inside the carousel
+ * - Visible on hover (group-hover)
+ * - Semi-transparent circular design
+ */
+const CarouselOverlayPrevious = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(
+  ({ className, ...props }, ref) => {
+    const { scrollPrev, canScrollPrev } = useCarousel();
+
+    if (!canScrollPrev) return null;
+
+    return (
+      <button
+        ref={ref}
+        aria-label="돌아가기"
+        className={cn(
+          "absolute left-2 top-1/2 -translate-y-1/2 z-20",
+          "h-8 w-8 rounded-full",
+          "bg-black/30 hover:bg-black/50 backdrop-blur-sm",
+          "flex items-center justify-center",
+          "text-white/90 hover:text-white",
+          "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+          "focus:outline-none focus:ring-2 focus:ring-white/50",
+          className,
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          scrollPrev();
+        }}
+        {...props}
+      >
+        <ArrowLeft className="h-4 w-4" />
+      </button>
+    );
+  },
+);
+CarouselOverlayPrevious.displayName = "CarouselOverlayPrevious";
+
+const CarouselOverlayNext = React.forwardRef<HTMLButtonElement, React.ComponentProps<typeof Button>>(
+  ({ className, ...props }, ref) => {
+    const { scrollNext, canScrollNext } = useCarousel();
+
+    if (!canScrollNext) return null;
+
+    return (
+      <button
+        ref={ref}
+        aria-label="다음"
+        className={cn(
+          "absolute right-2 top-1/2 -translate-y-1/2 z-20",
+          "h-8 w-8 rounded-full",
+          "bg-black/30 hover:bg-black/50 backdrop-blur-sm",
+          "flex items-center justify-center",
+          "text-white/90 hover:text-white",
+          "opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+          "focus:outline-none focus:ring-2 focus:ring-white/50",
+          className,
+        )}
+        onClick={(e) => {
+          e.stopPropagation();
+          scrollNext();
+        }}
+        {...props}
+      >
+        <ArrowRight className="h-4 w-4" />
+      </button>
+    );
+  },
+);
+CarouselOverlayNext.displayName = "CarouselOverlayNext";
+
+export { type CarouselApi, Carousel, CarouselContent, CarouselItem, CarouselPrevious, CarouselNext, CarouselOverlayPrevious, CarouselOverlayNext };
