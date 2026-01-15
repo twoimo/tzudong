@@ -224,7 +224,7 @@ const createMarkerContentFn = (restaurant: Restaurant, isSelected: boolean): str
         ? 'drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3)) drop-shadow(0 0 0 rgba(239, 68, 68, 0.5))'
         : 'drop-shadow(0 2px 6px rgba(0, 0, 0, 0.25))';
     const transform = isSelected ? 'scale(1.15)' : 'scale(1)';
-    // [OPTIMIZATION] 스타일 외부화: animation은 CSS 클래스명만 참조
+    // [최적화] 스타일 외부화: animation은 CSS 클래스명만 참조
     const animationClass = isSelected ? 'marker-bounce' : '';
     const zIndex = isSelected ? '100' : '1';
 
@@ -363,7 +363,7 @@ const getExtendedBounds = (map: any, padding: number = VIEWPORT_PADDING) => {
 const isRestaurantInViewport = (restaurant: Restaurant, extendedBounds: any): boolean => {
     if (!extendedBounds || !restaurant.lat || !restaurant.lng) return true;
 
-    // Naver Maps LatLngBounds.hasLatLng 사용 (또는 단순 수치 비교로 최적화 가능)
+    // 네이버 지도 LatLngBounds.hasLatLng 사용 (또는 단순 수치 비교로 최적화 가능)
     const latLng = new window.naver.maps.LatLng(restaurant.lat, restaurant.lng);
     const bounds = new window.naver.maps.LatLngBounds(extendedBounds.sw, extendedBounds.ne);
     return bounds.hasLatLng(latLng);
@@ -431,7 +431,7 @@ const NaverMapView = memo(({
         return isMobileOrTablet ? Math.max(baseZoom - 2, 6) : baseZoom;
     }, [isMobileOrTablet]);
 
-    // Naver Maps API 로드 - LCP 최적화를 위해 lazyOnload 전략 사용
+    // 네이버 지도 API 로드 - LCP 최적화를 위해 lazyOnload 전략 사용
     const { isLoaded, loadError } = useNaverMaps({ autoLoad: true, strategy: 'lazyOnload' });
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [internalPanelOpen, setInternalPanelOpen] = useState(false);
@@ -512,7 +512,7 @@ const NaverMapView = memo(({
             rafId = null;
         });
 
-        // Cleanup
+        // 정리
         return () => {
             observer.disconnect();
             if (rafId !== null) {
@@ -547,7 +547,7 @@ const NaverMapView = memo(({
             clusterAnimationManager.start(mapOptimization.clusterAnimationInterval);
         }
 
-        // Cleanup: 컴포넌트 언마운트 시
+        // 정리: 컴포넌트 언마운트 시
         return () => {
             markerContentCache.clear();
 
@@ -662,7 +662,7 @@ const NaverMapView = memo(({
 
             return new window.naver.maps.LatLng(finalLat, finalLng);
         } catch (e) {
-            console.error("Coordinate calculation failed:", e);
+            console.error("좌표 계산 실패:", e);
             return new window.naver.maps.LatLng(lat, lng);
         }
     };
@@ -791,7 +791,7 @@ const NaverMapView = memo(({
             targetZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
         }
 
-        // [OPTIMIZATION] 실시간 뷰포트 오프셋 계산
+        // [최적화] 실시간 뷰포트 오프셋 계산
         // DOM 요소의 실제 너비를 측정하여 정확한 중앙 배치
         const effectiveOffset = getViewportOffset();
 
