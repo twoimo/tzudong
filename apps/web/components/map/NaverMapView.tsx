@@ -693,6 +693,27 @@ const NaverMapView = memo(({
         return panelWidth;
     }, [isMobileOrTablet, onMarkerClick, internalPanelOpen, isGridMode, isPanelCollapsed, propIsPanelOpen, externalPanelOpen, panelWidth]);
 
+    // [Helper] 패널 오프셋을 고려한 morph (클러스터 클릭 시 사용)
+    // 우측 패널이 열려있을 때 클러스터 중심이 "보이는 영역"의 중앙에 위치하도록 조정
+    const morphWithPanelOffset = useCallback((
+        targetLat: number,
+        targetLng: number,
+        targetZoom: number
+    ) => {
+        const map = mapInstanceRef.current;
+        if (!map || !window.naver) return;
+
+        // 패널 오프셋의 절반을 적용하여 보이는 영역 중앙에 배치
+        // getAdjustedCenter는 offsetX=0일 때 원본 좌표 반환
+        const adjustedCenter = getAdjustedCenter(
+            targetLat,
+            targetLng,
+            targetZoom,
+            getViewportOffset() / 2
+        );
+        map.morph(adjustedCenter, targetZoom);
+    }, [getViewportOffset]);
+
     // [통합] 지도 중심 및 줌 조정 로직
     useEffect(() => {
         if (!mapInstanceRef.current || isGridMode) return;
@@ -1461,10 +1482,10 @@ const NaverMapView = memo(({
                     cluster.categories,
                     cluster.region,
                     () => {
-                        // [Fix] 서울 자치구처럼 단계별 줌인 (현재 줌 +2)
+                        // [Fix] 서울 자치구처럼 단계별 줌인 (현재 줌 +2) + 패널 오프셋 적용
                         const currentZoom = map.getZoom();
                         const targetZoom = Math.min(currentZoom + 2, 9);
-                        map.morph(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng), targetZoom);
+                        morphWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
                     }
                 );
             });
@@ -1495,7 +1516,7 @@ const NaverMapView = memo(({
                         cluster.categories,
                         cluster.region,
                         () => {
-                            // [Fix] 단계별 줌인: 9→11→13 (한 번에 13으로 점프하지 않음)
+                            // [Fix] 단계별 줌인: 9→11→13 + 패널 오프셋 적용
                             const currentZoom = map.getZoom();
                             let targetZoom = 13;
                             if (currentZoom <= 10) {
@@ -1503,7 +1524,7 @@ const NaverMapView = memo(({
                             } else if (currentZoom <= 12) {
                                 targetZoom = 13;
                             }
-                            map.morph(new naver.maps.LatLng(cluster.center.lat, cluster.center.lng), targetZoom);
+                            morphWithPanelOffset(cluster.center.lat, cluster.center.lng, targetZoom);
                         }
                     );
                 });
@@ -1582,12 +1603,13 @@ const NaverMapView = memo(({
                                 categories,
                                 clusterId,
                                 () => {
+                                    // [Fix] Supercluster 줌인 + 패널 오프셋 적용
                                     const expansionZoom = clusterIndexRef.current!.getClusterExpansionZoom(clusterId);
                                     const currentZoom = map.getZoom();
                                     let targetZoom = expansionZoom;
                                     if (targetZoom <= currentZoom) targetZoom = currentZoom + 2;
                                     targetZoom = Math.max(targetZoom, 9);
-                                    map.morph(new naver.maps.LatLng(lat, lng), targetZoom);
+                                    morphWithPanelOffset(lat, lng, targetZoom);
                                 }
                             );
                         } else {
