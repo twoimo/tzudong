@@ -14,6 +14,7 @@ import { GlobalLoader } from '@/components/ui/global-loader';
 
 interface LeaderboardOverlayProps {
     onClose?: () => void;
+    onOpenUserProfile?: (userId: string) => void;
 }
 
 // 순위 아이콘 반환
@@ -40,7 +41,7 @@ const getUserTier = (reviewCount: number) => {
  * 랭킹 오버레이
  * - 모바일/태블릿 랭킹 페이지와 동일한 헤더 스타일
  */
-export default function LeaderboardOverlay({ onClose }: LeaderboardOverlayProps) {
+export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: LeaderboardOverlayProps) {
     const { user: currentUser } = useAuth();
     const { data: leaderboardData = [], isLoading } = useLeaderboard();
     const userItemRef = useRef<HTMLDivElement>(null);
@@ -123,9 +124,18 @@ export default function LeaderboardOverlay({ onClose }: LeaderboardOverlayProps)
                                 >
                                     <div className="flex-shrink-0 w-10 flex items-center justify-center">{getRankIcon(user.rank)}</div>
                                     <div className="flex-1 min-w-0 max-w-xs">
-                                        <Link href={`/user/${user.id}`} className={cn("font-semibold text-base truncate block hover:underline cursor-pointer", isCurrentUser ? "text-primary" : "hover:text-primary")}>
-                                            {user.username}{isCurrentUser && " (나)"}
-                                        </Link>
+                                        {onOpenUserProfile ? (
+                                            <div
+                                                onClick={() => onOpenUserProfile(user.id)}
+                                                className={cn("font-semibold text-base truncate block hover:underline cursor-pointer", isCurrentUser ? "text-primary" : "hover:text-primary")}
+                                            >
+                                                {user.username}{isCurrentUser && " (나)"}
+                                            </div>
+                                        ) : (
+                                            <Link href={`/user/${user.id}`} className={cn("font-semibold text-base truncate block hover:underline cursor-pointer", isCurrentUser ? "text-primary" : "hover:text-primary")}>
+                                                {user.username}{isCurrentUser && " (나)"}
+                                            </Link>
+                                        )}
                                     </div>
                                     <div className="flex items-center gap-4 ml-auto shrink-0">
                                         <div className="flex items-center gap-1">

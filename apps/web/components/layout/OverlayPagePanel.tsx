@@ -15,6 +15,7 @@ import AdminReviewsContent from '@/components/overlay-pages/AdminReviewsOverlay'
 import InsightContent from '@/components/overlay-pages/InsightOverlay';
 import { Restaurant } from '@/types/restaurant';
 import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
+import { UserProfilePanel } from '@/components/profile/UserProfilePanel';
 
 // 패널별 최대 너비 설정
 const PANEL_WIDTHS: Record<Exclude<OverlayPanelType, null>, string> = {
@@ -41,6 +42,7 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
     const queryClient = useQueryClient();
     const [isReviewPanelOpen, setIsReviewPanelOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
+    const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [isDesktop, setIsDesktop] = useState(false);
 
     // 데스크탑 체크 (lg breakpoint = 1024px)
@@ -59,6 +61,10 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
             if (e.key === 'Escape') {
                 if (isReviewPanelOpen) {
                     setIsReviewPanelOpen(false);
+                } else if (selectedRestaurant) {
+                    setSelectedRestaurant(null);
+                } else if (selectedUserId) {
+                    setSelectedUserId(null);
                 } else {
                     onClose();
                 }
@@ -67,14 +73,21 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
 
         document.addEventListener('keydown', handleEscape);
         return () => document.removeEventListener('keydown', handleEscape);
-    }, [activePanel, onClose, isReviewPanelOpen]);
+    }, [activePanel, onClose, isReviewPanelOpen, selectedRestaurant, selectedUserId]);
 
     // 패널 닫힐 때 리뷰 패널도 닫기
     useEffect(() => {
         if (!activePanel) {
             setIsReviewPanelOpen(false);
             setSelectedRestaurant(null);
+            setSelectedUserId(null);
         }
+    }, [activePanel]);
+
+    // activePanel 변경 시 모든 선택 상태 초기화
+    useEffect(() => {
+        setSelectedRestaurant(null);
+        setSelectedUserId(null);
     }, [activePanel]);
 
     const handleOpenReviewPanel = useCallback(() => {
@@ -98,16 +111,27 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
         setSelectedRestaurant(null);
     }, []);
 
+    const handleOpenUserProfile = useCallback((userId: string) => {
+        setSelectedUserId(userId);
+    }, []);
+
+    const handleCloseUserProfile = useCallback(() => {
+        setSelectedUserId(null);
+    }, []);
+
     if (!activePanel) return null;
 
     let maxWidth = PANEL_WIDTHS[activePanel];
     const showInlineReviewPanel = activePanel === 'feed' && isReviewPanelOpen && isDesktop;
-    const showSideDetailPanel = activePanel === 'stamp' && selectedRestaurant && isDesktop;
+    const showRestaurantDetail = activePanel === 'stamp' && selectedRestaurant && isDesktop;
+    const showUserProfile = activePanel === 'leaderboard' && selectedUserId && isDesktop;
 
-    // 도장 패널에서 상세 패널이 열리면 메인 패널 너비 조정
-    if (showSideDetailPanel) {
+    // 사이드 패널이 열려있을 때 메인 패널 너비 조정
+    if (showRestaurantDetail) {
+        // 도장 패널의 경우 사이드 패널이 열리면 max-w-4xl로 축소 (기존 max-w-6xl)
         maxWidth = 'max-w-4xl'; // 896px + 400px = 1296px (fits in 1400px+)
     }
+    // 랭킹 패널(max-w-3xl)은 사이드 패널이 열려도 너비 유지 (충분히 작음)
 
     return (
         <>
@@ -151,7 +175,12 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
                             onOpenRestaurantDetail={handleOpenRestaurantDetail}
                         />
                     )}
-                    {activePanel === 'leaderboard' && <LeaderboardContent onClose={onClose} />}
+                    {activePanel === 'leaderboard' && (
+                        <LeaderboardContent
+                            onClose={onClose}
+                            onOpenUserProfile={handleOpenUserProfile}
+                        />
+                    )}
                     {activePanel === 'costs' && <CostsContent onClose={onClose} />}
                     {activePanel === 'admin-reviews' && <AdminReviewsContent />}
                     {activePanel === 'insight' && <InsightContent />}
@@ -178,22 +207,30 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
                     </div>
                 )}
 
-                {/* 맛집 상세 패널 - 데스크탑 도장 오버레이에서 우측 표시 */}
-                {showSideDetailPanel && (
-                    <div
-                        className={cn(
-                            "bg-background shadow-2xl",
-                            "flex flex-col overflow-hidden",
-                            "w-[400px]",
-                            "rounded-2xl border border-border",
-                            "animate-in slide-in-from-right-4 duration-300"
-                        )}
-                    >
+                {/* 우측 사이드 패널 영역 - 맛집 상세 */}
+                {showRestaurantDetail && (
+                    <div className={cn(
+                        "flex-shrink-0 border-l border-border bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
+                        "w-[400px]"
+                    )}>
                         <RestaurantDetailPanel
-                            restaurant={selectedRestaurant}
+                            restaurant={selectedRestaurant!}
                             onClose={handleCloseRestaurantDetail}
                             isPanelOpen={true}
-                            onWriteReview={() => console.log('write review from overlay')}
+                        />
+                    </div>
+                )}
+
+                {/* 우측 사이드 패널 영역 - 사용자 프로필 */}
+                {showUserProfile && (
+                    <div className={cn(
+                        "flex-shrink-0 border-l border-border bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
+                        "w-[400px]"
+                    )}>
+                        <UserProfilePanel
+                            userId={selectedUserId!}
+                            onClose={handleCloseUserProfile}
+                            showBackButton={true}
                         />
                     </div>
                 )}
