@@ -6,7 +6,7 @@ import { Trophy, Medal, Award, Stamp, Info, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useAuth } from '@/contexts/AuthContext';
 import { useLeaderboard } from '@/hooks/useLeaderboard';
 import { cn } from '@/lib/utils';
@@ -74,21 +74,21 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
                             <h1 className="text-2xl font-bold text-primary flex items-center gap-2">
                                 <Trophy className="h-6 w-6 text-primary" />
                                 쯔동여지도 랭킹
-                                <Popover>
-                                    <PopoverTrigger asChild>
+                                <HoverCard>
+                                    <HoverCardTrigger asChild>
                                         <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-muted" title="랭킹 산정 기준 보기">
                                             <Info className="h-4 w-4 text-muted-foreground" />
                                         </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-auto max-w-sm">
+                                    </HoverCardTrigger>
+                                    <HoverCardContent className="w-auto max-w-sm z-[100]" align="start">
                                         <div className="space-y-1">
                                             <h4 className="font-medium text-sm whitespace-nowrap">📊 랭킹 산정 기준</h4>
                                             <p className="text-xs text-muted-foreground whitespace-nowrap">
                                                 인증된 리뷰(도장) 수가 많을수록 높은 순위를 받습니다.
                                             </p>
                                         </div>
-                                    </PopoverContent>
-                                </Popover>
+                                    </HoverCardContent>
+                                </HoverCard>
                             </h1>
                         </div>
                         <p className="text-sm text-muted-foreground mt-1">
