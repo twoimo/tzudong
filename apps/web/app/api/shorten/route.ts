@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
         if (existing) {
             // 이미 존재하면 기존 코드 반환
-            const origin = request.headers.get('origin') || request.nextUrl.origin;
+            const origin = process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || request.nextUrl.origin;
             return NextResponse.json({
                 shortUrl: `${origin}/s/${existing.code}`,
                 code: existing.code,
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const origin = request.headers.get('origin') || request.nextUrl.origin;
+        const origin = process.env.NEXT_PUBLIC_SITE_URL || request.headers.get('origin') || request.nextUrl.origin;
         return NextResponse.json({
             shortUrl: `${origin}/s/${code}`,
             code,

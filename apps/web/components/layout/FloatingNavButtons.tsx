@@ -41,12 +41,10 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
     const { isAdmin } = useAuth();
     const allItems = isAdmin ? [...USER_ITEMS, ...ADMIN_ITEMS] : USER_ITEMS;
 
-    // [NEW] 홈 화면(/)에서만 표시하도록 제한
-    if (pathname !== '/') return null;
-
     const handlePanelClick = useCallback((panelId: OverlayPanelType) => {
         onPanelChange(activePanel === panelId ? null : panelId);
     }, [activePanel, onPanelChange]);
+
 
     // [리뷰 공유] openFeedOverlay 이벤트 리스너
     useEffect(() => {
@@ -64,6 +62,9 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelec
         window.addEventListener('openFeedOverlay', handleOpenFeedOverlay);
         return () => window.removeEventListener('openFeedOverlay', handleOpenFeedOverlay);
     }, [onPanelChange, onReviewSelect]);
+
+    // [NEW] 홈 화면(/)에서만 표시하도록 제한
+    if (pathname !== '/') return null;
 
     return (
         <div className={cn("fixed z-[92] flex flex-col items-start gap-2", className)}>

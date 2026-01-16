@@ -40,6 +40,8 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
     const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [targetReviewId, setTargetReviewId] = useState<string | null>(null);
+
 
     // 오버레이 패널 상태
     const [activeOverlayPanel, setActiveOverlayPanel] = useState<OverlayPanelType>(null);
@@ -108,7 +110,14 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
     // 오버레이 패널 닫기 핸들러
     const handleCloseOverlayPanel = useCallback(() => {
         setActiveOverlayPanel(null);
+        setTargetReviewId(null);
     }, []);
+
+    // 리뷰 선택 핸들러 (Deep Link)
+    const handleReviewSelect = useCallback((reviewId: string) => {
+        setTargetReviewId(reviewId);
+    }, []);
+
 
     // 관리자 모달 핸들러
     const handleAdminSuccess = (updatedRestaurant?: Restaurant) => {
@@ -147,14 +156,18 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
                 <FloatingNavButtons
                     activePanel={activeOverlayPanel}
                     onPanelChange={handleOverlayPanelChange}
+                    onReviewSelect={handleReviewSelect}
                     className="bottom-8 left-8"
                 />
+
 
                 {/* 오버레이 페이지 패널 */}
                 <OverlayPagePanel
                     activePanel={activeOverlayPanel}
                     onClose={handleCloseOverlayPanel}
+                    initialReviewId={targetReviewId}
                 />
+
             </main>
 
             {/* 모달들 */}

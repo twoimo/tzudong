@@ -176,9 +176,15 @@ export default function HomeClient() {
         const urlLat = searchParams.get('lat');
         const urlLng = searchParams.get('lng');
         const urlZoom = searchParams.get('z');
+        // const reviewId = searchParams.get('review'); <-- this was causing error if already defined?
+        // Let's check the context.
+        // Actually, I will just fix the variable name to be safe `sharedReviewId`.
+        const sharedReviewId = searchParams.get('review');
+
+
 
         // 공유 URL 감지: lat, lng, z가 있고 다른 특수 파라미터(r, restaurant, review)가 없는 경우
-        if (urlLat && urlLng && urlZoom && !restaurantId && !searchParams.get('review')) {
+        if (urlLat && urlLng && urlZoom && !restaurantId && !sharedReviewId) {
             const lat = parseFloat(urlLat);
             const lng = parseFloat(urlLng);
 
@@ -224,17 +230,20 @@ export default function HomeClient() {
         // [리뷰 공유] 리뷰 공유 링크 처리 (/?review={reviewId})
         const reviewId = searchParams.get('review');
         if (reviewId) {
-            if (isDesktop) {
+            // [Mobile Check] window.innerWidth로 즉시 확인 (Hook 초기값 의존 X)
+            // 1024px 이하를 모바일/태블릿으로 간주 (iPad Pro 등 일부 대형 태블릿 제외)
+            const isMobileWidth = typeof window !== 'undefined' && window.innerWidth <= 1024;
+
+            if (!isMobileWidth) {
                 // 데스크탑: 피드 오버레이 열기 (selectedReviewId로 스크롤)
                 setSelectedReviewId(reviewId);
                 window.dispatchEvent(new CustomEvent('openFeedOverlay', { detail: { reviewId } }));
-                // [URL 안정화] URL 유지 - router.replace 제거
             } else {
                 // 모바일/태블릿: 피드 페이지로 리다이렉트
                 router.replace(`/feed?review=${reviewId}`);
             }
         }
-    }, [searchParams, router, isDesktop]);
+    }, [searchParams, router]);
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);

@@ -26,6 +26,7 @@ const PANEL_WIDTHS: Record<Exclude<OverlayPanelType, null>, string> = {
 interface OverlayPagePanelProps {
     activePanel: OverlayPanelType;
     onClose: () => void;
+    initialReviewId?: string | null;
 }
 
 /**
@@ -34,7 +35,7 @@ interface OverlayPagePanelProps {
  * - 피드 패널에서 리뷰 작성 시 나란히 표시
  * - 모바일에서는 Dialog로, 데스크탑에서는 inline으로 표시
  */
-function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelProps) {
+function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: OverlayPagePanelProps) {
     const queryClient = useQueryClient();
     const [isReviewPanelOpen, setIsReviewPanelOpen] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
@@ -162,6 +163,7 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
                             onOpenReviewModal={handleOpenReviewPanel}
                             hideReviewModal={true}
                             hideFloatingButton={isReviewPanelOpen}
+                            initialReviewId={initialReviewId}
                         />
                     )}
                     {activePanel === 'stamp' && (

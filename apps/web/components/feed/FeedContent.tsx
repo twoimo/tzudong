@@ -49,7 +49,10 @@ interface FeedContentProps {
     hideReviewModal?: boolean;
     /** 플로팅 버튼 숨김 */
     hideFloatingButton?: boolean;
+    /** 초기 하이라이트 리뷰 ID (Deep Link) */
+    initialReviewId?: string | null;
 }
+
 
 // ========== Main Component ==========
 export default function FeedContent({
@@ -58,7 +61,9 @@ export default function FeedContent({
     onOpenReviewModal,
     hideReviewModal,
     hideFloatingButton,
+    initialReviewId,
 }: FeedContentProps) {
+
     const { user } = useAuth();
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -96,21 +101,30 @@ export default function FeedContent({
     useEffect(() => {
         // URL에서 review 파라미터 직접 확인 (overlay일 때만 searchParams가 null일 수 있음)
         const urlParams = new URLSearchParams(window.location.search);
-        const reviewId = urlParams.get('review');
+        const urlReviewId = urlParams.get('review');
+        const effectiveReviewId = initialReviewId || urlReviewId;
 
-        if (reviewId) {
-            setHighlightedReviewId(reviewId);
+        if (effectiveReviewId) {
+            setHighlightedReviewId(effectiveReviewId);
 
             let attempts = 0;
+
             const maxAttempts = 30;
 
             const scrollToElement = () => {
-                const element = document.getElementById(`${reviewIdPrefix}-${reviewId}`);
+                const element = document.getElementById(`${reviewIdPrefix}-${effectiveReviewId}`);
                 if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // [MOBILE/DESKTOP] 공통 스크롤 로직
+                    // block: 'center'는 화면 중앙에 위치시킴
+                    requestAnimationFrame(() => {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    });
+
+                    // 강조 효과 해제 타이머
                     setTimeout(() => setHighlightedReviewId(null), 3000);
                 } else if (attempts < maxAttempts) {
                     attempts++;
+                    // 재시도 간격 200ms -> 30회 = 6초
                     setTimeout(scrollToElement, 200);
                 }
             };

@@ -118,7 +118,8 @@ export const ReviewCard = React.memo(function ReviewCard({
         setIsShareCopied(true); // 로딩 표시
 
         // 리뷰 개별 링크 생성 (홈 페이지 기반 - 디바이스 감지 후 처리)
-        const targetUrl = `${window.location.origin}/?review=${review.id}`;
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+        const targetUrl = `${siteUrl}/?review=${review.id}`;
 
         try {
             const response = await fetch('/api/shorten', {
