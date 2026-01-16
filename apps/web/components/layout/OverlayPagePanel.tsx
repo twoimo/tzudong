@@ -134,7 +134,7 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
         <>
             {/* 배경 오버레이 - 하나만 */}
             <div
-                className="fixed inset-0 z-[85] bg-black/40 backdrop-blur-sm transition-opacity duration-300"
+                className="fixed inset-0 z-[97] bg-black/40 backdrop-blur-sm transition-opacity duration-300"
                 onClick={onClose}
                 aria-hidden="true"
             />
@@ -142,7 +142,7 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
             {/* 패널 컨테이너 - 나란히 배치 */}
             <div
                 className={cn(
-                    "fixed z-[86] flex gap-4",
+                    "fixed z-[98] flex gap-4",
                     "top-20 bottom-8 left-1/2 -translate-x-1/2",
                     "transition-all duration-300 ease-out"
                 )}
