@@ -1,7 +1,7 @@
 'use client';
 
 import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
+
 import AuthModal from '@/components/auth/AuthModal';
 import { ProfileModal } from '@/components/profile/ProfileModal';
 import { NicknameSetupModal } from '@/components/profile/NicknameSetupModal';

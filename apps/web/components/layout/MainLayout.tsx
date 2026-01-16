@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import Header from '@/components/layout/Header';
-import Sidebar from '@/components/layout/Sidebar';
+
 import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import AuthModal from '@/components/auth/AuthModal';
 import { ProfileModal } from '@/components/profile/ProfileModal';
@@ -112,25 +112,13 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
             {/* [OPTIMIZATION] Load Supabase logic only when user is logged in */}
             {user && <UserDataPrefetcher />}
 
-            {/* 사이드바 (데스크탑 1600px 이상에서만 표시) */}
-            <div className={cn(
-                // CSS 미디어 쿼리: 1599px 이하에서 숨김
-                "max-[1599px]:hidden",
-                // JS 기반 조건: isDesktop이 false면 숨김 (hydration 후)
-                !isDesktop && "hidden"
-            )}>
-                <Sidebar isOpen={isSidebarOpen} isMyPageMode={isMyPage} />
-            </div>
+            {/* 사이드바 제거됨 */}
 
             <div
                 className={cn(
                     "flex-1 flex flex-col overflow-hidden transition-[margin] duration-300",
-                    // 데스크탑(1600px 이상)에서만 사이드바 마진 적용
-                    "min-[1600px]:ml-16",
-                    isSidebarOpen && "min-[1600px]:ml-64",
                     // 모바일/태블릿(1599px 이하)에서 하단 네비게이션 공간 확보
-                    // CSS 변수로 동적 높이 반영 (60px + safe-area-inset-bottom)
-                    "max-[1599px]:pb-[var(--mobile-bottom-nav-height)]"
+                    "pb-[var(--mobile-bottom-nav-height)] md:pb-0"
                 )}
                 style={{ transitionTimingFunction: 'cubic-bezier(0.25, 0.1, 0.25, 1.0)' }}
             >
@@ -145,7 +133,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
                     onToggleCenteredLayout={shouldShowCenteredLayoutButton ? handleToggleCenteredLayout : undefined}
                     isAdmin={isAdmin}
                     onAnnouncementClick={handleAnnouncementClick}
-                    hideToggleSidebar={isMobileOrTablet}
+                    hideToggleSidebar={true}
                 />
 
                 <main className={cn(

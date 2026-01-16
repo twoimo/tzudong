@@ -398,7 +398,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           alt="쯔동여지도"
           width={100}
           height={32}
-          className="h-8 w-auto md:h-9"
+          className="h-10 w-auto md:h-11"
           priority
         />
       </Link>
