@@ -20,24 +20,29 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
+// ... imports ...
+import { Suspense } from 'react';
+
 export default function LeaderboardPage() {
     const { user: currentUser } = useAuth();
-    const { isMobileOrTablet } = useDeviceType();
+    // const { isMobileOrTablet } = useDeviceType(); // Hook check replaced by window check
     const { data: leaderboardData = [], isLoading } = useLeaderboard();
     const userItemRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
+    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
-        if (isMobileOrTablet === false) {
+        setIsMounted(true);
+        // [DESKTOP CHECK]
+        if (window.innerWidth > 1024) {
             router.replace('/');
         }
-    }, [isMobileOrTablet, router]);
+    }, [router]);
 
     const sortedLeaderboard = [...leaderboardData].sort((a, b) => b.verifiedReviewCount - a.verifiedReviewCount);
     const myRank = currentUser ? sortedLeaderboard.find((u) => u.id === currentUser.id)?.rank : null;
 
-    // 데스크탑에서는 아무것도 렌더링하지 않음 (리다이렉트 대기)
-    if (isMobileOrTablet === false) return null;
+    /* ... rest of logic ... */
 
     useEffect(() => {
         if (currentUser && userItemRef.current) {
@@ -46,6 +51,9 @@ export default function LeaderboardPage() {
             }, 500);
         }
     }, [currentUser, sortedLeaderboard]);
+
+    if (!isMounted) return null;
+    if (typeof window !== 'undefined' && window.innerWidth > 1024) return null;
 
     if (isLoading) {
         return (

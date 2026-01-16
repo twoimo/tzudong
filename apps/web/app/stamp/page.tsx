@@ -41,6 +41,7 @@ import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RestaurantReviewsPanel } from "@/components/stamp/RestaurantReviewsPanel";
 import { REGIONS, extractRegion, parseCategory, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
 import { StampCard } from "@/components/stamp/StampCard";
+import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
 
 type SortColumn = "name" | "category" | "fanVisits";
 type SortDirection = "asc" | "desc" | null;
@@ -264,17 +265,20 @@ RestaurantRow.displayName = 'RestaurantRow';
 export default function StampPage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
-    const { isMobileOrTablet, isDesktop } = useDeviceType();
+    // const { isMobileOrTablet, isDesktop } = useDeviceType(); // Hook check replaced
+    const { isMobileOrTablet, isDesktop } = useDeviceType(); // Keep for logic usage later, but NOT for redirect
     const router = useRouter();
+    const [isMounted, setIsMounted] = useState(false);
 
     useEffect(() => {
-        if (isMobileOrTablet === false) {
+        setIsMounted(true);
+        // [DESKTOP CHECK]
+        if (window.innerWidth > 1024) {
             router.replace('/');
         }
-    }, [isMobileOrTablet, router]);
+    }, [router]);
 
-    // 데스크탑에서는 아무것도 렌더링하지 않음 (리다이렉트 대기)
-    if (isMobileOrTablet === false) return null;
+    // ... hooks ...
 
     const { toast } = useToast();
     const [searchTerm, setSearchTerm] = useState("");
@@ -688,19 +692,27 @@ export default function StampPage() {
     // --- 핸들러 (Handlers) ---
     const handleRestaurantClick = useCallback(async (restaurant: Restaurant) => {
         if (isMobileOrTablet) {
-            router.push(`/?restaurant=${restaurant.id}`);
-            return;
+            // [MOBILE] Open Bottom Sheet instead of navigating
+            setSelectedRestaurant(restaurant);
+            setIsRightPanelVisible(true);
+
+            // Fetch reviews for the selected restaurant (if using existing state)
+            // Note: RestaurantReviewsPanel usually fetches or displays provided reviews.
+            // Check if we need to manually trigger fetch here or if existing effect handles 'selectedRestaurant'.
+            // Based on code, we probably rely on `selectedRestaurant` state change to trigger queries?
+            // Need to verify. But first step is preventing router push.
+        } else {
+            // [DESKTOP] Open Right Panel
+            setSelectedRestaurant(restaurant);
+
+            // 리뷰 데이터 prefetch로 바텀 시트 열리기 전에 미리 로드
+            // [FIX] prefetchInfiniteQuery causing crash on mobile/tablet. Disabled for stability.
+            // await queryClient.prefetchInfiniteQuery({...});
+
+            // prefetch 완료 후 바텀 시트 열기
+            setIsRightPanelVisible(true);
         }
-
-        setSelectedRestaurant(restaurant);
-
-        // 리뷰 데이터 prefetch로 바텀 시트 열리기 전에 미리 로드
-        // [FIX] prefetchInfiniteQuery causing crash on mobile/tablet. Disabled for stability.
-        // await queryClient.prefetchInfiniteQuery({...});
-
-        // prefetch 완료 후 바텀 시트 열기
-        setIsRightPanelVisible(true);
-    }, [isMobileOrTablet, router]);
+    }, [isMobileOrTablet]);
 
     const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
@@ -841,6 +853,10 @@ export default function StampPage() {
             />
         );
     }
+
+    // [Check before render]
+    if (!isMounted) return null;
+    if (typeof window !== 'undefined' && window.innerWidth > 1024) return null;
 
     return (
         <>
@@ -1180,39 +1196,28 @@ export default function StampPage() {
                 )}
             </PanelGroup>
 
-            {/* 바텀 시트 - 리뷰 (모바일/태블릿 전용) - 제거됨: 모바일은 메인 지도로 이동 */}
-            {/* {isMobileOrTablet && (
+            {/* 바텀 시트 - 리뷰 (모바일/태블릿 전용) */}
+            {isRightPanelVisible && selectedRestaurant && (
                 <BottomSheet
                     isOpen={isRightPanelVisible}
                     onClose={handleCloseRightPanel}
-                    defaultHeight={75}
-                    showHandle={true}
+                    defaultHeight={100} // 최대로 열어서 헤더 아래까지 채움
+                    headerOffset={80}   // 헤더(64px) + 여백(16px) 공간 확보
+                    bottomNavOffset={56} // 하단 네비게이션(56px) 공간 확보
+                    disableContentScroll={true} // 내부 패널 스크롤 사용
                     showCloseButton={false}
+                    className="p-0"
                 >
-                    <RestaurantReviewsPanel
+                    <RestaurantDetailPanel
                         restaurant={selectedRestaurant}
-                        reviews={restaurantReviews}
-                        selectedReview={selectedReview}
-                        currentPhotoIndex={currentPhotoIndex}
-                        cardPhotoIndexes={cardPhotoIndexes}
-                        onReviewClick={handleReviewClick}
-                        onBackFromDetail={handleBackFromReviewDetail}
+                        onClose={handleCloseRightPanel}
                         onWriteReview={handleWriteReview}
-                        onToggleLike={toggleLike}
-                        onPrevPhoto={handlePrevPhoto}
-                        onNextPhoto={handleNextPhoto}
-                        onPhotoIndexChange={setCurrentPhotoIndex}
-                        onCardPhotoChange={handleReviewCardPhotoChange}
-                        showHeader={true}
-                        isLoading={reviewsLoading}
-                        currentUserId={user?.id}
-                        onEditReview={(reviewData) => setEditingReview({
-                            ...reviewData,
-                            restaurantId: selectedRestaurant?.id || '',
-                        })}
+                        isPanelOpen={isRightPanelVisible}
+                        isMobile={true}
+                        className="h-full shadow-none border-0 overflow-hidden"
                     />
                 </BottomSheet>
-            )} */}
+            )}
 
             {/* 리뷰 모달 (Review Modal) */}
             <ReviewModal
