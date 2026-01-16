@@ -337,7 +337,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                                     <Filter className="h-4 w-4 ml-2" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-80" align="start">
+                            <PopoverContent className="w-80 z-[100]" align="start">
                                 <div className="space-y-2">
                                     <h4 className="font-semibold text-sm mb-3">지역 선택</h4>
                                     <ScrollArea className="h-64">
@@ -370,7 +370,7 @@ export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampO
                                     <Filter className="h-4 w-4 ml-2" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-64" align="start">
+                            <PopoverContent className="w-64 z-[100]" align="start">
                                 <div className="space-y-2">
                                     <h4 className="font-semibold text-sm mb-3">카테고리 선택</h4>
                                     <ScrollArea className="h-64">
