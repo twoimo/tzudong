@@ -9,56 +9,123 @@ interface BottomSheetProps {
     isOpen: boolean;
     onClose: () => void;
     children: React.ReactNode;
-    defaultHeight?: number;
-    minHeight?: number;
-    maxHeight?: number;
+    defaultHeight?: number; // Percent
+    minHeight?: number;    // Percent
+    maxHeight?: number;    // Percent
     showHandle?: boolean;
     showCloseButton?: boolean;
     className?: string;
-    closeThreshold?: number;
+    closeThreshold?: number; // Percent
+    disableContentScroll?: boolean;
+    headerOffset?: number;   // Pixels (e.g., 80px for header + spacing)
+    bottomNavOffset?: number; // Pixels (e.g., 56px for bottom nav)
 }
 
 /**
  * 드래그 가능한 바텀시트 컴포넌트
- * [OPTIMIZED] Ref 기반 드래그로 리렌더링 최소화
+ * [OPTIMIZED] HomeMapContainer의 고성능 로직 이식 (visualViewport, Physics, RAF)
  */
 function BottomSheetComponent({
     isOpen,
     onClose,
     children,
     defaultHeight = 75,
-    minHeight = 15,
-    maxHeight = 90,
+    minHeight = 20,
+    maxHeight = 100,
     showHandle = true,
     showCloseButton = true,
     className,
     closeThreshold = 15,
+    disableContentScroll = false,
+    headerOffset = 0,
+    bottomNavOffset = 0,
 }: BottomSheetProps) {
-    // [OPTIMIZATION] 렌더링에 필요한 상태만 useState
-    const [height, setHeight] = useState(defaultHeight);
+    // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
+    const [sheetHeight, setSheetHeight] = useState(defaultHeight);
     const [isDragging, setIsDragging] = useState(false);
 
-    // [OPTIMIZATION] 드래그 로직용 Ref (리렌더링 없음)
-    const handleRef = useRef<HTMLDivElement>(null);
-    const sheetRef = useRef<HTMLDivElement>(null);
+    // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
+    const viewportHeightRef = useRef(typeof window !== 'undefined'
+        ? (window.visualViewport?.height ?? window.innerHeight)
+        : 800
+    );
+
+    // Constants matching HomeMapContainer
+    const MIN_DRAG_HEIGHT = 5;
+    const MIN_SHEET_HEIGHT = minHeight;
+    const SWIPE_VELOCITY_THRESHOLD = 0.5;
+
+    const isDraggingRef = useRef(false);
     const startYRef = useRef(0);
     const startHeightRef = useRef(defaultHeight);
     const lastYRef = useRef(0);
     const lastTimeRef = useRef(0);
     const velocityRef = useRef(0);
-    const isDraggingRef = useRef(false);
+    const sheetRef = useRef<HTMLDivElement>(null);
+    const handleRef = useRef<HTMLDivElement>(null);
     const rafIdRef = useRef<number>(0);
 
-    // [OPTIMIZATION] 드래그 시작 공통 로직
+    // [PERFORMANCE] visualViewport resize 스로틀링 (16ms ≈ 60fps)
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const viewport = window.visualViewport;
+        if (!viewport) return;
+
+        let throttleTimer: number | null = null;
+
+        const handleResize = () => {
+            if (throttleTimer !== null) return;
+
+            throttleTimer = requestAnimationFrame(() => {
+                viewportHeightRef.current = viewport.height;
+                // 드래그 중이 아닐 때만 상태 업데이트 (리렌더링 최소화)
+                if (!isDraggingRef.current) {
+                    // 최대 높이를 넘지 않도록 조정
+                    const currentMaxHeight = headerOffset > 0
+                        ? ((viewport.height - headerOffset) / viewport.height) * 100
+                        : maxHeight;
+
+                    setSheetHeight(prev => Math.min(prev, currentMaxHeight));
+                }
+                throttleTimer = null;
+            });
+        };
+
+        viewport.addEventListener('resize', handleResize, { passive: true });
+        // 초기값 설정
+        viewportHeightRef.current = viewport.height;
+
+        return () => {
+            viewport.removeEventListener('resize', handleResize);
+            if (throttleTimer !== null) cancelAnimationFrame(throttleTimer);
+        };
+    }, [isOpen, headerOffset, maxHeight]);
+
+    // 패널이 열릴 때 초기화
+    useEffect(() => {
+        if (isOpen) {
+            // 헤더 오프셋이 있는 경우 최대 높이 계산하여 초기화
+            if (headerOffset > 0 && typeof window !== 'undefined' && window.visualViewport) {
+                const vh = window.visualViewport.height;
+                const calculatedMax = ((vh - headerOffset) / vh) * 100;
+                setSheetHeight(Math.min(defaultHeight, calculatedMax));
+            } else {
+                setSheetHeight(defaultHeight);
+            }
+        }
+    }, [isOpen, defaultHeight, headerOffset]);
+
+    // [PERFORMANCE] 드래그 시작 공통 로직
     const handleDragStartCore = useCallback((clientY: number) => {
         isDraggingRef.current = true;
         startYRef.current = clientY;
-        startHeightRef.current = height;
+        startHeightRef.current = sheetHeight;
         lastYRef.current = clientY;
         lastTimeRef.current = Date.now();
         velocityRef.current = 0;
         setIsDragging(true);
-    }, [height]);
+    }, [sheetHeight]);
 
     // 터치 드래그 시작
     const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -71,8 +138,8 @@ function BottomSheetComponent({
         handleDragStartCore(e.clientY);
     }, [handleDragStartCore]);
 
-    // [OPTIMIZATION] 드래그 이동 공통 로직 - RAF 기반
-    const handleMoveCore = useCallback((currentY: number) => {
+    // [PERFORMANCE] 드래그 중 공통 로직 - RAF 기반 최적화
+    const handleDragMoveCore = useCallback((currentY: number) => {
         if (!isDraggingRef.current) return;
 
         const currentTime = Date.now();
@@ -84,29 +151,34 @@ function BottomSheetComponent({
         lastYRef.current = currentY;
         lastTimeRef.current = currentTime;
 
-        // [OPTIMIZATION] 이전 RAF 취소
+        // [PERFORMANCE] 이전 RAF 취소
         if (rafIdRef.current) {
             cancelAnimationFrame(rafIdRef.current);
         }
 
         rafIdRef.current = requestAnimationFrame(() => {
             const deltaY = startYRef.current - currentY;
-            const viewportHeight = window.innerHeight;
-            const deltaPercent = (deltaY / viewportHeight) * 100;
+            const vh = viewportHeightRef.current;
+            const deltaPercent = (deltaY / vh) * 100;
+
+            // 최대 높이 동적 계산 (헤더 오프셋 고려)
+            const currentMaxHeight = headerOffset > 0
+                ? ((vh - headerOffset) / vh) * 100
+                : maxHeight;
 
             let newHeight = startHeightRef.current + deltaPercent;
-            newHeight = Math.max(5, Math.min(maxHeight, newHeight));
+            newHeight = Math.max(MIN_DRAG_HEIGHT, Math.min(currentMaxHeight, newHeight));
 
-            setHeight(newHeight);
+            setSheetHeight(newHeight);
         });
-    }, [maxHeight]);
+    }, [headerOffset, maxHeight]);
 
     // 터치 드래그 중
     const handleTouchMove = useCallback((e: React.TouchEvent) => {
-        handleMoveCore(e.touches[0].clientY);
-    }, [handleMoveCore]);
+        handleDragMoveCore(e.touches[0].clientY);
+    }, [handleDragMoveCore]);
 
-    // [OPTIMIZATION] 드래그 종료 - 클로저 문제 회피
+    // [PERFORMANCE] 드래그 종료
     const handleDragEnd = useCallback(() => {
         isDraggingRef.current = false;
         setIsDragging(false);
@@ -117,29 +189,28 @@ function BottomSheetComponent({
         }
 
         // 빠른 스와이프로 닫기
-        if (velocityRef.current > 0.5) {
+        if (velocityRef.current > SWIPE_VELOCITY_THRESHOLD) {
             onClose();
             return;
         }
 
         // 현재 높이 기반 판단
-        setHeight(currentHeight => {
+        setSheetHeight(currentHeight => {
             if (currentHeight <= closeThreshold) {
                 queueMicrotask(onClose);
                 return currentHeight;
             }
-            return currentHeight < minHeight ? minHeight : currentHeight;
+            return currentHeight < MIN_SHEET_HEIGHT ? MIN_SHEET_HEIGHT : currentHeight;
         });
-    }, [closeThreshold, minHeight, onClose]);
+    }, [onClose, closeThreshold, MIN_SHEET_HEIGHT]);
 
-    // [OPTIMIZATION] 마우스 이벤트 - window에 등록
+    // [PERFORMANCE] 마우스 이벤트 - window에 등록 (드래그 중일 때만)
     useEffect(() => {
         if (!isDragging) return;
 
         const handleMouseMove = (e: MouseEvent) => {
-            handleMoveCore(e.clientY);
+            handleDragMoveCore(e.clientY);
         };
-
         const handleMouseUp = () => {
             handleDragEnd();
         };
@@ -151,23 +222,14 @@ function BottomSheetComponent({
             window.removeEventListener('mousemove', handleMouseMove);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [isDragging, handleMoveCore, handleDragEnd]);
-
-    // isOpen 변경 시 높이 리셋
-    useEffect(() => {
-        if (isOpen) {
-            setHeight(defaultHeight);
-        }
-    }, [isOpen, defaultHeight]);
+    }, [isDragging, handleDragMoveCore, handleDragEnd]);
 
     // ESC 키로 닫기
     useEffect(() => {
         if (!isOpen) return;
-
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
         };
-
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
@@ -175,17 +237,15 @@ function BottomSheetComponent({
     // Pull-to-Refresh 방지
     useEffect(() => {
         if (!isOpen) return;
-
         document.body.style.overscrollBehavior = 'contain';
         document.documentElement.style.overscrollBehavior = 'contain';
-
         return () => {
             document.body.style.overscrollBehavior = '';
             document.documentElement.style.overscrollBehavior = '';
         };
     }, [isOpen]);
 
-    // 드래그 핸들 Pull-to-Refresh 방지
+    // 드래그 핸들 Pull-to-Refresh 방지 (Passive: false)
     useEffect(() => {
         const handle = handleRef.current;
         if (!handle || !isOpen) return;
@@ -199,6 +259,16 @@ function BottomSheetComponent({
     }, [isOpen]);
 
     if (!isOpen) return null;
+
+    // 동적 높이 스타일
+    const heightStyle = {
+        // [FIX] Safari/삼성 인터넷 100vh 버그 수정 - HomeMapContainer 방식 적용
+        // bottom: 0 고정 + height(px)로 직접 계산하여 가상 키보드 등 대응
+        height: `${viewportHeightRef.current * sheetHeight / 100}px`,
+        // 헤더 오프셋이 있는 경우 최대 높이 제한 (CSS로도 이중 안전장치)
+        maxHeight: headerOffset > 0 ? `calc(100% - ${headerOffset}px)` : `${maxHeight}%`,
+        transitionTimingFunction: isDragging ? undefined : 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+    };
 
     return (
         <>
@@ -215,13 +285,11 @@ function BottomSheetComponent({
                     'fixed bottom-0 left-0 right-0 z-50',
                     'bg-background rounded-t-2xl shadow-xl',
                     'flex flex-col',
-                    isDragging ? '' : 'transition-[height] duration-150 ease-out',
+                    // 드래그 중에는 트랜지션 제거
+                    isDragging ? '' : 'transition-[height] duration-300',
                     className
                 )}
-                style={{
-                    height: `${height}vh`,
-                    willChange: isDragging ? 'height' : 'auto',
-                }}
+                style={heightStyle}
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* 핸들 바 */}
@@ -253,18 +321,22 @@ function BottomSheetComponent({
 
                 {/* 콘텐츠 영역 */}
                 <div
-                    className="flex-1 overflow-y-auto overscroll-contain min-h-0 border-t border-border/50"
+                    className={cn(
+                        "flex-1 overscroll-contain min-h-0 border-t border-border/50",
+                        disableContentScroll ? "overflow-hidden" : "overflow-y-auto"
+                    )}
                     style={{
                         WebkitOverflowScrolling: 'touch',
-                        paddingBottom: 'env(safe-area-inset-bottom)'
+                        paddingBottom: `calc(env(safe-area-inset-bottom) + ${bottomNavOffset}px)`
                     }}
                     onTouchStart={(e) => {
-                        if (e.currentTarget.scrollHeight > e.currentTarget.clientHeight) {
+                        // 스크롤이 비활성화된 경우 이벤트 전파 막지 않음 (내부 스크롤 허용)
+                        if (!disableContentScroll && e.currentTarget.scrollHeight > e.currentTarget.clientHeight) {
                             e.stopPropagation();
                         }
                     }}
-                    onTouchMove={(e) => e.stopPropagation()}
-                    onTouchEnd={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => !disableContentScroll && e.stopPropagation()}
+                    onTouchEnd={(e) => !disableContentScroll && e.stopPropagation()}
                 >
                     {children}
                 </div>
@@ -273,6 +345,5 @@ function BottomSheetComponent({
     );
 }
 
-// [OPTIMIZATION] memo로 불필요한 리렌더링 방지
 export const BottomSheet = memo(BottomSheetComponent);
 BottomSheet.displayName = 'BottomSheet';
