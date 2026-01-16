@@ -388,20 +388,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         </div>
       )}
 
-      {/* 쯔동여지도 로고 */}
-      <Link href="/" className={cn(
-        "relative z-10 flex-shrink-0 transition-all duration-300 hover:opacity-80 flex items-center",
-        isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
-      )}>
-        <NextImage
-          src="/sidebar_logo.png"
-          alt="쯔동여지도"
-          width={100}
-          height={32}
-          className="h-10 w-auto md:h-11"
-          priority
-        />
-      </Link>
+
 
       {/* 중앙: 공지 배너 - 남은 공간 최대 활용, 내용 길이와 무관하게 고정 */}
       {currentBanner && (

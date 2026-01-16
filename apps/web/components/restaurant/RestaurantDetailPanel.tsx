@@ -293,7 +293,7 @@ export function RestaurantDetailPanel({
         url.searchParams.set('q', restaurant.name);
         url.searchParams.set('lat', restaurant.lat?.toString() || '');
         url.searchParams.set('lng', restaurant.lng?.toString() || '');
-        url.searchParams.set('z', '16.00');
+        url.searchParams.set('z', '15.00');
         try {
             await navigator.clipboard.writeText(url.toString());
             setIsShareCopied(true);
