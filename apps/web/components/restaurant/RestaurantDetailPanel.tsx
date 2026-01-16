@@ -3,6 +3,7 @@ import { MapPin, MessageSquare, Youtube, Navigation, Settings, Store, Quote, Sta
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
@@ -25,6 +26,7 @@ interface RestaurantDetailPanelProps {
     onToggleCollapse?: () => void;
     isPanelOpen?: boolean;
     isMobile?: boolean;
+    className?: string;
 }
 
 interface Review {
@@ -57,6 +59,7 @@ export function RestaurantDetailPanel({
     onToggleCollapse,
     isPanelOpen = true,
     isMobile = false,
+    className,
 }: RestaurantDetailPanelProps) {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
@@ -468,7 +471,10 @@ export function RestaurantDetailPanel({
             <div
                 data-testid="restaurant-detail-panel"
                 data-panel-type="restaurant-detail"
-                className="h-full w-full max-w-full flex flex-col bg-background border-l border-border relative"
+                className={cn(
+                    "h-full w-full max-w-full flex flex-col bg-background border-l border-border relative",
+                    className
+                )}
             >
                 {/* 플로팅 접기/펼치기 버튼 - 패널 좌측 가장자리, 모바일에서는 숨김 */}
                 {onToggleCollapse && !isMobile && (

@@ -210,13 +210,15 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
                 {/* 우측 사이드 패널 영역 - 맛집 상세 */}
                 {showRestaurantDetail && (
                     <div className={cn(
-                        "flex-shrink-0 border-l border-border bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
-                        "w-[400px]"
+                        "flex-shrink-0 bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
+                        "w-[400px]",
+                        "rounded-2xl border border-border shadow-2xl overflow-hidden"
                     )}>
                         <RestaurantDetailPanel
                             restaurant={selectedRestaurant!}
                             onClose={handleCloseRestaurantDetail}
                             isPanelOpen={true}
+                            className="border-none"
                         />
                     </div>
                 )}
@@ -224,8 +226,9 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
                 {/* 우측 사이드 패널 영역 - 사용자 프로필 */}
                 {showUserProfile && (
                     <div className={cn(
-                        "flex-shrink-0 border-l border-border bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
-                        "w-[400px]"
+                        "flex-shrink-0 bg-background transition-[width] duration-300 ease-in-out hidden xl:block",
+                        "w-[400px]",
+                        "rounded-2xl border border-border shadow-2xl overflow-hidden"
                     )}>
                         <UserProfilePanel
                             userId={selectedUserId!}
