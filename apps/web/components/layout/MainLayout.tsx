@@ -19,8 +19,13 @@ import { cn } from '@/lib/utils';
 import { Restaurant } from '@/types/restaurant';
 import { Announcement } from '@/types/announcement';
 
-// [OPTIMIZATION] Lazy load Supabase prefetcher to reduce initial bundle size
+// [OPTIMIZATION] Lazy load components
 const UserDataPrefetcher = dynamic(() => import('@/components/layout/UserDataPrefetcher'), {
+    ssr: false,
+});
+
+// [NEW] 오버레이 레이아웃 지연 로딩
+const OverlayLayout = dynamic(() => import('@/components/layout/OverlayLayout'), {
     ssr: false,
 });
 
@@ -43,6 +48,9 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     // 마이페이지 여부 확인
     const isMyPage = pathname?.startsWith('/mypage');
 
+    // [NEW] 홈페이지 여부 확인 (오버레이 레이아웃 적용 대상)
+    const isHomePage = pathname === '/';
+
     // 페이지 이동 감지
     useEffect(() => {
         if (prevPathnameRef.current !== pathname) {
@@ -64,7 +72,7 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
     }, [signOut, queryClient, router]);
 
     // 성능 최적화: 핸들러 메모이제이션
-    const handleToggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen]);
+    const handleToggleSidebar = useCallback(() => setIsSidebarOpen(!isSidebarOpen), [isSidebarOpen, setIsSidebarOpen]);
     const handleOpenAuth = useCallback(() => setIsAuthModalOpen(true), []);
     const handleProfileClick = useCallback(() => setIsProfileModalOpen(true), []);
     const handleToggleCenteredLayout = useCallback(() => setIsCenteredLayout(!isCenteredLayout), [isCenteredLayout]);
@@ -89,6 +97,13 @@ export function MainLayoutContent({ children }: { children: React.ReactNode }) {
         setSelectedRestaurant(restaurant);
         setIsAdminModalOpen(true);
     };
+
+    // [NEW] 데스크탑에서는 항상 오버레이 레이아웃 사용 (사이드바 완전 제거)
+    if (isDesktop) {
+        return <OverlayLayout>{children}</OverlayLayout>;
+    }
+
+    // 모바일/태블릿 레이아웃
 
     return (
         // h-screen 대신 CSS 변수(--full-height)로 모바일 브라우저 UI 고려

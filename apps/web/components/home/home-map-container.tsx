@@ -315,13 +315,39 @@ function HomeMapContainerComponent({
             {/* [CSR] 맛집 상세 패널 - 데스크탑: 사이드 패널, 모바일/태블릿: 바텀시트 */}
             {panelRestaurant && (
                 <>
-                    {/* 데스크탑 사이드 패널 */}
+                    {/* 데스크탑 오버레이 패널 */}
                     {isDesktop && (
-                        <div
-                            className={`absolute top-0 right-0 h-full z-20 shadow-xl bg-background transition-all duration-300 ease-in-out ${isPanelOpen ? 'w-[400px]' : 'w-0'}`}
-                            style={{ overflow: 'visible' }}
-                        >
-                            <div className="h-full w-[400px] bg-background border-l border-border">
+                        <>
+                            {/* 배경 오버레이 */}
+                            <div
+                                className={cn(
+                                    "fixed inset-0 z-[90] transition-opacity duration-300",
+                                    isPanelOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+                                )}
+                                onClick={onPanelClose}
+                                aria-hidden="true"
+                            />
+                            {/* 상세 패널 */}
+                            <div
+                                className={cn(
+                                    "fixed top-16 right-0 h-[calc(100vh-64px)] w-[400px] z-[95]",
+                                    "bg-background border-l border-border shadow-2xl",
+                                    "transform transition-transform duration-300 ease-out",
+                                    isPanelOpen ? "translate-x-0" : "translate-x-full"
+                                )}
+                                style={{ overflow: 'visible' }}
+                            >
+                                {/* 접기 버튼 */}
+                                <button
+                                    onClick={onPanelClose}
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-full z-50 flex items-center justify-center w-6 h-12 bg-background border border-r-0 border-border rounded-l-md shadow-md hover:bg-muted transition-colors cursor-pointer group"
+                                    title="패널 닫기"
+                                    aria-label="패널 닫기"
+                                >
+                                    <svg className="h-4 w-4 text-muted-foreground group-hover:text-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                    </svg>
+                                </button>
                                 <RestaurantDetailPanel
                                     restaurant={panelRestaurant}
                                     onClose={onPanelClose}
@@ -336,8 +362,9 @@ function HomeMapContainerComponent({
                                     isPanelOpen={isPanelOpen}
                                 />
                             </div>
-                        </div>
+                        </>
                     )}
+
 
                     {/* 모바일/태블릿 바텀시트 */}
                     {isMobileOrTablet && isPanelOpen && (
