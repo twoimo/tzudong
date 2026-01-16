@@ -206,6 +206,11 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
         }
     }, [onClose, router]);
 
+    // [최적화] useCallback으로 탭 변경 핸들러 메모이제이션
+    const handleTabChange = useCallback((value: string) => {
+        setActiveTab(value as 'stamps' | 'reviews' | 'likers');
+    }, []);
+
     if (profileLoading) {
         return (
             <div className="h-full flex flex-col">
