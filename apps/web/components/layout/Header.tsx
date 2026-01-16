@@ -193,7 +193,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     if (isMobileOrTablet) {
       // 모바일/태블릿: 바텀시트로 공지사항 리스트 표시
       const announcements = getActiveAnnouncements();
-      console.log('Loaded announcements:', announcements);
+
       setAllAnnouncements(announcements);
       setAnnouncementPage(1);
       setAnnouncementViewMode('list');
