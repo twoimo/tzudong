@@ -19,6 +19,7 @@ import { useRestaurants } from "@/hooks/use-restaurants";
 
 interface StampOverlayProps {
     onClose?: () => void;
+    onOpenRestaurantDetail?: (restaurant: Restaurant) => void;
 }
 
 // 지역 목록
@@ -107,7 +108,7 @@ interface FilterState {
  * 도장 오버레이
  * - 모바일/태블릿 도장 페이지와 동일한 필터링 및 표시
  */
-export default function StampOverlay({ onClose }: StampOverlayProps) {
+export default function StampOverlay({ onClose, onOpenRestaurantDetail }: StampOverlayProps) {
     const { user } = useAuth();
     const [displayLimit, setDisplayLimit] = useState(20);
     const [cardThumbnailIndexes, setCardThumbnailIndexes] = useState<Record<string, number>>({});
@@ -228,8 +229,12 @@ export default function StampOverlay({ onClose }: StampOverlayProps) {
     }, [filters]);
 
     const handleRestaurantClick = useCallback((restaurant: Restaurant) => {
-        window.dispatchEvent(new CustomEvent('closeOverlayAndGoToRestaurant', { detail: restaurant.id }));
-    }, []);
+        if (onOpenRestaurantDetail) {
+            onOpenRestaurantDetail(restaurant);
+        } else {
+            window.dispatchEvent(new CustomEvent('closeOverlayAndGoToRestaurant', { detail: restaurant.id }));
+        }
+    }, [onOpenRestaurantDetail]);
 
     const handleThumbnailChange = useCallback((id: string, index: number) => {
         setCardThumbnailIndexes(prev => ({ ...prev, [id]: index }));

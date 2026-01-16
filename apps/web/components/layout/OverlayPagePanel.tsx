@@ -13,6 +13,8 @@ import LeaderboardContent from '@/components/overlay-pages/LeaderboardOverlay';
 import CostsContent from '@/components/overlay-pages/CostsOverlay';
 import AdminReviewsContent from '@/components/overlay-pages/AdminReviewsOverlay';
 import InsightContent from '@/components/overlay-pages/InsightOverlay';
+import { Restaurant } from '@/types/restaurant';
+import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
 
 // 패널별 최대 너비 설정
 const PANEL_WIDTHS: Record<Exclude<OverlayPanelType, null>, string> = {
@@ -38,6 +40,7 @@ interface OverlayPagePanelProps {
 function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelProps) {
     const queryClient = useQueryClient();
     const [isReviewPanelOpen, setIsReviewPanelOpen] = useState(false);
+    const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
     const [isDesktop, setIsDesktop] = useState(false);
 
     // 데스크탑 체크 (lg breakpoint = 1024px)
@@ -70,6 +73,7 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
     useEffect(() => {
         if (!activePanel) {
             setIsReviewPanelOpen(false);
+            setSelectedRestaurant(null);
         }
     }, [activePanel]);
 
@@ -86,10 +90,24 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
         setIsReviewPanelOpen(false);
     }, [queryClient]);
 
+    const handleOpenRestaurantDetail = useCallback((restaurant: Restaurant) => {
+        setSelectedRestaurant(restaurant);
+    }, []);
+
+    const handleCloseRestaurantDetail = useCallback(() => {
+        setSelectedRestaurant(null);
+    }, []);
+
     if (!activePanel) return null;
 
-    const maxWidth = PANEL_WIDTHS[activePanel];
+    let maxWidth = PANEL_WIDTHS[activePanel];
     const showInlineReviewPanel = activePanel === 'feed' && isReviewPanelOpen && isDesktop;
+    const showSideDetailPanel = activePanel === 'stamp' && selectedRestaurant && isDesktop;
+
+    // 도장 패널에서 상세 패널이 열리면 메인 패널 너비 조정
+    if (showSideDetailPanel) {
+        maxWidth = 'max-w-4xl'; // 896px + 400px = 1296px (fits in 1400px+)
+    }
 
     return (
         <>
@@ -127,7 +145,12 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
                             hideFloatingButton={isReviewPanelOpen}
                         />
                     )}
-                    {activePanel === 'stamp' && <StampContent onClose={onClose} />}
+                    {activePanel === 'stamp' && (
+                        <StampContent
+                            onClose={onClose}
+                            onOpenRestaurantDetail={handleOpenRestaurantDetail}
+                        />
+                    )}
                     {activePanel === 'leaderboard' && <LeaderboardContent onClose={onClose} />}
                     {activePanel === 'costs' && <CostsContent onClose={onClose} />}
                     {activePanel === 'admin-reviews' && <AdminReviewsContent />}
@@ -154,9 +177,29 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
                         />
                     </div>
                 )}
+
+                {/* 맛집 상세 패널 - 데스크탑 도장 오버레이에서 우측 표시 */}
+                {showSideDetailPanel && (
+                    <div
+                        className={cn(
+                            "bg-background shadow-2xl",
+                            "flex flex-col overflow-hidden",
+                            "w-[400px]",
+                            "rounded-2xl border border-border",
+                            "animate-in slide-in-from-right-4 duration-300"
+                        )}
+                    >
+                        <RestaurantDetailPanel
+                            restaurant={selectedRestaurant}
+                            onClose={handleCloseRestaurantDetail}
+                            isPanelOpen={true}
+                            onWriteReview={() => console.log('write review from overlay')}
+                        />
+                    </div>
+                )}
             </div>
 
-            {/* 모바일/태블릿에서만 Dialog 표시 */}
+            {/* 모바일/태블릿에서만 Dialog 표시 (필요시) - 현재는 없음 */}
             {!isDesktop && isReviewPanelOpen && (
                 <ReviewModal
                     isOpen={true}
