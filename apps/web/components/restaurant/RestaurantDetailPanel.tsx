@@ -1,10 +1,40 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { MapPin, MessageSquare, Youtube, Navigation, Settings, Store, Quote, Star, Edit, ArrowLeft, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
+import { User } from "@supabase/supabase-js";
+import { toast } from "sonner";
+import {
+    X,
+    MapPin,
+    Clock,
+    ExternalLink,
+    ThumbsUp,
+    MessageSquare,
+    Share2,
+    Navigation,
+    Globe,
+    MoreVertical,
+    Flag,
+    Edit,
+    Pencil,
+    Map as MapIcon,
+    Copy,
+    ChevronDown,
+    Info,
+    Youtube,
+    Settings,
+    Store,
+    Quote,
+    Star,
+    ArrowLeft,
+    Check,
+    ChevronUp,
+    ChevronRight,
+    ChevronLeft
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -289,17 +319,51 @@ export function RestaurantDetailPanel({
     // [핸들러] 공유하기 URL 복사 - useCallback으로 메모이제이션
     const handleShareUrl = useCallback(async () => {
         if (!restaurant) return;
+
+        // 1. 원본 URL 생성
         const url = new URL(window.location.href);
         url.searchParams.set('q', restaurant.name);
         url.searchParams.set('lat', restaurant.lat?.toString() || '');
         url.searchParams.set('lng', restaurant.lng?.toString() || '');
-        url.searchParams.set('z', '15.00');
+        url.searchParams.set('z', '15.00'); // 줌 레벨 15로 설정
+        const longUrl = url.toString();
+
         try {
-            await navigator.clipboard.writeText(url.toString());
+            // 2. 단축 URL 생성 시도
+            const response = await fetch('/api/shorten', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ url: longUrl }),
+            });
+
+            let shareUrl = longUrl;
+
+            if (response.ok) {
+                const data = await response.json();
+                if (data.shortCode) {
+                    // 단축 URL 구성 (현재 도메인 기준)
+                    shareUrl = `${window.location.origin}/s/${data.shortCode}`;
+                }
+            }
+
+            // 3. 클립보드 복사
+            await navigator.clipboard.writeText(shareUrl);
             setIsShareCopied(true);
             setTimeout(() => setIsShareCopied(false), 2000);
-        } catch {
-            console.error('URL 복사 실패');
+            toast.success('공유 링크가 복사되었습니다');
+        } catch (err) {
+            console.error('URL 단축/복사 실패:', err);
+            // 실패 시 원본 URL이라도 복사 시도
+            try {
+                await navigator.clipboard.writeText(longUrl);
+                setIsShareCopied(true);
+                setTimeout(() => setIsShareCopied(false), 2000);
+                toast.success('공유 링크가 복사되었습니다 (단축 실패)');
+            } catch (copyErr) {
+                toast.error('링크 복사에 실패했습니다');
+            }
         }
     }, [restaurant]);
 

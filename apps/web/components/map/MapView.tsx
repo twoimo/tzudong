@@ -85,6 +85,10 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const markersRef = useRef<any[]>([]);
   const detailPanelRef = useRef<HTMLDivElement>(null);
 
+  // [상태] 지도 이동 - 선택된 맛집으로 이동 (한 번만 수행)
+  const lastCenteredRestaurantId = useRef<string | null>(null);
+
+  // 패널 상태 관리 (내부적으로 관리하거나 props로 제어)
   const [mapBounds, setMapBounds] = useState<any | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -190,9 +194,13 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [searchedRestaurant, onRestaurantSelect, isLoaded]);
 
-  // selectedRestaurant 변경 시 동적 오프셋으로 중앙 정렬
+  // [지도 이동] 선택된 맛집으로 이동 (한 번만 수행)
   useEffect(() => {
-    if (!selectedRestaurant || !isLoaded || !googleMapRef.current) {
+    if (!selectedRestaurant || !mapRef.current || !isLoaded) return;
+
+    // 이미 이 맛집으로 이동했다면 건너뛰기 (사용자가 지도를 움직일 수 있게 함)
+    // 단, selectedRestaurant 객체가 아예 바뀌었더라도 ID가 같다면 이동하지 않음
+    if (lastCenteredRestaurantId.current === selectedRestaurant.id) {
       return;
     }
 
@@ -229,10 +237,20 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       // 지도 이동
       map.panTo({ lat, lng: adjustedLng });
+
+      // 이동 완료 표시
+      lastCenteredRestaurantId.current = selectedRestaurant.id;
     } catch (error) {
       console.error('MapView: Error moving to selected restaurant:', error);
     }
   }, [selectedRestaurant, isLoaded, effectivePanelWidth]);
+
+  // 선택 해제 시 ref 초기화
+  useEffect(() => {
+    if (!selectedRestaurant) {
+      lastCenteredRestaurantId.current = null;
+    }
+  }, [selectedRestaurant]);
 
   // useRestaurants 옵션 메모이제이션
   const restaurantsOptions = useMemo(() => ({
