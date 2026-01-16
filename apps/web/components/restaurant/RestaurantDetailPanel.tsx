@@ -38,7 +38,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import Image from "next/image";
 import { ScrollableTagContainer } from "@/components/ui/scrollable-tag-container";
@@ -161,39 +161,42 @@ export function RestaurantDetailPanel({
         };
     }, [restaurant]);
 
-    // [데이터 조회] 실제 리뷰 데이터 가져오기
-    const { data: reviewsData = [], isLoading: reviewsLoading } = useQuery({
+    // [데이터 조회] 리뷰 무한 스크롤 (성능 최적화: 10개씩 페이징)
+    const {
+        data: reviewsInfiniteData,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading: reviewsLoading
+    } = useInfiniteQuery({
         queryKey: ['restaurant-reviews', restaurant?.id],
-        queryFn: async () => {
+        queryFn: async ({ pageParam = 0 }) => {
             try {
-                if (!restaurant) return [];
+                if (!restaurant) return { reviews: [], nextCursor: null };
 
-                // 0. 모든 관련 레코드 ID 수집 (현재 ID + 병합된 ID)
+                // 0. 모든 관련 레코드 ID 수집
                 const allIds = [restaurant.id];
                 if (restaurant.mergedRestaurants && restaurant.mergedRestaurants.length > 0) {
                     allIds.push(...restaurant.mergedRestaurants.map((r: any) => r.id));
                 }
 
-                // 1. 해당 맛집의 승인된 리뷰 조회
-                const { data: reviewsData, error: reviewsError } = await (supabase
+                // 1. 해당 맛집의 승인된 리뷰 조회 (Paging)
+                const { data: reviewsPageData, error: reviewsError } = await (supabase
                     .from('reviews') as any)
                     .select('*')
                     .in('restaurant_id', allIds)
                     .eq('is_verified', true)
                     .order('is_pinned', { ascending: false })
-                    .order('created_at', { ascending: false });
+                    .order('created_at', { ascending: false })
+                    .range(pageParam, pageParam + 9); // 10개씩 조회
 
-                if (reviewsError) {
-                    console.error('❌ 리뷰 조회 실패:', reviewsError);
-                    return [];
-                }
-
-                if (!reviewsData || reviewsData.length === 0) {
-                    return [];
+                if (reviewsError) throw reviewsError;
+                if (!reviewsPageData || reviewsPageData.length === 0) {
+                    return { reviews: [], nextCursor: null };
                 }
 
                 // 2. 필요한 user_id 수집
-                const userIds = [...new Set(reviewsData.map((r: any) => r.user_id))];
+                const userIds = [...new Set(reviewsPageData.map((r: any) => r.user_id))];
 
                 // 3. Profiles 가져오기
                 const { data: profilesData } = await (supabase
@@ -201,13 +204,13 @@ export function RestaurantDetailPanel({
                     .select('user_id, nickname, avatar_url')
                     .in('user_id', userIds);
 
-                // 4. Map으로 변환 (빠른 조회)
+                // 4. Map으로 변환
                 const profilesMap = new Map<string, { nickname: string; avatarUrl: string | null }>(
                     (profilesData || []).map((p: any) => [p.user_id, { nickname: p.nickname, avatarUrl: p.avatar_url }])
                 );
 
                 // 6. 리뷰 좋아요 데이터 조회
-                const reviewIds = reviewsData.map((r: any) => r.id);
+                const reviewIds = reviewsPageData.map((r: any) => r.id);
                 const { data: likesData } = await (supabase
                     .from('review_likes') as any)
                     .select('review_id, user_id')
@@ -224,7 +227,7 @@ export function RestaurantDetailPanel({
                 });
 
                 // 7. 리뷰 데이터 매핑
-                const reviews = reviewsData.map((review: any) => {
+                const reviews = reviewsPageData.map((review: any) => {
                     const likesInfo = likesMap.get(review.id) || { count: 0, isLiked: false };
                     const userProfile = profilesMap.get(review.user_id);
 
@@ -252,46 +255,41 @@ export function RestaurantDetailPanel({
                     };
                 }) as Review[];
 
-                return reviews;
+                const nextCursor = reviewsPageData.length === 10 ? pageParam + 10 : null;
+                return { reviews, nextCursor };
             } catch (error) {
                 console.error('❌ 리뷰 데이터 조회 중 오류:', error);
-                return [];
+                return { reviews: [], nextCursor: null };
             }
         },
+        initialPageParam: 0,
+        getNextPageParam: (lastPage) => lastPage?.nextCursor ?? undefined,
         enabled: !!restaurant?.id,
-        // [수정] 리뷰 표시 문제 수정 - 전역 설정 오버라이드
-        refetchOnMount: 'always', // 패널 열릴 때마다 항상 새로운 데이터 fetch
-        staleTime: 0, // 리뷰 데이터는 항상 최신 상태로 유지
-        gcTime: 30 * 1000, // 30초 후 캐시 정리 (패널 닫힌 후)
+        refetchOnMount: 'always',
+        staleTime: 0,
+        gcTime: 30 * 1000,
     });
 
-    // [리뷰 필터링] 쯔양 구독자 리뷰 우선 표시 (닉네임에 '쯔양' 또는 'tzuyang'이 포함된 사용자)
-    const safeReviewsData = Array.isArray(reviewsData) ? reviewsData : [];
-    const tzuyangReviews = safeReviewsData.filter(review =>
-        review.isVerified &&
-        (review.userName.toLowerCase().includes('쯔양') ||
-            review.userName.toLowerCase().includes('tzuyang'))
-    );
-    const otherReviews = safeReviewsData.filter(review =>
-        review.isVerified &&
-        !(review.userName.toLowerCase().includes('쯔양') ||
-            review.userName.toLowerCase().includes('tzuyang'))
-    );
+    // [리뷰 데이터 평탄화]
+    const safeReviewsData = useMemo(() =>
+        reviewsInfiniteData?.pages.flatMap(page => page.reviews) || [],
+        [reviewsInfiniteData]);
 
-    // [리뷰 정렬] 우선순위: 쯔양 구독자 리뷰 3개, 그 다음 일반 리뷰
-    const priorityReviews = [...tzuyangReviews, ...otherReviews];
-    const recentReviews = priorityReviews.slice(0, 3);
+    // [리뷰 정렬] 최근 리뷰는 작성일순(Query에서 정렬됨)으로 표시 - 3개만 미리보기
+    const recentReviews = safeReviewsData.slice(0, 3);
+
+    // [총 리뷰 수]
+    const totalReviewCount = (restaurant as any).verified_review_count ?? safeReviewsData.length;
 
     // [초기화] 초기 로드 시 likedReviews 상태 초기화
     useEffect(() => {
-        const safeData = Array.isArray(reviewsData) ? reviewsData : [];
-        if (safeData.length > 0) {
-            const likedReviewIds = safeData
+        if (safeReviewsData.length > 0) {
+            const likedReviewIds = safeReviewsData
                 .filter(review => review.isLikedByUser)
                 .map(review => review.id);
             setLikedReviews(new Set(likedReviewIds));
         }
-    }, [reviewsData]);
+    }, [safeReviewsData]);
 
     // [핸들러] 전체 리뷰 보기
     const handleViewAllReviews = useCallback(() => {
@@ -584,7 +582,7 @@ export function RestaurantDetailPanel({
                                             </h3>
                                         </div>
                                         <p className="text-sm text-muted-foreground truncate">
-                                            전체 리뷰 {safeReviewsData.length}개
+                                            전체 리뷰 {totalReviewCount}개
                                         </p>
                                     </div>
                                 </>
@@ -919,9 +917,9 @@ export function RestaurantDetailPanel({
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-semibold text-sm flex items-center gap-2">
                                             <Star className="h-4 w-4 text-muted-foreground" />
-                                            최근 리뷰 ({safeReviewsData.length})
+                                            최근 리뷰 ({totalReviewCount})
                                         </h3>
-                                        {safeReviewsData.length > 0 && (
+                                        {totalReviewCount > 3 && (
                                             <Button
                                                 variant="link"
                                                 size="sm"
@@ -998,6 +996,18 @@ export function RestaurantDetailPanel({
                                                 })}
                                             />
                                         ))}
+
+                                        {/* 더 보기 버튼 */}
+                                        {hasNextPage && (
+                                            <Button
+                                                variant="outline"
+                                                className="w-full mt-4"
+                                                onClick={() => fetchNextPage()}
+                                                disabled={isFetchingNextPage}
+                                            >
+                                                {isFetchingNextPage ? '불러오는 중...' : '리뷰 더 보기'}
+                                            </Button>
+                                        )}
                                     </div>
                                 )}
                             </div>
