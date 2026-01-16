@@ -319,10 +319,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       if (updatedRestaurant) {
         // selectedRestaurant 업데이트 (외부 상태 동기화)
         onRestaurantSelect?.(updatedRestaurant);
-      } else if (!updatedRestaurant) {
-        // 삭제된 경우에만 패널 닫기
-        onRestaurantSelect?.(null);
       }
+      // [수정] 화면 밖으로 벗어나서 리스트에 없더라도 패널을 닫지 않음
+      // else if (!updatedRestaurant) {
+      //   onRestaurantSelect?.(null);
+      // }
     }
   }, [restaurants, refreshTrigger, selectedRestaurant, onRestaurantSelect]);
 
@@ -626,7 +627,9 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           ref={mapRef}
           className="flex-1 h-full"
           onClick={() => {
-            onPanelClick?.('map');
+            // 지도 클릭 시 패널 닫기/모드 변경 등의 동작이 필요하다면 여기서 처리
+            // 단, 드래그 시에는 발생하지 않아야 함.
+            // onPanelClick?.('map');
           }}
         />
 
