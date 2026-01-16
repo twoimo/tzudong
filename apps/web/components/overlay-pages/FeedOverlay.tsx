@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import Link from 'next/link';
-import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search, Edit, CheckCircle, X } from 'lucide-react';
+import { Heart, MapPin, Calendar, User, MessageSquareText, Plus, Eye, EyeOff, Filter, Search, Edit, CheckCircle, X, Share2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -333,10 +333,36 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
     const hasMultiplePhotos = review.photos.length > 1;
     const isLongContent = review.content.length > 50;
 
+    const [isShareCopied, setIsShareCopied] = useState(false);
+
     useEffect(() => {
         if (!api) return;
         api.on("select", () => setCurrentPhotoIndex(api.selectedScrollSnap()));
     }, [api]);
+
+    const handleShareClick = useCallback(async () => {
+        setIsShareCopied(true);
+        const targetUrl = `/?restaurant=${review.restaurantId}`;
+        try {
+            const response = await fetch('/api/shorten', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ targetUrl, restaurantId: review.restaurantId, restaurantName: review.restaurantName }),
+            });
+            if (response.ok) {
+                const data = await response.json();
+                await navigator.clipboard.writeText(data.shortUrl);
+            } else {
+                const url = new URL(window.location.origin);
+                url.searchParams.set('restaurant', review.restaurantId);
+                await navigator.clipboard.writeText(url.toString());
+            }
+            setTimeout(() => setIsShareCopied(false), 2000);
+        } catch {
+            console.error('URL 복사 실패');
+            setIsShareCopied(false);
+        }
+    }, [review.restaurantId, review.restaurantName]);
 
     return (
         <Card className="overflow-hidden">
@@ -358,6 +384,9 @@ const FeedCard = memo(function FeedCard({ review, likeCount, isLiked, onToggleLi
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className={`h-8 w-8 ${isShareCopied ? 'text-green-600' : 'text-muted-foreground hover:text-primary'}`} onClick={handleShareClick} title={isShareCopied ? "복사됨!" : "리뷰 공유"}>
+                        {isShareCopied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                    </Button>
                     {isOwnReview && onEditReview && (
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditReview({
                             id: review.id, restaurantId: review.restaurantId, restaurantName: review.restaurantName,

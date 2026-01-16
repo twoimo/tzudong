@@ -48,7 +48,7 @@ function FloatingNavButtonsComponent({ activePanel, onPanelChange, className }: 
     }, [activePanel, onPanelChange]);
 
     return (
-        <div className={cn("fixed z-[80] flex flex-col items-start gap-2", className)}>
+        <div className={cn("fixed z-[92] flex flex-col items-start gap-2", className)}>
             {allItems.map((item) => {
                 const isActive = activePanel === item.id;
                 return (

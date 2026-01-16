@@ -358,7 +358,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   return (
     <header
-      className="border-b border-border bg-background flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
+      className="border-b border-border bg-background flex items-center shadow-sm z-[92] relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
     >
       {/* 한지 질감 오버레이 - 다크모드에서 숨김 */}
       <div
