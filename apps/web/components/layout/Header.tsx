@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -641,6 +641,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-border my-1" />
+                  <DropdownMenuItem onClick={() => router.push('/admin/restaurants')} className="text-foreground hover:bg-accent py-1.5">
+                    <Utensils className="mr-2 h-4 w-4" />
+                    맛집관리
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-foreground hover:bg-accent py-1.5">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
@@ -662,6 +666,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
                     <Image className="mr-2 h-4 w-4" />
                     배너관리
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/admin/insight')} className="text-foreground hover:bg-accent py-1.5">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    인사이트
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push('/admin/costs')} className="text-foreground hover:bg-accent py-1.5">
                     <DollarSign className="mr-2 h-4 w-4" />

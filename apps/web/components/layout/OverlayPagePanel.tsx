@@ -10,8 +10,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import FeedContent from '@/components/overlay-pages/FeedOverlay';
 import StampContent from '@/components/overlay-pages/StampOverlay';
 import LeaderboardContent from '@/components/overlay-pages/LeaderboardOverlay';
-import AdminReviewsContent from '@/components/overlay-pages/AdminReviewsOverlay';
-import InsightContent from '@/components/overlay-pages/InsightOverlay';
+
 import { Restaurant } from '@/types/restaurant';
 import { RestaurantDetailPanel } from '@/components/restaurant/RestaurantDetailPanel';
 import { UserProfilePanel } from '@/components/profile/UserProfilePanel';
@@ -21,8 +20,7 @@ const PANEL_WIDTHS: Record<Exclude<OverlayPanelType, null>, string> = {
     feed: 'max-w-[560px]',     // 560px - 리뷰 피드 (리뷰 작성 패널과 동일한 크기)
     stamp: 'max-w-6xl',        // 1152px - 도장 그리드
     leaderboard: 'max-w-3xl',  // 768px - 랭킹
-    'admin-reviews': 'max-w-6xl', // 1152px - 검수 테이블
-    insight: 'max-w-6xl',      // 1152px - 인사이트
+
 };
 
 interface OverlayPagePanelProps {
@@ -179,8 +177,7 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
                         />
                     )}
 
-                    {activePanel === 'admin-reviews' && <AdminReviewsContent />}
-                    {activePanel === 'insight' && <InsightContent />}
+
                 </div>
 
                 {/* 리뷰 작성 패널 - 데스크탑에서만 inline 표시 */}

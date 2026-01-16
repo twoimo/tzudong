@@ -1,12 +1,12 @@
 'use client';
 
 import { memo, useCallback } from 'react';
-import { MessageSquare, Stamp, Trophy, ShieldCheck, BarChart3 } from 'lucide-react';
+import { MessageSquare, Stamp, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type OverlayPanelType = 'feed' | 'stamp' | 'leaderboard' | 'admin-reviews' | 'insight' | null;
+export type OverlayPanelType = 'feed' | 'stamp' | 'leaderboard' | null;
 
 interface FloatingNavButtonsProps {
     activePanel: OverlayPanelType;
@@ -28,11 +28,8 @@ const USER_ITEMS: NavItem[] = [
     { id: 'leaderboard', icon: Trophy, label: '랭킹' },
 ];
 
-// 관리자 전용 메뉴
-const ADMIN_ITEMS: NavItem[] = [
-    { id: 'admin-reviews', icon: ShieldCheck, label: '검수', adminOnly: true },
-    { id: 'insight', icon: BarChart3, label: '인사이트', adminOnly: true },
-];
+// 관리자 전용 메뉴 (헤더로 이동됨)
+const ADMIN_ITEMS: NavItem[] = [];
 
 /**
  * 플로팅 네비게이션 버튼
