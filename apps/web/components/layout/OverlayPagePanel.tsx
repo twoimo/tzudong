@@ -126,11 +126,10 @@ function OverlayPagePanelComponent({ activePanel, onClose }: OverlayPagePanelPro
     const showRestaurantDetail = activePanel === 'stamp' && selectedRestaurant && isDesktop;
     const showUserProfile = activePanel === 'leaderboard' && selectedUserId && isDesktop;
 
-    // 사이드 패널이 열려있을 때 메인 패널 너비 조정
-    if (showRestaurantDetail) {
-        // 도장 패널의 경우 사이드 패널이 열리면 max-w-4xl로 축소 (기존 max-w-6xl)
-        maxWidth = 'max-w-4xl'; // 896px + 400px = 1296px (fits in 1400px+)
-    }
+    // 사이드 패널이 열려있을 때 메인 패널 너비 조정 로직 제거 (사용자 요청: 크기 유지)
+    // if (showRestaurantDetail) {
+    //    maxWidth = 'max-w-4xl';
+    // }
     // 랭킹 패널(max-w-3xl)은 사이드 패널이 열려도 너비 유지 (충분히 작음)
 
     return (
