@@ -1,12 +1,12 @@
 'use client';
 
 import { memo, useCallback } from 'react';
-import { MessageSquare, Stamp, Trophy, DollarSign, ShieldCheck, BarChart3 } from 'lucide-react';
+import { MessageSquare, Stamp, Trophy, ShieldCheck, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type OverlayPanelType = 'feed' | 'stamp' | 'leaderboard' | 'costs' | 'admin-reviews' | 'insight' | null;
+export type OverlayPanelType = 'feed' | 'stamp' | 'leaderboard' | 'admin-reviews' | 'insight' | null;
 
 interface FloatingNavButtonsProps {
     activePanel: OverlayPanelType;
@@ -30,7 +30,6 @@ const USER_ITEMS: NavItem[] = [
 
 // 관리자 전용 메뉴
 const ADMIN_ITEMS: NavItem[] = [
-    { id: 'costs', icon: DollarSign, label: '비용', adminOnly: true },
     { id: 'admin-reviews', icon: ShieldCheck, label: '검수', adminOnly: true },
     { id: 'insight', icon: BarChart3, label: '인사이트', adminOnly: true },
 ];

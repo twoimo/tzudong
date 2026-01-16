@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, Suspense, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,18 +9,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { DollarSign, Server, Edit, Save, X, Plus, Trash2 } from "lucide-react";
+import { Edit, Save, X, Plus, Trash2, ArrowLeft, Loader2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { GlobalLoader } from "@/components/ui/global-loader";
-
-interface CostsOverlayProps {
-    onClose?: () => void;
-}
 
 interface ServerCost {
     id: string;
@@ -36,20 +32,25 @@ const DUMMY_SERVER_COSTS: ServerCost[] = [
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(amount);
 
-/**
- * 비용 오버레이
- * - 헤더 통합 (타이틀 + 닫기 버튼 + 총 비용)
- */
-export default function CostsOverlay({ onClose }: CostsOverlayProps) {
-    const { isAdmin } = useAuth();
+function CostsManagementPage() {
+    const router = useRouter();
+    const { user, isAdmin, isLoading: authLoading } = useAuth();
     const queryClient = useQueryClient();
+
     const [isEditing, setIsEditing] = useState(false);
     const [editingCost, setEditingCost] = useState<ServerCost | null>(null);
     const [isCreating, setIsCreating] = useState(false);
     const [formData, setFormData] = useState({ item_name: "", monthly_cost: "", description: "" });
 
+    // 권한 체크
+    useEffect(() => {
+        if (!authLoading && (!user || !isAdmin)) {
+            router.push('/');
+        }
+    }, [authLoading, user, isAdmin, router]);
+
     const { data: costs = [], isLoading } = useQuery({
-        queryKey: ['server-costs-overlay'],
+        queryKey: ['server-costs-admin'],
         queryFn: async () => {
             try {
                 const { data, error } = await supabase.from('server_costs').select('*').order('monthly_cost', { ascending: false });
@@ -69,7 +70,7 @@ export default function CostsOverlay({ onClose }: CostsOverlayProps) {
             if (error) throw error;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['server-costs-overlay'] });
+            queryClient.invalidateQueries({ queryKey: ['server-costs-admin'] });
             toast({ title: "추가 완료", description: "비용 항목이 추가되었습니다" });
             setIsCreating(false);
             setFormData({ item_name: "", monthly_cost: "", description: "" });
@@ -85,7 +86,7 @@ export default function CostsOverlay({ onClose }: CostsOverlayProps) {
             if (error) throw error;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['server-costs-overlay'] });
+            queryClient.invalidateQueries({ queryKey: ['server-costs-admin'] });
             toast({ title: "수정 완료", description: "비용 항목이 수정되었습니다" });
             setIsEditing(false);
             setEditingCost(null);
@@ -99,7 +100,7 @@ export default function CostsOverlay({ onClose }: CostsOverlayProps) {
             if (error) throw error;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['server-costs-overlay'] });
+            queryClient.invalidateQueries({ queryKey: ['server-costs-admin'] });
             toast({ title: "삭제 완료", description: "비용 항목이 삭제되었습니다" });
         },
         onError: (error: Error) => toast({ title: "삭제 실패", description: error.message, variant: "destructive" }),
@@ -118,84 +119,96 @@ export default function CostsOverlay({ onClose }: CostsOverlayProps) {
     }, [formData, createMutation]);
     const handleDelete = useCallback((id: string) => { if (confirm("정말로 이 비용 항목을 삭제하시겠습니까?")) deleteMutation.mutate(id); }, [deleteMutation]);
 
+    if (authLoading || !user || !isAdmin) return <GlobalLoader />;
     if (isLoading) return <GlobalLoader message="비용 데이터를 불러오는 중..." />;
 
     return (
-        <div className="flex flex-col h-full bg-background">
-            {/* 통합 헤더 */}
-            <div className="border-b border-border bg-background p-4 shrink-0 rounded-t-2xl">
-                <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                        <DollarSign className="h-5 w-5 text-primary" />
-                        <h2 className="text-lg font-bold text-foreground">월 서버 운영 비용</h2>
+        <div className="min-h-screen bg-[#fdfbf7] font-serif">
+            {/* 한지 질감 오버레이 */}
+            <div
+                className="fixed inset-0 opacity-30 pointer-events-none z-0"
+                style={{
+                    backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.1'/%3E%3C/svg%3E")`,
+                }}
+            />
+
+            <div className="relative z-10 container mx-auto p-4 md:p-6 max-w-4xl">
+                {/* 헤더 */}
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => router.back()}
+                            className="hover:bg-stone-200/50 h-8 w-8 md:h-10 md:w-10"
+                        >
+                            <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
+                        </Button>
+                        <div>
+                            <h1 className="text-xl md:text-2xl font-bold text-stone-900">서버 운영 비용</h1>
+                            <p className="text-sm text-stone-500 hidden md:block">매월 발생하는 서버 및 인프라 비용을 관리합니다</p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                        {isAdmin && (
-                            <Button size="sm" onClick={() => setIsCreating(true)} className="bg-gradient-primary">
-                                <Plus className="h-4 w-4 mr-1" />추가
-                            </Button>
-                        )}
-                        {onClose && (
-                            <Button variant="ghost" size="icon" onClick={onClose} className="h-9 w-9 hover:bg-muted rounded-full">
-                                <X className="h-5 w-5" />
-                            </Button>
-                        )}
-                    </div>
+                    <Button onClick={() => setIsCreating(true)} className="bg-stone-800 hover:bg-stone-700">
+                        <Plus className="h-4 w-4 mr-2" />
+                        <span className="hidden md:inline">비용 항목 추가</span>
+                        <span className="md:hidden">추가</span>
+                    </Button>
                 </div>
-                <Card className="p-3 bg-gradient-primary">
-                    <div className="text-center text-white">
-                        <p className="text-xs opacity-90 mb-1">총 월 운영 비용</p>
-                        <p className="text-xl font-bold">{formatCurrency(totalMonthlyCost)}</p>
-                        <p className="text-xs opacity-80">{costs.length}개 항목</p>
+
+                {/* 비용 요약 카드 */}
+                <Card className="mb-6 p-6 bg-white border-stone-200 shadow-sm">
+                    <div className="flex flex-col items-center justify-center text-center">
+                        <p className="text-sm text-stone-500 mb-1">총 월 운영 비용</p>
+                        <p className="text-3xl font-bold text-green-700">{formatCurrency(totalMonthlyCost)}</p>
+                        <p className="text-xs text-stone-400 mt-2">{costs.length}개 항목 기준</p>
                     </div>
                 </Card>
-            </div>
 
-            {/* 비용 목록 */}
-            <div className="flex-1 overflow-hidden">
-                <ScrollArea className="h-full">
-                    {costs.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
-                            <Server className="h-12 w-12 mb-4" />
-                            <p>등록된 비용 항목이 없습니다</p>
-                        </div>
-                    ) : (
-                        <Table>
-                            <TableHeader className="sticky top-0 bg-muted">
+                {/* 비용 목록 */}
+                <Card className="border-stone-200 overflow-hidden bg-white shadow-sm">
+                    <Table>
+                        <TableHeader className="bg-stone-50">
+                            <TableRow>
+                                <TableHead>항목명</TableHead>
+                                <TableHead className="text-right">월 비용</TableHead>
+                                <TableHead className="text-right">비율</TableHead>
+                                <TableHead className="hidden md:table-cell">설명</TableHead>
+                                <TableHead className="text-right">작업</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {costs.length === 0 ? (
                                 <TableRow>
-                                    <TableHead>항목명</TableHead>
-                                    <TableHead className="text-right">월 비용</TableHead>
-                                    <TableHead className="text-right">비율</TableHead>
-                                    <TableHead>설명</TableHead>
-                                    {isAdmin && <TableHead className="text-right">작업</TableHead>}
+                                    <TableCell colSpan={5} className="h-48 text-center text-muted-foreground">
+                                        등록된 비용 항목이 없습니다
+                                    </TableCell>
                                 </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {costs.map((cost) => {
+                            ) : (
+                                costs.map((cost) => {
                                     const percentage = totalMonthlyCost > 0 ? ((cost.monthly_cost / totalMonthlyCost) * 100).toFixed(1) : "0.0";
                                     return (
-                                        <TableRow key={cost.id}>
+                                        <TableRow key={cost.id} className="hover:bg-stone-50">
                                             <TableCell className="font-medium">{cost.item_name}</TableCell>
                                             <TableCell className="text-right font-bold">{formatCurrency(cost.monthly_cost)}</TableCell>
                                             <TableCell className="text-right"><Badge variant="outline">{percentage}%</Badge></TableCell>
-                                            <TableCell className="max-w-[200px]"><span className="text-sm text-muted-foreground truncate block">{cost.description || "-"}</span></TableCell>
-                                            {isAdmin && (
-                                                <TableCell className="text-right">
-                                                    <div className="flex items-center justify-end gap-1">
-                                                        <Button variant="ghost" size="sm" onClick={() => handleEdit(cost)}><Edit className="h-4 w-4" /></Button>
-                                                        <Button variant="ghost" size="sm" onClick={() => handleDelete(cost.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                                                    </div>
-                                                </TableCell>
-                                            )}
+                                            <TableCell className="hidden md:table-cell max-w-[200px]"><span className="text-sm text-stone-500 truncate block">{cost.description || "-"}</span></TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <Button variant="ghost" size="sm" onClick={() => handleEdit(cost)}><Edit className="h-4 w-4" /></Button>
+                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(cost.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                                                </div>
+                                            </TableCell>
                                         </TableRow>
                                     );
-                                })}
-                            </TableBody>
-                        </Table>
-                    )}
-                </ScrollArea>
+                                })
+                            )}
+                        </TableBody>
+                    </Table>
+                </Card>
             </div>
 
+            {/* 수정 다이얼로그 */}
             <Dialog open={isEditing} onOpenChange={setIsEditing}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>비용 항목 수정</DialogTitle><DialogDescription>비용 항목의 정보를 수정합니다</DialogDescription></DialogHeader>
@@ -206,13 +219,14 @@ export default function CostsOverlay({ onClose }: CostsOverlayProps) {
                             <div><Label>설명</Label><Textarea value={editingCost.description || ""} onChange={(e) => setEditingCost({ ...editingCost, description: e.target.value })} rows={3} /></div>
                             <div className="flex gap-2 justify-end">
                                 <Button variant="outline" onClick={() => setIsEditing(false)}><X className="h-4 w-4 mr-2" />취소</Button>
-                                <Button onClick={handleSave} className="bg-gradient-primary"><Save className="h-4 w-4 mr-2" />저장</Button>
+                                <Button onClick={handleSave} className="bg-stone-800 hover:bg-stone-700 text-white"><Save className="h-4 w-4 mr-2" />저장</Button>
                             </div>
                         </div>
                     )}
                 </DialogContent>
             </Dialog>
 
+            {/* 생성 다이얼로그 */}
             <Dialog open={isCreating} onOpenChange={setIsCreating}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>비용 항목 추가</DialogTitle><DialogDescription>새로운 비용 항목을 추가합니다</DialogDescription></DialogHeader>
@@ -222,11 +236,19 @@ export default function CostsOverlay({ onClose }: CostsOverlayProps) {
                         <div><Label>설명</Label><Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="비용 항목에 대한 추가 설명" rows={3} /></div>
                         <div className="flex gap-2 justify-end">
                             <Button variant="outline" onClick={() => setIsCreating(false)}><X className="h-4 w-4 mr-2" />취소</Button>
-                            <Button onClick={handleCreate} className="bg-gradient-primary"><Plus className="h-4 w-4 mr-2" />추가</Button>
+                            <Button onClick={handleCreate} className="bg-stone-800 hover:bg-stone-700 text-white"><Plus className="h-4 w-4 mr-2" />추가</Button>
                         </div>
                     </div>
                 </DialogContent>
             </Dialog>
         </div>
+    );
+}
+
+export default function CostsPageWrapper() {
+    return (
+        <Suspense fallback={<GlobalLoader />}>
+            <CostsManagementPage />
+        </Suspense>
     );
 }

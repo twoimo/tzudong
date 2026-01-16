@@ -1,5 +1,5 @@
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -662,6 +662,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
                     <Image className="mr-2 h-4 w-4" />
                     배너관리
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/admin/costs')} className="text-foreground hover:bg-accent py-1.5">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    서버비용
                   </DropdownMenuItem>
                 </>
               )}
