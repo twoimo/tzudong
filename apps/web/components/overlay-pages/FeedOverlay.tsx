@@ -7,6 +7,7 @@ interface FeedOverlayProps {
     onOpenReviewModal?: () => void;
     hideReviewModal?: boolean;
     hideFloatingButton?: boolean;
+    initialReviewId?: string | null;
 }
 
 /**
@@ -18,6 +19,7 @@ export default function FeedOverlay({
     onOpenReviewModal,
     hideReviewModal,
     hideFloatingButton,
+    initialReviewId,
 }: FeedOverlayProps) {
     return (
         <div className="h-full flex flex-col">
@@ -27,6 +29,7 @@ export default function FeedOverlay({
                 onOpenReviewModal={onOpenReviewModal}
                 hideReviewModal={hideReviewModal}
                 hideFloatingButton={hideFloatingButton}
+                initialReviewId={initialReviewId}
             />
         </div>
     );
