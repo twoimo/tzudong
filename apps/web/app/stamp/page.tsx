@@ -278,10 +278,8 @@ export default function StampPage() {
         }
     }, [router]);
 
-    // ... hooks ...
 
     const { toast } = useToast();
-    const [searchTerm, setSearchTerm] = useState("");
 
     // --- 상태 (State) ---
     const [viewMode, setViewMode] = useState<ViewMode>("grid");

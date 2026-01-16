@@ -1,17 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from "react";
-
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { LeaderboardList } from "@/components/leaderboard/LeaderboardList";
-import { Trophy, Medal, Award, Stamp, Info } from "lucide-react";
+import { Trophy, Info } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLeaderboard } from "@/hooks/useLeaderboard";
-import { useDeviceType } from "@/hooks/useDeviceType";
-import { cn } from "@/lib/utils";
 import { GlobalLoader } from "@/components/ui/global-loader";
 import {
     Popover,
@@ -20,12 +14,8 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
-// ... imports ...
-import { Suspense } from 'react';
-
 export default function LeaderboardPage() {
     const { user: currentUser } = useAuth();
-    // const { isMobileOrTablet } = useDeviceType(); // Hook check replaced by window check
     const { data: leaderboardData = [], isLoading } = useLeaderboard();
     const userItemRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
@@ -42,7 +32,6 @@ export default function LeaderboardPage() {
     const sortedLeaderboard = [...leaderboardData].sort((a, b) => b.verifiedReviewCount - a.verifiedReviewCount);
     const myRank = currentUser ? sortedLeaderboard.find((u) => u.id === currentUser.id)?.rank : null;
 
-    /* ... rest of logic ... */
 
     useEffect(() => {
         if (currentUser && userItemRef.current) {
