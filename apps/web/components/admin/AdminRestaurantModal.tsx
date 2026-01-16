@@ -589,7 +589,7 @@ export function AdminRestaurantModal({
                         console.error('소프트 삭제 실패:', deleteError);
                         toast.error('일부 항목 삭제에 실패했습니다');
                     } else {
-                        console.log('✅ 소프트 삭제 완료:', deletedReviewIds);
+
                     }
                 }
 
@@ -683,7 +683,7 @@ export function AdminRestaurantModal({
                         hasError = true;
                         break;
                     } else {
-                        console.log('✅ 신규 레코드 추가 성공:', youtubeLink);
+
                         toast.success(`✅ 신규 유튜브 링크 추가 성공!`);
                     }
                 }

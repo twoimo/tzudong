@@ -181,12 +181,12 @@ function extractCityDistrictGu(address: string): string | null {
     if (parts.length >= 2) {
         // 기본: 시/도 + 시/군/구
         let region = `${parts[0]} ${parts[1]}`;
-        
+
         // 3번째 어절이 있고, (구/시/군/읍/면/동/로/길)로 끝나면 추가
         // 예: 성남시 분당구, 마포구 양화로, 제주시 애월읍
         if (parts.length >= 3) {
             const p3 = parts[2];
-            if (p3.endsWith('구') || p3.endsWith('시') || p3.endsWith('군') || 
+            if (p3.endsWith('구') || p3.endsWith('시') || p3.endsWith('군') ||
                 p3.endsWith('읍') || p3.endsWith('면') || p3.endsWith('동') ||
                 p3.endsWith('로') || p3.endsWith('길')) {
                 region += ` ${p3}`;
@@ -208,36 +208,36 @@ function removeDuplicateAddresses(addresses: GeocodingResult[]): GeocodingResult
 
 async function geocodeAddressMultiple(name: string, address: string, maxResults: number = 3): Promise<GeocodingResult[]> {
     // Supabase Edge Function을 통해 지오코딩 (EditRestaurantModal과 동일한 방식)
-    console.log('🗺️ 지오코딩 쿼리:', { name, address });
-    
+
+
     const { data, error } = await supabase.functions.invoke('naver-geocode', {
         body: { query: address, count: maxResults }
     });
-    
-    console.log('📡 Edge Function 응답:', { data, error });
-    
+
+
+
     if (error) {
         console.error('❌ Edge Function 에러:', error);
         throw new Error(error.message || JSON.stringify(error));
     }
-    
+
     if (!data) {
         console.error('❌ 응답 데이터 없음');
         return [];
     }
-    
+
     if (data.error) {
         console.error('❌ API 에러:', data.error);
         throw new Error(data.error);
     }
-    
+
     if (!data.addresses || data.addresses.length === 0) {
         console.warn('⚠️ 주소 결과 없음');
         return [];
     }
-    
-    console.log('✅ 지오코딩 성공:', data.addresses.length, '개 결과');
-    
+
+
+
     return data.addresses.slice(0, maxResults).map((addr: any) => ({
         road_address: addr.roadAddress || '',
         jibun_address: addr.jibunAddress || '',
@@ -305,7 +305,7 @@ export function SubmissionDetailView({
     const [fetchingMeta, setFetchingMeta] = useState<string | null>(null);
     const [initialAddress, setInitialAddress] = useState<string>('');
     const [addressChanged, setAddressChanged] = useState(false);
-    
+
     const isEditSubmission = submission.submission_type === 'edit';
     const pendingItems = submission.items.filter(item => item.item_status === 'pending');
     const hasDuplicateItems = pendingItems.some(item => item.duplicate_check_result?.isDuplicate);
@@ -409,7 +409,7 @@ export function SubmissionDetailView({
 
     const handleSelectGeocodingResult = (index: number) => {
         const result = geocodingResults[index];
-        
+
         // 먼저 initialAddress 업데이트 (handleFieldChange 트리거 방지)
         setInitialAddress(result.jibun_address);
         setAddressChanged(false);
@@ -444,10 +444,10 @@ export function SubmissionDetailView({
                 // @ts-ignore - onItemDecisionsChange가 setState 함수인 경우 함수형 업데이트 지원
                 onItemDecisionsChange((prev: Record<string, ItemDecision>) => ({
                     ...prev,
-                    [itemId]: { 
-                        ...prev[itemId], 
-                        metaFetched: true, 
-                        metaData: meta 
+                    [itemId]: {
+                        ...prev[itemId],
+                        metaFetched: true,
+                        metaData: meta
                     },
                 }));
                 toast.success(`메타데이터 가져오기 완료`);
@@ -472,11 +472,11 @@ export function SubmissionDetailView({
             // 병렬로 메타데이터 가져오기
             await Promise.all(pendingItems.map(async (item) => {
                 if (!isMounted) return;
-                
+
                 // 초기 상태의 decision 참조 (여기서는 youtube_link만 필요하므로 안전)
                 const decision = itemDecisions[item.id];
                 const link = decision?.youtube_link || item.youtube_link;
-                
+
                 if (decision && !decision.metaFetched && link) {
                     try {
                         const meta = await fetchYoutubeMetadata(link);
@@ -507,16 +507,16 @@ export function SubmissionDetailView({
                 toast.success('메타데이터 자동 가져오기 완료');
             }
         };
-        
+
         const timer = setTimeout(() => {
             fetchAllMetadata();
         }, 500);
-        
+
         return () => {
             isMounted = false;
             clearTimeout(timer);
         };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [submission.id]); // itemDecisions를 의존성에 넣으면 무한 루프 가능성 있음
 
     // 자동 지오코딩 (주소가 있고 결과가 없을 때)
@@ -535,8 +535,8 @@ export function SubmissionDetailView({
         }, 100);
 
         return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [submission.id]); 
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [submission.id]);
 
     // 지오코딩 결과 선택 시 자동으로 네이버 검색 검증 실행
     useEffect(() => {
@@ -547,7 +547,7 @@ export function SubmissionDetailView({
             }, 200);
             return () => clearTimeout(timer);
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedGeocodingIndex]);
 
     return (
@@ -696,9 +696,9 @@ export function SubmissionDetailView({
                         <Label className="text-sm font-semibold flex items-center gap-1">
                             <span className="text-green-600">N</span> 네이버 검색 검증
                         </Label>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
+                        <Button
+                            variant="outline"
+                            size="sm"
                             onClick={onVerifyNaverSearch}
                             disabled={naverSearchLoading || selectedGeocodingIndex === null}
                             className="h-6 text-xs"
@@ -707,7 +707,7 @@ export function SubmissionDetailView({
                             검증 실행
                         </Button>
                     </div>
-                    
+
                     {selectedGeocodingIndex === null ? (
                         <div className="text-xs text-muted-foreground p-2 border rounded-md bg-gray-50 text-center">
                             지오코딩 결과를 선택하면 검증이 가능합니다.
@@ -802,14 +802,14 @@ export function SubmissionDetailView({
                             선택
                         </Badge>
                     </div>
-                    
+
                     {submission.items.map((item) => {
                         const videoId = getYoutubeVideoId(itemDecisions[item.id]?.youtube_link || item.youtube_link);
                         const decision = itemDecisions[item.id];
                         const isPending = item.item_status === 'pending';
                         const metaData = decision?.metaData;
                         const isSelected = decision?.approved;
-                        
+
                         return (
                             <div
                                 key={item.id}
@@ -854,7 +854,7 @@ export function SubmissionDetailView({
                                                 </span>
                                             </div>
                                         )}
-                                        
+
                                         {/* 메타데이터 가져오기 버튼 - 빨간색 */}
                                         <Button
                                             variant={decision?.metaFetched ? "default" : "destructive"}
@@ -876,7 +876,7 @@ export function SubmissionDetailView({
                                             {decision?.metaFetched ? '메타 완료' : '메타데이터 가져오기'}
                                         </Button>
                                     </div>
-                                    
+
                                     {/* 오른쪽: 상태 뱃지 + 기타 뱃지들 */}
                                     <div className="flex items-center gap-2">
                                         {item.duplicate_check_result?.isDuplicate && (
@@ -886,10 +886,10 @@ export function SubmissionDetailView({
                                         )}
                                         <Badge variant={
                                             item.item_status === 'pending' ? 'secondary' :
-                                            item.item_status === 'approved' ? 'default' : 'destructive'
+                                                item.item_status === 'approved' ? 'default' : 'destructive'
                                         } className="text-xs">
                                             {item.item_status === 'pending' ? '대기' :
-                                             item.item_status === 'approved' ? '승인' : '반려'}
+                                                item.item_status === 'approved' ? '승인' : '반려'}
                                         </Badge>
                                     </div>
                                 </div>
@@ -898,7 +898,7 @@ export function SubmissionDetailView({
                                 <div className="border rounded-lg p-3 bg-white">
                                     {/* 사용자 제출 헤더 */}
                                     <p className="text-sm font-semibold text-gray-800 mb-2 border-b pb-1">사용자 제출</p>
-                                    
+
                                     {/* YouTube 썸네일 + 메타데이터 */}
                                     <div className="flex gap-3 mb-3">
                                         {videoId && (
@@ -971,7 +971,7 @@ export function SubmissionDetailView({
                                     <div className="border rounded-lg p-3 bg-gray-50 mt-2">
                                         {/* 기존 데이터 헤더 */}
                                         <p className="text-sm font-semibold text-gray-800 mb-2 border-b pb-1">기존 데이터</p>
-                                        
+
                                         {/* 기존 YouTube 썸네일 + 메타데이터 */}
                                         {(() => {
                                             const originalVideoId = getYoutubeVideoId(item.original_restaurant?.youtube_link || undefined);
@@ -1018,9 +1018,9 @@ export function SubmissionDetailView({
                                                             <div>
                                                                 <p className="text-xs text-gray-500 mb-1">기존 등록된 영상</p>
                                                                 {item.original_restaurant?.youtube_link ? (
-                                                                    <a 
-                                                                        href={item.original_restaurant.youtube_link} 
-                                                                        target="_blank" 
+                                                                    <a
+                                                                        href={item.original_restaurant.youtube_link}
+                                                                        target="_blank"
                                                                         rel="noopener noreferrer"
                                                                         className="text-blue-500 hover:underline text-xs break-all"
                                                                     >
@@ -1034,7 +1034,7 @@ export function SubmissionDetailView({
                                                 </div>
                                             );
                                         })()}
-                                        
+
                                         {/* 기존 쯔양 리뷰 */}
                                         <div className="space-y-1">
                                             <Label className="text-xs text-gray-600">기존 쯔양 리뷰</Label>

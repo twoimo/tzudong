@@ -109,7 +109,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   // 맛집으로 지도 이동하는 함수 (즉시 실행, 재시도 없음)
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
     if (!googleMapRef.current) {
-      console.warn('MapView: Map not ready for moving');
+
       return;
     }
 
@@ -395,7 +395,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       // selectedRestaurant 또는 searchedRestaurant와 비교하여 선택 상태 판단
       const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
 
-      console.log('[MapView] 마커 생성:', restaurant.name, 'isSelected:', isSelected, 'selectedRestaurant:', selectedRestaurant?.id, 'restaurant.id:', restaurant.id);
+
 
       // 카테고리별 적절한 이모티콘으로 변경
       const getCategoryIcon = (categories: string | string[] | null | undefined) => {
@@ -453,19 +453,19 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
 
       markerElement.addEventListener("click", () => {
-        console.log('[MapView] 마커 클릭:', restaurant.name);
+
 
         // 1. 패널을 먼저 즉시 열기 (지도 이동 전에)
         onMarkerClick?.(restaurant);
-        console.log('[MapView] onMarkerClick 호출 (패널 즉시 열기)');
+
 
         // 2. selectedRestaurant 업데이트
         onRestaurantSelect?.(restaurant);
-        console.log('[MapView] onRestaurantSelect 호출');
+
 
         // 3. 지도 이동은 마지막에 (비동기 작업)
         moveToRestaurant(restaurant);
-        console.log('[MapView] moveToRestaurant 호출');
+
       });
 
       markersRef.current.push(marker);
@@ -476,26 +476,18 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   useEffect(() => {
     if (!isLoaded || markersRef.current.length === 0 || !restaurantsToShow) return;
 
-    console.log('[MapView] 마커 스타일 업데이트 실행:', {
-      selectedRestaurantId: selectedRestaurant?.id,
-      searchedRestaurantId: searchedRestaurant?.id,
-      markersCount: markersRef.current.length,
-      restaurantsCount: restaurantsToShow.length
-    });
+
 
     markersRef.current.forEach((marker, index) => {
       const restaurant = restaurantsToShow[index];
       if (!restaurant) {
-        console.warn('[MapView] 마커 스타일 업데이트 스킵: restaurant 없음, index:', index);
         return;
       }
 
       // selectedRestaurant 또는 searchedRestaurant와 비교하여 활성화 상태 결정
       const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
 
-      if (isSelected) {
-        console.log('[MapView] 마커 활성화:', restaurant.name, 'id:', restaurant.id);
-      }
+
 
       const markerElement = marker.content as HTMLElement;
       if (!markerElement) return;
