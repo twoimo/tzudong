@@ -86,6 +86,9 @@ export default function HomeClient() {
     const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
     const [isPanelCollapsed, setIsPanelCollapsed] = useState(false);
 
+    // [리뷰 공유] 공유 링크로 접속 시 리뷰 하이라이트용 ID
+    const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+
     // [Fix] 마운트 시점 기록 - 라우트 변경 후 돌아왔을 때 지도 강제 리마운트
     const [mapMountKey] = useState(() => Date.now());
 
@@ -169,40 +172,69 @@ export default function HomeClient() {
             })();
         }
 
-        // [공유 URL] 맛집 이름(q)으로 맛집 자동 선택
-        if (restaurantName && !restaurantId) {
-            (async () => {
-                try {
-                    const { supabase } = await import('@/integrations/supabase/client');
-                    const { mergeRestaurants } = await import('@/hooks/use-restaurants');
+        // [공유 URL] lat/lng로 맛집 자동 선택 (z, lat, lng만 있는 경우)
+        const urlLat = searchParams.get('lat');
+        const urlLng = searchParams.get('lng');
+        const urlZoom = searchParams.get('z');
 
-                    // 맛집 이름으로 검색
-                    const { data: restaurants, error } = await supabase
-                        .from('restaurants')
-                        .select('*')
-                        .eq('name', restaurantName)
-                        .eq('status', 'approved');
+        // 공유 URL 감지: lat, lng, z가 있고 다른 특수 파라미터(r, restaurant, review)가 없는 경우
+        if (urlLat && urlLng && urlZoom && !restaurantId && !searchParams.get('review')) {
+            const lat = parseFloat(urlLat);
+            const lng = parseFloat(urlLng);
 
-                    if (error || !restaurants || restaurants.length === 0) {
-                        console.error('맛집 조회 실패:', error);
-                        return;
+            if (!isNaN(lat) && !isNaN(lng)) {
+                (async () => {
+                    try {
+                        const { supabase } = await import('@/integrations/supabase/client');
+                        const { mergeRestaurants } = await import('@/hooks/use-restaurants');
+
+                        // 좌표로 가장 가까운 맛집 검색 (약간의 오차 허용)
+                        const tolerance = 0.0001; // 약 10m 오차
+                        const { data: restaurants, error } = await supabase
+                            .from('restaurants')
+                            .select('*')
+                            .gte('lat', lat - tolerance)
+                            .lte('lat', lat + tolerance)
+                            .gte('lng', lng - tolerance)
+                            .lte('lng', lng + tolerance)
+                            .eq('status', 'approved');
+
+                        if (error || !restaurants || restaurants.length === 0) {
+                            // 맛집을 찾지 못한 경우, 지도만 해당 위치로 이동 (이미 NaverMapView에서 처리됨)
+                            return;
+                        }
+
+                        // 병합 로직 적용
+                        const merged = mergeRestaurants(restaurants as any);
+                        const restaurant = merged[0];
+
+                        if (restaurant) {
+                            setTimeout(() => {
+                                openDetailPanel(restaurant);
+                                // [URL 안정화] URL 유지
+                            }, 500);
+                        }
+                    } catch (err) {
+                        console.error('맛집 조회 실패:', err);
                     }
-
-                    // 병합 로직 적용
-                    const merged = mergeRestaurants(restaurants as any);
-                    const restaurant = merged[0];
-
-                    if (restaurant) {
-                        setTimeout(() => {
-                            openDetailPanel(restaurant);
-                        }, 500);
-                    }
-                } catch (err) {
-                    console.error('맛집 조회 실패:', err);
-                }
-            })();
+                })();
+            }
         }
-    }, [searchParams, router]);
+
+        // [리뷰 공유] 리뷰 공유 링크 처리 (/?review={reviewId})
+        const reviewId = searchParams.get('review');
+        if (reviewId) {
+            if (isDesktop) {
+                // 데스크탑: 피드 오버레이 열기 (selectedReviewId로 스크롤)
+                setSelectedReviewId(reviewId);
+                window.dispatchEvent(new CustomEvent('openFeedOverlay', { detail: { reviewId } }));
+                // [URL 안정화] URL 유지 - router.replace 제거
+            } else {
+                // 모바일/태블릿: 피드 페이지로 리다이렉트
+                router.replace(`/feed?review=${reviewId}`);
+            }
+        }
+    }, [searchParams, router, isDesktop]);
 
     // 상태 관리 커스텀 훅
     const state = useHomeState(mapMode);
@@ -284,11 +316,13 @@ export default function HomeClient() {
         state.setIsPanelOpen(true);
 
         // [Fix] 마커 클릭 시 URL의 restaurant 파라미터 제거하여 스티키 현상 방지
+        // 단, q 파라미터(공유 URL)는 유지하여 네이버 지도처럼 URL 안정적으로 유지
         const currentParams = new URLSearchParams(window.location.search);
-        if (currentParams.has('r') || currentParams.has('restaurant') || currentParams.has('q')) {
-            // 파라미터가 있을 때만 replace 실행
+        if (currentParams.has('r') || currentParams.has('restaurant')) {
+            // r 또는 restaurant 파라미터가 있을 때만 replace 실행 (북마크에서 온 경우)
             router.replace('/', { scroll: false });
         }
+        // q 파라미터(공유 URL)는 유지
     }, [state.setPanelRestaurant, state.setSelectedRestaurant, state.setSearchedRestaurant, state.setIsPanelOpen, router]);
 
     // 팝업 이벤트 리스너

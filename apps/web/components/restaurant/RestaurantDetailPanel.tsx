@@ -320,12 +320,11 @@ export function RestaurantDetailPanel({
     const handleShareUrl = useCallback(async () => {
         if (!restaurant) return;
 
-        // 1. 원본 URL 생성
-        const url = new URL(window.location.href);
-        url.searchParams.set('q', restaurant.name);
-        url.searchParams.set('lat', restaurant.lat?.toString() || '');
-        url.searchParams.set('lng', restaurant.lng?.toString() || '');
-        url.searchParams.set('z', '15.00'); // 줌 레벨 15로 설정
+        // 1. 원본 URL 생성 (z, lat, lng만 포함 - 네이버 지도 스타일)
+        const url = new URL(window.location.origin);
+        url.searchParams.set('z', '15.00'); // 줌 레벨 15 유지
+        url.searchParams.set('lat', restaurant.lat?.toFixed(6) || '');
+        url.searchParams.set('lng', restaurant.lng?.toFixed(6) || '');
         const longUrl = url.toString();
 
         try {
@@ -335,16 +334,23 @@ export function RestaurantDetailPanel({
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ url: longUrl }),
+                body: JSON.stringify({
+                    targetUrl: longUrl,
+                    restaurantId: restaurant.id,
+                    restaurantName: restaurant.name
+                }),
             });
 
             let shareUrl = longUrl;
 
             if (response.ok) {
                 const data = await response.json();
-                if (data.shortCode) {
-                    // 단축 URL 구성 (현재 도메인 기준)
-                    shareUrl = `${window.location.origin}/s/${data.shortCode}`;
+                // API returns: { shortUrl, code, isExisting }
+                if (data.shortUrl) {
+                    shareUrl = data.shortUrl;
+                } else if (data.code) {
+                    // Fallback: construct from code
+                    shareUrl = `${window.location.origin}/s/${data.code}`;
                 }
             }
 

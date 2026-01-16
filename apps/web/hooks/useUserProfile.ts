@@ -170,7 +170,11 @@ export function useUserProfile(userId: string) {
             const typedProfile = profile as ProfileRow;
             const reviews = (reviewsResult.data ?? []) as ReviewRow[];
 
+            // 전체 리뷰 수 = 조회된 모든 리뷰의 수
+            const reviewCount = reviews.length;
+            // 인증된 리뷰 수 (도장)
             const verifiedReviewCount = reviews.filter(r => r.is_verified).length;
+
             const reviewIds = reviews.map(r => r.id);
 
             // 좋아요 수 조회 (있을 경우에만)
@@ -188,8 +192,8 @@ export function useUserProfile(userId: string) {
                 userId: typedProfile.user_id,
                 nickname: typedProfile.nickname,
                 avatarUrl: typedProfile.avatar_url || undefined,
-                reviewCount: verifiedReviewCount,
-                verifiedReviewCount,
+                reviewCount, // 전체 리뷰 수
+                verifiedReviewCount, // 인증된 리뷰 수 (도장)
                 totalLikes,
                 tier: getUserTier(verifiedReviewCount),
             };

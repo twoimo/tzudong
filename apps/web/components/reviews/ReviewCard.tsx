@@ -39,6 +39,8 @@ export interface ReviewCardProps {
         isVerified: boolean;
         adminNote: string | null;
     }) => void;
+    idPrefix?: string;
+    isHighlighted?: boolean;
 }
 
 import { Carousel, CarouselContent, CarouselItem, CarouselOverlayPrevious, CarouselOverlayNext, type CarouselApi } from "@/components/ui/carousel";
@@ -49,7 +51,9 @@ export const ReviewCard = React.memo(function ReviewCard({
     onClick,
     onRestaurantClick,
     currentUserId,
-    onEditReview
+    onEditReview,
+    idPrefix,
+    isHighlighted
 }: ReviewCardProps) {
     const router = useRouter();
     const isOwnReview = currentUserId && review.userId === currentUserId;
@@ -108,12 +112,13 @@ export const ReviewCard = React.memo(function ReviewCard({
         }
     }, [router, review.restaurantId, onRestaurantClick]);
 
-    // 공유 클릭 핸들러 (단축 URL 사용)
+    // 공유 클릭 핸들러 (리뷰 개별 링크 - 단축 URL 사용)
     const handleShareClick = useCallback(async (e: React.MouseEvent) => {
         e.stopPropagation();
         setIsShareCopied(true); // 로딩 표시
 
-        const targetUrl = `/?restaurant=${review.restaurantId}`;
+        // 리뷰 개별 링크 생성 (홈 페이지 기반 - 디바이스 감지 후 처리)
+        const targetUrl = `${window.location.origin}/?review=${review.id}`;
 
         try {
             const response = await fetch('/api/shorten', {
@@ -130,9 +135,7 @@ export const ReviewCard = React.memo(function ReviewCard({
                 const data = await response.json();
                 await navigator.clipboard.writeText(data.shortUrl);
             } else {
-                const url = new URL(window.location.origin);
-                url.searchParams.set('restaurant', review.restaurantId || '');
-                await navigator.clipboard.writeText(url.toString());
+                await navigator.clipboard.writeText(targetUrl);
             }
 
             setTimeout(() => setIsShareCopied(false), 2000);
@@ -140,7 +143,7 @@ export const ReviewCard = React.memo(function ReviewCard({
             console.error('URL 복사 실패');
             setIsShareCopied(false);
         }
-    }, [review.restaurantId, review.restaurantName]);
+    }, [review.id, review.restaurantId, review.restaurantName]);
 
     // [PERFORMANCE] 날짜 포맷 메모이제이션
     const { visitedDate, submittedDate } = useMemo(() => {
@@ -163,7 +166,11 @@ export const ReviewCard = React.memo(function ReviewCard({
 
     return (
         <div
-            className={`w-full rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mb-4 max-w-full ${review.isPinned ? "border-primary border-2" : ""}`}
+            id={idPrefix ? `${idPrefix}-${review.id}` : undefined}
+            className={`w-full rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden mb-4 max-w-full transition-all duration-500 
+                ${review.isPinned ? "border-primary border-2" : ""}
+                ${isHighlighted ? "ring-2 ring-primary ring-offset-2" : ""}
+            `}
             onClick={onClick}
         >
             {/* 헤더 영역 */}

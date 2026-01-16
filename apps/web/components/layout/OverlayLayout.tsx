@@ -83,7 +83,7 @@ export default function OverlayLayout({ children }: { children: React.ReactNode 
             queryClient.clear();
             router.push('/');
         } catch (error) {
-            console.error('Logout error:', error);
+            // Logout error ignored
         }
     }, [signOut, queryClient, router]);
 

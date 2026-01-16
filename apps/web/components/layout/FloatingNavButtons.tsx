@@ -1,6 +1,5 @@
-'use client';
-
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { MessageSquare, Stamp, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -11,6 +10,7 @@ export type OverlayPanelType = 'feed' | 'stamp' | 'leaderboard' | null;
 interface FloatingNavButtonsProps {
     activePanel: OverlayPanelType;
     onPanelChange: (panel: OverlayPanelType) => void;
+    onReviewSelect?: (reviewId: string) => void;
     className?: string;
 }
 
@@ -36,13 +36,34 @@ const ADMIN_ITEMS: NavItem[] = [];
  * - 모바일 스타일과 동일한 디자인
  * - 관리자 전용 버튼 포함
  */
-function FloatingNavButtonsComponent({ activePanel, onPanelChange, className }: FloatingNavButtonsProps) {
+function FloatingNavButtonsComponent({ activePanel, onPanelChange, onReviewSelect, className }: FloatingNavButtonsProps) {
+    const pathname = usePathname();
     const { isAdmin } = useAuth();
     const allItems = isAdmin ? [...USER_ITEMS, ...ADMIN_ITEMS] : USER_ITEMS;
+
+    // [NEW] 홈 화면(/)에서만 표시하도록 제한
+    if (pathname !== '/') return null;
 
     const handlePanelClick = useCallback((panelId: OverlayPanelType) => {
         onPanelChange(activePanel === panelId ? null : panelId);
     }, [activePanel, onPanelChange]);
+
+    // [리뷰 공유] openFeedOverlay 이벤트 리스너
+    useEffect(() => {
+        const handleOpenFeedOverlay = (e: Event) => {
+            const customEvent = e as CustomEvent<{ reviewId: string }>;
+            const { reviewId } = customEvent.detail;
+            // 피드 오버레이 열기
+            onPanelChange('feed');
+            // 리뷰 선택 콜백
+            if (onReviewSelect && reviewId) {
+                onReviewSelect(reviewId);
+            }
+        };
+
+        window.addEventListener('openFeedOverlay', handleOpenFeedOverlay);
+        return () => window.removeEventListener('openFeedOverlay', handleOpenFeedOverlay);
+    }, [onPanelChange, onReviewSelect]);
 
     return (
         <div className={cn("fixed z-[92] flex flex-col items-start gap-2", className)}>

@@ -472,7 +472,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-80 bg-card border-border font-serif"
+              className="w-80 bg-card border-border font-serif z-[100]"
             >
               <DropdownMenuLabel className="flex items-center justify-between text-foreground">
                 <span>알림</span>
@@ -554,7 +554,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-72 bg-card border-border font-serif"
+              className="w-72 bg-card border-border font-serif z-[100]"
             >
               <DropdownMenuLabel className="flex items-center justify-between text-foreground">
                 <span>북마크</span>
@@ -633,7 +633,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-border font-serif w-36">
+            <DropdownMenuContent align="end" className="bg-card border-border font-serif w-36 z-[100]">
               <DropdownMenuItem onClick={handleMyPageClick} className="text-foreground hover:bg-accent py-1.5">
                 <User className="mr-2 h-4 w-4" />
                 마이페이지

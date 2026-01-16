@@ -318,15 +318,7 @@ function HomeMapContainerComponent({
                     {/* 데스크탑 오버레이 패널 */}
                     {isDesktop && (
                         <>
-                            {/* 배경 오버레이 */}
-                            <div
-                                className={cn(
-                                    "fixed inset-0 z-[90] transition-opacity duration-300",
-                                    isPanelOpen ? "opacity-100" : "opacity-0 pointer-events-none"
-                                )}
-                                onClick={onPanelClose}
-                                aria-hidden="true"
-                            />
+
                             {/* 상세 패널 */}
                             <div
                                 className={cn(
