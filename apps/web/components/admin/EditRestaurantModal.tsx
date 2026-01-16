@@ -144,7 +144,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       setGeocodingResults([]);
       setSelectedGeocodingIndex(null);
 
-      console.log('🇺🇷 네이버 Geocoding API 사용');
+
       toast({
         title: '네이버 Geocoding API로 검색 중...',
       });
@@ -162,10 +162,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const allResults = [...fullAddressResults, ...shortAddressResults];
       const uniqueResults = removeDuplicateAddresses(allResults);
 
-      console.log('🗺️ 네이버 지오코딩 결과:', {
-        uniqueResults: uniqueResults.length,
-        results: uniqueResults,
-      });
+
 
       if (uniqueResults.length > 0) {
         setGeocodingResults(uniqueResults);
@@ -224,7 +221,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       setGeocodingResults([]);
       setSelectedGeocodingIndex(null);
 
-      console.log('🌏 Google Geocoding API 사용');
+
       toast({
         title: 'Google Geocoding API로 검색 중...',
       });
@@ -239,10 +236,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       const allResults = [...fullAddressResults, ...addressOnlyResults];
       const uniqueResults = removeDuplicateAddresses(allResults);
 
-      console.log('🗺️ Google 지오코딩 결과:', {
-        uniqueResults: uniqueResults.length,
-        results: uniqueResults,
-      });
+
 
       if (uniqueResults.length > 0) {
         setGeocodingResults(uniqueResults);
@@ -364,15 +358,14 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
   }>> => {
     try {
       // 주소만 사용 (이름 제외) - Geocoding API는 주소만 필요
-      console.log('🗺️ 지오코딩 쿼리:', { name, address });
+
 
       // Supabase Edge Function을 통해 지오코딩 호출 (CORS 우회)
       const { data, error } = await supabase.functions.invoke('naver-geocode', {
         body: { query: address, count: limit }
       });
 
-      console.log('📡 Edge Function 응답:', { data, error });
-      console.log('📡 data 전체:', JSON.stringify(data, null, 2));
+
 
       if (error) {
         console.error('❌ Edge Function 에러:', error);
@@ -389,21 +382,14 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         throw new Error(data.error);
       }
 
-      // 📊 디버깅: Naver API의 실제 응답 구조 확인
-      console.log('🔍 data 구조 분석:', {
-        hasAddresses: 'addresses' in data,
-        addressesType: typeof data.addresses,
-        addressesLength: data.addresses?.length,
-        dataKeys: Object.keys(data),
-        fullData: data
-      });
+
 
       if (!data.addresses || data.addresses.length === 0) {
         console.warn('⚠️ 주소 결과 없음');
         return [];
       }
 
-      console.log('✅ 지오코딩 성공:', data.addresses.length, '개 결과');
+
 
       // 최대 limit개까지만 반환
       return data.addresses.slice(0, limit).map((addr: NaverGeocodingAddress) => ({
@@ -480,12 +466,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       // 선택된 지오코딩 결과 가져오기
       const selectedResult = geocodingResults[selectedGeocodingIndex];
 
-      console.log('🔍 중복 검사 시작:', {
-        name: trimmedName,
-        jibun_address: selectedResult.jibun_address,
-        record_id: record.id,
-        youtube_link: record.youtube_link,
-      });
+
 
       // 🔥 중복 검사 추가
       const duplicateCheck = await checkRestaurantDuplicate(
@@ -495,28 +476,20 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         record.youtube_link // YouTube 링크도 함께 전달
       );
 
-      console.log('📊 중복 검사 결과:', duplicateCheck);
+
 
       if (duplicateCheck.isDuplicate) {
-        console.log('⚠️ 중복 감지!', {
-          matchedRestaurant: duplicateCheck.matchedRestaurant,
-          currentYoutubeLink: record.youtube_link,
-          matchedYoutubeLink: duplicateCheck.matchedRestaurant?.youtube_link,
-        });
+
 
         // 🔥 수정: 유튜브 링크 비교 로직 개선
         const currentYoutubeLink = record.youtube_link?.trim() || null;
         const matchedYoutubeLink = duplicateCheck.matchedRestaurant?.youtube_link?.trim() || null;
 
-        console.log('🔗 유튜브 링크 비교:', {
-          current: currentYoutubeLink,
-          matched: matchedYoutubeLink,
-          isDifferent: currentYoutubeLink !== matchedYoutubeLink,
-        });
+
 
         // 유튜브 링크가 다른 경우: 확인 모달 표시
         if (currentYoutubeLink !== matchedYoutubeLink) {
-          console.log('✅ 유튜브 링크가 다름 → 확인 모달 표시');
+
 
           setConflictingRestaurantInfo({
             name: duplicateCheck.matchedRestaurant!.name,
@@ -527,7 +500,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
           return;
         }
 
-        console.log('❌ 유튜브 링크가 같음 → 중복 오류 처리');
+
 
         // 유튜브 링크가 같은 경우: 중복 오류 처리 (기존 로직)
         const errorDetails = {
@@ -595,12 +568,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
     const selectedResult = geocodingResults[selectedGeocodingIndex!];
 
     // restaurants 테이블에 업데이트 (evaluation_records와 통합됨)
-    console.log('🔄 DB 업데이트 시작:', {
-      id: record.id,
-      name: trimmedName,
-      categories: selectedCategories,
-      selectedResult,
-    });
+
 
     const updateData = {
       name: trimmedName,
@@ -623,7 +591,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       updated_at: new Date().toISOString(),
     };
 
-    console.log('📝 업데이트 데이터:', updateData);
+
 
     const { data: updatedRestaurant, error: updateError } = await supabase
       .from('restaurants')
@@ -633,7 +601,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
       .select()
       .single();
 
-    console.log('📥 DB 응답:', { data: updatedRestaurant, error: updateError });
+
 
     if (updateError) {
       console.error('❌ DB 업데이트 에러 상세:', {
@@ -738,7 +706,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         updateData.tzuyang_review = trimmedTzuyangReview;
       }
 
-      console.log('💾 저장 데이터:', updateData);
+
 
       const { error: updateError } = await supabase
         .from('restaurants')
@@ -891,13 +859,7 @@ export function EditRestaurantModal({ record, open, onOpenChange, onSuccess }: E
         }
       }
 
-      console.log('🔄 Modal 초기화:', {
-        record_id: record.id,
-        address,
-        has_naver_info: !!record.restaurant_info.naver_address_info,
-        initial_categories: initialCategories,
-        category_revision: record.evaluation_results?.category_TF?.category_revision,
-      });
+
 
       setInitialAddress(address); // 원본 주소 저장
       setAddressChanged(false); // 주소 변경 여부 초기화

@@ -85,6 +85,10 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   const markersRef = useRef<any[]>([]);
   const detailPanelRef = useRef<HTMLDivElement>(null);
 
+  // [상태] 지도 이동 - 선택된 맛집으로 이동 (한 번만 수행)
+  const lastCenteredRestaurantId = useRef<string | null>(null);
+
+  // 패널 상태 관리 (내부적으로 관리하거나 props로 제어)
   const [mapBounds, setMapBounds] = useState<any | null>(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [hasUserInteracted, setHasUserInteracted] = useState(false);
@@ -109,7 +113,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   // 맛집으로 지도 이동하는 함수 (즉시 실행, 재시도 없음)
   const moveToRestaurant = useCallback((restaurant: Restaurant) => {
     if (!googleMapRef.current) {
-      console.warn('MapView: Map not ready for moving');
+
       return;
     }
 
@@ -190,9 +194,13 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
     }
   }, [searchedRestaurant, onRestaurantSelect, isLoaded]);
 
-  // selectedRestaurant 변경 시 동적 오프셋으로 중앙 정렬
+  // [지도 이동] 선택된 맛집으로 이동 (한 번만 수행)
   useEffect(() => {
-    if (!selectedRestaurant || !isLoaded || !googleMapRef.current) {
+    if (!selectedRestaurant || !mapRef.current || !isLoaded) return;
+
+    // 이미 이 맛집으로 이동했다면 건너뛰기 (사용자가 지도를 움직일 수 있게 함)
+    // 단, selectedRestaurant 객체가 아예 바뀌었더라도 ID가 같다면 이동하지 않음
+    if (lastCenteredRestaurantId.current === selectedRestaurant.id) {
       return;
     }
 
@@ -229,10 +237,20 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
 
       // 지도 이동
       map.panTo({ lat, lng: adjustedLng });
+
+      // 이동 완료 표시
+      lastCenteredRestaurantId.current = selectedRestaurant.id;
     } catch (error) {
       console.error('MapView: Error moving to selected restaurant:', error);
     }
   }, [selectedRestaurant, isLoaded, effectivePanelWidth]);
+
+  // 선택 해제 시 ref 초기화
+  useEffect(() => {
+    if (!selectedRestaurant) {
+      lastCenteredRestaurantId.current = null;
+    }
+  }, [selectedRestaurant]);
 
   // useRestaurants 옵션 메모이제이션
   const restaurantsOptions = useMemo(() => ({
@@ -301,10 +319,11 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       if (updatedRestaurant) {
         // selectedRestaurant 업데이트 (외부 상태 동기화)
         onRestaurantSelect?.(updatedRestaurant);
-      } else if (!updatedRestaurant) {
-        // 삭제된 경우에만 패널 닫기
-        onRestaurantSelect?.(null);
       }
+      // [수정] 화면 밖으로 벗어나서 리스트에 없더라도 패널을 닫지 않음
+      // else if (!updatedRestaurant) {
+      //   onRestaurantSelect?.(null);
+      // }
     }
   }, [restaurants, refreshTrigger, selectedRestaurant, onRestaurantSelect]);
 
@@ -395,7 +414,7 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       // selectedRestaurant 또는 searchedRestaurant와 비교하여 선택 상태 판단
       const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
 
-      console.log('[MapView] 마커 생성:', restaurant.name, 'isSelected:', isSelected, 'selectedRestaurant:', selectedRestaurant?.id, 'restaurant.id:', restaurant.id);
+
 
       // 카테고리별 적절한 이모티콘으로 변경
       const getCategoryIcon = (categories: string | string[] | null | undefined) => {
@@ -453,19 +472,19 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
       });
 
       markerElement.addEventListener("click", () => {
-        console.log('[MapView] 마커 클릭:', restaurant.name);
+
 
         // 1. 패널을 먼저 즉시 열기 (지도 이동 전에)
         onMarkerClick?.(restaurant);
-        console.log('[MapView] onMarkerClick 호출 (패널 즉시 열기)');
+
 
         // 2. selectedRestaurant 업데이트
         onRestaurantSelect?.(restaurant);
-        console.log('[MapView] onRestaurantSelect 호출');
+
 
         // 3. 지도 이동은 마지막에 (비동기 작업)
         moveToRestaurant(restaurant);
-        console.log('[MapView] moveToRestaurant 호출');
+
       });
 
       markersRef.current.push(marker);
@@ -476,26 +495,18 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
   useEffect(() => {
     if (!isLoaded || markersRef.current.length === 0 || !restaurantsToShow) return;
 
-    console.log('[MapView] 마커 스타일 업데이트 실행:', {
-      selectedRestaurantId: selectedRestaurant?.id,
-      searchedRestaurantId: searchedRestaurant?.id,
-      markersCount: markersRef.current.length,
-      restaurantsCount: restaurantsToShow.length
-    });
+
 
     markersRef.current.forEach((marker, index) => {
       const restaurant = restaurantsToShow[index];
       if (!restaurant) {
-        console.warn('[MapView] 마커 스타일 업데이트 스킵: restaurant 없음, index:', index);
         return;
       }
 
       // selectedRestaurant 또는 searchedRestaurant와 비교하여 활성화 상태 결정
       const isSelected = selectedRestaurant?.id === restaurant.id || searchedRestaurant?.id === restaurant.id;
 
-      if (isSelected) {
-        console.log('[MapView] 마커 활성화:', restaurant.name, 'id:', restaurant.id);
-      }
+
 
       const markerElement = marker.content as HTMLElement;
       if (!markerElement) return;
@@ -616,7 +627,9 @@ const MapView = memo(({ filters, selectedCountry, searchedRestaurant, selectedRe
           ref={mapRef}
           className="flex-1 h-full"
           onClick={() => {
-            onPanelClick?.('map');
+            // 지도 클릭 시 패널 닫기/모드 변경 등의 동작이 필요하다면 여기서 처리
+            // 단, 드래그 시에는 발생하지 않아야 함.
+            // onPanelClick?.('map');
           }}
         />
 

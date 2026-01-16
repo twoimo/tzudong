@@ -1,5 +1,7 @@
+import Link from "next/link";
+import NextImage from "next/image";
 import { RankingWidget } from "./RankingWidget";
-import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp } from "lucide-react";
+import { PanelLeft, Moon, Sun, Bell, BellOff, Maximize, User, LogOut, X, CheckCheck, ClipboardList, MessageSquare, Megaphone, ChevronLeft, ChevronRight, Bookmark, Settings, Eye, EyeOff, Edit2, Trash2, Image, ChevronDown, ChevronUp, DollarSign, Utensils, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import {
@@ -191,7 +193,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
     if (isMobileOrTablet) {
       // 모바일/태블릿: 바텀시트로 공지사항 리스트 표시
       const announcements = getActiveAnnouncements();
-      console.log('Loaded announcements:', announcements);
+
       setAllAnnouncements(announcements);
       setAnnouncementPage(1);
       setAnnouncementViewMode('list');
@@ -358,7 +360,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
 
   return (
     <header
-      className="border-b border-border bg-background flex items-center shadow-sm z-10 relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
+      className="border-b border-border bg-background flex items-center shadow-sm z-[92] relative transition-colors duration-300 gap-2 sm:gap-4 h-14 px-2 md:h-16 md:px-4"
     >
       {/* 한지 질감 오버레이 - 다크모드에서 숨김 */}
       <div
@@ -385,6 +387,8 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
           </Button>
         </div>
       )}
+
+
 
       {/* 중앙: 공지 배너 - 남은 공간 최대 활용, 내용 길이와 무관하게 고정 */}
       {currentBanner && (
@@ -468,7 +472,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-80 bg-card border-border font-serif"
+              className="w-80 bg-card border-border font-serif z-[100]"
             >
               <DropdownMenuLabel className="flex items-center justify-between text-foreground">
                 <span>알림</span>
@@ -550,7 +554,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
             </DropdownMenuTrigger>
             <DropdownMenuContent
               align="end"
-              className="w-72 bg-card border-border font-serif"
+              className="w-72 bg-card border-border font-serif z-[100]"
             >
               <DropdownMenuLabel className="flex items-center justify-between text-foreground">
                 <span>북마크</span>
@@ -629,7 +633,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                 <User className="h-5 w-5" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-card border-border font-serif w-36">
+            <DropdownMenuContent align="end" className="bg-card border-border font-serif w-36 z-[100]">
               <DropdownMenuItem onClick={handleMyPageClick} className="text-foreground hover:bg-accent py-1.5">
                 <User className="mr-2 h-4 w-4" />
                 마이페이지
@@ -641,6 +645,10 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
               {isAdmin && (
                 <>
                   <DropdownMenuSeparator className="bg-border my-1" />
+                  <DropdownMenuItem onClick={() => router.push('/admin/evaluations')} className="text-foreground hover:bg-accent py-1.5">
+                    <Utensils className="mr-2 h-4 w-4" />
+                    맛집관리
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={handleAdminSubmissionsClick} className="text-foreground hover:bg-accent py-1.5">
                     <ClipboardList className="mr-2 h-4 w-4" />
                     제보관리
@@ -662,6 +670,15 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                   <DropdownMenuItem onClick={handleAdminBannersClick} className="text-foreground hover:bg-accent py-1.5">
                     <Image className="mr-2 h-4 w-4" />
                     배너관리
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="bg-border my-1" />
+                  <DropdownMenuItem onClick={() => router.push('/admin/insight')} className="text-foreground hover:bg-accent py-1.5">
+                    <BarChart3 className="mr-2 h-4 w-4" />
+                    인사이트
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/admin/costs')} className="text-foreground hover:bg-accent py-1.5">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    서버비용
                   </DropdownMenuItem>
                 </>
               )}

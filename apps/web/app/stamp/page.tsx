@@ -2,6 +2,7 @@
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
+import { useRouter } from "next/navigation";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, Trophy, Eye, EyeOff, MapPin, List, Grid, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,28 +34,19 @@ import { GlobalLoader } from "@/components/ui/global-loader";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { ReviewEditModal } from "@/components/reviews/ReviewEditModal";
 import { useRestaurants, mergeRestaurants } from "@/hooks/use-restaurants";
+
 import { useDeviceType } from "@/hooks/useDeviceType";
+import { useToast } from "@/hooks/use-toast";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { RestaurantReviewsPanel } from "@/components/stamp/RestaurantReviewsPanel";
-
-// 지역 목록
-const REGIONS = [
-    "서울", "경기", "인천", "부산", "대구", "광주", "대전", "울산",
-    "세종", "강원", "충북", "충남", "전북", "전남", "경북", "경남", "제주",
-    "미국", "일본", "태국", "인도네시아", "튀르키예", "헝가리", "오스트레일리아"
-];
+import { REGIONS, extractRegion, parseCategory, getYouTubeThumbnailUrl, StampFilterState, UserReview } from "@/components/stamp/stamp-utils";
+import { StampCard } from "@/components/stamp/StampCard";
 
 type SortColumn = "name" | "category" | "fanVisits";
 type SortDirection = "asc" | "desc" | null;
 type ViewMode = "grid" | "list";
 
-interface FilterState {
-    searchQuery: string;
-    categories: string[];
-    regions: string[];
-    fanVisitsMin: number;
-    showUnvisitedOnly: boolean;
-}
+// StampFilterState 및 UserReview는 stamp-utils에서 import
 
 interface Review {
     id: string;
@@ -77,73 +69,7 @@ interface Review {
     categories: string[];
 }
 
-interface UserReview {
-    restaurant_id: string;
-    is_verified: boolean;
-}
-
-// 유틸리티 함수들을 컴포넌트 외부로 이동 (성능 최적화: 불필요한 재생성 방지)
-const parseCategory = (categoryData: any): string | null => {
-    if (Array.isArray(categoryData) && categoryData.length > 0) return categoryData[0];
-    if (typeof categoryData === 'string') {
-        try {
-            const parsed = JSON.parse(categoryData);
-            if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
-            return categoryData;
-        } catch {
-            return categoryData;
-        }
-    }
-    return null;
-};
-
-const extractYouTubeVideoId = (url: string) => {
-    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-    const match = url.match(regExp);
-    return (match && match[2].length === 11) ? match[2] : null;
-};
-
-const getYouTubeThumbnailUrl = (url: string) => {
-    const videoId = extractYouTubeVideoId(url);
-    return videoId ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg` : null;
-};
-
-// 주소에서 지역 추출 (불변 데이터이므로 외부로)
-const regionPatterns = [
-    { pattern: /^서울|서울특별시/, region: "서울" },
-    { pattern: /^경기도|^경기/, region: "경기" },
-    { pattern: /^인천|인천광역시/, region: "인천" },
-    { pattern: /^부산|부산광역시/, region: "부산" },
-    { pattern: /^대구|대구광역시/, region: "대구" },
-    { pattern: /^광주|광주광역시/, region: "광주" },
-    { pattern: /^대전|대전광역시/, region: "대전" },
-    { pattern: /^울산|울산광역시/, region: "울산" },
-    { pattern: /^세종|세종특별자치시/, region: "세종" },
-    { pattern: /^강원|강원특별자치도|강원도/, region: "강원" },
-    { pattern: /^충청북도|^충북/, region: "충북" },
-    { pattern: /^충청남도|^충남/, region: "충남" },
-    { pattern: /^전라북도|^전북|^전북특별자치도/, region: "전북" },
-    { pattern: /^전라남도|^전남/, region: "전남" },
-    { pattern: /^경상북도|^경북/, region: "경북" },
-    { pattern: /^경상남도|^경남/, region: "경남" },
-    { pattern: /^제주|제주특별자치도/, region: "제주" },
-    { pattern: /미국|USA|United States/i, region: "미국" },
-    { pattern: /일본|Japan/i, region: "일본" },
-    { pattern: /태국|Thailand/i, region: "태국" },
-    { pattern: /인도네시아|Indonesia/i, region: "인도네시아" },
-    { pattern: /튀르키예|Turkey|Türkiye/i, region: "튀르키예" },
-    { pattern: /헝가리|Hungary/i, region: "헝가리" },
-    { pattern: /오스트레일리아|Australia/i, region: "오스트레일리아" },
-];
-
-const extractRegion = (roadAddress: string | null, jibunAddress: string | null): string => {
-    const address = roadAddress || jibunAddress || "";
-    if (!address) return "";
-    for (const { pattern, region } of regionPatterns) {
-        if (pattern.test(address)) return region;
-    }
-    return "";
-};
+// 유틸리티 함수들: stamp-utils.ts에서 import
 
 // 리스트 아이템 컴포넌트 메모이제이션 (성능 최적화)
 interface RestaurantCardProps {
@@ -339,11 +265,24 @@ export default function StampPage() {
     const { user } = useAuth();
     const queryClient = useQueryClient();
     const { isMobileOrTablet, isDesktop } = useDeviceType();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (isMobileOrTablet === false) {
+            router.replace('/');
+        }
+    }, [isMobileOrTablet, router]);
+
+    // 데스크탑에서는 아무것도 렌더링하지 않음 (리다이렉트 대기)
+    if (isMobileOrTablet === false) return null;
+
+    const { toast } = useToast();
+    const [searchTerm, setSearchTerm] = useState("");
 
     // --- 상태 (State) ---
     const [viewMode, setViewMode] = useState<ViewMode>("grid");
     const [searchQuery, setSearchQuery] = useState("");
-    const [filters, setFilters] = useState<FilterState>({
+    const [filters, setFilters] = useState<StampFilterState>({
         searchQuery: "",
         categories: [],
         regions: [],
@@ -559,8 +498,8 @@ export default function StampPage() {
         }
 
         // 리뷰 수 필터
-        if (filters.fanVisitsMin > 0) {
-            result = result.filter(r => (r.review_count || 0) >= filters.fanVisitsMin);
+        if ((filters.fanVisitsMin ?? 0) > 0) {
+            result = result.filter(r => (r.review_count || 0) >= (filters.fanVisitsMin ?? 0));
         }
 
         // 정렬
@@ -748,6 +687,11 @@ export default function StampPage() {
 
     // --- 핸들러 (Handlers) ---
     const handleRestaurantClick = useCallback(async (restaurant: Restaurant) => {
+        if (isMobileOrTablet) {
+            router.push(`/?restaurant=${restaurant.id}`);
+            return;
+        }
+
         setSelectedRestaurant(restaurant);
 
         // 리뷰 데이터 prefetch로 바텀 시트 열리기 전에 미리 로드
@@ -756,7 +700,7 @@ export default function StampPage() {
 
         // prefetch 완료 후 바텀 시트 열기
         setIsRightPanelVisible(true);
-    }, []);
+    }, [isMobileOrTablet, router]);
 
     const handleCloseRightPanel = useCallback(() => {
         setIsRightPanelVisible(false);
@@ -881,7 +825,7 @@ export default function StampPage() {
         filters.categories.length +
         filters.regions.length +
         (filters.showUnvisitedOnly ? 1 : 0) +
-        (filters.fanVisitsMin > 0 ? 1 : 0);
+        ((filters.fanVisitsMin ?? 0) > 0 ? 1 : 0);
 
     // 검색어 동기화 (Sync search query)
     useEffect(() => {
@@ -1074,7 +1018,7 @@ export default function StampPage() {
                                     <PopoverTrigger asChild>
                                         <Button variant="outline" className="justify-between">
                                             <span className="truncate">
-                                                리뷰 {filters.fanVisitsMin > 0 ? `${filters.fanVisitsMin}개 이상` : "전체"}
+                                                리뷰 {(filters.fanVisitsMin ?? 0) > 0 ? `${filters.fanVisitsMin}개 이상` : "전체"}
                                             </span>
                                             <Filter className="h-4 w-4 ml-2" />
                                         </Button>
@@ -1083,10 +1027,10 @@ export default function StampPage() {
                                         <div className="space-y-4">
                                             <div className="flex justify-between items-center">
                                                 <h4 className="font-semibold text-sm">최소 리뷰 수</h4>
-                                                <span className="text-sm text-muted-foreground">{filters.fanVisitsMin}개 이상</span>
+                                                <span className="text-sm text-muted-foreground">{filters.fanVisitsMin ?? 0}개 이상</span>
                                             </div>
                                             <Slider
-                                                defaultValue={[filters.fanVisitsMin]}
+                                                defaultValue={[filters.fanVisitsMin ?? 0]}
                                                 max={100}
                                                 step={1}
                                                 onValueChange={(value) => setFilters(prev => ({ ...prev, fanVisitsMin: value[0] }))}
@@ -1236,8 +1180,8 @@ export default function StampPage() {
                 )}
             </PanelGroup>
 
-            {/* 바텀 시트 - 리뷰 (모바일/태블릿 전용) */}
-            {isMobileOrTablet && (
+            {/* 바텀 시트 - 리뷰 (모바일/태블릿 전용) - 제거됨: 모바일은 메인 지도로 이동 */}
+            {/* {isMobileOrTablet && (
                 <BottomSheet
                     isOpen={isRightPanelVisible}
                     onClose={handleCloseRightPanel}
@@ -1268,7 +1212,7 @@ export default function StampPage() {
                         })}
                     />
                 </BottomSheet>
-            )}
+            )} */}
 
             {/* 리뷰 모달 (Review Modal) */}
             <ReviewModal

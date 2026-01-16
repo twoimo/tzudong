@@ -1,9 +1,40 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { MapPin, MessageSquare, Youtube, Navigation, Settings, Store, Quote, Star, Edit, ArrowLeft, Copy, Check, ChevronDown, ChevronUp, ChevronRight, ChevronLeft, Share2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { Restaurant } from "@/types/restaurant";
+import { User } from "@supabase/supabase-js";
+import { toast } from "sonner";
+import {
+    X,
+    MapPin,
+    Clock,
+    ExternalLink,
+    ThumbsUp,
+    MessageSquare,
+    Share2,
+    Navigation,
+    Globe,
+    MoreVertical,
+    Flag,
+    Edit,
+    Pencil,
+    Map as MapIcon,
+    Copy,
+    ChevronDown,
+    Info,
+    Youtube,
+    Settings,
+    Store,
+    Quote,
+    Star,
+    ArrowLeft,
+    Check,
+    ChevronUp,
+    ChevronRight,
+    ChevronLeft
+} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import AuthModal from "@/components/auth/AuthModal";
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -25,6 +56,7 @@ interface RestaurantDetailPanelProps {
     onToggleCollapse?: () => void;
     isPanelOpen?: boolean;
     isMobile?: boolean;
+    className?: string;
 }
 
 interface Review {
@@ -57,6 +89,7 @@ export function RestaurantDetailPanel({
     onToggleCollapse,
     isPanelOpen = true,
     isMobile = false,
+    className,
 }: RestaurantDetailPanelProps) {
     const { user, isAdmin } = useAuth();
     const queryClient = useQueryClient();
@@ -286,17 +319,57 @@ export function RestaurantDetailPanel({
     // [핸들러] 공유하기 URL 복사 - useCallback으로 메모이제이션
     const handleShareUrl = useCallback(async () => {
         if (!restaurant) return;
-        const url = new URL(window.location.href);
-        url.searchParams.set('q', restaurant.name);
-        url.searchParams.set('lat', restaurant.lat?.toString() || '');
-        url.searchParams.set('lng', restaurant.lng?.toString() || '');
-        url.searchParams.set('z', '16.00');
+
+        // 1. 원본 URL 생성 (z, lat, lng만 포함 - 네이버 지도 스타일)
+        const url = new URL(window.location.origin);
+        url.searchParams.set('z', '15.00'); // 줌 레벨 15 유지
+        url.searchParams.set('lat', restaurant.lat?.toFixed(6) || '');
+        url.searchParams.set('lng', restaurant.lng?.toFixed(6) || '');
+        const longUrl = url.toString();
+
         try {
-            await navigator.clipboard.writeText(url.toString());
+            // 2. 단축 URL 생성 시도
+            const response = await fetch('/api/shorten', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    targetUrl: longUrl,
+                    restaurantId: restaurant.id,
+                    restaurantName: restaurant.name
+                }),
+            });
+
+            let shareUrl = longUrl;
+
+            if (response.ok) {
+                const data = await response.json();
+                // API returns: { shortUrl, code, isExisting }
+                if (data.shortUrl) {
+                    shareUrl = data.shortUrl;
+                } else if (data.code) {
+                    // Fallback: construct from code
+                    shareUrl = `${window.location.origin}/s/${data.code}`;
+                }
+            }
+
+            // 3. 클립보드 복사
+            await navigator.clipboard.writeText(shareUrl);
             setIsShareCopied(true);
             setTimeout(() => setIsShareCopied(false), 2000);
-        } catch {
-            console.error('URL 복사 실패');
+            toast.success('공유 링크가 복사되었습니다');
+        } catch (err) {
+            console.error('URL 단축/복사 실패:', err);
+            // 실패 시 원본 URL이라도 복사 시도
+            try {
+                await navigator.clipboard.writeText(longUrl);
+                setIsShareCopied(true);
+                setTimeout(() => setIsShareCopied(false), 2000);
+                toast.success('공유 링크가 복사되었습니다 (단축 실패)');
+            } catch (copyErr) {
+                toast.error('링크 복사에 실패했습니다');
+            }
         }
     }, [restaurant]);
 
@@ -468,7 +541,10 @@ export function RestaurantDetailPanel({
             <div
                 data-testid="restaurant-detail-panel"
                 data-panel-type="restaurant-detail"
-                className="h-full w-full max-w-full flex flex-col bg-background border-l border-border relative"
+                className={cn(
+                    "h-full w-full max-w-full flex flex-col bg-background border-l border-border relative",
+                    className
+                )}
             >
                 {/* 플로팅 접기/펼치기 버튼 - 패널 좌측 가장자리, 모바일에서는 숨김 */}
                 {onToggleCollapse && !isMobile && (

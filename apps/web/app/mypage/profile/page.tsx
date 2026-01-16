@@ -462,7 +462,8 @@ export default function ProfilePage() {
         <CardContent className="space-y-6">
 
           {/* 프로필 사진 - 반응형 UI */}
-          <div className="space-y-4">
+          {/* 프로필 사진 - 반응형 UI */}
+          <div className="space-y-4 md:hidden">
             <Label className="flex items-center gap-2">
               <Camera className="h-4 w-4" />
               프로필 사진
@@ -470,23 +471,18 @@ export default function ProfilePage() {
             {/* 모바일: 중앙 정렬, 태블릿/데스크탑: 가로 배치 */}
             <div className="flex flex-col items-center gap-3 py-3 sm:flex-row sm:items-center sm:gap-4 sm:py-0">
               <div className="relative group shrink-0">
-                {/* 모바일: 20x20, 태블릿: 18x18, 데스크탑: 16x16 */}
-                <Avatar className="h-20 w-20 sm:h-18 sm:w-18 md:h-16 md:w-16 ring-2 sm:ring-2 ring-muted group-hover:ring-primary/30 transition-all">
+                <Avatar className="h-20 w-20 sm:h-18 sm:w-18 ring-2 sm:ring-2 ring-muted group-hover:ring-primary/30 transition-all">
                   <AvatarImage src={avatarUrl} alt={displayName} className="object-cover" />
                   <AvatarFallback className="bg-primary/10">
-                    <User className="h-8 w-8 sm:h-7 sm:w-7 md:h-6 md:w-6 text-primary" />
+                    <User className="h-8 w-8 sm:h-7 sm:w-7 text-primary" />
                   </AvatarFallback>
                 </Avatar>
-                {/* 편집 배지 - 모바일에서 더 크게 */}
-                <div className="absolute -bottom-1 -right-1 sm:-bottom-0.5 sm:-right-0.5 w-7 h-7 sm:w-6 sm:h-6 bg-primary rounded-full flex items-center justify-center shadow border-2 border-background">
-                  <Camera className="h-3.5 w-3.5 sm:h-3 sm:w-3 text-primary-foreground" />
-                </div>
-                {/* 호버/터치 오버레이 */}
-                <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity cursor-pointer rounded-full">
+
+                <label className="absolute inset-0 flex items-center justify-center bg-black/60 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity cursor-pointer rounded-full z-10">
                   {avatarUploading ? (
-                    <Loader2 className="h-6 w-6 sm:h-5 sm:w-5 text-white animate-spin" />
+                    <Loader2 className="h-6 w-6 text-white animate-spin" />
                   ) : (
-                    <Camera className="h-6 w-6 sm:h-5 sm:w-5 text-white" />
+                    <Camera className="h-6 w-6 text-white" />
                   )}
                   <input
                     type="file"
@@ -497,25 +493,34 @@ export default function ProfilePage() {
                   />
                 </label>
               </div>
-              {/* 안내 텍스트 + 삭제 버튼 */}
-              <div className="text-sm text-muted-foreground text-center sm:text-left">
-                <p>이미지 클릭하여 변경</p>
-                <p className="text-xs">최대 2MB, JPG/PNG 권장</p>
-                {profile?.avatar_url && (
-                  <button
-                    onClick={handleAvatarDelete}
-                    disabled={avatarUploading}
-                    className="text-xs text-destructive hover:underline mt-1 flex items-center gap-1 mx-auto sm:mx-0"
-                  >
-                    <X className="h-3 w-3" />
-                    사진 삭제
-                  </button>
-                )}
+
+              <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row items-center gap-2">
+                  <h3 className="font-bold text-xl truncate max-w-[200px]">
+                    {displayName}
+                  </h3>
+                </div>
+
+                {/* 안내 텍스트 + 삭제 버튼 */}
+                <div className="text-sm text-muted-foreground text-center sm:text-left">
+                  <p>이미지 클릭하여 변경</p>
+                  <p className="text-xs">최대 2MB, JPG/PNG 권장</p>
+                  {profile?.avatar_url && (
+                    <button
+                      onClick={handleAvatarDelete}
+                      disabled={avatarUploading}
+                      className="text-xs text-destructive hover:underline mt-1 flex items-center gap-1 mx-auto sm:mx-0"
+                    >
+                      <X className="h-3 w-3" />
+                      사진 삭제
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          <Separator />
+          <Separator className="md:hidden" />
 
           {/* 이메일 */}
           <div className="space-y-2">
@@ -659,119 +664,122 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* 북마크 */}
-      <Link href="/mypage/bookmarks" className="block">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Bookmark className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">나의 북마크 내역</p>
-                  <p className="text-sm text-muted-foreground">
-                    저장한 맛집 {bookmarks.length}개
-                  </p>
+      {/* 데스크탑에서는 숨김 (사이드바에 있음) */}
+      <div className="space-y-4 md:hidden">
+        {/* 북마크 */}
+        <Link href="/mypage/bookmarks" className="block">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Bookmark className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">나의 북마크 내역</p>
+                    <p className="text-sm text-muted-foreground">
+                      저장한 맛집 {bookmarks.length}개
+                    </p>
+                  </div>
                 </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* 리뷰 내역 */}
+        <Link href="/mypage/reviews" className="block">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">나의 리뷰 내역</p>
+                    <p className="text-sm text-muted-foreground">
+                      작성한 리뷰 확인
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* 제보 내역 */}
+        <Link href="/mypage/submissions/new" className="block">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <MapPin className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">신규 맛집 제보</p>
+                    <p className="text-sm text-muted-foreground">
+                      새로운 맛집 알려주기
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* 맛집 수정 요청 */}
+        <Link href="/mypage/submissions/edit" className="block">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Edit className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">맛집 수정 요청</p>
+                    <p className="text-sm text-muted-foreground">
+                      기존 맛집 정보 수정
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* 쯔양 맛집 제보 */}
+        <Link href="/mypage/submissions/recommend" className="block">
+          <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Youtube className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-medium">쯔양 맛집 제보</p>
+                    <p className="text-sm text-muted-foreground">
+                      쯔양이 방문한 맛집 제보
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* 로그아웃 (모바일용) */}
+        <Card>
+          <CardContent className="pt-6">
+            <Button
+              variant="outline"
+              className="w-full gap-2"
+              onClick={() => signOut()}
+            >
+              <LogOut className="h-4 w-4" />
+              로그아웃
+            </Button>
           </CardContent>
         </Card>
-      </Link>
-
-      {/* 리뷰 내역 */}
-      <Link href="/mypage/reviews" className="block">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">나의 리뷰 내역</p>
-                  <p className="text-sm text-muted-foreground">
-                    작성한 리뷰 확인
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
-
-      {/* 제보 내역 */}
-      <Link href="/mypage/submissions/new" className="block">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">신규 맛집 제보</p>
-                  <p className="text-sm text-muted-foreground">
-                    새로운 맛집 알려주기
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
-
-      {/* 맛집 수정 요청 */}
-      <Link href="/mypage/submissions/edit" className="block">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Edit className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">맛집 수정 요청</p>
-                  <p className="text-sm text-muted-foreground">
-                    기존 맛집 정보 수정
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
-
-      {/* 쯔양 맛집 제보 */}
-      <Link href="/mypage/submissions/recommend" className="block">
-        <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Youtube className="h-5 w-5 text-muted-foreground" />
-                <div>
-                  <p className="font-medium">쯔양 맛집 제보</p>
-                  <p className="text-sm text-muted-foreground">
-                    쯔양이 방문한 맛집 제보
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="h-5 w-5 text-muted-foreground" />
-            </div>
-          </CardContent>
-        </Card>
-      </Link>
-
-      {/* 로그아웃 */}
-      <Card>
-        <CardContent className="pt-6">
-          <Button
-            variant="outline"
-            className="w-full gap-2"
-            onClick={() => signOut()}
-          >
-            <LogOut className="h-4 w-4" />
-            로그아웃
-          </Button>
-        </CardContent>
-      </Card>
+      </div>
 
       {/* 계정 비활성화 */}
       <Card className="border-yellow-500/50">

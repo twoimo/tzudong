@@ -56,6 +56,7 @@ const nextConfig = {
     outputFileTracingRoot: path.join(__dirname, '../../'),
     experimental: {
         forceSwcTransforms: false,
+        optimizePackageImports: ['lucide-react', 'date-fns', 'recharts', 'lodash'],
     },
     // Turbopack 설정 추가 (Next.js 16 호환성)
     turbopack: {},

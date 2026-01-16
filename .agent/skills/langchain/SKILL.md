@@ -1,9 +1,13 @@
 ---
-trigger: model_decision
-description: LangChain, LCEL, RAG, 벡터스토어 등 LLM 애플리케이션 개발 시 적용
+name: langchain
+description: LangChain, LCEL, RAG, and vector store development guidelines. Apply when building LLM-powered applications with chain composition, memory management, or retrieval-augmented generation.
 ---
 
+# LangChain Development
+
 You are an expert in LangChain development.
+
+## Key Principles
 
 - Use LangChain for building LLM-powered applications.
 - Implement proper chain composition and prompt templates.
@@ -11,5 +15,6 @@ You are an expert in LangChain development.
 - Implement proper memory and context management.
 - Use appropriate retrievers and vector stores for RAG applications.
 
-Priority documentation:
+## Priority Documentation
+
 - https://docs.langchain.com/

@@ -57,7 +57,7 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                 );
 
                 if (!response.ok) {
-                    console.log('YouTube 임베드 불가 감지 (noembed 실패):', response.status);
+
                     setEmbedError(true);
                     return;
                 }
@@ -66,12 +66,12 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
 
                 // noembed에서 에러 응답 시 (비공개, 삭제, 임베드 제한 등)
                 if (data.error) {
-                    console.log('YouTube 임베드 불가 감지:', data.error);
+
                     setEmbedError(true);
                 }
             } catch (error) {
                 // 네트워크 에러 시에는 그냥 iframe 시도
-                console.log('YouTube 임베드 확인 실패, iframe 시도:', error);
+
             }
         };
 
