@@ -361,15 +361,15 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                 <div className="flex-1 overflow-hidden">
                     {/* 도장 탭 */}
                     <TabsContent value="stamps" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
-                        <ScrollArea className="h-full">
-                            {stampsLoading ? (
-                                <GlobalLoader message="도장 불러오는 중..." />
-                            ) : stamps.length === 0 ? (
-                                <EmptyState
-                                    icon={<Stamp className="h-8 w-8 mb-2 opacity-50" />}
-                                    message="아직 도장이 없습니다"
-                                />
-                            ) : (
+                        {stampsLoading ? (
+                            <GlobalLoader message="도장 불러오는 중..." />
+                        ) : stamps.length === 0 ? (
+                            <EmptyState
+                                icon={<Stamp className="h-8 w-8 mb-2 opacity-50" />}
+                                message="아직 도장이 없습니다"
+                            />
+                        ) : (
+                            <ScrollArea className="h-full">
                                 <div className="divide-y divide-border">
                                     {stamps.map((stamp, index) => (
                                         <StampItem
@@ -379,21 +379,21 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                                         />
                                     ))}
                                 </div>
-                            )}
-                        </ScrollArea>
+                            </ScrollArea>
+                        )}
                     </TabsContent>
 
                     {/* 리뷰 탭 */}
                     <TabsContent value="reviews" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
-                        <ScrollArea className="h-full">
-                            {reviewsLoading ? (
-                                <GlobalLoader message="리뷰 불러오는 중..." />
-                            ) : reviews.length === 0 ? (
-                                <EmptyState
-                                    icon={<MessageSquare className="h-8 w-8 mb-2 opacity-50" />}
-                                    message="작성한 리뷰가 없습니다"
-                                />
-                            ) : (
+                        {reviewsLoading ? (
+                            <GlobalLoader message="리뷰 불러오는 중..." />
+                        ) : reviews.length === 0 ? (
+                            <EmptyState
+                                icon={<MessageSquare className="h-8 w-8 mb-2 opacity-50" />}
+                                message="작성한 리뷰가 없습니다"
+                            />
+                        ) : (
+                            <ScrollArea className="h-full">
                                 <div className="divide-y divide-border">
                                     {reviews.map((review, index) => (
                                         <ReviewItem
@@ -403,28 +403,28 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                                         />
                                     ))}
                                 </div>
-                            )}
-                        </ScrollArea>
+                            </ScrollArea>
+                        )}
                     </TabsContent>
 
                     {/* 좋아요 탭 */}
                     <TabsContent value="likers" className="h-full m-0 data-[state=inactive]:hidden" forceMount>
-                        <ScrollArea className="h-full">
-                            {likersLoading ? (
-                                <GlobalLoader message="좋아요 불러오는 중..." />
-                            ) : likers.length === 0 ? (
-                                <EmptyState
-                                    icon={<Heart className="h-8 w-8 mb-2 opacity-50" />}
-                                    message="아직 좋아요를 받지 않았습니다"
-                                />
-                            ) : (
+                        {likersLoading ? (
+                            <GlobalLoader message="좋아요 불러오는 중..." />
+                        ) : likers.length === 0 ? (
+                            <EmptyState
+                                icon={<Heart className="h-8 w-8 mb-2 opacity-50" />}
+                                message="아직 좋아요를 받지 않았습니다"
+                            />
+                        ) : (
+                            <ScrollArea className="h-full">
                                 <div className="divide-y divide-border">
                                     {likers.map((liker, index) => (
                                         <LikerItem key={`liker-${liker.userId || 'unknown'}-${index}`} liker={liker} />
                                     ))}
                                 </div>
-                            )}
-                        </ScrollArea>
+                            </ScrollArea>
+                        )}
                     </TabsContent>
                 </div>
             </Tabs>
