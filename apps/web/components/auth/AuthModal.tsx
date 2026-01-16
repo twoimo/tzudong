@@ -216,7 +216,7 @@ const PrivacyPolicyContent = memo(() => (
       </p>
       <div className="mt-2 text-muted-foreground">
         <p>성명: 최연우</p>
-        <p>연락처: twoimo@dgu.ac.kr</p>
+        <p>연락처: cs@tzudong.app</p>
       </div>
     </section>
 

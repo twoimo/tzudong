@@ -705,7 +705,7 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
                     <p className="font-medium text-foreground">타이니번 데이터랩</p>
                     <p>대표: 최연우</p>
                     <p>사업자: 601-09-04613</p>
-                    <p>이메일: twoimo@dgu.ac.kr</p>
+                    <p>이메일: cs@tzudong.app</p>
                   </div>
                 )}
               </div>
