@@ -259,14 +259,14 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
             <div className="border-b border-border bg-background p-4 flex flex-col gap-4">
                 <div className="flex items-center justify-between min-w-0">
                     <div className="flex items-center gap-3">
-                        {showBackButton && (
+                        {showBackButton && !onClose && (
                             <Button
                                 variant="ghost"
                                 size="icon"
                                 onClick={handleBack}
                                 className="flex-shrink-0 -ml-2"
                             >
-                                {onClose ? <X className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+                                <ChevronLeft className="h-5 w-5" />
                             </Button>
                         )}
                         {/* 프로필 아바타 */}
@@ -295,6 +295,16 @@ export function UserProfilePanel({ userId, onClose, showBackButton = true }: Use
                             </div>
                         </div>
                     </div>
+                    {showBackButton && onClose && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={handleBack}
+                            className="flex-shrink-0 -mr-2 h-10 w-10"
+                        >
+                            <X className="h-5 w-5" />
+                        </Button>
+                    )}
                 </div>
 
                 {/* 통계 카드 */}
