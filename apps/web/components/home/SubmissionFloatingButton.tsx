@@ -35,7 +35,8 @@ const SubmissionFloatingButton = memo(function SubmissionFloatingButton({
                 // 모바일/태블릿: 우측 하단 (검색 버튼 위)
                 // 검색 버튼: bottom-20(80px) + h-12(48px) = top at 128px
                 // 제보 버튼: bottom-36(144px) -> 16px 간격
-                isMobileOrTablet ? "right-4 bottom-36" : `${desktopLeft} bottom-6`,
+                // 데스크탑: 우측 하단 고정
+                isMobileOrTablet ? "right-4 bottom-36" : "right-6 bottom-6",
                 // [Mobile] 돋보기 아이콘과 동일한 크기 (h-12 w-12)
                 isMobileOrTablet ? "h-12 w-12" : "h-14 w-14",
                 "rounded-full shadow-xl",

@@ -397,6 +397,7 @@ const NaverMapView = memo(({
     const prevSelectedRestaurantIdRef = useRef<string | null>(null); // 이전 선택된 레스토랑 ID 추적 (동일 마커 재클릭 감지용)
     const prevSidebarOpenRef = useRef<boolean>(true); // 이전 사이드바 열림 상태 추적
     const hasUserMovedMapRef = useRef<boolean>(false); // 사용자가 지도를 직접 움직였는지 추적
+    const isInitialLoadFromUrlRef = useRef<boolean>(false); // URL 파라미터로 초기화되었는지 추적 (공유 URL 지원)
 
     // [Cluster] Supercluster 인덱스 및 클러스터 상태
     const clusterIndexRef = useRef<Supercluster<ClusterProperties> | null>(null);
@@ -711,6 +712,12 @@ const NaverMapView = memo(({
     useEffect(() => {
         if (!mapInstanceRef.current || isGridMode) return;
 
+        // [Fix] URL 파라미터로 초기화된 경우 첫 번째 실행에서 줌 오버라이드 방지
+        if (isInitialLoadFromUrlRef.current) {
+            isInitialLoadFromUrlRef.current = false; // 플래그 해제 (다음 실행부터는 정상 동작)
+            return;
+        }
+
         const map = mapInstanceRef.current;
         const { naver } = window;
 
@@ -782,6 +789,17 @@ const NaverMapView = memo(({
             // [Fix] 마커 클릭 시 기존 줌 레벨 유지 (줌 변경 없이 패널만 열기)
             targetZoom = currentMapZoom;
         } else {
+            // [Fix] URL 파라미터가 있으면 그대로 유지 (공유 URL 시나리오)
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlLat = parseFloat(urlParams.get('lat') || '');
+            const urlLng = parseFloat(urlParams.get('lng') || '');
+            const urlZoom = parseFloat(urlParams.get('z') || '');
+
+            if (!isNaN(urlLat) && !isNaN(urlLng) && !isNaN(urlZoom)) {
+                // URL에 좌표가 있으면 현재 상태 유지 (이동하지 않음)
+                return;
+            }
+
             const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
             const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
             targetLat = regionConfig.center[0];
@@ -1018,6 +1036,16 @@ const NaverMapView = memo(({
                 targetLat = selectedRestaurant.lat;
                 targetLng = selectedRestaurant.lng;
             } else {
+                // [Fix] URL 파라미터가 있으면 현재 상태 유지 (공유 URL 시나리오)
+                const urlParams = new URLSearchParams(window.location.search);
+                const urlLat = parseFloat(urlParams.get('lat') || '');
+                const urlLng = parseFloat(urlParams.get('lng') || '');
+                const urlZoom = parseFloat(urlParams.get('z') || '');
+
+                if (!isNaN(urlLat) && !isNaN(urlLng) && !isNaN(urlZoom)) {
+                    return; // URL 좌표 있으면 이동하지 않음
+                }
+
                 const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
                 const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
                 targetLat = regionConfig.center[0];
@@ -1946,36 +1974,7 @@ const NaverMapView = memo(({
         try {
             const { naver } = window;
 
-            // 선택된 지역에 따라 지도 중심과 줌 레벨 설정
-            const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
-            const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
-            // 디바이스별 줌 레벨 조정 (전국은 기본값 유지)
-            const isNational = regionKey === "전국";
-            const initialZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
-            const map = new naver.maps.Map(mapRef.current, {
-                center: new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]),
-                zoom: initialZoom,
-                minZoom: 6,
-                maxZoom: 18,
-                zoomControl: false,
-                zoomControlOptions: {
-                    position: naver.maps.Position.TOP_RIGHT,
-                },
-                mapTypeControl: false,
-                mapTypeControlOptions: {
-                    position: naver.maps.Position.TOP_LEFT,
-                },
-                scaleControl: false,
-                // 성능 최적화 및 UX 개선 옵션
-                background: '#ffffff',
-                tileSpare: 5, // [UX] 화면 밖 타일 미리 로딩 (흰색 배경 방지), 기본값보다 높게 설정
-                tileTransition: true, // [UX] 타일 로딩 시 페이드 효과
-            });
-
-            mapInstanceRef.current = map;
-            setIsMapInitialized(true);
-
-            // [URL 라우팅] 초기 로드 시 URL에서 상태 복원
+            // [URL 라우팅] 초기 로드 시 URL에서 상태 복원 - 지도 생성 전에 파싱
             const params = new URLSearchParams(window.location.search);
             // 신규 형식: z (줌), 구 형식: c (하위 호환)
             const zParam = params.get('z');
@@ -1991,11 +1990,46 @@ const NaverMapView = memo(({
                 urlZoom = parseFloat(cParam.split(',')[0]); // 구 형식 하위 호환
             }
 
-            if (urlZoom && !isNaN(urlZoom)) {
-                map.setZoom(urlZoom);
-                if (!isNaN(urlLat) && !isNaN(urlLng)) {
-                    map.setCenter(new naver.maps.LatLng(urlLat, urlLng));
-                }
+            // 선택된 지역에 따라 지도 중심과 줌 레벨 설정
+            const regionKey = selectedRegion && (selectedRegion in REGION_MAP_CONFIG) ? selectedRegion : "전국";
+            const regionConfig = REGION_MAP_CONFIG[regionKey as keyof typeof REGION_MAP_CONFIG];
+            // 디바이스별 줌 레벨 조정 (전국은 기본값 유지)
+            const isNational = regionKey === "전국";
+            const defaultZoom = getDeviceAdjustedZoom(regionConfig.zoom, isNational);
+
+            // [Fix] URL에 줌/좌표가 있으면 그 값을 우선 사용 (공유 URL 지원)
+            const hasValidUrlState = urlZoom && !isNaN(urlZoom) && !isNaN(urlLat) && !isNaN(urlLng);
+            const initialZoom = hasValidUrlState ? urlZoom : defaultZoom;
+            const initialCenter = hasValidUrlState
+                ? new naver.maps.LatLng(urlLat, urlLng)
+                : new naver.maps.LatLng(regionConfig.center[0], regionConfig.center[1]);
+
+            const map = new naver.maps.Map(mapRef.current, {
+                center: initialCenter,
+                zoom: initialZoom,
+                minZoom: 6,
+                maxZoom: 18,
+                zoomControl: false,
+                zoomControlOptions: {
+                    position: naver.maps.Position.TOP_RIGHT,
+                },
+                mapTypeControl: false,
+                mapTypeControlOptions: {
+                    position: naver.maps.Position.TOP_LEFT,
+                },
+                scaleControl: false,
+                // 성능 최적화 및 UX 개선 옵션
+                background: '#f5f5f5', // [UX] 흰색보다 약간 회색으로 변경 (눈에 덜 띔)
+                tileSpare: 5, // [UX] 화면 밖 타일 미리 로딩 (줌아웃 시 흰색 배경 방지)
+                tileTransition: true, // [UX] 타일 로딩 시 페이드 효과
+            });
+
+            mapInstanceRef.current = map;
+            setIsMapInitialized(true);
+
+            // [Fix] URL 파라미터로 초기화된 경우 플래그 설정 (centering effect에서 줌 오버라이드 방지)
+            if (hasValidUrlState) {
+                isInitialLoadFromUrlRef.current = true;
             }
 
             // [Fix] 지도 초기화 후 idle 이벤트 강제 트리거 - 클러스터 초기화 보장
@@ -2005,37 +2039,11 @@ const NaverMapView = memo(({
                 }
             }, 100);
 
-            // [URL 라우팅] 지도 이동 시 URL 동기화 (idle 이벤트)
-            naver.maps.Event.addListener(map, 'idle', () => {
-                const center = map.getCenter();
-                const zoom = map.getZoom();
+            // [URL 라우팅] 지도 이동 시 URL 동기화 비활성화
+            // 사용자가 직접 공유 버튼을 클릭할 때만 URL이 생성되도록 변경
+            // idle 이벤트에서 URL 동기화하면 공유 URL 접속 시 원치 않는 URL 변경이 발생함
+            // naver.maps.Event.addListener(map, 'idle', () => { ... });
 
-                if (center && !isNaN(zoom)) {
-                    const currentParams = new URLSearchParams(window.location.search);
-                    const currentZ = parseFloat(currentParams.get('z') || '0');
-                    const currentLat = parseFloat(currentParams.get('lat') || '0');
-                    const currentLng = parseFloat(currentParams.get('lng') || '0');
-
-                    const newZ = parseFloat(zoom.toFixed(2));
-                    const newLat = parseFloat(center.lat().toFixed(6));
-                    const newLng = parseFloat(center.lng().toFixed(6));
-
-                    // 값이 변경되었을 때만 업데이트 (미세한 떨림 방지)
-                    // 줌: 0.01 차이, 좌표: 0.000001 차이 (약 10cm)
-                    const isZoomChanged = Math.abs(currentZ - newZ) > 0.01;
-                    const isLatChanged = Math.abs(currentLat - newLat) > 0.000001;
-                    const isLngChanged = Math.abs(currentLng - newLng) > 0.000001;
-
-                    if (isZoomChanged || isLatChanged || isLngChanged) {
-                        const newParams = new URLSearchParams(window.location.search);
-                        newParams.set('z', newZ.toString());
-                        newParams.delete('c'); // 구 형식 제거
-                        newParams.set('lat', newLat.toString());
-                        newParams.set('lng', newLng.toString());
-                        window.history.replaceState({}, '', `?${newParams.toString()}`);
-                    }
-                }
-            });
         } catch (error) {
             console.error("네이버 지도 초기화 오류:", error);
             showMapToast("지도를 초기화하는 중 오류가 발생했습니다.", 'error');
@@ -2287,7 +2295,9 @@ const NaverMapView = memo(({
             <div
                 className="flex-1 h-full relative z-0"
                 onClick={() => {
-                    onPanelClick?.('map');
+                    // 지도 클릭 시 패널 닫기/모드 변경 등의 동작이 필요하다면 여기서 처리
+                    // 단, 드래그 시에는 발생하지 않아야 함.
+                    // onPanelClick?.('map');
                 }}
             >
                 {/* 지도 컨테이너 - 모바일 터치 성능 최적화 */}
