@@ -1,0 +1,89 @@
+[2026-01-13T19:50:26.528050+09:00] [INFO] ============================================================
+[2026-01-13T19:50:26.528308+09:00] [INFO] 🚀 [COLLECT-URLS] 파이프라인 시작
+[2026-01-13T19:50:26.528389+09:00] [INFO] ⏰ 시작 시간: 2026-01-13 19:50:26
+[2026-01-13T19:50:26.528459+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log
+[2026-01-13T19:50:26.528523+09:00] [INFO]    📄 text: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/text/26-01-13
+[2026-01-13T19:50:26.528589+09:00] [INFO]    📊 structured: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/structured/26-01-13
+[2026-01-13T19:50:26.528651+09:00] [INFO]    📋 report: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/report/26-01-13
+[2026-01-13T19:50:26.528715+09:00] [INFO] ============================================================
+[2026-01-13T19:50:26.528774+09:00] [INFO] ============================================================
+[2026-01-13T19:50:26.528833+09:00] [INFO] 🚀 [COLLECT-URLS] 파이프라인 시작
+[2026-01-13T19:50:26.528896+09:00] [INFO] ⏰ 시작 시간: 2026-01-13 19:50:26
+[2026-01-13T19:50:26.528957+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/report/26-01-13
+[2026-01-13T19:50:26.529030+09:00] [INFO] ============================================================
+[2026-01-13T19:50:26.529116+09:00] [INFO] ============================================================
+[2026-01-13T19:50:26.529203+09:00] [INFO]   YouTube 채널 동영상 URL 수집
+[2026-01-13T19:50:26.529285+09:00] [INFO] ============================================================
+[2026-01-13T19:50:26.530630+09:00] [INFO] 대상 채널: ['tzuyang', 'meatcreator']
+[2026-01-13T19:50:26.530702+09:00] [INFO] 
+[2026-01-13T19:50:26.530762+09:00] [INFO] --- tzuyang 처리 시작 ---
+[2026-01-13T19:50:26.533068+09:00] [INFO] 채널 처리: 쯔양 (tzuyang)
+[2026-01-13T19:50:26.533138+09:00] [INFO] 채널 ID: UCfpaSruWW3S4dibonKXENjA
+[2026-01-13T19:50:26.533300+09:00] [INFO] URL 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/data/tzuyang/urls.txt
+[2026-01-13T19:50:26.533426+09:00] [INFO] 기존 수집된 URL: 0개
+[2026-01-13T19:50:26.814520+09:00] [INFO] 채널: tzuyang쯔양
+[2026-01-13T19:50:26.814850+09:00] [INFO] 업로드 플레이리스트 ID: UUfpaSruWW3S4dibonKXENjA
+[2026-01-13T19:50:32.767352+09:00] [SUCCESS] 총 1007개 URL 수집 완료
+[2026-01-13T19:50:32.768355+09:00] [INFO] 신규 저장: 1007개, 스킵 (기존): 0개
+[2026-01-13T19:50:32.768524+09:00] [INFO] 
+[2026-01-13T19:50:32.768637+09:00] [INFO] --- meatcreator 처리 시작 ---
+[2026-01-13T19:50:32.771831+09:00] [INFO] 채널 처리: 정육왕 MeatCreator (meatcreator)
+[2026-01-13T19:50:32.771939+09:00] [INFO] 채널 ID: UCifMIDFkI1Cd8ISKwNLEyDA
+[2026-01-13T19:50:32.772021+09:00] [INFO] URL 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/data/meatcreator/urls.txt
+[2026-01-13T19:50:32.772244+09:00] [INFO] 기존 수집된 URL: 0개
+[2026-01-13T19:50:33.028603+09:00] [ERROR] 실행 중 오류 발생: 채널을 찾을 수 없습니다: UCifMIDFkI1Cd8ISKwNLEyDA
+[2026-01-13T19:50:33.028978+09:00] [INFO] ============================================================
+[2026-01-13T19:50:33.029233+09:00] [INFO] 🏁 [COLLECT-URLS] 파이프라인 종료
+[2026-01-13T19:50:33.029348+09:00] [INFO] ⏰ 종료 시간: 2026-01-13 19:50:33
+[2026-01-13T19:50:33.029435+09:00] [INFO] ⏱️ 소요 시간: 6.5초
+[2026-01-13T19:50:33.029592+09:00] [INFO] ============================================================
+[2026-01-13T19:50:33.030117+09:00] [INFO] 📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/report/26-01-13/collect-urls_195026.json
+[2026-01-13T19:52:40.471936+09:00] [INFO] ============================================================
+[2026-01-13T19:52:40.472425+09:00] [INFO] 🚀 [COLLECT-URLS] 파이프라인 시작
+[2026-01-13T19:52:40.472580+09:00] [INFO] ⏰ 시작 시간: 2026-01-13 19:52:40
+[2026-01-13T19:52:40.472751+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log
+[2026-01-13T19:52:40.472848+09:00] [INFO]    📄 text: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/text/26-01-13
+[2026-01-13T19:52:40.472928+09:00] [INFO]    📊 structured: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/structured/26-01-13
+[2026-01-13T19:52:40.472999+09:00] [INFO]    📋 report: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/report/26-01-13
+[2026-01-13T19:52:40.473066+09:00] [INFO] ============================================================
+[2026-01-13T19:52:40.473134+09:00] [INFO] ============================================================
+[2026-01-13T19:52:40.473204+09:00] [INFO] 🚀 [COLLECT-URLS] 파이프라인 시작
+[2026-01-13T19:52:40.473273+09:00] [INFO] ⏰ 시작 시간: 2026-01-13 19:52:40
+[2026-01-13T19:52:40.473335+09:00] [INFO] 📁 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/report/26-01-13
+[2026-01-13T19:52:40.473407+09:00] [INFO] ============================================================
+[2026-01-13T19:52:40.473492+09:00] [INFO] ============================================================
+[2026-01-13T19:52:40.473552+09:00] [INFO]   YouTube 채널 동영상 URL 수집
+[2026-01-13T19:52:40.473613+09:00] [INFO] ============================================================
+[2026-01-13T19:52:40.475080+09:00] [INFO] 대상 채널: ['tzuyang', 'meatcreator']
+[2026-01-13T19:52:40.475215+09:00] [INFO] 
+[2026-01-13T19:52:40.475537+09:00] [INFO] --- tzuyang 처리 시작 ---
+[2026-01-13T19:52:40.478772+09:00] [INFO] 채널 처리: 쯔양 (tzuyang)
+[2026-01-13T19:52:40.479101+09:00] [INFO] 채널 ID: UCfpaSruWW3S4dibonKXENjA
+[2026-01-13T19:52:40.479218+09:00] [INFO] URL 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/data/tzuyang/urls.txt
+[2026-01-13T19:52:40.479982+09:00] [INFO] 기존 수집된 URL: 1007개
+[2026-01-13T19:52:40.741429+09:00] [INFO] 채널: tzuyang쯔양
+[2026-01-13T19:52:40.741827+09:00] [INFO] 업로드 플레이리스트 ID: UUfpaSruWW3S4dibonKXENjA
+[2026-01-13T19:52:46.324289+09:00] [SUCCESS] 총 1007개 URL 수집 완료
+[2026-01-13T19:52:46.325004+09:00] [INFO] 신규 저장: 0개, 스킵 (기존): 1007개
+[2026-01-13T19:52:46.325429+09:00] [INFO] 
+[2026-01-13T19:52:46.325675+09:00] [INFO] --- meatcreator 처리 시작 ---
+[2026-01-13T19:52:46.331599+09:00] [INFO] 채널 처리: 정육왕 MeatCreator (meatcreator)
+[2026-01-13T19:52:46.332163+09:00] [INFO] 채널 ID: UC1oXmhvYHVI2bApphh3IzuQ
+[2026-01-13T19:52:46.332449+09:00] [INFO] URL 파일: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/data/meatcreator/urls.txt
+[2026-01-13T19:52:46.332713+09:00] [INFO] 기존 수집된 URL: 0개
+[2026-01-13T19:52:46.527488+09:00] [INFO] 채널: 정육왕 MeatCreator
+[2026-01-13T19:52:46.527948+09:00] [INFO] 업로드 플레이리스트 ID: UU1oXmhvYHVI2bApphh3IzuQ
+[2026-01-13T19:52:55.578959+09:00] [SUCCESS] 총 1046개 URL 수집 완료
+[2026-01-13T19:52:55.579902+09:00] [INFO] 신규 저장: 1046개, 스킵 (기존): 0개
+[2026-01-13T19:52:55.580064+09:00] [INFO] 
+[2026-01-13T19:52:55.580162+09:00] [INFO] ============================================================
+[2026-01-13T19:52:55.580254+09:00] [SUCCESS] 모든 채널 처리 완료
+[2026-01-13T19:52:55.580333+09:00] [INFO] ============================================================
+[2026-01-13T19:52:55.580404+09:00] [INFO]   tzuyang: 신규 0개 / 전체 1007개
+[2026-01-13T19:52:55.580477+09:00] [INFO]   meatcreator: 신규 1046개 / 전체 1046개
+[2026-01-13T19:52:55.580591+09:00] [INFO] ============================================================
+[2026-01-13T19:52:55.580660+09:00] [INFO] 🏁 [COLLECT-URLS] 파이프라인 종료
+[2026-01-13T19:52:55.580743+09:00] [INFO] ⏰ 종료 시간: 2026-01-13 19:52:55
+[2026-01-13T19:52:55.580858+09:00] [INFO] ⏱️ 소요 시간: 15.1초
+[2026-01-13T19:52:55.580924+09:00] [INFO] ============================================================
+[2026-01-13T19:52:55.581296+09:00] [INFO] 📝 JSON 로그 저장: /Users/byeon-ujung/Desktop/programming/tzudong_pjt/tzudong/backend/restaurant-crawling-test/log/report/26-01-13/collect-urls_195240.json

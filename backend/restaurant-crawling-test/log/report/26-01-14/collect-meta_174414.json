@@ -1,0 +1,25 @@
+{
+  "phase": "collect-meta",
+  "started_at": "2026-01-14 17:44:14",
+  "ended_at": "2026-01-14 17:44:15",
+  "duration_seconds": 1.93,
+  "duration_formatted": "1.9초",
+  "statistics": {},
+  "timers": {
+    "youtube_api_video": {
+      "count": 4,
+      "total_seconds": 0.64,
+      "avg_seconds": 0.159,
+      "formatted": "0.6초"
+    },
+    "openai_api_call": {
+      "count": 1,
+      "total_seconds": 1.27,
+      "avg_seconds": 1.266,
+      "formatted": "1.3초"
+    }
+  },
+  "success_count": 1,
+  "error_count": 0,
+  "skip_count": 0
+}
