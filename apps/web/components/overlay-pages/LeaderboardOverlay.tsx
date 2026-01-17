@@ -31,13 +31,13 @@ export default function LeaderboardOverlay({ onClose, onOpenUserProfile }: Leade
     const myRank = currentUser ? leaderboardData.find((u: LeaderboardUser) => u.id === currentUser.id)?.rank : null;
 
     useEffect(() => {
-        if (currentUser && userItemRef.current) {
+        if (!isLoading && currentUser && leaderboardData.length > 0) {
             const timer = setTimeout(() => {
                 userItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 500);
+            }, 300);
             return () => clearTimeout(timer);
         }
-    }, [currentUser, leaderboardData]);
+    }, [isLoading, currentUser, leaderboardData]);
 
     if (isLoading) return <GlobalLoader message="랭킹 데이터를 불러오는 중..." />;
 
