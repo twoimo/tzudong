@@ -1081,7 +1081,8 @@ export default function StampPage() {
                         </div>
 
                         {/* 콘텐츠 영역 (Content Area) */}
-                        <div className="flex-1 min-h-0 p-6 bg-background">
+                        {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
+                        <div className="flex-1 min-h-0 px-6 pt-6 pb-[calc(var(--mobile-bottom-nav-height,60px)+1.5rem)] md:pb-6 bg-background">
                             {viewMode === 'grid' ? (
                                 /* 그리드 뷰 (Grid View) */
                                 <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
