@@ -37,9 +37,9 @@ function FeedPageContent() {
     if (typeof window !== 'undefined' && window.innerWidth > 1024) return null;
 
     return (
-        <main className="h-[100dvh] w-full bg-background overflow-hidden">
+        <div className="h-full w-full bg-background overflow-hidden">
             <FeedContent variant="page" />
-        </main>
+        </div>
     );
 }
 
