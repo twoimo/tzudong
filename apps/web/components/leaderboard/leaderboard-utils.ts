@@ -8,6 +8,8 @@ export interface LeaderboardUser {
     rank: number;
     verifiedReviewCount: number;
     totalLikes: number;
+    avgLikesPerReview: number;
+    qualityScore: number;
 }
 
 export interface UserTier {
@@ -47,11 +49,11 @@ export const getRankIconElement = (rank: number) => {
 };
 
 
-export const getUserTier = (reviewCount: number): UserTier => {
-    if (reviewCount >= 100) return { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" };
-    if (reviewCount >= 50) return { name: "💎 다이아몬드", color: "text-blue-600", bgColor: "bg-blue-50" };
-    if (reviewCount >= 25) return { name: "🏆 골드", color: "text-yellow-600", bgColor: "bg-yellow-50" };
-    if (reviewCount >= 10) return { name: "🥈 실버", color: "text-muted-foreground", bgColor: "bg-muted" };
-    if (reviewCount >= 5) return { name: "🥉 브론즈", color: "text-amber-600", bgColor: "bg-amber-50" };
+export const getUserTier = (qualityScore: number): UserTier => {
+    if (qualityScore >= 150) return { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" };
+    if (qualityScore >= 75) return { name: "💎 다이아몬드", color: "text-blue-600", bgColor: "bg-blue-50" };
+    if (qualityScore >= 35) return { name: "🏆 골드", color: "text-yellow-600", bgColor: "bg-yellow-50" };
+    if (qualityScore >= 15) return { name: "🥈 실버", color: "text-muted-foreground", bgColor: "bg-muted" };
+    if (qualityScore >= 7) return { name: "🥉 브론즈", color: "text-amber-600", bgColor: "bg-amber-50" };
     return { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
 };

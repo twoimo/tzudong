@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { startOfMonth, formatISO } from "date-fns";
 
 export interface LeaderboardUser {
     id: string;
@@ -8,11 +9,13 @@ export interface LeaderboardUser {
     reviewCount: number;
     verifiedReviewCount: number;
     totalLikes: number;
+    avgLikesPerReview: number;
+    qualityScore: number;
 }
 
-export const useLeaderboard = () => {
+export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
     return useQuery({
-        queryKey: ['leaderboard-all-users'],
+        queryKey: ['leaderboard-users', period],
         queryFn: async () => {
             try {
                 // [1단계] 모든 프로필 조회
@@ -33,10 +36,19 @@ export const useLeaderboard = () => {
 
                 // [2단계] 해당 사용자들의 모든 리뷰 조회
                 const userIds = profilesData.map((profile: any) => profile.user_id);
-                const { data: allReviewsData, error: allReviewsError } = await (supabase
-                    .from('reviews') as any)
-                    .select('id, user_id, is_verified')
+
+                let reviewsQuery = supabase
+                    .from('reviews')
+                    .select('id, user_id, is_verified, created_at')
                     .in('user_id', userIds);
+
+                // 월간 필터 적용
+                if (period === 'monthly') {
+                    const startOfMonthDate = startOfMonth(new Date());
+                    reviewsQuery = reviewsQuery.gte('created_at', formatISO(startOfMonthDate));
+                }
+
+                const { data: allReviewsData, error: allReviewsError } = await reviewsQuery;
 
                 if (allReviewsError) {
                     console.warn('전체 리뷰 데이터 조회 실패:', allReviewsError.message);
@@ -90,11 +102,19 @@ export const useLeaderboard = () => {
                     });
                 }
 
-                // [4단계] 각 사용자별 통계 계산
+                // [4단계] 각 사용자별 통계 계산 및 품질 점수 산출
                 const users = profilesData.map((profile: any) => {
                     const reviewCount = reviewCountMap.get(profile.user_id) || 0;
                     const verifiedReviewCount = verifiedReviewCountMap.get(profile.user_id) || 0;
                     const totalLikes = totalLikesMap.get(profile.user_id) || 0;
+
+                    // 평균 좋아요 계산 (0으로 나누기 방지)
+                    const avgLikesPerReview = verifiedReviewCount > 0
+                        ? totalLikes / verifiedReviewCount
+                        : 0;
+
+                    // 품질 점수: 리뷰수 × (1 + 평균좋아요 × 0.1)
+                    const qualityScore = verifiedReviewCount * (1 + avgLikesPerReview * 0.1);
 
                     return {
                         id: profile.user_id,
@@ -102,12 +122,14 @@ export const useLeaderboard = () => {
                         reviewCount,
                         verifiedReviewCount,
                         totalLikes,
+                        avgLikesPerReview: Math.round(avgLikesPerReview * 10) / 10,
+                        qualityScore: Math.round(qualityScore * 10) / 10,
                     };
                 });
 
-                // 승인된 리뷰 수 기준 내림차순 정렬 및 순위 부여
+                // 품질 점수 기준 내림차순 정렬 및 순위 부여
                 return users
-                    .sort((a: any, b: any) => b.verifiedReviewCount - a.verifiedReviewCount)
+                    .sort((a: any, b: any) => b.qualityScore - a.qualityScore)
                     .map((user: any, index: number) => ({
                         ...user,
                         rank: index + 1,
