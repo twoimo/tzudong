@@ -166,6 +166,7 @@ def migrate_meta(backup_dir: Path, output_dir: Path, channel: str = "tzuyang"):
     """
     meta 데이터 마이그레이션
     results_with_meta.jsonl에서 youtube_meta 추출 → meta/{video_id}.jsonl 생성
+    collected_at은 transcripts.json에서 가져옴
     """
     crawling_backup = backup_dir / "geminiCLI-restaurant-crawling" / "data"
     output_meta_dir = output_dir / "restaurant-crawling" / "data" / channel / "meta"
@@ -182,6 +183,20 @@ def migrate_meta(backup_dir: Path, output_dir: Path, channel: str = "tzuyang"):
             continue
 
         print(f"\n📂 처리 중: {date_folder.name}")
+
+        # transcripts.json에서 video_id별 collected_at 매핑 생성
+        collected_at_map = {}
+        transcripts_file = date_folder / "tzuyang_restaurant_transcripts.json"
+        if transcripts_file.exists():
+            try:
+                with open(transcripts_file, "r", encoding="utf-8") as tf:
+                    transcripts = json.load(tf)
+                    for item in transcripts:
+                        vid = extract_video_id(item.get("youtube_link"))
+                        if vid and item.get("collected_at"):
+                            collected_at_map[vid] = item.get("collected_at")
+            except Exception as e:
+                print(f"  ⚠️ transcripts.json 읽기 오류: {e}")
 
         with open(input_file, "r", encoding="utf-8") as f:
             for line in f:
@@ -201,7 +216,7 @@ def migrate_meta(backup_dir: Path, output_dir: Path, channel: str = "tzuyang"):
                         continue
 
                     # meta 데이터 구성 (recollect_id: 0 = 마이그레이션)
-                    # 현재 코드와 동일한 구조 (video_id 제거)
+                    # collected_at은 transcripts.json에서 가져옴
                     meta_data = {
                         "youtube_link": data.get("youtube_link"),
                         "channel_name": channel,
@@ -219,7 +234,7 @@ def migrate_meta(backup_dir: Path, output_dir: Path, channel: str = "tzuyang"):
                         },
                         "recollect_id": 0,
                         "recollect_reason": "migration",
-                        "collected_at": None,
+                        "collected_at": collected_at_map.get(video_id),
                         "ads_info": youtube_meta.get("ads_info"),
                     }
 
