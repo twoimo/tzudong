@@ -27,7 +27,7 @@
     {
       "origin_name": "음식점명",
       "youtuber_review": "리뷰 요약" | null,
-      "category": "카테고리 (필수 카테고리 중 하나)",
+      "category": "필수 카테고리 중 하나로 매핑한 카테고리",
       "reasoning_basis": 추론 근거
     }, ...
   ]
