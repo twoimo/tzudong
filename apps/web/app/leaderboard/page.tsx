@@ -37,12 +37,13 @@ export default function LeaderboardPage() {
 
 
     useEffect(() => {
-        if (currentUser && userItemRef.current) {
-            setTimeout(() => {
+        if (!isLoading && currentUser && leaderboardData.length > 0) {
+            const timer = setTimeout(() => {
                 userItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 500);
+            }, 300);
+            return () => clearTimeout(timer);
         }
-    }, [currentUser, leaderboardData]);
+    }, [isLoading, currentUser, leaderboardData]);
 
     if (!isMounted) return null;
     if (typeof window !== 'undefined' && window.innerWidth > 1024) return null;
