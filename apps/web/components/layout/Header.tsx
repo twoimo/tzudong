@@ -388,21 +388,6 @@ const HeaderComponent = ({ onToggleSidebar, isLoggedIn, isAuthLoading = true, on
         </div>
       )}
 
-      {/* 로고 */}
-      <Link href="/" className={cn(
-        "relative z-10 flex-shrink-0 flex items-center mr-2 transition-all duration-300",
-        isHydrated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-1"
-      )}>
-        <NextImage
-          src="/main_logo.png"
-          alt="Tzudong"
-          width={120}
-          height={40}
-          className="h-7 w-auto md:h-9 object-contain"
-          priority
-        />
-      </Link>
-
 
 
       {/* 중앙: 공지 배너 - 남은 공간 최대 활용, 내용 길이와 무관하게 고정 */}
