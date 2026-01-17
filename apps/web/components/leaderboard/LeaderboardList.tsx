@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Stamp, Trophy } from 'lucide-react';
+import { Stamp, Trophy, Sparkles } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -26,7 +27,7 @@ export function LeaderboardList({
             <div className="divide-y divide-border">
                 {users.map((user, index) => {
                     const isCurrentUser = currentUserId === user.id;
-                    const tier = getUserTier(user.verifiedReviewCount);
+                    const tier = getUserTier(user.qualityScore);
 
                     return (
                         <div
@@ -71,6 +72,12 @@ export function LeaderboardList({
 
                             {/* Stats */}
                             <div className="flex items-center gap-4 ml-auto shrink-0">
+                                <div className="flex items-center gap-1">
+                                    <Sparkles className="h-3.5 w-3.5 text-amber-500 fill-amber-100" />
+                                    <span className="font-bold text-sm text-amber-600">
+                                        {user.qualityScore ?? 0}
+                                    </span>
+                                </div>
                                 <div className="flex items-center gap-1">
                                     <Stamp className="h-3.5 w-3.5 text-muted-foreground" />
                                     <span className="font-bold text-sm">
