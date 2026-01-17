@@ -427,7 +427,8 @@ export default function FeedContent({
                 </div>
 
                 {/* 피드 목록 */}
-                <div className="flex-1 overflow-y-auto pb-8">
+                {/* [FIX] 모바일 하단 네비게이션 높이 고려하여 패딩 증가 */}
+                <div className="flex-1 overflow-y-auto pb-[calc(var(--mobile-bottom-nav-height,60px)+2rem)] md:pb-8">
                     {allReviews.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-muted-foreground">
                             <p>아직 승인된 리뷰가 없습니다.</p>
