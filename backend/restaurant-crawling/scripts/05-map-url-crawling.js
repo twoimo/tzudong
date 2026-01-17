@@ -85,7 +85,7 @@ async function ncpGeocode(address) {
     }
 
     try {
-        const url = `https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`;
+        const url = `https://maps.apigw.ntruss.com/map-geocode/v2/geocode?query=${encodeURIComponent(address)}`;
         const response = await fetch(url, {
             headers: {
                 'X-NCP-APIGW-API-KEY-ID': keyId,
@@ -672,7 +672,7 @@ ${placeNames.join('\n')}
     {
       "naver_name": "음식점명 (위 목록에서 그대로 복사)",
       "youtuber_review": "리뷰 요약",
-      "category": "카테고리 (위 목록 중 하나)",
+      "category": "필수 카테고리 중 하나로 매핑한 카테고리",
       "reasoning_basis": "추론 근거(해당 식당에 대한 리뷰, 카테고리 정리한 근거) 작성(자막 타임스탬프 포함 권장)."
     }, ...
   ]
@@ -689,7 +689,7 @@ ${placeNames.join('\n')}
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const model = process.env.PRIMARY_MODEL || 'gemini-2.5-flash';
-            execSync(`gemini -m ${model} -f "${tempPromptPath}" --output-format json > "${tempResponsePath}"`, {
+            execSync(`gemini -m ${model} --output-format json < "${tempPromptPath}" > "${tempResponsePath}"`, {
                 timeout: 120000,
                 encoding: 'utf-8'
             });
@@ -924,6 +924,11 @@ async function main() {
 
             // Gemini CLI로 youtuber_review 추출
             const reviews = await extractYoutuberReview(videoId, metaData, transcript, naverPlaces);
+
+            if (reviews.length === 0) {
+                log('warning', `[${videoId}] 리뷰 추출 실패 또는 결과 없음 (Gemini CLI 오류 가능성) - 저장 건너뜀`);
+                continue;
+            }
             
             // 리뷰 매칭 (naver_name으로만 매칭)
             for (const place of naverPlaces) {
@@ -937,12 +942,23 @@ async function main() {
                 }
             }
 
+
+            // 키 순서 재정렬 (origin_name -> naver_name -> 나머지)
+            const orderedPlaces = naverPlaces.map(p => {
+                const { origin_name, naver_name, ...rest } = p;
+                return {
+                    origin_name,
+                    naver_name,
+                    ...rest
+                };
+            });
+
             // 저장
             const record = {
                 youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
+                channel_name: channelName,
                 recollect_version: recollectVersion,
-                restaurants: naverPlaces,
-                channel_name: channelName
+                restaurants: orderedPlaces
             };
 
             fs.appendFileSync(mapUrlCrawlingFile, JSON.stringify(record, null, 0) + '\n');

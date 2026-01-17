@@ -672,7 +672,7 @@ ${placeNames.join('\n')}
     {
       "naver_name": "음식점명 (위 목록에서 그대로 복사)",
       "youtuber_review": "리뷰 요약",
-      "category": "카테고리 (위 목록 중 하나)",
+      "category": "필수 카테고리 중 하나로 매핑한 카테고리",
       "reasoning_basis": "추론 근거(해당 식당에 대한 리뷰, 카테고리 정리한 근거) 작성(자막 타임스탬프 포함 권장)."
     }, ...
   ]
