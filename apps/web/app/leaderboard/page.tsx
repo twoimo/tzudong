@@ -106,28 +106,17 @@ export default function LeaderboardPage() {
                             맛집 리뷰를 작성하고 랭킹을 올려보세요!
                         </p>
                     </div>
-                    <div className="flex gap-8 text-right">
-                        {currentUser && (
-                            <div>
-                                <div className="text-sm font-medium text-muted-foreground">
-                                    나의 순위
-                                </div>
-                                <div className="text-2xl font-bold text-primary">
-                                    {myRank ? `${myRank}위` : "-"}
-                                </div>
-                            </div>
-                        )}
+                    <div>
+                        <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-auto">
+                            <TabsList className="h-8">
+                                <TabsTrigger value="all" className="text-xs px-3">전체</TabsTrigger>
+                                <TabsTrigger value="monthly" className="text-xs px-3">월간</TabsTrigger>
+                            </TabsList>
+                        </Tabs>
                     </div>
                 </div>
 
-                <div className="mt-4">
-                    <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="all">전체 랭킹</TabsTrigger>
-                            <TabsTrigger value="monthly">월간 랭킹</TabsTrigger>
-                        </TabsList>
-                    </Tabs>
-                </div>
+
             </div>
 
             {/* Compact List */}
