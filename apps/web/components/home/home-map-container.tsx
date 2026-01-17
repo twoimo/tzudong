@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect, useMemo } from 'react';
+import { Suspense, lazy, useState, useCallback, memo, useRef, useEffect } from 'react';
 import { Restaurant, Region } from '@/types/restaurant';
 import { FilterState } from '@/components/filters/FilterPanel';
 import { RestaurantDetailPanel } from "@/components/restaurant/RestaurantDetailPanel";
@@ -39,6 +39,14 @@ interface HomeMapContainerProps {
     isPanelCollapsed?: boolean; // 패널 접기 상태
 }
 
+// ========== [PERFORMANCE] 상수 호이스팅 - 컴포넌트 외부로 이동하여 리렌더링 시 재선언 방지 ==========
+const INITIAL_HEIGHT = 65;
+const HEADER_OFFSET = 80; // 헤더(64px) + 여유(16px)
+const MIN_DRAG_HEIGHT = 5;
+const MIN_SHEET_HEIGHT = 20;
+const CLOSE_THRESHOLD = 15;
+const SWIPE_VELOCITY_THRESHOLD = 0.5;
+
 // [CSR] 지도 렌더링 및 그리드/단일 모드 처리 - 브라우저 전용 지도 라이브러리 사용
 function HomeMapContainerComponent({
     mapMode,
@@ -66,14 +74,6 @@ function HomeMapContainerComponent({
 }: HomeMapContainerProps) {
     const { isMobileOrTablet, isDesktop } = useDeviceType();
 
-    // ========== [PERFORMANCE] 상수 및 Ref 기반 상태 관리 ==========
-    const INITIAL_HEIGHT = 65;
-    const HEADER_OFFSET = 80; // 헤더(64px) + 여유(16px)
-    const MIN_DRAG_HEIGHT = 5;
-    const MIN_SHEET_HEIGHT = 20;
-    const CLOSE_THRESHOLD = 15;
-    const SWIPE_VELOCITY_THRESHOLD = 0.5;
-
     // [PERFORMANCE] 드래그 중 리렌더링 제거 - Ref로 관리
     const viewportHeightRef = useRef(typeof window !== 'undefined'
         ? (window.visualViewport?.height ?? window.innerHeight)
@@ -91,12 +91,6 @@ function HomeMapContainerComponent({
     // [PERFORMANCE] 렌더링에 필요한 상태만 useState로 관리
     const [sheetHeight, setSheetHeight] = useState(INITIAL_HEIGHT);
     const [isDragging, setIsDragging] = useState(false);
-
-    // [PERFORMANCE] 최대 높이 계산 - useMemo로 캐싱
-    const maxHeightPercent = useMemo(() => {
-        const vh = viewportHeightRef.current;
-        return ((vh - HEADER_OFFSET) / vh) * 100;
-    }, [sheetHeight]); // sheetHeight 변경 시에만 재계산 (실제 필요 시)
 
     // [PERFORMANCE] visualViewport resize 스로틀링 (16ms ≈ 60fps)
     useEffect(() => {
@@ -274,6 +268,19 @@ function HomeMapContainerComponent({
         };
     }, [isPanelOpen, isMobileOrTablet, handleDragMoveCore, handleDragEnd]);
 
+    // [PERFORMANCE] 메모이제이션된 핸들러 - 자식 컴포넌트 리렌더링 방지
+    const handleAdminEditRestaurant = useCallback(() => {
+        if (onAdminEditRestaurant && panelRestaurant) {
+            onAdminEditRestaurant(panelRestaurant);
+        }
+    }, [onAdminEditRestaurant, panelRestaurant]);
+
+    const handleRequestEditRestaurant = useCallback(() => {
+        if (panelRestaurant) {
+            onRequestEditRestaurant(panelRestaurant);
+        }
+    }, [onRequestEditRestaurant, panelRestaurant]);
+
     return (
         <div className="relative w-full h-full">
             {mapMode === 'domestic' ? (
@@ -344,12 +351,8 @@ function HomeMapContainerComponent({
                                     restaurant={panelRestaurant}
                                     onClose={onPanelClose}
                                     onWriteReview={onReviewModalOpen}
-                                    onEditRestaurant={onAdminEditRestaurant ? () => {
-                                        onAdminEditRestaurant(panelRestaurant);
-                                    } : undefined}
-                                    onRequestEditRestaurant={() => {
-                                        onRequestEditRestaurant(panelRestaurant);
-                                    }}
+                                    onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
+                                    onRequestEditRestaurant={handleRequestEditRestaurant}
                                     onToggleCollapse={onTogglePanelCollapse}
                                     isPanelOpen={isPanelOpen}
                                 />
@@ -414,12 +417,8 @@ function HomeMapContainerComponent({
                                         restaurant={panelRestaurant}
                                         onClose={onPanelClose}
                                         onWriteReview={onReviewModalOpen}
-                                        onEditRestaurant={onAdminEditRestaurant ? () => {
-                                            onAdminEditRestaurant(panelRestaurant);
-                                        } : undefined}
-                                        onRequestEditRestaurant={() => {
-                                            onRequestEditRestaurant(panelRestaurant);
-                                        }}
+                                        onEditRestaurant={onAdminEditRestaurant ? handleAdminEditRestaurant : undefined}
+                                        onRequestEditRestaurant={handleRequestEditRestaurant}
                                         onToggleCollapse={onTogglePanelCollapse}
                                         isPanelOpen={isPanelOpen}
                                         isMobile={true}
