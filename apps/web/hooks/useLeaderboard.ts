@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfMonth, formatISO } from "date-fns";
 
@@ -176,5 +176,6 @@ export const useLeaderboard = (period: 'all' | 'monthly' = 'all') => {
             }
         },
         staleTime: 0, // 실시간 업데이트를 위해 0으로 설정
+        placeholderData: keepPreviousData,
     });
 };
