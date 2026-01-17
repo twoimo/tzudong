@@ -1202,7 +1202,7 @@ export default function StampPage() {
                     onClose={handleCloseRightPanel}
                     defaultHeight={100} // 최대로 열어서 헤더 아래까지 채움
                     headerOffset={80}   // 헤더(64px) + 여백(16px) 공간 확보
-                    bottomNavOffset={56} // 하단 네비게이션(56px) 공간 확보
+                    bottomNavOffset={64} // 하단 네비게이션(56px) 공간 확보
                     disableContentScroll={true} // 내부 패널 스크롤 사용
                     showCloseButton={false}
                     className="p-0"
