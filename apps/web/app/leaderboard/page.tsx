@@ -12,11 +12,14 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { LeaderboardUser } from "@/components/leaderboard/leaderboard-utils";
 
 export default function LeaderboardPage() {
     const { user: currentUser } = useAuth();
-    const { data: leaderboardData = [], isLoading } = useLeaderboard();
+    const [period, setPeriod] = useState<'all' | 'monthly'>('all');
+    const { data: leaderboardData = [], isLoading } = useLeaderboard(period);
     const userItemRef = useRef<HTMLDivElement>(null);
     const router = useRouter();
     const [isMounted, setIsMounted] = useState(false);
@@ -29,8 +32,8 @@ export default function LeaderboardPage() {
         }
     }, [router]);
 
-    const sortedLeaderboard = [...leaderboardData].sort((a, b) => b.verifiedReviewCount - a.verifiedReviewCount);
-    const myRank = currentUser ? sortedLeaderboard.find((u) => u.id === currentUser.id)?.rank : null;
+    // 이미 useLeaderboard에서 qualityScore 기준으로 정렬됨
+    const myRank = currentUser ? leaderboardData.find((u: LeaderboardUser) => u.id === currentUser.id)?.rank : null;
 
 
     useEffect(() => {
@@ -39,7 +42,7 @@ export default function LeaderboardPage() {
                 userItemRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }, 500);
         }
-    }, [currentUser, sortedLeaderboard]);
+    }, [currentUser, leaderboardData]);
 
     if (!isMounted) return null;
     if (typeof window !== 'undefined' && window.innerWidth > 1024) return null;
@@ -70,17 +73,30 @@ export default function LeaderboardPage() {
                                             variant="ghost"
                                             size="icon"
                                             className="h-6 w-6 rounded-full hover:bg-muted"
-                                            title="랭킹 산정 기준 보기"
+                                            title="랭킹 및 티어 산정 기준 보기"
                                         >
                                             <Info className="h-4 w-4 text-muted-foreground" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-auto max-w-sm">
-                                        <div className="space-y-1">
-                                            <h4 className="font-medium text-sm whitespace-nowrap">📊 랭킹 산정 기준</h4>
-                                            <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                                인증된 리뷰(도장) 수가 많을수록 높은 순위를 받습니다.
-                                            </p>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <h4 className="font-medium text-sm">📊 랭킹 산정 기준</h4>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    품질 점수 = 리뷰수 × (1 + 평균좋아요 × 0.1)
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <h4 className="font-medium text-sm">🏅 티어 산정 기준</h4>
+                                                <ul className="text-xs text-muted-foreground mt-1 space-y-0.5">
+                                                    <li>👑 마스터: 150점 이상</li>
+                                                    <li>💎 다이아몬드: 75점 이상</li>
+                                                    <li>🏆 골드: 35점 이상</li>
+                                                    <li>🥈 실버: 15점 이상</li>
+                                                    <li>🥉 브론즈: 7점 이상</li>
+                                                    <li>🌱 뉴비: 7점 미만</li>
+                                                </ul>
+                                            </div>
                                         </div>
                                     </PopoverContent>
                                 </Popover>
@@ -103,12 +119,21 @@ export default function LeaderboardPage() {
                         )}
                     </div>
                 </div>
+
+                <div className="mt-4">
+                    <Tabs value={period} onValueChange={(v) => setPeriod(v as 'all' | 'monthly')} className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="all">전체 랭킹</TabsTrigger>
+                            <TabsTrigger value="monthly">월간 랭킹</TabsTrigger>
+                        </TabsList>
+                    </Tabs>
+                </div>
             </div>
 
             {/* Compact List */}
             <div className="flex-1 overflow-hidden">
                 <LeaderboardList
-                    users={sortedLeaderboard}
+                    users={leaderboardData}
                     currentUserId={currentUser?.id}
                     userItemRef={userItemRef}
                 />

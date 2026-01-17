@@ -22,6 +22,8 @@ export interface UserProfile {
     reviewCount: number;
     verifiedReviewCount: number;
     totalLikes: number;
+    avgLikesPerReview: number;
+    qualityScore: number;
     tier: TierInfo;
 }
 
@@ -57,13 +59,13 @@ export interface UserStamp {
 // Constants
 // ============================================================================
 
-/** 티어 임계값 및 정보 (내림차순 정렬 - 가장 높은 티어부터) */
+/** 티어 임계값 및 정보 (품질 점수 기준, 내림차순 정렬) */
 const TIER_THRESHOLDS: ReadonlyArray<{ threshold: number; tier: TierInfo }> = [
-    { threshold: 100, tier: { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" } },
-    { threshold: 50, tier: { name: "💎 다이아몬드", color: "text-blue-600", bgColor: "bg-blue-50" } },
-    { threshold: 25, tier: { name: "🏆 골드", color: "text-yellow-600", bgColor: "bg-yellow-50" } },
-    { threshold: 10, tier: { name: "🥈 실버", color: "text-gray-600", bgColor: "bg-gray-50" } },
-    { threshold: 5, tier: { name: "🥉 브론즈", color: "text-amber-600", bgColor: "bg-amber-50" } },
+    { threshold: 150, tier: { name: "👑 마스터", color: "text-purple-600", bgColor: "bg-purple-50" } },
+    { threshold: 75, tier: { name: "💎 다이아몬드", color: "text-blue-600", bgColor: "bg-blue-50" } },
+    { threshold: 35, tier: { name: "🏆 골드", color: "text-yellow-600", bgColor: "bg-yellow-50" } },
+    { threshold: 15, tier: { name: "🥈 실버", color: "text-gray-600", bgColor: "bg-gray-50" } },
+    { threshold: 7, tier: { name: "🥉 브론즈", color: "text-amber-600", bgColor: "bg-amber-50" } },
 ] as const;
 
 const DEFAULT_TIER: TierInfo = { name: "🌱 뉴비", color: "text-green-600", bgColor: "bg-green-50" };
@@ -76,10 +78,10 @@ const QUERY_GC_TIME = 1000 * 60 * 10; // 10분
 // Utility Functions
 // ============================================================================
 
-/** 티어 계산 함수 - 이진 탐색 최적화 */
-export function getUserTier(reviewCount: number): TierInfo {
+/** 티어 계산 함수 - 품질 점수 기준 */
+export function getUserTier(qualityScore: number): TierInfo {
     for (const { threshold, tier } of TIER_THRESHOLDS) {
-        if (reviewCount >= threshold) return tier;
+        if (qualityScore >= threshold) return tier;
     }
     return DEFAULT_TIER;
 }
@@ -188,14 +190,24 @@ export function useUserProfile(userId: string) {
                 totalLikes = count ?? 0;
             }
 
+            // 품질 점수 계산
+            const avgLikesPerReview = verifiedReviewCount > 0
+                ? totalLikes / verifiedReviewCount
+                : 0;
+            const qualityScore = Math.round(
+                verifiedReviewCount * (1 + avgLikesPerReview * 0.1) * 10
+            ) / 10;
+
             return {
                 userId: typedProfile.user_id,
                 nickname: typedProfile.nickname,
                 avatarUrl: typedProfile.avatar_url || undefined,
-                reviewCount, // 전체 리뷰 수
-                verifiedReviewCount, // 인증된 리뷰 수 (도장)
+                reviewCount,
+                verifiedReviewCount,
                 totalLikes,
-                tier: getUserTier(verifiedReviewCount),
+                avgLikesPerReview: Math.round(avgLikesPerReview * 10) / 10,
+                qualityScore,
+                tier: getUserTier(qualityScore),
             };
         },
         enabled: !!userId,
