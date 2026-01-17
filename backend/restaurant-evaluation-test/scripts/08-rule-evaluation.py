@@ -238,15 +238,32 @@ def ncp_geocode_addresses(addr: str) -> Optional[List[Dict[str, Any]]]:
 # ========= 평가 로직 (기존 backup 그대로 + naver_name 추가) =========
 def evaluate_category_validity(
     restaurants: List[Dict[str, Any]],
-) -> List[Dict[str, Any]]:
-    """카테고리 유효성 평가"""
+    location_match_results: List[Dict[str, Any]],
+) -> tuple:
+    """카테고리 유효성 평가
+    location_match_TF 결과에서 naver_name을 가져와서 name 필드에 사용
+    Returns: (category_validity_TF list, evaluation_name_source dict)
+    """
+    # origin_name -> naver_name 매핑 생성
+    naver_name_map = {}
+    for loc_item in location_match_results:
+        origin_name = loc_item.get("origin_name")
+        naver_name = loc_item.get("naver_name")
+        if origin_name:
+            naver_name_map[origin_name] = naver_name
+
     results = []
+    evaluation_name_source = {}
     for restaurant in restaurants:
-        name = _norm_space(str(restaurant.get("origin_name", "")))
+        origin_name = _norm_space(str(restaurant.get("origin_name", "")))
+        # name: naver_name 있으면 naver_name, 없으면 origin_name
+        name = naver_name_map.get(origin_name) or origin_name
+        name_source = "naver_name" if naver_name_map.get(origin_name) else "origin_name"
         category = restaurant.get("category")
         is_valid = category is not None and category in VALID_CATEGORIES
-        results.append({"origin_name": name, "eval_value": is_valid})
-    return results
+        results.append({"name": name, "eval_value": is_valid})
+        evaluation_name_source[origin_name] = name_source
+    return results, evaluation_name_source
 
 
 def evaluate_one_restaurant(rec: Dict[str, Any]) -> Dict[str, Any]:
@@ -411,10 +428,7 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
     evaluation_target = obj.get("evaluation_target", {})
     restaurants = obj.get("restaurants", [])
 
-    # 1. 카테고리 유효성 평가
-    category_eval_list = evaluate_category_validity(restaurants)
-
-    # 2. 위치 정합성 평가 (네이버 API)
+    # 1. 위치 정합성 평가 (네이버 API) - 먼저 실행하여 naver_name 획득
     location_eval_list: List[Dict[str, Any]] = []
     for r in restaurants:
         # evaluation_target[name] == True인 것만 평가
@@ -447,11 +461,17 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
         location_eval_list.append(res)
         time.sleep(0.5)  # API rate-limit 완화
 
+    # 2. 카테고리 유효성 평가 (location_match_TF 결과에서 naver_name 활용)
+    category_eval_list, evaluation_name_source = evaluate_category_validity(
+        restaurants, location_eval_list
+    )
+
     return {
         "youtube_link": youtube_link,
         "channel_name": channel_name,
         "evaluation_target": evaluation_target,
         "evaluation_results": {
+            "evaluation_name_source": evaluation_name_source,
             "category_validity_TF": category_eval_list,
             "location_match_TF": location_eval_list,
         },
@@ -463,18 +483,18 @@ def process_one_line(obj: Dict[str, Any]) -> Dict[str, Any]:
 def main():
     parser = argparse.ArgumentParser(description="Rule 기반 평가")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
-    parser.add_argument("--data-path", required=True, help="채널 데이터 경로")
+    parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
     args = parser.parse_args()
 
     channel = args.channel
-    data_path = Path(args.data_path)
+    evaluation_path = Path(args.evaluation_path)
 
     print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Rule 평가 시작: {channel}")
-    print(f"데이터 경로: {data_path}")
+    print(f"평가 경로: {evaluation_path}")
 
     # 입출력 폴더
-    selection_dir = data_path / "evaluation" / "selection"
-    output_dir = data_path / "evaluation" / "rule_results"
+    selection_dir = evaluation_path / "evaluation" / "selection"
+    output_dir = evaluation_path / "evaluation" / "rule_results"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     if not selection_dir.exists():

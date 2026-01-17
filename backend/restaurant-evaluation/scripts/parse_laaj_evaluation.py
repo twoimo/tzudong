@@ -49,6 +49,20 @@ def parse_gemini_response(response_file: Path) -> dict:
                     if "visit_authenticity" in item:
                         return item
         elif isinstance(data, dict):
+            # 새 형식: {"session_id": ..., "response": "...", "stats": ...}
+            if "response" in data:
+                response_str = data["response"]
+                if isinstance(response_str, str):
+                    extracted = extract_json(response_str)
+                    if extracted:
+                        return extracted
+                    # response가 직접 JSON일 수도 있음
+                    try:
+                        response_data = json.loads(response_str)
+                        if "visit_authenticity" in response_data:
+                            return response_data
+                    except:
+                        pass
             if "visit_authenticity" in data:
                 return data
             if "text" in data:
@@ -67,7 +81,7 @@ def parse_gemini_response(response_file: Path) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="LAAJ 평가 결과 파서")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
-    parser.add_argument("--data-path", required=True, help="데이터 경로")
+    parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
     parser.add_argument("--video-id", required=True, help="비디오 ID")
     parser.add_argument("--response-file", required=True, help="Gemini 응답 파일")
     parser.add_argument("--rule-file", required=True, help="rule_results 파일")
@@ -76,8 +90,8 @@ def main():
     # 경로 설정
     script_dir = Path(__file__).parent
     project_root = script_dir.parent.parent
-    data_path = project_root / args.data_path
-    laaj_results_dir = data_path / "evaluation" / "laaj_results"
+    evaluation_path = project_root / args.evaluation_path
+    laaj_results_dir = evaluation_path / "evaluation" / "laaj_results"
     laaj_results_dir.mkdir(parents=True, exist_ok=True)
 
     response_file = Path(args.response_file)
@@ -95,6 +109,29 @@ def main():
     # 기존 evaluation_results에 LAAJ 결과 병합
     existing_eval = rule_data.get("evaluation_results", {})
     merged_eval = {**existing_eval, **laaj_results}
+
+    # evaluation_name_source 생성: 각 음식점의 name 출처 추적
+    # location_match_TF에서 naver_name 유무로 판단
+    evaluation_name_source = {}
+    loc_match_list = existing_eval.get("location_match_TF", [])
+    for item in loc_match_list:
+        origin_name = item.get("origin_name")
+        naver_name = item.get("naver_name")
+        if origin_name:
+            if naver_name:
+                evaluation_name_source[origin_name] = "naver_name"
+            else:
+                evaluation_name_source[origin_name] = "origin_name"
+
+    # evaluation_name_source를 맨 앞에 배치
+    from collections import OrderedDict
+
+    ordered_eval = OrderedDict()
+    ordered_eval["evaluation_name_source"] = evaluation_name_source
+    for key, value in merged_eval.items():
+        if key != "evaluation_name_source":
+            ordered_eval[key] = value
+    merged_eval = dict(ordered_eval)
 
     # 출력 데이터 구성
     output_data = {

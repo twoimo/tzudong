@@ -103,25 +103,28 @@ def create_evaluation_targets(video_id: str, data_path: Path, channel: str) -> d
 def main():
     parser = argparse.ArgumentParser(description="평가 대상 선정")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
-    parser.add_argument("--data-path", required=True, help="채널 데이터 경로")
+    parser.add_argument("--crawling-path", required=True, help="크롤링 데이터 경로")
+    parser.add_argument("--evaluation-path", required=True, help="평가 결과 저장 경로")
     args = parser.parse_args()
 
     channel = args.channel
-    data_path = Path(args.data_path)
+    crawling_path = Path(args.crawling_path)
+    evaluation_path = Path(args.evaluation_path)
 
     print(
         f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] 평가 대상 선정 시작: {channel}"
     )
-    print(f"데이터 경로: {data_path}")
+    print(f"크롤링 경로: {crawling_path}")
+    print(f"평가 경로: {evaluation_path}")
 
     # 출력 폴더 생성
-    selection_dir = data_path / "evaluation" / "selection"
-    not_selection_dir = data_path / "evaluation" / "notSelection"
+    selection_dir = evaluation_path / "evaluation" / "selection"
+    not_selection_dir = evaluation_path / "evaluation" / "notSelection"
     selection_dir.mkdir(parents=True, exist_ok=True)
     not_selection_dir.mkdir(parents=True, exist_ok=True)
 
     # crawling 폴더에서 video_id 수집
-    crawling_dir = data_path / "crawling"
+    crawling_dir = crawling_path / "crawling"
     if not crawling_dir.exists():
         print(f"❌ crawling 폴더 없음: {crawling_dir}")
         return
@@ -154,7 +157,7 @@ def main():
             continue
 
         # 처리
-        result = create_evaluation_targets(video_id, data_path, channel)
+        result = create_evaluation_targets(video_id, crawling_path, channel)
 
         if result is None:
             continue

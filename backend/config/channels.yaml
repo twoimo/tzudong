@@ -3,13 +3,15 @@ channels:
     channel_id: "UCfpaSruWW3S4dibonKXENjA"
     handle: "@tzuyang6145"
     name: "쯔양"
-    data_path: "data/tzuyang"
+    data_path: "restaurant-crawling/data/tzuyang"
+    evaluation_data_path: "restaurant-evaluation/data/tzuyang"
 
   meatcreator:
     channel_id: "UC1oXmhvYHVI2bApphh3IzuQ"
     handle: "@meatcreator"
     name: "정육왕 MeatCreator"
-    data_path: "data/meatcreator"
+    data_path: "restaurant-crawling/data/meatcreator"
+    evaluation_data_path: "restaurant-evaluation/data/meatcreator"
 
 # API 설정
 api:

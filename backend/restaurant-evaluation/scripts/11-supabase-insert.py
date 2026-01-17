@@ -29,14 +29,14 @@ KST = timezone(timedelta(hours=9))
 def main():
     parser = argparse.ArgumentParser(description="Supabase 데이터 삽입")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
-    parser.add_argument("--data-path", required=True, help="채널 데이터 경로")
+    parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
     parser.add_argument(
         "--dry-run", action="store_true", help="실제 삽입 없이 테스트만"
     )
     args = parser.parse_args()
 
     channel = args.channel
-    data_path = Path(args.data_path)
+    evaluation_path = Path(args.evaluation_path)
     dry_run = args.dry_run
 
     # .env 로드
@@ -62,7 +62,7 @@ def main():
     supabase: Client = create_client(supabase_url, supabase_key)
 
     # 입력 파일
-    input_file = data_path / "evaluation" / "transforms.jsonl"
+    input_file = evaluation_path / "evaluation" / "transforms.jsonl"
 
     if not input_file.exists():
         print(f"❌ transforms 파일 없음: {input_file}")

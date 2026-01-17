@@ -78,25 +78,34 @@ format_duration() {
 # 인자 파싱
 # ================================
 CHANNEL=""
-DATA_PATH=""
+CRAWLING_PATH=""
+EVALUATION_PATH=""
 while [[ $# -gt 0 ]]; do
     case $1 in
         --channel|-c) CHANNEL="$2"; shift 2 ;;
-        --data-path) DATA_PATH="$2"; shift 2 ;;
+        --crawling-path) CRAWLING_PATH="$2"; shift 2 ;;
+        --evaluation-path) EVALUATION_PATH="$2"; shift 2 ;;
         *) echo "알 수 없는 옵션: $1"; exit 1 ;;
     esac
 done
 
-if [ -z "$CHANNEL" ] || [ -z "$DATA_PATH" ]; then
-    echo "사용법: $0 --channel <채널명> --data-path <데이터경로>"
+if [ -z "$CHANNEL" ] || [ -z "$CRAWLING_PATH" ] || [ -z "$EVALUATION_PATH" ]; then
+    echo "사용법: $0 --channel <채널명> --crawling-path <크롤링경로> --evaluation-path <평가경로>"
     exit 1
 fi
 
-FULL_DATA_PATH="$PROJECT_ROOT/$DATA_PATH"
-RULE_RESULTS_DIR="$FULL_DATA_PATH/evaluation/rule_results"
-LAAJ_RESULTS_DIR="$FULL_DATA_PATH/evaluation/laaj_results"
-ERRORS_DIR="$FULL_DATA_PATH/evaluation/errors"
-TRANSCRIPT_DIR="$FULL_DATA_PATH/transcript"
+FULL_CRAWLING_PATH="$PROJECT_ROOT/$CRAWLING_PATH"
+FULL_EVALUATION_PATH="$PROJECT_ROOT/$EVALUATION_PATH"
+
+# Evaluation 경로에서 읽기/쓰기
+RULE_RESULTS_DIR="$FULL_EVALUATION_PATH/evaluation/rule_results"
+LAAJ_RESULTS_DIR="$FULL_EVALUATION_PATH/evaluation/laaj_results"
+ERRORS_DIR="$FULL_EVALUATION_PATH/evaluation/errors"
+
+# Crawling 경로에서 읽기
+TRANSCRIPT_DIR="$FULL_CRAWLING_PATH/transcript"
+META_DIR="$FULL_CRAWLING_PATH/meta"
+
 TEMP_DIR="$SCRIPT_DIR/../temp"
 
 mkdir -p "$LAAJ_RESULTS_DIR" "$ERRORS_DIR" "$TEMP_DIR"
@@ -105,7 +114,8 @@ log_info "============================================================"
 log_info "  Gemini CLI LAAJ 음식점 평가 시작"
 log_info "============================================================"
 log_info "채널: $CHANNEL"
-log_info "데이터 경로: $FULL_DATA_PATH"
+log_info "크롤링 경로: $FULL_CRAWLING_PATH"
+log_info "평가 경로: $FULL_EVALUATION_PATH"
 log_info "Gemini 모델: $CURRENT_MODEL (fallback: $FALLBACK_MODEL)"
 
 # 필수 파일 확인
@@ -193,7 +203,7 @@ for i in "${!VIDEO_IDS[@]}"; do
     TARGET_META_ID=$(echo "$RECOLLECT_VERSION" | jq -r '.meta // 0')
     
     # recollect_version.meta 기반으로 meta 파일에서 title 조회
-    META_FILE="$FULL_DATA_PATH/meta/${VIDEO_ID}.jsonl"
+    META_FILE="$META_DIR/${VIDEO_ID}.jsonl"
     VIDEO_TITLE=""
     if [ -f "$META_FILE" ]; then
         while IFS= read -r META_LINE; do
@@ -216,11 +226,39 @@ for i in "${!VIDEO_IDS[@]}"; do
         continue
     fi
     
-    # 평가 대상 음식점 추출 (evaluation_target[name] == true인 것만)
+    # 평가 대상 음식점 추출 (evaluation_target[origin_name] == true인 것만)
+    # naver_name이 있으면 name으로 사용, 없으면 origin_name 사용
+    # name_source는 따로 저장해두고 파싱 시 활용
+    
+    # 원본 데이터 (name_source 포함) - 파싱용
+    RESTAURANTS_WITH_SOURCE=$(echo "$RULE_DATA" | jq -c '
+        .restaurants as $rests |
+        .evaluation_target as $targets |
+        .evaluation_results.location_match_TF as $loc_evals |
+        $rests | map(
+            select($targets[.origin_name] == true) |
+            . as $r |
+            ($loc_evals | map(select(.origin_name == $r.origin_name)) | first // null) as $loc |
+            {
+                origin_name: .origin_name,
+                name: (if $loc and $loc.naver_name then $loc.naver_name else .origin_name end),
+                name_source: (if $loc and $loc.naver_name then "naver_name" else "origin_name" end)
+            }
+        )
+    ')
+    
+    # 프롬프트용 데이터 (name만, origin_name/name_source 제외)
     RESTAURANTS_TO_EVALUATE=$(echo "$RULE_DATA" | jq -c '
         .restaurants as $rests |
         .evaluation_target as $targets |
-        $rests | map(select($targets[.name] == true))
+        .evaluation_results.location_match_TF as $loc_evals |
+        $rests | map(
+            select($targets[.origin_name] == true) |
+            . as $r |
+            ($loc_evals | map(select(.origin_name == $r.origin_name)) | first // null) as $loc |
+            del(.origin_name) |
+            . + {name: (if $loc and $loc.naver_name then $loc.naver_name else $r.origin_name end)}
+        )
     ')
     RESTAURANT_COUNT=$(echo "$RESTAURANTS_TO_EVALUATE" | jq 'length')
     
@@ -319,7 +357,7 @@ $TRANSCRIPT
         for PARSE_ATTEMPT in 1 2 3; do
             if python3 "$PARSER_SCRIPT" \
                 --channel "$CHANNEL" \
-                --data-path "$DATA_PATH" \
+                --evaluation-path "$EVALUATION_PATH" \
                 --video-id "$VIDEO_ID" \
                 --response-file "$TEMP_RESPONSE" \
                 --rule-file "$RULE_FILE"; then

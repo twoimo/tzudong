@@ -28,9 +28,9 @@
 - 반환 형식 예시:
   {
     "values": [
-      {"origin_name": "빈해원", "eval_value": 1, "eval_basis": "[01:55] 간판+내부 확인"},
-      {"origin_name": "복성루", "eval_value": 1, "eval_basis": "[08:58] 착석 장면 존재"},
-      {"origin_name": "지린성", "eval_value": 1, "eval_basis": "[15:06] 주문 장면 확인"}
+      {"name": "빈해원", "eval_value": 1, "eval_basis": "[01:55] 간판+내부 확인"},
+      {"name": "복성루", "eval_value": 1, "eval_basis": "[08:58] 착석 장면 존재"},
+      {"name": "지린성", "eval_value": 1, "eval_basis": "[15:06] 주문 장면 확인"}
     ],
     "missing": []
   }
@@ -46,9 +46,9 @@
 - 평가 대상: 각 restaurants의 reasoning_basis 텍스트
 - 반환 형식 예시:
   [
-    {"origin_name": "빈해원", "eval_value": 1, "eval_basis": "00:01:55 간판과 주소 언급을 근거로 특정"},
-    {"origin_name": "복성루", "eval_value": 1, "eval_basis": "00:08:58 간판과 주소 언급 근거로 특정"},
-    {"origin_name": "지린성", "eval_value": 1, "eval_basis": "00:15:06 간판 명시 및 현장 언급으로 특정"}
+    {"name": "빈해원", "eval_value": 1, "eval_basis": "00:01:55 간판과 주소 언급을 근거로 특정"},
+    {"name": "복성루", "eval_value": 1, "eval_basis": "00:08:58 간판과 주소 언급 근거로 특정"},
+    {"name": "지린성", "eval_value": 1, "eval_basis": "00:15:06 간판 명시 및 현장 언급으로 특정"}
   ]
 - 주의: 추측 금지, reasoning_basis 내 명시된 텍스트와 자막을 대조하여 평가
 
@@ -62,9 +62,9 @@
 - 평가 대상: 각 restaurants의 reasoning_basis
 - 반환 형식 예시:
   [
-    {"origin_name": "빈해원", "eval_value": true, "eval_basis": "[01:55] '빈해원' 언급 및 주소 자막 존재"},
-    {"origin_name": "복성루", "eval_value": true, "eval_basis": "[08:58] '복성루' 간판 언급 확인"},
-    {"origin_name": "지린성", "eval_value": true, "eval_basis": "[15:06] '지린성' 명시 및 방문 언급 확인"}
+    {"name": "빈해원", "eval_value": true, "eval_basis": "[01:55] '빈해원' 언급 및 주소 자막 존재"},
+    {"name": "복성루", "eval_value": true, "eval_basis": "[08:58] '복성루' 간판 언급 확인"},
+    {"name": "지린성", "eval_value": true, "eval_basis": "[15:06] '지린성' 명시 및 방문 언급 확인"}
   ]
 
 ---
@@ -77,9 +77,9 @@
 - 평가 대상: 각 restaurants의 youtuber_review
 - 반환 형식 예시:
   [
-    {"origin_name": "빈해원", "eval_value": 1.0, "eval_basis": "[03:20] 짬뽕, [05:10] 탕수육 실제 주문 및 평가 일치"},
-    {"origin_name": "복성루", "eval_value": 1.0, "eval_basis": "[10:30] 짬뽕과 잡채밥 실제 주문 및 평가 일치"},
-    {"origin_name": "지린성", "eval_value": 1.0, "eval_basis": "[17:00] 고추짜장, 고추짬뽕 주문 및 매운맛 표현 일치"}
+    {"name": "빈해원", "eval_value": 1.0, "eval_basis": "[03:20] 짬뽕, [05:10] 탕수육 실제 주문 및 평가 일치"},
+    {"name": "복성루", "eval_value": 1.0, "eval_basis": "[10:30] 짬뽕과 잡채밥 실제 주문 및 평가 일치"},
+    {"name": "지린성", "eval_value": 1.0, "eval_basis": "[17:00] 고추짜장, 고추짬뽕 주문 및 매운맛 표현 일치"}
   ]
 
 ---
@@ -92,9 +92,9 @@
 - 평가 대상: 각 restaurants의 category
 - 반환 형식 예시:
   [
-    {"origin_name": "빈해원", "eval_value": true, "category_revision": null},
-    {"origin_name": "복성루", "eval_value": true, "category_revision": null},
-    {"origin_name": "지린성", "eval_value": true, "category_revision": null}
+    {"name": "빈해원", "eval_value": true, "category_revision": null},
+    {"name": "복성루", "eval_value": true, "category_revision": null},
+    {"name": "지린성", "eval_value": true, "category_revision": null}
   ]
 - 카테고리 범위: ["치킨", "중식", "돈까스·회", "피자", "패스트푸드", "찜·탕", "족발·보쌈", "분식", "카페·디저트", "한식", "고기", "양식", "아시안", "야식", "도시락"]
 </평가 루브릭>
@@ -103,11 +103,11 @@
 - 최종 출력은 **반드시 5개의 평가 항목(visit_authenticity, rb_inference_score, rb_grounding_TF, review_faithfulness_score, category_TF)를 key로 하고, 그 평가 결과를 값으로 하는 단일 JSON 객체만 반환(다른 설명/언급 절대 금지).**
 - 출력 예시:
 {
-  "visit_authenticity": {"values": [{"origin_name": "빈해원", "eval_value": 1, "eval_basis": "간판+내부 확인"}, {"origin_name": "복성루", "eval_value": 1, "eval_basis": "착석 장면 존재"}, {"origin_name": "지린성", "eval_value": 1, "eval_basis": "주문 장면 확인"}], "missing": []},
-  "rb_inference_score": [{"origin_name": "빈해원", "eval_value": 1, "eval_basis": "00:01:55 간판과 주소 언급을 근거로 특정"}, {"origin_name": "복성루", "eval_value": 1, "eval_basis": "00:08:58 간판과 주소 언급 근거로 특정"}, {"origin_name": "지린성", "eval_value": 1, "eval_basis": "00:15:06 간판 명시 및 현장 언급으로 특정"}],
-  "rb_grounding_TF": [{"origin_name": "빈해원", "eval_value": true, "eval_basis": "1분55초 간판 장면 및 주소 자막 존재"}, {"origin_name": "복성루", "eval_value": true, "eval_basis": "8분58초 간판 장면 확인"}, {"origin_name": "지린성", "eval_value": true, "eval_basis": "15분6초 간판 및 내부 장면 확인"}],
-  "review_faithfulness_score": [{"origin_name": "빈해원", "eval_value": 1.0, "eval_basis": "짬뽕, 탕수육, 짜장면 실제 주문 및 평가 일치"}, {"origin_name": "복성루", "eval_value": 1.0, "eval_basis": "짬뽕과 잡채밥 실제 주문 및 평가 일치"}, {"origin_name": "지린성", "eval_value": 1.0, "eval_basis": "고추짜장, 고추짬뽕 실제 주문 및 매운맛 표현 일치"}],
-  "category_TF": [{"origin_name": "빈해원", "eval_value": true, "category_revision": null}, {"origin_name": "복성루", "eval_value": true, "category_revision": null}, {"origin_name": "지린성", "eval_value": true, "category_revision": null}]
+  "visit_authenticity": {"values": [{"name": "빈해원", "eval_value": 1, "eval_basis": "간판+내부 확인"}, {"name": "복성루", "eval_value": 1, "eval_basis": "착석 장면 존재"}, {"name": "지린성", "eval_value": 1, "eval_basis": "주문 장면 확인"}], "missing": []},
+  "rb_inference_score": [{"name": "빈해원", "eval_value": 1, "eval_basis": "00:01:55 간판과 주소 언급을 근거로 특정"}, {"name": "복성루", "eval_value": 1, "eval_basis": "00:08:58 간판과 주소 언급 근거로 특정"}, {"name": "지린성", "eval_value": 1, "eval_basis": "00:15:06 간판 명시 및 현장 언급으로 특정"}],
+  "rb_grounding_TF": [{"name": "빈해원", "eval_value": true, "eval_basis": "1분55초 간판 장면 및 주소 자막 존재"}, {"name": "복성루", "eval_value": true, "eval_basis": "8분58초 간판 장면 확인"}, {"name": "지린성", "eval_value": true, "eval_basis": "15분6초 간판 및 내부 장면 확인"}],
+  "review_faithfulness_score": [{"name": "빈해원", "eval_value": 1.0, "eval_basis": "짬뽕, 탕수육, 짜장면 실제 주문 및 평가 일치"}, {"name": "복성루", "eval_value": 1.0, "eval_basis": "짬뽕과 잡채밥 실제 주문 및 평가 일치"}, {"name": "지린성", "eval_value": 1.0, "eval_basis": "고추짜장, 고추짬뽕 실제 주문 및 매운맛 표현 일치"}],
+  "category_TF": [{"name": "빈해원", "eval_value": true, "category_revision": null}, {"name": "복성루", "eval_value": true, "category_revision": null}, {"name": "지린성", "eval_value": true, "category_revision": null}]
 }
 (※ 위 JSON 예시는 형식 참고용이며 실제 평가값은 입력 데이터 기반으로 판단)
 </출력 형식>

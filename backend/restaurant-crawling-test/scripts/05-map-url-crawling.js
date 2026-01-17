@@ -285,28 +285,25 @@ async function collectFromNaverMap(page, mapUrl) {
         await page.goto(placeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
         await new Promise(r => setTimeout(r, 2000));
 
-        // 주소 펼치기 (Role/Text 기반)
+        // 주소 펼치기 (주소 아이콘 SVG path로 섹션 찾기)
         try {
             await page.evaluate(() => {
-                const buttons = document.querySelectorAll('a[role="button"]');
-                for (const btn of buttons) {
-                    const text = btn.textContent || "";
-                    if (btn.getAttribute('aria-expanded') === 'false') {
-                        const addressLabel = Array.from(document.querySelectorAll('strong')).find(el => el.textContent.includes('주소'));
-                        if (addressLabel) {
-                            const parent = addressLabel.parentElement;
-                            if (parent) {
-                                const sibling = parent.nextElementSibling;
-                                if (sibling) {
-                                    const targetBtn = sibling.querySelector('a[role="button"][aria-expanded="false"]');
-                                    if (targetBtn) targetBtn.click();
-                                }
-                            }
+                // 주소 아이콘 SVG의 path d 속성 일부로 식별
+                const svgs = document.querySelectorAll('svg');
+                for (const svg of svgs) {
+                    const path = svg.querySelector('path');
+                    if (path && path.getAttribute('d')?.includes('M9,1C5.4,1,2.5,3.7')) {
+                        // 주소 아이콘의 부모 요소에서 펼치기 버튼 찾기
+                        let parent = svg.closest('div.O8qbU');
+                        if (parent) {
+                            const btn = parent.querySelector('a[aria-expanded="false"]');
+                            if (btn) btn.click();
                         }
+                        break;
                     }
                 }
             });
-            await new Promise(r => setTimeout(r, 1000));
+            await new Promise(r => setTimeout(r, 1500));
         } catch {}
 
         // 정보 추출
@@ -525,10 +522,13 @@ function normalizeAddressForCompare(address) {
 async function enrichWithNaverSearch(placeInfo) {
     if (!placeInfo || !placeInfo.origin_name) return null;
     
+    // 원본 주소 결정 (roadAddress > jibunAddress > address 우선순위)
+    const originalAddress = placeInfo.roadAddress || placeInfo.jibunAddress || placeInfo.address;
+    
     // 검색 쿼리: 상호명 + 시군구 (있으면)
     let query = placeInfo.origin_name;
-    if (placeInfo.address) {
-        const sigungu = extractSigungu(placeInfo.address);
+    if (originalAddress) {
+        const sigungu = extractSigungu(originalAddress);
         if (sigungu) query = `${placeInfo.origin_name} ${sigungu.split(' ')[0]}`;
     }
     
@@ -540,7 +540,7 @@ async function enrichWithNaverSearch(placeInfo) {
     }
     
     // 원본 주소에서 시군구 추출 (층/호 정규화 후)
-    const originalAddrNorm = normalizeAddressForCompare(placeInfo.address);
+    const originalAddrNorm = normalizeAddressForCompare(originalAddress);
     const originalSigungu = extractSigungu(originalAddrNorm);
     
     if (!originalSigungu) {

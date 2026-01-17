@@ -39,7 +39,10 @@ def generate_trace_id(youtube_link: str, name: str, review: str) -> str:
 
 
 def get_eval_item(eval_results: dict, rest_name: str, key: str) -> Optional[dict]:
-    """evaluation_results에서 name으로 항목 찾기"""
+    """evaluation_results에서 항목 찾기
+    - Rule 평가 항목 (category_validity_TF): origin_name으로 매칭
+    - LAAJ 평가 항목: name으로 매칭
+    """
     if not eval_results:
         return None
 
@@ -53,14 +56,17 @@ def get_eval_item(eval_results: dict, rest_name: str, key: str) -> Optional[dict
     elif isinstance(value, list):
         item_list = value
 
+    # 모든 평가 항목이 이제 name으로 매칭됨 (location_match_TF는 별도 처리)
+    match_key = "name"
+
     found_item = next(
-        (item for item in item_list if item.get("origin_name") == rest_name), None
+        (item for item in item_list if item.get(match_key) == rest_name), None
     )
 
     if found_item:
         new_item = found_item.copy()
-        if "origin_name" in new_item:
-            del new_item["origin_name"]
+        if match_key in new_item:
+            del new_item[match_key]
         return new_item
     return None
 
@@ -216,14 +222,14 @@ def transform_json_object(
                             (
                                 item
                                 for item in visit_auth_values
-                                if item.get("origin_name") == restaurant_name
+                                if item.get("name") == restaurant_name
                             ),
                             None,
                         )
                         if visit_auth_item:
                             new_visit_item = visit_auth_item.copy()
-                            if "origin_name" in new_visit_item:
-                                del new_visit_item["origin_name"]
+                            if "name" in new_visit_item:
+                                del new_visit_item["name"]
                             new_eval_results["visit_authenticity"] = new_visit_item
                     else:
                         eval_item = get_eval_item(
@@ -326,7 +332,7 @@ def transform_json_object(
                 if isinstance(missing_item, str):
                     missing_name = missing_item
                 elif isinstance(missing_item, dict):
-                    missing_name = missing_item.get("origin_name")
+                    missing_name = missing_item.get("name")
                 else:
                     continue
 
@@ -523,23 +529,32 @@ def transform_map_url_crawling_object(
 def main():
     parser = argparse.ArgumentParser(description="평가 결과 변환")
     parser.add_argument("--channel", "-c", required=True, help="채널 이름")
-    parser.add_argument("--data-path", required=True, help="채널 데이터 경로")
+    parser.add_argument(
+        "--crawling-path",
+        required=True,
+        help="크롤링 데이터 경로 (meta, map_url_crawling)",
+    )
+    parser.add_argument("--evaluation-path", required=True, help="평가 데이터 경로")
     args = parser.parse_args()
 
     channel = args.channel
-    data_path = Path(args.data_path)
+    crawling_path = Path(args.crawling_path)
+    evaluation_path = Path(args.evaluation_path)
 
     print(f"\n[{datetime.now(KST).strftime('%H:%M:%S')}] Transform 시작: {channel}")
-    print(f"데이터 경로: {data_path}")
+    print(f"크롤링 경로: {crawling_path}")
+    print(f"평가 경로: {evaluation_path}")
 
-    # 입력 폴더
-    laaj_results_dir = data_path / "evaluation" / "laaj_results"
-    not_selection_dir = data_path / "evaluation" / "notSelection"
-    map_url_crawling_dir = data_path / "map_url_crawling"  # ← 정육왕 전용
-    meta_dir = data_path / "meta"
+    # 입력 폴더 (evaluation 경로)
+    laaj_results_dir = evaluation_path / "evaluation" / "laaj_results"
+    not_selection_dir = evaluation_path / "evaluation" / "notSelection"
 
-    # 출력 파일 (전체 합쳐서 하나)
-    output_file = data_path / "evaluation" / "transforms.jsonl"
+    # 입력 폴더 (crawling 경로)
+    map_url_crawling_dir = crawling_path / "map_url_crawling"  # ← 정육왕 전용
+    meta_dir = crawling_path / "meta"
+
+    # 출력 파일 (evaluation 경로)
+    output_file = evaluation_path / "evaluation" / "transforms.jsonl"
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     # 기존 trace_id 수집 (중복 방지)

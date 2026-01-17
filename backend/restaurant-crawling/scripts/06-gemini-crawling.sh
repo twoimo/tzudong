@@ -140,8 +140,8 @@ get_channels() {
 
 get_channel_data_path() {
     local channel=$1
-    # YAML에서 data_path 추출
-    grep -A 5 "^  $channel:" "$CONFIG_FILE" | grep "data_path:" | awk '{print $2}'
+    # YAML에서 data_path 추출 (따옴표 제거)
+    grep -A 5 "^  $channel:" "$CONFIG_FILE" | grep "data_path:" | awk '{print $2}' | tr -d '"'
 }
 
 get_channel_name() {
@@ -317,8 +317,8 @@ process_channel() {
         
         log_info "[$INDEX/$TOTAL] 처리중: $TITLE"
         
-        # 프롬프트 생성
-        PROMPT_TEMPLATE=$(cat "$PROMPT_FILE")
+        # 프롬프트 생성 ({YOUTUBER_NAME}을 채널 이름으로 치환)
+        PROMPT_TEMPLATE=$(cat "$PROMPT_FILE" | sed "s/{YOUTUBER_NAME}/$channel_name/g")
         
         # 자막 추가 (30000자 제한)
         TRANSCRIPT_TRUNCATED=$(echo "$TRANSCRIPT" | head -c 30000)
