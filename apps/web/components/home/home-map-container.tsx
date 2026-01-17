@@ -372,7 +372,7 @@ function HomeMapContainerComponent({
                                     // 드래그 중에는 트랜지션 제거, 종료 시 부드러운 스프링 효과
                                     isDragging ? '' : 'transition-[height] duration-300',
                                     // iOS safe area 지원 + 하단 네비게이션바 공간
-                                    'pb-[calc(env(safe-area-inset-bottom)+56px)]'
+                                    'pb-[calc(env(safe-area-inset-bottom)+64px)]'
                                 )}
                                 style={{
                                     // [FIX] Safari/삼성 인터넷 100vh 버그 수정
