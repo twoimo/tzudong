@@ -35,9 +35,9 @@ export const metadata: Metadata = {
     description: "쯔양 유튜브에 나온 전국 맛집을 지도에서 한눈에! 영상 보기, 리뷰, 도장 깨기까지",
     icons: {
         icon: [
-            { url: '/favicon.svg', type: 'image/svg+xml' },
+            { url: '/favicon.png', type: 'image/png' },
         ],
-        apple: '/favicon.svg',
+        apple: '/favicon.png',
     },
     openGraph: {
         title: '쯔동여지도 - 쯔양이 다녀간 맛집을 한눈에! 전국 맛집 지도 플랫폼',
