@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { analyzeReceiptWithCliFallback } from '../../../../lib/gemini-cli';
-import { createClient } from '@/integrations/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -125,7 +125,7 @@ export async function POST(req: Request) {
 
         // [보안] 3. 일일 쿼터 확인 (Hybrid 전략)
         // 전략: 하루 20회까지는 Vercel(Google API) 사용 -> 초과 시 OCI 서버로 전환
-        const MAX_DAILY_QUOTA = 20;
+        const MAX_DAILY_QUOTA = 5;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
