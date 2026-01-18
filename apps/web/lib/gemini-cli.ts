@@ -79,10 +79,8 @@ async function analyzeWithDaemon(tempImagePath: string, promptText: string): Pro
 // --- 기존 CLI 스폰 방식 폴백 (느림) ---
 async function analyzeWithSpawn(imageBuffer: Buffer, promptText: string): Promise<any> {
     console.log('[Gemini CLI] 프로세스 스폰 방식(느림)으로 실행...');
-    const projectTempDir = path.join(process.cwd(), '.gemini', 'tmp');
-    if (!fs.existsSync(projectTempDir)) {
-        await fs.promises.mkdir(projectTempDir, { recursive: true });
-    }
+    const projectTempDir = os.tmpdir();
+
     const tempFilePath = path.join(projectTempDir, `receipt-${Date.now()}.jpg`);
     const promptFilePath = path.join(projectTempDir, `prompt-${Date.now()}.txt`);
 
@@ -92,7 +90,10 @@ async function analyzeWithSpawn(imageBuffer: Buffer, promptText: string): Promis
         const fullPrompt = `${promptText}\n\nUser Input Image: @${tempFilePath}`;
         await fs.promises.writeFile(promptFilePath, fullPrompt, 'utf-8');
 
-        const command = `cat "${promptFilePath}" | gemini --model ${model}`;
+        // Vercel 등 서버 환경 대응: npx로 실행 (패키지가 로컬에 있으면 로컬 bin 사용됨)
+        // -y: 확인 절차 생략
+        // 공식 패키지: @google/gemini-cli
+        const command = `cat "${promptFilePath}" | npx -y @google/gemini-cli --model ${model}`;
         const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
 
         if (stderr) console.warn('[Gemini CLI] Stderr:', stderr);
@@ -155,10 +156,10 @@ export async function analyzeReceiptWithCliFallback(imageBuffer: Buffer, promptT
     }
 
     // 임시 파일 생성 (데몬/CLI 공통 사용)
-    const projectTempDir = path.join(process.cwd(), '.gemini', 'tmp');
-    if (!fs.existsSync(projectTempDir)) {
-        await fs.promises.mkdir(projectTempDir, { recursive: true });
-    }
+    const projectTempDir = os.tmpdir();
+    // Vercel의 경우 /tmp는 항상 존재하므로 mkdir 불필요, 하지만 안전을 위해 확인은 가능
+    // await fs.promises.mkdir(projectTempDir, { recursive: true }); 
+
     const tempFilePath = path.join(projectTempDir, `receipt-d-${Date.now()}.jpg`);
     await fs.promises.writeFile(tempFilePath, optimizedBuffer);
 
