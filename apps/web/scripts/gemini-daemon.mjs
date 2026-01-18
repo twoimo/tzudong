@@ -129,9 +129,14 @@ const server = http.createServer(async (req, res) => {
 
             // 이미지 Base64 처리
             if (imageBase64) {
-                const tempDir = os.tmpdir();
+                // [Fix] CLI Workspace 보안 정책으로 인해, 이미지는 반드시 실행 경로(워크스페이스) 내부에 있어야 함.
+                const tempDir = path.join(process.cwd(), 'temp_images');
+                if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
+
                 tempImagePath = path.join(tempDir, `oci-upload-${Date.now()}.jpg`);
                 fs.writeFileSync(tempImagePath, Buffer.from(imageBase64, 'base64'));
+
+                // CLI에 전달할 때는 상대 경로 권장 (혹은 절대 경로도 워크스페이스 내부는 허용됨)
                 finalPrompt = `${prompt}\n\nUser Input Image: @${tempImagePath}`;
                 log(`[Image] 임시 파일 생성: ${tempImagePath}`);
             }
