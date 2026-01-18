@@ -132,7 +132,7 @@ export async function POST(req: Request) {
             }, { status: 429 });
         }
 
-        // Check if API key is present
+        // API 키 확인
         if (!GEMINI_API_KEY) {
             throw new Error('API 키 누락');
         }
