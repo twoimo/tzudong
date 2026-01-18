@@ -129,7 +129,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
-    const [verificationPhotoUrl, setVerificationPhotoUrl] = useState<string | null>(null);
     const [ocrLimitReached, setOcrLimitReached] = useState(false);
     const [quota, setQuota] = useState<{ used: number; max: number; remaining: number } | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
@@ -539,6 +538,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 });
             }
 
+            // 분석 성공 시 쿼터 갱신 (실시간 반영)
+            fetchQuota();
+
         } catch (error) {
             console.error("OCR 오류:", error);
             toast({
@@ -813,22 +815,28 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             loadDraft();
         }
     }, [isOpen, user?.id, restaurant?.id, loadDraft]);
-    // 쿼터 확인
+    // 쿼터 확인 함수
+    const fetchQuota = useCallback(() => {
+        if (!user) return;
+        fetch('/api/ocr/quota')
+            .then(res => res.json())
+            .then(data => {
+                if (data.remaining !== undefined) {
+                    setQuota(data);
+                    if (data.remaining === 0) {
+                        setOcrLimitReached(true);
+                    }
+                }
+            })
+            .catch(console.error);
+    }, [user]);
+
+    // 초기 로딩 및 모달 열릴 때 쿼터 확인
     useEffect(() => {
         if (isOpen && user) {
-            fetch('/api/ocr/quota')
-                .then(res => res.json())
-                .then(data => {
-                    if (data.remaining !== undefined) {
-                        setQuota(data);
-                        if (data.remaining === 0) {
-                            setOcrLimitReached(true);
-                        }
-                    }
-                })
-                .catch(console.error);
+            fetchQuota();
         }
-    }, [isOpen, user]);
+    }, [isOpen, user, fetchQuota]);
 
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
@@ -988,7 +996,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground mb-3">
-                                                    <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴를 자동으로 입력해드려요!</span>
+                                                    <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
                                                 </p>
                                                 <Button
                                                     variant="outline"
