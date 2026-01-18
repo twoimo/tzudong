@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 import { analyzeReceiptWithCliFallback } from '../../../../lib/gemini-cli';
-import { createClient } from '@/lib/supabase/server';
+import { createClient } from '@/integrations/supabase/server';
+import { NextRequest } from 'next/server';
 import crypto from 'crypto';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// 환경 변수 검증 (OCR Server URL은 lib에서 검증됨)
+// --- 설정 (Configuration) ---
+// OCI 서버 주소 (환경변수 필수)
+const OCI_API_URL = process.env.OCI_GEMINI_API_URL;
+const GEMINI_API_KEY = process.env.GEMINI_OCR_YEON;
 
 const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
 
 ## 핵심 지침
-
-### 1. 가게명 추출 (가장 중요!)
-- **배달앱(쿠팡이츠, 배달의민족, 요기요 등) 영수증**:
-  - 가게명은 앱 로고 바로 아래가 아닌, "주문매장:", "가맹점:", "상호:" 필드에서 확인하세요.
-  - 상단에 보이는 이상한 문자열(예: OUVPZE, XKPQE 등)은 OCR 오류일 가능성이 높습니다.
   - 하단의 "주문매장: 스시로이" 같은 명확한 텍스트를 우선 참조하세요.
 - **일반 영수증**: 상단 로고/상호명 영역에서 추출
 - **유명 브랜드 자동 완성 금지**: "초특가마R"라고 적혀있으면 "초록마을"로 고치지 말고 보이는 그대로(또는 문맥상 "초특가마트"가 확실하면 그렇게) 추출하세요.
@@ -116,16 +116,7 @@ export async function POST(req: Request) {
         const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
         const imageHash = hashBuffer.toString('hex');
 
-        import { GoogleGenerativeAI } from '@google/generative-ai';
-
-        // 환경 변수 검증
-        const GEMINI_API_KEY = process.env.GEMINI_OCR_YEON;
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
-        const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
-// ... (Prompt truncated for brevity in tool call, but implied to be same) ...
-`;
-
-        // ... (Inside POST) ...
 
         // [보안] 3. 일일 쿼터 확인 (Hybrid 전략)
         // 전략: 하루 20회까지는 Vercel(Google API) 사용 -> 초과 시 OCI 서버로 전환
@@ -152,6 +143,7 @@ export async function POST(req: Request) {
         // 1. Google API 시도 (쿼터 내 && API 키 존재)
         if (!useOciDirectly && GEMINI_API_KEY) {
             try {
+                const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
                 const generativeModel = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
                 const result = await generativeModel.generateContent([
                     OCR_PROMPT,
