@@ -1188,7 +1188,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
                                     <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
-                                    <span className="font-medium">업로드된 사진: {foodPhotos.length}장</span>
                                 </div>
                             </div>
 
@@ -1718,7 +1717,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
                                         <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
-                                        <span className="font-medium">업로드된 사진: {foodPhotos.length}장</span>
                                     </div>
                                 </div>
 
