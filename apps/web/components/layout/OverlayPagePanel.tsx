@@ -189,8 +189,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                             "bg-background shadow-2xl",
                             "flex flex-col overflow-hidden",
                             "w-[560px] max-w-[calc(100vw-700px)]",
-                            "rounded-2xl border border-border",
-                            "animate-in slide-in-from-right-4 duration-300"
+                            "rounded-2xl border border-border"
                         )}
                     >
                         <ReviewModal

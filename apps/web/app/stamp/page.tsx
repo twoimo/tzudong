@@ -1151,13 +1151,6 @@ export default function StampPage() {
                                     </Table>
                                 </div>
                             )}
-
-                            {filteredAndSortedRestaurants.length === 0 && (
-                                <div className="text-center py-12">
-                                    <Trophy className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                                    <p className="text-muted-foreground">검색 결과가 없습니다.</p>
-                                </div>
-                            )}
                         </div>
                     </div>{/* End Scroll Container */}
                 </Panel>

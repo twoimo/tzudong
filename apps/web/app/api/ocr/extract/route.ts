@@ -123,8 +123,8 @@ export async function POST(req: Request) {
 
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
 
-        // [보안] 3. 일일 쿼터 확인 (Hybrid 전략)
-        // 전략: 하루 20회까지는 Vercel(Google API) 사용 -> 초과 시 OCI 서버로 전환
+        // [보안] 3. 일일 쿼터 확인
+        // 전략: 하루 5회 제한 (초과 시 429 에러 반환)
         const MAX_DAILY_QUOTA = 5;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -182,8 +182,8 @@ export async function POST(req: Request) {
             }
         }
 
-        // 2. OCI 서버 폴백 (쿼터 초과 OR API 실패 시)
-        console.log('OCI OCR 요청 시작...');
+        // 2. OCI 서버 폴백 (Google API 실패 시)
+        // console.log('OCI OCR 요청 시작...');
         const data = await analyzeReceiptWithCliFallback(buffer, OCR_PROMPT);
 
         // 성공 로그 (OCI)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -129,8 +130,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
-    const [ocrLimitReached, setOcrLimitReached] = useState(false);
-    const [quota, setQuota] = useState<{ used: number; max: number; remaining: number; resetAt?: string } | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -809,34 +808,28 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         return () => clearTimeout(timer);
     }, [isOpen, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, autoSave]);
 
-    // 모달이 열릴 때 임시 저장된 데이터 확인
+    // SWR을 사용한 쿼터 조회 (자동 캐싱 및 중복 요청 제거)
+    const { data: quota, isLoading: isLoadingQuota, mutate: mutateQuota } = useSWR(
+        isOpen && user ? '/api/ocr/quota' : null,
+        async (url) => {
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Quota fetch failed');
+            return res.json();
+        },
+        {
+            revalidateOnFocus: false, // 포커스 시 재조회 방지 (너무 잦은 조회 방지)
+            dedupingInterval: 60000,  // 1분 내 중복 요청 방지
+        }
+    );
+
+    const ocrLimitReached = quota?.remaining === 0;
+
+    // 초기 로딩 및 모달 열릴 때 임시 저장 불러오기
     useEffect(() => {
         if (isOpen && user?.id && restaurant?.id) {
             loadDraft();
         }
     }, [isOpen, user?.id, restaurant?.id, loadDraft]);
-    // 쿼터 확인 함수
-    const fetchQuota = useCallback(() => {
-        if (!user) return;
-        fetch('/api/ocr/quota')
-            .then(res => res.json())
-            .then(data => {
-                if (data.remaining !== undefined) {
-                    setQuota(data);
-                    if (data.remaining === 0) {
-                        setOcrLimitReached(true);
-                    }
-                }
-            })
-            .catch(console.error);
-    }, [user]);
-
-    // 초기 로딩 및 모달 열릴 때 쿼터 확인
-    useEffect(() => {
-        if (isOpen && user) {
-            fetchQuota();
-        }
-    }, [isOpen, user, fetchQuota]);
 
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
@@ -865,11 +858,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                         <div className="flex-1">
                             <h2 className="text-2xl font-semibold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
                                 쯔동여지도 리뷰 작성
-                                {quota && (
-                                    <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
-                                        AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
-                                    </Badge>
-                                )}
                             </h2>
                             <p className="text-sm text-muted-foreground">
                                 맛집 방문 후기를 공유해주세요
@@ -900,24 +888,33 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                         {/* 인증 사진 (최상단 배치) */}
                         <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                                인증 사진 <span className="text-red-500">*</span>
-                            </Label>
+                            <div className="flex items-center justify-between">
+                                <Label className="flex items-center gap-2">
+                                    인증 사진 <span className="text-red-500">*</span>
+                                </Label>
+                                {quota && (
+                                    <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
+                                        AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
+                                    </Badge>
+                                )}
+                            </div>
                             <Card
                                 ref={verificationDropRef}
-                                className={`relative p-6 border-dashed transition-colors ${ocrLimitReached
-                                    ? 'border-muted bg-muted/50 cursor-not-allowed'
-                                    : isVerificationDragging
-                                        ? 'border-primary bg-primary/5 cursor-pointer'
-                                        : verificationPhoto
-                                            ? 'border-green-300 bg-green-50/50 cursor-pointer'
-                                            : 'border-border hover:border-primary/50 cursor-pointer'
+                                className={`relative p-6 border-dashed transition-colors ${isLoadingQuota
+                                    ? 'border-muted bg-muted/20 cursor-wait'
+                                    : ocrLimitReached
+                                        ? 'border-muted bg-muted/50 cursor-not-allowed'
+                                        : isVerificationDragging
+                                            ? 'border-primary bg-primary/5 cursor-pointer'
+                                            : verificationPhoto
+                                                ? 'border-green-300 bg-green-50/50 cursor-pointer'
+                                                : 'border-border hover:border-primary/50 cursor-pointer'
                                     }`}
-                                onDragOver={!ocrLimitReached ? handleDragOver : undefined}
-                                onDragEnter={!ocrLimitReached ? handleVerificationDragEnter : undefined}
-                                onDragLeave={!ocrLimitReached ? handleVerificationDragLeave : undefined}
-                                onDrop={!ocrLimitReached ? handleVerificationDrop : undefined}
-                                onClick={!ocrLimitReached ? openVerificationFileDialog : undefined}
+                                onDragOver={!ocrLimitReached && !isLoadingQuota ? handleDragOver : undefined}
+                                onDragEnter={!ocrLimitReached && !isLoadingQuota ? handleVerificationDragEnter : undefined}
+                                onDragLeave={!ocrLimitReached && !isLoadingQuota ? handleVerificationDragLeave : undefined}
+                                onDrop={!ocrLimitReached && !isLoadingQuota ? handleVerificationDrop : undefined}
+                                onClick={!ocrLimitReached && !isLoadingQuota ? openVerificationFileDialog : undefined}
                             >
                                 <div className="flex flex-col items-center gap-4">
                                     {verificationPhoto ? (
@@ -958,6 +955,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <Trash2 className="h-4 w-4" />
                                                 사진 제거
                                             </Button>
+                                        </div>
+                                    ) : isLoadingQuota ? (
+                                        <div className="w-full text-center space-y-3 py-4">
+                                            <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                                            <p className="text-sm text-muted-foreground">분석 가능 횟수 확인 중...</p>
                                         </div>
                                     ) : ocrLimitReached ? (
                                         <div className="w-full text-center space-y-3 p-2">
@@ -1385,16 +1387,11 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             )}
 
                             <div className="flex items-start justify-between gap-2 pt-3">
-                                <div className="flex-1">
-                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
+                                <div className="flex-1 text-center">
+                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent flex items-center justify-center gap-3">
                                         쯔동여지도 리뷰 작성
-                                        {quota && (
-                                            <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
-                                                AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
-                                            </Badge>
-                                        )}
                                     </DialogTitle>
-                                    <DialogDescription>
+                                    <DialogDescription className="text-center">
                                         맛집 방문 후기를 공유해주세요
                                     </DialogDescription>
                                 </div>
@@ -1420,22 +1417,33 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                                 {/* 인증 사진 (최상단 배치) */}
                                 <div className="space-y-2">
-                                    <Label className="flex items-center gap-2">
-                                        인증 사진 <span className="text-red-500">*</span>
-                                    </Label>
+                                    <div className="flex items-center justify-between">
+                                        <Label className="flex items-center gap-2">
+                                            인증 사진 <span className="text-red-500">*</span>
+                                        </Label>
+                                        {quota && (
+                                            <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
+                                                AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
+                                            </Badge>
+                                        )}
+                                    </div>
                                     <Card
                                         ref={verificationDropRef}
-                                        className={`relative p-6 border-dashed transition-colors cursor-pointer ${isVerificationDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : verificationPhoto
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-border hover:border-primary/50'
+                                        className={`relative p-6 border-dashed transition-colors ${isLoadingQuota
+                                            ? 'border-muted bg-muted/20 cursor-wait'
+                                            : ocrLimitReached
+                                                ? 'border-muted bg-muted/50 cursor-not-allowed'
+                                                : isVerificationDragging
+                                                    ? 'border-primary bg-primary/5 cursor-pointer'
+                                                    : verificationPhoto
+                                                        ? 'border-green-300 bg-green-50/50 cursor-pointer'
+                                                        : 'border-border hover:border-primary/50 cursor-pointer'
                                             }`}
-                                        onDragOver={handleDragOver}
-                                        onDragEnter={handleVerificationDragEnter}
-                                        onDragLeave={handleVerificationDragLeave}
-                                        onDrop={handleVerificationDrop}
-                                        onClick={openVerificationFileDialog}
+                                        onDragOver={!ocrLimitReached && !isLoadingQuota ? handleDragOver : undefined}
+                                        onDragEnter={!ocrLimitReached && !isLoadingQuota ? handleVerificationDragEnter : undefined}
+                                        onDragLeave={!ocrLimitReached && !isLoadingQuota ? handleVerificationDragLeave : undefined}
+                                        onDrop={!ocrLimitReached && !isLoadingQuota ? handleVerificationDrop : undefined}
+                                        onClick={!ocrLimitReached && !isLoadingQuota ? openVerificationFileDialog : undefined}
                                     >
                                         <div className="flex flex-col items-center gap-4">
                                             {verificationPhoto ? (
@@ -1476,6 +1484,31 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                         <Trash2 className="h-4 w-4" />
                                                         사진 제거
                                                     </Button>
+                                                </div>
+                                            ) : isLoadingQuota ? (
+                                                <div className="w-full text-center space-y-3 py-4">
+                                                    <Loader2 className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
+                                                    <p className="text-sm text-muted-foreground">분석 가능 횟수 확인 중...</p>
+                                                </div>
+                                            ) : ocrLimitReached ? (
+                                                <div className="w-full text-center space-y-3 p-2">
+                                                    <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 transition-colors">
+                                                        <Clock className="h-8 w-8 text-amber-600" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-amber-700 mb-1">
+                                                            일일 무료 분석 한도(5회)를 사용했습니다
+                                                        </p>
+                                                        <p className="text-sm text-muted-foreground mb-3">
+                                                            {quota?.resetAt ? (
+                                                                <>
+                                                                    {new Date(quota.resetAt).toLocaleTimeString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}에 다시 분석할 수 있습니다
+                                                                </>
+                                                            ) : (
+                                                                <>내일 00시에 다시 분석할 수 있습니다</>
+                                                            )}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <div className="w-full text-center space-y-3">
