@@ -207,7 +207,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         setFoodPhotos(prev => prev.filter((_, i) => i !== index));
     }, []);
 
-    // 드래그 앤 드롭 핸들러들 (useCallback으로 메모이제이션)
+    // 드래그 앤 드롭 핸들러 (useCallback으로 메모이제이션)
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault();
         e.stopPropagation();
@@ -313,74 +313,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }
     }, [restaurant]);
 
-    // 로컬 스토리지 키
-    const DRAFT_KEY = 'review_draft_v1';
-
-    // 초안 저장 로직 (1초 디바운스)
-    useEffect(() => {
-        if (!isOpen) return; // 모달이 닫혀있으면 저장하지 않음
-
-        const saveDraft = setTimeout(() => {
-            const draft = {
-                content,
-                visitedDate,
-                visitedTime,
-                categories,
-                searchQuery,
-                selectedRestaurant,
-                hasVerificationPhoto: !!verificationPhoto, // 사진 유무만 저장
-                updatedAt: new Date().getTime(),
-            };
-            // 내용이 비어있지 않을 때만 저장
-            if (content || visitedDate || visitedTime || categories.length > 0 || selectedRestaurant) {
-                localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-            }
-        }, 1000);
-
-        return () => clearTimeout(saveDraft);
-    }, [content, visitedDate, visitedTime, categories, searchQuery, selectedRestaurant, verificationPhoto, isOpen]);
-
-    // 초안 복원 로직
-    useEffect(() => {
-        if (isOpen) {
-            const savedDraft = localStorage.getItem(DRAFT_KEY);
-            if (savedDraft) {
-                try {
-                    const draft = JSON.parse(savedDraft);
-                    // 24시간 이내의 초안만 유효
-                    if (Date.now() - draft.updatedAt < 24 * 60 * 60 * 1000) {
-                        // 기존 상태가 비어있을 때만 복원 (혹은 사용자에게 물어볼 수도 있음 - 여기서는 자동 복원하되 덮어쓰기 주의)
-                        // 하지만 모달이 새로 열릴 때(isOpen true) 실행되므로, 초기화 상태라고 가정해도 됨.
-                        // 단, props로 restaurant가 넘어온 경우는 제외하거나 병합해야 함.
-
-                        if (!content && !visitedDate && !visitedTime && categories.length === 0) {
-                            if (draft.content) setContent(draft.content);
-                            if (draft.visitedDate) setVisitedDate(draft.visitedDate);
-                            if (draft.visitedTime) setVisitedTime(draft.visitedTime);
-                            if (draft.categories) setCategories(draft.categories);
-                            if (draft.selectedRestaurant && !restaurant) {
-                                setSelectedRestaurant(draft.selectedRestaurant);
-                                setSearchQuery(draft.selectedRestaurant.name);
-                            }
-                            if (draft.hasVerificationPhoto && !verificationPhoto) {
-                                toast({
-                                    title: "작성 중인 리뷰 복원됨",
-                                    description: "이전에 작성하던 내용을 불러왔습니다. 사진은 다시 올려주세요.",
-                                });
-                            } else {
-                                toast({
-                                    title: "작성 중인 리뷰 복원됨",
-                                    description: "이전에 작성하던 내용을 불러왔습니다.",
-                                });
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error("임시 저장 데이터 파싱 실패", e);
-                }
-            }
-        }
-    }, [isOpen]); // restaurant는 deps에서 제외 (마운트 시점 기준)
+    // 기존 로컬 스토리지 기반 임시 저장 로직 제거됨 (IndexedDB로 통합)
 
     // 모달 닫을 때나 성공 시 초안 삭제 (이 부분은 handleSubmit 성공 시와 handleClose에서 처리해야 함)
     // handleClose에서는 삭제하지 않음 (임시 저장 의도). handleSubmit 성공 시에만 삭제.
@@ -429,7 +362,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     // 429: 일일 한도 초과 (백엔드에서 메시지 전달)
                     if (response.status === 429) {
                         const errorData = await response.json();
-                        setOcrLimitReached(true);
+                        mutateQuota(); // 쿼터 정보 갱신하여 UI에 한도 초과 반영
                         throw new Error(errorData.error || "일일 무료 분석 한도를 초과했습니다.");
                     }
                     const errorData = await response.json();
@@ -538,7 +471,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             }
 
             // 분석 성공 시 쿼터 갱신 (실시간 반영)
-            fetchQuota();
+            mutateQuota();
 
         } catch (error) {
             console.error("OCR 오류:", error);
@@ -687,7 +620,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             });
 
             // 성공 시 초안 삭제
-            localStorage.removeItem(DRAFT_KEY);
+
 
             if (onSuccess) {
                 onSuccess();
