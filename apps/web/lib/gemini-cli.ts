@@ -90,11 +90,19 @@ async function analyzeWithSpawn(imageBuffer: Buffer, promptText: string): Promis
         const fullPrompt = `${promptText}\n\nUser Input Image: @${tempFilePath}`;
         await fs.promises.writeFile(promptFilePath, fullPrompt, 'utf-8');
 
+        // 인증 주입 및 환경변수 설정
+        const env = await injectCredentials();
+
         // Vercel 등 서버 환경 대응: npx로 실행 (패키지가 로컬에 있으면 로컬 bin 사용됨)
         // -y: 확인 절차 생략
         // 공식 패키지: @google/gemini-cli
         const command = `cat "${promptFilePath}" | npx -y @google/gemini-cli --model ${model}`;
-        const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
+
+        // env 옵션 추가: HOME을 /tmp로 조작
+        const { stdout, stderr } = await execAsync(command, {
+            timeout: 60000,
+            env: env
+        });
 
         if (stderr) console.warn('[Gemini CLI] Stderr:', stderr);
 
@@ -135,6 +143,42 @@ async function optimizeImage(buffer: Buffer): Promise<Buffer> {
     }
 }
 
+
+// --- 인증 정보 주입 (Vercel 대응) ---
+async function injectCredentials(): Promise<NodeJS.ProcessEnv> {
+    const tempHome = os.tmpdir();
+    const geminiDir = path.join(tempHome, '.gemini');
+    const credsPath = path.join(geminiDir, 'oauth_creds.json');
+    const accountsPath = path.join(geminiDir, 'google_accounts.json');
+
+    // 환경변수에서 인증 정보 확인 (User가 Vercel에 설정해야 함)
+    // base64로 인코딩된 JSON 문자열을 권장 (줄바꿈/특수문자 문제 방지)
+    const credsBase64 = process.env.GEMINI_CREDENTIALS_BASE64;
+
+    if (credsBase64) {
+        try {
+            if (!fs.existsSync(geminiDir)) {
+                await fs.promises.mkdir(geminiDir, { recursive: true });
+            }
+
+            // 이미 존재하면 덮어쓸지 여부는 선택사항이나, 최신Env 반영을 위해 덮어쓰기 권장
+            const credsJson = Buffer.from(credsBase64, 'base64').toString('utf-8');
+            await fs.promises.writeFile(credsPath, credsJson, 'utf-8');
+
+            // google_accounts.json도 필요할 수 있음 (보통 oauth_creds만 있어도 갱신 시도함)
+            console.log('[Gemini Lib] 인증 정보 주입 완료 (Vercel Mode)');
+        } catch (e) {
+            console.warn('[Gemini Lib] 인증 정보 주입 실패:', e);
+        }
+    }
+
+    // 변경된 HOME을 포함한 환경변수 객체 반환
+    return {
+        ...process.env,
+        HOME: tempHome, // CLI가 /tmp를 Home으로 인식하게 함
+        // XDG_CONFIG_HOME: tempHome // 일부 도구 대응
+    };
+}
 
 // -----------------------------------------------------------
 // 메인 함수
