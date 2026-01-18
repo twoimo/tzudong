@@ -121,29 +121,42 @@ const server = http.createServer(async (req, res) => {
                 await geminiClient.resetChat();
             }
 
-            const { prompt } = JSON.parse(body);
-            log(`[Request] 요청 수신 (길이: ${prompt.length})`);
-            log(`[Preview] ${prompt.substring(0, 50)}...`);
+            const { prompt, imageBase64 } = JSON.parse(body);
+            log(`[Request] 요청 수신 (길이: ${prompt.length}, 이미지: ${imageBase64 ? 'Yes' : 'No'})`);
+
+            let tempImagePath = null;
+            let finalPrompt = prompt;
+
+            // 이미지 Base64 처리
+            if (imageBase64) {
+                const tempDir = os.tmpdir();
+                tempImagePath = path.join(tempDir, `oci-upload-${Date.now()}.jpg`);
+                fs.writeFileSync(tempImagePath, Buffer.from(imageBase64, 'base64'));
+                finalPrompt = `${prompt}\n\nUser Input Image: @${tempImagePath}`;
+                log(`[Image] 임시 파일 생성: ${tempImagePath}`);
+            }
+
+            log(`[Preview] ${finalPrompt.substring(0, 50)}...`);
 
             const abortController = new AbortController();
 
             // @include (이미지 첨부) 처리 로직
-            // CLI 내부의 handleAtCommand를 사용하여 @path 구문 해석 및 파일 로드
             const { processedQuery, error } = await handleAtCommand({
-                query: prompt,
+                query: finalPrompt,
                 config: config,
-                addItem: () => { }, // 히스토리 사이드 이펙트 무시
+                addItem: () => { },
                 onDebugMessage: (msg) => log(`[Debug] ${msg}`),
                 messageId: Date.now(),
                 signal: abortController.signal
             });
 
             if (error) {
+                if (tempImagePath) fs.unlinkSync(tempImagePath);
                 throw new Error(`명령어 처리 오류: ${error}`);
             }
 
             // Gemini 서비스로 전송
-            const parts = processedQuery || [{ text: prompt }]; // 처리된 쿼리가 없으면 원본 텍스트 사용
+            const parts = processedQuery || [{ text: finalPrompt }];
             const promptId = Math.random().toString(16).slice(2);
 
             const responseStream = geminiClient.sendMessageStream(parts, abortController.signal, promptId);
@@ -160,6 +173,16 @@ const server = http.createServer(async (req, res) => {
 
             log(`[Response] 생성 완료 (${fullText.length} 자).`);
 
+            // 파일 정리
+            if (tempImagePath) {
+                try {
+                    fs.unlinkSync(tempImagePath);
+                    log(`[Image] 임시 파일 삭제 완료`);
+                } catch (e) {
+                    log(`[Warning] 파일 삭제 실패: ${e.message}`);
+                }
+            }
+
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ text: fullText }));
 
@@ -172,6 +195,7 @@ const server = http.createServer(async (req, res) => {
     });
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-    log(`[Server] 포트 ${PORT}에서 대기 중...`);
+// 외부 접속 허용 (0.0.0.0)
+server.listen(PORT, '0.0.0.0', () => {
+    log(`[Server] 포트 ${PORT}에서 대기 중... (외부 접속 허용)`);
 });
