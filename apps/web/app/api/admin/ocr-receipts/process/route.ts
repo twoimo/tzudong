@@ -25,7 +25,7 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY!;
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
+const OCR_PROMPT = `한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
 
 ## 핵심 지침
 
