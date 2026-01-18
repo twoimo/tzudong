@@ -130,7 +130,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
     const [ocrLimitReached, setOcrLimitReached] = useState(false);
-    const [quota, setQuota] = useState<{ used: number; max: number; remaining: number } | null>(null);
+    const [quota, setQuota] = useState<{ used: number; max: number; remaining: number; resetAt?: string } | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -905,17 +905,19 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             </Label>
                             <Card
                                 ref={verificationDropRef}
-                                className={`relative p-6 border-dashed transition-colors cursor-pointer ${isVerificationDragging
-                                    ? 'border-primary bg-primary/5'
-                                    : verificationPhoto
-                                        ? 'border-green-300 bg-green-50/50'
-                                        : 'border-border hover:border-primary/50'
+                                className={`relative p-6 border-dashed transition-colors ${ocrLimitReached
+                                    ? 'border-muted bg-muted/50 cursor-not-allowed'
+                                    : isVerificationDragging
+                                        ? 'border-primary bg-primary/5 cursor-pointer'
+                                        : verificationPhoto
+                                            ? 'border-green-300 bg-green-50/50 cursor-pointer'
+                                            : 'border-border hover:border-primary/50 cursor-pointer'
                                     }`}
-                                onDragOver={handleDragOver}
-                                onDragEnter={handleVerificationDragEnter}
-                                onDragLeave={handleVerificationDragLeave}
-                                onDrop={handleVerificationDrop}
-                                onClick={openVerificationFileDialog}
+                                onDragOver={!ocrLimitReached ? handleDragOver : undefined}
+                                onDragEnter={!ocrLimitReached ? handleVerificationDragEnter : undefined}
+                                onDragLeave={!ocrLimitReached ? handleVerificationDragLeave : undefined}
+                                onDrop={!ocrLimitReached ? handleVerificationDrop : undefined}
+                                onClick={!ocrLimitReached ? openVerificationFileDialog : undefined}
                             >
                                 <div className="flex flex-col items-center gap-4">
                                     {verificationPhoto ? (
@@ -967,21 +969,15 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     일일 무료 분석 한도(5회)를 사용했습니다
                                                 </p>
                                                 <p className="text-sm text-muted-foreground mb-3">
-                                                    내일 00시에 다시 분석할 수 있습니다 <br />
-                                                    <span className="text-xs">(사진 선택 시 직접 입력 모드로 진행됩니다)</span>
+                                                    {quota?.resetAt ? (
+                                                        <>
+                                                            {new Date(quota.resetAt).toLocaleTimeString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}에 다시 분석할 수 있습니다
+                                                        </>
+                                                    ) : (
+                                                        <>내일 00시에 다시 분석할 수 있습니다</>
+                                                    )}
                                                 </p>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-2 border-amber-200 hover:bg-amber-50"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openVerificationFileDialog();
-                                                    }}
-                                                >
-                                                    <Plus className="h-4 w-4" />
-                                                    직접 입력하기 (분석 없이 업로드)
-                                                </Button>
+
                                             </div>
                                         </div>
                                     ) : (
@@ -1367,7 +1363,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         <>
             <Dialog open={isOpen} onOpenChange={handleClose}>
                 {isOpen && (
-                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none">
                         <DialogHeader className="relative space-y-3">
                             {/* 자동 저장 상태 표시 - 좌측 상단 */}
                             {lastSavedAt && (
