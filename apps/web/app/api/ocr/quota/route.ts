@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET() {
     try {
-        const supabase = await createClient();
+        const supabase = await createServerClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
@@ -15,7 +16,13 @@ export async function GET() {
 
         const MAX_DAILY_QUOTA = 5;
 
-        const { count, error: countError } = await (supabase
+        // Service Role 클라이언트 생성 (RLS 우회)
+        const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
+        const { count, error: countError } = await (supabaseAdmin
             .from('ocr_logs') as any)
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
