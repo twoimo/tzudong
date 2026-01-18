@@ -958,7 +958,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         </div>
                                         <h3 className="text-lg font-bold text-primary mb-2">AI가 영수증을 분석하고 있어요</h3>
                                         <p className="text-sm text-muted-foreground mb-4">
-                                            가게명, 방문일시, 메뉴 정보를<br />자동으로 입력합니다 ✨
+                                            가게명, 방문일시, 메뉴 정보, 리뷰 내용을<br />자동으로 입력합니다 ✨
                                         </p>
                                         <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                             <CheckCircle2 className="w-3 h-3 text-green-600" />
@@ -1486,7 +1486,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 </div>
                                                 <h3 className="text-lg font-bold text-primary mb-2">AI가 영수증을 분석하고 있어요</h3>
                                                 <p className="text-sm text-muted-foreground mb-4">
-                                                    가게명, 방문일시, 메뉴 정보를<br />자동으로 입력합니다 ✨
+                                                    가게명, 방문일시, 메뉴 정보, 리뷰 내용을<br />자동으로 입력합니다 ✨
                                                 </p>
                                                 <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
                                                     <CheckCircle2 className="w-3 h-3 text-green-600" />
