@@ -234,7 +234,7 @@ function OverlayPagePanelComponent({ activePanel, onClose, initialReviewId }: Ov
                 )}
             </div>
 
-            {/* 모바일/태블릿에서만 Dialog 표시 (필요시) - 현재는 없음 */}
+            {/* 모바일/태블릿에서는 Dialog로 표시 */}
             {!isDesktop && isReviewPanelOpen && (
                 <ReviewModal
                     isOpen={true}
