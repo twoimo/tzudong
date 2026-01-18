@@ -74,7 +74,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Calendar, Upload, X as XIcon, AlertCircle, CircleAlert, CheckCircle2, Image, Trash2, Plus, Search, Camera, ChevronDown, Loader2, Clock } from "lucide-react";
+import { Calendar, Upload, X as XIcon, AlertCircle, CircleAlert, CheckCircle2, Image, Trash2, Plus, Search, Camera, ChevronDown, Loader2, Clock, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
@@ -129,6 +129,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
+    const [ocrLimitReached, setOcrLimitReached] = useState(false);
+    const [quota, setQuota] = useState<{ used: number; max: number; remaining: number; resetAt?: string } | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -425,6 +427,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 });
 
                 if (!response.ok) {
+                    // 429: 일일 한도 초과 (백엔드에서 메시지 전달)
+                    if (response.status === 429) {
+                        const errorData = await response.json();
+                        setOcrLimitReached(true);
+                        throw new Error(errorData.error || "일일 무료 분석 한도를 초과했습니다.");
+                    }
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'OCR 분석 실패');
                 }
@@ -529,6 +537,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     description: "영수증을 분석했으나 자동 입력할 정보를 찾지 못했습니다.",
                 });
             }
+
+            // 분석 성공 시 쿼터 갱신 (실시간 반영)
+            fetchQuota();
 
         } catch (error) {
             console.error("OCR 오류:", error);
@@ -804,6 +815,29 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             loadDraft();
         }
     }, [isOpen, user?.id, restaurant?.id, loadDraft]);
+    // 쿼터 확인 함수
+    const fetchQuota = useCallback(() => {
+        if (!user) return;
+        fetch('/api/ocr/quota')
+            .then(res => res.json())
+            .then(data => {
+                if (data.remaining !== undefined) {
+                    setQuota(data);
+                    if (data.remaining === 0) {
+                        setOcrLimitReached(true);
+                    }
+                }
+            })
+            .catch(console.error);
+    }, [user]);
+
+    // 초기 로딩 및 모달 열릴 때 쿼터 확인
+    useEffect(() => {
+        if (isOpen && user) {
+            fetchQuota();
+        }
+    }, [isOpen, user, fetchQuota]);
+
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
         return (
@@ -829,8 +863,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     )}
                     <div className="flex items-start justify-between gap-2 pt-3">
                         <div className="flex-1">
-                            <h2 className="text-2xl font-semibold bg-gradient-primary bg-clip-text text-transparent">
+                            <h2 className="text-2xl font-semibold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
                                 쯔동여지도 리뷰 작성
+                                {quota && (
+                                    <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
+                                        AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
+                                    </Badge>
+                                )}
                             </h2>
                             <p className="text-sm text-muted-foreground">
                                 맛집 방문 후기를 공유해주세요
@@ -866,17 +905,19 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                             </Label>
                             <Card
                                 ref={verificationDropRef}
-                                className={`relative p-6 border-dashed transition-colors cursor-pointer ${isVerificationDragging
-                                    ? 'border-primary bg-primary/5'
-                                    : verificationPhoto
-                                        ? 'border-green-300 bg-green-50/50'
-                                        : 'border-border hover:border-primary/50'
+                                className={`relative p-6 border-dashed transition-colors ${ocrLimitReached
+                                    ? 'border-muted bg-muted/50 cursor-not-allowed'
+                                    : isVerificationDragging
+                                        ? 'border-primary bg-primary/5 cursor-pointer'
+                                        : verificationPhoto
+                                            ? 'border-green-300 bg-green-50/50 cursor-pointer'
+                                            : 'border-border hover:border-primary/50 cursor-pointer'
                                     }`}
-                                onDragOver={handleDragOver}
-                                onDragEnter={handleVerificationDragEnter}
-                                onDragLeave={handleVerificationDragLeave}
-                                onDrop={handleVerificationDrop}
-                                onClick={openVerificationFileDialog}
+                                onDragOver={!ocrLimitReached ? handleDragOver : undefined}
+                                onDragEnter={!ocrLimitReached ? handleVerificationDragEnter : undefined}
+                                onDragLeave={!ocrLimitReached ? handleVerificationDragLeave : undefined}
+                                onDrop={!ocrLimitReached ? handleVerificationDrop : undefined}
+                                onClick={!ocrLimitReached ? openVerificationFileDialog : undefined}
                             >
                                 <div className="flex flex-col items-center gap-4">
                                     {verificationPhoto ? (
@@ -918,6 +959,27 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 사진 제거
                                             </Button>
                                         </div>
+                                    ) : ocrLimitReached ? (
+                                        <div className="w-full text-center space-y-3 p-2">
+                                            <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 transition-colors">
+                                                <AlertTriangle className="h-8 w-8 text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium mb-1 text-amber-700">
+                                                    일일 무료 분석 한도(5회)를 사용했습니다
+                                                </p>
+                                                <p className="text-sm text-muted-foreground mb-3">
+                                                    {quota?.resetAt ? (
+                                                        <>
+                                                            {new Date(quota.resetAt).toLocaleTimeString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}에 다시 분석할 수 있습니다
+                                                        </>
+                                                    ) : (
+                                                        <>내일 00시에 다시 분석할 수 있습니다</>
+                                                    )}
+                                                </p>
+
+                                            </div>
+                                        </div>
                                     ) : (
                                         <div className="w-full text-center space-y-3">
                                             <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
@@ -930,7 +992,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                     {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
                                                 </p>
                                                 <p className="text-sm text-muted-foreground mb-3">
-                                                    <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴를 자동으로 입력해드려요!</span>
+                                                    <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
                                                 </p>
                                                 <Button
                                                     variant="outline"
@@ -1301,7 +1363,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         <>
             <Dialog open={isOpen} onOpenChange={handleClose}>
                 {isOpen && (
-                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+                    <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto p-4 sm:p-6 rounded-xl pb-[max(1.5rem,env(safe-area-inset-bottom))] duration-0 data-[state=open]:animate-none data-[state=closed]:animate-none">
                         <DialogHeader className="relative space-y-3">
                             {/* 자동 저장 상태 표시 - 좌측 상단 */}
                             {lastSavedAt && (
@@ -1324,8 +1386,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                             <div className="flex items-start justify-between gap-2 pt-3">
                                 <div className="flex-1">
-                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
                                         쯔동여지도 리뷰 작성
+                                        {quota && (
+                                            <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
+                                                AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
+                                            </Badge>
+                                        )}
                                     </DialogTitle>
                                     <DialogDescription>
                                         맛집 방문 후기를 공유해주세요
@@ -1422,7 +1489,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                             {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
                                                         </p>
                                                         <p className="text-sm text-muted-foreground mb-3">
-                                                            <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴를 자동으로 입력해드려요!</span>
+                                                            <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
                                                         </p>
                                                         <Button
                                                             variant="outline"

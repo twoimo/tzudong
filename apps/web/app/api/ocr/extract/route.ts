@@ -141,8 +141,10 @@ export async function POST(req: Request) {
             console.error("쿼터 확인 실패 (OCI로 진행):", countError);
             useOciDirectly = true;
         } else if (count !== null && count >= MAX_DAILY_QUOTA) {
-            console.log(`일일 쿼터(${MAX_DAILY_QUOTA}) 초과. OCI 서버로 전환합니다.`);
-            useOciDirectly = true;
+            return NextResponse.json(
+                { error: `일일 무료 분석 한도(${MAX_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.` },
+                { status: 429 }
+            );
         }
 
         // 1. Google API 시도 (쿼터 내 && API 키 존재)
@@ -163,13 +165,14 @@ export async function POST(req: Request) {
                 const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
 
                 // 성공 로그
-                await (supabase.from('ocr_logs') as any).insert({
+                const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
                     user_id: user.id,
                     image_hash: imageHash,
                     model_used: 'gemini-3-flash-preview', // Vercel API
                     success: true,
                     metadata: { file_size: file.size, store_found: !!data.store_name }
                 });
+                if (logError) console.error('OCR Log Insert Error (Google):', logError);
 
                 return NextResponse.json(data);
 
@@ -184,7 +187,7 @@ export async function POST(req: Request) {
         const data = await analyzeReceiptWithCliFallback(buffer, OCR_PROMPT);
 
         // 성공 로그 (OCI)
-        await (supabase.from('ocr_logs') as any).insert({
+        const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
             user_id: user.id,
             image_hash: imageHash,
             model_used: 'oci-gemini-server',
@@ -195,6 +198,7 @@ export async function POST(req: Request) {
                 quota_exceeded: count !== null && count >= MAX_DAILY_QUOTA
             }
         });
+        if (logError) console.error('OCR Log Insert Error (OCI):', logError);
 
         return NextResponse.json(data);
 
