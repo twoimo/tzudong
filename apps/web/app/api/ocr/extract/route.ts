@@ -165,13 +165,14 @@ export async function POST(req: Request) {
                 const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
 
                 // 성공 로그
-                await (supabase.from('ocr_logs') as any).insert({
+                const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
                     user_id: user.id,
                     image_hash: imageHash,
                     model_used: 'gemini-3-flash-preview', // Vercel API
                     success: true,
                     metadata: { file_size: file.size, store_found: !!data.store_name }
                 });
+                if (logError) console.error('OCR Log Insert Error (Google):', logError);
 
                 return NextResponse.json(data);
 
@@ -186,7 +187,7 @@ export async function POST(req: Request) {
         const data = await analyzeReceiptWithCliFallback(buffer, OCR_PROMPT);
 
         // 성공 로그 (OCI)
-        await (supabase.from('ocr_logs') as any).insert({
+        const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
             user_id: user.id,
             image_hash: imageHash,
             model_used: 'oci-gemini-server',
@@ -197,6 +198,7 @@ export async function POST(req: Request) {
                 quota_exceeded: count !== null && count >= MAX_DAILY_QUOTA
             }
         });
+        if (logError) console.error('OCR Log Insert Error (OCI):', logError);
 
         return NextResponse.json(data);
 
