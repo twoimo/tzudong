@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient as createServerClient } from '@/lib/supabase/server';
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from '@/lib/supabase/server';
 
 export async function GET() {
     try {
-        const supabase = await createServerClient();
+        const supabase = await createClient();
         const { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
@@ -16,13 +15,7 @@ export async function GET() {
 
         const MAX_DAILY_QUOTA = 5;
 
-        // Service Role 클라이언트 생성 (RLS 우회)
-        const supabaseAdmin = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-        );
-
-        const { count, error: countError } = await (supabaseAdmin
+        const { count, error: countError } = await (supabase
             .from('ocr_logs') as any)
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
@@ -35,10 +28,15 @@ export async function GET() {
         const used = count || 0;
         const remaining = Math.max(0, MAX_DAILY_QUOTA - used);
 
+        // 다음 리셋 시간: 내일 00:00:00
+        const resetAt = new Date(today);
+        resetAt.setDate(resetAt.getDate() + 1);
+
         return NextResponse.json({
             used,
             max: MAX_DAILY_QUOTA,
-            remaining
+            remaining,
+            resetAt: resetAt.toISOString()
         });
 
     } catch (error: any) {
