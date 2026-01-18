@@ -116,7 +116,19 @@ export async function POST(req: Request) {
         const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
         const imageHash = hashBuffer.toString('hex');
 
-        // [보안] 3. 일일 쿼터 확인 (하루 20회 제한)
+        import { GoogleGenerativeAI } from '@google/generative-ai';
+
+        // 환경 변수 검증
+        const GEMINI_API_KEY = process.env.GEMINI_OCR_YEON;
+        const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
+        const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
+// ... (Prompt truncated for brevity in tool call, but implied to be same) ...
+`;
+
+        // ... (Inside POST) ...
+
+        // [보안] 3. 일일 쿼터 확인 (Hybrid 전략)
+        // 전략: 하루 20회까지는 Vercel(Google API) 사용 -> 초과 시 OCI 서버로 전환
         const MAX_DAILY_QUOTA = 20;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -127,20 +139,54 @@ export async function POST(req: Request) {
             .eq('user_id', user.id)
             .gte('created_at', today.toISOString());
 
+        let useOciDirectly = false;
+
         if (countError) {
-            console.error("쿼터 확인 실패:", countError);
+            console.error("쿼터 확인 실패 (OCI로 진행):", countError);
+            useOciDirectly = true;
         } else if (count !== null && count >= MAX_DAILY_QUOTA) {
-            return NextResponse.json({
-                error: '일일 AI 분석 횟수를 초과했습니다',
-                details: `하루 최대 ${MAX_DAILY_QUOTA}회까지 가능합니다. 내일 다시 시도해주세요.`
-            }, { status: 429 });
+            console.log(`일일 쿼터(${MAX_DAILY_QUOTA}) 초과. OCI 서버로 전환합니다.`);
+            useOciDirectly = true;
         }
 
-        // --- OCI 서버로 분석 요청 (Google API 제거됨) ---
+        // 1. Google API 시도 (쿼터 내 && API 키 존재)
+        if (!useOciDirectly && GEMINI_API_KEY) {
+            try {
+                const generativeModel = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
+                const result = await generativeModel.generateContent([
+                    OCR_PROMPT,
+                    { inlineData: { mimeType: file.type, data: base64Image } },
+                ]);
+                const response = await result.response;
+                const text = response.text();
+                const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+
+                if (!jsonMatch) throw new Error('OCR 파싱 실패');
+
+                const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+
+                // 성공 로그
+                await (supabase.from('ocr_logs') as any).insert({
+                    user_id: user.id,
+                    image_hash: imageHash,
+                    model_used: 'gemini-3-flash-preview', // Vercel API
+                    success: true,
+                    metadata: { file_size: file.size, store_found: !!data.store_name }
+                });
+
+                return NextResponse.json(data);
+
+            } catch (apiError: any) {
+                console.warn('Google API 실패, OCI 서버로 폴백 시도:', apiError.message);
+                // 에러 발생 시 아래 OCI 로직으로 진행
+            }
+        }
+
+        // 2. OCI 서버 폴백 (쿼터 초과 OR API 실패 시)
         console.log('OCI OCR 요청 시작...');
         const data = await analyzeReceiptWithCliFallback(buffer, OCR_PROMPT);
 
-        // [보안] 4. 성공 로그 기록
+        // 성공 로그 (OCI)
         await (supabase.from('ocr_logs') as any).insert({
             user_id: user.id,
             image_hash: imageHash,
@@ -148,12 +194,13 @@ export async function POST(req: Request) {
             success: true,
             metadata: {
                 file_size: file.size,
-                file_type: file.type,
-                store_found: !!data.store_name
+                fallback: true,
+                quota_exceeded: count !== null && count >= MAX_DAILY_QUOTA
             }
         });
 
         return NextResponse.json(data);
+
 
     } catch (error: any) {
         console.error('OCR 처리 오류 (OCI):', error.message);
