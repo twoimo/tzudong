@@ -403,9 +403,14 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 const formData = new FormData();
                 formData.append('image', file);
 
-                const response = await fetch('/api/ocr/analyze', {
+                if (!user) {
+                    throw new Error('로그인이 필요한 서비스입니다');
+                }
+
+                const response = await fetch('/api/ocr/extract', {
                     method: 'POST',
                     body: formData,
+                    credentials: 'include',
                 });
 
                 if (!response.ok) {
