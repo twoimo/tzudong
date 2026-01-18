@@ -427,7 +427,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             let autoFilledParts: string[] = [];
 
             // 1. 맛집 자동 검색 및 설정
-            if (data.store_name && !selectedRestaurant && !restaurant) {
+            // 수정: 이미 선택된 맛집이 있어도(selectedRestaurant) OCR 결과가 있으면 교체 시도 (단, props로 고정된 restaurant가 없어야 함)
+            if (data.store_name && !restaurant) {
                 const { data: restaurants, error } = await supabase
                     .from('restaurants')
                     .select('id, name')
@@ -437,16 +438,26 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 if (!error && restaurants && restaurants.length > 0) {
                     setSelectedRestaurant(restaurants[0]);
                     autoFilledParts.push("맛집");
+
+                    // 만약 기존에 선택된 맛집과 다르다면 알림
+                    if (selectedRestaurant && selectedRestaurant.id !== restaurants[0].id) {
+                        toast({
+                            title: "맛집 정보 업데이트",
+                            description: `영수증 정보에 맞춰 맛집이 '${restaurants[0].name}'(으)로 변경되었습니다.`,
+                        });
+                    }
                 } else {
                     // 정확한 일치가 없으면 검색어로 설정하여 목록 노출 유도
                     setSearchQuery(data.store_name);
+                    setSelectedRestaurant(null); // 기존 선택 해제하여 검색 유도
+
                     // 검색 결과가 나오도록 잠시 대기 후 토스트 메시지 (useEffect에 의해 검색 실행됨)
                     toast({
                         title: "맛집을 선택해주세요",
                         description: `'${data.store_name}' 검색 결과를 확인하고 선택해주세요.`,
                     });
                 }
-            } else if (data.store_name && (selectedRestaurant || restaurant)) {
+            } else if (data.store_name && restaurant) {
                 // 이미 선택된 경우 검증만 수행
                 const currentName = selectedRestaurant?.name || restaurant?.name || "";
                 if (!currentName.includes(data.store_name) && !data.store_name.includes(currentName)) {
