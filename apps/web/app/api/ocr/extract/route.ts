@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { analyzeReceiptWithCliFallback } from '../../../../lib/gemini-cli';
-import { createClient } from '@/lib/supabase/server';
+import { createClient as createServerClient } from '@/lib/supabase/server';
+import { createClient } from '@supabase/supabase-js';
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -97,7 +98,7 @@ export async function POST(req: Request) {
         base64Image = buffer.toString('base64');
 
         // [보안] 1. 사용자 인증 확인
-        const supabase = await createClient();
+        const supabase = await createServerClient();
         let { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
@@ -124,12 +125,18 @@ export async function POST(req: Request) {
         const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
 
         // [보안] 3. 일일 쿼터 확인 (Hybrid 전략)
-        // 전략: 하루 20회까지는 Vercel(Google API) 사용 -> 초과 시 OCI 서버로 전환
+        // Service Role 클라이언트 생성 (RLS 우회)
+        const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!
+        );
+
+        // 전략: 하루 5회까지는 Vercel(Google API) 사용 -> 초과 시 429 에러
         const MAX_DAILY_QUOTA = 5;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const { count, error: countError } = await (supabase
+        const { count, error: countError } = await (supabaseAdmin
             .from('ocr_logs') as any)
             .select('*', { count: 'exact', head: true })
             .eq('user_id', user.id)
@@ -165,7 +172,7 @@ export async function POST(req: Request) {
                 const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
 
                 // 성공 로그
-                const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
+                const { error: logError } = await (supabaseAdmin.from('ocr_logs') as any).insert({
                     user_id: user.id,
                     image_hash: imageHash,
                     model_used: 'gemini-3-flash-preview', // Vercel API
@@ -187,7 +194,7 @@ export async function POST(req: Request) {
         const data = await analyzeReceiptWithCliFallback(buffer, OCR_PROMPT);
 
         // 성공 로그 (OCI)
-        const { error: logError } = await (supabase.from('ocr_logs') as any).insert({
+        const { error: logError } = await (supabaseAdmin.from('ocr_logs') as any).insert({
             user_id: user.id,
             image_hash: imageHash,
             model_used: 'oci-gemini-server',
@@ -208,12 +215,19 @@ export async function POST(req: Request) {
 
         // [보안] 실패 로그 기록
         try {
-            const supabase = await createClient();
+            const supabase = await createServerClient();
             const { data: { user } } = await supabase.auth.getUser();
             if (user && buffer) {
                 const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
                 const imageHash = hashBuffer.toString('hex');
-                await (supabase.from('ocr_logs') as any).insert({
+
+                // 서비스 롤 클라이언트로 실패 로그 기록 (RLS 우회)
+                const supabaseAdmin = createClient(
+                    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                    process.env.SUPABASE_SERVICE_ROLE_KEY!
+                );
+
+                await (supabaseAdmin.from('ocr_logs') as any).insert({
                     user_id: user.id,
                     image_hash: imageHash,
                     model_used: 'fail',
