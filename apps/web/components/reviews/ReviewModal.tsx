@@ -70,13 +70,17 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Calendar, Upload, X as XIcon, AlertCircle, CircleAlert, CheckCircle2, Image, Trash2, Plus, Search, Camera, ChevronDown, Loader2, Clock } from "lucide-react";
+import { CheckCircle2, X as XIcon, Loader2, CircleAlert } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { ReviewVerificationGuide } from "./form/ReviewVerificationGuide";
+import { ReviewVerificationUpload } from "./form/ReviewVerificationUpload";
+import { ReviewRestaurantSearch } from "./form/ReviewRestaurantSearch";
+import { ReviewDateSelection } from "./form/ReviewDateSelection";
+import { ReviewCategorySelect } from "./form/ReviewCategorySelect";
+import { ReviewFoodPhotoUpload } from "./form/ReviewFoodPhotoUpload";
+import { ReviewContentInput } from "./form/ReviewContentInput";
+import { REVIEW_CATEGORIES, ReviewCategory } from "./constants";
 
 interface ReviewModalProps {
     isOpen: boolean;
@@ -86,25 +90,6 @@ interface ReviewModalProps {
     inline?: boolean; // Dialog 없이 콘텐츠만 렌더링 (데스크톱 나란히 배치용)
 }
 
-const CATEGORIES = [
-    "치킨",
-    "중식",
-    "돈까스·회",
-    "피자",
-    "패스트푸드",
-    "찜·탕",
-    "족발·보쌈",
-    "분식",
-    "카페·디저트",
-    "한식",
-    "고기",
-    "양식",
-    "아시안",
-    "야식",
-    "도시락",
-] as const;
-
-type Category = typeof CATEGORIES[number];
 
 interface OCRItem {
     name: string;
@@ -126,7 +111,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const { user } = useAuth();
     const [visitedDate, setVisitedDate] = useState("");
     const [visitedTime, setVisitedTime] = useState("");
-    const [categories, setCategories] = useState<Category[]>([]);
+    const [categories, setCategories] = useState<ReviewCategory[]>([]);
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
@@ -143,134 +128,6 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [isSearching, setIsSearching] = useState(false);
     const [selectedRestaurant, setSelectedRestaurant] = useState<{ id: string; name: string } | null>(restaurant);
 
-    // 드래그 앤 드롭을 위한 ref들
-    const verificationDropRef = useRef<HTMLDivElement>(null);
-    const foodPhotosDropRef = useRef<HTMLDivElement>(null);
-    const verificationFileInputRef = useRef<HTMLInputElement>(null);
-    const foodPhotosFileInputRef = useRef<HTMLInputElement>(null);
-
-    // 드래그 상태
-    const [isVerificationDragging, setIsVerificationDragging] = useState(false);
-    const [isFoodPhotosDragging, setIsFoodPhotosDragging] = useState(false);
-
-    // 이미지 미리보기 URL 메모리 관리 (URL.createObjectURL 정리)
-    const verificationPhotoUrl = useMemo(() => {
-        if (verificationPhoto) {
-            return URL.createObjectURL(verificationPhoto);
-        }
-        return null;
-    }, [verificationPhoto]);
-
-    const foodPhotoUrls = useMemo(() => {
-        return foodPhotos.map(photo => URL.createObjectURL(photo));
-    }, [foodPhotos]);
-
-    // URL 정리 (메모리 누수 방지)
-    useEffect(() => {
-        return () => {
-            if (verificationPhotoUrl) {
-                URL.revokeObjectURL(verificationPhotoUrl);
-            }
-        };
-    }, [verificationPhotoUrl]);
-
-    useEffect(() => {
-        return () => {
-            foodPhotoUrls.forEach(url => URL.revokeObjectURL(url));
-        };
-    }, [foodPhotoUrls]);
-
-    // 메모이제이션된 이벤트 핸들러들
-    const handleVerificationPhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            setVerificationPhoto(file);
-            analyzeReceipt(file);
-        }
-    }, []);
-
-    const handleFoodPhotosChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        if (files.length === 0) return;
-
-        // requestAnimationFrame을 사용하여 UI 블로킹 방지
-        requestAnimationFrame(() => {
-            setFoodPhotos(prev => [...prev, ...files]);
-        });
-
-        // input 초기화 (같은 파일 재선택 가능하도록)
-        e.target.value = '';
-    }, []);
-
-    const removeFoodPhoto = useCallback((index: number) => {
-        setFoodPhotos(prev => prev.filter((_, i) => i !== index));
-    }, []);
-
-    // 드래그 앤 드롭 핸들러들 (useCallback으로 메모이제이션)
-    const handleDragOver = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-    }, []);
-
-    const handleVerificationDragEnter = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsVerificationDragging(true);
-    }, []);
-
-    const handleVerificationDragLeave = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsVerificationDragging(false);
-    }, []);
-
-    const handleVerificationDrop = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsVerificationDragging(false);
-
-        const files = Array.from(e.dataTransfer.files);
-        const imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-        if (imageFiles.length > 0) {
-            setVerificationPhoto(imageFiles[0]);
-            analyzeReceipt(imageFiles[0]);
-        }
-    }, []);
-
-    const handleFoodPhotosDragEnter = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsFoodPhotosDragging(true);
-    }, []);
-
-    const handleFoodPhotosDragLeave = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsFoodPhotosDragging(false);
-    }, []);
-
-    const handleFoodPhotosDrop = useCallback((e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setIsFoodPhotosDragging(false);
-
-        const files = Array.from(e.dataTransfer.files);
-        const imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-        if (imageFiles.length > 0) {
-            setFoodPhotos(prev => [...prev, ...imageFiles]);
-        }
-    }, []);
-
-    // 파일 선택기 열기 함수들 (useCallback으로 메모이제이션)
-    const openVerificationFileDialog = useCallback(() => {
-        verificationFileInputRef.current?.click();
-    }, []);
-
-    const openFoodPhotosFileDialog = useCallback(() => {
-        foodPhotosFileInputRef.current?.click();
-    }, []);
 
     // 맛집 검색 핸들러
     const handleSearchRestaurant = useCallback(async (query: string) => {
@@ -312,80 +169,98 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         }
     }, [restaurant]);
 
-    // 로컬 스토리지 키
-    const DRAFT_KEY = 'review_draft_v1';
+    // 모달 닫기 핸들러
+    const handleClose = useCallback(() => {
+        setVisitedDate("");
+        setVisitedTime("");
+        setCategories([]);
+        setContent("");
+        setVerificationPhoto(null);
+        setFoodPhotos([]);
+        onClose();
+    }, [onClose]);
 
-    // 초안 저장 로직 (1초 디바운스)
-    useEffect(() => {
-        if (!isOpen) return; // 모달이 닫혀있으면 저장하지 않음
+    // 임시 저장 데이터 삭제 (IndexedDB)
+    const clearDraft = useCallback(async () => {
+        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
+        if (!user?.id || !targetRestaurantId) return;
 
-        const saveDraft = setTimeout(() => {
-            const draft = {
-                content,
+        try {
+            await deleteDraft(user.id, targetRestaurantId);
+            setLastSavedAt(null);
+        } catch (error) {
+            console.error('임시 저장 데이터 삭제 실패:', error);
+        }
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
+
+    // 임시 저장된 데이터 불러오기 (IndexedDB)
+    const loadDraft = useCallback(async () => {
+        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
+        if (!user?.id || !targetRestaurantId) return;
+
+        try {
+            const draft = await getDraft(user.id, targetRestaurantId);
+            if (draft) {
+                setVisitedDate(draft.visitedDate);
+                setVisitedTime(draft.visitedTime);
+                setCategories(draft.categories as ReviewCategory[]);
+                setContent(draft.content);
+
+                // 사진 복원
+                if (draft.verificationPhoto) {
+                    setVerificationPhoto(draft.verificationPhoto);
+                }
+                if (draft.foodPhotos && draft.foodPhotos.length > 0) {
+                    setFoodPhotos(draft.foodPhotos);
+                }
+
+                setLastSavedAt(new Date(draft.savedAt));
+            }
+        } catch (error) {
+            console.error('임시 저장 데이터 로드 실패:', error);
+        }
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
+
+    // 자동 저장 (IndexedDB)
+    const autoSave = useCallback(async () => {
+        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
+        if (!user?.id || !targetRestaurantId) return;
+
+        // 내용이 하나라도 있을 때만 저장 (빈 문자열이라도 저장 - 지운 경우 대응)
+        // 모든 필드가 초기값인 경우에만 저장 스킵
+        const hasAnyContent = visitedDate || visitedTime || categories.length > 0 || content || verificationPhoto || foodPhotos.length > 0;
+        if (!hasAnyContent) {
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+            await saveDraft({
+                userId: user.id,
+                restaurantId: targetRestaurantId,
                 visitedDate,
                 visitedTime,
                 categories,
-                searchQuery,
-                selectedRestaurant,
-                hasVerificationPhoto: !!verificationPhoto, // 사진 유무만 저장
-                updatedAt: new Date().getTime(),
-            };
-            // 내용이 비어있지 않을 때만 저장
-            if (content || visitedDate || visitedTime || categories.length > 0 || selectedRestaurant) {
-                localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-            }
-        }, 1000);
-
-        return () => clearTimeout(saveDraft);
-    }, [content, visitedDate, visitedTime, categories, searchQuery, selectedRestaurant, verificationPhoto, isOpen]);
-
-    // 초안 복원 로직
-    useEffect(() => {
-        if (isOpen) {
-            const savedDraft = localStorage.getItem(DRAFT_KEY);
-            if (savedDraft) {
-                try {
-                    const draft = JSON.parse(savedDraft);
-                    // 24시간 이내의 초안만 유효
-                    if (Date.now() - draft.updatedAt < 24 * 60 * 60 * 1000) {
-                        // 기존 상태가 비어있을 때만 복원 (혹은 사용자에게 물어볼 수도 있음 - 여기서는 자동 복원하되 덮어쓰기 주의)
-                        // 하지만 모달이 새로 열릴 때(isOpen true) 실행되므로, 초기화 상태라고 가정해도 됨.
-                        // 단, props로 restaurant가 넘어온 경우는 제외하거나 병합해야 함.
-
-                        if (!content && !visitedDate && !visitedTime && categories.length === 0) {
-                            if (draft.content) setContent(draft.content);
-                            if (draft.visitedDate) setVisitedDate(draft.visitedDate);
-                            if (draft.visitedTime) setVisitedTime(draft.visitedTime);
-                            if (draft.categories) setCategories(draft.categories);
-                            if (draft.selectedRestaurant && !restaurant) {
-                                setSelectedRestaurant(draft.selectedRestaurant);
-                                setSearchQuery(draft.selectedRestaurant.name);
-                            }
-                            if (draft.hasVerificationPhoto && !verificationPhoto) {
-                                toast({
-                                    title: "작성 중인 리뷰 복원됨",
-                                    description: "이전에 작성하던 내용을 불러왔습니다. 사진은 다시 올려주세요.",
-                                });
-                            } else {
-                                toast({
-                                    title: "작성 중인 리뷰 복원됨",
-                                    description: "이전에 작성하던 내용을 불러왔습니다.",
-                                });
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.error("임시 저장 데이터 파싱 실패", e);
-                }
-            }
+                content,
+                verificationPhoto,
+                foodPhotos,
+            });
+            setLastSavedAt(new Date());
+        } catch (error) {
+            console.error('자동 저장 실패:', error);
+        } finally {
+            setIsSaving(false);
         }
-    }, [isOpen]); // restaurant는 deps에서 제외 (마운트 시점 기준)
+    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos]);
 
-    // 모달 닫을 때나 성공 시 초안 삭제 (이 부분은 handleSubmit 성공 시와 handleClose에서 처리해야 함)
-    // handleClose에서는 삭제하지 않음 (임시 저장 의도). handleSubmit 성공 시에만 삭제.
+    // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
+    const isFormValid = useMemo(() => {
+        const targetRestaurant = selectedRestaurant || restaurant;
+        return visitedDate && visitedTime && targetRestaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
+    }, [visitedDate, visitedTime, selectedRestaurant, restaurant, categories.length, content, verificationPhoto, foodPhotos.length]);
 
     // OCR 분석 실행 (모달 내부에서 처리)
-    const analyzeReceipt = async (file: File) => {
+    const analyzeReceipt = useCallback(async (file: File) => {
         // 1. 캐싱 키 생성 (파일 메타데이터 + 크기 기반)
         const fileKey = `ocr_cache_${file.name}_${file.size}_${file.lastModified}`;
 
@@ -471,7 +346,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             // 3. 카테고리
             if (data.category) {
                 // 카테고리 유효성 검사
-                const validCategory = CATEGORIES.find(c => c === data.category);
+                const validCategory = REVIEW_CATEGORIES.find(c => c === data.category);
                 if (validCategory) {
                     setCategories([validCategory]);
                     autoFilledParts.push("카테고리");
@@ -486,8 +361,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 // 초안이 없으면 기존 방식대로 메뉴 목록 추가
                 const menuText = data.items.map(item => `- ${item.name}: ${item.price?.toLocaleString() || 0}원`).join('\\n');
                 const totalText = data.total_amount ? `\\n총 결제금액: ${data.total_amount.toLocaleString()}원` : '';
-                const newContent = content ? `${content}\\n\\n[영수증 메뉴]\\n${menuText}${totalText}` : `[영수증 메뉴]\\n${menuText}${totalText}`;
-                setContent(newContent);
+                // 함수형 업데이트를 사용하여 content 의존성 제거
+                setContent(prevContent => prevContent ? `${prevContent}\\n\\n[영수증 메뉴]\\n${menuText}${totalText}` : `[영수증 메뉴]\\n${menuText}${totalText}`);
             }
 
             // 결과 리포트
@@ -513,8 +388,8 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         } finally {
             setIsAnalyzing(false);
         }
-    };
-    const handleSubmit = async () => {
+    }, [selectedRestaurant, restaurant]); // content 의존성 제거 (함수형 업데이트 사용)
+    const handleSubmit = useCallback(async () => {
         const targetRestaurant = selectedRestaurant || restaurant;
         // 필수 항목 검증
         if (!visitedDate || !visitedTime || !targetRestaurant?.id || categories.length === 0 || !content || !verificationPhoto || foodPhotos.length === 0) {
@@ -649,8 +524,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 description: "소중한 리뷰가 등록되었습니다. 관리자 승인 후 스탬프가 지급됩니다.",
             });
 
-            // 성공 시 초안 삭제
-            localStorage.removeItem(DRAFT_KEY);
+
 
             if (onSuccess) {
                 onSuccess();
@@ -667,96 +541,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
         } finally {
             setIsSubmitting(false);
         }
-    };
+    }, [selectedRestaurant, restaurant, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos, user, onSuccess, handleClose, clearDraft]); // DRAFT_KEY는 로컬 상수이므로 의존성 제외 (혹은 포함 필요 시 컴포넌트 밖으로 이동)
 
-    const handleClose = useCallback(() => {
-        setVisitedDate("");
-        setVisitedTime("");
-        setCategories([]);
-        setContent("");
-        setVerificationPhoto(null);
-        setFoodPhotos([]);
-        onClose();
-    }, [onClose]);
 
-    // 폼 유효성 검사 메모이제이션 (리뷰 내용 최소 20자)
-    const isFormValid = useMemo(() => {
-        const targetRestaurant = selectedRestaurant || restaurant;
-        return visitedDate && visitedTime && targetRestaurant?.id && categories.length > 0 && content.trim().length >= 20 && verificationPhoto && foodPhotos.length > 0;
-    }, [visitedDate, visitedTime, selectedRestaurant, restaurant, categories.length, content, verificationPhoto, foodPhotos.length]);
-
-    // 임시 저장된 데이터 불러오기 (IndexedDB)
-    const loadDraft = useCallback(async () => {
-        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
-        if (!user?.id || !targetRestaurantId) return;
-
-        try {
-            const draft = await getDraft(user.id, targetRestaurantId);
-            if (draft) {
-                setVisitedDate(draft.visitedDate);
-                setVisitedTime(draft.visitedTime);
-                setCategories(draft.categories as Category[]);
-                setContent(draft.content);
-
-                // 사진 복원
-                if (draft.verificationPhoto) {
-                    setVerificationPhoto(draft.verificationPhoto);
-                }
-                if (draft.foodPhotos && draft.foodPhotos.length > 0) {
-                    setFoodPhotos(draft.foodPhotos);
-                }
-
-                setLastSavedAt(new Date(draft.savedAt));
-            }
-        } catch (error) {
-            console.error('임시 저장 데이터 로드 실패:', error);
-        }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
-
-    // 자동 저장 (IndexedDB)
-    const autoSave = useCallback(async () => {
-        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
-        if (!user?.id || !targetRestaurantId) return;
-
-        // 내용이 하나라도 있을 때만 저장 (빈 문자열이라도 저장 - 지운 경우 대응)
-        // 모든 필드가 초기값인 경우에만 저장 스킵
-        const hasAnyContent = visitedDate || visitedTime || categories.length > 0 || content || verificationPhoto || foodPhotos.length > 0;
-        if (!hasAnyContent) {
-            return;
-        }
-
-        try {
-            setIsSaving(true);
-            await saveDraft({
-                userId: user.id,
-                restaurantId: targetRestaurantId,
-                visitedDate,
-                visitedTime,
-                categories,
-                content,
-                verificationPhoto,
-                foodPhotos,
-            });
-            setLastSavedAt(new Date());
-        } catch (error) {
-            console.error('자동 저장 실패:', error);
-        } finally {
-            setIsSaving(false);
-        }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id, visitedDate, visitedTime, categories, content, verificationPhoto, foodPhotos]);
-
-    // 임시 저장 데이터 삭제 (IndexedDB)
-    const clearDraft = useCallback(async () => {
-        const targetRestaurantId = selectedRestaurant?.id || restaurant?.id;
-        if (!user?.id || !targetRestaurantId) return;
-
-        try {
-            await deleteDraft(user.id, targetRestaurantId);
-            setLastSavedAt(null);
-        } catch (error) {
-            console.error('임시 저장 데이터 삭제 실패:', error);
-        }
-    }, [user?.id, selectedRestaurant?.id, restaurant?.id]);
 
     // 디바운스된 자동 저장 (500ms)
     useEffect(() => {
@@ -818,425 +605,69 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 <div className="flex-1 overflow-y-auto px-6 py-4">
                     <div className="space-y-6">
 
-                        {/* 중요 공지 - 컴팩트 버전 */}
-                        <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
-                            <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">
-                                <p className="font-semibold flex items-center gap-1">
-                                    📸 영수증 인증 가이드
-                                </p>
-                                <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
-                                    <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
-                                    <li><b>AI 자동 분석</b>으로 정보를 편리하게 채워보세요 ✨</li>
-                                    <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
-                                </ul>
-                            </div>
-                        </Card>
 
-                        {/* 인증 사진 (최상단 배치) */}
-                        <div className="space-y-2">
-                            <Label className="flex items-center gap-2">
-                                인증 사진 <span className="text-red-500">*</span>
-                            </Label>
-                            <Card
-                                ref={verificationDropRef}
-                                className={`relative p-6 border-dashed transition-colors cursor-pointer ${isVerificationDragging
-                                    ? 'border-primary bg-primary/5'
-                                    : verificationPhoto
-                                        ? 'border-green-300 bg-green-50/50'
-                                        : 'border-border hover:border-primary/50'
-                                    }`}
-                                onDragOver={handleDragOver}
-                                onDragEnter={handleVerificationDragEnter}
-                                onDragLeave={handleVerificationDragLeave}
-                                onDrop={handleVerificationDrop}
-                                onClick={openVerificationFileDialog}
-                            >
-                                <div className="flex flex-col items-center gap-4">
-                                    {verificationPhoto ? (
-                                        <div className="w-full space-y-3">
-                                            <div className="flex items-center justify-center relative">
-                                                <div className="relative">
-                                                    <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
-                                                        <img
-                                                            src={verificationPhotoUrl || ''}
-                                                            alt="인증 사진 미리보기"
-                                                            className="w-full h-full object-cover"
-                                                        />
-                                                    </div>
-                                                    <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
-                                                        <CheckCircle2 className="h-4 w-4" />
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="text-center">
-                                                <Badge variant="default" className="gap-1 mb-2 bg-green-500">
-                                                    <CheckCircle2 className="h-3 w-3" />
-                                                    인증 사진 업로드 완료
-                                                </Badge>
-                                                <p className="text-sm font-medium">{verificationPhoto.name}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {(verificationPhoto.size / 1024 / 1024).toFixed(1)}MB
-                                                </p>
-                                            </div>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="w-full gap-2"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setVerificationPhoto(null);
-                                                }}
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                                사진 제거
-                                            </Button>
-                                        </div>
-                                    ) : (
-                                        <div className="w-full text-center space-y-3">
-                                            <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
-                                                }`}>
-                                                <Image className={`h-8 w-8 transition-colors ${isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
-                                                    }`} />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium mb-1">
-                                                    {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
-                                                </p>
-                                                <p className="text-sm text-muted-foreground mb-3">
-                                                    <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴를 자동으로 입력해드려요!</span>
-                                                </p>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    className="gap-2"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        openVerificationFileDialog();
-                                                    }}
-                                                >
-                                                    <Plus className="h-4 w-4" />
-                                                    사진 선택
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <input ref={verificationFileInputRef} type="file" accept="image/*" onChange={handleVerificationPhotoChange} className="hidden" />
+                        <ReviewVerificationGuide />
 
-                                {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
-                                {isAnalyzing && (
-                                    <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
-                                        <div className="relative mb-4">
-                                            <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-                                            <div className="relative bg-background rounded-full p-3 border-2 border-primary shadow-lg">
-                                                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                                            </div>
-                                        </div>
-                                        <h3 className="text-lg font-bold text-primary mb-2">AI가 영수증을 분석하고 있어요</h3>
-                                        <p className="text-sm text-muted-foreground mb-4">
-                                            가게명, 방문일시, 메뉴 정보를<br />자동으로 입력합니다 ✨
-                                        </p>
-                                        <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-                                            <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                            <span>분석된 데이터는 AI 학습에 사용되지 않습니다</span>
-                                        </div>
-                                    </div>
-                                )}
-                            </Card>
-                        </div>
+                        <ReviewVerificationUpload
+                            photo={verificationPhoto}
+                            onPhotoSelect={(file) => {
+                                setVerificationPhoto(file);
+                                analyzeReceipt(file);
+                            }}
+                            onPhotoRemove={() => setVerificationPhoto(null)}
+                            isAnalyzing={isAnalyzing}
+                        />
 
-                        {/* 하단 폼 영역 (맛집 정보 ~ 리뷰 내용) */}
                         <div className="space-y-6 relative rounded-xl transition-all">
+                            <ReviewRestaurantSearch
+                                selectedRestaurant={selectedRestaurant}
+                                initialRestaurant={restaurant}
+                                searchQuery={searchQuery}
+                                setSearchQuery={setSearchQuery}
+                                searchResults={searchResults}
+                                isSearching={isSearching}
+                                onSelectRestaurant={(res) => {
+                                    setSelectedRestaurant(res);
+                                    setSearchQuery("");
+                                    setSearchResults([]);
+                                }}
+                                onClearRestaurant={() => {
+                                    setSelectedRestaurant(null);
+                                    setSearchQuery("");
+                                }}
+                            />
 
-                            {/* 방문 맛집 정보 */}
-                            <div className={`space-y-2 transition-all duration-500 ${(!selectedRestaurant && searchQuery && !isSearching)
-                                ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
-                                : ""
-                                }`}>
-                                <Label>
-                                    방문한 쯔양 맛집 <span className="text-red-500">*</span>
-                                </Label>
-                                {(selectedRestaurant || restaurant) ? (
-                                    <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                        <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                        <span className="font-medium text-green-800 flex-1">
-                                            {(selectedRestaurant || restaurant)?.name}
-                                        </span>
-                                        {!restaurant && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => {
-                                                    setSelectedRestaurant(null);
-                                                    setSearchQuery("");
-                                                }}
-                                                className="h-6 px-2 text-xs"
-                                            >
-                                                변경
-                                            </Button>
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="space-y-2">
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder="맛집 이름을 검색하세요..."
-                                                value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="pl-9"
-                                            />
-                                        </div>
-                                        {isSearching && (
-                                            <div className="flex items-center gap-2 text-sm text-muted-foreground p-2">
-                                                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                                                검색 중...
-                                            </div>
-                                        )}
-                                        {!isSearching && searchQuery.length >= 2 && searchResults.length === 0 && (
-                                            <div className="text-sm text-muted-foreground p-2">
-                                                검색 결과가 없습니다.
-                                            </div>
-                                        )}
-                                        {searchResults.length > 0 && (
-                                            <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-                                                {searchResults.map((result) => (
-                                                    <button
-                                                        key={result.id}
-                                                        onClick={() => {
-                                                            setSelectedRestaurant(result);
-                                                            setSearchQuery("");
-                                                            setSearchResults([]);
-                                                        }}
-                                                        className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors border-b last:border-b-0 text-sm"
-                                                    >
-                                                        {result.name}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                        {searchQuery.length < 2 && (
-                                            <p className="text-xs text-muted-foreground">
-                                                2글자 이상 입력하면 검색됩니다.
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                            <ReviewDateSelection
+                                visitedDate={visitedDate}
+                                setVisitedDate={setVisitedDate}
+                                visitedTime={visitedTime}
+                                setVisitedTime={setVisitedTime}
+                                idPrefix="inline"
+                            />
 
-                            {/* 방문 날짜 및 시간 */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="inline-visitDate" className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4" />
-                                        방문 날짜 <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="inline-visitDate"
-                                        type="date"
-                                        value={visitedDate}
-                                        onChange={(e) => setVisitedDate(e.target.value)}
-                                        max={new Date().toISOString().split('T')[0]}
-                                        min={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                                        enterKeyHint="next"
-                                    />
-                                </div>
+                            <ReviewCategorySelect
+                                categories={categories}
+                                setCategories={setCategories}
+                                idPrefix="inline"
+                            />
 
-                                <div className="space-y-2">
-                                    <Label htmlFor="inline-visitTime" className="flex items-center gap-2">
-                                        <Clock className="h-4 w-4" />
-                                        방문 시간 <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Input
-                                        id="inline-visitTime"
-                                        type="time"
-                                        step="60"
-                                        value={visitedTime}
-                                        onChange={(e) => setVisitedTime(e.target.value)}
-                                        enterKeyHint="next"
-                                    />
-                                </div>
-                            </div>
+                            <ReviewFoodPhotoUpload
+                                photos={foodPhotos}
+                                onPhotosSelected={(files) => {
+                                    requestAnimationFrame(() => {
+                                        setFoodPhotos(prev => [...prev, ...files]);
+                                    });
+                                }}
+                                onPhotoRemove={(index) => {
+                                    setFoodPhotos(prev => prev.filter((_, i) => i !== index));
+                                }}
+                            />
 
-                            {/* 카테고리 */}
-                            <div className="space-y-2">
-                                <Label>
-                                    카테고리 <span className="text-red-500">*</span>
-                                </Label>
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button variant="outline" className="w-full justify-between">
-                                            <span className="truncate">
-                                                {categories.length > 0
-                                                    ? `${categories.length}개 선택됨`
-                                                    : "어떤 종류의 음식을 드셨나요?"
-                                                }
-                                            </span>
-                                            <ChevronDown className="h-4 w-4 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-64" align="start">
-                                        <div className="space-y-2">
-                                            <h4 className="font-semibold text-sm">카테고리 선택</h4>
-                                            <div className="space-y-2 max-h-48 overflow-y-auto">
-                                                {CATEGORIES.map((cat) => (
-                                                    <div key={cat} className="flex items-center space-x-2">
-                                                        <Checkbox
-                                                            id={`inline-category-${cat}`}
-                                                            checked={categories.includes(cat)}
-                                                            onCheckedChange={(checked) => {
-                                                                if (checked) {
-                                                                    setCategories([...categories, cat]);
-                                                                } else {
-                                                                    setCategories(categories.filter(c => c !== cat));
-                                                                }
-                                                            }}
-                                                        />
-                                                        <Label htmlFor={`inline-category-${cat}`} className="text-sm cursor-pointer flex-1">
-                                                            {cat}
-                                                        </Label>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            {categories.length > 0 && (
-                                                <div className="pt-2 border-t">
-                                                    <Button variant="outline" size="sm" onClick={() => setCategories([])} className="w-full">
-                                                        선택 해제
-                                                    </Button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
-                                {categories.length > 0 && (
-                                    <div className="flex flex-wrap gap-1 mt-2">
-                                        {categories.map((category) => (
-                                            <Badge key={category} variant="secondary" className="text-xs">
-                                                {category}
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setCategories(categories.filter(c => c !== category))}
-                                                    className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                >
-                                                    <XIcon className="h-3 w-3" />
-                                                </button>
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-
-
-                            {/* 음식 사진 */}
-                            <div className="space-y-2">
-                                <Label className="flex items-center gap-2">
-                                    음식 사진 (다양한 각도) <span className="text-red-500">*</span>
-                                </Label>
-
-                                {foodPhotos.length > 0 && (
-                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                                        {foodPhotos.map((photo, index) => (
-                                            <div key={index} className="relative group">
-                                                <Card className="p-2 hover:shadow-md transition-shadow">
-                                                    <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                                                        <img src={foodPhotoUrls[index] || ''} alt={`음식 사진 ${index + 1}`} className="w-full h-full object-cover" />
-                                                    </div>
-                                                    <div className="mt-2 space-y-1">
-                                                        <p className="text-xs font-medium truncate" title={photo.name}>{photo.name}</p>
-                                                        <p className="text-xs text-muted-foreground">{(photo.size / 1024 / 1024).toFixed(1)}MB</p>
-                                                    </div>
-                                                </Card>
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                                    onClick={() => removeFoodPhoto(index)}
-                                                >
-                                                    <XIcon className="h-3 w-3" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-
-                                <Card
-                                    ref={foodPhotosDropRef}
-                                    className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
-                                        ? 'border-primary bg-primary/5'
-                                        : foodPhotos.length > 0
-                                            ? 'border-green-300 bg-green-50/50'
-                                            : 'border-border hover:border-primary/50'
-                                        }`}
-                                    onDragOver={handleDragOver}
-                                    onDragEnter={handleFoodPhotosDragEnter}
-                                    onDragLeave={handleFoodPhotosDragLeave}
-                                    onDrop={handleFoodPhotosDrop}
-                                    onClick={openFoodPhotosFileDialog}
-                                >
-                                    <div className="flex flex-col items-center gap-4">
-                                        <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-muted'}`}>
-                                            <Upload className={`h-8 w-8 transition-colors ${isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'}`} />
-                                        </div>
-                                        <div className="text-center space-y-2">
-                                            <p className="font-medium">
-                                                {isFoodPhotosDragging ? '여기에 사진들을 놓아주세요' : '음식 사진을 업로드해주세요'}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                다양한 각도에서 촬영한 사진을 드래그하거나 클릭해서 선택해주세요
-                                            </p>
-                                            <div className="flex gap-2 justify-center">
-                                                <Button variant="outline" size="sm" className="gap-2" onClick={(e) => { e.stopPropagation(); openFoodPhotosFileDialog(); }}>
-                                                    <Plus className="h-4 w-4" />
-                                                    사진 추가
-                                                </Button>
-                                                {foodPhotos.length > 0 && (
-                                                    <Badge variant="secondary" className="px-3 py-1">
-                                                        📷 {foodPhotos.length}장 업로드됨
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <input ref={foodPhotosFileInputRef} type="file" accept="image/*" multiple onChange={handleFoodPhotosChange} className="hidden" />
-                                </Card>
-
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
-                                    <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
-                                </div>
-                            </div>
-
-                            {/* 리뷰 내용 */}
-                            <div className="space-y-3">
-                                <Label htmlFor="inline-content">
-                                    리뷰 내용 <span className="text-red-500">*</span>
-                                </Label>
-
-                                <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
-                                    <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
-                                        <p className="font-semibold flex items-center gap-1">
-                                            💡 작성 가이드
-                                        </p>
-                                        <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
-                                            <li>어떤 메뉴를 드셨나요?</li>
-                                            <li>맛은 어떠셨나요?</li>
-                                            <li>분위기나 서비스는 어땠나요?</li>
-                                            <li>추천하고 싶은 메뉴가 있나요?</li>
-                                        </ul>
-                                    </div>
-                                </Card>
-
-                                <Textarea
-                                    id="inline-content"
-                                    placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
-                                    value={content}
-                                    onChange={(e) => setContent(e.target.value)}
-                                    rows={8}
-                                    className="resize-none"
-                                />
-                                <div className="text-right text-xs text-muted-foreground">
-                                    {content.length} / 최소 20자
-                                </div>
-                            </div>
+                            <ReviewContentInput
+                                content={content}
+                                setContent={setContent}
+                                idPrefix="inline"
+                            />
                         </div>
                     </div>
                 </div>
@@ -1309,464 +740,67 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                         <div className="space-y-6 mt-2">
                             <div className="space-y-6">
-                                {/* 중요 공지 - 컴팩트 버전 */}
-                                {/* 중요 공지 - 컴팩트 버전 */}
-                                <Card className="bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 p-3">
-                                    <div className="space-y-1 text-xs text-amber-900 dark:text-amber-100">
-                                        <p className="font-semibold flex items-center gap-1">
-                                            📸 영수증 인증 가이드
-                                        </p>
-                                        <ul className="space-y-0.5 ml-4 list-disc text-amber-700 dark:text-amber-300">
-                                            <li><b>영수증 전체</b>가 잘리지 않도록 촬영해주세요</li>
-                                            <li><b>AI 자동 분석</b>으로 정보를 편리하게 채워보세요 ✨</li>
-                                            <li>방문일은 <span className="text-red-600 font-semibold">3개월 이내</span>여야 합니다</li>
-                                        </ul>
-                                    </div>
-                                </Card>
+                                <ReviewVerificationGuide />
 
-                                {/* 인증 사진 (최상단 배치) */}
-                                <div className="space-y-2">
-                                    <Label className="flex items-center gap-2">
-                                        인증 사진 <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Card
-                                        ref={verificationDropRef}
-                                        className={`relative p-6 border-dashed transition-colors cursor-pointer ${isVerificationDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : verificationPhoto
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-border hover:border-primary/50'
-                                            }`}
-                                        onDragOver={handleDragOver}
-                                        onDragEnter={handleVerificationDragEnter}
-                                        onDragLeave={handleVerificationDragLeave}
-                                        onDrop={handleVerificationDrop}
-                                        onClick={openVerificationFileDialog}
-                                    >
-                                        <div className="flex flex-col items-center gap-4">
-                                            {verificationPhoto ? (
-                                                <div className="w-full space-y-3">
-                                                    <div className="flex items-center justify-center relative">
-                                                        <div className="relative">
-                                                            <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-green-200">
-                                                                <img
-                                                                    src={verificationPhotoUrl || ''}
-                                                                    alt="인증 사진 미리보기"
-                                                                    className="w-full h-full object-cover"
-                                                                />
-                                                            </div>
-                                                            <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1">
-                                                                <CheckCircle2 className="h-4 w-4" />
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-center">
-                                                        <Badge variant="default" className="gap-1 mb-2 bg-green-500">
-                                                            <CheckCircle2 className="h-3 w-3" />
-                                                            인증 사진 업로드 완료
-                                                        </Badge>
-                                                        <p className="text-sm font-medium">{verificationPhoto.name}</p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {(verificationPhoto.size / 1024 / 1024).toFixed(1)}MB
-                                                        </p>
-                                                    </div>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="w-full gap-2"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setVerificationPhoto(null);
-                                                        }}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                        사진 제거
-                                                    </Button>
-                                                </div>
-                                            ) : (
-                                                <div className="w-full text-center space-y-3">
-                                                    <div className={`mx-auto w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isVerificationDragging ? 'bg-primary/10' : 'bg-muted'
-                                                        }`}>
-                                                        <Image className={`h-8 w-8 transition-colors ${isVerificationDragging ? 'text-primary' : 'text-muted-foreground'
-                                                            }`} />
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-medium mb-1">
-                                                            {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
-                                                        </p>
-                                                        <p className="text-sm text-muted-foreground mb-3">
-                                                            <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴를 자동으로 입력해드려요!</span>
-                                                        </p>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="gap-2"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                openVerificationFileDialog();
-                                                            }}
-                                                        >
-                                                            <Plus className="h-4 w-4" />
-                                                            사진 선택
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <input ref={verificationFileInputRef} type="file" accept="image/*" onChange={handleVerificationPhotoChange} className="hidden" />
+                                <ReviewVerificationUpload
+                                    photo={verificationPhoto}
+                                    onPhotoSelect={(file) => {
+                                        setVerificationPhoto(file);
+                                        analyzeReceipt(file);
+                                    }}
+                                    onPhotoRemove={() => setVerificationPhoto(null)}
+                                    isAnalyzing={isAnalyzing}
+                                />
 
-                                        {/* AI 분석 로딩 오버레이 (카드 전체 덮음) */}
-                                        {isAnalyzing && (
-                                            <div className="absolute inset-0 z-50 bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center text-center p-6 rounded-xl border border-primary/20">
-                                                <div className="relative mb-4">
-                                                    <div className="absolute inset-0 bg-primary/20 rounded-full animate-ping" />
-                                                    <div className="relative bg-background rounded-full p-3 border-2 border-primary shadow-lg">
-                                                        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-                                                    </div>
-                                                </div>
-                                                <h3 className="text-lg font-bold text-primary mb-2">AI가 영수증을 분석하고 있어요</h3>
-                                                <p className="text-sm text-muted-foreground mb-4">
-                                                    가게명, 방문일시, 메뉴 정보를<br />자동으로 입력합니다 ✨
-                                                </p>
-                                                <div className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/50 px-3 py-1.5 rounded-full">
-                                                    <CheckCircle2 className="w-3 h-3 text-green-600" />
-                                                    <span>분석된 데이터는 AI 학습에 사용되지 않습니다</span>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </Card>
-                                </div>
+                                <ReviewRestaurantSearch
+                                    selectedRestaurant={selectedRestaurant}
+                                    initialRestaurant={restaurant}
+                                    searchQuery={searchQuery}
+                                    setSearchQuery={setSearchQuery}
+                                    searchResults={searchResults}
+                                    isSearching={isSearching}
+                                    onSelectRestaurant={(res) => {
+                                        setSelectedRestaurant(res);
+                                        setSearchQuery("");
+                                        setSearchResults([]);
+                                    }}
+                                    onClearRestaurant={() => {
+                                        setSelectedRestaurant(null);
+                                        setSearchQuery("");
+                                    }}
+                                />
 
-                                {/* 방문 맛집 정보 */}
-                                <div className={`space-y-2 transition-all duration-500 ${(!selectedRestaurant && searchQuery && !isSearching)
-                                    ? "ring-2 ring-primary ring-offset-2 rounded-lg p-1 bg-primary/5"
-                                    : ""
-                                    }`}>
-                                    <Label>
-                                        방문한 쯔양 맛집 <span className="text-red-500">*</span>
-                                    </Label>
-                                    {(selectedRestaurant || restaurant) ? (
-                                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                            <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                            <span className="font-medium text-green-800 flex-1">
-                                                {(selectedRestaurant || restaurant)?.name}
-                                            </span>
-                                            {!restaurant && (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setSelectedRestaurant(null);
-                                                        setSearchQuery("");
-                                                    }}
-                                                    className="h-6 px-2 text-xs"
-                                                >
-                                                    변경
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className="space-y-2">
-                                            <div className="relative">
-                                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    placeholder="맛집 이름을 검색하세요..."
-                                                    value={searchQuery}
-                                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                                    className="pl-9"
-                                                />
-                                            </div>
-                                            {isSearching && (
-                                                <div className="flex items-center gap-2 text-sm text-muted-foreground p-2">
-                                                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
-                                                    검색 중...
-                                                </div>
-                                            )}
-                                            {!isSearching && searchQuery.length >= 2 && searchResults.length === 0 && (
-                                                <div className="text-sm text-muted-foreground p-2">
-                                                    검색 결과가 없습니다.
-                                                </div>
-                                            )}
-                                            {searchResults.length > 0 && (
-                                                <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-                                                    {searchResults.map((result) => (
-                                                        <button
-                                                            key={result.id}
-                                                            onClick={() => {
-                                                                setSelectedRestaurant(result);
-                                                                setSearchQuery("");
-                                                                setSearchResults([]);
-                                                            }}
-                                                            className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors border-b last:border-b-0 text-sm"
-                                                        >
-                                                            {result.name}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                            {searchQuery.length < 2 && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    2글자 이상 입력하면 검색됩니다.
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
+                                <ReviewDateSelection
+                                    visitedDate={visitedDate}
+                                    setVisitedDate={setVisitedDate}
+                                    visitedTime={visitedTime}
+                                    setVisitedTime={setVisitedTime}
+                                    idPrefix="dialog"
+                                />
 
-                                {/* 방문 날짜 및 시간 */}
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="visitDate" className="flex items-center gap-2">
-                                            <Calendar className="h-4 w-4" />
-                                            방문 날짜 <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                            id="visitDate"
-                                            type="date"
-                                            value={visitedDate}
-                                            onChange={(e) => setVisitedDate(e.target.value)}
-                                            max={new Date().toISOString().split('T')[0]}
-                                            min={new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                                            enterKeyHint="next"
-                                        />
-                                    </div>
+                                <ReviewCategorySelect
+                                    categories={categories}
+                                    setCategories={setCategories}
+                                    idPrefix="dialog"
+                                />
 
-                                    <div className="space-y-2">
-                                        <Label htmlFor="visitTime" className="flex items-center gap-2">
-                                            <Clock className="h-4 w-4" />
-                                            방문 시간 <span className="text-red-500">*</span>
-                                        </Label>
-                                        <Input
-                                            id="visitTime"
-                                            type="time"
-                                            step="60"
-                                            value={visitedTime}
-                                            onChange={(e) => setVisitedTime(e.target.value)}
-                                            enterKeyHint="next"
-                                        />
-                                    </div>
-                                </div>
+                                <ReviewFoodPhotoUpload
+                                    photos={foodPhotos}
+                                    onPhotosSelected={(files) => {
+                                        requestAnimationFrame(() => {
+                                            setFoodPhotos(prev => [...prev, ...files]);
+                                        });
+                                    }}
+                                    onPhotoRemove={(index) => {
+                                        setFoodPhotos(prev => prev.filter((_, i) => i !== index));
+                                    }}
+                                />
 
-                                {/* 카테고리 */}
-                                <div className="space-y-2">
-                                    <Label>
-                                        카테고리 <span className="text-red-500">*</span>
-                                    </Label>
-                                    <Popover>
-                                        <PopoverTrigger asChild>
-                                            <Button
-                                                variant="outline"
-                                                className="w-full justify-between"
-                                            >
-                                                <span className="truncate">
-                                                    {categories.length > 0
-                                                        ? `${categories.length}개 선택됨`
-                                                        : "어떤 종류의 음식을 드셨나요?"
-                                                    }
-                                                </span>
-                                                <ChevronDown className="h-4 w-4 opacity-50" />
-                                            </Button>
-                                        </PopoverTrigger>
-                                        <PopoverContent className="w-64" align="start">
-                                            <div className="space-y-2">
-                                                <h4 className="font-semibold text-sm">카테고리 선택</h4>
-                                                <div className="space-y-2 max-h-48 overflow-y-auto">
-                                                    {CATEGORIES.map((cat) => (
-                                                        <div key={cat} className="flex items-center space-x-2">
-                                                            <Checkbox
-                                                                id={`review-category-${cat}`}
-                                                                checked={categories.includes(cat)}
-                                                                onCheckedChange={(checked) => {
-                                                                    if (checked) {
-                                                                        setCategories([...categories, cat]);
-                                                                    } else {
-                                                                        setCategories(categories.filter(c => c !== cat));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <Label
-                                                                htmlFor={`review-category-${cat}`}
-                                                                className="text-sm cursor-pointer flex-1"
-                                                            >
-                                                                {cat}
-                                                            </Label>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                                {categories.length > 0 && (
-                                                    <div className="pt-2 border-t">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => setCategories([])}
-                                                            className="w-full"
-                                                        >
-                                                            선택 해제
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </PopoverContent>
-                                    </Popover>
-                                    {categories.length > 0 && (
-                                        <div className="flex flex-wrap gap-1 mt-2">
-                                            {categories.map((category) => (
-                                                <Badge key={category} variant="secondary" className="text-xs">
-                                                    {category}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setCategories(categories.filter(c => c !== category))}
-                                                        className="ml-1 hover:bg-secondary-foreground/20 rounded-full p-0.5"
-                                                    >
-                                                        <XIcon className="h-3 w-3" />
-                                                    </button>
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-
-                                {/* 음식 사진 */}
-                                <div className="space-y-2">
-                                    <Label className="flex items-center gap-2">
-                                        음식 사진 (다양한 각도) <span className="text-red-500">*</span>
-                                    </Label>
-
-                                    {/* 업로드된 사진들 미리보기 */}
-                                    {foodPhotos.length > 0 && (
-                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
-                                            {foodPhotos.map((photo, index) => (
-                                                <div key={index} className="relative group">
-                                                    <Card className="p-2 hover:shadow-md transition-shadow">
-                                                        <div className="aspect-square rounded-lg overflow-hidden bg-muted">
-                                                            <img
-                                                                src={foodPhotoUrls[index] || ''}
-                                                                alt={`음식 사진 ${index + 1}`}
-                                                                className="w-full h-full object-cover"
-                                                            />
-                                                        </div>
-                                                        <div className="mt-2 space-y-1">
-                                                            <p className="text-xs font-medium truncate" title={photo.name}>
-                                                                {photo.name}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {(photo.size / 1024 / 1024).toFixed(1)}MB
-                                                            </p>
-                                                        </div>
-                                                    </Card>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="icon"
-                                                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                                                        onClick={() => removeFoodPhoto(index)}
-                                                    >
-                                                        <XIcon className="h-3 w-3" />
-                                                    </Button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* 드래그 앤 드롭 영역 */}
-                                    <Card
-                                        ref={foodPhotosDropRef}
-                                        className={`p-6 border-dashed transition-colors cursor-pointer ${isFoodPhotosDragging
-                                            ? 'border-primary bg-primary/5'
-                                            : foodPhotos.length > 0
-                                                ? 'border-green-300 bg-green-50/50'
-                                                : 'border-border hover:border-primary/50'
-                                            }`}
-                                        onDragOver={handleDragOver}
-                                        onDragEnter={handleFoodPhotosDragEnter}
-                                        onDragLeave={handleFoodPhotosDragLeave}
-                                        onDrop={handleFoodPhotosDrop}
-                                        onClick={openFoodPhotosFileDialog}
-                                    >
-                                        <div className="flex flex-col items-center gap-4">
-                                            <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${isFoodPhotosDragging ? 'bg-primary/10' : 'bg-muted'
-                                                }`}>
-                                                <Upload className={`h-8 w-8 transition-colors ${isFoodPhotosDragging ? 'text-primary' : 'text-muted-foreground'
-                                                    }`} />
-                                            </div>
-                                            <div className="text-center space-y-2">
-                                                <p className="font-medium">
-                                                    {isFoodPhotosDragging ? '여기에 사진들을 놓아주세요' : '음식 사진을 업로드해주세요'}
-                                                </p>
-                                                <p className="text-sm text-muted-foreground">
-                                                    먹은 음식을 다양한 각도에서 촬영한 사진을 드래그하거나 클릭해서 선택해주세요
-                                                </p>
-                                                <div className="flex gap-2 justify-center">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="gap-2"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            openFoodPhotosFileDialog();
-                                                        }}
-                                                    >
-                                                        <Plus className="h-4 w-4" />
-                                                        사진 추가
-                                                    </Button>
-                                                    {foodPhotos.length > 0 && (
-                                                        <Badge variant="secondary" className="px-3 py-1">
-                                                            📷 {foodPhotos.length}장 업로드됨
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* 숨겨진 파일 입력 */}
-                                        <input
-                                            ref={foodPhotosFileInputRef}
-                                            type="file"
-                                            accept="image/*"
-                                            multiple
-                                            onChange={handleFoodPhotosChange}
-                                            className="hidden"
-                                        />
-                                    </Card>
-
-                                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-xs text-muted-foreground">
-                                        <span>💡 다양한 각도의 사진을 업로드하면 더 풍부한 리뷰가 됩니다</span>
-                                    </div>
-                                </div>
-
-                                {/* 리뷰 내용 */}
-                                <div className="space-y-3">
-                                    <Label htmlFor="content">
-                                        리뷰 내용 <span className="text-red-500">*</span>
-                                    </Label>
-
-                                    {/* 작성 가이드 (항상 표시) */}
-                                    <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3">
-                                        <div className="space-y-1 text-xs text-blue-900 dark:text-blue-100">
-                                            <p className="font-semibold flex items-center gap-1">
-                                                💡 작성 가이드
-                                            </p>
-                                            <ul className="space-y-0.5 ml-4 list-disc text-blue-700 dark:text-blue-300">
-                                                <li>어떤 메뉴를 드셨나요?</li>
-                                                <li>맛은 어떠셨나요?</li>
-                                                <li>분위기나 서비스는 어땠나요?</li>
-                                                <li>추천하고 싶은 메뉴가 있나요?</li>
-                                            </ul>
-                                        </div>
-                                    </Card>
-
-                                    <Textarea
-                                        id="content"
-                                        placeholder="맛집에 대한 솔직한 후기를 작성해주세요..."
-                                        value={content}
-                                        onChange={(e) => setContent(e.target.value)}
-                                        rows={8}
-                                        className="resize-none"
-                                    />
-                                    <p className="text-xs text-muted-foreground text-right">
-                                        {content.length} / 최소 20자
-                                    </p>
-                                </div>
+                                <ReviewContentInput
+                                    content={content}
+                                    setContent={setContent}
+                                    idPrefix="dialog"
+                                />
                             </div>
                         </div>
 
@@ -1792,7 +826,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                         </span>
                                     ) : (
                                         <span className="text-amber-600 flex items-center gap-1">
-                                            <AlertCircle className="h-3 w-3" />
+                                            <CircleAlert className="h-3 w-3" />
                                             필수 항목을 모두 입력해주세요
                                         </span>
                                     )}
