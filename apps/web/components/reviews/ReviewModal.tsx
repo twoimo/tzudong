@@ -1390,8 +1390,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
 
                             <div className="flex items-start justify-between gap-2 pt-3">
                                 <div className="flex-1">
-                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent">
+                                    <DialogTitle className="text-2xl bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
                                         쯔동여지도 리뷰 작성
+                                        {quota && (
+                                            <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
+                                                AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
+                                            </Badge>
+                                        )}
                                     </DialogTitle>
                                     <DialogDescription>
                                         맛집 방문 후기를 공유해주세요
