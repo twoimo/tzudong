@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { promisify } from 'util';
 import http from 'http';
+import sharp from 'sharp'; // 이미지 최적화
 
 const execAsync = promisify(exec);
 
@@ -112,6 +113,27 @@ async function analyzeWithSpawn(imageBuffer: Buffer, promptText: string): Promis
     }
 }
 
+// --- 이미지 최적화 (Sharp) ---
+async function optimizeImage(buffer: Buffer): Promise<Buffer> {
+    try {
+        const metadata = await sharp(buffer).metadata();
+        // 이미지가 너무 크면 리사이징 (폭 1024px로 제한)
+        if (metadata.width && metadata.width > 1024) {
+            return await sharp(buffer)
+                .resize({ width: 1024 })
+                .jpeg({ quality: 80 })
+                .toBuffer();
+        }
+        // 크기가 작더라도 포맷 통일 및 용량 감소를 위해 JPEG 80% 변환
+        return await sharp(buffer)
+            .jpeg({ quality: 80 })
+            .toBuffer();
+    } catch (e) {
+        console.warn('[Gemini Lib] 이미지 최적화 실패 (원본 사용):', e);
+        return buffer;
+    }
+}
+
 
 // -----------------------------------------------------------
 // 메인 함수
@@ -121,13 +143,24 @@ export async function analyzeReceiptWithCliFallback(imageBuffer: Buffer, promptT
     const startTime = Date.now();
     console.log('[Gemini Lib] 분석 요청 시작...');
 
+    // 이미지 최적화 (용량 절감 -> 속도 향상)
+    const originalSize = imageBuffer.length;
+    let optimizedBuffer = imageBuffer;
+    try {
+        optimizedBuffer = await optimizeImage(imageBuffer);
+        const newSize = optimizedBuffer.length;
+        console.log(`[Gemini Lib] 이미지 최적화: ${(originalSize / 1024).toFixed(0)}KB -> ${(newSize / 1024).toFixed(0)}KB (${((originalSize - newSize) / originalSize * 100).toFixed(0)}% 절감)`);
+    } catch (e) {
+        console.warn('[Gemini Lib] 최적화 건너뜀:', e);
+    }
+
     // 임시 파일 생성 (데몬/CLI 공통 사용)
     const projectTempDir = path.join(process.cwd(), '.gemini', 'tmp');
     if (!fs.existsSync(projectTempDir)) {
         await fs.promises.mkdir(projectTempDir, { recursive: true });
     }
     const tempFilePath = path.join(projectTempDir, `receipt-d-${Date.now()}.jpg`);
-    await fs.promises.writeFile(tempFilePath, imageBuffer);
+    await fs.promises.writeFile(tempFilePath, optimizedBuffer);
 
     try {
         // 1. 데몬 방식 시도 (Fast, Free)
