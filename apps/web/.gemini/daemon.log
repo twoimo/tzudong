@@ -1,0 +1,102 @@
+[2026-01-18T09:16:09.631Z] Daemon starting... PID: 1600083
+[2026-01-18T09:16:12.387Z] Import Error: Cannot find module '/home/ubuntu/.npm-global/lib/node_modules/@google/gemini-cli/dist/src/validateNonInteractiveAuth.js' imported from /home/ubuntu/tzudong/apps/web/scripts/gemini-daemon.mjs
+[2026-01-18T09:16:12.387Z] Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/ubuntu/.npm-global/lib/node_modules/@google/gemini-cli/dist/src/validateNonInteractiveAuth.js' imported from /home/ubuntu/tzudong/apps/web/scripts/gemini-daemon.mjs
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForModule (node:internal/modules/esm/utils:222:31)
+[2026-01-18T09:16:34.106Z] Daemon starting... PID: 1600347
+[2026-01-18T09:16:36.833Z] Import Error: Cannot find module '/home/ubuntu/.npm-global/lib/node_modules/@google/gemini-cli-core/dist/index.js' imported from /home/ubuntu/tzudong/apps/web/scripts/gemini-daemon.mjs
+[2026-01-18T09:16:36.834Z] Error [ERR_MODULE_NOT_FOUND]: Cannot find module '/home/ubuntu/.npm-global/lib/node_modules/@google/gemini-cli-core/dist/index.js' imported from /home/ubuntu/tzudong/apps/web/scripts/gemini-daemon.mjs
+    at finalizeResolution (node:internal/modules/esm/resolve:274:11)
+    at moduleResolve (node:internal/modules/esm/resolve:859:10)
+    at defaultResolve (node:internal/modules/esm/resolve:983:11)
+    at #cachedDefaultResolve (node:internal/modules/esm/loader:731:20)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:708:38)
+    at ModuleLoader.getModuleJobForImport (node:internal/modules/esm/loader:310:38)
+    at onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:664:36)
+    at TracingChannel.tracePromise (node:diagnostics_channel:350:14)
+    at ModuleLoader.import (node:internal/modules/esm/loader:663:21)
+    at defaultImportModuleDynamicallyForModule (node:internal/modules/esm/utils:222:31)
+[2026-01-18T09:17:06.341Z] Daemon starting... PID: 1600743
+[2026-01-18T09:17:09.040Z] Imports successful.
+[2026-01-18T09:17:09.046Z] Server listening on port 3456
+[2026-01-18T09:17:17.594Z] Initializing Gemini Config...
+[2026-01-18T09:17:17.776Z] Config loaded.
+[2026-01-18T09:17:17.778Z] Auth Type: oauth-personal
+[2026-01-18T09:17:19.259Z] Auth refreshed.
+[2026-01-18T09:17:19.259Z] Gemini Client ready.
+[2026-01-18T09:17:19.259Z] Received request: Hello gemini...
+[2026-01-18T09:17:19.260Z] Request Error: Chat not initialized
+[2026-01-18T09:17:19.261Z] Error: Chat not initialized
+    at GeminiClient.getChat (file:///home/ubuntu/.npm-global/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/core/client.js:133:19)
+    at GeminiClient.sendMessageStream (file:///home/ubuntu/.npm-global/lib/node_modules/@google/gemini-cli/node_modules/@google/gemini-cli-core/dist/src/core/client.js:534:34)
+    at sendMessageStream.next (<anonymous>)
+    at IncomingMessage.<anonymous> (file:///home/ubuntu/tzudong/apps/web/scripts/gemini-daemon.mjs:146:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[2026-01-18T09:17:38.279Z] Daemon starting... PID: 1601131
+[2026-01-18T09:17:41.103Z] Imports successful.
+[2026-01-18T09:17:41.109Z] Server listening on port 3456
+[2026-01-18T09:17:46.287Z] Initializing Gemini Config...
+[2026-01-18T09:17:46.451Z] Config loaded.
+[2026-01-18T09:17:46.560Z] Config initialized.
+[2026-01-18T09:17:46.562Z] Auth Type: oauth-personal
+[2026-01-18T09:17:47.364Z] Auth refreshed.
+[2026-01-18T09:17:47.364Z] Gemini Client ready.
+[2026-01-18T09:17:47.364Z] Received request: Hello gemini...
+[2026-01-18T09:17:50.686Z] Response generated (57 chars).
+[2026-01-18T09:17:58.301Z] Received request: Hello gemini...
+[2026-01-18T09:18:06.568Z] Response generated (19 chars).
+[2026-01-18T09:19:01.790Z] Daemon starting... PID: 1601993
+[2026-01-18T09:19:03.739Z] Imports successful.
+[2026-01-18T09:23:48.993Z] Daemon starting... PID: 1604118
+[2026-01-18T09:23:50.710Z] Imports successful.
+[2026-01-18T09:23:50.749Z] Server listening on port 3456
+[2026-01-18T09:23:50.965Z] Initializing Gemini Config...
+[2026-01-18T09:23:51.136Z] Config loaded.
+[2026-01-18T09:23:51.311Z] Config initialized.
+[2026-01-18T09:23:51.313Z] Auth Type: oauth-personal
+[2026-01-18T09:23:52.568Z] Auth refreshed.
+[2026-01-18T09:23:52.568Z] Gemini Client ready.
+[2026-01-18T09:23:52.568Z] Received request: Describe this image in JSON format: { "description...
+[2026-01-18T09:23:52.574Z] Debug: Path /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768728228932.jpg resolved to file: /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768728228932.jpg, using relative path: .gemini/tmp/receipt-d-1768728228932.jpg
+[2026-01-18T09:24:02.668Z] Response generated (153 chars).
+[2026-01-18T09:35:35.789Z] [Daemon] 프로세스 시작됨. PID: 1608908
+[2026-01-18T09:35:37.588Z] [Daemon] 필수 모듈 로드 완료.
+[2026-01-18T09:35:37.632Z] [Server] 포트 3456에서 대기 중...
+[2026-01-18T09:35:37.756Z] [Daemon] Gemini 설정 초기화 중...
+[2026-01-18T09:35:37.936Z] [Daemon] 설정 로드됨.
+[2026-01-18T09:35:38.098Z] [Daemon] 설정 초기화 완료.
+[2026-01-18T09:35:38.100Z] [Daemon] 인증 타입: oauth-personal
+[2026-01-18T09:35:39.507Z] [Daemon] 인증 토큰 갱신 완료.
+[2026-01-18T09:35:39.507Z] [Daemon] Gemini 클라이언트 준비 완료.
+[2026-01-18T09:35:39.507Z] [Request] 요청 수신 (길이: 153)
+[2026-01-18T09:35:39.507Z] [Preview] Describe this image in JSON format: { "description...
+[2026-01-18T09:35:39.513Z] [Debug] Path /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768728935695.jpg resolved to file: /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768728935695.jpg, using relative path: .gemini/tmp/receipt-d-1768728935695.jpg
+[2026-01-18T09:35:44.987Z] [Response] 생성 완료 (142 자).
+[2026-01-18T09:38:28.833Z] [Request] 요청 수신 (길이: 153)
+[2026-01-18T09:38:28.833Z] [Preview] Describe this image in JSON format: { "description...
+[2026-01-18T09:38:28.838Z] [Debug] Path /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729108803.jpg resolved to file: /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729108803.jpg, using relative path: .gemini/tmp/receipt-d-1768729108803.jpg
+[2026-01-18T09:38:35.361Z] [Response] 생성 완료 (137 자).
+[2026-01-18T09:38:36.372Z] [Request] 요청 수신 (길이: 153)
+[2026-01-18T09:38:36.372Z] [Preview] Describe this image in JSON format: { "description...
+[2026-01-18T09:38:36.374Z] [Debug] Path /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729116369.jpg resolved to file: /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729116369.jpg, using relative path: .gemini/tmp/receipt-d-1768729116369.jpg
+[2026-01-18T09:38:45.459Z] [Response] 생성 완료 (130 자).
+[2026-01-18T09:38:46.466Z] [Request] 요청 수신 (길이: 153)
+[2026-01-18T09:38:46.466Z] [Preview] Describe this image in JSON format: { "description...
+[2026-01-18T09:38:46.467Z] [Debug] Path /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729126463.jpg resolved to file: /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729126463.jpg, using relative path: .gemini/tmp/receipt-d-1768729126463.jpg
+[2026-01-18T09:38:53.953Z] [Response] 생성 완료 (142 자).
+[2026-01-18T09:38:54.960Z] [Request] 요청 수신 (길이: 153)
+[2026-01-18T09:38:54.960Z] [Preview] Describe this image in JSON format: { "description...
+[2026-01-18T09:38:54.961Z] [Debug] Path /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729134957.jpg resolved to file: /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729134957.jpg, using relative path: .gemini/tmp/receipt-d-1768729134957.jpg
+[2026-01-18T09:39:03.629Z] [Response] 생성 완료 (129 자).
+[2026-01-18T09:39:04.636Z] [Request] 요청 수신 (길이: 153)
+[2026-01-18T09:39:04.636Z] [Preview] Describe this image in JSON format: { "description...
+[2026-01-18T09:39:04.637Z] [Debug] Path /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729144632.jpg resolved to file: /home/ubuntu/tzudong/apps/web/.gemini/tmp/receipt-d-1768729144632.jpg, using relative path: .gemini/tmp/receipt-d-1768729144632.jpg
+[2026-01-18T09:39:13.388Z] [Response] 생성 완료 (127 자).
