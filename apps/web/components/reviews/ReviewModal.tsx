@@ -407,9 +407,20 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     throw new Error('로그인이 필요한 서비스입니다');
                 }
 
+                // [보안] 3. 토큰 직접 조회 (쿠키 전송 실패 대비)
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+
+                if (!token) {
+                    throw new Error('로그인 세션이 만료되었습니다. 다시 로그인해주세요.');
+                }
+
                 const response = await fetch('/api/ocr/extract', {
                     method: 'POST',
                     body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
                     credentials: 'include',
                 });
 
