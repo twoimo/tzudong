@@ -116,6 +116,9 @@ const server = http.createServer(async (req, res) => {
             // Lazy Initialization: 첫 요청 시 초기화 수행
             if (!geminiClient) {
                 await init();
+            } else {
+                // 이전 대화 기록이 쌓이면 느려지므로 매 요청마다 채팅 세션 초기화
+                await geminiClient.resetChat();
             }
 
             const { prompt } = JSON.parse(body);
