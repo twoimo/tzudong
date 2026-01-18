@@ -101,10 +101,23 @@ export async function POST(req: Request) {
 
         // [보안] 1. 사용자 인증 확인
         const supabase = await createClient();
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        let { data: { user }, error: authError } = await supabase.auth.getUser();
 
         if (authError || !user) {
-            return NextResponse.json({ error: '로그인이 필요한 서비스입니다' }, { status: 401 });
+            // [폴백] 쿠키 인증 실패 시, 헤더 인증 시도 (Bearer Token)
+            const authHeader = req.headers.get('Authorization');
+            if (authHeader?.startsWith('Bearer ')) {
+                const token = authHeader.split(' ')[1];
+                const { data: { user: headerUser }, error: headerError } = await supabase.auth.getUser(token);
+
+                if (headerError || !headerUser) {
+                    return NextResponse.json({ error: '로그인이 필요한 서비스입니다 (Token Invalid)' }, { status: 401 });
+                }
+                // 헤더 인증 성공 시 user 객체 덮어쓰기
+                user = headerUser;
+            } else {
+                return NextResponse.json({ error: '로그인이 필요한 서비스입니다' }, { status: 401 });
+            }
         }
 
         // [보안] 2. 이미지 해시 계산 (중복 처리 확인용 - 현재는 로깅만)
@@ -132,7 +145,7 @@ export async function POST(req: Request) {
             }, { status: 429 });
         }
 
-        // Check if API key is present
+        // API 키 확인
         if (!GEMINI_API_KEY) {
             throw new Error('API 키 누락');
         }
