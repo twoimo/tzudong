@@ -1,17 +1,9 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { analyzeReceiptWithCliFallback } from '../../../../lib/gemini-cli';
 import { createClient } from '@/lib/supabase/server';
 import crypto from 'crypto';
 
-// 환경 변수 검증
-const GEMINI_API_KEY = process.env.GEMINI_OCR_YEON;
-
-if (!GEMINI_API_KEY) {
-    console.warn("GEMINI_OCR_YEON 환경변수가 설정되지 않았습니다. API 호출 시 CLI Fallback만 시도될 수 있습니다.");
-}
-
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY || '');
+// 환경 변수 검증 (OCR Server URL은 lib에서 검증됨)
 
 const OCR_PROMPT = `당신은 한국 음식점 영수증/배달앱 주문서 OCR 전문가입니다.
 
@@ -125,7 +117,7 @@ export async function POST(req: Request) {
         const imageHash = hashBuffer.toString('hex');
 
         // [보안] 3. 일일 쿼터 확인 (하루 20회 제한)
-        const MAX_DAILY_QUOTA = 20; // TODO: 환경변수 또는 DB 설정으로 관리 권장
+        const MAX_DAILY_QUOTA = 20;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -137,7 +129,6 @@ export async function POST(req: Request) {
 
         if (countError) {
             console.error("쿼터 확인 실패:", countError);
-            // 쿼터 확인 실패 시 일단 넘어가거나 에러 처리 (여기서는 진행)
         } else if (count !== null && count >= MAX_DAILY_QUOTA) {
             return NextResponse.json({
                 error: '일일 AI 분석 횟수를 초과했습니다',
@@ -145,42 +136,15 @@ export async function POST(req: Request) {
             }, { status: 429 });
         }
 
-        // API 키 확인
-        if (!GEMINI_API_KEY) {
-            throw new Error('API 키 누락');
-        }
-
-        // Gemini 모델 초기화
-        const generativeModel = genAI.getGenerativeModel({ model: 'gemini-3-flash-preview' });
-
-        const result = await generativeModel.generateContent([
-            OCR_PROMPT,
-            {
-                inlineData: {
-                    mimeType: file.type,
-                    data: base64Image,
-                },
-            },
-        ]);
-
-        const response = await result.response;
-        const text = response.text();
-
-        // JSON 파싱
-        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
-
-        if (!jsonMatch) {
-            throw new Error('OCR 파싱 실패');
-        }
-
-        const jsonStr = jsonMatch[1] || jsonMatch[0];
-        const data = JSON.parse(jsonStr);
+        // --- OCI 서버로 분석 요청 (Google API 제거됨) ---
+        console.log('OCI OCR 요청 시작...');
+        const data = await analyzeReceiptWithCliFallback(buffer, OCR_PROMPT);
 
         // [보안] 4. 성공 로그 기록
         await (supabase.from('ocr_logs') as any).insert({
             user_id: user.id,
             image_hash: imageHash,
-            model_used: 'gemini-3-flash-preview',
+            model_used: 'oci-gemini-server',
             success: true,
             metadata: {
                 file_size: file.size,
@@ -192,43 +156,9 @@ export async function POST(req: Request) {
         return NextResponse.json(data);
 
     } catch (error: any) {
-        console.error('OCR 처리 오류 (API), CLI 폴백 시도:', error.message);
+        console.error('OCR 처리 오류 (OCI):', error.message);
 
-        // CLI Fallback 시도
-        if (buffer) {
-            try {
-                // 사용자 정보 재확인 (try scope 밖 변수 사용이 어려울 수 있으므로)
-                const supabase = await createClient();
-                const { data: { user } } = await supabase.auth.getUser();
-
-                console.log('Gemini CLI Fallback 실행 중...');
-                const startFallback = Date.now();
-                const fallbackData = await analyzeReceiptWithCliFallback(buffer, OCR_PROMPT);
-                console.log(`Gemini CLI Fallback 성공 (${Date.now() - startFallback}ms)`);
-
-                // [보안] 성공 로그 기록 (Fallback)
-                if (user) {
-                    const hashBuffer = crypto.createHash('sha256').update(buffer).digest();
-                    const imageHash = hashBuffer.toString('hex');
-                    await (supabase.from('ocr_logs') as any).insert({
-                        user_id: user.id,
-                        image_hash: imageHash,
-                        model_used: 'gemini-cli-fallback',
-                        success: true,
-                        metadata: {
-                            file_size: buffer.length,
-                            fallback: true
-                        }
-                    });
-                }
-
-                return NextResponse.json(fallbackData);
-            } catch (cliError: any) {
-                console.error('Gemini CLI Fallback 실패:', cliError);
-            }
-        }
-
-        // [보안] 실패 로그 기록 (가능한 경우)
+        // [보안] 실패 로그 기록
         try {
             const supabase = await createClient();
             const { data: { user } } = await supabase.auth.getUser();
@@ -244,16 +174,11 @@ export async function POST(req: Request) {
                 });
             }
         } catch (logError) {
-            // 로깅 실패는 메인 에러에 영향을 주지 않도록 무시
+            // 무시
         }
 
-
-        const errorMessage = error.message.includes('API key') || error.message.includes('API 키 누락')
-            ? '유효하지 않은 API 키 및 CLI 실패'
-            : '내부 서버 오류';
-
         return NextResponse.json({
-            error: errorMessage,
+            error: 'OCR 처리 중 오류가 발생했습니다.',
             details: error.message
         }, { status: 500 });
     }
