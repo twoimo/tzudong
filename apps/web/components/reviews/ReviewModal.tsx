@@ -74,7 +74,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
-import { Calendar, Upload, X as XIcon, AlertCircle, CircleAlert, CheckCircle2, Image, Trash2, Plus, Search, Camera, ChevronDown, Loader2, Clock } from "lucide-react";
+import { Calendar, Upload, X as XIcon, AlertCircle, CircleAlert, CheckCircle2, Image, Trash2, Plus, Search, Camera, ChevronDown, Loader2, Clock, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
@@ -129,6 +129,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
+    const [ocrLimitReached, setOcrLimitReached] = useState(false);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -425,6 +426,12 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                 });
 
                 if (!response.ok) {
+                    // 429: 일일 한도 초과 (백엔드에서 메시지 전달)
+                    if (response.status === 429) {
+                        const errorData = await response.json();
+                        setOcrLimitReached(true);
+                        throw new Error(errorData.error || "일일 무료 분석 한도를 초과했습니다.");
+                    }
                     const errorData = await response.json();
                     throw new Error(errorData.error || 'OCR 분석 실패');
                 }
@@ -917,6 +924,33 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                 <Trash2 className="h-4 w-4" />
                                                 사진 제거
                                             </Button>
+                                        </div>
+                                    ) : ocrLimitReached ? (
+                                        <div className="w-full text-center space-y-3 p-2">
+                                            <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center bg-amber-100 transition-colors">
+                                                <AlertTriangle className="h-8 w-8 text-amber-600" />
+                                            </div>
+                                            <div>
+                                                <p className="font-medium mb-1 text-amber-700">
+                                                    일일 무료 분석 한도(5회)를 사용했습니다
+                                                </p>
+                                                <p className="text-sm text-muted-foreground mb-3">
+                                                    내일 00시에 다시 분석할 수 있습니다 <br />
+                                                    <span className="text-xs">(사진 선택 시 직접 입력 모드로 진행됩니다)</span>
+                                                </p>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="gap-2 border-amber-200 hover:bg-amber-50"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openVerificationFileDialog();
+                                                    }}
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                    직접 입력하기 (분석 없이 업로드)
+                                                </Button>
+                                            </div>
                                         </div>
                                     ) : (
                                         <div className="w-full text-center space-y-3">
@@ -1422,7 +1456,7 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                                                             {isVerificationDragging ? '여기에 사진을 놓아주세요' : '영수증 인증 사진을 업로드해주세요'}
                                                         </p>
                                                         <p className="text-sm text-muted-foreground mb-3">
-                                                            <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴를 자동으로 입력해드려요!</span>
+                                                            <span className="text-primary font-medium">AI가 가게명, 날짜, 메뉴, 리뷰 내용을 자동으로 입력해드려요!</span>
                                                         </p>
                                                         <Button
                                                             variant="outline"

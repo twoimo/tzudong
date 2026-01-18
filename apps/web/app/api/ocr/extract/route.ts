@@ -141,8 +141,10 @@ export async function POST(req: Request) {
             console.error("쿼터 확인 실패 (OCI로 진행):", countError);
             useOciDirectly = true;
         } else if (count !== null && count >= MAX_DAILY_QUOTA) {
-            console.log(`일일 쿼터(${MAX_DAILY_QUOTA}) 초과. OCI 서버로 전환합니다.`);
-            useOciDirectly = true;
+            return NextResponse.json(
+                { error: `일일 무료 분석 한도(${MAX_DAILY_QUOTA}회)를 초과했습니다. 내일 00시에 초기화됩니다.` },
+                { status: 429 }
+            );
         }
 
         // 1. Google API 시도 (쿼터 내 && API 키 존재)
