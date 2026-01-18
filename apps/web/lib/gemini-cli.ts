@@ -1,126 +1,9 @@
-import { exec, spawn } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import { promisify } from 'util';
-import http from 'http';
 import sharp from 'sharp'; // 이미지 최적화
 
-const execAsync = promisify(exec);
-
-// --- 데몬 설정 (Daemon Configuration) ---
-const DAEMON_PORT = 3456;
-const PROJECT_ROOT = process.cwd();
-const DAEMON_SCRIPT = path.join(PROJECT_ROOT, 'scripts', 'gemini-daemon.mjs');
-
-async function checkDaemonHealth(): Promise<boolean> {
-    return new Promise((resolve) => {
-        const req = http.get(`http://127.0.0.1:${DAEMON_PORT}/health`, (res) => {
-            resolve(res.statusCode === 200);
-        });
-        req.on('error', () => resolve(false));
-        req.end();
-    });
-}
-
-async function startDaemon() {
-    console.log('[Gemini Daemon] 데몬 프로세스 시작 중...');
-    const subprocess = spawn(process.execPath, [DAEMON_SCRIPT], {
-        detached: true,
-        stdio: 'ignore', // 로그는 파일로 기록됨
-        cwd: PROJECT_ROOT
-    });
-    subprocess.unref(); // 부모 프로세스가 종료되어도 데몬 유지
-
-    // 시작 대기 (최대 5초)
-    for (let i = 0; i < 10; i++) {
-        await new Promise(r => setTimeout(r, 500));
-        if (await checkDaemonHealth()) {
-            console.log('[Gemini Daemon] 데몬 준비 완료.');
-            return true;
-        }
-    }
-    console.warn('[Gemini Daemon] 데몬 시작 실패 (타임아웃).');
-    return false;
-}
-
-async function analyzeWithDaemon(tempImagePath: string, promptText: string): Promise<any> {
-    const fullPrompt = `${promptText}\n\nUser Input Image: @${tempImagePath}`;
-
-    return new Promise((resolve, reject) => {
-        const req = http.request(`http://127.0.0.1:${DAEMON_PORT}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
-        }, (res) => {
-            let data = '';
-            res.on('data', chunk => data += chunk);
-            res.on('end', () => {
-                if (res.statusCode !== 200) {
-                    reject(new Error(`Daemon Error: ${res.statusCode} ${data}`));
-                    return;
-                }
-                try {
-                    const json = JSON.parse(data);
-                    if (json.error) reject(new Error(json.error));
-                    else resolve(json);
-                } catch (e) {
-                    reject(new Error('Invalid JSON from Daemon'));
-                }
-            });
-        });
-
-        req.on('error', (e) => reject(e));
-        req.write(JSON.stringify({ prompt: fullPrompt }));
-        req.end();
-    });
-}
-
-
-// --- 기존 CLI 스폰 방식 폴백 (느림) ---
-async function analyzeWithSpawn(imageBuffer: Buffer, promptText: string): Promise<any> {
-    console.log('[Gemini CLI] 프로세스 스폰 방식(느림)으로 실행...');
-    const projectTempDir = os.tmpdir();
-
-    const tempFilePath = path.join(projectTempDir, `receipt-${Date.now()}.jpg`);
-    const promptFilePath = path.join(projectTempDir, `prompt-${Date.now()}.txt`);
-
-    try {
-        await fs.promises.writeFile(tempFilePath, imageBuffer);
-        const model = 'gemini-3-flash-preview';
-        const fullPrompt = `${promptText}\n\nUser Input Image: @${tempFilePath}`;
-        await fs.promises.writeFile(promptFilePath, fullPrompt, 'utf-8');
-
-        // 인증 주입 및 환경변수 설정
-        const env = await injectCredentials();
-
-        // Vercel 등 서버 환경 대응: npx로 실행 (패키지가 로컬에 있으면 로컬 bin 사용됨)
-        // -y: 확인 절차 생략
-        // 공식 패키지: @google/gemini-cli
-        const command = `cat "${promptFilePath}" | npx -y @google/gemini-cli --model ${model}`;
-
-        // env 옵션 추가: HOME을 /tmp로 조작
-        const { stdout, stderr } = await execAsync(command, {
-            timeout: 60000,
-            env: env
-        });
-
-        if (stderr) console.warn('[Gemini CLI] Stderr:', stderr);
-
-        const text = stdout.toString();
-        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
-
-        if (!jsonMatch) throw new Error('JSON 파싱 실패');
-
-        await fs.promises.unlink(tempFilePath).catch(() => { });
-        await fs.promises.unlink(promptFilePath).catch(() => { });
-
-        return JSON.parse(jsonMatch[1] || jsonMatch[0]);
-    } catch (e) {
-        await fs.promises.unlink(tempFilePath).catch(() => { });
-        await fs.promises.unlink(promptFilePath).catch(() => { });
-        throw e;
-    }
-}
+// --- 설정 (Configuration) ---
+// OCI 서버 주소 (환경변수 필수)
+// 예: http://123.45.67.89:3456
+const OCI_API_URL = process.env.OCI_GEMINI_API_URL;
 
 // --- 이미지 최적화 (Sharp) ---
 async function optimizeImage(buffer: Buffer): Promise<Buffer> {
@@ -143,52 +26,24 @@ async function optimizeImage(buffer: Buffer): Promise<Buffer> {
     }
 }
 
-
-// --- 인증 정보 주입 (Vercel 대응) ---
-async function injectCredentials(): Promise<NodeJS.ProcessEnv> {
-    const tempHome = os.tmpdir();
-    const geminiDir = path.join(tempHome, '.gemini');
-    const credsPath = path.join(geminiDir, 'oauth_creds.json');
-    const accountsPath = path.join(geminiDir, 'google_accounts.json');
-
-    // 환경변수에서 인증 정보 확인 (User가 Vercel에 설정해야 함)
-    // base64로 인코딩된 JSON 문자열을 권장 (줄바꿈/특수문자 문제 방지)
-    const credsBase64 = process.env.GEMINI_CREDENTIALS_BASE64;
-
-    if (credsBase64) {
-        try {
-            if (!fs.existsSync(geminiDir)) {
-                await fs.promises.mkdir(geminiDir, { recursive: true });
-            }
-
-            // 이미 존재하면 덮어쓸지 여부는 선택사항이나, 최신Env 반영을 위해 덮어쓰기 권장
-            const credsJson = Buffer.from(credsBase64, 'base64').toString('utf-8');
-            await fs.promises.writeFile(credsPath, credsJson, 'utf-8');
-
-            // google_accounts.json도 필요할 수 있음 (보통 oauth_creds만 있어도 갱신 시도함)
-            console.log('[Gemini Lib] 인증 정보 주입 완료 (Vercel Mode)');
-        } catch (e) {
-            console.warn('[Gemini Lib] 인증 정보 주입 실패:', e);
-        }
-    }
-
-    // 변경된 HOME을 포함한 환경변수 객체 반환
-    return {
-        ...process.env,
-        HOME: tempHome, // CLI가 /tmp를 Home으로 인식하게 함
-        // XDG_CONFIG_HOME: tempHome // 일부 도구 대응
-    };
-}
-
 // -----------------------------------------------------------
-// 메인 함수
+// 메인 함수: OCI 원격 서버로 분석 요청
 // -----------------------------------------------------------
 
 export async function analyzeReceiptWithCliFallback(imageBuffer: Buffer, promptText: string): Promise<any> {
     const startTime = Date.now();
-    console.log('[Gemini Lib] 분석 요청 시작...');
 
-    // 이미지 최적화 (용량 절감 -> 속도 향상)
+    if (!OCI_API_URL) {
+        // 개발 환경 편의를 위해 하드코딩된 IP (User Provided)를 fallback으로 사용 가능
+        // 하지만 배포 환경에서는 Env Var 권장
+        // console.warn('OCI_GEMINI_API_URL 미설정. 기본값 사용 시도...');
+        // const DEFAULT_URL = 'http://129.154.55.232:3456';
+        throw new Error('OCI_GEMINI_API_URL 환경변수가 설정되지 않았습니다.');
+    }
+
+    console.log(`[Gemini Lib] OCI 분석 요청 시작: ${OCI_API_URL}`);
+
+    // 1. 이미지 최적화
     const originalSize = imageBuffer.length;
     let optimizedBuffer = imageBuffer;
     try {
@@ -199,63 +54,44 @@ export async function analyzeReceiptWithCliFallback(imageBuffer: Buffer, promptT
         console.warn('[Gemini Lib] 최적화 건너뜀:', e);
     }
 
-    // 임시 파일 생성 (데몬/CLI 공통 사용)
-    const projectTempDir = os.tmpdir();
-    // Vercel의 경우 /tmp는 항상 존재하므로 mkdir 불필요, 하지만 안전을 위해 확인은 가능
-    // await fs.promises.mkdir(projectTempDir, { recursive: true }); 
+    // 2. Base64 변환
+    const imageBase64 = optimizedBuffer.toString('base64');
 
-    const tempFilePath = path.join(projectTempDir, `receipt-d-${Date.now()}.jpg`);
-    await fs.promises.writeFile(tempFilePath, optimizedBuffer);
-
+    // 3. OCI 서버로 전송
     try {
-        // 1. 데몬 방식 시도 (Fast, Free)
-        let daemonHealthy = await checkDaemonHealth();
-        if (!daemonHealthy) {
-            daemonHealthy = await startDaemon();
+        const response = await fetch(OCI_API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                prompt: promptText,
+                imageBase64: imageBase64
+            }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`OCI Server Error (${response.status}): ${errorText}`);
         }
 
-        if (daemonHealthy) {
-            try {
-                console.log('[Gemini Daemon] 데몬으로 요청 전송...');
-                const result = await analyzeWithDaemon(tempFilePath, promptText);
+        const result = await response.json();
 
-                // 결과 파싱 (데몬은 { text: "..." } 반환)
-                // 데몬이 반환한 텍스트 안에 JSON이 들어있음
-                const text = result.text;
-                const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+        // 결과 파싱
+        const text = result.text;
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
 
-                if (jsonMatch) {
-                    const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-                    console.log(`[Gemini Daemon] 성공 (${Date.now() - startTime}ms)`);
-
-                    // 파일 정리
-                    await fs.promises.unlink(tempFilePath).catch(() => { });
-                    return data;
-                } else {
-                    console.warn('[Gemini Daemon] JSON 파싱 실패, Raw Text 반환');
-                    // 일부 경우 Text만 올 수 있음. 실패로 간주하지 않고 텍스트라도 반환?
-                    // 아니, JSON을 기대하므로 실패 처리하고 CLI로?
-                    throw new Error('JSON match failed');
-                }
-            } catch (e: any) {
-                console.warn(`[Gemini Daemon] 실패 (${e.message}). CLI 스폰으로 폴백...`);
-            }
+        if (jsonMatch) {
+            const data = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+            console.log(`[Gemini Lib] OCI 분석 성공 (${Date.now() - startTime}ms)`);
+            return data;
         } else {
-            console.warn('[Gemini Daemon] 데몬 연결 불가. CLI 스폰으로 폴백...');
+            console.warn('[Gemini Lib] JSON 파싱 실패, Raw Text 반환');
+            throw new Error('JSON match failed');
         }
-
-        // 2. 실패 시 레거시 스폰 방식 (Slow, Free)
-        // tempFilePath는 이미 생성됨. analyzeWithSpawn은 buffer를 받아 다시 쓰지만,
-        // 여기서는 spawn 함수를 그대로 두었으므로 buffer를 넘깁니다.
-        // 효율을 위해 analyzeWithSpawn을 수정하여 path를 받게 할 수도 있지만, 안전하게 기존 로직 사용.
-
-        await fs.promises.unlink(tempFilePath).catch(() => { }); // 데몬용 파일 삭제
-
-        return await analyzeWithSpawn(imageBuffer, promptText);
 
     } catch (error) {
-        console.error('[Gemini Lib] 모든 분석 방법 실패:', error);
-        await fs.promises.unlink(tempFilePath).catch(() => { });
+        console.error('[Gemini Lib] OCI 분석 실패:', error);
         throw error;
     }
 }
