@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { analyzeReceiptWithCliFallback } from '../../../../lib/gemini-cli';
-import { createClient } from '@/integrations/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { NextRequest } from 'next/server';
 import crypto from 'crypto';
 import { GoogleGenerativeAI } from '@google/generative-ai';
