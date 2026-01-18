@@ -106,7 +106,21 @@ const CATEGORIES = [
 
 type Category = typeof CATEGORIES[number];
 
-import { OCRResult } from "./ReceiptOCRModal";
+interface OCRItem {
+    name: string;
+    price: number | null;
+}
+
+export interface OCRResult {
+    store_name?: string;
+    date?: string;
+    time?: string;
+    items?: OCRItem[];
+    total_amount?: number;
+    category?: string;
+    review_draft?: string;
+    confidence?: number;
+}
 
 export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = false }: ReviewModalProps) {
     const { user } = useAuth();
