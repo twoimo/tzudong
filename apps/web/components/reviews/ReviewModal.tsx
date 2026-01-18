@@ -129,7 +129,9 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
     const [categories, setCategories] = useState<Category[]>([]);
     const [content, setContent] = useState("");
     const [verificationPhoto, setVerificationPhoto] = useState<File | null>(null);
+    const [verificationPhotoUrl, setVerificationPhotoUrl] = useState<string | null>(null);
     const [ocrLimitReached, setOcrLimitReached] = useState(false);
+    const [quota, setQuota] = useState<{ used: number; max: number; remaining: number } | null>(null);
     const [foodPhotos, setFoodPhotos] = useState<File[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -811,6 +813,23 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
             loadDraft();
         }
     }, [isOpen, user?.id, restaurant?.id, loadDraft]);
+    // 쿼터 확인
+    useEffect(() => {
+        if (isOpen && user) {
+            fetch('/api/ocr/quota')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.remaining !== undefined) {
+                        setQuota(data);
+                        if (data.remaining === 0) {
+                            setOcrLimitReached(true);
+                        }
+                    }
+                })
+                .catch(console.error);
+        }
+    }, [isOpen, user]);
+
     // inline 모드: Dialog 없이 콘텐츠만 렌더링
     if (inline) {
         return (
@@ -836,8 +855,13 @@ export function ReviewModal({ isOpen, onClose, restaurant, onSuccess, inline = f
                     )}
                     <div className="flex items-start justify-between gap-2 pt-3">
                         <div className="flex-1">
-                            <h2 className="text-2xl font-semibold bg-gradient-primary bg-clip-text text-transparent">
+                            <h2 className="text-2xl font-semibold bg-gradient-primary bg-clip-text text-transparent flex items-center gap-3">
                                 쯔동여지도 리뷰 작성
+                                {quota && (
+                                    <Badge variant="outline" className={`text-xs font-normal border-primary/20 ${quota.remaining === 0 ? 'bg-amber-50 text-amber-600' : 'bg-primary/5 text-primary'}`}>
+                                        AI 분석 남은 횟수: {quota.remaining}/{quota.max}회
+                                    </Badge>
+                                )}
                             </h2>
                             <p className="text-sm text-muted-foreground">
                                 맛집 방문 후기를 공유해주세요
