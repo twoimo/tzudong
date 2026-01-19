@@ -9,13 +9,11 @@ const __dirname = path.dirname(__filename);
 
 // 환경 변수 로드
 const projectRoot = path.resolve(__dirname, '../../../');
-// .env 로드
 const backendEnvLocal = path.join(projectRoot, 'backend', '.env.local');
 
 if (fs.existsSync(backendEnvLocal)) {
     dotenv.config({ path: backendEnvLocal });
 } else {
-    // Default fallback
     dotenv.config();
 }
 
@@ -40,11 +38,8 @@ function log(level, msg) {
 
 // --- 상수 ---
 const COLLECTION_INTERVAL_MS = 3000;
-
-// 미지정 시 기본 채널
 let CHANNEL_NAME = 'tzuyang';
 
-// 인자 파싱
 const args = process.argv.slice(2);
 const channelIdx = args.indexOf('--channel');
 if (channelIdx !== -1 && args[channelIdx + 1]) {
@@ -87,7 +82,6 @@ function getMetaFilePath(videoId) {
     return path.join(META_DIR, `${videoId}.jsonl`);
 }
 
-// 쿠키 로드
 async function loadCookies() {
     const cookiePath = path.resolve(__dirname, '../data/cookies.json');
     if (fs.existsSync(cookiePath)) {
@@ -115,15 +109,12 @@ async function fetchVideoPage(videoId, cookieHeader) {
         if (response.status === 429) {
             throw new Error("429 Too Many Requests");
         }
-
         if (response.url.includes("accounts.google.com")) {
             throw new Error("Redirected to Login - Auth Failed");
         }
-
         if (!response.ok) {
             throw new Error(`HTTP Error: ${response.status}`);
         }
-
         return await response.text();
     } catch (e) {
         throw e;
@@ -136,7 +127,6 @@ function extractHeatmapFromHtml(html) {
 
     try {
         const data = JSON.parse(match[1]);
-
         function findKey(obj, key) {
             if (!obj) return null;
             if (obj[key]) return obj[key];
@@ -153,12 +143,10 @@ function extractHeatmapFromHtml(html) {
         if (markers && Array.isArray(markers) && markers.length > 0) {
             return { type: 'raw_markers', data: markers };
         }
-
         const markerGraph = findKey(data, 'markerGraph');
         if (markerGraph && markerGraph.markers && Array.isArray(markerGraph.markers)) {
             return { type: 'raw_markers', data: markerGraph.markers };
         }
-
         return null;
     } catch (e) {
         log('warn', `Parse Error: ${e.message}`);
@@ -170,31 +158,13 @@ function saveVideoData(videoId, data) {
     const filepath = getOutputFilePath(videoId);
     const line = JSON.stringify(data) + '\n';
     try {
-        // 파일에 추가 (일반적으로 실행당 한 줄이지만 히스토리 지원)
         fs.appendFileSync(filepath, line, 'utf-8');
     } catch (e) {
         log('error', `Failed to write to file ${filepath}: ${e.message}`);
     }
 }
 
-function getPublishedAt(videoId) {
-    const metaPath = getMetaFilePath(videoId);
-    if (fs.existsSync(metaPath)) {
-        try {
-            // 메타 파일의 마지막 줄 읽기 (보통 한 줄이지만 혹시 모를 상황 대비)
-            const content = fs.readFileSync(metaPath, 'utf-8').trim().split('\n').pop();
-            if (content) {
-                const meta = JSON.parse(content);
-                return meta.published_at || null;
-            }
-        } catch (e) { }
-    }
-    return null;
-}
-
 function shouldCollect(videoId) {
-    // 파일 존재 여부 및 최신 데이터 확인
-    // Meta에서 recollect_id 및 recollect_vars 가져오기
     const metaPath = getMetaFilePath(videoId);
     let metaRecollectId = -1;
     let recollectVars = [];
@@ -211,11 +181,28 @@ function shouldCollect(videoId) {
             }
         } catch (e) { }
     } else {
-        // 메타 파일 없으면 수집 시도 (안전장치)
         return true;
     }
 
-    // 이미 수집된 Heatmap 확인
+    // 1. Mandatory Check: Min 5 Days since Published
+    // (일단 업로드한지 최소 5일이어야 하고(필수))
+    if (!publishedAt) {
+        // Safe fallback if no published_at (assume old enough unless we want strict)
+        // Or if meta exists but no date, maybe wait?
+        // Let's assume passed if unknown, or return false? 
+        // Better to return false to be safe and wait for valid meta.
+        return false;
+    }
+
+    const pubDate = new Date(publishedAt);
+    const now = getKSTDate();
+    const diffTime = Math.abs(now - pubDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 5) {
+        return false;
+    }
+
     const filepath = getOutputFilePath(videoId);
     if (fs.existsSync(filepath)) {
         try {
@@ -224,39 +211,27 @@ function shouldCollect(videoId) {
                 const lastData = JSON.parse(content);
                 const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
 
-                // Sync Logic:
-                // 1. Meta ID > Heatmap ID 일 때만 고려
                 if (metaRecollectId > lastRecollectId) {
-                    // 2. Variable Check (List based)
-                    // Heatmap 수집 트리거 조건:
-                    // - new_video
-                    // - duration_changed
-                    // 스킵 조건:
-                    // - title_changed (영상 내용 불변)
-                    // - thumbnail_changed (영상 내용 불변)
-                    // - scheduled_* (조회수 갱신용, 히트맵은 불변 가정)
+                    // Trigger Conditions:
+                    // 1. New Video (implied by ID check maybe, strictly "new_video" var)
+                    // 2. Duration Changed
+                    // 3. Periodic Collection (scheduled_*)
 
-                    const TRIGGER_VARS = ['new_video', 'duration_changed'];
+                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly'];
 
                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
                     if (shouldTrigger) {
                         return true;
                     } else {
-                        // 스킵하지만, ID 싱크가 안 맞아서 계속 이 로직을 타게 됨.
-                        // 하지만 상관없음. ID가 다르면 -> 체크 -> Trigger 없음 -> return false (Skip).
-                        // 효율적임.
                         return false;
                     }
                 }
-
-                // ID가 같거나 Heatmap이 더 최신이면 스킵
                 return false;
             }
         } catch (e) { }
     }
 
-    // 히트맵 파일 없으면 수집
     return true;
 }
 
@@ -277,7 +252,6 @@ async function main() {
         const fileContent = fs.readFileSync(URLS_FILE, 'utf-8');
         const urls = fileContent.split('\n').filter(line => line.trim() !== '');
 
-        // 매핑
         const targets = urls.map(url => {
             const vid = extractVideoId(url);
             return { url, video_id: vid };
@@ -288,7 +262,7 @@ async function main() {
 
         log('info', `Found ${urls.length} URLs, ${targets.length} targets to process.`);
 
-        const batch = targets; // 전체 수집 (배치 제한 제거)
+        const batch = targets;
 
         for (let i = 0; i < batch.length; i++) {
             const { video_id, url } = batch[i];
@@ -323,9 +297,9 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             return;
         }
 
-        // Meta에서 recollect_id 가져오기
+        // Meta Info
         const metaInfo = getMetaInfo(video_id);
-        const filepath = getOutputFilePath(video_id); // Define filepath here for scope access
+        const filepath = getOutputFilePath(video_id);
 
         const formattedData = newHeatmap.data.map(item => {
             const seconds = Math.floor(item.startMillis / 1000);
@@ -376,7 +350,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             status: 'success',
             recollect_id: metaInfo.recollect_id,
             recollect_vars: metaInfo.recollect_vars, // List
-            recollect_reason: metaInfo.recollect_vars.length > 0 ? metaInfo.recollect_vars[0] : null, // Backward compat
+            recollect_reason: metaInfo.recollect_vars.length > 0 ? metaInfo.recollect_vars[0] : null, // Compat
             collected_at: new Date().toISOString()
         });
         log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
@@ -399,7 +373,6 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
     }
 }
 
-// Meta 정보 조회 헬퍼 (Modified for recollect_vars)
 function getMetaInfo(videoId) {
     const metaPath = getMetaFilePath(videoId);
     if (fs.existsSync(metaPath)) {
