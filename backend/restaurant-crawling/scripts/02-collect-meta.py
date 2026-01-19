@@ -148,7 +148,7 @@ def calculate_schedule_reason(published_at_str: str, last_collected_at_str: str)
     if days_since_published >= 14 and days_since_collected >= 7:
         return "scheduled_weekly"
 
-    # 6. 5일 ~ 14일: 3일마다 (New Logic)
+    # 6. 5일 ~ 14일: 3일마다 (신규 로직)
     if days_since_published >= 5 and days_since_collected >= 3:
         return "scheduled_3days"
 
@@ -162,25 +162,25 @@ def detect_changes(current: Dict, previous: Dict) -> List[str]:
     if previous is None:
         return ["new_video"]
 
-    # 1. Title
+    # 1. 제목
     if current.get("title") != previous.get("title"):
         changes.append("title_changed")
 
-    # 2. Duration (1초 이상 차이)
+    # 2. 재생 시간 (1초 이상 차이)
     curr_dur = current.get("duration", 0)
     prev_dur = previous.get("duration", 0)
     if abs(curr_dur - prev_dur) > 1:
         changes.append("duration_changed")
 
-    # 3. Thumbnail (Hash Comparison)
-    # Note: Youtube API always returns URL. Hash check ensures actual image change.
+    # 3. 썸네일 (해시 비교)
+    # 참고: YouTube API는 항상 URL을 반환합니다. 해시 확인을 통해 실제 이미지 변경 여부를 확인합니다.
     curr_thumb_hash = current.get("thumbnail_hash")
     prev_thumb_hash = previous.get("thumbnail_hash")
     
     if curr_thumb_hash and prev_thumb_hash and curr_thumb_hash != prev_thumb_hash:
         changes.append("thumbnail_changed")
     
-    # 4. Schedule Check
+    # 4. 스케줄 확인
     schedule_reason = calculate_schedule_reason(
         current.get("published_at"), 
         previous.get("collected_at")
@@ -192,7 +192,7 @@ def detect_changes(current: Dict, previous: Dict) -> List[str]:
 
 
 def get_video_meta_batch(youtube, video_ids: List[str]) -> Dict[str, Dict]:
-    """YouTube API Batch Request (Max 50)"""
+    """YouTube API 배치 요청 (최대 50개)"""
     results = {}
     try:
         response = youtube.videos().list(
@@ -208,9 +208,9 @@ def get_video_meta_batch(youtube, video_ids: List[str]) -> Dict[str, Dict]:
 
             duration_seconds = parse_duration(content_details.get("duration", "PT0S"))
             
-            # Thumbnail processing
+            # 썸네일 처리
             thumbnails = snippet.get("thumbnails", {})
-            # Select best quality
+            # 최고 화질 선택
             thumb_url = (
                 thumbnails.get("maxres", {}).get("url") or 
                 thumbnails.get("standard", {}).get("url") or 
@@ -219,7 +219,7 @@ def get_video_meta_batch(youtube, video_ids: List[str]) -> Dict[str, Dict]:
                 thumbnails.get("default", {}).get("url")
             )
             
-            # Hash calculation (Costly operation, but necessary for detection)
+            # 해시 계산 (비용이 높지만 감지에 필수)
             thumb_hash = get_image_hash(thumb_url) if thumb_url else None
 
             results[vid] = {
@@ -245,7 +245,7 @@ def get_video_meta_batch(youtube, video_ids: List[str]) -> Dict[str, Dict]:
     return results
 
 def save_thumbnail_file(channel_data_path: Path, video_id: str, recollect_id: int, url: str):
-    """Save thumbnail image file with versioning"""
+    """버전 관리가 적용된 썸네일 이미지 파일 저장"""
     if not url: return
     
     thumb_dir = channel_data_path / "thumbnails"
@@ -255,9 +255,9 @@ def save_thumbnail_file(channel_data_path: Path, video_id: str, recollect_id: in
         resp = requests.get(url, timeout=10)
         if resp.status_code == 200:
             ext = url.split('.')[-1]
-            if len(ext) > 4 or '?' in ext: ext = 'jpg' # simple fallback
+            if len(ext) > 4 or '?' in ext: ext = 'jpg' # 간단한 대체 처리
             
-            # File format: {video_id}-{recollect_id}.{ext}
+            # 파일 형식: {video_id}-{recollect_id}.{ext}
             filename = f"{video_id}-{recollect_id}.{ext}"
             filepath = thumb_dir / filename
             
@@ -293,13 +293,13 @@ def collect_channel_meta(
 
     success_count = 0
     
-    # Batch Processing
+    # 배치 처리
     BATCH_SIZE = 50
     for i in range(0, len(video_ids), BATCH_SIZE):
         batch_ids = video_ids[i:i+BATCH_SIZE]
         logger.progress(i, len(video_ids), f"Batch {i//BATCH_SIZE + 1}")
         
-        # 1. Fetch Current Meta for Batch
+        # 1. 배치의 현재 메타데이터 가져오기
         current_metas = get_video_meta_batch(youtube, batch_ids)
         
         for vid in batch_ids:
@@ -308,36 +308,34 @@ def collect_channel_meta(
             current_meta = current_metas[vid]
             previous_meta = get_latest_meta(channel_data_path, vid)
             
-            # 2. Detect Changes -> List[str]
+            # 2. 변경 사항 감지 -> List[str]
             recollect_vars = detect_changes(current_meta, previous_meta)
             
-            # 3. New Video Handling (Always collect)
+            # 3. 신규 영상 처리 (항상 수집)
             if not previous_meta:
                 recollect_vars = ["new_video"]
             elif not recollect_vars:
-                # No changes and no schedule trigger -> Skip
+                # 변경 사항 및 스케줄 트리거 없음 -> 건너뛰기
                 continue
 
-            # 4. Determine Recollect ID
+            # 4. 수집 ID 결정
             prev_id = previous_meta.get("recollect_id", 0) if previous_meta else 0
             new_id = prev_id + 1 if previous_meta else 0
             
-            # 5. Save Thumbnail if needed
-            # Only save file if new_video or thumbnail_changed
+            # 5. 필요시 썸네일 저장
+            # 신규 영상이거나 썸네일이 변경된 경우에만 파일 저장
             if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
                 save_thumbnail_file(channel_data_path, vid, new_id, current_meta.get("thumbnail_url"))
 
-            # 6. Append Meta
+            # 6. 메타데이터 추가
             current_meta["recollect_id"] = new_id
-            current_meta["recollect_vars"] = recollect_vars # List
-            # Legacy field for compatibility (optional, or remove)
-            current_meta["recollect_reason"] = recollect_vars[0] if recollect_vars else None 
+            current_meta["recollect_vars"] = recollect_vars # 리스트
             current_meta["collected_at"] = datetime.now(KST).isoformat()
             
-            # OpenAI Analysis (Optional)
-            # ... (Existing logic can be kept or simplified. Assuming skipped for now unless specifically requested to keep exact logic)
-            current_meta["ads_info"] = {"is_ads": False} # Simplified for speed or keep existing if crucial. 
-            # (User didn't emphasize ads logic refactor, focusing on thumbnail/schedule. Will skip expensive GPT call in this refactor unless 'skip-ads' is false)
+            # OpenAI 분석 (옵션)
+            # ... (기존 로직 유지 또는 단순화)
+            current_meta["ads_info"] = {"is_ads": False} # 속도를 위해 단순화
+            # (사용자가 광고 로직 리팩토링을 강조하지 않았고 썸네일/스케줄에 집중함. 'skip-ads'가 false가 아니면 비싼 GPT 호출 건너뜀)
             
             output_file = meta_dir / f"{vid}.jsonl"
             append_to_jsonl(str(output_file), current_meta)
@@ -350,12 +348,12 @@ def collect_channel_meta(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--channel", "-c", type=str)
-    parser.add_argument("--skip-ads", action="store_true", default=True) # Default true for speed
+    parser.add_argument("--skip-ads", action="store_true", default=True) # 속도를 위해 기본값 True
     args = parser.parse_args()
 
     youtube_api_key = get_api_key("youtube")
     if not youtube_api_key:
-        print("❌ YOUTUBE_API_KEY Missing")
+        print("❌ YOUTUBE_API_KEY 누락됨")
         sys.exit(1)
 
     youtube = build("youtube", "v3", developerKey=youtube_api_key)

@@ -187,13 +187,13 @@ function shouldCollect(videoId) {
         return true;
     }
 
-    // 1. Mandatory Check: Min 5 Days since Published
+    // 1. 필수 확인: 게시 후 5일 경과 여부
     // (일단 업로드한지 최소 5일이어야 하고(필수))
     if (!publishedAt) {
-        // Safe fallback if no published_at (assume old enough unless we want strict)
-        // Or if meta exists but no date, maybe wait?
-        // Let's assume passed if unknown, or return false? 
-        // Better to return false to be safe and wait for valid meta.
+        // published_at이 없는 경우 안전한 대체 처리 (엄격을 원치 않으면 충분히 오래된 것으로 가정)
+        // 또는 메타는 있는데 날짜가 없으면 대기할까?
+        // 알 수 없으면 통과로 가정할지, 아니면 false를 반환할지?
+        // 안전을 위해 false를 반환하고 유효한 메타를 기다리는 것이 좋음.
         return false;
     }
 
@@ -215,10 +215,10 @@ function shouldCollect(videoId) {
                 const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
 
                 if (metaRecollectId > lastRecollectId) {
-                    // Trigger Conditions:
-                    // 1. New Video (implied by ID check maybe, strictly "new_video" var)
-                    // 2. Duration Changed
-                    // 3. Periodic Collection (scheduled_*)
+                    // 트리거 조건:
+                    // 1. 신규 영상 (ID 확인으로 암시됨, 정확히는 "new_video" 변수)
+                    // 2. 재생 시간 변경
+                    // 3. 주기적 수집 (scheduled_*)
 
                     const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_3days', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly'];
 
@@ -300,7 +300,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             return;
         }
 
-        // Meta Info
+        // 메타 정보
         const metaInfo = getMetaInfo(video_id);
         const filepath = getOutputFilePath(video_id);
 
@@ -314,7 +314,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             };
         });
 
-        // [Shorts Filter] (180초 미만)
+        // [Shorts 필터] (180초 미만)
         if (formattedData.length > 0) {
             const lastPoint = formattedData[formattedData.length - 1];
             if (lastPoint.startMillis < 180000) {
@@ -352,8 +352,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             interaction_data: formattedData,
             status: 'success',
             recollect_id: metaInfo.recollect_id,
-            recollect_vars: metaInfo.recollect_vars, // List
-            recollect_reason: metaInfo.recollect_vars.length > 0 ? metaInfo.recollect_vars[0] : null, // Compat
+            recollect_vars: metaInfo.recollect_vars, // 리스트
             collected_at: new Date().toISOString()
         });
         log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
@@ -385,7 +384,7 @@ function getMetaInfo(videoId) {
                 const meta = JSON.parse(content);
                 return {
                     recollect_id: meta.recollect_id !== undefined ? meta.recollect_id : 0,
-                    recollect_vars: meta.recollect_vars || (meta.recollect_reason ? [meta.recollect_reason] : []),
+                    recollect_vars: meta.recollect_vars || [],
                     published_at: meta.published_at || null
                 };
             }

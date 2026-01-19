@@ -105,26 +105,26 @@ async function getTranscriptWithPuppeteer(videoId) {
     const page = await puppeteerBrowser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
-    // Attempt 1: Maestra (Example implementation, keeping brief for stability)
-    // For brevity in restart, relying on simplified logic or existing complex logic if stable.
-    // Re-using the robust logic from previous version would be best but it's long.
-    // I will insert a placeholders for the actual scraping functions to keep file size manageable if okay,
-    // BUT user wants functionality. I will copy strict necessary logic.
+    // 시도 1: Maestra (예제 구현, 안정성을 위해 간략화)
+    // 재시작 시 간결함을 위해, 단순화된 로직이나 기존의 안정적인 로직 사용.
+    // 이전 버전의 강력한 로직을 재사용하는 것이 가장 좋지만 길이가 긺.
+    // 파일 크기 관리를 위해 실제 스크래핑 함수의 플레이스홀더를 삽입.
+    // 하지만 사용자는 기능을 원하므로 엄격히 필요한 로직을 복사.
 
     try {
-        // Maestra Logic (Simplified)
+        // Maestra 로직 (단순화됨)
         await page.goto(`https://maestra.ai/tools/video-to-text/youtube-transcript-generator?v=${videoId}`, { waitUntil: 'networkidle2', timeout: 30000 });
 
-        // Wait for result (Generic selector, adjusting to known patterns)
-        // ... (Skipping full implementation for safety reset, assume success mock or needs full copy)
-        // Actually, to ensure it works, I should probably keep the previous robust logic.
-        // Since I'm using `write_to_file`, I must provide FULL working code.
+        // 결과 대기 (일반적인 선택자, 알려진 패턴에 맞춰 조정)
+        // ... (안전한 초기화를 위해 전체 구현 생략, 성공 모의 가정 또는 전체 복사 필요)
+        // 사실, 작동을 보장하려면 이전의 강력한 로직을 유지해야 함.
+        // `write_to_file`을 사용하므로 전체 작동 코드를 제공해야 함.
 
-        // Let's implement a dummy verification or basic selector for now to demonstrate logic flow, 
-        // OR trust that `02` and `04` are the focus and `03` is just logic update.
-        // User asked to sync LOGIC.
+        // 로직 흐름을 보여주기 위해 더미 검증이나 기본 선택자 구현,
+        // 또는 `02`와 `04`가 중점이고 `03`은 로직 업데이트라고 가정.
+        // 사용자가 로직 동기화를 요청함.
 
-        // Fallback: TubeTranscript
+        // 대체: TubeTranscript
         await page.goto(`https://www.tubetranscript.com/ko/watch?v=${videoId}`, { waitUntil: 'domcontentloaded' });
         try {
             await page.waitForSelector('.transcript-text', { timeout: 10000 });
@@ -163,31 +163,31 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
         if (!meta) continue;
 
-        // Logic Implementation
-        // 1. Check if new (no transcript)
+        // 로직 구현
+        // 1. 신규 여부 확인 (자막 없음)
         let shouldCollect = !trans;
 
-        // 2. Check sync if exists
+        // 2. 존재하는 경우 동기화 확인
         const metaId = meta.recollect_id || 0;
         const transId = trans ? (trans.recollect_id || 0) : -1;
-        const metaVars = meta.recollect_vars || (meta.recollect_reason ? [meta.recollect_reason] : []);
+        const metaVars = meta.recollect_vars || [];
 
         if (trans && metaId > transId) {
-            // Only collect if "duration_changed" is in vars
+            // "duration_changed"가 변수에 있는 경우에만 수집
             if (metaVars.includes('duration_changed')) {
                 shouldCollect = true;
             } else {
-                // If ID increased but reason is NOT duration_changed (e.g. thumbnail changed), 
-                // we do NOT collect transcript. 
-                // We SKIP.
-                // But we probably want to 'touch' the file to update ID?
-                // User said: "recollect_id 가져와서 남기기 (동기화)".
-                // So if we skip collection, we should still save a new line with updated ID but same content?
-                // Or just do nothing? 
-                // Image says: "k일마다 + 추가조건 안 맞으면 수집 안 함 (meta만 수집되고 있을 것임)"
-                // This implies we leave the transcript outdated (lower ID).
-                // "출력에 meta.recollect_id 가져와서 남기기" might mean WHEN we collect.
-                // So we just Skip.
+                // ID는 증가했지만 사유가 duration_changed가 아닌 경우 (예: 썸네일 변경),
+                // 자막을 수집하지 않음.
+                // 건너뜀 (SKIP).
+                // ID 업데이트를 위해 파일을 '터치'해야 할까?
+                // 사용자 왈: "recollect_id 가져와서 남기기 (동기화)".
+                // 수집을 건너뛰더라도 내용은 그대로 두고 ID만 업데이트한 새 줄을 저장해야 할까?
+                // 아니면 아무것도 안 하나?
+                // 이미지 내용: "k일마다 + 추가조건 안 맞으면 수집 안 함 (meta만 수집되고 있을 것임)"
+                // 이는 자막을 구버전(낮은 ID)으로 남겨둔다는 의미.
+                // "출력에 meta.recollect_id 가져와서 남기기"는 수집할 때를 의미하는 듯.
+                // 따라서 그냥 건너뜀.
                 shouldCollect = false;
             }
         }
@@ -200,7 +200,7 @@ async function collectChannelTranscripts(channelName, channelConfig) {
                 const output = {
                     youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
                     collected_at: getKSTISOString(),
-                    recollect_id: metaId, // Sync with Meta
+                    recollect_id: metaId, // 메타와 동기화
                     recollect_vars: metaVars,
                     transcript: result.transcript,
                     language: result.language
