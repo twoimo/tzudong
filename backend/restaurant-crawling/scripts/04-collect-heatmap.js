@@ -10,9 +10,12 @@ const __dirname = path.dirname(__filename);
 // 환경 변수 로드
 const projectRoot = path.resolve(__dirname, '../../../');
 const backendEnvLocal = path.join(projectRoot, 'backend', '.env.local');
+const backendEnv = path.join(projectRoot, 'backend', '.env');
 
 if (fs.existsSync(backendEnvLocal)) {
     dotenv.config({ path: backendEnvLocal });
+} else if (fs.existsSync(backendEnv)) {
+    dotenv.config({ path: backendEnv });
 } else {
     dotenv.config();
 }

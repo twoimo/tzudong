@@ -20,11 +20,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // .env 로드
-const envPath = path.resolve(__dirname, '../../.env.local');
-if (fs.existsSync(envPath)) {
+// .env 로드
+const envLocalPath = path.resolve(__dirname, '../../.env.local');
+const envPath = path.resolve(__dirname, '../../.env');
+
+if (fs.existsSync(envLocalPath)) {
+    config({ path: envLocalPath });
+} else if (fs.existsSync(envPath)) {
     config({ path: envPath });
 } else {
-    config({ path: path.resolve(__dirname, '../../.env') });
+    config(); // Fallback
 }
 
 // config 로드
@@ -92,6 +97,7 @@ async function getTranscriptWithPuppeteer(videoId) {
     if (!puppeteerBrowser) {
         puppeteerBrowser = await puppeteerModule.launch({
             headless: true,
+            executablePath: '/usr/bin/chromium-browser',
             args: ['--no-sandbox', '--disable-setuid-sandbox']
         });
     }

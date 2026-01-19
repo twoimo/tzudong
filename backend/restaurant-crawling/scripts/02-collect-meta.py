@@ -40,9 +40,10 @@ except ImportError:
     sys.exit(1)
 
 # .env 로드
-env_path = Path(__file__).parent.parent / ".env.local"
+# .env 로드
+env_path = Path(__file__).parent.parent.parent / ".env.local"
 if not env_path.exists():
-    env_path = Path(__file__).parent.parent / ".env"
+    env_path = Path(__file__).parent.parent.parent / ".env"
 load_dotenv(env_path)
 
 # KST (UTC+9)
