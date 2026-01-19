@@ -128,9 +128,8 @@ def calculate_schedule_reason(published_at_str: str, last_collected_at_str: str)
     months_since_published = days_since_published / 30.0
 
     # 1. 5일 미만: 매일 (혹은 수집 즉시) -> 여기서는 변경 감지 로직에 맡김 (기본 스킵, 변경시만)
-    # 하지만 사용자는 5일 지난 영상에 대해서만 스케줄링을 적용한다고 했으므로
     if days_since_published < 5:
-        return None # 스케줄링에 의한 강제 수집 없음 (변경 감지로만 수동)
+        return None # 스케줄링에 의한 강제 수집 없음
 
     # 2. 6개월 이상: 스킵
     if months_since_published >= 6:
@@ -144,9 +143,13 @@ def calculate_schedule_reason(published_at_str: str, last_collected_at_str: str)
     if months_since_published >= 1 and days_since_collected >= 14:
         return "scheduled_biweekly"
 
-    # 5. 0~1개월: 매주 (여기선 5일~1개월 사이)
-    if months_since_published < 1 and days_since_collected >= 7:
+    # 5. 14일 ~ 1개월: 매주
+    if days_since_published >= 14 and days_since_collected >= 7:
         return "scheduled_weekly"
+
+    # 6. 5일 ~ 14일: 3일마다 (New Logic)
+    if days_since_published >= 5 and days_since_collected >= 3:
+        return "scheduled_3days"
 
     return None
 

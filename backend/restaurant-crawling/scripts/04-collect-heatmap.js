@@ -217,7 +217,7 @@ function shouldCollect(videoId) {
                     // 2. Duration Changed
                     // 3. Periodic Collection (scheduled_*)
 
-                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly'];
+                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_3days', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly'];
 
                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
