@@ -21,42 +21,45 @@ def migrate_file(filepath):
             try:
                 data = json.loads(line.strip())
                 
-                # Check if migration needed
+                original_vars = data.get('recollect_vars', [])
+                # Handle case where vars might not have been created yet (if run cleanly) OR fixing previous run
                 if 'recollect_vars' not in data:
                     reason = data.get('recollect_reason')
-                    
-                    # Create list
-                    if reason:
-                        data['recollect_vars'] = [reason]
-                    else:
-                        data['recollect_vars'] = []
-                    
+                    original_vars = [reason] if reason else []
+
+                # Filter "migration"
+                new_vars = [v for v in original_vars if v != "migration"]
+                
+                # Check changes
+                has_migration_string = "migration" in original_vars
+                has_legacy_key = "recollect_reason" in data
+                vars_changed = (original_vars != new_vars) or ('recollect_vars' not in data)
+
+                if has_legacy_key or vars_changed or has_migration_string:
+                    data['recollect_vars'] = new_vars
+                    if 'recollect_reason' in data:
+                        del data['recollect_reason']
                     changed = True
                 
                 updated_lines.append(json.dumps(data, ensure_ascii=False) + '\n')
             except:
-                updated_lines.append(line) # Keep corrupted lines as is
+                updated_lines.append(line) 
         
         if changed:
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.writelines(updated_lines)
-            print(f"[Migrated] {filepath}")
-        else:
-            # print(f"[Skipped] {filepath}")
-            pass
+            print(f"[Fixed] {filepath}")
 
     except Exception as e:
         print(f"[Error] {filepath}: {e}")
 
 def main():
-    # Target all types
     targets = ["meta", "heatmap", "transcript"]
-    
     total_files = 0
     for target in targets:
         pattern = str(BASE_DIR / "**" / target / "*.jsonl")
         files = glob.glob(pattern, recursive=True)
-        print(f"Migrating {target}: Found {len(files)} files")
+        print(f"Checking {target}: Found {len(files)} files")
         
         for f in files:
             migrate_file(f)
