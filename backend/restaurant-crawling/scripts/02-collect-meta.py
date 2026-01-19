@@ -106,6 +106,15 @@ def get_image_hash(url: str) -> Optional[str]:
     return None
 
 
+
+def check_thumbnail_exists(channel_data_path: Path, video_id: str, recollect_id: int) -> bool:
+    """해당 버전의 썸네일 파일 존재 여부 확인"""
+    thumb_dir = channel_data_path / "thumbnails"
+    # 확장자를 모르므로 glob 패턴 사용 (jpg, png, webp 등)
+    pattern = f"{video_id}-{recollect_id}.*"
+    return any(thumb_dir.glob(pattern))
+
+
 def calculate_schedule_reason(published_at_str: str, last_collected_at_str: str) -> Optional[str]:
     """
     주기적 수집 스케줄링 로직
@@ -315,7 +324,13 @@ def collect_channel_meta(
             if not previous_meta:
                 recollect_vars = ["new_video"]
             elif not recollect_vars:
-                # 변경 사항 및 스케줄 트리거 없음 -> 건너뛰기
+                # 변경 사항 없음. 하지만 썸네일 파일이 없는지 확인 (백필)
+                prev_id = previous_meta.get("recollect_id", 0)
+                if not check_thumbnail_exists(channel_data_path, vid, prev_id):
+                    # 썸네일이 없으면 현재(이전 버전) ID로 저장
+                    save_thumbnail_file(channel_data_path, vid, prev_id, current_meta.get("thumbnail_url"))
+                
+                # 메타데이터 업데이트 불필요 -> 건너뛰기
                 continue
 
             # 4. 수집 ID 결정
@@ -323,7 +338,7 @@ def collect_channel_meta(
             new_id = prev_id + 1 if previous_meta else 0
             
             # 5. 필요시 썸네일 저장
-            # 신규 영상이거나 썸네일이 변경된 경우에만 파일 저장
+            # 신규 영상이거나, 썸네일이 변경되었으면 저장
             if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
                 save_thumbnail_file(channel_data_path, vid, new_id, current_meta.get("thumbnail_url"))
 

@@ -60,6 +60,21 @@
 
 ---
 
+## 🤖 자동화 (Daily Pipeline)
+
+**`backend/run_daily.sh`** 스크립트를 통해 매일 새벽 4시에 전체 파이프라인이 순차적으로 실행됩니다.
+
+### Crontab 설정
+```bash
+# 매일 새벽 4시 00분 실행 (로그 저장)
+0 4 * * * /home/ubuntu/tzudong/backend/run_daily.sh >> /home/ubuntu/tzudong/backend/log/cron/daily_$(date +\%Y-\%m-\%d).log 2>&1
+```
+
+### 실행 순서
+`urls.txt` → `01` (탐색) → `02` (메타/스케줄) → `04` (히트맵 5일차) → `03` (자막)
+
+---
+
 ## 01-collect-urls.py
 
 ### 기능
@@ -106,13 +121,24 @@ YouTube Data API로 영상 메타데이터를 수집하고, 광고 분석을 수
 
 ### 저장 조건
 1. **신규 영상**
-2. **변경 시 저장** (title 또는 duration 변경)
-   - 단순 조회수(stats) 변경 시에는 저장하지 않음 (recollect_id 증가 안 함)
+2. **변경 시 저장** (title, duration, thumbnail 변경)
+3. **주기적 수집** (영상 Age에 따른 스케줄링)
+   - **~5일**: 매일 (변경 시)
+   - **5일 ~ 2주**: **3일마다** 🔥
+   - **2주 ~ 1달**: 1주마다
+   - **1달 ~ 3달**: 2주마다
+   - **3달 ~ 6달**: 1달마다
+   - **6달 이상**: 중단
+4. **썸네일 백필**: `thumbnails/`에 파일이 없으면 자동 다운로드
 
-### recollect 관리
+### recollect 관리 (`recollect_vars`)
+기존 `recollect_reason` (String)에서 **`recollect_vars` (List)** 로 변경되었습니다.
+
 ```python
-# 변경 감지
-recollect_reason = detect_changes(meta, previous_meta)
+# 변경 감지 (List 반환)
+recollect_vars = detect_changes(meta, previous_meta)
+# 예: ["duration_changed", "scheduled_weekly", "thumbnail_changed"]
+
 
 # recollect_id 설정
 if previous_meta:
@@ -122,7 +148,7 @@ else:
     new_recollect_id = 0
 
 meta["recollect_id"] = new_recollect_id
-meta["recollect_reason"] = recollect_reason  # title_changed, duration_changed 등
+meta["recollect_vars"] = recollect_vars  # List[str]
 meta["collected_at"] = datetime.now(KST).isoformat()
 ```
 
@@ -143,12 +169,12 @@ meta["collected_at"] = datetime.now(KST).isoformat()
     "like_count": 1234,
     "comment_count": 100
   },
-  "recollect_id": 0,
-  "recollect_reason": null,
+  "recollect_id": 3,
+  "recollect_vars": ["scheduled_weekly", "thumbnail_changed"],
   "collected_at": "2025-12-01T12:00:00+09:00",
   "ads_info": {
-    "is_ads": true,
-    "what_ads": "OOO 협찬"
+    "is_ads": false,
+    "what_ads": null
   }
 }
 ```
@@ -511,6 +537,8 @@ data/{channel}/
 │   └── urls.txt              ← 01 출력
 ├── meta/
 │   └── {video_id}.jsonl      ← 02 출력
+├── thumbnails/
+│   └── {video_id}-{recollect_id}.jpg  ← 02 출력 (버전 관리)
 ├── transcript/
 │   └── {video_id}.jsonl      ← 03 출력
 ├── heatmap/
