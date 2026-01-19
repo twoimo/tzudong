@@ -141,7 +141,7 @@ get_channels() {
 get_channel_data_path() {
     local channel=$1
     # YAML에서 data_path 추출 (따옴표 제거)
-    grep -A 5 "^  $channel:" "$CONFIG_FILE" | grep "data_path:" | awk '{print $2}' | tr -d '"'
+    grep -A 5 "^  $channel:" "$CONFIG_FILE" | grep "  data_path:" | awk '{print $2}' | tr -d '"'
 }
 
 get_channel_name() {
