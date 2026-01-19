@@ -338,9 +338,9 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
         // [Shorts Filter]
         if (formattedData.length > 0) {
             const lastPoint = formattedData[formattedData.length - 1];
-            // 히트맵 마지막 포인트가 120초(2분) 미만이면 쇼츠/티저로 간주
-            if (lastPoint.startMillis < 120000) {
-                log('info', `[Skip] Shorts detected (<120s). ID: ${video_id}`);
+            // 히트맵 마지막 포인트가 180초(3분) 미만이면 쇼츠/티저로 간주
+            if (lastPoint.startMillis < 180000) {
+                log('info', `[Skip] Shorts detected (<180s). ID: ${video_id}`);
                 saveVideoData(video_id, {
                     youtube_link,
                     video_id,
