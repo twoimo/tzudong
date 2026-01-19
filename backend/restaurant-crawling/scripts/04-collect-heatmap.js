@@ -1,579 +1,422 @@
-#!/usr/bin/env node
-/**
- * YouTube Heatmap 수집 스크립트 (recollect_id 기반)
- * - Puppeteer로 히트맵 SVG 데이터 수집
- * - Meta의 recollect_id/recollect_reason 확인하여 수집 결정
- * - title_changed, duration_changed 시 재수집
- * - published_at 기반 주기적 수집
- * 
- * 수집 조건:
- * 수집 조건:
- * - (신규 OR title_changed OR duration_changed OR 주기적 수집)
- * - AND (업로드 5일 경과)
- * 
- * 사용법:
- *   node 04-collect-heatmap.js --channel tzuyang
- *   node 04-collect-heatmap.js --channel meatcreator
- *   node 04-collect-heatmap.js  # 모든 채널
- */
-
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import yaml from 'js-yaml';
+import dotenv from 'dotenv';
+import winston from 'winston';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// config 로드 (CHANNELS_CONFIG 환경변수로 지정 가능)
-function loadChannelsConfig() {
-    const configName = process.env.CHANNELS_CONFIG || 'channels.yaml';
-    const configPath = path.resolve(__dirname, '../../config', configName);
-    if (!fs.existsSync(configPath)) {
-        throw new Error(`설정 파일 없음: ${configPath}`);
-    }
-    return yaml.load(fs.readFileSync(configPath, 'utf-8'));
+// 환경 변수 로드
+const projectRoot = path.resolve(__dirname, '../../../');
+// .env 로드
+const backendEnvLocal = path.join(projectRoot, 'backend', '.env.local');
+
+if (fs.existsSync(backendEnvLocal)) {
+    dotenv.config({ path: backendEnvLocal });
+} else {
+    // Default fallback
+    dotenv.config();
 }
 
-// 한국 시간 (KST)
+// --- 로거 설정 ---
+const logger = winston.createLogger({
+    level: 'info',
+    format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.printf(({ timestamp, level, message }) => {
+            return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+        })
+    ),
+    transports: [
+        new winston.transports.Console(),
+        new winston.transports.File({ filename: path.join(__dirname, 'collect_heatmap.log') })
+    ]
+});
+
+function log(level, msg) {
+    logger.log(level, msg);
+}
+
+// --- 상수 ---
+const COLLECTION_INTERVAL_MS = 3000;
+
+// 미지정 시 기본 채널
+let CHANNEL_NAME = 'tzuyang';
+
+// 인자 파싱
+const args = process.argv.slice(2);
+const channelIdx = args.indexOf('--channel');
+if (channelIdx !== -1 && args[channelIdx + 1]) {
+    CHANNEL_NAME = args[channelIdx + 1];
+}
+
+const BASE_DATA_DIR = path.resolve(__dirname, `../data/${CHANNEL_NAME}`);
+const DATA_DIR = path.join(BASE_DATA_DIR, 'heatmap');
+const META_DIR = path.join(BASE_DATA_DIR, 'meta');
+const URLS_FILE = path.join(BASE_DATA_DIR, 'urls.txt');
+
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+const HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9,ko;q=0.8',
+};
+
+// --- 헬퍼 함수 ---
 function getKSTDate() {
     const now = new Date();
     const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
     return new Date(utc + (9 * 60 * 60 * 1000));
 }
 
-// KST ISO 문자열 생성 (2025-12-04T01:37:01.799+09:00 형식)
-function getKSTISOString() {
-    const now = new Date();
-    return now.toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' }).replace(' ', 'T') + 
-        '.' + String(now.getMilliseconds()).padStart(3, '0') + '+09:00';
-}
-
-// 로그 함수
-function log(level, msg) {
-    const time = getKSTDate().toTimeString().slice(0, 8);
-    const tags = {
-        info: '[INFO]',
-        success: '[OK]',
-        warning: '[WARN]',
-        error: '[ERR]',
-        debug: '[DBG]',
-    };
-    console.log(`[${time}] ${tags[level] || '[LOG]'} ${msg}`);
-}
-
-// URL에서 video_id 추출
 function extractVideoId(url) {
-    const patterns = [
-        /youtube\.com\/watch\?v=([^&]+)/,
-        /youtu\.be\/([^?]+)/,
-        /youtube\.com\/embed\/([^?]+)/,
-        /youtube\.com\/shorts\/([^?]+)/,
-    ];
-    for (const pattern of patterns) {
-        const match = url.match(pattern);
-        if (match) return match[1];
-    }
-    return null;
+    if (!url) return null;
+    const match = url.match(/[?&]v=([^&]+)/);
+    return match ? match[1] : null;
 }
 
-// urls.txt에서 video_id 목록 로드
-function loadVideoIdsFromTxt(dataPath) {
-    const urlsFile = path.join(dataPath, 'urls.txt');
-    if (!fs.existsSync(urlsFile)) return [];
+function getOutputFilePath(videoId) {
+    return path.join(DATA_DIR, `${videoId}.jsonl`);
+}
 
-    const lines = fs.readFileSync(urlsFile, 'utf-8').split('\n');
-    const videoIds = [];
-    for (const line of lines) {
-        const url = line.trim();
-        if (url) {
-            const videoId = extractVideoId(url);
-            if (videoId) videoIds.push(videoId);
+function getMetaFilePath(videoId) {
+    return path.join(META_DIR, `${videoId}.jsonl`);
+}
+
+// 쿠키 로드
+async function loadCookies() {
+    const cookiePath = path.resolve(__dirname, '../data/cookies.json');
+    if (fs.existsSync(cookiePath)) {
+        try {
+            const cookiesString = fs.readFileSync(cookiePath, 'utf-8');
+            const cookies = JSON.parse(cookiesString);
+            return cookies.map(c => `${c.name}=${c.value}`).join('; ');
+        } catch (e) {
+            log('warn', `Failed to load cookies: ${e.message}`);
         }
     }
-    return videoIds;
+    return '';
 }
 
-// JSONL 파일의 마지막 줄 (최신 데이터) 로드
-function getLatestData(filePath) {
-    if (!fs.existsSync(filePath)) return null;
+async function fetchVideoPage(videoId, cookieHeader) {
+    const url = `https://www.youtube.com/watch?v=${videoId}`;
     try {
-        const lines = fs.readFileSync(filePath, 'utf-8').trim().split('\n');
-        if (lines.length > 0 && lines[lines.length - 1]) {
-            return JSON.parse(lines[lines.length - 1]);
+        const response = await fetch(url, {
+            headers: {
+                ...HEADERS,
+                'Cookie': cookieHeader
+            }
+        });
+
+        if (response.status === 429) {
+            throw new Error("429 Too Many Requests");
         }
-    } catch { }
-    return null;
+
+        if (response.url.includes("accounts.google.com")) {
+            throw new Error("Redirected to Login - Auth Failed");
+        }
+
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
+        }
+
+        return await response.text();
+    } catch (e) {
+        throw e;
+    }
 }
 
-// Meta 로드
-function getLatestMeta(dataPath, videoId) {
-    return getLatestData(path.join(dataPath, 'meta', `${videoId}.jsonl`));
-}
+function extractHeatmapFromHtml(html) {
+    const match = html.match(/var\s+ytInitialData\s*=\s*({.*?});/s);
+    if (!match) return null;
 
-// Heatmap 로드
-function getLatestHeatmap(dataPath, videoId) {
-    return getLatestData(path.join(dataPath, 'heatmap', `${videoId}.jsonl`));
-}
+    try {
+        const data = JSON.parse(match[1]);
 
-/**
- * published_at 기반 수집 주기 확인
- */
-function shouldCollectBySchedule(publishedAt, lastCollectedAt) {
-    if (!publishedAt || !lastCollectedAt) return null;
+        function findKey(obj, key) {
+            if (!obj) return null;
+            if (obj[key]) return obj[key];
+            if (typeof obj === 'object') {
+                for (const k in obj) {
+                    const found = findKey(obj[k], key);
+                    if (found) return found;
+                }
+            }
+            return null;
+        }
 
-    const now = getKSTDate();
-    const published = new Date(publishedAt);
-    const lastCollected = new Date(lastCollectedAt);
+        const markers = findKey(data, 'markers');
+        if (markers && Array.isArray(markers) && markers.length > 0) {
+            return { type: 'raw_markers', data: markers };
+        }
 
-    const monthsSincePublished = (now - published) / (1000 * 60 * 60 * 24 * 30);
-    const daysSinceCollected = (now - lastCollected) / (1000 * 60 * 60 * 24);
+        const markerGraph = findKey(data, 'markerGraph');
+        if (markerGraph && markerGraph.markers && Array.isArray(markerGraph.markers)) {
+            return { type: 'raw_markers', data: markerGraph.markers };
+        }
 
-    // 6개월 이상: 스킵
-    if (monthsSincePublished >= 6) {
+        return null;
+    } catch (e) {
+        log('warn', `Parse Error: ${e.message}`);
         return null;
     }
-    // 3~6개월: 1달마다 (30일)
-    if (monthsSincePublished >= 3 && daysSinceCollected >= 30) {
-        return "scheduled_monthly";
-    }
-    // 1~3개월: 2주마다 (14일)
-    if (monthsSincePublished >= 1 && daysSinceCollected >= 14) {
-        return "scheduled_biweekly";
-    }
-    // 0~1개월: 매주 (7일)
-    if (monthsSincePublished < 1 && daysSinceCollected >= 7) {
-        return "scheduled_weekly";
-    }
+}
 
+function saveVideoData(videoId, data) {
+    const filepath = getOutputFilePath(videoId);
+    const line = JSON.stringify(data) + '\n';
+    try {
+        // 파일에 추가 (일반적으로 실행당 한 줄이지만 히스토리 지원)
+        fs.appendFileSync(filepath, line, 'utf-8');
+    } catch (e) {
+        log('error', `Failed to write to file ${filepath}: ${e.message}`);
+    }
+}
+
+function getPublishedAt(videoId) {
+    const metaPath = getMetaFilePath(videoId);
+    if (fs.existsSync(metaPath)) {
+        try {
+            // 메타 파일의 마지막 줄 읽기 (보통 한 줄이지만 혹시 모를 상황 대비)
+            const content = fs.readFileSync(metaPath, 'utf-8').trim().split('\n').pop();
+            if (content) {
+                const meta = JSON.parse(content);
+                return meta.published_at || null;
+            }
+        } catch (e) { }
+    }
     return null;
 }
 
-// Puppeteer 설정
-let puppeteerBrowser = null;
-let puppeteerModule = null;
-let puppeteerChecked = false;
-let stealthApplied = false;
+function shouldCollect(videoId) {
+    // 파일 존재 여부 및 최신 데이터 확인
+    // Meta에서 recollect_id 및 recollect_reason 가져오기
+    const metaPath = getMetaFilePath(videoId);
+    let metaRecollectId = -1;
+    let recollectReason = null;
+    let publishedAt = null;
 
-/**
- * Puppeteer로 히트맵 수집 (backup 코드 기반)
- */
-async function collectHeatmap(videoId) {
-    // Puppeteer 로드
-    if (!puppeteerChecked) {
-        puppeteerChecked = true;
+    if (fs.existsSync(metaPath)) {
         try {
-            const puppeteerExtra = await import('puppeteer-extra');
-            const StealthPlugin = await import('puppeteer-extra-plugin-stealth');
-            if (!stealthApplied) {
-                puppeteerExtra.default.use(StealthPlugin.default());
-                stealthApplied = true;
+            const content = fs.readFileSync(metaPath, 'utf-8').trim().split('\n').pop();
+            if (content) {
+                const meta = JSON.parse(content);
+                metaRecollectId = meta.recollect_id !== undefined ? meta.recollect_id : 0;
+                recollectReason = meta.recollect_reason;
+                publishedAt = meta.published_at;
             }
-            puppeteerModule = puppeteerExtra;
-        } catch {
-            try {
-                puppeteerModule = await import('puppeteer');
-            } catch {
-                puppeteerModule = null;
-            }
-        }
+        } catch (e) { }
+    } else {
+        // 메타 파일 없으면 수집 시도 (안전장치)
+        return true;
     }
 
-    if (!puppeteerModule) {
-        return { error: 'puppeteer not available' };
-    }
-
-    // 브라우저 시작
-    if (!puppeteerBrowser) {
-        puppeteerBrowser = await puppeteerModule.default.launch({
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-gpu',
-                '--window-size=1280,720'
-            ]
-        });
-    }
-
-    const page = await puppeteerBrowser.newPage();
-
-    try {
-        // User-Agent 설정
-        await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-        await page.setViewport({ width: 1280, height: 720 });
-
-        // 한국어 쿠키 설정
-        await page.setCookie({
-            name: 'PREF',
-            value: 'hl=ko&gl=KR',
-            domain: '.youtube.com'
-        });
-
-        // YouTube 접속 (autoplay=1)
-        const url = `https://www.youtube.com/watch?v=${videoId}&autoplay=1`;
-        await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
-        await new Promise(r => setTimeout(r, 3000));
-
-        // 팝업 닫기
+    // 이미 수집된 Heatmap 확인
+    const filepath = getOutputFilePath(videoId);
+    if (fs.existsSync(filepath)) {
         try {
-            await page.evaluate(() => {
-                const dismissButtons = document.querySelectorAll(
-                    'button[aria-label*="No thanks"], button[aria-label*="괜찮습니다"], ' +
-                    'button[aria-label*="Dismiss"], button[aria-label*="닫기"]'
-                );
-                for (const btn of dismissButtons) {
-                    if (btn.textContent?.includes('No thanks') || 
-                        btn.textContent?.includes('괜찮습니다') ||
-                        btn.textContent?.includes('나중에')) {
-                        btn.click();
-                        break;
+            const content = fs.readFileSync(filepath, 'utf-8').trim().split('\n').pop();
+            if (content) {
+                const lastData = JSON.parse(content);
+                const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
+
+                // Sync Logic:
+                // 1. Meta ID > Heatmap ID 일 때만 고려
+                if (metaRecollectId > lastRecollectId) {
+                    // 2. Reason 필터링
+                    // - duration_changed: 수집 (구조적 변화)
+                    // - new_video: 수집 (첫 수집)
+                    // - periodic_daily: 스킵 (조회수만 변경됨)
+                    // - title_changed: 스킵 (유저 인터랙션 데이터 불변 가정)
+
+                    const ALLOWED_REASONS = ['new_video', 'duration_changed'];
+
+                    if (recollectReason && ALLOWED_REASONS.includes(recollectReason)) {
+                        return true;
+                    } else {
+                        // periodic_daily 등: 수집 안 함 -> 하지만 버전 싱크는 맞춰야 함?
+                        // 아니오, 싱크 안 맞추고 내버려두면:
+                        // 다음날 metaID 증가 -> 여전히 GAP 존재 -> reason은 또 periodic -> 또 스킵.
+                        // 그러다가 duration_changed 발생 -> reason=duration -> GAP 존재 -> 수집.
+                        // 즉, ID Gap이 계속 벌려져 있어도 문제 없음. Reason만 보고 판단하면 됨.
+                        return false;
                     }
                 }
-                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-            });
-            await new Promise(r => setTimeout(r, 2000));
-        } catch { }
 
-        // 재생 시도
-        for (let attempt = 0; attempt < 3; attempt++) {
-            try {
-                await page.click('.html5-video-player');
-                await new Promise(r => setTimeout(r, 500));
-                await page.keyboard.press('k');
-                await new Promise(r => setTimeout(r, 1000));
-                await page.evaluate(() => {
-                    const video = document.querySelector('video');
-                    if (video && video.paused) {
-                        video.muted = true;
-                        video.play().catch(() => {});
-                    }
-                });
-                await new Promise(r => setTimeout(r, 1000));
-            } catch { }
+                // ID가 같거나 Heatmap이 더 최신이면 스킵
+                return false;
+            }
+        } catch (e) { }
+    }
+
+    // 히트맵 파일 없으면 수집
+    return true;
+}
+
+async function main() {
+    log('info', `=== HTTP Heatmap Collector Started [Channel: ${CHANNEL_NAME}] ===`);
+    log('info', `Source: ${URLS_FILE}`);
+    log('info', `Saving to: ${DATA_DIR}`);
+
+    const cookieHeader = await loadCookies();
+    if (cookieHeader) log('info', 'Cookies loaded.');
+    else log('warn', 'No cookies found.');
+
+    try {
+        if (!fs.existsSync(URLS_FILE)) {
+            throw new Error(`URLs file not found: ${URLS_FILE}`);
         }
 
-        // 광고 처리
-        let isAdPlaying = await page.evaluate(() => {
-            const player = document.querySelector('.html5-video-player');
-            return player?.classList.contains('ad-showing') || false;
+        const fileContent = fs.readFileSync(URLS_FILE, 'utf-8');
+        const urls = fileContent.split('\n').filter(line => line.trim() !== '');
+
+        // 매핑
+        const targets = urls.map(url => {
+            const vid = extractVideoId(url);
+            return { url, video_id: vid };
+        }).filter(v => {
+            if (!v.video_id) return false;
+            return shouldCollect(v.video_id);
         });
 
-        if (isAdPlaying) {
-            const maxWait = 60000;
-            const startTime = Date.now();
+        log('info', `Found ${urls.length} URLs, ${targets.length} targets to process.`);
 
-            while (Date.now() - startTime < maxWait) {
-                isAdPlaying = await page.evaluate(() => {
-                    const player = document.querySelector('.html5-video-player');
-                    return player?.classList.contains('ad-showing') || false;
+        const batch = targets; // 전체 수집 (배치 제한 제거)
+
+        for (let i = 0; i < batch.length; i++) {
+            const { video_id, url } = batch[i];
+            await processVideo(video_id, url, cookieHeader);
+
+            if (i < batch.length - 1) {
+                const delay = COLLECTION_INTERVAL_MS + Math.random() * 2000;
+                await new Promise(r => setTimeout(r, delay));
+            }
+        }
+
+    } catch (e) {
+        log('error', `Fatal Error: ${e.message}`);
+    }
+}
+
+async function processVideo(video_id, youtube_link, cookieHeader) {
+    log('info', `Processing [${video_id}]...`);
+
+    try {
+        const html = await fetchVideoPage(video_id, cookieHeader);
+        const newHeatmap = extractHeatmapFromHtml(html);
+
+        if (!newHeatmap) {
+            log('warn', `No heatmap found for ${video_id}.`);
+            saveVideoData(video_id, {
+                youtube_link,
+                video_id,
+                status: 'no_heatmap',
+                collected_at: new Date().toISOString()
+            });
+            return;
+        }
+
+        // Meta에서 recollect_id 가져오기
+        const metaPath = getMetaFilePath(video_id);
+        const metaInfo = getMetaInfo(video_id);
+        const filepath = getOutputFilePath(video_id); // Define filepath here for scope access
+
+        const formattedData = newHeatmap.data.map(item => {
+            const seconds = Math.floor(item.startMillis / 1000);
+            const mm = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const ss = (seconds % 60).toString().padStart(2, '0');
+            return {
+                ...item,
+                formatted_time: `${mm}:${ss}`
+            };
+        });
+
+        // [Shorts Filter]
+        if (formattedData.length > 0) {
+            const lastPoint = formattedData[formattedData.length - 1];
+            // 히트맵 마지막 포인트가 120초(2분) 미만이면 쇼츠/티저로 간주
+            if (lastPoint.startMillis < 120000) {
+                log('info', `[Skip] Shorts detected (<120s). ID: ${video_id}`);
+                saveVideoData(video_id, {
+                    youtube_link,
+                    video_id,
+                    status: 'skipped_shorts',
+                    recollect_id: metaInfo.recollect_id,
+                    collected_at: new Date().toISOString()
                 });
+                return;
+            }
+        }
 
-                if (!isAdPlaying) break;
-
-                // 건너뛰기 버튼 찾기
-                const skipInfo = await page.evaluate(() => {
-                    const selectors = ['.ytp-skip-ad-button', '.ytp-ad-skip-button', 'button[id^="skip-button"]'];
-                    for (const selector of selectors) {
-                        const btn = document.querySelector(selector);
-                        if (btn) {
-                            const style = window.getComputedStyle(btn);
-                            return { found: true, selector, visible: style.display !== 'none' };
+        if (fs.existsSync(filepath)) {
+            try {
+                const lines = fs.readFileSync(filepath, 'utf-8').trim().split('\n');
+                if (lines.length > 0) {
+                    const lastLine = lines.pop(); // Get actual last non-empty line
+                    if (lastLine) {
+                        const lastData = JSON.parse(lastLine);
+                        // If recollect_id matches, we can skip content check (assume strict sync)
+                        // But let's keep content check as safeguard, OR just strictly rely on ID.
+                        // User wants strict sync with meta logic.
+                        if (lastData.recollect_id === metaInfo.recollect_id && lastData.status !== 'error') {
+                            log('info', `[Skip] Already collected for recollect_id ${metaInfo.recollect_id}.`);
+                            return;
                         }
                     }
-                    return { found: false };
-                });
-
-                if (skipInfo.found && skipInfo.visible) {
-                    try {
-                        await page.click(skipInfo.selector);
-                        await new Promise(r => setTimeout(r, 3000));
-                    } catch { }
                 }
-
-                await new Promise(r => setTimeout(r, 1000));
-            }
+            } catch (e) { }
         }
 
-        await new Promise(r => setTimeout(r, 3000));
+        saveVideoData(video_id, {
+            youtube_link,
+            video_id,
+            interaction_data: formattedData,
+            status: 'success',
+            recollect_id: metaInfo.recollect_id,
+            recollect_reason: metaInfo.recollect_reason,
+            collected_at: new Date().toISOString()
+        });
+        log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
 
-        // 프로그레스 바 활성화 대기
-        const maxProgressWait = 10000;
-        const progressStart = Date.now();
-        let progressBarEnabled = false;
-
-        while (Date.now() - progressStart < maxProgressWait) {
-            const state = await page.evaluate(() => {
-                const container = document.querySelector('.ytp-progress-bar-container');
-                const player = document.querySelector('.html5-video-player');
-                return {
-                    disabled: container?.getAttribute('aria-disabled') === 'true',
-                    adPlaying: player?.classList.contains('ad-showing') || false
-                };
-            });
-
-            if (!state.disabled && !state.adPlaying) {
-                progressBarEnabled = true;
-                break;
-            }
-
-            await new Promise(r => setTimeout(r, 500));
-        }
-
-        if (!progressBarEnabled) {
-            await page.close();
-            return { error: 'progress_bar_disabled' };
-        }
-
-        // 프로그레스 바 호버 (히트맵 표시)
-        try {
-            await page.click('.html5-video-player');
-            await new Promise(r => setTimeout(r, 500));
-            await page.hover('.ytp-progress-bar');
-            await new Promise(r => setTimeout(r, 1500));
-        } catch (e) {
-            await page.close();
-            return { error: 'hover_failed' };
-        }
-
-        // 히트맵 데이터 추출
-        const heatmapData = await page.evaluate(() => {
-            // SVG path 데이터 추출 (핵심!)
-            let svgPathData = null;
-            const modernHeatMap = document.querySelector('.ytp-modern-heat-map');
-            if (modernHeatMap) {
-                svgPathData = modernHeatMap.getAttribute('d');
-            } else {
-                const legacyPath = document.querySelector('.ytp-heat-map-path');
-                if (legacyPath) {
-                    svgPathData = legacyPath.getAttribute('d');
-                }
-            }
-
-            return { svgPathData };
+    } catch (e) {
+        log('error', `Error processing ${video_id}: ${e.message}`);
+        saveVideoData(video_id, {
+            youtube_link,
+            video_id,
+            collected_at: new Date().toISOString(),
+            recollect_id: 0,
+            recollect_reason: 'error',
+            status: 'error',
+            error_message: e.message
         });
 
-        // svgPathData가 없으면 실패
-        if (!heatmapData.svgPathData || heatmapData.svgPathData.length < 50) {
-            await page.close();
-            return { error: 'svg_not_found' };
+        if (e.message.includes("429") || e.message.includes("Auth Failed")) {
+            throw e;
         }
-
-        await page.close();
-
-        return {
-            video_id: videoId,
-            svg_path_data: heatmapData.svgPathData
-        };
-
-    } catch (error) {
-        try { await page.close(); } catch { }
-        return { error: error.message };
     }
 }
 
-/**
- * 채널 히트맵 수집 (recollect_id 기반)
- */
-async function collectChannelHeatmaps(channelName, channelConfig) {
-    const dataPath = path.resolve(__dirname, '../../', channelConfig.data_path);
-    const heatmapDir = path.join(dataPath, 'heatmap');
-
-    if (!fs.existsSync(heatmapDir)) {
-        fs.mkdirSync(heatmapDir, { recursive: true });
-    }
-
-    const allVideoIds = loadVideoIdsFromTxt(dataPath);
-
-    log('info', `채널: ${channelConfig.name}`);
-    log('info', `전체 URL: ${allVideoIds.length}개`);
-
-    if (allVideoIds.length === 0) {
-        log('warning', 'URL 없음');
-        return { channel: channelName, processed: 0, success: 0, skipped: 0 };
-    }
-
-    const toCollect = [];
-
-    for (const videoId of allVideoIds) {
-        const latestMeta = getLatestMeta(dataPath, videoId);
-        const latestHeatmap = getLatestHeatmap(dataPath, videoId);
-
-        if (!latestMeta) {
-            continue;
-        }
-
-        // 업로드 5일 미만 체크
-        const publishedAt = new Date(latestMeta.published_at);
-        const now = new Date();
-        const diffDays = (now - publishedAt) / (1000 * 60 * 60 * 24);
-
-        if (diffDays < 5) {
-            log('debug', `[Skip] ${videoId} - 업로드 5일 미만 (${diffDays.toFixed(1)}일)`);
-            continue;
-        }
-
-        const metaRecollectId = latestMeta.recollect_id || 0;
-        const heatmapRecollectId = latestHeatmap?.recollect_id || 0;
-
-        let shouldCollect = false;
-        let pReason = null;
-
-        // 1. 신규
-        if (!latestHeatmap) {
-            shouldCollect = true;
-            pReason = null;
-        } else {
-            // 2. 메타데이터 변경 (제목/길이)
-            const metaUpdated = (metaRecollectId > heatmapRecollectId) &&
-                (latestMeta.recollect_reason === "title_changed" || latestMeta.recollect_reason === "duration_changed");
-
-            // 3. 주기적 수집
-            const scheduleReason = shouldCollectBySchedule(
-                latestMeta.published_at,
-                latestHeatmap.collected_at
-            );
-
-            if (metaUpdated) {
-                shouldCollect = true;
-                pReason = latestMeta.recollect_reason;
-            } else if (scheduleReason) {
-                shouldCollect = true;
-                pReason = scheduleReason;
+// Meta 정보 조회 헬퍼
+function getMetaInfo(videoId) {
+    const metaPath = getMetaFilePath(videoId);
+    if (fs.existsSync(metaPath)) {
+        try {
+            const content = fs.readFileSync(metaPath, 'utf-8').trim().split('\n').pop();
+            if (content) {
+                const meta = JSON.parse(content);
+                return {
+                    recollect_id: meta.recollect_id !== undefined ? meta.recollect_id : 0,
+                    recollect_reason: meta.recollect_reason || null,
+                    published_at: meta.published_at || null
+                };
             }
-        }
-
-        if (shouldCollect) {
-            // log('debug', `[Collect] ${videoId} - Reason: ${pReason}`); // 원본 파일에는 debug 로그 일단 주석 처리? 아니면 추가? -> 추가함.
-            toCollect.push({ videoId, recollectReason: pReason, metaRecollectId });
-        }
+        } catch (e) { }
     }
-
-    log('info', `수집 대상: ${toCollect.length}개`);
-
-    if (toCollect.length === 0) {
-        log('success', '수집 대상 없음');
-        return { channel: channelName, processed: 0, success: 0, failed: 0, skipped: allVideoIds.length };
-    }
-
-    const stats = { success: 0, failed: 0 };
-
-    // Rate limit 설정
-    const randomMs = (min, max) => Math.floor(Math.random() * (max - min + 1) + min);
-
-    for (let i = 0; i < toCollect.length; i++) {
-        const { videoId, recollectReason, metaRecollectId } = toCollect[i];
-        log('info', `  [${i + 1}/${toCollect.length}] ${videoId} (${recollectReason})`);
-
-        const result = await collectHeatmap(videoId);
-
-        // 성공한 경우만 저장
-        if (!result.error) {
-            const outputData = {
-                youtube_link: `https://www.youtube.com/watch?v=${videoId}`,
-                collected_at: getKSTISOString(),
-                recollect_id: metaRecollectId,
-                recollect_reason: recollectReason,
-                svg_path_data: result.svg_path_data
-            };
-
-            const outputFile = path.join(heatmapDir, `${videoId}.jsonl`);
-            fs.appendFileSync(outputFile, JSON.stringify(outputData) + '\n', 'utf-8');
-
-            stats.success++;
-            log('success', `    → SVG 수집 완료 (${result.svg_path_data.length} chars)`);
-        } else {
-            stats.failed++;
-            log('warning', `    → 실패: ${result.error}`);
-        }
-
-        // Rate limit
-        // 50개마다 3-5분 대기
-        if ((i + 1) % 50 === 0 && i < toCollect.length - 1) {
-            const wait = randomMs(180000, 300000);
-            log('warning', `⏳ 50개 처리 완료 - ${Math.floor(wait/1000)}초 대기...`);
-            await new Promise(r => setTimeout(r, wait));
-        }
-        // 10개마다 30-40초 대기
-        else if ((i + 1) % 10 === 0 && i < toCollect.length - 1) {
-            const wait = randomMs(30000, 40000);
-            log('info', `⏳ 10개 처리 완료 - ${Math.floor(wait/1000)}초 대기...`);
-            await new Promise(r => setTimeout(r, wait));
-        }
-        // 5개마다 10-15초 대기
-        else if ((i + 1) % 5 === 0 && i < toCollect.length - 1) {
-            const wait = randomMs(10000, 15000);
-            await new Promise(r => setTimeout(r, wait));
-        }
-        // 매 영상 2-5초 대기
-        else if (i < toCollect.length - 1) {
-            const wait = randomMs(2000, 5000);
-            await new Promise(r => setTimeout(r, wait));
-        }
-    }
-
-    return {
-        channel: channelName,
-        processed: toCollect.length,
-        success: stats.success,
-        failed: stats.failed,
-        skipped: allVideoIds.length - toCollect.length,
-    };
+    return { recollect_id: 0, recollect_reason: null, published_at: null };
 }
 
-/**
- * 메인 실행
- */
-async function main() {
-    const args = process.argv.slice(2);
-    let channelFilter = null;
-
-    for (let i = 0; i < args.length; i++) {
-        if (args[i] === '--channel' || args[i] === '-c') {
-            channelFilter = args[i + 1];
-        }
-    }
-
-    log('info', '='.repeat(60));
-    log('info', '  YouTube 히트맵 수집 (Puppeteer, recollect_id 기반)');
-    log('info', '='.repeat(60));
-
-    const config = loadChannelsConfig();
-    const channels = config.channels;
-    const channelNames = channelFilter ? [channelFilter] : Object.keys(channels);
-
-    log('info', `대상 채널: ${channelNames.join(', ')}`);
-
-    const results = [];
-
-    try {
-        for (const channelName of channelNames) {
-            if (!channels[channelName]) {
-                log('error', `알 수 없는 채널: ${channelName}`);
-                continue;
-            }
-            const result = await collectChannelHeatmaps(channelName, channels[channelName]);
-            results.push(result);
-        }
-    } finally {
-        // 브라우저 종료
-        if (puppeteerBrowser) {
-            await puppeteerBrowser.close();
-        }
-    }
-
-    log('info', '');
-    log('info', '='.repeat(60));
-    log('success', '히트맵 수집 완료');
-    for (const result of results) {
-        log('info', `  ${result.channel}: 성공 ${result.success}개, 실패 ${result.failed}개, 스킵 ${result.skipped}개`);
-    }
-    log('info', '='.repeat(60));
-}
-
-main().catch(error => {
-    log('error', `치명적 오류: ${error.message}`);
-    console.error(error);
-    process.exit(1);
-});
+main();
