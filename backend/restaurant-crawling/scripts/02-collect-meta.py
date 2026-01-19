@@ -40,7 +40,6 @@ except ImportError:
     sys.exit(1)
 
 # .env 로드
-# .env 로드
 env_path = Path(__file__).parent.parent.parent / ".env.local"
 if not env_path.exists():
     env_path = Path(__file__).parent.parent.parent / ".env"
@@ -200,6 +199,59 @@ def detect_changes(current: Dict, previous: Dict) -> List[str]:
     return changes
 
 
+
+def analyze_ad_content(
+    openai_client: OpenAI, text: str, logger: PipelineLogger
+) -> Optional[List[str]]:
+    """광고/협찬 주체를 GPT-4o-mini로 분석"""
+    text_preview = text[:100]
+
+    try:
+        api_config = get_api_config()
+        model = api_config.get("openai", {}).get("model", "gpt-4o-mini")
+
+        # 타이머는 생략하거나 PipelineLogger 특성에 맞게 사용 (여기선 try-except 내 단순 호출)
+        response = openai_client.chat.completions.create(
+            model=model,
+            temperature=0.3,
+            messages=[
+                {
+                    "role": "system",
+                    "content": """광고/협찬/지원을 한 **정확한 주체들의 전체 이름**을 **리스트** 형식으로 답변하세요.
+예시: ['하이트진로', '영양군청']
+주체를 찾을 수 없으면 'None'을 출력합니다.""",
+                },
+                {"role": "user", "content": text_preview},
+            ],
+        )
+
+        content = response.choices[0].message.content.strip()
+
+        if not content or content.lower() == "none":
+            return None
+
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            try:
+                import ast
+                parsed = ast.literal_eval(content)
+            except Exception:
+                parsed = [content]
+
+        if isinstance(parsed, str):
+            parsed = [parsed]
+        elif not isinstance(parsed, list):
+            parsed = [str(parsed)]
+
+        parsed = [str(x).strip() for x in parsed if str(x).strip()]
+        return parsed if parsed else None
+
+    except Exception as e:
+        logger.warning(f"광고 분석 실패: {e}")
+        return None
+
+
 def get_video_meta_batch(youtube, video_ids: List[str]) -> Dict[str, Dict]:
     """YouTube API 배치 요청 (최대 50개)"""
     results = {}
@@ -348,9 +400,20 @@ def collect_channel_meta(
             current_meta["collected_at"] = datetime.now(KST).isoformat()
             
             # OpenAI 분석 (옵션)
-            # ... (기존 로직 유지 또는 단순화)
-            current_meta["ads_info"] = {"is_ads": False} # 속도를 위해 단순화
-            # (사용자가 광고 로직 리팩토링을 강조하지 않았고 썸네일/스케줄에 집중함. 'skip-ads'가 false가 아니면 비싼 GPT 호출 건너뜀)
+            ad_keywords = ["협찬", "광고", "지원"]
+            description = current_meta.get("description", "")
+            is_ads = any(keyword in description for keyword in ad_keywords)
+            
+            what_ads = None
+            if is_ads:
+                # 이전 데이터 재사용 확인
+                if previous_meta and previous_meta.get("ads_info", {}).get("what_ads"):
+                    what_ads = previous_meta["ads_info"]["what_ads"]
+                elif openai_client:
+                    # 신규 분석
+                    what_ads = analyze_ad_content(openai_client, description, logger)
+            
+            current_meta["ads_info"] = {"is_ads": is_ads, "what_ads": what_ads}
             
             output_file = meta_dir / f"{vid}.jsonl"
             append_to_jsonl(str(output_file), current_meta)
@@ -363,24 +426,31 @@ def collect_channel_meta(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--channel", "-c", type=str)
-    parser.add_argument("--skip-ads", action="store_true", default=True) # 속도를 위해 기본값 True
+    parser.add_argument("--skip-ads", action="store_true", help="광고 분석 스킵")
     args = parser.parse_args()
 
     youtube_api_key = get_api_key("youtube")
+    openai_api_key = get_api_key("openai")
+
     if not youtube_api_key:
         print("❌ YOUTUBE_API_KEY 누락됨")
         sys.exit(1)
 
     youtube = build("youtube", "v3", developerKey=youtube_api_key)
+    
+    openai_client = None
+    if not args.skip_ads and openai_api_key:
+        openai_client = OpenAI(api_key=openai_api_key)
+
     logger = PipelineLogger(phase="collect-meta", log_dir=LOG_DIR)
     logger.start_stage()
 
     try:
         if args.channel:
-            collect_channel_meta(args.channel, youtube, None, logger)
+            collect_channel_meta(args.channel, youtube, openai_client, logger)
         else:
             for ch in get_all_channels():
-                collect_channel_meta(ch, youtube, None, logger)
+                collect_channel_meta(ch, youtube, openai_client, logger)
     except Exception as e:
         logger.error(f"Error: {e}")
     finally:
