@@ -194,10 +194,10 @@ function getPublishedAt(videoId) {
 
 function shouldCollect(videoId) {
     // 파일 존재 여부 및 최신 데이터 확인
-    // Meta에서 recollect_id 및 recollect_reason 가져오기
+    // Meta에서 recollect_id 및 recollect_vars 가져오기
     const metaPath = getMetaFilePath(videoId);
     let metaRecollectId = -1;
-    let recollectReason = null;
+    let recollectVars = [];
     let publishedAt = null;
 
     if (fs.existsSync(metaPath)) {
@@ -206,7 +206,7 @@ function shouldCollect(videoId) {
             if (content) {
                 const meta = JSON.parse(content);
                 metaRecollectId = meta.recollect_id !== undefined ? meta.recollect_id : 0;
-                recollectReason = meta.recollect_reason;
+                recollectVars = meta.recollect_vars || (meta.recollect_reason ? [meta.recollect_reason] : []);
                 publishedAt = meta.published_at;
             }
         } catch (e) { }
@@ -227,22 +227,25 @@ function shouldCollect(videoId) {
                 // Sync Logic:
                 // 1. Meta ID > Heatmap ID 일 때만 고려
                 if (metaRecollectId > lastRecollectId) {
-                    // 2. Reason 필터링
-                    // - duration_changed: 수집 (구조적 변화)
-                    // - new_video: 수집 (첫 수집)
-                    // - periodic_daily: 스킵 (조회수만 변경됨)
-                    // - title_changed: 스킵 (유저 인터랙션 데이터 불변 가정)
+                    // 2. Variable Check (List based)
+                    // Heatmap 수집 트리거 조건:
+                    // - new_video
+                    // - duration_changed
+                    // 스킵 조건:
+                    // - title_changed (영상 내용 불변)
+                    // - thumbnail_changed (영상 내용 불변)
+                    // - scheduled_* (조회수 갱신용, 히트맵은 불변 가정)
 
-                    const ALLOWED_REASONS = ['new_video', 'duration_changed'];
+                    const TRIGGER_VARS = ['new_video', 'duration_changed'];
 
-                    if (recollectReason && ALLOWED_REASONS.includes(recollectReason)) {
+                    const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
+
+                    if (shouldTrigger) {
                         return true;
                     } else {
-                        // periodic_daily 등: 수집 안 함 -> 하지만 버전 싱크는 맞춰야 함?
-                        // 아니오, 싱크 안 맞추고 내버려두면:
-                        // 다음날 metaID 증가 -> 여전히 GAP 존재 -> reason은 또 periodic -> 또 스킵.
-                        // 그러다가 duration_changed 발생 -> reason=duration -> GAP 존재 -> 수집.
-                        // 즉, ID Gap이 계속 벌려져 있어도 문제 없음. Reason만 보고 판단하면 됨.
+                        // 스킵하지만, ID 싱크가 안 맞아서 계속 이 로직을 타게 됨.
+                        // 하지만 상관없음. ID가 다르면 -> 체크 -> Trigger 없음 -> return false (Skip).
+                        // 효율적임.
                         return false;
                     }
                 }
@@ -321,7 +324,6 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
         }
 
         // Meta에서 recollect_id 가져오기
-        const metaPath = getMetaFilePath(video_id);
         const metaInfo = getMetaInfo(video_id);
         const filepath = getOutputFilePath(video_id); // Define filepath here for scope access
 
@@ -335,10 +337,9 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             };
         });
 
-        // [Shorts Filter]
+        // [Shorts Filter] (180초 미만)
         if (formattedData.length > 0) {
             const lastPoint = formattedData[formattedData.length - 1];
-            // 히트맵 마지막 포인트가 180초(3분) 미만이면 쇼츠/티저로 간주
             if (lastPoint.startMillis < 180000) {
                 log('info', `[Skip] Shorts detected (<180s). ID: ${video_id}`);
                 saveVideoData(video_id, {
@@ -356,12 +357,9 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             try {
                 const lines = fs.readFileSync(filepath, 'utf-8').trim().split('\n');
                 if (lines.length > 0) {
-                    const lastLine = lines.pop(); // Get actual last non-empty line
+                    const lastLine = lines.pop();
                     if (lastLine) {
                         const lastData = JSON.parse(lastLine);
-                        // If recollect_id matches, we can skip content check (assume strict sync)
-                        // But let's keep content check as safeguard, OR just strictly rely on ID.
-                        // User wants strict sync with meta logic.
                         if (lastData.recollect_id === metaInfo.recollect_id && lastData.status !== 'error') {
                             log('info', `[Skip] Already collected for recollect_id ${metaInfo.recollect_id}.`);
                             return;
@@ -377,7 +375,8 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             interaction_data: formattedData,
             status: 'success',
             recollect_id: metaInfo.recollect_id,
-            recollect_reason: metaInfo.recollect_reason,
+            recollect_vars: metaInfo.recollect_vars, // List
+            recollect_reason: metaInfo.recollect_vars.length > 0 ? metaInfo.recollect_vars[0] : null, // Backward compat
             collected_at: new Date().toISOString()
         });
         log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
@@ -400,7 +399,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
     }
 }
 
-// Meta 정보 조회 헬퍼
+// Meta 정보 조회 헬퍼 (Modified for recollect_vars)
 function getMetaInfo(videoId) {
     const metaPath = getMetaFilePath(videoId);
     if (fs.existsSync(metaPath)) {
@@ -410,13 +409,13 @@ function getMetaInfo(videoId) {
                 const meta = JSON.parse(content);
                 return {
                     recollect_id: meta.recollect_id !== undefined ? meta.recollect_id : 0,
-                    recollect_reason: meta.recollect_reason || null,
+                    recollect_vars: meta.recollect_vars || (meta.recollect_reason ? [meta.recollect_reason] : []),
                     published_at: meta.published_at || null
                 };
             }
         } catch (e) { }
     }
-    return { recollect_id: 0, recollect_reason: null, published_at: null };
+    return { recollect_id: 0, recollect_vars: [], published_at: null };
 }
 
 main();
