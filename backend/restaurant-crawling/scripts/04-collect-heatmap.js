@@ -196,7 +196,7 @@ function shouldCollect(videoId) {
             if (content) {
                 const meta = JSON.parse(content);
                 metaRecollectId = meta.recollect_id !== undefined ? meta.recollect_id : 0;
-                recollectVars = meta.recollect_vars || (meta.recollect_reason ? [meta.recollect_reason] : []);
+                recollectVars = meta.recollect_vars || [];
                 publishedAt = meta.published_at;
             }
         } catch (e) { }
@@ -411,7 +411,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             video_id,
             collected_at: new Date().toISOString(),
             recollect_id: 0,
-            recollect_reason: 'error',
+            recollect_vars: ['error'],
             status: 'error',
             error_message: e.message
         });

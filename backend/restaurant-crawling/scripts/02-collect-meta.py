@@ -180,7 +180,92 @@ def check_schedule_condition(frequency: str, video_id: str) -> bool:
     return False
 
 
-def detect_changes(current: Dict, previous: Dict) -> List[str]:
+def get_meta_history(channel_path: Path, video_id: str, max_records: int = 7) -> List[Dict]:
+    """JSONL 파일에서 최근 N개의 메타데이터 히스토리 로드"""
+    meta_file = channel_path / "meta" / f"{video_id}.jsonl"
+    if not meta_file.exists():
+        return []
+    try:
+        lines = meta_file.read_text().strip().split('\n')
+        return [json.loads(line) for line in lines[-max_records:] if line]
+    except Exception:
+        return []
+
+
+def calculate_daily_growth_rates(history: List[Dict]) -> List[float]:
+    """수집 히스토리에서 일평균 조회수 증가폭 계산"""
+    daily_rates = []
+    for i in range(1, len(history)):
+        prev = history[i - 1]
+        curr = history[i]
+        
+        prev_views = prev.get("stats", {}).get("view_count", 0)
+        curr_views = curr.get("stats", {}).get("view_count", 0)
+        
+        prev_collected = prev.get("collected_at", "")
+        curr_collected = curr.get("collected_at", "")
+        
+        if not prev_collected or not curr_collected:
+            continue
+        
+        try:
+            prev_date = datetime.fromisoformat(prev_collected.replace("Z", "+00:00"))
+            curr_date = datetime.fromisoformat(curr_collected.replace("Z", "+00:00"))
+            days_elapsed = max((curr_date - prev_date).days, 1)
+        except Exception:
+            days_elapsed = 1
+        
+        if prev_views and curr_views and prev_views > 0:
+            daily_rate = (curr_views - prev_views) / days_elapsed
+            daily_rates.append(daily_rate)
+    
+    return daily_rates
+
+
+def detect_viral_anomaly(
+    channel_path: Path, 
+    video_id: str, 
+    current_views: int, 
+    current_date: datetime
+) -> bool:
+    """일평균 증가폭 기준 이상치 탐지 (평균 + 3σ)"""
+    history = get_meta_history(channel_path, video_id, max_records=7)
+    
+    if len(history) < 4:  # 최소 4개 기록 필요 (3개의 증가폭)
+        return False
+    
+    daily_rates = calculate_daily_growth_rates(history)
+    
+    if len(daily_rates) < 3:
+        return False
+    
+    # 평균 및 표준편차 계산
+    mean = sum(daily_rates) / len(daily_rates)
+    variance = sum((r - mean) ** 2 for r in daily_rates) / len(daily_rates)
+    std = variance ** 0.5
+    threshold = mean + 3 * std
+    
+    # 이번 수집의 일평균 증가폭 계산
+    last_record = history[-1]
+    last_views = last_record.get("stats", {}).get("view_count", 0)
+    last_collected = last_record.get("collected_at", "")
+    
+    if not last_collected or not last_views:
+        return False
+    
+    try:
+        last_date = datetime.fromisoformat(last_collected.replace("Z", "+00:00"))
+        days_elapsed = max((current_date - last_date).days, 1)
+    except Exception:
+        days_elapsed = 1
+    
+    current_daily_rate = (current_views - last_views) / days_elapsed
+    
+    # 조건: 임계값 초과 AND 최소 임계값이 양수
+    return current_daily_rate > threshold and threshold > 0
+
+
+def detect_changes(current: Dict, previous: Dict, channel_path: Path = None, video_id: str = None) -> List[str]:
     """변경 사항 감지 및 리스트 반환 (recollect_vars)"""
     changes = []
     
@@ -205,22 +290,30 @@ def detect_changes(current: Dict, previous: Dict) -> List[str]:
     if curr_thumb_hash and prev_thumb_hash and curr_thumb_hash != prev_thumb_hash:
         changes.append("thumbnail_changed")
     
-    # 4. 조회수 급등 감지 (Viral Growth) - 3개월 이상 된 영상 대상
+    # 4. 조회수 급등 감지 (Viral Growth)
     published_at_str = current.get("published_at")
-    if published_at_str:
+    if published_at_str and previous:
         published_at = datetime.fromisoformat(published_at_str.replace('Z', '+00:00')).astimezone(KST)
         now = datetime.now(KST)
-        elapsed_months = (now - published_at).days / 30.0
+        elapsed_days = (now - published_at).days
+        elapsed_months = elapsed_days / 30.0
         
-        if elapsed_months >= 3 and previous:
-            prev_views = previous.get("stats", {}).get("view_count", 0)
-            curr_views = current.get("stats", {}).get("view_count", 0)
-            
-            if prev_views is not None and curr_views is not None and prev_views > 0:
+        curr_views = current.get("stats", {}).get("view_count", 0)
+        prev_views = previous.get("stats", {}).get("view_count", 0)
+        
+        # 분기: 영상 수명에 따라 다른 감지 로직 적용
+        if elapsed_days >= 14 and elapsed_months < 6:
+            # 2주 ~ 6개월: 일평균 증가폭 이상치 탐지 (mean + 3σ)
+            if channel_path and video_id and curr_views:
+                if detect_viral_anomaly(channel_path, video_id, curr_views, now):
+                    changes.append("viral_growth")
+        elif elapsed_months >= 6:
+            # 6개월 이상: 이전 대비 % 증가 로직 (기존 방식 유지)
+            if prev_views and curr_views and prev_views > 0:
                 growth_rate = (curr_views - prev_views) / prev_views
                 absolute_growth = curr_views - prev_views
                 
-                # 조건: 50% 이상 증가 AND 절대값 5만 이상 증가
+                # 조건: 50% 이상 증가 AND 절대값 10만 이상 증가
                 if growth_rate >= 0.5 and absolute_growth >= 100000:
                     changes.append("viral_growth")
 
@@ -420,7 +513,7 @@ def collect_channel_meta(
             previous_meta = get_latest_meta(channel_path, vid)
             
             # 2. 변경 사항 감지 -> List[str] (viral 포함)
-            recollect_vars = detect_changes(current_meta, previous_meta)
+            recollect_vars = detect_changes(current_meta, previous_meta, channel_path, vid)
             is_changed = bool(recollect_vars)
             
             # 3. 스케줄링 결정
@@ -444,23 +537,18 @@ def collect_channel_meta(
                         schedule_reason = frequency
                 else:
                     # frequency is None -> 0~6개월 매일 수집 대상
-                    # 메타는 매일 수집 (daily_collection)
+                    # 메타는 매일 수집 (daily_collection -> recollect_vars에만 추가)
                     # 히트맵은 주 1회만 수집 (scheduled_weekly 체크)
                     
-                    # 1. 메타 데이터 수집 태그 (항상 부여하지만, 변경사항 없을 때만 schedule_reason으로 사용)
+                    # 1. 메타 데이터 수집 태그 (recollect_vars에만 추가)
                     if not is_changed:
-                         schedule_reason = "daily_collection"
+                         recollect_vars.append("daily_collection")
                          
                     # 2. 히트맵 수집 태그 (주 1회만 부여)
-                    # check_schedule_condition을 사용하여 오늘이 'Weekly' 당번인지 확인
                     if check_schedule_condition("scheduled_weekly", vid):
-                         # recollect_vars에 추가하여 04번 스크립트가 반응하게 함
-                         # 단, schedule_reason(메타 수집 사유)이 이미 daily_collection이면, 
-                         # 나중에 recollect_vars.append(schedule_reason) 할 때 daily_collection이 들어감
-                         # scheduled_weekly는 '추가' 태그로 넣어줘야 함
                          recollect_vars.append("scheduled_weekly")
 
-            is_scheduled = (schedule_reason is not None or "scheduled_weekly" in recollect_vars)
+            is_scheduled = (schedule_reason is not None or "scheduled_weekly" in recollect_vars or "daily_collection" in recollect_vars)
 
             # 4. 최종 수집 여부 결정
             # 변경사항이 있거나(is_changed) OR 스케줄에 걸렸거나(is_scheduled)
@@ -476,15 +564,10 @@ def collect_channel_meta(
             # previous_meta가 없으면(신규) 0, 있으면 +1
             new_id = prev_id + 1 if previous_meta else 0
             
-            # recollect_reason 결정 (우선순위: 변경 > 바이럴 > 스케줄)
-            if is_changed:
-                if not previous_meta:
-                    current_meta["recollect_reason"] = "new_video"
-                else:
-                    current_meta["recollect_reason"] = recollect_vars[0]
-            elif schedule_reason:
-                current_meta["recollect_reason"] = schedule_reason
-                recollect_vars.append(schedule_reason)
+            # schedule_reason이 있으면 recollect_vars에 추가 (daily_collection 제외)
+            if schedule_reason and schedule_reason != "daily_collection":
+                if schedule_reason not in recollect_vars:
+                    recollect_vars.append(schedule_reason)
 
             # 6. 필요시 썸네일 저장
             if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
