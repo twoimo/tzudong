@@ -2273,3 +2273,16 @@
 [2026-01-20T07:29:02.260Z] [INFO] Saved heatmap for zHluIc1ix-4 (Points: 100)
 [2026-01-20T07:29:05.667Z] [INFO] Processing [h6Lf1PG3kT8]...
 [2026-01-20T07:29:06.485Z] [INFO] [Skip] Shorts detected (<180s). ID: h6Lf1PG3kT8
+[2026-01-20T10:19:41.002Z] [INFO] === HTTP Heatmap Collector Started [Channel: tzuyang] ===
+[2026-01-20T10:19:41.004Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-20T10:19:41.005Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-20T10:19:41.006Z] [INFO] Cookies loaded.
+[2026-01-20T10:19:41.007Z] [INFO] Found 1010 URLs, filtering deleted...
+[2026-01-20T10:19:41.017Z] [INFO] [Skip] Video qSug9_Vw8QY: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T10:19:41.017Z] [INFO] [Trigger] Video kx3gQVt5a3I: Found trigger variable(s) [new_video]
+[2026-01-20T10:19:41.043Z] [INFO] [Trigger] Video cr4rGpM9HcQ: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T10:19:41.178Z] [INFO] Found 1010 URLs, 2 targets to process.
+[2026-01-20T10:19:41.179Z] [INFO] Processing [kx3gQVt5a3I]...
+[2026-01-20T10:19:42.161Z] [WARN] No heatmap found for kx3gQVt5a3I.
+[2026-01-20T10:19:45.216Z] [INFO] Processing [cr4rGpM9HcQ]...
+[2026-01-20T10:19:46.032Z] [WARN] No heatmap found for cr4rGpM9HcQ.
