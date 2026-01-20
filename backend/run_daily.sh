@@ -35,6 +35,10 @@ node backend/restaurant-crawling/scripts/04-collect-heatmap.js >> "$LOG_FILE" 2>
 echo "[$(date)] [Step 4] Collecting Transcripts..." >> "$LOG_FILE"
 node backend/restaurant-crawling/scripts/03-collect-transcript.js >> "$LOG_FILE" 2>&1
 
+# 5. Gemini 분석 (자막 분석 및 리뷰 추출)
+echo "[$(date)] [Step 5] Analyzing with Gemini..." >> "$LOG_FILE"
+bash backend/restaurant-crawling/scripts/06-gemini-crawling.sh >> "$LOG_FILE" 2>&1
+
 echo "============================================================" >> "$LOG_FILE"
 echo "[$(date)] ✅ Daily Collection Pipeline Completed" >> "$LOG_FILE"
 echo "============================================================" >> "$LOG_FILE"
