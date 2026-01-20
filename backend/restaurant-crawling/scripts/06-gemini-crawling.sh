@@ -319,7 +319,7 @@ process_channel() {
         # 자막을 [MM:SS] 형식으로 변환
         TRANSCRIPT=$(echo "$TRANSCRIPT_DATA" | jq -r '
             .transcript // [] | 
-            map("[" + ((.start / 60 | floor | tostring | if length < 2 then "0" + . else . end)) + ":" + ((.start % 60 | floor | tostring | if length < 2 then "0" + . else . end)) + "] " + .text) | 
+            map("[" + (if (.start | type) == "string" then .start else ((.start / 60 | floor | tostring | if length < 2 then "0" + . else . end)) + ":" + ((.start % 60 | floor | tostring | if length < 2 then "0" + . else . end)) end) + "] " + .text) | 
             join("\n")
         ' 2>/dev/null)
         
