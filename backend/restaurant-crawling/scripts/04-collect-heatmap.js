@@ -220,7 +220,7 @@ function shouldCollect(videoId) {
                     // (예: new_video, duration_changed, scheduled_*, viral_growth 등)
                     if (metaRecollectId > lastRecollectId) {
                         // heatmap 수집해야 하는 meta 변수들
-                        const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_3days', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
+                        const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'viral_growth'];
 
                         // recollectVars 중 하나라도 TRIGGER_VARS에 포함되면 수집
                         const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));

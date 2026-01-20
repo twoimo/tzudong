@@ -216,7 +216,7 @@ def detect_changes(current: Dict, previous: Dict) -> List[str]:
                 absolute_growth = curr_views - prev_views
                 
                 # 조건: 50% 이상 증가 AND 절대값 5만 이상 증가
-                if growth_rate >= 0.5 and absolute_growth >= 50000:
+                if growth_rate >= 0.5 and absolute_growth >= 100000:
                     changes.append("viral_growth")
 
     return changes
@@ -439,12 +439,23 @@ def collect_channel_meta(
                         schedule_reason = frequency
                 else:
                     # frequency is None -> 0~6개월 매일 수집 대상
-                    # 단, 변경사항이 이미 있으면(is_changed) 굳이 daily_collection 추가 안 해도 수집됨
-                    # 변경사항 없을 때만 'daily_collection'으로 트리거
+                    # 메타는 매일 수집 (daily_collection)
+                    # 히트맵은 주 1회만 수집 (scheduled_weekly 체크)
+                    
+                    # 1. 메타 데이터 수집 태그 (항상 부여하지만, 변경사항 없을 때만 schedule_reason으로 사용)
                     if not is_changed:
-                        schedule_reason = "daily_collection"
-            
-            is_scheduled = (schedule_reason is not None)
+                         schedule_reason = "daily_collection"
+                         
+                    # 2. 히트맵 수집 태그 (주 1회만 부여)
+                    # check_schedule_condition을 사용하여 오늘이 'Weekly' 당번인지 확인
+                    if check_schedule_condition("scheduled_weekly", vid):
+                         # recollect_vars에 추가하여 04번 스크립트가 반응하게 함
+                         # 단, schedule_reason(메타 수집 사유)이 이미 daily_collection이면, 
+                         # 나중에 recollect_vars.append(schedule_reason) 할 때 daily_collection이 들어감
+                         # scheduled_weekly는 '추가' 태그로 넣어줘야 함
+                         recollect_vars.append("scheduled_weekly")
+
+            is_scheduled = (schedule_reason is not None or "scheduled_weekly" in recollect_vars)
 
             # 4. 최종 수집 여부 결정
             # 변경사항이 있거나(is_changed) OR 스케줄에 걸렸거나(is_scheduled)
