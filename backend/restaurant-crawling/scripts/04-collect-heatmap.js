@@ -332,94 +332,94 @@ async function main() {
 async function processVideo(video_id, youtube_link, cookieHeader) {
     log('info', `Processing [${video_id}]...`);
 
-    try {
-        const html = await fetchVideoPage(video_id, cookieHeader);
-        const newHeatmap = extractHeatmapFromHtml(html);
+    // 메타 정보 확인
+    const metaInfo = getMetaInfo(video_id);
 
-        if (!newHeatmap) {
-            log('warn', `No heatmap found for ${video_id}.`);
-            saveVideoData(video_id, {
-                youtube_link,
-                video_id,
-                status: 'no_heatmap',
-                collected_at: new Date().toISOString()
-            });
-            return;
-        }
-
-        // 메타 정보
-        const metaInfo = getMetaInfo(video_id);
-        const filepath = getOutputFilePath(video_id);
-
-        const formattedData = newHeatmap.data.map(item => {
-            const seconds = Math.floor(item.startMillis / 1000);
-            const mm = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const ss = (seconds % 60).toString().padStart(2, '0');
-            return {
-                ...item,
-                formatted_time: `${mm}:${ss}`
-            };
-        });
-
-        // [Shorts 필터] (180초 미만)
-        if (formattedData.length > 0) {
-            const lastPoint = formattedData[formattedData.length - 1];
-            if (lastPoint.startMillis < 180000) {
-                log('info', `[Skip] Shorts detected (<180s). ID: ${video_id}`);
-                saveVideoData(video_id, {
-                    youtube_link,
-                    video_id,
-                    status: 'skipped_shorts',
-                    recollect_id: metaInfo.recollect_id,
-                    collected_at: new Date().toISOString()
-                });
-                return;
-            }
-        }
-
-        if (fs.existsSync(filepath)) {
-            try {
-                const lines = fs.readFileSync(filepath, 'utf-8').trim().split('\n');
-                if (lines.length > 0) {
-                    const lastLine = lines.pop();
-                    if (lastLine) {
-                        const lastData = JSON.parse(lastLine);
-                        if (lastData.recollect_id === metaInfo.recollect_id && lastData.status !== 'error') {
-                            log('info', `[Skip] Already collected for recollect_id ${metaInfo.recollect_id}.`);
-                            return;
-                        }
-                    }
-                }
-            } catch (e) { }
-        }
-
+    // [Shorts 필터] (180초 미만) - 페이지 페치 전 확인
+    if (metaInfo.duration !== null && metaInfo.duration < 180) {
+        log('info', `[Skip] Shorts detected from meta (<180s). ID: ${video_id} (Duration: ${metaInfo.duration}s)`);
         saveVideoData(video_id, {
             youtube_link,
             video_id,
-            interaction_data: formattedData,
-            status: 'success',
+            status: 'skipped_shorts',
             recollect_id: metaInfo.recollect_id,
-            recollect_vars: metaInfo.recollect_vars, // 리스트
+            duration: metaInfo.duration,
             collected_at: new Date().toISOString()
         });
-        log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
+        return;
+    }
 
-    } catch (e) {
-        log('error', `Error processing ${video_id}: ${e.message}`);
+    const html = await fetchVideoPage(video_id, cookieHeader);
+    const newHeatmap = extractHeatmapFromHtml(html);
+
+    if (!newHeatmap) {
+        log('warn', `No heatmap found for ${video_id}.`);
         saveVideoData(video_id, {
             youtube_link,
             video_id,
-            collected_at: new Date().toISOString(),
-            recollect_id: 0,
-            recollect_vars: ['error'],
-            status: 'error',
-            error_message: e.message
+            status: 'no_heatmap',
+            duration: metaInfo.duration,
+            collected_at: new Date().toISOString()
         });
-
-        if (e.message.includes("429") || e.message.includes("Auth Failed")) {
-            throw e;
-        }
+        return;
     }
+
+    const filepath = getOutputFilePath(video_id);
+
+    const formattedData = newHeatmap.data.map(item => {
+        const seconds = Math.floor(item.startMillis / 1000);
+        const mm = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const ss = (seconds % 60).toString().padStart(2, '0');
+        return {
+            ...item,
+            formatted_time: `${mm}:${ss}`
+        };
+    });
+
+
+    if (fs.existsSync(filepath)) {
+        try {
+            const lines = fs.readFileSync(filepath, 'utf-8').trim().split('\n');
+            if (lines.length > 0) {
+                const lastLine = lines.pop();
+                if (lastLine) {
+                    const lastData = JSON.parse(lastLine);
+                    if (lastData.recollect_id === metaInfo.recollect_id && lastData.status !== 'error') {
+                        log('info', `[Skip] Already collected for recollect_id ${metaInfo.recollect_id}.`);
+                        return;
+                    }
+                }
+            }
+        } catch (e) { }
+    }
+
+    saveVideoData(video_id, {
+        youtube_link,
+        video_id,
+        interaction_data: formattedData,
+        status: 'success',
+        recollect_id: metaInfo.recollect_id,
+        recollect_vars: metaInfo.recollect_vars, // 리스트
+        collected_at: new Date().toISOString()
+    });
+    log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
+
+} catch (e) {
+    log('error', `Error processing ${video_id}: ${e.message}`);
+    saveVideoData(video_id, {
+        youtube_link,
+        video_id,
+        collected_at: new Date().toISOString(),
+        recollect_id: 0,
+        recollect_vars: ['error'],
+        status: 'error',
+        error_message: e.message
+    });
+
+    if (e.message.includes("429") || e.message.includes("Auth Failed")) {
+        throw e;
+    }
+}
 }
 
 function getMetaInfo(videoId) {
@@ -432,12 +432,14 @@ function getMetaInfo(videoId) {
                 return {
                     recollect_id: meta.recollect_id !== undefined ? meta.recollect_id : 0,
                     recollect_vars: meta.recollect_vars || [],
-                    published_at: meta.published_at || null
+                    published_at: meta.published_at || null,
+                    duration: meta.duration !== undefined ? meta.duration : null,
+                    is_shorts: !!meta.is_shorts
                 };
             }
         } catch (e) { }
     }
-    return { recollect_id: 0, recollect_vars: [], published_at: null };
+    return { recollect_id: 0, recollect_vars: [], published_at: null, duration: null, is_shorts: false };
 }
 
 main();
