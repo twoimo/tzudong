@@ -114,53 +114,65 @@ def check_thumbnail_exists(channel_data_path: Path, video_id: str, recollect_id:
     return any(thumb_dir.glob(pattern))
 
 
-def calculate_schedule_reason(published_at_str: str, last_collected_at_str: str) -> Optional[str]:
+def get_schedule_frequency(published_at_str: str) -> Optional[str]:
     """
-    주기적 수집 스케줄링 로직
-    - published_at 기준 경과 시간에 따라 주기 결정
+    영상 age에 따른 수집 주기 결정 (KST 기준)
+    0~6개월: 매일 (None -> 항상 수집)
+    6개월~1년: 주 1회 (scheduled_weekly)
+    1년~: 2주 1회 (scheduled_biweekly)
     """
-    if not published_at_str or not last_collected_at_str:
-        return "new_video"
+    if not published_at_str:
+        return "scheduled_weekly" # fallback
 
+    pub_date = datetime.fromisoformat(published_at_str.replace("Z", "+00:00")).astimezone(KST)
     now = datetime.now(KST)
     
-    # ISO 포맷 파싱 (KST 호환)
-    try:
-        published_at = datetime.fromisoformat(published_at_str.replace('Z', '+00:00'))
-        last_collected = datetime.fromisoformat(last_collected_at_str.replace('Z', '+00:00'))
-    except ValueError:
-        return None
-
-    days_since_published = (now - published_at).days
-    days_since_collected = (now - last_collected).days
+    # safe delta calculation
+    delta = now - pub_date
+    days_diff = delta.days
     
-    months_since_published = days_since_published / 30.0
+    if days_diff < 0:
+        return None # 미래 날짜는 일단 수집
+        
+    months_diff = days_diff / 30.0 # 대략적 계산
 
-    # 1. 5일 미만: 매일 (혹은 수집 즉시) -> 여기서는 변경 감지 로직에 맡김 (기본 스킵, 변경시만)
-    if days_since_published < 5:
-        return None # 스케줄링에 의한 강제 수집 없음
-
-    # 2. 6개월 이상: 스킵
-    if months_since_published >= 6:
-        return None
-
-    # 3. 3~6개월: 1달마다
-    if months_since_published >= 3 and days_since_collected >= 30:
-        return "scheduled_monthly"
-
-    # 4. 1~3개월: 2주마다
-    if months_since_published >= 1 and days_since_collected >= 14:
+    if months_diff < 6:
+        # 0 ~ 6개월: 매일 수집 (스케줄링 제한 없음)
+        return None 
+    elif months_diff < 12:
+        # 6 ~ 12개월: 주 1회
+        return "scheduled_weekly"
+    else:
+        # 1년 이상: 2주 1회
         return "scheduled_biweekly"
 
-    # 5. 14일 ~ 1개월: 매주
-    if days_since_published >= 14 and days_since_collected >= 7:
-        return "scheduled_weekly"
 
-    # 6. 5일 ~ 14일: 3일마다 (신규 로직)
-    if days_since_published >= 5 and days_since_collected >= 3:
-        return "scheduled_3days"
-
-    return None
+def check_schedule_condition(frequency: str, video_id: str) -> bool:
+    """
+    frequency에 따라 오늘 수집해야 하는지 결정
+    해싱을 사용하여 부하 분산
+    """
+    if not frequency:
+        return True
+        
+    today = datetime.now(KST).date()
+    # video_id 해싱 -> 0~99
+    vid_hash = int(hashlib.md5(video_id.encode()).hexdigest(), 16) % 100
+    
+    if frequency == "scheduled_weekly":
+        # 0~13: 월, 14~27: 화 ... 
+        # 간단히: (vid_hash % 7) == (today.weekday())
+        # 이렇게 하면 같은 요일에 몰림 방지되나? 
+        # weekday()는 0(월)~6(일)
+        return (vid_hash % 7) == today.weekday()
+        
+    if frequency == "scheduled_biweekly":
+        # 14일 주기
+        # 기준일(epoch)로부터 지난 일수 % 14 == vid_hash % 14
+        days_since_epoch = (today - datetime(2024, 1, 1).date()).days
+        return (days_since_epoch % 14) == (vid_hash % 14)
+        
+    return False
 
 
 def detect_changes(current: Dict, previous: Dict) -> List[str]:
@@ -188,16 +200,26 @@ def detect_changes(current: Dict, previous: Dict) -> List[str]:
     if curr_thumb_hash and prev_thumb_hash and curr_thumb_hash != prev_thumb_hash:
         changes.append("thumbnail_changed")
     
-    # 4. 스케줄 확인
-    schedule_reason = calculate_schedule_reason(
-        current.get("published_at"), 
-        previous.get("collected_at")
-    )
-    if schedule_reason:
-        changes.append(schedule_reason)
+    # 4. 조회수 급등 감지 (Viral Growth) - 3개월 이상 된 영상 대상
+    published_at_str = current.get("published_at")
+    if published_at_str:
+        published_at = datetime.fromisoformat(published_at_str.replace('Z', '+00:00')).astimezone(KST)
+        now = datetime.now(KST)
+        elapsed_months = (now - published_at).days / 30.0
+        
+        if elapsed_months >= 3 and previous:
+            prev_views = previous.get("stats", {}).get("view_count", 0)
+            curr_views = current.get("stats", {}).get("view_count", 0)
+            
+            if prev_views is not None and curr_views is not None and prev_views > 0:
+                growth_rate = (curr_views - prev_views) / prev_views
+                absolute_growth = curr_views - prev_views
+                
+                # 조건: 50% 이상 증가 AND 절대값 5만 이상 증가
+                if growth_rate >= 0.5 and absolute_growth >= 50000:
+                    changes.append("viral_growth")
 
     return changes
-
 
 
 def analyze_ad_content(
@@ -334,22 +356,45 @@ def collect_channel_meta(
     logger: PipelineLogger,
 ) -> Dict[str, Any]:
     
-    channel_data_path = get_channel_data_path(channel_name)
-    logger.info(f"채널 처리: {channel_name}")
+    channel_path = Path(f"backend/restaurant-crawling/data/{channel_name}")
+    urls_path = channel_path / "urls.txt"
+    deleted_path = channel_path / "deleted_urls.txt"
 
+    if not urls_path.exists():
+        logger.warning(f"  ❌ URL 파일 없음: {urls_path}")
+        return {}
+
+    # 1. 수집 대상 비디오 ID 로드
     video_ids = []
-    urls_file = channel_data_path / "urls.txt"
-    if urls_file.exists():
-        with open(urls_file, "r", encoding="utf-8") as f:
-            for line in f:
-                vid = extract_video_id(line.strip())
-                if vid: video_ids.append(vid)
+    with open(urls_path, "r", encoding="utf-8") as f:
+        for line in f:
+            url = line.strip()
+            if url:
+                video_ids.append(extract_video_id(url))
 
-    logger.info(f"전체 URL: {len(video_ids)}개")
+    # 2. 삭제된 비디오 필터링 (명시적 체크)
+    deleted_ids = set()
+    if deleted_path.exists():
+        with open(deleted_path, "r", encoding="utf-8") as f:
+            for line in f:
+                # Format: URL\tTIMESTAMP or just URL
+                parts = line.strip().split('\t')
+                if parts:
+                    vid = extract_video_id(parts[0])
+                    if vid:
+                        deleted_ids.add(vid)
+    
+    # urls.txt에는 없지만 혹시 남아있을 수 있는 것들 필터링
+    original_count = len(video_ids)
+    video_ids = [vid for vid in video_ids if vid not in deleted_ids]
+    if len(video_ids) < original_count:
+        logger.warning(f"  ⚠️ 삭제된 영상 {original_count - len(video_ids)}개 필터링됨")
+
+    logger.info(f"  🔍 수집 대상: {len(video_ids)}개")
     if not video_ids:
         return {"processed": 0}
 
-    meta_dir = channel_data_path / "meta"
+    meta_dir = channel_path / "meta"
     meta_dir.mkdir(parents=True, exist_ok=True)
 
     success_count = 0
@@ -369,36 +414,66 @@ def collect_channel_meta(
             current_meta = current_metas[vid]
             previous_meta = get_latest_meta(channel_data_path, vid)
             
-            # 2. 변경 사항 감지 -> List[str]
+            # 2. 변경 사항 감지 -> List[str] (viral 포함)
             recollect_vars = detect_changes(current_meta, previous_meta)
+            is_changed = bool(recollect_vars)
             
-            # 3. 신규 영상 처리 (항상 수집)
+            # 3. 스케줄링 결정
+            schedule_reason = None
+            
+            # 신규 영상은 무조건 수집 (previous_meta 없음)
             if not previous_meta:
-                recollect_vars = ["new_video"]
-            elif not recollect_vars:
-                # 변경 사항 없음. 하지만 썸네일 파일이 없는지 확인 (백필)
+                 recollect_vars = ["new_video"]
+                 schedule_reason = "new_video"
+            else:
+                # 변경사항 없으면 스케줄 확인
+                frequency = get_schedule_frequency(current_meta.get("published_at"))
+                
+                # Viral은 스케줄 무시하고 수집 (detect_changes에서 이미 추가됨)
+                is_viral = "viral_growth" in recollect_vars
+                
+                if is_viral:
+                    schedule_reason = "viral_growth"
+                elif frequency:
+                    if check_schedule_condition(frequency, vid):
+                        schedule_reason = frequency
+                else:
+                    # frequency is None -> 0~6개월 매일 수집 대상
+                    # 단, 변경사항이 이미 있으면(is_changed) 굳이 daily_collection 추가 안 해도 수집됨
+                    # 변경사항 없을 때만 'daily_collection'으로 트리거
+                    if not is_changed:
+                        schedule_reason = "daily_collection"
+            
+            is_scheduled = (schedule_reason is not None)
+
+            # 4. 최종 수집 여부 결정
+            # 변경사항이 있거나(is_changed) OR 스케줄에 걸렸거나(is_scheduled)
+            if not (is_changed or is_scheduled):
+                # 수집 안 함. 하지만 썸네일 백필 체크
                 prev_id = previous_meta.get("recollect_id", 0)
                 if not check_thumbnail_exists(channel_data_path, vid, prev_id):
-                    # 썸네일이 없으면 현재(이전 버전) ID로 저장
                     save_thumbnail_file(channel_data_path, vid, prev_id, current_meta.get("thumbnail_url"))
-                
-                # 메타데이터 업데이트 불필요 -> 건너뛰기
                 continue
 
-            # 4. 수집 ID 결정
+            # 5. 수집 확정 -> ID 계산
             prev_id = previous_meta.get("recollect_id", 0) if previous_meta else 0
+            # previous_meta가 없으면(신규) 0, 있으면 +1
             new_id = prev_id + 1 if previous_meta else 0
             
-            # 5. 필요시 썸네일 저장
-            # 신규 영상이거나, 썸네일이 변경되었으면 저장
+            # recollect_reason 결정 (우선순위: 변경 > 바이럴 > 스케줄)
+            if is_changed:
+                if not previous_meta:
+                    current_meta["recollect_reason"] = "new_video"
+                else:
+                    current_meta["recollect_reason"] = recollect_vars[0]
+            elif schedule_reason:
+                current_meta["recollect_reason"] = schedule_reason
+                recollect_vars.append(schedule_reason)
+
+            # 6. 필요시 썸네일 저장
             if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
                 save_thumbnail_file(channel_data_path, vid, new_id, current_meta.get("thumbnail_url"))
 
-            # 6. 메타데이터 추가
-            current_meta["recollect_id"] = new_id
-            current_meta["recollect_vars"] = recollect_vars # 리스트
-            current_meta["collected_at"] = datetime.now(KST).isoformat()
-            
             # OpenAI 분석 (옵션)
             ad_keywords = ["협찬", "광고", "지원"]
             description = current_meta.get("description", "")
@@ -414,6 +489,11 @@ def collect_channel_meta(
                     what_ads = analyze_ad_content(openai_client, description, logger)
             
             current_meta["ads_info"] = {"is_ads": is_ads, "what_ads": what_ads}
+
+            # 7. 메타데이터 추가
+            current_meta["recollect_id"] = new_id
+            current_meta["recollect_vars"] = recollect_vars
+            current_meta["collected_at"] = datetime.now(KST).isoformat()
             
             output_file = meta_dir / f"{vid}.jsonl"
             append_to_jsonl(str(output_file), current_meta)

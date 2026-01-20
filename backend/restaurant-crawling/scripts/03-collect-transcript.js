@@ -516,11 +516,30 @@ async function collectChannelTranscripts(channelName, channelConfig) {
     const dataPath = path.resolve(__dirname, '../../', channelConfig.data_path);
     const transcriptDir = path.join(dataPath, 'transcript');
 
+    const channelDataPath = path.join(DATA_DIR, channelName);
+    const deletedPath = path.join(channelDataPath, 'deleted_urls.txt');
+
+    // 1. deleted_ids 로드
+    const deletedIds = new Set();
+    if (fs.existsSync(deletedPath)) {
+        const lines = fs.readFileSync(deletedPath, 'utf8').split('\n');
+        for (const line of lines) {
+            const parts = line.split('\t');
+            if (parts[0]) {
+                const vid = extractVideoId(parts[0]);
+                if (vid) deletedIds.add(vid);
+            }
+        }
+    }
+
+    // 2. Load all video IDs
+    const allVideoIds = loadVideoIdsFromTxt(channelName).filter(vid => !deletedIds.has(vid));
+    // ...const transcriptDir = path.join(dataPath, 'transcript');
+
     if (!fs.existsSync(transcriptDir)) {
         fs.mkdirSync(transcriptDir, { recursive: true });
     }
 
-    const allVideoIds = loadVideoIdsFromTxt(dataPath);
     const permanentSkipUrls = loadPermanentSkipUrls();  // 블랙리스트 로드
     log('info', `채널: ${channelConfig.name}`);
     log('info', `전체 URL: ${allVideoIds.length}개`);
