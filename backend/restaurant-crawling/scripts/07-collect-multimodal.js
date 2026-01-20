@@ -151,8 +151,29 @@ async function main() {
     const files = fs.readdirSync(HEATMAP_DIR).filter(f => f.endsWith('.jsonl'));
     log('info', `Found ${files.length} heatmap files.`);
 
+    // 0. 삭제된 ID 로드
+    const deletedPath = path.join(BASE_DATA_DIR, 'deleted_urls.txt');
+    const deletedIds = new Set();
+    if (fs.existsSync(deletedPath)) {
+        const lines = fs.readFileSync(deletedPath, 'utf8').split('\n');
+        for (const line of lines) {
+            const parts = line.split('\t');
+            if (parts[0]) {
+                const vid = parts[0].includes('v=') ? parts[0].split('v=')[1].split('&')[0] : null;
+                if (vid) deletedIds.add(vid);
+            }
+        }
+    }
+
     for (const file of files) {
         const videoId = file.replace('.jsonl', '');
+
+        // 삭제된 영상 스킵
+        if (deletedIds.has(videoId)) {
+            // log('info', `[Skip] Deleted video: ${videoId}`);
+            continue;
+        }
+
         const filePath = path.join(HEATMAP_DIR, file);
 
         try {

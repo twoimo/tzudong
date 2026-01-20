@@ -5,6 +5,11 @@ YouTube 메타데이터 & 썸네일 수집 스크립트 (recollect_id 기반)
 - 썸네일 변경 감지 (MD5 해시)
 - 변경 사유 리스트 관리 (recollect_vars)
 - 주기적 수집 스케줄링 적용
+
+사용법:
+    python3 02-collect-meta.py --channel tzuyang
+    python3 02-collect-meta.py --channel meatcreator
+    python3 02-collect-meta.py  # 모든 채널
 """
 
 import os
@@ -39,7 +44,6 @@ except ImportError:
     print("   pip install google-api-python-client openai python-dotenv requests")
     sys.exit(1)
 
-# .env 로드
 # .env 로드
 env_path = Path(__file__).parent.parent.parent / ".env.local"
 if not env_path.exists():
@@ -115,53 +119,65 @@ def check_thumbnail_exists(channel_data_path: Path, video_id: str, recollect_id:
     return any(thumb_dir.glob(pattern))
 
 
-def calculate_schedule_reason(published_at_str: str, last_collected_at_str: str) -> Optional[str]:
+def get_schedule_frequency(published_at_str: str) -> Optional[str]:
     """
-    주기적 수집 스케줄링 로직
-    - published_at 기준 경과 시간에 따라 주기 결정
+    영상 age에 따른 수집 주기 결정 (KST 기준)
+    0~6개월: 매일 (None -> 항상 수집)
+    6개월~1년: 주 1회 (scheduled_weekly)
+    1년~: 2주 1회 (scheduled_biweekly)
     """
-    if not published_at_str or not last_collected_at_str:
-        return "new_video"
+    if not published_at_str:
+        return "scheduled_weekly" # fallback
 
+    pub_date = datetime.fromisoformat(published_at_str.replace("Z", "+00:00")).astimezone(KST)
     now = datetime.now(KST)
     
-    # ISO 포맷 파싱 (KST 호환)
-    try:
-        published_at = datetime.fromisoformat(published_at_str.replace('Z', '+00:00'))
-        last_collected = datetime.fromisoformat(last_collected_at_str.replace('Z', '+00:00'))
-    except ValueError:
-        return None
-
-    days_since_published = (now - published_at).days
-    days_since_collected = (now - last_collected).days
+    # safe delta calculation
+    delta = now - pub_date
+    days_diff = delta.days
     
-    months_since_published = days_since_published / 30.0
+    if days_diff < 0:
+        return None # 미래 날짜는 일단 수집
+        
+    months_diff = days_diff / 30.0 # 대략적 계산
 
-    # 1. 5일 미만: 매일 (혹은 수집 즉시) -> 여기서는 변경 감지 로직에 맡김 (기본 스킵, 변경시만)
-    if days_since_published < 5:
-        return None # 스케줄링에 의한 강제 수집 없음
-
-    # 2. 6개월 이상: 스킵
-    if months_since_published >= 6:
-        return None
-
-    # 3. 3~6개월: 1달마다
-    if months_since_published >= 3 and days_since_collected >= 30:
-        return "scheduled_monthly"
-
-    # 4. 1~3개월: 2주마다
-    if months_since_published >= 1 and days_since_collected >= 14:
+    if months_diff < 6:
+        # 0 ~ 6개월: 매일 수집 (스케줄링 제한 없음)
+        return None 
+    elif months_diff < 12:
+        # 6 ~ 12개월: 주 1회
+        return "scheduled_weekly"
+    else:
+        # 1년 이상: 2주 1회
         return "scheduled_biweekly"
 
-    # 5. 14일 ~ 1개월: 매주
-    if days_since_published >= 14 and days_since_collected >= 7:
-        return "scheduled_weekly"
 
-    # 6. 5일 ~ 14일: 3일마다 (신규 로직)
-    if days_since_published >= 5 and days_since_collected >= 3:
-        return "scheduled_3days"
-
-    return None
+def check_schedule_condition(frequency: str, video_id: str) -> bool:
+    """
+    frequency에 따라 오늘 수집해야 하는지 결정
+    해싱을 사용하여 부하 분산
+    """
+    if not frequency:
+        return True
+        
+    today = datetime.now(KST).date()
+    # video_id 해싱 -> 0~99
+    vid_hash = int(hashlib.md5(video_id.encode()).hexdigest(), 16) % 100
+    
+    if frequency == "scheduled_weekly":
+        # 0~13: 월, 14~27: 화 ... 
+        # 간단히: (vid_hash % 7) == (today.weekday())
+        # 이렇게 하면 같은 요일에 몰림 방지되나? 
+        # weekday()는 0(월)~6(일)
+        return (vid_hash % 7) == today.weekday()
+        
+    if frequency == "scheduled_biweekly":
+        # 14일 주기
+        # 기준일(epoch)로부터 지난 일수 % 14 == vid_hash % 14
+        days_since_epoch = (today - datetime(2024, 1, 1).date()).days
+        return (days_since_epoch % 14) == (vid_hash % 14)
+        
+    return False
 
 
 def detect_changes(current: Dict, previous: Dict) -> List[str]:
@@ -189,15 +205,78 @@ def detect_changes(current: Dict, previous: Dict) -> List[str]:
     if curr_thumb_hash and prev_thumb_hash and curr_thumb_hash != prev_thumb_hash:
         changes.append("thumbnail_changed")
     
-    # 4. 스케줄 확인
-    schedule_reason = calculate_schedule_reason(
-        current.get("published_at"), 
-        previous.get("collected_at")
-    )
-    if schedule_reason:
-        changes.append(schedule_reason)
+    # 4. 조회수 급등 감지 (Viral Growth) - 3개월 이상 된 영상 대상
+    published_at_str = current.get("published_at")
+    if published_at_str:
+        published_at = datetime.fromisoformat(published_at_str.replace('Z', '+00:00')).astimezone(KST)
+        now = datetime.now(KST)
+        elapsed_months = (now - published_at).days / 30.0
+        
+        if elapsed_months >= 3 and previous:
+            prev_views = previous.get("stats", {}).get("view_count", 0)
+            curr_views = current.get("stats", {}).get("view_count", 0)
+            
+            if prev_views is not None and curr_views is not None and prev_views > 0:
+                growth_rate = (curr_views - prev_views) / prev_views
+                absolute_growth = curr_views - prev_views
+                
+                # 조건: 50% 이상 증가 AND 절대값 5만 이상 증가
+                if growth_rate >= 0.5 and absolute_growth >= 100000:
+                    changes.append("viral_growth")
 
     return changes
+
+
+def analyze_ad_content(
+    openai_client: OpenAI, text: str, logger: PipelineLogger
+) -> Optional[List[str]]:
+    """광고/협찬 주체를 GPT-4o-mini로 분석"""
+    text_preview = text[:100]
+
+    try:
+        api_config = get_api_config()
+        model = api_config.get("openai", {}).get("model", "gpt-4o-mini")
+
+        # 타이머는 생략하거나 PipelineLogger 특성에 맞게 사용 (여기선 try-except 내 단순 호출)
+        response = openai_client.chat.completions.create(
+            model=model,
+            temperature=0.3,
+            messages=[
+                {
+                    "role": "system",
+                    "content": """광고/협찬/지원을 한 **정확한 주체들의 전체 이름**을 **리스트** 형식으로 답변하세요.
+예시: ['하이트진로', '영양군청']
+주체를 찾을 수 없으면 'None'을 출력합니다.""",
+                },
+                {"role": "user", "content": text_preview},
+            ],
+        )
+
+        content = response.choices[0].message.content.strip()
+
+        if not content or content.lower() == "none":
+            return None
+
+        try:
+            parsed = json.loads(content)
+        except json.JSONDecodeError:
+            try:
+                import ast
+                parsed = ast.literal_eval(content)
+            except Exception:
+                parsed = [content]
+
+        if isinstance(parsed, str):
+            parsed = [parsed]
+        elif not isinstance(parsed, list):
+            parsed = [str(parsed)]
+
+        parsed = [str(x).strip() for x in parsed if str(x).strip()]
+        return parsed if parsed else None
+
+    except Exception as e:
+        logger.warning(f"광고 분석 실패: {e}")
+        return None
 
 
 def get_video_meta_batch(youtube, video_ids: List[str]) -> Dict[str, Dict]:
@@ -282,22 +361,45 @@ def collect_channel_meta(
     logger: PipelineLogger,
 ) -> Dict[str, Any]:
     
-    channel_data_path = get_channel_data_path(channel_name)
-    logger.info(f"채널 처리: {channel_name}")
+    channel_path = Path(__file__).parent.parent / "data" / channel_name
+    urls_path = channel_path / "urls.txt"
+    deleted_path = channel_path / "deleted_urls.txt"
 
+    if not urls_path.exists():
+        logger.warning(f"  ❌ URL 파일 없음: {urls_path}")
+        return {}
+
+    # 1. 수집 대상 비디오 ID 로드
     video_ids = []
-    urls_file = channel_data_path / "urls.txt"
-    if urls_file.exists():
-        with open(urls_file, "r", encoding="utf-8") as f:
-            for line in f:
-                vid = extract_video_id(line.strip())
-                if vid: video_ids.append(vid)
+    with open(urls_path, "r", encoding="utf-8") as f:
+        for line in f:
+            url = line.strip()
+            if url:
+                video_ids.append(extract_video_id(url))
 
-    logger.info(f"전체 URL: {len(video_ids)}개")
+    # 2. 삭제된 비디오 필터링 (명시적 체크)
+    deleted_ids = set()
+    if deleted_path.exists():
+        with open(deleted_path, "r", encoding="utf-8") as f:
+            for line in f:
+                # Format: URL\tTIMESTAMP or just URL
+                parts = line.strip().split('\t')
+                if parts:
+                    vid = extract_video_id(parts[0])
+                    if vid:
+                        deleted_ids.add(vid)
+    
+    # urls.txt에는 없지만 혹시 남아있을 수 있는 것들 필터링
+    original_count = len(video_ids)
+    video_ids = [vid for vid in video_ids if vid not in deleted_ids]
+    if len(video_ids) < original_count:
+        logger.warning(f"  ⚠️ 삭제된 영상 {original_count - len(video_ids)}개 필터링됨")
+
+    logger.info(f"  🔍 수집 대상: {len(video_ids)}개")
     if not video_ids:
         return {"processed": 0}
 
-    meta_dir = channel_data_path / "meta"
+    meta_dir = channel_path / "meta"
     meta_dir.mkdir(parents=True, exist_ok=True)
 
     success_count = 0
@@ -315,42 +417,99 @@ def collect_channel_meta(
             if vid not in current_metas: continue
             
             current_meta = current_metas[vid]
-            previous_meta = get_latest_meta(channel_data_path, vid)
+            previous_meta = get_latest_meta(channel_path, vid)
             
-            # 2. 변경 사항 감지 -> List[str]
+            # 2. 변경 사항 감지 -> List[str] (viral 포함)
             recollect_vars = detect_changes(current_meta, previous_meta)
+            is_changed = bool(recollect_vars)
             
-            # 3. 신규 영상 처리 (항상 수집)
+            # 3. 스케줄링 결정
+            schedule_reason = None
+            
+            # 신규 영상은 무조건 수집 (previous_meta 없음)
             if not previous_meta:
-                recollect_vars = ["new_video"]
-            elif not recollect_vars:
-                # 변경 사항 없음. 하지만 썸네일 파일이 없는지 확인 (백필)
-                prev_id = previous_meta.get("recollect_id", 0)
-                if not check_thumbnail_exists(channel_data_path, vid, prev_id):
-                    # 썸네일이 없으면 현재(이전 버전) ID로 저장
-                    save_thumbnail_file(channel_data_path, vid, prev_id, current_meta.get("thumbnail_url"))
+                 recollect_vars = ["new_video"]
+                 schedule_reason = "new_video"
+            else:
+                # 변경사항 없으면 스케줄 확인
+                frequency = get_schedule_frequency(current_meta.get("published_at"))
                 
-                # 메타데이터 업데이트 불필요 -> 건너뛰기
+                # Viral은 스케줄 무시하고 수집 (detect_changes에서 이미 추가됨)
+                is_viral = "viral_growth" in recollect_vars
+                
+                if is_viral:
+                    schedule_reason = "viral_growth"
+                elif frequency:
+                    if check_schedule_condition(frequency, vid):
+                        schedule_reason = frequency
+                else:
+                    # frequency is None -> 0~6개월 매일 수집 대상
+                    # 메타는 매일 수집 (daily_collection)
+                    # 히트맵은 주 1회만 수집 (scheduled_weekly 체크)
+                    
+                    # 1. 메타 데이터 수집 태그 (항상 부여하지만, 변경사항 없을 때만 schedule_reason으로 사용)
+                    if not is_changed:
+                         schedule_reason = "daily_collection"
+                         
+                    # 2. 히트맵 수집 태그 (주 1회만 부여)
+                    # check_schedule_condition을 사용하여 오늘이 'Weekly' 당번인지 확인
+                    if check_schedule_condition("scheduled_weekly", vid):
+                         # recollect_vars에 추가하여 04번 스크립트가 반응하게 함
+                         # 단, schedule_reason(메타 수집 사유)이 이미 daily_collection이면, 
+                         # 나중에 recollect_vars.append(schedule_reason) 할 때 daily_collection이 들어감
+                         # scheduled_weekly는 '추가' 태그로 넣어줘야 함
+                         recollect_vars.append("scheduled_weekly")
+
+            is_scheduled = (schedule_reason is not None or "scheduled_weekly" in recollect_vars)
+
+            # 4. 최종 수집 여부 결정
+            # 변경사항이 있거나(is_changed) OR 스케줄에 걸렸거나(is_scheduled)
+            if not (is_changed or is_scheduled):
+                # 수집 안 함. 하지만 썸네일 백필 체크
+                prev_id = previous_meta.get("recollect_id", 0)
+                if not check_thumbnail_exists(channel_path, vid, prev_id):
+                    save_thumbnail_file(channel_path, vid, prev_id, current_meta.get("thumbnail_url"))
                 continue
 
-            # 4. 수집 ID 결정
+            # 5. 수집 확정 -> ID 계산
             prev_id = previous_meta.get("recollect_id", 0) if previous_meta else 0
+            # previous_meta가 없으면(신규) 0, 있으면 +1
             new_id = prev_id + 1 if previous_meta else 0
             
-            # 5. 필요시 썸네일 저장
-            # 신규 영상이거나, 썸네일이 변경되었으면 저장
-            if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
-                save_thumbnail_file(channel_data_path, vid, new_id, current_meta.get("thumbnail_url"))
+            # recollect_reason 결정 (우선순위: 변경 > 바이럴 > 스케줄)
+            if is_changed:
+                if not previous_meta:
+                    current_meta["recollect_reason"] = "new_video"
+                else:
+                    current_meta["recollect_reason"] = recollect_vars[0]
+            elif schedule_reason:
+                current_meta["recollect_reason"] = schedule_reason
+                recollect_vars.append(schedule_reason)
 
-            # 6. 메타데이터 추가
-            current_meta["recollect_id"] = new_id
-            current_meta["recollect_vars"] = recollect_vars # 리스트
-            current_meta["collected_at"] = datetime.now(KST).isoformat()
-            
+            # 6. 필요시 썸네일 저장
+            if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
+                save_thumbnail_file(channel_path, vid, new_id, current_meta.get("thumbnail_url"))
+
             # OpenAI 분석 (옵션)
-            # ... (기존 로직 유지 또는 단순화)
-            current_meta["ads_info"] = {"is_ads": False} # 속도를 위해 단순화
-            # (사용자가 광고 로직 리팩토링을 강조하지 않았고 썸네일/스케줄에 집중함. 'skip-ads'가 false가 아니면 비싼 GPT 호출 건너뜀)
+            ad_keywords = ["협찬", "광고", "지원"]
+            description = current_meta.get("description", "")
+            is_ads = any(keyword in description for keyword in ad_keywords)
+            
+            what_ads = None
+            if is_ads:
+                # 이전 데이터 재사용 확인
+                if previous_meta and previous_meta.get("ads_info", {}).get("what_ads"):
+                    what_ads = previous_meta["ads_info"]["what_ads"]
+                elif openai_client:
+                    # 신규 분석
+                    what_ads = analyze_ad_content(openai_client, description, logger)
+            
+            current_meta["ads_info"] = {"is_ads": is_ads, "what_ads": what_ads}
+
+            # 7. 메타데이터 추가
+            current_meta["recollect_id"] = new_id
+            current_meta["recollect_vars"] = recollect_vars
+            current_meta["collected_at"] = datetime.now(KST).isoformat()
             
             output_file = meta_dir / f"{vid}.jsonl"
             append_to_jsonl(str(output_file), current_meta)
@@ -363,24 +522,31 @@ def collect_channel_meta(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--channel", "-c", type=str)
-    parser.add_argument("--skip-ads", action="store_true", default=True) # 속도를 위해 기본값 True
+    parser.add_argument("--skip-ads", action="store_true", help="광고 분석 스킵")
     args = parser.parse_args()
 
     youtube_api_key = get_api_key("youtube")
+    openai_api_key = get_api_key("openai")
+
     if not youtube_api_key:
         print("❌ YOUTUBE_API_KEY 누락됨")
         sys.exit(1)
 
     youtube = build("youtube", "v3", developerKey=youtube_api_key)
+    
+    openai_client = None
+    if not args.skip_ads and openai_api_key:
+        openai_client = OpenAI(api_key=openai_api_key)
+
     logger = PipelineLogger(phase="collect-meta", log_dir=LOG_DIR)
     logger.start_stage()
 
     try:
         if args.channel:
-            collect_channel_meta(args.channel, youtube, None, logger)
+            collect_channel_meta(args.channel, youtube, openai_client, logger)
         else:
             for ch in get_all_channels():
-                collect_channel_meta(ch, youtube, None, logger)
+                collect_channel_meta(ch, youtube, openai_client, logger)
     except Exception as e:
         logger.error(f"Error: {e}")
     finally:

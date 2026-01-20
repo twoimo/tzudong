@@ -5,9 +5,9 @@ YouTube Data API v3 사용
 채널별로 동영상 URL을 수집하고 data/{channel}/urls.txt에 저장합니다.
 
 사용법:
-    python 01-collect-urls.py --channel tzuyang
-    python 01-collect-urls.py --channel meatcreator
-    python 01-collect-urls.py  # 모든 채널
+    python3 01-collect-urls.py --channel tzuyang
+    python3 01-collect-urls.py --channel meatcreator
+    python3 01-collect-urls.py  # 모든 채널
 """
 
 import os
@@ -181,6 +181,38 @@ def save_urls(
     return len(new_urls)
 
 
+def save_deleted_urls(
+    deleted_urls: List[str],
+    channel_data_path: Path,
+    urls_file: Path,
+    remaining_urls: List[str],
+    logger: PipelineLogger,
+    dry_run: bool = False,
+):
+    """
+    삭제된 URL을 deleted_urls.txt에 기록하고 urls.txt를 갱신
+    """
+    if not deleted_urls:
+        return
+
+    deleted_file = channel_data_path / "deleted_urls.txt"
+    timestamp = datetime.now(KST).isoformat()
+    
+    if not dry_run:
+        # 1. deleted_urls.txt에 추가
+        with open(deleted_file, "a", encoding="utf-8") as f:
+            for url in deleted_urls:
+                f.write(f"{url}\t{timestamp}\n")
+        
+        # 2. urls.txt 갱신 (삭제된 것 제외)
+        with open(urls_file, "w", encoding="utf-8") as f:
+            for url in remaining_urls:
+                f.write(url + "\n")
+
+    logger.warning(f"삭제된 영상 감지: {len(deleted_urls)}개 -> deleted_urls.txt 이동")
+    logger.add_statistic("deleted_urls_count", len(deleted_urls))
+
+
 def collect_channel_urls(
     channel_name: str, api_key: str, logger: PipelineLogger, dry_run: bool = False
 ) -> Dict[str, Any]:
@@ -205,15 +237,31 @@ def collect_channel_urls(
     with logger.timer("fetch_all_video_urls"):
         urls = fetch_all_video_urls(api_key, channel_id, logger)
 
-    # 저장
+    # 저장 (신규 추가)
     with logger.timer("save_urls"):
         new_count = save_urls(urls, urls_file, existing_urls, logger, dry_run)
+    
+    # 삭제된 영상 처리
+    # existing_urls에는 있지만, 방금 수집한 urls에는 없는 것
+    current_url_set = set(urls)
+    deleted_urls = [url for url in existing_urls if url not in current_url_set]
+    
+    if deleted_urls:
+        save_deleted_urls(
+            deleted_urls, 
+            channel_data_path, 
+            urls_file, 
+            urls, # 이번에 수집된 전체 목록이 곧 remaining_urls가 됨 (정렬 여부는 API 순서 따름)
+            logger, 
+            dry_run
+        )
 
     return {
         "channel_name": channel_name,
         "channel_id": channel_id,
         "total_fetched": len(urls),
         "new_saved": new_count,
+        "deleted_count": len(deleted_urls),
         "existing_count": len(existing_urls),
     }
 
@@ -271,7 +319,7 @@ def main():
 
         for result in results:
             logger.info(
-                f"  {result['channel_name']}: 신규 {result['new_saved']}개 / 전체 {result['total_fetched']}개"
+                f"  {result['channel_name']}: 신규 {result['new_saved']}개 / 삭제 {result.get('deleted_count', 0)}개 / 전체 {result['total_fetched']}개"
             )
 
     except Exception as e:

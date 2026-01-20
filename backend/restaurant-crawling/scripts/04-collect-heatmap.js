@@ -1,3 +1,20 @@
+/**
+ * 유튜브 히트맵(Most Replayed) 데이터 수집 스크립트
+ * - HTML 파싱을 통해 '가장 많이 다시 본 구간' 데이터 추출
+ * - Meta 수집기(02)가 생성한 recollect_vars 태그를 기반으로 수집 여부 결정
+ * 
+ * [수집 발동 조건 (TRIGGER_VARS)]
+ * 1. new_video: 신규 영상 (무조건 수집)
+ * 2. duration_changed: 길이 변경 (영상 수정됨)
+ * 3. scheduled_weekly: 주간 정기 수집 (0~6개월, 6개월~1년)
+ * 4. scheduled_biweekly: 격주 정기 수집 (1년 이상)
+ * 5. viral_growth: 역주행 감지 (즉시 수집)
+ * 
+ * [사용법]
+ *   node 04-collect-heatmap.js --channel tzuyang
+ *   node 04-collect-heatmap.js  # 모든 채널
+ */
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -216,18 +233,23 @@ function shouldCollect(videoId) {
 
                 if (metaRecollectId > lastRecollectId) {
                     // 트리거 조건:
-                    // 1. 신규 영상 (ID 확인으로 암시됨, 정확히는 "new_video" 변수)
-                    // 2. 재생 시간 변경
-                    // 3. 주기적 수집 (scheduled_*)
+                    // 2. ID가 증가했으면, '트리거' 변수가 포함되어 있는지 확인
+                    // (예: new_video, duration_changed, scheduled_*, viral_growth 등)
+                    if (metaRecollectId > lastRecollectId) {
+                        // heatmap 수집해야 하는 meta 변수들
+                        const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'viral_growth'];
 
-                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_3days', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly'];
+                        // recollectVars 중 하나라도 TRIGGER_VARS에 포함되면 수집
+                        const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
-                    const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
-
-                    if (shouldTrigger) {
-                        return true;
-                    } else {
-                        return false;
+                        if (shouldTrigger) {
+                            log('info', `[Trigger] Video ${videoId}: Found trigger variable(s) [${recollectVars.join(', ')}]`);
+                            return true;
+                        } else {
+                            // ID는 증가했지만 트리거 변수가 없으면 (예: title_changed, thumbnail_changed 등) -> 스킵
+                            log('info', `[Skip] Video ${videoId}: recurs_vars [${recollectVars.join(', ')}] do not trigger heatmap.`);
+                            return false;
+                        }
                     }
                 }
                 return false;
@@ -248,18 +270,43 @@ async function main() {
     else log('warn', 'No cookies found.');
 
     try {
-        if (!fs.existsSync(URLS_FILE)) {
-            throw new Error(`URLs file not found: ${URLS_FILE}`);
+        // 1. deleted_ids 로드
+        const deletedPath = path.join(BASE_DATA_DIR, 'deleted_urls.txt');
+        const deletedIds = new Set();
+        if (fs.existsSync(deletedPath)) {
+            const lines = fs.readFileSync(deletedPath, 'utf8').split('\n');
+            for (const line of lines) {
+                const parts = line.split('\t');
+                if (parts[0]) {
+                    const vid = extractVideoId(parts[0]);
+                    if (vid) deletedIds.add(vid);
+                }
+            }
         }
 
-        const fileContent = fs.readFileSync(URLS_FILE, 'utf-8');
-        const urls = fileContent.split('\n').filter(line => line.trim() !== '');
+        const urlsPath = path.join(BASE_DATA_DIR, 'urls.txt');
+        if (!fs.existsSync(urlsPath)) {
+            log('warn', `No urls.txt for channel ${CHANNEL_NAME}`);
+            return;
+        }
+
+        const urls = fs.readFileSync(urlsPath, 'utf8')
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0);
+
+        log('info', `Found ${urls.length} URLs, filtering deleted...`);
 
         const targets = urls.map(url => {
             const vid = extractVideoId(url);
             return { url, video_id: vid };
         }).filter(v => {
             if (!v.video_id) return false;
+            // 2. 삭제된 비디오 스킵
+            if (deletedIds.has(v.video_id)) {
+                log('info', `[Skip] Video ID ${v.video_id} is in deleted_urls.txt.`);
+                return false;
+            }
             return shouldCollect(v.video_id);
         });
 

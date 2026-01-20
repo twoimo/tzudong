@@ -60,10 +60,10 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
     const R = 6371000; // 지구 반경 (m)
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
-    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-              Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
 }
 
@@ -209,7 +209,7 @@ async function closeBrowser() {
 // 지도 URL 추출 (네이버, 카카오, 구글)
 function extractMapUrls(text) {
     if (!text) return [];
-    
+
     // 텍스트 내의 literal \n을 실제 공백으로 치환하여 안전하게 처리
     const cleanText = text.replace(/\\n/g, ' ').replace(/\n/g, ' ');
 
@@ -230,7 +230,7 @@ function extractMapUrls(text) {
         const matches = cleanText.match(pattern) || [];
         urls.push(...matches);
     }
-    
+
     // URL 정제 (끝에 붙은 점, 콤마 등 제거)
     return [...new Set(urls)].map(url => url.replace(/[\.,;]+$/, '').trim());
 }
@@ -307,11 +307,11 @@ async function collectFromNaverMap(page, mapUrl) {
                 }
             });
             await new Promise(r => setTimeout(r, 1000));
-        } catch {}
+        } catch { }
 
         // 정보 추출
         const placeInfo = await page.evaluate(() => {
-            const result = { origin_name: null, roadAddress: null, jibunAddress: null }; 
+            const result = { origin_name: null, roadAddress: null, jibunAddress: null };
 
             // 1. 상호명 (ID: _title 내부)
             const titleEl = document.querySelector('#_title');
@@ -338,10 +338,10 @@ async function collectFromNaverMap(page, mapUrl) {
                 if (targetSpan && targetSpan.parentElement) {
                     let text = targetSpan.parentElement.innerText;
                     text = text.replace(label, '')
-                               .replace(/복사/g, '')
-                               .replace(/우편번호\s*[\d-]+/g, '')
-                               .replace(/우편번호/g, '')
-                               .trim();
+                        .replace(/복사/g, '')
+                        .replace(/우편번호\s*[\d-]+/g, '')
+                        .replace(/우편번호/g, '')
+                        .trim();
                     return text;
                 }
                 return null;
@@ -355,7 +355,7 @@ async function collectFromNaverMap(page, mapUrl) {
                 if (addressLabel && addressLabel.parentElement && addressLabel.parentElement.nextElementSibling) {
                     const contentDiv = addressLabel.parentElement.nextElementSibling;
                     let text = contentDiv.textContent.replace(/주소/g, '').replace(/복사/g, '').trim();
-                    if (text.length > 5) result.roadAddress = text; 
+                    if (text.length > 5) result.roadAddress = text;
                 }
             }
 
@@ -372,7 +372,7 @@ async function collectFromNaverMap(page, mapUrl) {
                 placeInfo.originalLat = parseFloat(lat);
                 placeInfo.originalLng = parseFloat(lng);
             }
-        } catch {}
+        } catch { }
 
         placeInfo.description_map_url = mapUrl;
         placeInfo.origin_name = cleanText(placeInfo.origin_name);
@@ -400,7 +400,7 @@ async function collectFromKakaoMap(page, mapUrl) {
             try {
                 const response = await fetch(url, { method: 'HEAD', redirect: 'follow' });
                 url = response.url;
-            } catch {}
+            } catch { }
         }
 
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -408,7 +408,7 @@ async function collectFromKakaoMap(page, mapUrl) {
 
         const placeInfo = await page.evaluate(() => {
             const result = { origin_name: null, address: null };
-            
+
             // OG 태그에서 추출
             const ogTitle = document.querySelector('meta[property="og:title"]');
             if (ogTitle) {
@@ -416,10 +416,10 @@ async function collectFromKakaoMap(page, mapUrl) {
                 if (name && name.includes('|')) name = name.split('|')[0].trim();
                 result.origin_name = name;
             }
-            
+
             const ogDesc = document.querySelector('meta[property="og:description"]');
             if (ogDesc) result.address = ogDesc.getAttribute('content');
-            
+
             return result;
         });
 
@@ -450,7 +450,7 @@ async function collectFromGoogleMap(page, mapUrl) {
             try {
                 const response = await fetch(url, { method: 'HEAD', redirect: 'follow' });
                 url = response.url;
-            } catch {}
+            } catch { }
         }
 
         await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -467,11 +467,11 @@ async function collectFromGoogleMap(page, mapUrl) {
 
         const placeInfo = await page.evaluate(() => {
             const result = { origin_name: null, address: null };
-            
+
             // 상호명
             const nameEl = document.querySelector('h1.DUwDvf') || document.querySelector('h1');
             if (nameEl) result.origin_name = nameEl.textContent?.trim();
-            
+
             if (!result.origin_name) {
                 const ogTitle = document.querySelector('meta[property="og:title"]');
                 if (ogTitle) {
@@ -480,14 +480,14 @@ async function collectFromGoogleMap(page, mapUrl) {
                     result.origin_name = name;
                 }
             }
-            
+
             // 주소
             const addressBtn = document.querySelector('button[data-item-id*="address"]');
             if (addressBtn) {
                 const addrText = addressBtn.querySelector('.Io6YTe') || addressBtn.querySelector('.fontBodyMedium');
                 if (addrText) result.address = addrText.textContent?.trim();
             }
-            
+
             return result;
         });
 
@@ -524,41 +524,41 @@ function normalizeAddressForCompare(address) {
 // 검색 실패 또는 시군구 불일치시 null 반환 (실패 처리)
 async function enrichWithNaverSearch(placeInfo) {
     if (!placeInfo || !placeInfo.origin_name) return null;
-    
+
     // 검색 쿼리: 상호명 + 시군구 (있으면)
     let query = placeInfo.origin_name;
     if (placeInfo.address) {
         const sigungu = extractSigungu(placeInfo.address);
         if (sigungu) query = `${placeInfo.origin_name} ${sigungu.split(' ')[0]}`;
     }
-    
+
     // 네이버 검색 결과 3개 받아오기
     const naverResults = await searchNaverApi(query);
     if (!naverResults || naverResults.length === 0) {
         log('warning', `네이버 검색 실패 (폐업 등): ${placeInfo.origin_name}`);
         return null;
     }
-    
+
     // 원본 주소에서 시군구 추출 (층/호 정규화 후)
     const originalAddrNorm = normalizeAddressForCompare(placeInfo.address);
     const originalSigungu = extractSigungu(originalAddrNorm);
-    
+
     if (!originalSigungu) {
         log('warning', `원본 주소에서 시군구 추출 실패: ${placeInfo.address}`);
         return null;
     }
-    
+
     // 3개 결과 중 시군구 일치하는 것 찾기
     let matched = null;
     for (const item of naverResults) {
         // 지번주소 시군구 비교
         const jibunAddrNorm = normalizeAddressForCompare(item.address);
         const jibunSigungu = extractSigungu(jibunAddrNorm);
-        
+
         // 도로명주소 시군구 비교
         const roadAddrNorm = normalizeAddressForCompare(item.roadAddress);
         const roadSigungu = extractSigungu(roadAddrNorm);
-        
+
         if ((jibunSigungu && jibunSigungu === originalSigungu) ||
             (roadSigungu && roadSigungu === originalSigungu)) {
             matched = item;
@@ -566,20 +566,20 @@ async function enrichWithNaverSearch(placeInfo) {
             break;
         }
     }
-    
+
     if (!matched) {
         log('warning', `시군구 일치 항목 없음 (실패 처리): ${placeInfo.name}`);
         return null;
     }
-    
+
     // origin_name은 이미 설정되어 있으므로 복사/삭제 불필요
-    
+
     // 선택된 결과로 네이버 정보 추가 (category는 LLM이 처리하므로 여기서 설정 안 함)
     placeInfo.naver_name = matched.name;          // 네이버 검색 결과 상호명
     placeInfo.jibunAddress = matched.address;     // 지번주소
     placeInfo.roadAddress = matched.roadAddress;  // 도로명주소
     // category는 LLM이 자막 분석해서 설정함
-    
+
     return placeInfo;
 }
 
@@ -740,8 +740,8 @@ ${placeNames.join('\n')}
     }
 
     // 정리
-    try { fs.unlinkSync(tempPromptPath); } catch {}
-    try { fs.unlinkSync(tempResponsePath); } catch {}
+    try { fs.unlinkSync(tempPromptPath); } catch { }
+    try { fs.unlinkSync(tempResponsePath); } catch { }
 
     return [];
 }
@@ -758,13 +758,13 @@ async function main() {
 
     // 정육왕(meatcreator)만 처리
     const ALLOWED_CHANNELS = ['meatcreator'];
-    
+
     const config = loadChannelsConfig();
     let channels = targetChannel ? [targetChannel] : ALLOWED_CHANNELS;
-    
+
     // 허용된 채널만 필터링
     channels = channels.filter(ch => ALLOWED_CHANNELS.includes(ch));
-    
+
     if (channels.length === 0) {
         log('warning', '처리할 채널 없음 (이 스크립트는 정육왕 전용)');
         return;
@@ -800,8 +800,35 @@ async function main() {
             continue;
         }
 
-        const urls = fs.readFileSync(urlsFile, 'utf-8').split('\n').filter(Boolean);
-        log('info', `총 URL: ${urls.length}개`);
+        // 1. deleted_ids 로드
+        const deletedPath = path.join(channelDir, 'deleted_urls.txt');
+        const deletedIds = new Set();
+        if (fs.existsSync(deletedPath)) {
+            const lines = fs.readFileSync(deletedPath, 'utf8').split('\n');
+            for (const line of lines) {
+                const parts = line.split('\t');
+                if (parts[0]) {
+                    const vid = parts[0].includes('v=') ? parts[0].split('v=')[1].split('&')[0] : null;
+                    if (vid) deletedIds.add(vid);
+                }
+            }
+        }
+
+        const urls = fs.readFileSync(urlsFile, 'utf-8')
+            .split('\n')
+            .map(line => line.trim())
+            .filter(line => line.length > 0)
+            .filter(line => {
+                const vid = line.includes('v=') ? line.split('v=')[1].split('&')[0] : null;
+                if (!vid) return false;
+                if (deletedIds.has(vid)) {
+                    // log('debug', `[Skip] Deleted video: ${vid}`);
+                    return false;
+                }
+                return true;
+            });
+
+        log('info', `총 URL: ${urls.length}개 (삭제된 영상 스킵 후)`);
 
         const browser = await getBrowser();
         if (!browser) continue;
@@ -891,13 +918,13 @@ async function main() {
                 // enrichWithNaverSearch 성공 시 origin_name/naver_name이 있음
                 if (placeInfo && (placeInfo.origin_name || placeInfo.naver_name)) {
                     placeInfo = await verifyAndGeocode(placeInfo);
-                    
+
                     // verifyAndGeocode가 null 반환 시 실패 처리
                     if (!placeInfo) {
                         log('warning', `  → 검증 실패 - 06 파이프라인으로 처리`);
                         continue;
                     }
-                    
+
                     // 필수 필드 검증 (origin_name 또는 naver_name, jibunAddress, lat, lng)
                     if (hasRequiredFields(placeInfo)) {
                         places.push(placeInfo);
@@ -929,7 +956,7 @@ async function main() {
                 log('warning', `[${videoId}] 리뷰 추출 실패 또는 결과 없음 (Gemini CLI 오류 가능성) - 저장 건너뜀`);
                 continue;
             }
-            
+
             // 리뷰 매칭 (naver_name으로만 매칭)
             for (const place of naverPlaces) {
                 const review = reviews.find(r => r.naver_name === place.naver_name);

@@ -227,6 +227,14 @@ process_channel() {
     local NO_META=0
     local GEMINI_CALLS=0
     local TOTAL_GEMINI_TIME=0
+
+    # deleted_urls.txt 로드 (ID만 추출하여 임시 파일에 저장)
+    local DELETED_IDS_FILE="$full_data_path/deleted_ids.temp"
+    if [ -f "$full_data_path/deleted_urls.txt" ]; then
+        awk -F'\t' '{print $1}' "$full_data_path/deleted_urls.txt" | sed -n 's/.*v=\([^&]*\).*/\1/p' > "$DELETED_IDS_FILE"
+    else
+        touch "$DELETED_IDS_FILE"
+    fi
     
     # 각 URL 처리
     for i in "${!URLS[@]}"; do
@@ -263,6 +271,12 @@ process_channel() {
         if [ -f "$MAP_URL_CRAWLING_FILE" ]; then
             SKIPPED=$((SKIPPED + 1))
             log_debug "[$INDEX/$TOTAL] map_url_crawling에서 처리됨 - 스킵: $VIDEO_ID"
+            continue
+        fi
+
+        # 삭제된 영상 체크
+        if grep -qF "$VIDEO_ID" "$DELETED_IDS_FILE"; then
+            log_debug "[$INDEX/$TOTAL] 삭제된 영상 - 스킵: $VIDEO_ID"
             continue
         fi
         
