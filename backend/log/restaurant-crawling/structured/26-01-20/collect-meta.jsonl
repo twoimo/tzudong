@@ -282,3 +282,18 @@
 {"timestamp": "2026-01-20T18:37:23.036861+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 종료 시간: 2026-01-20 18:37:23", "data": null}
 {"timestamp": "2026-01-20T18:37:23.036940+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏱️ 소요 시간: 6분 7초", "data": null}
 {"timestamp": "2026-01-20T18:37:23.037013+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T18:50:06.211991+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T18:50:06.212250+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🚀 [COLLECT-META] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-20T18:50:06.212360+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 시작 시간: 2026-01-20 18:50:06", "data": null}
+{"timestamp": "2026-01-20T18:50:06.212437+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "📁 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling", "data": null}
+{"timestamp": "2026-01-20T18:50:06.212509+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📄 text: /home/ubuntu/tzudong/backend/log/restaurant-crawling/text/26-01-20", "data": null}
+{"timestamp": "2026-01-20T18:50:06.212656+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📊 structured: /home/ubuntu/tzudong/backend/log/restaurant-crawling/structured/26-01-20", "data": null}
+{"timestamp": "2026-01-20T18:50:06.212728+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "   📋 report: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-20", "data": null}
+{"timestamp": "2026-01-20T18:50:06.212840+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T18:50:06.212922+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T18:50:06.213002+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "🚀 [COLLECT-META] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-20T18:50:06.213073+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "⏰ 시작 시간: 2026-01-20 18:50:06", "data": null}
+{"timestamp": "2026-01-20T18:50:06.213134+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "📁 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-20", "data": null}
+{"timestamp": "2026-01-20T18:50:06.213196+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-20T18:50:06.215046+09:00", "level": "INFO", "phase": "collect-meta", "step": null, "message": "  🔍 수집 대상: 1010개", "data": null}
+{"timestamp": "2026-01-20T18:50:06.215283+09:00", "level": "INFO", "phase": "collect-meta", "step": "progress", "message": "진행: 0/1010 (0.0%)", "data": null}

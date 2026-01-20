@@ -1,12 +1,12 @@
 /**
  * 자막 수집 스크립트 (recollect_id 기반)
  * - Puppeteer로 maestra.ai / tubetranscript.com에서 자막 수집
- * - Meta의 recollect_id/recollect_reason 확인하여 수집 결정
+ * - Meta의 recollect_id/recollect_vars 확인하여 수집 결정
  * - duration_changed 시 재수집
  * 
  * 수집 조건:
  * - meta.recollect_id > transcript.recollect_id
- * - AND (신규 OR meta.recollect_reason == "duration_changed")
+ * - AND (신규 OR meta.recollect_vars에 "duration_changed" 포함)
  * 
  * 사용법:
  *   node 03-collect-transcript.js --channel tzuyang
@@ -570,12 +570,12 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
         // 수집 조건: meta.recollect_id > transcript.recollect_id
         if (metaRecollectId > transcriptRecollectId) {
-            const recollectReason = latestMeta.recollect_reason;
+            const recollectVars = latestMeta.recollect_vars || [];
 
             // 신규 또는 duration 변경 시 수집
-            if (!latestTranscript || recollectReason === "duration_changed") {
-                const reasonText = latestTranscript ? recollectReason : null;  // 신규는 null
-                toCollect.push({ videoId, recollectReason: reasonText, metaRecollectId });
+            if (!latestTranscript || recollectVars.includes("duration_changed")) {
+                const reasonVars = latestTranscript ? recollectVars : [];  // 신규는 빈 배열
+                toCollect.push({ videoId, recollectVars: reasonVars, metaRecollectId });
             }
         }
     }
@@ -592,11 +592,11 @@ async function collectChannelTranscripts(channelName, channelConfig) {
     const REST_DURATION = 180000; // 3분 (180초)
 
     for (let i = 0; i < toCollect.length; i++) {
-        const { videoId, recollectReason, metaRecollectId } = toCollect[i];
+        const { videoId, recollectVars, metaRecollectId } = toCollect[i];
         await acquirePuppeteerSlot();
 
         try {
-            log('info', `  [${i + 1}/${toCollect.length}] ${videoId} (${recollectReason})`);
+            log('info', `  [${i + 1}/${toCollect.length}] ${videoId} (${recollectVars.join(', ') || 'new'})`);
 
             const result = await getTranscriptWithPuppeteer(videoId);
 
@@ -607,7 +607,7 @@ async function collectChannelTranscripts(channelName, channelConfig) {
                 transcript: result ? result.segments : [],
                 // recollect 정보
                 recollect_id: metaRecollectId,
-                recollect_reason: recollectReason,
+                recollect_vars: recollectVars,
             };
 
             const outputFile = path.join(transcriptDir, `${videoId}.jsonl`);
