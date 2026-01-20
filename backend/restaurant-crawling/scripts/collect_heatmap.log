@@ -2286,3 +2286,14 @@
 [2026-01-20T10:19:42.161Z] [WARN] No heatmap found for kx3gQVt5a3I.
 [2026-01-20T10:19:45.216Z] [INFO] Processing [cr4rGpM9HcQ]...
 [2026-01-20T10:19:46.032Z] [WARN] No heatmap found for cr4rGpM9HcQ.
+[2026-01-20T10:25:04.348Z] [INFO] === HTTP Heatmap Collector Started [Channel: tzuyang] ===
+[2026-01-20T10:25:04.351Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-20T10:25:04.351Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-20T10:25:04.351Z] [INFO] Cookies loaded.
+[2026-01-20T10:25:04.352Z] [INFO] Found 1010 URLs, filtering deleted...
+[2026-01-20T10:25:04.361Z] [INFO] [Skip] Video qSug9_Vw8QY: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T10:25:04.510Z] [INFO] Found 1010 URLs, 2 targets to process.
+[2026-01-20T10:25:04.510Z] [INFO] Processing [kx3gQVt5a3I]...
+[2026-01-20T10:25:04.511Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: kx3gQVt5a3I (Duration: 30s)
+[2026-01-20T10:25:08.959Z] [INFO] Processing [cr4rGpM9HcQ]...
+[2026-01-20T10:25:08.960Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: cr4rGpM9HcQ (Duration: 57s)
