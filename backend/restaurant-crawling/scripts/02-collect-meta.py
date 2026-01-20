@@ -5,6 +5,11 @@ YouTube 메타데이터 & 썸네일 수집 스크립트 (recollect_id 기반)
 - 썸네일 변경 감지 (MD5 해시)
 - 변경 사유 리스트 관리 (recollect_vars)
 - 주기적 수집 스케줄링 적용
+
+사용법:
+    python3 02-collect-meta.py --channel tzuyang
+    python3 02-collect-meta.py --channel meatcreator
+    python3 02-collect-meta.py  # 모든 채널
 """
 
 import os
@@ -356,7 +361,7 @@ def collect_channel_meta(
     logger: PipelineLogger,
 ) -> Dict[str, Any]:
     
-    channel_path = Path(f"backend/restaurant-crawling/data/{channel_name}")
+    channel_path = Path(__file__).parent.parent / "data" / channel_name
     urls_path = channel_path / "urls.txt"
     deleted_path = channel_path / "deleted_urls.txt"
 
@@ -412,7 +417,7 @@ def collect_channel_meta(
             if vid not in current_metas: continue
             
             current_meta = current_metas[vid]
-            previous_meta = get_latest_meta(channel_data_path, vid)
+            previous_meta = get_latest_meta(channel_path, vid)
             
             # 2. 변경 사항 감지 -> List[str] (viral 포함)
             recollect_vars = detect_changes(current_meta, previous_meta)
@@ -462,8 +467,8 @@ def collect_channel_meta(
             if not (is_changed or is_scheduled):
                 # 수집 안 함. 하지만 썸네일 백필 체크
                 prev_id = previous_meta.get("recollect_id", 0)
-                if not check_thumbnail_exists(channel_data_path, vid, prev_id):
-                    save_thumbnail_file(channel_data_path, vid, prev_id, current_meta.get("thumbnail_url"))
+                if not check_thumbnail_exists(channel_path, vid, prev_id):
+                    save_thumbnail_file(channel_path, vid, prev_id, current_meta.get("thumbnail_url"))
                 continue
 
             # 5. 수집 확정 -> ID 계산
@@ -483,7 +488,7 @@ def collect_channel_meta(
 
             # 6. 필요시 썸네일 저장
             if "new_video" in recollect_vars or "thumbnail_changed" in recollect_vars:
-                save_thumbnail_file(channel_data_path, vid, new_id, current_meta.get("thumbnail_url"))
+                save_thumbnail_file(channel_path, vid, new_id, current_meta.get("thumbnail_url"))
 
             # OpenAI 분석 (옵션)
             ad_keywords = ["협찬", "광고", "지원"]

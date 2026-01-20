@@ -516,8 +516,8 @@ async function collectChannelTranscripts(channelName, channelConfig) {
     const dataPath = path.resolve(__dirname, '../../', channelConfig.data_path);
     const transcriptDir = path.join(dataPath, 'transcript');
 
-    const channelDataPath = path.join(DATA_DIR, channelName);
-    const deletedPath = path.join(channelDataPath, 'deleted_urls.txt');
+    // const channelDataPath = path.join(DATA_DIR, channelName); // ERROR
+    const deletedPath = path.join(dataPath, 'deleted_urls.txt');
 
     // 1. deleted_ids 로드
     const deletedIds = new Set();

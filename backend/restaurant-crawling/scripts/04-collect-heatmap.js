@@ -1,3 +1,20 @@
+/**
+ * 유튜브 히트맵(Most Replayed) 데이터 수집 스크립트
+ * - HTML 파싱을 통해 '가장 많이 다시 본 구간' 데이터 추출
+ * - Meta 수집기(02)가 생성한 recollect_vars 태그를 기반으로 수집 여부 결정
+ * 
+ * [수집 발동 조건 (TRIGGER_VARS)]
+ * 1. new_video: 신규 영상 (무조건 수집)
+ * 2. duration_changed: 길이 변경 (영상 수정됨)
+ * 3. scheduled_weekly: 주간 정기 수집 (0~6개월, 6개월~1년)
+ * 4. scheduled_biweekly: 격주 정기 수집 (1년 이상)
+ * 5. viral_growth: 역주행 감지 (즉시 수집)
+ * 
+ * [사용법]
+ *   node 04-collect-heatmap.js --channel tzuyang
+ *   node 04-collect-heatmap.js  # 모든 채널
+ */
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
