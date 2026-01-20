@@ -12,7 +12,6 @@
  * 
  * [사용법]
  *   node 04-collect-heatmap.js --channel tzuyang
- *   node 04-collect-heatmap.js  # 모든 채널
  */
 
 import fs from 'fs';
