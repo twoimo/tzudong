@@ -1,5 +1,5 @@
 /**
- * 05-naver-map-crawling.js
+ * 05-map-url-crawling.js
  * 정육왕 채널용 지도 기반 음식점 정보 수집
  * 
  * 기능:
@@ -10,7 +10,7 @@
  * 5. Gemini CLI로 youtuber_review 추출
  * 
  * 사용법:
- *   node 05-naver-map-crawling.js --channel meatcreator
+ *   node 05-map-url-crawling.js --channel meatcreator
  */
 
 import fs from 'fs';
@@ -19,6 +19,7 @@ import { fileURLToPath } from 'url';
 import { config } from 'dotenv';
 import yaml from 'js-yaml';
 import { execSync, spawn } from 'child_process';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -682,55 +683,56 @@ ${placeNames.join('\n')}
 </출력 규칙>
 `;
 
+    // Gemini API 호출 (1차)
+    const geminiApiKey = process.env.GEMINI_API_KEY;
+    if (geminiApiKey) {
+        log('info', `Gemini API 호출 시도 (${naverPlaces.length}개 장소)`);
+        try {
+            const genAI = new GoogleGenerativeAI(geminiApiKey);
+            const model = genAI.getGenerativeModel({ model: process.env.PRIMARY_MODEL || 'gemini-2.5-flash' });
+
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
+
+            let parsed = parseGeminiResponse(text);
+            const validated = validateReviews(parsed, placeNames, VALID_CATEGORIES);
+            log('success', `Gemini API 성공: 리뷰 ${validated.length}개 추출`);
+            return validated;
+
+        } catch (apiError) {
+            log('warning', `Gemini API 호출 실패 (CLI Fallback 시도): ${apiError.message}`);
+        }
+    } else {
+        log('warning', 'GEMINI_API_KEY 없음, 즉시 CLI Fallback 시도');
+    }
+
+    // Gemini CLI 호출 (2차 - Fallback)
     fs.writeFileSync(tempPromptPath, prompt);
 
-    // Gemini CLI 호출 (최대 3회 재시도)
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
             const model = process.env.PRIMARY_MODEL || 'gemini-2.5-flash';
-            execSync(`gemini -m ${model} --output-format json < "${tempPromptPath}" > "${tempResponsePath}"`, {
+            // --noblock 옵션 제거 (동기 실행 필요)
+            execSync(`gemini -p "$(cat "${tempPromptPath}")" -m ${model} --output-format json --yolo < /dev/null > "${tempResponsePath}"`, {
                 timeout: 120000,
-                encoding: 'utf-8'
+                encoding: 'utf-8',
+                shell: '/bin/bash'
             });
 
             // 응답 파싱
             const responseText = fs.readFileSync(tempResponsePath, 'utf-8');
-            let parsed = JSON.parse(responseText);
-            if (parsed.response) {
-                // Gemini CLI wrapper 형식
-                let jsonText = parsed.response;
-                if (jsonText.includes('```json')) {
-                    jsonText = jsonText.replace(/```json\n?/, '').replace(/```\s*$/, '');
-                }
-                parsed = JSON.parse(jsonText);
-            }
+            let parsed = parseGeminiResponse(responseText);
+            const validated = validateReviews(parsed, placeNames, VALID_CATEGORIES);
 
-            // 파싱 및 Enum 검증
-            if (!parsed.reviews || !Array.isArray(parsed.reviews)) {
-                throw new Error('리뷰 목록 형식이 올바르지 않습니다.');
-            }
+            log('success', `Gemini CLI 성공: 리뷰 ${validated.length}개 추출`);
 
-            const validatedReviews = [];
-            for (const review of parsed.reviews) {
-                // naver_name이 입력한 목록에 있는지 확인 (Enum 검증)
-                if (!review.naver_name || !placeNames.includes(review.naver_name)) {
-                    throw new Error(`naver_name Enum 검증 실패: ${review.naver_name}`);
-                }
+            // 정리
+            try { fs.unlinkSync(tempPromptPath); } catch { }
+            try { fs.unlinkSync(tempResponsePath); } catch { }
 
-                // category가 VALID_CATEGORIES에 있는지 확인 (Enum 검증)
-                if (review.category && !VALID_CATEGORIES.includes(review.category)) {
-                    throw new Error(`category Enum 검증 실패: ${review.category}`);
-                }
-
-                validatedReviews.push(review);
-            }
-
-            if (validatedReviews.length === 0 && placeNames.length > 0) {
-                throw new Error('유효한 리뷰가 하나도 추출되지 않았습니다 (Enum 매칭 실패).');
-            }
-
-            return validatedReviews;
+            return validated;
         } catch (err) {
             log('warning', `Gemini CLI 시도 ${attempt}/${maxRetries} 실패: ${err.message}`);
             if (attempt < maxRetries) {
@@ -744,6 +746,64 @@ ${placeNames.join('\n')}
     try { fs.unlinkSync(tempResponsePath); } catch { }
 
     return [];
+}
+
+// 응답 파싱 헬퍼 함수
+function parseGeminiResponse(text) {
+    let parsed;
+    try {
+        parsed = JSON.parse(text);
+    } catch (e) {
+        // Markdown 코드 블록 처리
+        const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/) || text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            try {
+                parsed = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+            } catch (e2) {
+                throw new Error(`JSON 파싱 실패 (Regex): ${e2.message}`);
+            }
+        } else {
+            throw new Error(`JSON 파싱 실패: ${e.message}`);
+        }
+    }
+
+    // Gemini CLI Wrapper 형식 처리 (response 필드에 들어있는 경우)
+    if (parsed.response && typeof parsed.response === 'string') {
+        let innerText = parsed.response;
+        // 중첩된 마크다운 처리
+        const innerMatch = innerText.match(/```json\s*([\s\S]*?)\s*```/) || innerText.match(/\{[\s\S]*\}/);
+        if (innerMatch) {
+            return JSON.parse(innerMatch[1] || innerMatch[0]);
+        }
+        return JSON.parse(innerText); // 그냥 JSON 문자열일 경우
+    }
+
+    return parsed;
+}
+
+// 리뷰 검증 헬퍼 함수
+function validateReviews(parsed, placeNames, validCategories) {
+    if (!parsed.reviews || !Array.isArray(parsed.reviews)) {
+        throw new Error('리뷰 목록 형식이 올바르지 않습니다.');
+    }
+
+    const validatedReviews = [];
+    for (const review of parsed.reviews) {
+        // naver_name Enum 검증
+        if (!review.naver_name || !placeNames.includes(review.naver_name)) {
+            throw new Error(`naver_name Enum 검증 실패: ${review.naver_name}`);
+        }
+        // category Enum 검증
+        if (review.category && !validCategories.includes(review.category)) {
+            throw new Error(`category Enum 검증 실패: ${review.category}`);
+        }
+        validatedReviews.push(review);
+    }
+
+    if (validatedReviews.length === 0 && placeNames.length > 0) {
+        throw new Error('유효한 리뷰가 하나도 추출되지 않았습니다 (Enum 매칭 실패).');
+    }
+    return validatedReviews;
 }
 
 // 메인 함수

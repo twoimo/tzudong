@@ -358,9 +358,22 @@ $TRANSCRIPT_TRUNCATED
         TEMP_STDERR="$SCRIPT_DIR/../temp/stderr_${VIDEO_ID}.log"
         echo "$PROMPT" > "$TEMP_PROMPT"
         
-        # Gemini CLI 호출 (최대 3회 시도)
+        # 1차 시도: Google API (Node.js SDK)
         URL_START_TIME=$(date +%s)
         GEMINI_SUCCESS=false
+        
+        GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
+        log_debug "Gemini API 호출 시도 (via gemini_api_request.js)"
+        
+        if node "$GEMINI_API_SCRIPT" "$TEMP_PROMPT" "$TEMP_RESPONSE"; then
+            GEMINI_SUCCESS=true
+            log_debug "Gemini API 호출 성공"
+        else
+            log_warning "Gemini API 호출 실패 (CLI Fallback 시도)"
+        fi
+
+        # 2차 시도: Gemini CLI (API 실패 시)
+        if [ "$GEMINI_SUCCESS" = false ]; then
         
         for GEMINI_ATTEMPT in 1 2 3; do
             GEMINI_START=$(date +%s)
@@ -395,6 +408,7 @@ $TRANSCRIPT_TRUNCATED
                 fi
             fi
         done
+        fi
         
         if [ "$GEMINI_SUCCESS" = true ]; then
             # 파서 실행 (최대 3회 시도)
