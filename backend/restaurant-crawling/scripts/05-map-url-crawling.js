@@ -244,124 +244,112 @@ function getMapType(url) {
     return 'unknown';
 }
 
-// 네이버 지도에서 장소 정보 수집
+// 네이버 지도에서 장소 정보 수집 (텍스트 기반 선택자 사용)
 async function collectFromNaverMap(page, mapUrl) {
     try {
-        // 단축 URL이면 먼저 페이지 방문하여 리다이렉트된 URL 가져오기
-        let url = mapUrl;
-        if (url.includes('naver.me')) {
-            try {
-                await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-                await new Promise(r => setTimeout(r, 2000));
-                url = page.url();  // 리다이렉트된 URL
-                log('debug', `단축 URL 리다이렉트: ${url}`);
-            } catch (e) {
-                log('debug', `단축 URL 리다이렉트 실패: ${e.message}`);
-                return null;
-            }
-        }
+        await page.goto(mapUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+        await new Promise(r => setTimeout(r, 2000)); // iframe 로딩 대기
 
-        // 유효하지 않은 URL 스킵
-        if (url.includes('form.naver.com') || url.includes('smartstore.naver.com')) {
-            return null;
-        }
-
-        // place ID 추출
-        const patterns = [
-            /place\.naver\.com\/(?:restaurant|place)\/(\d+)/,
-            /map\.naver\.com\/p\/entry\/place\/(\d+)/,
-            /pcmap\.place\.naver\.com\/(?:restaurant|place)\/(\d+)/,
-        ];
-        let placeId = null;
-        for (const pattern of patterns) {
-            const match = url.match(pattern);
-            if (match) { placeId = match[1]; break; }
-        }
-        if (!placeId) {
-            log('debug', `네이버 지도: place ID 추출 실패 - ${url}`);
-            return null;
-        }
-
-        const placeUrl = `https://pcmap.place.naver.com/restaurant/${placeId}/home`;
-        await page.goto(placeUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
-        await new Promise(r => setTimeout(r, 2000));
-
-        // 주소 펼치기 (Role/Text 기반)
+        // iframe 진입 (entryIframe 우선)
+        let frame = null;
         try {
-            await page.evaluate(() => {
-                const buttons = document.querySelectorAll('a[role="button"]');
-                for (const btn of buttons) {
-                    const text = btn.textContent || "";
-                    if (btn.getAttribute('aria-expanded') === 'false') {
-                        const addressLabel = Array.from(document.querySelectorAll('strong')).find(el => el.textContent.includes('주소'));
-                        if (addressLabel) {
-                            const parent = addressLabel.parentElement;
-                            if (parent) {
-                                const sibling = parent.nextElementSibling;
-                                if (sibling) {
-                                    const targetBtn = sibling.querySelector('a[role="button"][aria-expanded="false"]');
-                                    if (targetBtn) targetBtn.click();
-                                }
-                            }
+            const entryIframe = await page.$('#entryIframe');
+            if (entryIframe) {
+                frame = await entryIframe.contentFrame();
+            } else {
+                const searchIframe = await page.$('#searchIframe');
+                if (searchIframe) {
+                    const searchFrame = await searchIframe.contentFrame();
+                    // 검색 결과 목록에서 첫 번째 항목 클릭 시도
+                    const firstItem = await searchFrame.$('.place_bluelink, .UEzoS, .TZ435');
+                    if (firstItem) {
+                        await firstItem.click();
+                        await new Promise(r => setTimeout(r, 2000));
+                        const newEntryIframe = await page.$('#entryIframe');
+                        if (newEntryIframe) frame = await newEntryIframe.contentFrame();
+                    }
+                }
+            }
+        } catch (e) {
+            log('debug', `iframe 전환 중 오류: ${e.message}`);
+        }
+
+        // frame을 찾지 못했으면 메인 page 사용 (모바일 버전 등)
+        const target = frame || page;
+
+        // 정보 추출
+        const placeInfo = await target.evaluate(() => {
+            // 차단 확인
+            if (document.body.innerText.includes('서비스 이용이 제한되었습니다') || document.body.innerText.includes('과도한 접근 요청')) {
+                return { blocked: true };
+            }
+
+            const result = { origin_name: null, roadAddress: null, jibunAddress: null, category: null };
+
+            // 모든 텍스트 노드를 순회하며 정보 추출
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+            let node;
+            while (node = walker.nextNode()) {
+                const text = node.textContent.trim();
+
+                // 상호명: "홈" 또는 "사진" 탭 근처의 큰 글씨일 가능성이 높음 (단순화: 가장 큰 h1/span 찾기)
+                // 또는 특정 버튼 텍스트("복사") 근처
+            }
+
+            // 전략 2: 시각적/구조적 특징 이용 (덜 의존적)
+
+            // 1. 상호명 (보통 가장 상단의 h1 보다는, entryIframe 내의 특정 ID가 가장 확실하긴 함)
+            // _title ID가 여전히 유효하다면 최우선 사용
+            const titleEl = document.querySelector('#_title') || document.querySelector('.GHAhO') || document.querySelector('.Fc1rA');
+            if (titleEl) {
+                result.origin_name = titleEl.textContent.trim();
+            }
+
+            // 2. 주소 (텍스트 "주소"를 포함하는 요소의 부모/형제 찾기)
+            const allElements = document.querySelectorAll('*');
+            for (const el of allElements) {
+                // 직접 텍스트만 확인
+                if (el.children.length === 0 && el.textContent.includes('주소')) {
+                    // 주소 레이블 발견 -> 형제나 부모의 형제에서 주소 텍스트 찾기
+                    let container = el.parentElement;
+                    // 보통 div(주소) > strong(주소라벨) 구조이거나 div > div > strong
+                    // 부모의 텍스트 전체를 가져와서 파싱
+                    if (container) {
+                        const fullText = container.innerText;
+                        // "주소" 제거하고 나머지
+                        const addrCandidate = fullText.replace(/주소/g, '').replace(/복사/g, '').trim();
+                        if (addrCandidate.length > 5 && (addrCandidate.includes('길') || addrCandidate.includes('로') || addrCandidate.includes('동'))) {
+                            result.roadAddress = addrCandidate.split('\n')[0]; // 첫줄만
                         }
                     }
                 }
-            });
-            await new Promise(r => setTimeout(r, 1000));
-        } catch { }
-
-        // 정보 추출
-        const placeInfo = await page.evaluate(() => {
-            const result = { origin_name: null, roadAddress: null, jibunAddress: null };
-
-            // 1. 상호명 (ID: _title 내부)
-            const titleEl = document.querySelector('#_title');
-            if (titleEl) {
-                const spans = titleEl.querySelectorAll('span');
-                if (spans.length > 0) result.origin_name = spans[0].textContent.trim();
-                else result.origin_name = titleEl.textContent.trim();
-            }
-            if (!result.origin_name) {
-                const ogTitle = document.querySelector('meta[property="og:title"]');
-                if (ogTitle) result.origin_name = ogTitle.getAttribute('content')?.replace(/\s*:\s*네이버$/, '').trim();
             }
 
-            // 2. 카테고리
-            if (titleEl) {
-                const spans = titleEl.querySelectorAll('span');
-                if (spans.length > 1) result.category = spans[1].textContent.trim();
-            }
-
-            // 3. 주소 (도로명/지번 라벨 기반)
-            const findAddress = (label) => {
-                const spans = Array.from(document.querySelectorAll('span'));
-                const targetSpan = spans.find(s => s.textContent.includes(label));
-                if (targetSpan && targetSpan.parentElement) {
-                    let text = targetSpan.parentElement.innerText;
-                    text = text.replace(label, '')
-                        .replace(/복사/g, '')
-                        .replace(/우편번호\s*[\d-]+/g, '')
-                        .replace(/우편번호/g, '')
-                        .trim();
-                    return text;
+            // "도로명" / "지번" 텍스트 찾기
+            // span 태그 중에서 "도로명" 텍스트를 가진 놈
+            const spans = document.querySelectorAll('span');
+            for (const span of spans) {
+                if (span.textContent.includes('도로명') && span.textContent.length < 10) {
+                    // 부모 텍스트 확인
+                    if (span.parentElement) {
+                        result.roadAddress = span.parentElement.innerText.replace('도로명', '').replace('복사', '').trim();
+                    }
                 }
-                return null;
-            };
-
-            result.roadAddress = findAddress('도로명');
-            result.jibunAddress = findAddress('지번');
-
-            if (!result.roadAddress && !result.jibunAddress) {
-                const addressLabel = Array.from(document.querySelectorAll('strong')).find(el => el.textContent.includes('주소'));
-                if (addressLabel && addressLabel.parentElement && addressLabel.parentElement.nextElementSibling) {
-                    const contentDiv = addressLabel.parentElement.nextElementSibling;
-                    let text = contentDiv.textContent.replace(/주소/g, '').replace(/복사/g, '').trim();
-                    if (text.length > 5) result.roadAddress = text;
+                if (span.textContent.includes('지번') && span.textContent.length < 10) {
+                    if (span.parentElement) {
+                        result.jibunAddress = span.parentElement.innerText.replace('지번', '').replace('복사', '').trim();
+                    }
                 }
             }
 
             return result;
         });
+
+        if (placeInfo && placeInfo.blocked) {
+            log('warning', `네이버 지도 서비스 접속 차단됨 (IP 또는 세션)`);
+            await page.screenshot({ path: 'naver_blocked.png', fullPage: true });
+            return null;
+        }
 
         // URL에서 좌표 추출
         const currentUrl = page.url();
@@ -376,12 +364,21 @@ async function collectFromNaverMap(page, mapUrl) {
         } catch { }
 
         placeInfo.description_map_url = mapUrl;
-        placeInfo.origin_name = cleanText(placeInfo.origin_name);
-        // category는 LLM이 자막 분석해서 설정함
+        if (placeInfo.origin_name) placeInfo.origin_name = cleanText(placeInfo.origin_name);
+
         // 음식점명 또는 주소 없으면 실패
         if (!placeInfo.origin_name || (!placeInfo.jibunAddress && !placeInfo.roadAddress)) {
-            log('debug', `네이버 지도: 음식점명/주소 없음 - 실패`);
-            return null;
+            // 주소 정제: 도로명만 있어도 성공 처리하도록 완화
+            if (placeInfo.origin_name && (placeInfo.roadAddress || placeInfo.jibunAddress)) {
+                // OK
+            } else {
+                if (placeInfo.origin_name) log('debug', `네이버 지도: 상호명(${placeInfo.origin_name})은 찾았으나 주소 누락`);
+                else {
+                    log('debug', `네이버 지도: 상호명 찾기 실패`);
+                    await page.screenshot({ path: 'naver_map_debug.png', fullPage: true });
+                }
+                return null;
+            }
         }
 
         return placeInfo;
@@ -948,54 +945,58 @@ async function main() {
                 }
             }
 
-            // Puppeteer로 수집
-            const page = await browser.newPage();
-            await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
-
+            // Puppeteer로 수집 (세션 분리)
             const places = [];
-            for (const mapUrl of mapUrls) {
-                const mapType = getMapType(mapUrl);
-                let placeInfo = null;
+            const context = await browser.createBrowserContext();
+            const page = await context.newPage();
+            try {
+                await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
 
-                // 지도 타입에 따라 Puppeteer로 수집
-                switch (mapType) {
-                    case 'naver':
-                        placeInfo = await collectFromNaverMap(page, mapUrl);
-                        break;
-                    case 'kakao':
-                        placeInfo = await collectFromKakaoMap(page, mapUrl);
-                        break;
-                    case 'google':
-                        placeInfo = await collectFromGoogleMap(page, mapUrl);
-                        break;
-                }
+                for (const mapUrl of mapUrls) {
+                    const mapType = getMapType(mapUrl);
+                    let placeInfo = null;
 
-                // 모든 지도: 네이버 검색 API로 검증 (3개 결과 중 시군구 일치)
-                if (placeInfo) {
-                    placeInfo = await enrichWithNaverSearch(placeInfo);
-                }
-
-                // enrichWithNaverSearch 성공 시 origin_name/naver_name이 있음
-                if (placeInfo && (placeInfo.origin_name || placeInfo.naver_name)) {
-                    placeInfo = await verifyAndGeocode(placeInfo);
-
-                    // verifyAndGeocode가 null 반환 시 실패 처리
-                    if (!placeInfo) {
-                        log('warning', `  → 검증 실패 - 06 파이프라인으로 처리`);
-                        continue;
+                    // 지도 타입에 따라 Puppeteer로 수집
+                    switch (mapType) {
+                        case 'naver':
+                            placeInfo = await collectFromNaverMap(page, mapUrl);
+                            break;
+                        case 'kakao':
+                            placeInfo = await collectFromKakaoMap(page, mapUrl);
+                            break;
+                        case 'google':
+                            placeInfo = await collectFromGoogleMap(page, mapUrl);
+                            break;
                     }
 
-                    // 필수 필드 검증 (origin_name 또는 naver_name, jibunAddress, lat, lng)
-                    if (hasRequiredFields(placeInfo)) {
-                        places.push(placeInfo);
-                        log('success', `  → ${placeInfo.naver_name || placeInfo.origin_name} (${mapType})`);
-                    } else {
-                        log('warning', `  → ${placeInfo.naver_name || placeInfo.origin_name} 필수 필드 누락 - 06 파이프라인으로 처리`);
+                    // 모든 지도: 네이버 검색 API로 검증 (3개 결과 중 시군구 일치)
+                    if (placeInfo) {
+                        placeInfo = await enrichWithNaverSearch(placeInfo);
+                    }
+
+                    // enrichWithNaverSearch 성공 시 origin_name/naver_name이 있음
+                    if (placeInfo && (placeInfo.origin_name || placeInfo.naver_name)) {
+                        placeInfo = await verifyAndGeocode(placeInfo);
+
+                        // verifyAndGeocode가 null 반환 시 실패 처리
+                        if (!placeInfo) {
+                            log('warning', `  → 검증 실패 - 06 파이프라인으로 처리`);
+                            continue;
+                        }
+
+                        // 필수 필드 검증 (origin_name 또는 naver_name, jibunAddress, lat, lng)
+                        if (hasRequiredFields(placeInfo)) {
+                            places.push(placeInfo);
+                            log('success', `  → ${placeInfo.naver_name || placeInfo.origin_name} (${mapType})`);
+                        } else {
+                            log('warning', `  → ${placeInfo.naver_name || placeInfo.origin_name} 필수 필드 누락 - 06 파이프라인으로 처리`);
+                        }
                     }
                 }
+
+            } finally {
+                await context.close();
             }
-
-            await page.close();
 
             if (places.length === 0) {
                 log('debug', `[${videoId}] 수집된 장소 없음`);
