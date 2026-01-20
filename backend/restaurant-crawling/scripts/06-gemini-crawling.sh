@@ -194,8 +194,8 @@ process_channel() {
     local errors_dir="$full_data_path/crawling_errors"
     local error_log="$full_data_path/crawling_errors.log"
     
-    # 폴더 생성
-    mkdir -p "$crawling_dir" "$errors_dir"
+    # 폴더 생성 (errors_dir은 필요 시 생성)
+    mkdir -p "$crawling_dir"
     
     log_info ""
     log_info "=========================================="
@@ -363,10 +363,15 @@ $TRANSCRIPT_TRUNCATED
         GEMINI_SUCCESS=false
         
         GEMINI_API_SCRIPT="$SCRIPT_DIR/gemini_api_request.mjs"
+        GEMINI_START=$(date +%s)
         log_debug "Gemini API 호출 시도 (via gemini_api_request.js)"
         
         if node "$GEMINI_API_SCRIPT" "$TEMP_PROMPT" "$TEMP_RESPONSE"; then
             GEMINI_SUCCESS=true
+            GEMINI_END=$(date +%s)
+            GEMINI_DURATION=$((GEMINI_END - GEMINI_START))
+            TOTAL_GEMINI_TIME=$((TOTAL_GEMINI_TIME + GEMINI_DURATION))
+            GEMINI_CALLS=$((GEMINI_CALLS + 1))
             log_debug "Gemini API 호출 성공"
         else
             log_warning "Gemini API 호출 실패 (CLI Fallback 시도)"
@@ -447,6 +452,7 @@ $TRANSCRIPT_TRUNCATED
                 log_error "파서 실패 (3회 시도 후) ($FAILED/$TOTAL)"
                 echo "[$(date)] 파서 실패: $URL" >> "$error_log"
                 # 에러 JSONL 저장 (recollect_version 포함)
+                if [ ! -d "$errors_dir" ]; then mkdir -p "$errors_dir"; fi
                 jq -n \
                     --arg yl "$YOUTUBE_LINK" \
                     --arg vid "$VIDEO_ID" \
@@ -460,6 +466,7 @@ $TRANSCRIPT_TRUNCATED
             log_error "Gemini CLI 호출 실패 (3회 시도 후) ($FAILED/$TOTAL)"
             echo "[$(date)] Gemini CLI 실패: $URL" >> "$error_log"
             # 에러 JSONL 저장 (recollect_version 포함)
+            if [ ! -d "$errors_dir" ]; then mkdir -p "$errors_dir"; fi
             jq -n \
                 --arg yl "$YOUTUBE_LINK" \
                 --arg vid "$VIDEO_ID" \
@@ -499,6 +506,11 @@ $TRANSCRIPT_TRUNCATED
     if [ $GEMINI_CALLS -gt 0 ]; then
         AVG_GEMINI=$((TOTAL_GEMINI_TIME / GEMINI_CALLS))
         log_info "  평균 Gemini 시간: $(format_duration $AVG_GEMINI)"
+    fi
+
+    # 정돈: 임시 파일 삭제
+    if [ -f "$DELETED_IDS_FILE" ]; then
+        rm "$DELETED_IDS_FILE"
     fi
 }
 

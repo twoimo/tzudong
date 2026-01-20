@@ -533,7 +533,7 @@ async function collectChannelTranscripts(channelName, channelConfig) {
     }
 
     // 2. Load all video IDs
-    const allVideoIds = loadVideoIdsFromTxt(channelName).filter(vid => !deletedIds.has(vid));
+    const allVideoIds = loadVideoIdsFromTxt(dataPath).filter(vid => !deletedIds.has(vid));
     // ...const transcriptDir = path.join(dataPath, 'transcript');
 
     if (!fs.existsSync(transcriptDir)) {
@@ -568,13 +568,20 @@ async function collectChannelTranscripts(channelName, channelConfig) {
         const metaRecollectId = latestMeta.recollect_id || 0;
         const transcriptRecollectId = latestTranscript?.recollect_id || 0;
 
+        // DEBUG: 로그 추가
+        // console.log(`DEBUG: ${videoId} meta=${metaRecollectId}, transcript=${transcriptRecollectId}`);
+
         // 수집 조건: meta.recollect_id > transcript.recollect_id
-        if (metaRecollectId > transcriptRecollectId) {
+        // 주의: 둘 다 0이면 신규 수집 안됨 -> meta.recollect_id를 기본 1로 설정하거나 조건 수정 필요
+        // 현재 로직: metaRecollectId(0) > transcriptRecollectId(0) -> FALSE -> 수집 안 함
+
+        if (metaRecollectId >= transcriptRecollectId) { // 수정: >= 로 변경하여 0인 경우도 처리 (단, transcript가 없으면 수집)
             const recollectVars = latestMeta.recollect_vars || [];
 
-            // 신규 또는 duration 변경 시 수집
-            if (!latestTranscript || recollectVars.includes("duration_changed")) {
-                const reasonVars = latestTranscript ? recollectVars : [];  // 신규는 빈 배열
+            // 신규(transcript 없음) 또는 duration 변경 시 수집
+            // 또는 metaRecollectId > transcriptRecollectId 인 경우
+            if (!latestTranscript || metaRecollectId > transcriptRecollectId || recollectVars.includes("duration_changed")) {
+                const reasonVars = latestTranscript ? recollectVars : ['new_video'];
                 toCollect.push({ videoId, recollectVars: reasonVars, metaRecollectId });
             }
         }
