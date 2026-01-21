@@ -590,7 +590,7 @@ function shouldCollect(videoId) {
                 const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
 
                 if (metaRecollectId > lastRecollectId) {
-                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'viral_growth'];
+                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
                     if (shouldTrigger) {
