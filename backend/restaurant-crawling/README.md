@@ -560,6 +560,20 @@ data/{channel}/
 
 ---
 
+## 개발 환경 설정
+
+### 폰트 (Tab0 Mono K)
+코드 가독성을 위해 **Tab0 Mono K** 폰트 사용을 권장합니다. 프로젝트 루트의 `Tab0MonoK.ttc`를 설치하여 사용할 수 있습니다.
+
+```bash
+# 폰트 설치 (Linux)
+mkdir -p ~/.local/share/fonts
+cp ../../Tab0MonoK.ttc ~/.local/share/fonts/
+fc-cache -fv
+```
+
+---
+
 ## 실행 방법
 
 ```bash
