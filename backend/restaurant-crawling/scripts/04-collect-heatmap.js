@@ -46,7 +46,14 @@ if (fs.existsSync(backendEnvLocal)) {
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
-        winston.format.timestamp(),
+        winston.format.timestamp({
+            format: () => {
+                const now = new Date();
+                const kstOffset = 9 * 60 * 60 * 1000;
+                const kstDate = new Date(now.getTime() + kstOffset);
+                return kstDate.toISOString().replace('T', ' ').substring(0, 19);
+            }
+        }),
         winston.format.printf(({ timestamp, level, message }) => {
             return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
         })
