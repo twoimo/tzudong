@@ -2,11 +2,10 @@
  * 자막 수집 스크립트 (recollect_id 기반)
  * - Puppeteer로 maestra.ai / tubetranscript.com에서 자막 수집
  * - Meta의 recollect_id/recollect_vars 확인하여 수집 결정
- * - duration_changed 시 재수집
  * 
  * 수집 조건:
- * - meta.recollect_id > transcript.recollect_id
- * - AND (신규 OR meta.recollect_vars에 "duration_changed" 포함)
+ * 1. 신규 수집: transcript가 없는 경우
+ * 2. 재수집: transcript.recollect_id < meta.recollect_id AND duration_changed
  * 
  * 사용법:
  *   node 03-collect-transcript.js --channel tzuyang
@@ -567,23 +566,17 @@ async function collectChannelTranscripts(channelName, channelConfig) {
 
         const metaRecollectId = latestMeta.recollect_id || 0;
         const transcriptRecollectId = latestTranscript?.recollect_id || 0;
+        const recollectVars = latestMeta.recollect_vars || [];
 
-        // DEBUG: 로그 추가
-        // console.log(`DEBUG: ${videoId} meta=${metaRecollectId}, transcript=${transcriptRecollectId}`);
-
-        // 수집 조건: meta.recollect_id > transcript.recollect_id
-        // 주의: 둘 다 0이면 신규 수집 안됨 -> meta.recollect_id를 기본 1로 설정하거나 조건 수정 필요
-        // 현재 로직: metaRecollectId(0) > transcriptRecollectId(0) -> FALSE -> 수집 안 함
-
-        if (metaRecollectId >= transcriptRecollectId) { // 수정: >= 로 변경하여 0인 경우도 처리 (단, transcript가 없으면 수집)
-            const recollectVars = latestMeta.recollect_vars || [];
-
-            // 신규(transcript 없음) 또는 duration 변경 시 수집
-            // 또는 metaRecollectId > transcriptRecollectId 인 경우
-            if (!latestTranscript || metaRecollectId > transcriptRecollectId || recollectVars.includes("duration_changed")) {
-                const reasonVars = latestTranscript ? recollectVars : ['new_video'];
-                toCollect.push({ videoId, recollectVars: reasonVars, metaRecollectId });
-            }
+        // 수집 조건:
+        // 1. 신규 수집: transcript가 없는 경우
+        // 2. 재수집: transcript.recollect_id < meta.recollect_id AND duration_changed
+        if (!latestTranscript) {
+            // 신규 수집
+            toCollect.push({ videoId, recollectVars: ['new_video'], metaRecollectId });
+        } else if (transcriptRecollectId < metaRecollectId && recollectVars.includes('duration_changed')) {
+            // 재수집: recollect_id 조건 + duration 변경
+            toCollect.push({ videoId, recollectVars, metaRecollectId });
         }
     }
 

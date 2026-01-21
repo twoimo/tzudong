@@ -2821,3 +2821,50 @@
 [12:37:02] [INFO]   [937/1043] zlSU7LR-1ls (new_video)
 [12:37:12] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/zlSU7LR-1ls.jsonl'
 [12:37:14] [INFO]   [938/1043] dlm-gEQgulg (new_video)
+[12:37:57] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/dlm-gEQgulg.jsonl'
+[12:37:59] [INFO]   [939/1043] YWp4bG0Rce0 (new_video)
+[12:38:17] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/YWp4bG0Rce0.jsonl'
+[12:38:19] [INFO]   [940/1043] r_3ZQbcVQMc (new_video)
+[12:39:03] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/r_3ZQbcVQMc.jsonl'
+[12:39:06] [INFO]   [941/1043] iPpkJ900bl0 (new_video)
+[12:39:14] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/iPpkJ900bl0.jsonl'
+[12:39:17] [INFO]   [942/1043] hKL_iixP29o (new_video)
+[12:39:59] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/hKL_iixP29o.jsonl'
+[12:40:01] [INFO]   [943/1043] plJhs79NXrQ (new_video)
+[12:40:09] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/plJhs79NXrQ.jsonl'
+[12:40:12] [INFO]   [944/1043] 4KKV59lf9zw (new_video)
+[12:40:24] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/4KKV59lf9zw.jsonl'
+[12:40:25] [INFO]   [945/1043] NmY0NCPWsiI (new_video)
+[12:41:14] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/NmY0NCPWsiI.jsonl'
+[12:41:16] [INFO]   [946/1043] Lqm1kQ1H-H8 (new_video)
+[12:42:00] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/Lqm1kQ1H-H8.jsonl'
+[12:42:03] [INFO]   [947/1043] k1U6jLifLBk (new_video)
+[12:42:11] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/k1U6jLifLBk.jsonl'
+[12:42:14] [INFO]   [948/1043] NoVndP--l_U (new_video)
+[12:42:23] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/NoVndP--l_U.jsonl'
+[12:42:26] [INFO]   [949/1043] Yn-bCAwhfKE (new_video)
+[12:42:33] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/Yn-bCAwhfKE.jsonl'
+[12:42:35] [INFO]   [950/1043] BPjK6WAy6Ao (new_video)
+[12:42:42] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/BPjK6WAy6Ao.jsonl'
+[12:42:44] [INFO]   [951/1043] E_PfeWPfooc (new_video)
+[12:43:29] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/E_PfeWPfooc.jsonl'
+[12:43:31] [INFO]   [952/1043] 7AJ-G8DtKOQ (new_video)
+[12:43:41] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/7AJ-G8DtKOQ.jsonl'
+[12:43:42] [INFO]   [953/1043] hW5lN1U2J8s (new_video)
+[12:44:01] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/hW5lN1U2J8s.jsonl'
+[12:44:03] [INFO]   [954/1043] 7fkhDuZ3ij4 (new_video)
+[12:44:14] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/7fkhDuZ3ij4.jsonl'
+[12:44:15] [INFO]   [955/1043] bLgmB_rGIac (new_video)
+[12:45:00] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/bLgmB_rGIac.jsonl'
+[12:45:02] [INFO]   [956/1043] msTmNPD7v2A (new_video)
+[12:45:14] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/msTmNPD7v2A.jsonl'
+[12:45:15] [INFO]   [957/1043] 0xWCVwleELg (new_video)
+[12:45:24] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/0xWCVwleELg.jsonl'
+[12:45:26] [INFO]   [958/1043] q9rDup2-ejk (new_video)
+[12:45:35] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/q9rDup2-ejk.jsonl'
+[12:45:38] [INFO]   [959/1043] aX_CUlcY9EI (new_video)
+[12:46:21] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/aX_CUlcY9EI.jsonl'
+[12:46:23] [INFO]   [960/1043] Jp9jzJhceIM (new_video)
+[12:47:05] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/Jp9jzJhceIM.jsonl'
+[12:47:07] [INFO]   [961/1043] CanCHteTAts (new_video)
+[12:47:19] [WARN]     → 실패: ENOENT: no such file or directory, open '/home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/transcript/CanCHteTAts.jsonl'
