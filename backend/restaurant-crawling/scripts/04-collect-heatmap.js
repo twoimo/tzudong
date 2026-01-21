@@ -7,9 +7,10 @@
  * [수집 발동 조건 (TRIGGER_VARS)]
  * 1. new_video: 신규 영상 (무조건 수집)
  * 2. duration_changed: 길이 변경 (영상 수정됨)
- * 3. scheduled_weekly: 주간 정기 수집 (0~6개월, 6개월~1년)
- * 4. scheduled_biweekly: 격주 정기 수집 (1년 이상)
- * 5. viral_growth: 역주행 감지 (즉시 수집)
+ * 3. scheduled_weekly: 주간 정기 수집 (0~3개월)
+ * 4. scheduled_biweekly: 격주 정기 수집 (3개월~1년)
+ * 5. scheduled_monthly: 월간 정기 수집 (1년 이상)
+ * 6. viral_growth: 역주행 감지 (즉시 수집)
  * 
  * [사용법]
  *   node 04-collect-heatmap.js --channel tzuyang
@@ -590,7 +591,7 @@ function shouldCollect(videoId) {
                 const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
 
                 if (metaRecollectId > lastRecollectId) {
-                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'viral_growth'];
+                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
                     if (shouldTrigger) {

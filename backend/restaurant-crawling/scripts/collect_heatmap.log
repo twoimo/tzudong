@@ -7168,3 +7168,110 @@ Error marking filters as finished
 [2026-01-21T09:54:03.366Z] [INFO] Processing [QuwlZxZHHq0]...
 [2026-01-21T09:54:04.769Z] [INFO] Saved heatmap for QuwlZxZHHq0 (Points: 100, MostReplayed: 1개)
 [2026-01-21T09:54:04.769Z] [INFO] [Multimodal] QuwlZxZHHq0: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:14:26.590Z] [INFO] === HTTP Heatmap + Multimodal Collector Started [Channel: tzuyang] ===
+[2026-01-21T10:14:26.591Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-21T10:14:26.592Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-21T10:14:26.593Z] [INFO] Cookies loaded.
+[2026-01-21T10:14:26.594Z] [INFO] === 프레임 백필 시작 ===
+[2026-01-21T10:14:26.595Z] [INFO] [Backfill] -D43ezc57z8: 프레임 수집 시작
+[2026-01-21T10:14:26.595Z] [INFO] [Multimodal] -D43ezc57z8: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:14:38.146Z] [INFO] [Backfill] -gMCn9VDJns: 프레임 수집 시작
+[2026-01-21T10:14:38.147Z] [INFO] [Multimodal] -gMCn9VDJns: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:14:48.668Z] [INFO] [Backfill] 0JNcoJWx7R8: 프레임 수집 시작
+[2026-01-21T10:14:48.668Z] [INFO] [Multimodal] 0JNcoJWx7R8: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:14:56.541Z] [INFO] [Backfill] 2if2TjgSVEY: 프레임 수집 시작
+[2026-01-21T10:14:56.542Z] [INFO] [Multimodal] 2if2TjgSVEY: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:15:10.094Z] [INFO] [Backfill] 2j45QOvYkL4: 프레임 수집 시작
+[2026-01-21T10:15:10.095Z] [INFO] [Multimodal] 2j45QOvYkL4: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:15:17.571Z] [INFO] [Backfill] 5LMAWd-elok: 프레임 수집 시작
+[2026-01-21T10:15:17.571Z] [INFO] [Multimodal] 5LMAWd-elok: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:15:25.938Z] [INFO] [Backfill] 90NJAyFx09A: 프레임 수집 시작
+[2026-01-21T10:15:25.938Z] [INFO] [Multimodal] 90NJAyFx09A: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:15:37.633Z] [INFO] [Backfill] 9AeDIHDL9ZM: 프레임 수집 시작
+[2026-01-21T10:15:37.633Z] [INFO] [Multimodal] 9AeDIHDL9ZM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:15:50.541Z] [INFO] [Backfill] 9YoNoltBYPo: 프레임 수집 시작
+[2026-01-21T10:15:50.542Z] [INFO] [Multimodal] 9YoNoltBYPo: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:16:16.525Z] [INFO] [Backfill] 9dmuQzjhYFI: 프레임 수집 시작
+[2026-01-21T10:16:16.525Z] [INFO] [Multimodal] 9dmuQzjhYFI: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:16:23.230Z] [INFO] [Backfill] 9eJHNTya2pQ: 프레임 수집 시작
+[2026-01-21T10:16:23.230Z] [INFO] [Multimodal] 9eJHNTya2pQ: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:16:36.868Z] [INFO] [Backfill] 9gVyvPCGQNA: 프레임 수집 시작
+[2026-01-21T10:16:36.868Z] [INFO] [Multimodal] 9gVyvPCGQNA: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:16:44.768Z] [INFO] [Multimodal] 세그먼트 1 (588s-616s): 1개 프레임 저장
+[2026-01-21T10:16:45.691Z] [INFO] [Backfill] DJrOIqKlnDo: 프레임 수집 시작
+[2026-01-21T10:16:45.691Z] [INFO] [Multimodal] DJrOIqKlnDo: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:16:57.229Z] [INFO] [Backfill] FGJdgoU5L_s: 프레임 수집 시작
+[2026-01-21T10:16:57.230Z] [INFO] [Multimodal] FGJdgoU5L_s: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:17:12.138Z] [INFO] [Backfill] FPg95PvRbew: 프레임 수집 시작
+[2026-01-21T10:17:12.139Z] [INFO] [Multimodal] FPg95PvRbew: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:17:22.645Z] [INFO] [Backfill] INCehN6gz90: 프레임 수집 시작
+[2026-01-21T10:17:22.645Z] [INFO] [Multimodal] INCehN6gz90: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:17:32.862Z] [INFO] [Backfill] J9mrmZ3S_ps: 프레임 수집 시작
+[2026-01-21T10:17:32.862Z] [INFO] [Multimodal] J9mrmZ3S_ps: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:17:55.371Z] [INFO] [Backfill] JgmopiEN8dU: 프레임 수집 시작
+[2026-01-21T10:17:55.371Z] [INFO] [Multimodal] JgmopiEN8dU: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:18:17.694Z] [INFO] [Backfill] KDVJBtFEhw8: 프레임 수집 시작
+[2026-01-21T10:18:17.694Z] [INFO] [Multimodal] KDVJBtFEhw8: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:18:31.126Z] [INFO] [Backfill] KKBTfD0jPHA: 프레임 수집 시작
+[2026-01-21T10:18:31.126Z] [INFO] [Multimodal] KKBTfD0jPHA: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:18:48.679Z] [INFO] [Backfill] LhCEph7vBjw: 프레임 수집 시작
+[2026-01-21T10:18:48.680Z] [INFO] [Multimodal] LhCEph7vBjw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:18:55.795Z] [INFO] [Backfill] NEaW-nO-UGM: 프레임 수집 시작
+[2026-01-21T10:18:55.795Z] [INFO] [Multimodal] NEaW-nO-UGM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:19:09.788Z] [INFO] [Backfill] OLu58vHTq_8: 프레임 수집 시작
+[2026-01-21T10:19:09.789Z] [INFO] [Multimodal] OLu58vHTq_8: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:19:18.375Z] [INFO] [Backfill] QuwlZxZHHq0: 프레임 수집 시작
+[2026-01-21T10:19:18.375Z] [INFO] [Multimodal] QuwlZxZHHq0: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:19:29.141Z] [INFO] [Multimodal] 세그먼트 1 (632s-660s): 11개 프레임 저장
+[2026-01-21T10:19:29.720Z] [INFO] [Backfill] SCpmx_9QN0o: 프레임 수집 시작
+[2026-01-21T10:19:29.720Z] [INFO] [Multimodal] SCpmx_9QN0o: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:19:42.352Z] [INFO] [Backfill] SSAkcsiJDak: 프레임 수집 시작
+[2026-01-21T10:19:42.352Z] [INFO] [Multimodal] SSAkcsiJDak: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:19:54.454Z] [INFO] [Backfill] SbjywgoDGF4: 프레임 수집 시작
+[2026-01-21T10:19:54.454Z] [INFO] [Multimodal] SbjywgoDGF4: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:20:10.176Z] [INFO] [Backfill] TuZddCVF-yw: 프레임 수집 시작
+[2026-01-21T10:20:10.177Z] [INFO] [Multimodal] TuZddCVF-yw: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:20:24.231Z] [INFO] [Backfill] Tx_yrWwGCL4: 프레임 수집 시작
+[2026-01-21T10:20:24.232Z] [INFO] [Multimodal] Tx_yrWwGCL4: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:20:32.202Z] [INFO] [Backfill] Uz6Bltn0xIY: 프레임 수집 시작
+[2026-01-21T10:20:32.203Z] [INFO] [Multimodal] Uz6Bltn0xIY: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:20:40.961Z] [INFO] [Backfill] V__oVpfMi8I: 프레임 수집 시작
+[2026-01-21T10:20:40.961Z] [INFO] [Multimodal] V__oVpfMi8I: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:20:48.615Z] [INFO] [Backfill] W1Q42bEDfEU: 프레임 수집 시작
+[2026-01-21T10:20:48.616Z] [INFO] [Multimodal] W1Q42bEDfEU: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:21:03.159Z] [INFO] [Backfill] _ovsAbqKQAM: 프레임 수집 시작
+[2026-01-21T10:21:03.159Z] [INFO] [Multimodal] _ovsAbqKQAM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:21:15.034Z] [INFO] [Backfill] aG_xeTicF0k: 프레임 수집 시작
+[2026-01-21T10:21:15.034Z] [INFO] [Multimodal] aG_xeTicF0k: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:21:23.966Z] [INFO] [Backfill] av8T6X8hxhk: 프레임 수집 시작
+[2026-01-21T10:21:23.966Z] [INFO] [Multimodal] av8T6X8hxhk: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:21:33.757Z] [INFO] [Backfill] bVNb3YIH5TI: 프레임 수집 시작
+[2026-01-21T10:21:33.759Z] [INFO] [Multimodal] bVNb3YIH5TI: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:21:51.372Z] [INFO] [Backfill] bxEDXFycaXw: 프레임 수집 시작
+[2026-01-21T10:21:51.372Z] [INFO] [Multimodal] bxEDXFycaXw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:21:59.297Z] [INFO] [Backfill] c0G-lfExt64: 프레임 수집 시작
+[2026-01-21T10:21:59.297Z] [INFO] [Multimodal] c0G-lfExt64: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:22:10.358Z] [INFO] [Backfill] cGhoGXfAVS4: 프레임 수집 시작
+[2026-01-21T10:22:10.358Z] [INFO] [Multimodal] cGhoGXfAVS4: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:22:18.763Z] [INFO] [Backfill] cgVRNBLTHaM: 프레임 수집 시작
+[2026-01-21T10:22:18.763Z] [INFO] [Multimodal] cgVRNBLTHaM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:22:32.469Z] [INFO] [Backfill] dQ5FochDJEw: 프레임 수집 시작
+[2026-01-21T10:22:32.469Z] [INFO] [Multimodal] dQ5FochDJEw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:22:40.626Z] [INFO] [Backfill] foxU-9BowUc: 프레임 수집 시작
+[2026-01-21T10:22:40.626Z] [INFO] [Multimodal] foxU-9BowUc: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:22:48.665Z] [INFO] [Backfill] ixi_hfZlEWE: 프레임 수집 시작
+[2026-01-21T10:22:48.665Z] [INFO] [Multimodal] ixi_hfZlEWE: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:22:58.985Z] [INFO] [Backfill] kdM07dwCseo: 프레임 수집 시작
+[2026-01-21T10:22:58.985Z] [INFO] [Multimodal] kdM07dwCseo: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:23:07.410Z] [INFO] [Backfill] kdQT6LZZ_3s: 프레임 수집 시작
+[2026-01-21T10:23:07.411Z] [INFO] [Multimodal] kdQT6LZZ_3s: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:23:15.951Z] [INFO] [Backfill] lbueoat6MJk: 프레임 수집 시작
+[2026-01-21T10:23:15.952Z] [INFO] [Multimodal] lbueoat6MJk: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:23:29.722Z] [INFO] [Backfill] oloeGY3oAVg: 프레임 수집 시작
+[2026-01-21T10:23:29.723Z] [INFO] [Multimodal] oloeGY3oAVg: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:23:44.814Z] [INFO] [Backfill] pySDhYAsZa8: 프레임 수집 시작
+[2026-01-21T10:23:44.814Z] [INFO] [Multimodal] pySDhYAsZa8: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:23:51.973Z] [INFO] [Backfill] tXHO-aB-W_s: 프레임 수집 시작
+[2026-01-21T10:23:51.973Z] [INFO] [Multimodal] tXHO-aB-W_s: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T10:24:00.530Z] [INFO] [Backfill] tgsGUDC-Gd8: 프레임 수집 시작
+[2026-01-21T10:24:00.530Z] [INFO] [Multimodal] tgsGUDC-Gd8: 2개 "가장 많이 다시 본 장면" 구간 발견
