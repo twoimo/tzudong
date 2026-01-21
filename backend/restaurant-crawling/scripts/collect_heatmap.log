@@ -10709,3 +10709,256 @@ Error marking filters as finished
 [2026-01-21T15:17:54.742Z] [INFO] [Multimodal] 세그먼트 1 (403s-429s): 27개 프레임 저장
 [2026-01-21T15:18:08.403Z] [INFO] [Multimodal] 세그먼트 2 (636s-661s): 26개 프레임 저장
 [2026-01-21T15:18:22.541Z] [INFO] [Multimodal] 세그먼트 3 (881s-906s): 26개 프레임 저장
+[2026-01-21T15:18:42.036Z] [INFO] [Multimodal] 세그먼트 4 (1126s-1163s): 38개 프레임 저장
+[2026-01-21T15:18:42.036Z] [INFO] [Multimodal] yJ4SKcvYTe4: 117개 프레임 저장 완료
+[2026-01-21T15:18:43.596Z] [INFO] Processing [z7YR9ftkwB0]...
+[2026-01-21T15:18:44.697Z] [INFO] Saved heatmap for z7YR9ftkwB0 (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:18:44.698Z] [INFO] [Multimodal] z7YR9ftkwB0: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:18:57.684Z] [INFO] [Multimodal] 세그먼트 1 (406s-426s): 21개 프레임 저장
+[2026-01-21T15:18:57.684Z] [INFO] [Multimodal] z7YR9ftkwB0: 21개 프레임 저장 완료
+[2026-01-21T15:18:58.890Z] [INFO] Processing [BTkB2PiuKeA]...
+[2026-01-21T15:18:59.985Z] [INFO] Saved heatmap for BTkB2PiuKeA (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:18:59.985Z] [INFO] [Multimodal] BTkB2PiuKeA: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:19:10.479Z] [INFO] [Multimodal] 세그먼트 1 (410s-424s): 15개 프레임 저장
+[2026-01-21T15:19:21.512Z] [INFO] [Multimodal] 세그먼트 2 (568s-588s): 21개 프레임 저장
+[2026-01-21T15:19:21.513Z] [INFO] [Multimodal] BTkB2PiuKeA: 36개 프레임 저장 완료
+[2026-01-21T15:19:22.618Z] [INFO] Processing [jo-HOeXozr0]...
+[2026-01-21T15:19:23.899Z] [INFO] Saved heatmap for jo-HOeXozr0 (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:19:23.899Z] [INFO] [Multimodal] jo-HOeXozr0: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:19:36.138Z] [INFO] [Multimodal] 세그먼트 1 (406s-424s): 19개 프레임 저장
+[2026-01-21T15:19:46.520Z] [INFO] [Multimodal] 세그먼트 2 (644s-663s): 20개 프레임 저장
+[2026-01-21T15:19:46.520Z] [INFO] [Multimodal] jo-HOeXozr0: 39개 프레임 저장 완료
+[2026-01-21T15:19:48.491Z] [INFO] Processing [g7eXVZlbyUQ]...
+[2026-01-21T15:19:49.631Z] [INFO] Saved heatmap for g7eXVZlbyUQ (Points: 100, MostReplayed: 4개)
+[2026-01-21T15:19:49.631Z] [INFO] [Multimodal] g7eXVZlbyUQ: 4개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:20:02.418Z] [INFO] [Multimodal] 세그먼트 1 (227s-246s): 20개 프레임 저장
+[2026-01-21T15:20:16.706Z] [INFO] [Multimodal] 세그먼트 2 (400s-428s): 29개 프레임 저장
+[2026-01-21T15:20:26.449Z] [INFO] [Multimodal] 세그먼트 3 (646s-665s): 20개 프레임 저장
+[2026-01-21T15:20:36.392Z] [INFO] [Multimodal] 세그먼트 4 (773s-792s): 20개 프레임 저장
+[2026-01-21T15:20:36.393Z] [INFO] [Multimodal] g7eXVZlbyUQ: 89개 프레임 저장 완료
+[2026-01-21T15:20:38.096Z] [INFO] Processing [rOVZ4kDCWmw]...
+[2026-01-21T15:20:39.696Z] [INFO] Saved heatmap for rOVZ4kDCWmw (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:20:39.697Z] [INFO] [Multimodal] rOVZ4kDCWmw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:20:54.524Z] [INFO] [Multimodal] 세그먼트 1 (404s-426s): 23개 프레임 저장
+[2026-01-21T15:20:54.524Z] [INFO] [Multimodal] rOVZ4kDCWmw: 23개 프레임 저장 완료
+[2026-01-21T15:20:55.848Z] [INFO] Processing [go59i01SGhc]...
+[2026-01-21T15:20:56.938Z] [INFO] Saved heatmap for go59i01SGhc (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:20:56.938Z] [INFO] [Multimodal] go59i01SGhc: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:21:10.028Z] [INFO] [Multimodal] 세그먼트 1 (404s-422s): 19개 프레임 저장
+[2026-01-21T15:21:10.028Z] [INFO] [Multimodal] go59i01SGhc: 19개 프레임 저장 완료
+[2026-01-21T15:21:11.672Z] [INFO] Processing [xRyaIyl8quc]...
+[2026-01-21T15:21:12.666Z] [INFO] Saved heatmap for xRyaIyl8quc (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:21:12.666Z] [INFO] [Multimodal] xRyaIyl8quc: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:21:27.656Z] [INFO] [Multimodal] 세그먼트 1 (406s-429s): 24개 프레임 저장
+[2026-01-21T15:21:27.657Z] [INFO] [Multimodal] xRyaIyl8quc: 24개 프레임 저장 완료
+[2026-01-21T15:21:29.170Z] [INFO] Processing [4K6I8tXP_MM]...
+[2026-01-21T15:21:29.996Z] [INFO] Saved heatmap for 4K6I8tXP_MM (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:21:29.997Z] [INFO] [Multimodal] 4K6I8tXP_MM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:21:42.805Z] [INFO] [Multimodal] 세그먼트 1 (405s-423s): 19개 프레임 저장
+[2026-01-21T15:21:52.697Z] [INFO] [Multimodal] 세그먼트 2 (648s-666s): 19개 프레임 저장
+[2026-01-21T15:21:52.697Z] [INFO] [Multimodal] 4K6I8tXP_MM: 38개 프레임 저장 완료
+[2026-01-21T15:21:54.220Z] [INFO] Processing [B5kKGR2avLo]...
+[2026-01-21T15:21:55.190Z] [INFO] Saved heatmap for B5kKGR2avLo (Points: 100, MostReplayed: 5개)
+[2026-01-21T15:21:55.191Z] [INFO] [Multimodal] B5kKGR2avLo: 5개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:22:08.811Z] [INFO] [Multimodal] 세그먼트 1 (407s-427s): 21개 프레임 저장
+[2026-01-21T15:22:24.260Z] [INFO] [Multimodal] 세그먼트 2 (601s-631s): 31개 프레임 저장
+[2026-01-21T15:22:34.652Z] [INFO] [Multimodal] 세그먼트 3 (640s-660s): 21개 프레임 저장
+[2026-01-21T15:22:49.384Z] [INFO] [Multimodal] 세그먼트 4 (746s-776s): 31개 프레임 저장
+[2026-01-21T15:23:03.617Z] [INFO] [Multimodal] 세그먼트 5 (892s-922s): 31개 프레임 저장
+[2026-01-21T15:23:03.617Z] [INFO] [Multimodal] B5kKGR2avLo: 135개 프레임 저장 완료
+[2026-01-21T15:23:05.375Z] [INFO] Processing [Iy80EP6v01s]...
+[2026-01-21T15:23:06.517Z] [INFO] Saved heatmap for Iy80EP6v01s (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:23:06.517Z] [INFO] [Multimodal] Iy80EP6v01s: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:23:19.601Z] [INFO] [Multimodal] 세그먼트 1 (409s-428s): 20개 프레임 저장
+[2026-01-21T15:23:28.967Z] [INFO] [Multimodal] 세그먼트 2 (873s-891s): 19개 프레임 저장
+[2026-01-21T15:23:28.968Z] [INFO] [Multimodal] Iy80EP6v01s: 39개 프레임 저장 완료
+[2026-01-21T15:23:30.341Z] [INFO] Processing [-8wi-fVqTwk]...
+[2026-01-21T15:23:31.763Z] [INFO] Saved heatmap for -8wi-fVqTwk (Points: 100, MostReplayed: 3개)
+[2026-01-21T15:23:31.764Z] [INFO] [Multimodal] -8wi-fVqTwk: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:23:49.152Z] [INFO] [Multimodal] 세그먼트 1 (75s-104s): 30개 프레임 저장
+[2026-01-21T15:24:00.767Z] [INFO] [Multimodal] 세그먼트 2 (405s-425s): 21개 프레임 저장
+[2026-01-21T15:24:11.177Z] [INFO] [Multimodal] 세그먼트 3 (641s-661s): 21개 프레임 저장
+[2026-01-21T15:24:11.177Z] [INFO] [Multimodal] -8wi-fVqTwk: 72개 프레임 저장 완료
+[2026-01-21T15:24:12.670Z] [INFO] Processing [mA1U63BS-AQ]...
+[2026-01-21T15:24:13.722Z] [INFO] Saved heatmap for mA1U63BS-AQ (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:24:13.722Z] [INFO] [Multimodal] mA1U63BS-AQ: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:24:25.532Z] [INFO] [Multimodal] 세그먼트 1 (408s-425s): 18개 프레임 저장
+[2026-01-21T15:24:25.532Z] [INFO] [Multimodal] mA1U63BS-AQ: 18개 프레임 저장 완료
+[2026-01-21T15:24:26.568Z] [INFO] Processing [nOoAc-IZ8i4]...
+[2026-01-21T15:24:27.605Z] [INFO] Saved heatmap for nOoAc-IZ8i4 (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:24:27.605Z] [INFO] [Multimodal] nOoAc-IZ8i4: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:24:45.338Z] [INFO] [Multimodal] 세그먼트 1 (65s-94s): 30개 프레임 저장
+[2026-01-21T15:24:54.973Z] [INFO] [Multimodal] 세그먼트 2 (402s-421s): 20개 프레임 저장
+[2026-01-21T15:24:54.973Z] [INFO] [Multimodal] nOoAc-IZ8i4: 50개 프레임 저장 완료
+[2026-01-21T15:24:55.989Z] [INFO] Processing [bRY2uftc9pQ]...
+[2026-01-21T15:24:57.101Z] [INFO] Saved heatmap for bRY2uftc9pQ (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:24:57.101Z] [INFO] [Multimodal] bRY2uftc9pQ: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:25:11.891Z] [INFO] [Multimodal] 세그먼트 1 (799s-821s): 23개 프레임 저장
+[2026-01-21T15:25:11.892Z] [INFO] [Multimodal] bRY2uftc9pQ: 23개 프레임 저장 완료
+[2026-01-21T15:25:13.181Z] [INFO] Processing [IUvjIG3Bwqw]...
+[2026-01-21T15:25:14.937Z] [INFO] Saved heatmap for IUvjIG3Bwqw (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:25:14.937Z] [INFO] [Multimodal] IUvjIG3Bwqw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:25:29.806Z] [INFO] [Multimodal] 세그먼트 1 (639s-662s): 24개 프레임 저장
+[2026-01-21T15:25:29.806Z] [INFO] [Multimodal] IUvjIG3Bwqw: 24개 프레임 저장 완료
+[2026-01-21T15:25:31.112Z] [INFO] Processing [CBhRIsc_14A]...
+[2026-01-21T15:25:32.375Z] [INFO] Saved heatmap for CBhRIsc_14A (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:25:32.375Z] [INFO] [Multimodal] CBhRIsc_14A: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:25:43.154Z] [INFO] [Multimodal] 세그먼트 1 (407s-423s): 17개 프레임 저장
+[2026-01-21T15:25:43.155Z] [INFO] [Multimodal] CBhRIsc_14A: 17개 프레임 저장 완료
+[2026-01-21T15:25:44.481Z] [INFO] Processing [dcxQA9WRuq8]...
+[2026-01-21T15:25:45.836Z] [INFO] Saved heatmap for dcxQA9WRuq8 (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:25:45.836Z] [INFO] [Multimodal] dcxQA9WRuq8: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:25:57.559Z] [INFO] [Multimodal] 세그먼트 1 (405s-422s): 18개 프레임 저장
+[2026-01-21T15:25:57.559Z] [INFO] [Multimodal] dcxQA9WRuq8: 18개 프레임 저장 완료
+[2026-01-21T15:25:59.200Z] [INFO] Processing [16heS-I0edo]...
+[2026-01-21T15:26:00.491Z] [INFO] Saved heatmap for 16heS-I0edo (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:26:00.491Z] [INFO] [Multimodal] 16heS-I0edo: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:26:15.752Z] [INFO] [Multimodal] 세그먼트 1 (439s-464s): 26개 프레임 저장
+[2026-01-21T15:26:15.753Z] [INFO] [Multimodal] 16heS-I0edo: 26개 프레임 저장 완료
+[2026-01-21T15:26:17.295Z] [INFO] Processing [J7jeKk3BNO0]...
+[2026-01-21T15:26:18.631Z] [INFO] Saved heatmap for J7jeKk3BNO0 (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:26:18.631Z] [INFO] [Multimodal] J7jeKk3BNO0: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:26:32.407Z] [INFO] [Multimodal] 세그먼트 1 (646s-666s): 21개 프레임 저장
+[2026-01-21T15:26:32.407Z] [INFO] [Multimodal] J7jeKk3BNO0: 21개 프레임 저장 완료
+[2026-01-21T15:26:33.612Z] [INFO] Processing [rWkqKiqyOIA]...
+[2026-01-21T15:26:34.892Z] [INFO] Saved heatmap for rWkqKiqyOIA (Points: 100, MostReplayed: 4개)
+[2026-01-21T15:26:34.892Z] [INFO] [Multimodal] rWkqKiqyOIA: 4개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:26:47.696Z] [INFO] [Multimodal] 세그먼트 1 (406s-425s): 20개 프레임 저장
+[2026-01-21T15:26:58.088Z] [INFO] [Multimodal] 세그먼트 2 (641s-660s): 20개 프레임 저장
+[2026-01-21T15:27:08.335Z] [INFO] [Multimodal] 세그먼트 3 (714s-733s): 20개 프레임 저장
+[2026-01-21T15:27:18.958Z] [INFO] [Multimodal] 세그먼트 4 (840s-859s): 20개 프레임 저장
+[2026-01-21T15:27:18.959Z] [INFO] [Multimodal] rWkqKiqyOIA: 80개 프레임 저장 완료
+[2026-01-21T15:27:20.622Z] [INFO] Processing [ytgDdVzUUy8]...
+[2026-01-21T15:27:21.992Z] [INFO] Saved heatmap for ytgDdVzUUy8 (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:27:21.992Z] [INFO] [Multimodal] ytgDdVzUUy8: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:27:37.326Z] [INFO] [Multimodal] 세그먼트 1 (407s-428s): 22개 프레임 저장
+[2026-01-21T15:27:48.964Z] [INFO] [Multimodal] 세그먼트 2 (795s-816s): 22개 프레임 저장
+[2026-01-21T15:27:48.965Z] [INFO] [Multimodal] ytgDdVzUUy8: 44개 프레임 저장 완료
+[2026-01-21T15:27:50.049Z] [INFO] Processing [PWWm9Cy4GiY]...
+[2026-01-21T15:27:51.048Z] [INFO] Saved heatmap for PWWm9Cy4GiY (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:27:51.049Z] [INFO] [Multimodal] PWWm9Cy4GiY: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:28:03.169Z] [INFO] [Multimodal] 세그먼트 1 (646s-664s): 19개 프레임 저장
+[2026-01-21T15:28:03.170Z] [INFO] [Multimodal] PWWm9Cy4GiY: 19개 프레임 저장 완료
+[2026-01-21T15:28:04.225Z] [INFO] Processing [YuO-WQMznsw]...
+[2026-01-21T15:28:05.405Z] [INFO] Saved heatmap for YuO-WQMznsw (Points: 100, MostReplayed: 3개)
+[2026-01-21T15:28:05.406Z] [INFO] [Multimodal] YuO-WQMznsw: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:28:18.466Z] [INFO] [Multimodal] 세그먼트 1 (462s-482s): 21개 프레임 저장
+[2026-01-21T15:28:33.628Z] [INFO] [Multimodal] 세그먼트 2 (664s-694s): 31개 프레임 저장
+[2026-01-21T15:28:44.554Z] [INFO] [Multimodal] 세그먼트 3 (914s-935s): 22개 프레임 저장
+[2026-01-21T15:28:44.555Z] [INFO] [Multimodal] YuO-WQMznsw: 74개 프레임 저장 완료
+[2026-01-21T15:28:46.208Z] [INFO] Processing [JUIQs7ytf5U]...
+[2026-01-21T15:28:47.210Z] [INFO] Saved heatmap for JUIQs7ytf5U (Points: 100, MostReplayed: 3개)
+[2026-01-21T15:28:47.210Z] [INFO] [Multimodal] JUIQs7ytf5U: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:29:00.548Z] [INFO] [Multimodal] 세그먼트 1 (404s-423s): 20개 프레임 저장
+[2026-01-21T15:29:10.671Z] [INFO] [Multimodal] 세그먼트 2 (643s-662s): 20개 프레임 저장
+[2026-01-21T15:29:24.799Z] [INFO] [Multimodal] 세그먼트 3 (827s-855s): 29개 프레임 저장
+[2026-01-21T15:29:24.799Z] [INFO] [Multimodal] JUIQs7ytf5U: 69개 프레임 저장 완료
+[2026-01-21T15:29:26.458Z] [INFO] Processing [G5VVUL5tjIY]...
+[2026-01-21T15:29:27.729Z] [INFO] Saved heatmap for G5VVUL5tjIY (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:29:27.729Z] [INFO] [Multimodal] G5VVUL5tjIY: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:29:39.863Z] [INFO] [Multimodal] 세그먼트 1 (408s-426s): 19개 프레임 저장
+[2026-01-21T15:29:53.866Z] [INFO] [Multimodal] 세그먼트 2 (460s-487s): 28개 프레임 저장
+[2026-01-21T15:29:53.867Z] [INFO] [Multimodal] G5VVUL5tjIY: 47개 프레임 저장 완료
+[2026-01-21T15:29:55.374Z] [INFO] Processing [9oZUTH09vv8]...
+[2026-01-21T15:29:56.758Z] [INFO] Saved heatmap for 9oZUTH09vv8 (Points: 100, MostReplayed: 3개)
+[2026-01-21T15:29:56.758Z] [INFO] [Multimodal] 9oZUTH09vv8: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:30:10.747Z] [INFO] [Multimodal] 세그먼트 1 (400s-422s): 23개 프레임 저장
+[2026-01-21T15:30:26.936Z] [INFO] [Multimodal] 세그먼트 2 (636s-668s): 33개 프레임 저장
+[2026-01-21T15:30:37.770Z] [INFO] [Multimodal] 세그먼트 3 (883s-904s): 22개 프레임 저장
+[2026-01-21T15:30:37.771Z] [INFO] [Multimodal] 9oZUTH09vv8: 78개 프레임 저장 완료
+[2026-01-21T15:30:38.785Z] [INFO] Processing [uoVQb2OXhzM]...
+[2026-01-21T15:30:39.806Z] [INFO] Saved heatmap for uoVQb2OXhzM (Points: 100, MostReplayed: 3개)
+[2026-01-21T15:30:39.806Z] [INFO] [Multimodal] uoVQb2OXhzM: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:30:52.722Z] [INFO] [Multimodal] 세그먼트 1 (401s-420s): 20개 프레임 저장
+[2026-01-21T15:31:03.735Z] [INFO] [Multimodal] 세그먼트 2 (592s-612s): 21개 프레임 저장
+[2026-01-21T15:31:13.594Z] [INFO] [Multimodal] 세그먼트 3 (784s-803s): 20개 프레임 저장
+[2026-01-21T15:31:13.594Z] [INFO] [Multimodal] uoVQb2OXhzM: 61개 프레임 저장 완료
+[2026-01-21T15:31:15.405Z] [INFO] Processing [jEM5_8SsSVE]...
+[2026-01-21T15:31:16.845Z] [INFO] Saved heatmap for jEM5_8SsSVE (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:31:16.846Z] [INFO] [Multimodal] jEM5_8SsSVE: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:31:34.498Z] [INFO] [Multimodal] 세그먼트 1 (399s-428s): 30개 프레임 저장
+[2026-01-21T15:31:44.594Z] [INFO] [Multimodal] 세그먼트 2 (641s-661s): 21개 프레임 저장
+[2026-01-21T15:31:44.594Z] [INFO] [Multimodal] jEM5_8SsSVE: 51개 프레임 저장 완료
+[2026-01-21T15:31:45.604Z] [INFO] Processing [t3Bt1ooBrnk]...
+[2026-01-21T15:31:47.217Z] [INFO] Saved heatmap for t3Bt1ooBrnk (Points: 100, MostReplayed: 3개)
+[2026-01-21T15:31:47.217Z] [INFO] [Multimodal] t3Bt1ooBrnk: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:32:02.798Z] [INFO] [Multimodal] 세그먼트 1 (303s-327s): 25개 프레임 저장
+[2026-01-21T15:32:15.010Z] [INFO] [Multimodal] 세그먼트 2 (405s-428s): 24개 프레임 저장
+[2026-01-21T15:32:26.845Z] [INFO] [Multimodal] 세그먼트 3 (641s-664s): 24개 프레임 저장
+[2026-01-21T15:32:26.845Z] [INFO] [Multimodal] t3Bt1ooBrnk: 73개 프레임 저장 완료
+[2026-01-21T15:32:28.441Z] [INFO] Processing [XhUJ-ChfPQw]...
+[2026-01-21T15:32:30.019Z] [INFO] Saved heatmap for XhUJ-ChfPQw (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:32:30.019Z] [INFO] [Multimodal] XhUJ-ChfPQw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:32:43.635Z] [INFO] [Multimodal] 세그먼트 1 (401s-421s): 21개 프레임 저장
+[2026-01-21T15:32:43.635Z] [INFO] [Multimodal] XhUJ-ChfPQw: 21개 프레임 저장 완료
+[2026-01-21T15:32:45.027Z] [INFO] Processing [-e0ERP2rFkY]...
+[2026-01-21T15:32:46.174Z] [INFO] Saved heatmap for -e0ERP2rFkY (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:32:46.174Z] [INFO] [Multimodal] -e0ERP2rFkY: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:33:00.901Z] [INFO] [Multimodal] 세그먼트 1 (583s-605s): 23개 프레임 저장
+[2026-01-21T15:33:11.968Z] [INFO] [Multimodal] 세그먼트 2 (1026s-1048s): 23개 프레임 저장
+[2026-01-21T15:33:11.969Z] [INFO] [Multimodal] -e0ERP2rFkY: 46개 프레임 저장 완료
+[2026-01-21T15:33:13.796Z] [INFO] Processing [0-RhVo6P3zI]...
+[2026-01-21T15:33:14.997Z] [INFO] Saved heatmap for 0-RhVo6P3zI (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:33:14.997Z] [INFO] [Multimodal] 0-RhVo6P3zI: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:33:29.865Z] [INFO] [Multimodal] 세그먼트 1 (885s-907s): 23개 프레임 저장
+[2026-01-21T15:33:29.865Z] [INFO] [Multimodal] 0-RhVo6P3zI: 23개 프레임 저장 완료
+[2026-01-21T15:33:31.323Z] [INFO] Processing [HLzgIj9j0hs]...
+[2026-01-21T15:33:32.436Z] [INFO] Saved heatmap for HLzgIj9j0hs (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:33:32.436Z] [INFO] [Multimodal] HLzgIj9j0hs: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:33:48.205Z] [INFO] [Multimodal] 세그먼트 1 (157s-180s): 24개 프레임 저장
+[2026-01-21T15:34:00.304Z] [INFO] [Multimodal] 세그먼트 2 (785s-808s): 24개 프레임 저장
+[2026-01-21T15:34:00.305Z] [INFO] [Multimodal] HLzgIj9j0hs: 48개 프레임 저장 완료
+[2026-01-21T15:34:02.280Z] [INFO] Processing [7M6gEUjNrKo]...
+[2026-01-21T15:34:03.470Z] [INFO] Saved heatmap for 7M6gEUjNrKo (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:34:03.470Z] [INFO] [Multimodal] 7M6gEUjNrKo: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:34:17.591Z] [INFO] [Multimodal] 세그먼트 1 (401s-421s): 21개 프레임 저장
+[2026-01-21T15:34:28.702Z] [INFO] [Multimodal] 세그먼트 2 (649s-669s): 21개 프레임 저장
+[2026-01-21T15:34:28.703Z] [INFO] [Multimodal] 7M6gEUjNrKo: 42개 프레임 저장 완료
+[2026-01-21T15:34:30.426Z] [INFO] Processing [kvXlRgISLog]...
+[2026-01-21T15:34:31.671Z] [INFO] Saved heatmap for kvXlRgISLog (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:34:31.671Z] [INFO] [Multimodal] kvXlRgISLog: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:34:47.446Z] [INFO] [Multimodal] 세그먼트 1 (641s-668s): 28개 프레임 저장
+[2026-01-21T15:34:47.447Z] [INFO] [Multimodal] kvXlRgISLog: 28개 프레임 저장 완료
+[2026-01-21T15:34:48.734Z] [INFO] Processing [_w9_o7ihRrw]...
+[2026-01-21T15:34:50.089Z] [INFO] Saved heatmap for _w9_o7ihRrw (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:34:50.089Z] [INFO] [Multimodal] _w9_o7ihRrw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:35:01.981Z] [INFO] [Multimodal] 세그먼트 1 (406s-423s): 18개 프레임 저장
+[2026-01-21T15:35:01.981Z] [INFO] [Multimodal] _w9_o7ihRrw: 18개 프레임 저장 완료
+[2026-01-21T15:35:03.336Z] [INFO] Processing [Phh1m7HOXTE]...
+[2026-01-21T15:35:04.447Z] [INFO] Saved heatmap for Phh1m7HOXTE (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:35:04.447Z] [INFO] [Multimodal] Phh1m7HOXTE: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:35:18.488Z] [INFO] [Multimodal] 세그먼트 1 (402s-422s): 21개 프레임 저장
+[2026-01-21T15:35:34.081Z] [INFO] [Multimodal] 세그먼트 2 (636s-665s): 30개 프레임 저장
+[2026-01-21T15:35:34.082Z] [INFO] [Multimodal] Phh1m7HOXTE: 51개 프레임 저장 완료
+[2026-01-21T15:35:35.518Z] [INFO] Processing [gKHd2I0KmgQ]...
+[2026-01-21T15:35:36.564Z] [INFO] Saved heatmap for gKHd2I0KmgQ (Points: 100, MostReplayed: 2개)
+[2026-01-21T15:35:36.564Z] [INFO] [Multimodal] gKHd2I0KmgQ: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:35:49.943Z] [INFO] [Multimodal] 세그먼트 1 (407s-427s): 21개 프레임 저장
+[2026-01-21T15:36:01.164Z] [INFO] [Multimodal] 세그먼트 2 (640s-660s): 21개 프레임 저장
+[2026-01-21T15:36:01.165Z] [INFO] [Multimodal] gKHd2I0KmgQ: 42개 프레임 저장 완료
+[2026-01-21T15:36:02.738Z] [INFO] Processing [pxgZvKkngFQ]...
+[2026-01-21T15:36:03.647Z] [INFO] Saved heatmap for pxgZvKkngFQ (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:36:03.647Z] [INFO] [Multimodal] pxgZvKkngFQ: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:36:12.643Z] [INFO] [Multimodal] 세그먼트 1 (287s-297s): 11개 프레임 저장
+[2026-01-21T15:36:12.643Z] [INFO] [Multimodal] pxgZvKkngFQ: 11개 프레임 저장 완료
+[2026-01-21T15:36:13.821Z] [INFO] Processing [Mc-vgVeAHyc]...
+[2026-01-21T15:36:15.023Z] [INFO] Saved heatmap for Mc-vgVeAHyc (Points: 100, MostReplayed: 3개)
+[2026-01-21T15:36:15.023Z] [INFO] [Multimodal] Mc-vgVeAHyc: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:36:26.781Z] [INFO] [Multimodal] 세그먼트 1 (80s-97s): 18개 프레임 저장
+[2026-01-21T15:36:35.897Z] [INFO] [Multimodal] 세그먼트 2 (408s-425s): 18개 프레임 저장
+[2026-01-21T15:36:45.013Z] [INFO] [Multimodal] 세그먼트 3 (648s-665s): 18개 프레임 저장
+[2026-01-21T15:36:45.014Z] [INFO] [Multimodal] Mc-vgVeAHyc: 54개 프레임 저장 완료
+[2026-01-21T15:36:46.579Z] [INFO] Processing [EWCbmaIodXk]...
+[2026-01-21T15:36:47.564Z] [INFO] Saved heatmap for EWCbmaIodXk (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:36:47.564Z] [INFO] [Multimodal] EWCbmaIodXk: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:36:58.434Z] [INFO] [Multimodal] 세그먼트 1 (240s-255s): 16개 프레임 저장
+[2026-01-21T15:36:58.434Z] [INFO] [Multimodal] EWCbmaIodXk: 16개 프레임 저장 완료
+[2026-01-21T15:36:59.760Z] [INFO] Processing [82M8OUA1hKc]...
+[2026-01-21T15:37:00.969Z] [INFO] Saved heatmap for 82M8OUA1hKc (Points: 100, MostReplayed: 1개)
+[2026-01-21T15:37:00.969Z] [INFO] [Multimodal] 82M8OUA1hKc: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:37:16.469Z] [INFO] [Multimodal] 세그먼트 1 (403s-427s): 25개 프레임 저장
+[2026-01-21T15:37:16.469Z] [INFO] [Multimodal] 82M8OUA1hKc: 25개 프레임 저장 완료
+[2026-01-21T15:37:17.997Z] [INFO] Processing [gTK1frnLsxo]...
+[2026-01-21T15:37:19.153Z] [INFO] Saved heatmap for gTK1frnLsxo (Points: 100, MostReplayed: 4개)
+[2026-01-21T15:37:19.153Z] [INFO] [Multimodal] gTK1frnLsxo: 4개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T15:37:33.111Z] [INFO] [Multimodal] 세그먼트 1 (402s-423s): 22개 프레임 저장

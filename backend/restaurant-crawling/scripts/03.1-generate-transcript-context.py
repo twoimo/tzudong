@@ -45,7 +45,7 @@ def read_jsonl(data_path: str) -> dict | None:
             if lines:
                 return json.loads(lines[-1])
     except Exception as e:
-        print(f"Error reading {data_path}: {e}")
+        print(f"파일 읽기 오류 {data_path}: {e}")
     return None
 
 
@@ -61,7 +61,7 @@ def get_matching_metadata(meta_path: str, recollect_id: int) -> dict | None:
                     if meta.get("recollect_id") == recollect_id:
                         return meta
     except Exception as e:
-        print(f"Error reading metadata {meta_path}: {e}")
+        print(f"메타데이터 읽기 오류 {meta_path}: {e}")
     return None
 
 
@@ -79,7 +79,7 @@ def get_latest_doc_recollect_id(doc_path: str) -> int | None:
                     if last_docs and len(last_docs) > 0:
                         return last_docs[0].get("metadata", {}).get("recollect_id")
     except Exception as e:
-        print(f"Error reading doc file {doc_path}: {e}")
+        print(f"문서 파일 읽기 오류 {doc_path}: {e}")
     return None
 
 
@@ -194,7 +194,7 @@ def save_documents_for_video(
         f.write(json.dumps(docs_data, ensure_ascii=False) + "\n")
 
     print(
-        f"✅ Saved {len(documents)} documents to {filepath} (recollect_id={recollect_id})"
+        f"✅ {len(documents)}개 문서 저장 완료: {filepath} (recollect_id={recollect_id})"
     )
 
 
@@ -211,7 +211,7 @@ def process_video(
     recollect_id = transcript_data.get("recollect_id", 0)
 
     if not transcript:
-        print(f"⚠️ No transcript for {video_id}")
+        print(f"⚠️ 자막 없음: {video_id}")
         return
 
     full_transcript = "\n".join([seg["text"] for seg in transcript])
@@ -302,9 +302,9 @@ def main():
     # 트랜스크립트 파일 목록
     transcript_paths = glob.glob(str(transcript_dir / "*.jsonl"))
 
-    print(f"Found {len(transcript_paths)} transcript files")
-    print(f"Model: {args.model}")
-    print(f"Output: {output_dir}")
+    print(f"트랜스크립트 파일 {len(transcript_paths)}개 발견")
+    print(f"모델: {args.model}")
+    print(f"출력 경로: {output_dir}")
     print("=" * 60)
 
     processed_count = 0
@@ -321,7 +321,7 @@ def main():
         # 트랜스크립트 읽기
         transcript_data = read_jsonl(data_path)
         if not transcript_data:
-            print(f"⚠️ Failed to read transcript: {video_id}")
+            print(f"⚠️ 트랜스크립트 읽기 실패: {video_id}")
             continue
 
         transcript_recollect_id = transcript_data.get("recollect_id", 0)
@@ -333,13 +333,13 @@ def main():
         if existing_recollect_id is not None:
             if transcript_recollect_id <= existing_recollect_id:
                 print(
-                    f"⏭️ Skipping {video_id}: already processed (transcript recollect_id={transcript_recollect_id} <= doc recollect_id={existing_recollect_id})"
+                    f"⏭️ 스킵 {video_id}: 이미 처리됨 (transcript recollect_id={transcript_recollect_id} <= doc recollect_id={existing_recollect_id})"
                 )
                 skipped_count += 1
                 continue
             else:
                 print(
-                    f"🔄 Updating {video_id}: new recollect_id available ({transcript_recollect_id} > {existing_recollect_id})"
+                    f"🔄 업데이트 {video_id}: 새 recollect_id 감지 ({transcript_recollect_id} > {existing_recollect_id})"
                 )
 
         # 메타데이터 읽기
@@ -347,7 +347,7 @@ def main():
         metadata = get_matching_metadata(str(meta_path), transcript_recollect_id)
         if not metadata:
             print(
-                f"⚠️ No matching metadata for {video_id} (recollect_id={transcript_recollect_id})"
+                f"⚠️ 매칭되는 메타데이터 없음: {video_id} (recollect_id={transcript_recollect_id})"
             )
             continue
 
@@ -363,7 +363,7 @@ def main():
         processed_count += 1
 
     print("\n" + "=" * 60)
-    print(f"✅ Completed: {processed_count} videos processed, {skipped_count} skipped")
+    print(f"✅ 완료: {processed_count}개 영상 처리, {skipped_count}개 스킵")
 
 
 if __name__ == "__main__":
