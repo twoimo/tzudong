@@ -7,9 +7,10 @@
  * [수집 발동 조건 (TRIGGER_VARS)]
  * 1. new_video: 신규 영상 (무조건 수집)
  * 2. duration_changed: 길이 변경 (영상 수정됨)
- * 3. scheduled_weekly: 주간 정기 수집 (0~6개월, 6개월~1년)
- * 4. scheduled_biweekly: 격주 정기 수집 (1년 이상)
- * 5. viral_growth: 역주행 감지 (즉시 수집)
+ * 3. scheduled_weekly: 주간 정기 수집 (0~3개월)
+ * 4. scheduled_biweekly: 격주 정기 수집 (3개월~1년)
+ * 5. scheduled_monthly: 월간 정기 수집 (1년 이상)
+ * 6. viral_growth: 역주행 감지 (즉시 수집)
  * 
  * [사용법]
  *   node 04-collect-heatmap.js --channel tzuyang
@@ -45,7 +46,14 @@ if (fs.existsSync(backendEnvLocal)) {
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
-        winston.format.timestamp(),
+        winston.format.timestamp({
+            format: () => {
+                const now = new Date();
+                const kstOffset = 9 * 60 * 60 * 1000;
+                const kstDate = new Date(now.getTime() + kstOffset);
+                return kstDate.toISOString().replace('T', ' ').substring(0, 19);
+            }
+        }),
         winston.format.printf(({ timestamp, level, message }) => {
             return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
         })
@@ -594,10 +602,10 @@ function shouldCollect(videoId) {
                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
                     if (shouldTrigger) {
-                        log('info', `[Trigger] Video ${videoId}: Found trigger variable(s) [${recollectVars.join(', ')}]`);
+                        log('info', `[트리거] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
                         return true;
                     } else {
-                        log('info', `[Skip] Video ${videoId}: recurs_vars [${recollectVars.join(', ')}] do not trigger heatmap.`);
+                        log('info', `[스킵] ${videoId}: recollect_vars [${recollectVars.join(', ')}]는 히트맵 수집 대상 아님`);
                         return false;
                     }
                 }
@@ -610,13 +618,13 @@ function shouldCollect(videoId) {
 }
 
 async function main() {
-    log('info', `=== HTTP Heatmap + Multimodal Collector Started [Channel: ${CHANNEL_NAME}] ===`);
-    log('info', `Source: ${URLS_FILE}`);
-    log('info', `Saving to: ${DATA_DIR}`);
+    log('info', `=== HTTP 히트맵 + 멀티모달 수집기 시작 [채널: ${CHANNEL_NAME}] ===`);
+    log('info', `소스: ${URLS_FILE}`);
+    log('info', `저장 경로: ${DATA_DIR}`);
 
     const cookieHeader = await loadCookies();
-    if (cookieHeader) log('info', 'Cookies loaded.');
-    else log('warn', 'No cookies found.');
+    if (cookieHeader) log('info', '쿠키 로드 완료');
+    else log('warn', '쿠키 없음');
 
     try {
         // 1. deleted_ids 로드
@@ -638,7 +646,7 @@ async function main() {
 
         const urlsPath = path.join(BASE_DATA_DIR, 'urls.txt');
         if (!fs.existsSync(urlsPath)) {
-            log('warn', `No urls.txt for channel ${CHANNEL_NAME}`);
+            log('warn', `채널 ${CHANNEL_NAME}에 urls.txt 없음`);
             cleanupTempFrames();
             return;
         }
@@ -648,7 +656,7 @@ async function main() {
             .map(line => line.trim())
             .filter(line => line.length > 0);
 
-        log('info', `Found ${urls.length} URLs, filtering deleted...`);
+        log('info', `${urls.length}개 URL 발견, 삭제된 영상 필터링 중...`);
 
         const targets = urls.map(url => {
             const vid = extractVideoId(url);
@@ -656,13 +664,13 @@ async function main() {
         }).filter(v => {
             if (!v.video_id) return false;
             if (deletedIds.has(v.video_id)) {
-                log('info', `[Skip] Video ID ${v.video_id} is in deleted_urls.txt.`);
+                log('info', `[스킵] ${v.video_id}는 deleted_urls.txt에 있음`);
                 return false;
             }
             return shouldCollect(v.video_id);
         });
 
-        log('info', `Found ${urls.length} URLs, ${targets.length} targets to process.`);
+        log('info', `총 ${urls.length}개 URL, ${targets.length}개 처리 대상`);
 
         const batch = targets;
 
@@ -680,13 +688,13 @@ async function main() {
         cleanupTempFrames();
 
     } catch (e) {
-        log('error', `Fatal Error: ${e.message}`);
+        log('error', `치명적 오류: ${e.message}`);
         cleanupTempFrames();
     }
 }
 
 async function processVideo(video_id, youtube_link, cookieHeader) {
-    log('info', `Processing [${video_id}]...`);
+    log('info', `처리 중 [${video_id}]...`);
 
     try {
 
@@ -695,7 +703,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
 
         // [Shorts 필터] (180초 미만) - 페이지 페치 전 확인
         if (metaInfo.duration !== null && metaInfo.duration < 180) {
-            log('info', `[Skip] Shorts detected from meta (<180s). ID: ${video_id} (Duration: ${metaInfo.duration}s)`);
+            log('info', `[스킵] 메타에서 Shorts 감지 (<180초). ID: ${video_id} (길이: ${metaInfo.duration}초)`);
             saveVideoData(video_id, {
                 youtube_link,
                 video_id,
@@ -711,7 +719,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
         const newHeatmap = extractHeatmapFromHtml(html);
 
         if (!newHeatmap) {
-            log('warn', `No heatmap found for ${video_id}.`);
+            log('warn', `${video_id}에서 히트맵 찾을 수 없음`);
             saveVideoData(video_id, {
                 youtube_link,
                 video_id,
@@ -743,7 +751,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
                     if (lastLine) {
                         const lastData = JSON.parse(lastLine);
                         if (lastData.recollect_id === metaInfo.recollect_id && lastData.status !== 'error') {
-                            log('info', `[Skip] Already collected for recollect_id ${metaInfo.recollect_id}.`);
+                            log('info', `[스킵] recollect_id ${metaInfo.recollect_id}에 대해 이미 수집됨`);
                             return;
                         }
                     }
@@ -761,7 +769,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             recollect_vars: metaInfo.recollect_vars,
             collected_at: new Date().toISOString()
         });
-        log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length}, MostReplayed: ${(newHeatmap.mostReplayedMarkers || []).length}개)`);
+        log('info', `${video_id} 히트맵 저장 (포인트: ${formattedData.length}개, 가장많이본장면: ${(newHeatmap.mostReplayedMarkers || []).length}개)`);
 
         // === 멀티모달 프레임 추출 (히트맵 수집 직후) ===
         const multimodalResult = await extractMultimodalFrames(video_id, newHeatmap.mostReplayedMarkers || [], metaInfo.recollect_id, metaInfo.duration);
@@ -770,7 +778,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
         }
 
     } catch (e) {
-        log('error', `Error processing ${video_id}: ${e.message}`);
+        log('error', `${video_id} 처리 중 오류: ${e.message}`);
         saveVideoData(video_id, {
             youtube_link,
             video_id,

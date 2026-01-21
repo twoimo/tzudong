@@ -531,9 +531,8 @@ async function collectChannelTranscripts(channelName, channelConfig) {
         }
     }
 
-    // 2. Load all video IDs
+    // 2. 모든 video ID 로드
     const allVideoIds = loadVideoIdsFromTxt(dataPath).filter(vid => !deletedIds.has(vid));
-    // ...const transcriptDir = path.join(dataPath, 'transcript');
 
     if (!fs.existsSync(transcriptDir)) {
         fs.mkdirSync(transcriptDir, { recursive: true });
