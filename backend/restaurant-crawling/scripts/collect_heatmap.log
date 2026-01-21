@@ -6168,3 +6168,560 @@ Error marking filters as finished
 [2026-01-21T07:56:50.044Z] [INFO] [Multimodal] -1OU4tkFJns: 6개 구간 발견
 [2026-01-21T07:56:53.248Z] [INFO] [Backfill] F4sNpfOnZAc: 프레임 수집 시작
 [2026-01-21T07:56:53.248Z] [INFO] [Multimodal] F4sNpfOnZAc: 1개 구간 발견
+[2026-01-21T07:57:30.994Z] [INFO] [Multimodal] 세그먼트 1 (979s-1051s): 73개 프레임 저장
+[2026-01-21T07:57:33.423Z] [INFO] [Backfill] F7X1tougqpk: 프레임 수집 시작
+[2026-01-21T07:57:33.424Z] [INFO] [Multimodal] F7X1tougqpk: 7개 구간 발견
+[2026-01-21T07:57:36.177Z] [INFO] [Backfill] -8wi-fVqTwk: 프레임 수집 시작
+[2026-01-21T07:57:36.177Z] [INFO] [Multimodal] -8wi-fVqTwk: 6개 구간 발견
+[2026-01-21T07:58:46.564Z] [INFO] [Multimodal] 세그먼트 1 (732s-881s): 150개 프레임 저장
+[2026-01-21T07:58:47.222Z] [INFO] [Backfill] -D43ezc57z8: 프레임 수집 시작
+[2026-01-21T07:58:47.223Z] [INFO] [Multimodal] -D43ezc57z8: 4개 구간 발견
+[2026-01-21T07:59:09.000Z] [INFO] [Multimodal] 세그먼트 2 (636s-680s): 45개 프레임 저장
+[2026-01-21T07:59:21.578Z] [INFO] [Multimodal] 세그먼트 3 (403s-425s): 23개 프레임 저장
+[2026-01-21T07:59:36.760Z] [INFO] [Backfill] -H-mhUeu_qk: 프레임 수집 시작
+[2026-01-21T07:59:36.761Z] [INFO] [Multimodal] -H-mhUeu_qk: 2개 구간 발견
+[2026-01-21T07:59:57.183Z] [INFO] [Multimodal] 세그먼트 4 (201s-276s): 76개 프레임 저장
+[2026-01-21T07:59:58.334Z] [INFO] [Backfill] -HyRSLWcOeA: 프레임 수집 시작
+[2026-01-21T07:59:58.335Z] [INFO] [Multimodal] -HyRSLWcOeA: 5개 구간 발견
+[2026-01-21T08:00:14.341Z] [INFO] [Multimodal] 세그먼트 5 (95s-128s): 34개 프레임 저장
+[2026-01-21T08:00:31.505Z] [INFO] [Backfill] -LGODBDAg1c: 프레임 수집 시작
+[2026-01-21T08:00:31.505Z] [INFO] [Multimodal] -LGODBDAg1c: 7개 구간 발견
+[2026-01-21T08:00:40.180Z] [INFO] [Multimodal] 세그먼트 6 (137s-191s): 55개 프레임 저장
+[2026-01-21T08:00:48.165Z] [INFO] [Multimodal] 세그먼트 7 (1018s-1030s): 13개 프레임 저장
+[2026-01-21T08:00:51.891Z] [INFO] [Backfill] F7sPLM-ThnA: 프레임 수집 시작
+[2026-01-21T08:00:51.891Z] [INFO] [Multimodal] F7sPLM-ThnA: 4개 구간 발견
+[2026-01-21T08:01:23.790Z] [INFO] [Multimodal] 세그먼트 1 (873s-933s): 61개 프레임 저장
+[2026-01-21T08:01:38.703Z] [INFO] [Backfill] -RI5PUiPr3g: 프레임 수집 시작
+[2026-01-21T08:01:38.704Z] [INFO] [Multimodal] -RI5PUiPr3g: 3개 구간 발견
+[2026-01-21T08:01:56.707Z] [INFO] [Multimodal] 세그먼트 2 (38s-107s): 70개 프레임 저장
+[2026-01-21T08:02:02.354Z] [INFO] [Backfill] -Tf_SWz5f9k: 프레임 수집 시작
+[2026-01-21T08:02:02.354Z] [INFO] [Multimodal] -Tf_SWz5f9k: 6개 구간 발견
+[2026-01-21T08:02:27.387Z] [INFO] [Multimodal] 세그먼트 3 (640s-700s): 61개 프레임 저장
+[2026-01-21T08:02:38.735Z] [INFO] [Multimodal] 세그먼트 4 (941s-962s): 22개 프레임 저장
+[2026-01-21T08:02:42.257Z] [INFO] [Backfill] FDClBcO-3-0: 프레임 수집 시작
+[2026-01-21T08:02:42.257Z] [INFO] [Multimodal] FDClBcO-3-0: 4개 구간 발견
+[2026-01-21T08:02:55.875Z] [INFO] [Backfill] -X47382RRus: 프레임 수집 시작
+[2026-01-21T08:02:55.875Z] [INFO] [Multimodal] -X47382RRus: 3개 구간 발견
+[2026-01-21T08:03:07.855Z] [INFO] [Multimodal] 세그먼트 1 (152s-198s): 47개 프레임 저장
+[2026-01-21T08:03:14.095Z] [INFO] [Multimodal] 세그먼트 2 (412s-422s): 11개 프레임 저장
+[2026-01-21T08:03:15.608Z] [INFO] [Backfill] -e0ERP2rFkY: 프레임 수집 시작
+[2026-01-21T08:03:15.608Z] [INFO] [Multimodal] -e0ERP2rFkY: 9개 구간 발견
+[2026-01-21T08:03:20.790Z] [INFO] [Multimodal] 세그먼트 3 (654s-664s): 11개 프레임 저장
+[2026-01-21T08:04:09.159Z] [INFO] [Multimodal] 세그먼트 4 (44s-144s): 101개 프레임 저장
+[2026-01-21T08:04:12.602Z] [INFO] [Backfill] FGJdgoU5L_s: 프레임 수집 시작
+[2026-01-21T08:04:12.602Z] [INFO] [Multimodal] FGJdgoU5L_s: 4개 구간 발견
+[2026-01-21T08:04:23.846Z] [INFO] [Multimodal] 세그먼트 1 (653s-669s): 17개 프레임 저장
+[2026-01-21T08:04:25.445Z] [INFO] [Backfill] -fE1mGc-W8w: 프레임 수집 시작
+[2026-01-21T08:04:25.446Z] [INFO] [Multimodal] -fE1mGc-W8w: 3개 구간 발견
+[2026-01-21T08:04:39.332Z] [INFO] [Backfill] -gMCn9VDJns: 프레임 수집 시작
+[2026-01-21T08:04:39.332Z] [INFO] [Multimodal] -gMCn9VDJns: 4개 구간 발견
+[2026-01-21T08:04:40.799Z] [INFO] [Multimodal] 세그먼트 2 (404s-436s): 33개 프레임 저장
+[2026-01-21T08:04:58.113Z] [INFO] [Multimodal] 세그먼트 3 (886s-918s): 33개 프레임 저장
+[2026-01-21T08:05:30.338Z] [INFO] [Multimodal] 세그먼트 4 (124s-187s): 64개 프레임 저장
+[2026-01-21T08:05:33.965Z] [INFO] [Backfill] FPg95PvRbew: 프레임 수집 시작
+[2026-01-21T08:05:33.965Z] [INFO] [Multimodal] FPg95PvRbew: 4개 구간 발견
+[2026-01-21T08:06:01.825Z] [INFO] [Backfill] -kYYmiDGc-Y: 프레임 수집 시작
+[2026-01-21T08:06:01.827Z] [INFO] [Multimodal] -kYYmiDGc-Y: 5개 구간 발견
+[2026-01-21T08:06:04.642Z] [INFO] [Multimodal] 세그먼트 1 (816s-871s): 56개 프레임 저장
+[2026-01-21T08:06:13.292Z] [INFO] [Multimodal] 세그먼트 2 (652s-667s): 16개 프레임 저장
+[2026-01-21T08:06:21.288Z] [INFO] [Multimodal] 세그먼트 3 (408s-422s): 15개 프레임 저장
+[2026-01-21T08:06:37.173Z] [INFO] [Multimodal] 세그먼트 4 (163s-191s): 29개 프레임 저장
+[2026-01-21T08:06:39.254Z] [INFO] [Backfill] FSsr6NanwkM: 프레임 수집 시작
+[2026-01-21T08:06:39.254Z] [INFO] [Multimodal] FSsr6NanwkM: 7개 구간 발견
+[2026-01-21T08:06:53.440Z] [INFO] [Backfill] -kvz3B9JHWc: 프레임 수집 시작
+[2026-01-21T08:06:53.440Z] [INFO] [Multimodal] -kvz3B9JHWc: 4개 구간 발견
+[2026-01-21T08:07:07.635Z] [INFO] [Multimodal] 세그먼트 1 (820s-874s): 55개 프레임 저장
+[2026-01-21T08:07:14.098Z] [INFO] [Multimodal] 세그먼트 2 (410s-421s): 12개 프레임 저장
+[2026-01-21T08:07:30.770Z] [INFO] [Multimodal] 세그먼트 3 (526s-558s): 33개 프레임 저장
+[2026-01-21T08:07:38.196Z] [INFO] [Multimodal] 세그먼트 4 (652s-663s): 12개 프레임 저장
+[2026-01-21T08:07:53.325Z] [INFO] [Backfill] -lcUHOfTKX0: 프레임 수집 시작
+[2026-01-21T08:07:53.326Z] [INFO] [Multimodal] -lcUHOfTKX0: 3개 구간 발견
+[2026-01-21T08:07:54.949Z] [INFO] [Multimodal] 세그먼트 5 (610s-642s): 33개 프레임 저장
+[2026-01-21T08:08:07.904Z] [INFO] [Multimodal] 세그먼트 6 (168s-190s): 23개 프레임 저장
+[2026-01-21T08:08:20.148Z] [INFO] [Multimodal] 세그먼트 7 (904s-926s): 23개 프레임 저장
+[2026-01-21T08:08:21.612Z] [INFO] [Backfill] -v5JyOmVirM: 프레임 수집 시작
+[2026-01-21T08:08:21.612Z] [INFO] [Multimodal] -v5JyOmVirM: 6개 구간 발견
+[2026-01-21T08:08:23.079Z] [INFO] [Backfill] FaRvDCP4HEI: 프레임 수집 시작
+[2026-01-21T08:08:23.080Z] [INFO] [Multimodal] FaRvDCP4HEI: 2개 구간 발견
+[2026-01-21T08:08:32.968Z] [INFO] [Multimodal] 세그먼트 1 (699s-711s): 13개 프레임 저장
+[2026-01-21T08:08:50.237Z] [INFO] [Multimodal] 세그먼트 2 (31s-64s): 34개 프레임 저장
+[2026-01-21T08:08:53.442Z] [INFO] [Backfill] FcVz29NKM-o: 프레임 수집 시작
+[2026-01-21T08:08:53.443Z] [INFO] [Multimodal] FcVz29NKM-o: 4개 구간 발견
+[2026-01-21T08:09:04.270Z] [INFO] [Multimodal] 세그먼트 1 (411s-426s): 16개 프레임 저장
+[2026-01-21T08:09:04.411Z] [INFO] [Backfill] -wr8xH31c8M: 프레임 수집 시작
+[2026-01-21T08:09:04.412Z] [INFO] [Multimodal] -wr8xH31c8M: 5개 구간 발견
+[2026-01-21T08:09:18.792Z] [INFO] [Multimodal] 세그먼트 2 (644s-673s): 30개 프레임 저장
+[2026-01-21T08:09:51.650Z] [INFO] [Multimodal] 세그먼트 3 (521s-590s): 70개 프레임 저장
+[2026-01-21T08:10:06.801Z] [INFO] [Multimodal] 세그먼트 4 (164s-193s): 30개 프레임 저장
+[2026-01-21T08:10:09.608Z] [INFO] [Backfill] FgDCbXyv0UY: 프레임 수집 시작
+[2026-01-21T08:10:09.609Z] [INFO] [Multimodal] FgDCbXyv0UY: 1개 구간 발견
+[2026-01-21T08:10:19.121Z] [INFO] [Multimodal] 세그먼트 1 (649s-662s): 14개 프레임 저장
+[2026-01-21T08:10:20.503Z] [INFO] [Backfill] 0-RhVo6P3zI: 프레임 수집 시작
+[2026-01-21T08:10:20.503Z] [INFO] [Multimodal] 0-RhVo6P3zI: 5개 구간 발견
+[2026-01-21T08:10:22.333Z] [INFO] [Backfill] Fo6VAM5YSkQ: 프레임 수집 시작
+[2026-01-21T08:10:22.333Z] [INFO] [Multimodal] Fo6VAM5YSkQ: 2개 구간 발견
+[2026-01-21T08:10:35.353Z] [INFO] [Multimodal] 세그먼트 1 (890s-910s): 21개 프레임 저장
+[2026-01-21T08:10:42.035Z] [INFO] [Multimodal] 세그먼트 2 (870s-881s): 12개 프레임 저장
+[2026-01-21T08:10:44.925Z] [INFO] [Backfill] G3pQQeL47wI: 프레임 수집 시작
+[2026-01-21T08:10:44.925Z] [INFO] [Multimodal] G3pQQeL47wI: 7개 구간 발견
+[2026-01-21T08:10:48.587Z] [INFO] [Backfill] 00S1J_3uC0U: 프레임 수집 시작
+[2026-01-21T08:10:48.587Z] [INFO] [Multimodal] 00S1J_3uC0U: 5개 구간 발견
+[2026-01-21T08:10:54.013Z] [INFO] [Multimodal] 세그먼트 1 (655s-665s): 11개 프레임 저장
+[2026-01-21T08:11:21.256Z] [INFO] [Backfill] 02LzJVZCqt0: 프레임 수집 시작
+[2026-01-21T08:11:21.256Z] [INFO] [Multimodal] 02LzJVZCqt0: 4개 구간 발견
+[2026-01-21T08:11:25.710Z] [INFO] [Multimodal] 세그먼트 2 (411s-468s): 58개 프레임 저장
+[2026-01-21T08:11:42.037Z] [INFO] [Backfill] 07lbVa_QEpw: 프레임 수집 시작
+[2026-01-21T08:11:42.037Z] [INFO] [Multimodal] 07lbVa_QEpw: 5개 구간 발견
+[2026-01-21T08:12:16.101Z] [INFO] [Multimodal] 세그먼트 3 (271s-375s): 105개 프레임 저장
+[2026-01-21T08:12:40.753Z] [INFO] [Multimodal] 세그먼트 4 (804s-852s): 49개 프레임 저장
+[2026-01-21T08:12:56.999Z] [INFO] [Backfill] 0CLZlPTCXs4: 프레임 수집 시작
+[2026-01-21T08:12:57.000Z] [INFO] [Multimodal] 0CLZlPTCXs4: 3개 구간 발견
+[2026-01-21T08:13:19.345Z] [INFO] [Multimodal] 세그먼트 5 (711s-787s): 77개 프레임 저장
+[2026-01-21T08:13:21.425Z] [INFO] [Backfill] 0Ewq0-AyjcE: 프레임 수집 시작
+[2026-01-21T08:13:21.426Z] [INFO] [Multimodal] 0Ewq0-AyjcE: 2개 구간 발견
+[2026-01-21T08:13:36.469Z] [INFO] [Multimodal] 세그먼트 6 (589s-618s): 30개 프레임 저장
+[2026-01-21T08:14:08.218Z] [INFO] [Backfill] 0FACIBa9Jfg: 프레임 수집 시작
+[2026-01-21T08:14:08.219Z] [INFO] [Multimodal] 0FACIBa9Jfg: 6개 구간 발견
+[2026-01-21T08:14:13.569Z] [INFO] [Multimodal] 세그먼트 7 (112s-188s): 77개 프레임 저장
+[2026-01-21T08:14:16.039Z] [INFO] [Backfill] G5VVUL5tjIY: 프레임 수집 시작
+[2026-01-21T08:14:16.039Z] [INFO] [Multimodal] G5VVUL5tjIY: 2개 구간 발견
+[2026-01-21T08:14:55.935Z] [INFO] [Backfill] 0JNcoJWx7R8: 프레임 수집 시작
+[2026-01-21T08:14:55.936Z] [INFO] [Multimodal] 0JNcoJWx7R8: 4개 구간 발견
+[2026-01-21T08:15:21.730Z] [INFO] [Backfill] 0NzwTo7dhMc: 프레임 수집 시작
+[2026-01-21T08:15:21.731Z] [INFO] [Multimodal] 0NzwTo7dhMc: 2개 구간 발견
+[2026-01-21T08:15:27.147Z] [INFO] [Multimodal] 세그먼트 1 (408s-557s): 150개 프레임 저장
+[2026-01-21T08:15:33.955Z] [INFO] [Multimodal] 세그먼트 2 (651s-661s): 11개 프레임 저장
+[2026-01-21T08:15:37.789Z] [INFO] [Backfill] G67fimywcmk: 프레임 수집 시작
+[2026-01-21T08:15:37.790Z] [INFO] [Multimodal] G67fimywcmk: 4개 구간 발견
+[2026-01-21T08:15:48.013Z] [INFO] [Backfill] 0QF3dU243gM: 프레임 수집 시작
+[2026-01-21T08:15:48.014Z] [INFO] [Multimodal] 0QF3dU243gM: 6개 구간 발견
+[2026-01-21T08:15:58.593Z] [INFO] [Multimodal] 세그먼트 1 (1159s-1197s): 39개 프레임 저장
+[2026-01-21T08:16:40.732Z] [INFO] [Multimodal] 세그먼트 2 (879s-965s): 87개 프레임 저장
+[2026-01-21T08:16:54.773Z] [INFO] [Multimodal] 세그먼트 3 (1111s-1136s): 26개 프레임 저장
+[2026-01-21T08:17:11.792Z] [INFO] [Backfill] 0Tl5rNh5akc: 프레임 수집 시작
+[2026-01-21T08:17:11.793Z] [INFO] [Multimodal] 0Tl5rNh5akc: 6개 구간 발견
+[2026-01-21T08:17:14.610Z] [INFO] [Multimodal] 세그먼트 4 (280s-318s): 39개 프레임 저장
+[2026-01-21T08:17:16.666Z] [INFO] [Backfill] GBRoyvoSfAY: 프레임 수집 시작
+[2026-01-21T08:17:16.666Z] [INFO] [Multimodal] GBRoyvoSfAY: 6개 구간 발견
+[2026-01-21T08:17:42.203Z] [INFO] [Multimodal] 세그먼트 1 (976s-1023s): 48개 프레임 저장
+[2026-01-21T08:18:00.467Z] [INFO] [Backfill] 0VmT9F7y81s: 프레임 수집 시작
+[2026-01-21T08:18:00.468Z] [INFO] [Multimodal] 0VmT9F7y81s: 5개 구간 발견
+[2026-01-21T08:18:06.858Z] [INFO] [Multimodal] 세그먼트 2 (650s-698s): 49개 프레임 저장
+[2026-01-21T08:18:20.414Z] [INFO] [Multimodal] 세그먼트 3 (929s-953s): 25개 프레임 저장
+[2026-01-21T08:18:47.963Z] [INFO] [Backfill] 0_-X0y5bNKQ: 프레임 수집 시작
+[2026-01-21T08:18:47.964Z] [INFO] [Multimodal] 0_-X0y5bNKQ: 3개 구간 발견
+[2026-01-21T08:18:49.029Z] [INFO] [Multimodal] 세그먼트 4 (1080s-1139s): 60개 프레임 저장
+[2026-01-21T08:19:10.505Z] [INFO] [Backfill] 0dldcmnMR6s: 프레임 수집 시작
+[2026-01-21T08:19:10.506Z] [INFO] [Multimodal] 0dldcmnMR6s: 7개 구간 발견
+[2026-01-21T08:19:12.844Z] [INFO] [Multimodal] 세그먼트 5 (592s-640s): 49개 프레임 저장
+[2026-01-21T08:19:25.394Z] [INFO] [Multimodal] 세그먼트 6 (836s-860s): 25개 프레임 저장
+[2026-01-21T08:19:28.664Z] [INFO] [Backfill] GGQrROGsuuw: 프레임 수집 시작
+[2026-01-21T08:19:28.664Z] [INFO] [Multimodal] GGQrROGsuuw: 1개 구간 발견
+[2026-01-21T08:19:48.411Z] [INFO] [Multimodal] 세그먼트 1 (768s-802s): 35개 프레임 저장
+[2026-01-21T08:19:50.791Z] [INFO] [Backfill] 0lXxX_NA-t4: 프레임 수집 시작
+[2026-01-21T08:19:50.792Z] [INFO] [Multimodal] 0lXxX_NA-t4: 5개 구간 발견
+[2026-01-21T08:19:51.008Z] [INFO] [Backfill] GHZM7LgiVws: 프레임 수집 시작
+[2026-01-21T08:19:51.008Z] [INFO] [Multimodal] GHZM7LgiVws: 7개 구간 발견
+[2026-01-21T08:20:00.643Z] [INFO] [Multimodal] 세그먼트 1 (411s-424s): 14개 프레임 저장
+[2026-01-21T08:20:43.186Z] [INFO] [Multimodal] 세그먼트 2 (1052s-1144s): 93개 프레임 저장
+[2026-01-21T08:21:01.608Z] [INFO] [Multimodal] 세그먼트 3 (995s-1030s): 36개 프레임 저장
+[2026-01-21T08:21:09.493Z] [INFO] [Multimodal] 세그먼트 4 (171s-184s): 14개 프레임 저장
+[2026-01-21T08:21:17.438Z] [INFO] [Multimodal] 세그먼트 5 (652s-664s): 13개 프레임 저장
+[2026-01-21T08:21:35.342Z] [INFO] [Backfill] 0ykT2jWpwVk: 프레임 수집 시작
+[2026-01-21T08:21:35.343Z] [INFO] [Multimodal] 0ykT2jWpwVk: 6개 구간 발견
+[2026-01-21T08:21:36.001Z] [INFO] [Multimodal] 세그먼트 6 (686s-721s): 36개 프레임 저장
+[2026-01-21T08:21:59.475Z] [INFO] [Multimodal] 세그먼트 7 (114s-161s): 48개 프레임 저장
+[2026-01-21T08:22:01.894Z] [INFO] [Backfill] GJ0TXbKNk-g: 프레임 수집 시작
+[2026-01-21T08:22:01.894Z] [INFO] [Multimodal] GJ0TXbKNk-g: 3개 구간 발견
+[2026-01-21T08:22:11.624Z] [INFO] [Multimodal] 세그먼트 1 (652s-665s): 14개 프레임 저장
+[2026-01-21T08:22:14.119Z] [INFO] [Backfill] 11MTBs8k15g: 프레임 수집 시작
+[2026-01-21T08:22:14.119Z] [INFO] [Multimodal] 11MTBs8k15g: 10개 구간 발견
+[2026-01-21T08:22:24.488Z] [INFO] [Multimodal] 세그먼트 2 (166s-190s): 25개 프레임 저장
+[2026-01-21T08:22:32.643Z] [INFO] [Multimodal] 세그먼트 3 (415s-427s): 13개 프레임 저장
+[2026-01-21T08:22:35.004Z] [INFO] [Backfill] GLTd77dTP4Q: 프레임 수집 시작
+[2026-01-21T08:22:35.004Z] [INFO] [Multimodal] GLTd77dTP4Q: 7개 구간 발견
+[2026-01-21T08:23:01.918Z] [INFO] [Multimodal] 세그먼트 1 (56s-104s): 49개 프레임 저장
+[2026-01-21T08:23:13.945Z] [INFO] [Multimodal] 세그먼트 2 (412s-432s): 21개 프레임 저장
+[2026-01-21T08:23:34.391Z] [INFO] [Multimodal] 세그먼트 3 (806s-845s): 40개 프레임 저장
+[2026-01-21T08:23:41.273Z] [INFO] [Multimodal] 세그먼트 4 (178s-188s): 11개 프레임 저장
+[2026-01-21T08:24:09.439Z] [INFO] [Multimodal] 세그먼트 5 (862s-920s): 59개 프레임 저장
+[2026-01-21T08:24:34.127Z] [INFO] [Multimodal] 세그먼트 6 (487s-535s): 49개 프레임 저장
+[2026-01-21T08:24:45.513Z] [INFO] [Multimodal] 세그먼트 7 (112s-132s): 21개 프레임 저장
+[2026-01-21T08:24:47.519Z] [INFO] [Backfill] GPBfFGgLQSs: 프레임 수집 시작
+[2026-01-21T08:24:47.520Z] [INFO] [Multimodal] GPBfFGgLQSs: 4개 구간 발견
+[2026-01-21T08:24:58.080Z] [INFO] [Multimodal] 세그먼트 1 (414s-426s): 13개 프레임 저장
+[2026-01-21T08:25:11.331Z] [INFO] [Multimodal] 세그먼트 2 (461s-486s): 26개 프레임 저장
+[2026-01-21T08:25:42.405Z] [INFO] [Multimodal] 세그먼트 3 (910s-971s): 62개 프레임 저장
+[2026-01-21T08:26:03.285Z] [INFO] [Backfill] 16heS-I0edo: 프레임 수집 시작
+[2026-01-21T08:26:03.289Z] [INFO] [Multimodal] 16heS-I0edo: 5개 구간 발견
+[2026-01-21T08:26:43.947Z] [INFO] [Multimodal] 세그먼트 4 (591s-722s): 132개 프레임 저장
+[2026-01-21T08:26:47.130Z] [INFO] [Backfill] GPeeYxBVigM: 프레임 수집 시작
+[2026-01-21T08:26:47.130Z] [INFO] [Multimodal] GPeeYxBVigM: 8개 구간 발견
+[2026-01-21T08:26:58.973Z] [INFO] [Multimodal] 세그먼트 1 (1248s-1264s): 17개 프레임 저장
+[2026-01-21T08:27:08.848Z] [INFO] [Multimodal] 세그먼트 2 (416s-432s): 17개 프레임 저장
+[2026-01-21T08:27:25.572Z] [INFO] [Multimodal] 세그먼트 3 (704s-736s): 33개 프레임 저장
+[2026-01-21T08:27:27.780Z] [INFO] [Backfill] 1DnKb2BrsTg: 프레임 수집 시작
+[2026-01-21T08:27:27.781Z] [INFO] [Multimodal] 1DnKb2BrsTg: 3개 구간 발견
+[2026-01-21T08:27:42.722Z] [INFO] [Multimodal] 세그먼트 4 (160s-192s): 33개 프레임 저장
+[2026-01-21T08:27:49.655Z] [INFO] [Backfill] 1FrJg-bH63w: 프레임 수집 시작
+[2026-01-21T08:27:49.655Z] [INFO] [Multimodal] 1FrJg-bH63w: 8개 구간 발견
+[2026-01-21T08:28:07.113Z] [INFO] [Multimodal] 세그먼트 5 (464s-512s): 49개 프레임 저장
+[2026-01-21T08:28:30.675Z] [INFO] [Multimodal] 세그먼트 6 (976s-1024s): 49개 프레임 저장
+[2026-01-21T08:28:54.696Z] [INFO] [Multimodal] 세그먼트 7 (1488s-1536s): 49개 프레임 저장
+[2026-01-21T08:29:34.102Z] [INFO] [Multimodal] 세그먼트 8 (768s-848s): 81개 프레임 저장
+[2026-01-21T08:29:34.706Z] [INFO] [Backfill] 1O5vTQR8EO8: 프레임 수집 시작
+[2026-01-21T08:29:34.708Z] [INFO] [Multimodal] 1O5vTQR8EO8: 4개 구간 발견
+[2026-01-21T08:29:37.421Z] [INFO] [Backfill] GPxjPNVazpA: 프레임 수집 시작
+[2026-01-21T08:29:37.421Z] [INFO] [Multimodal] GPxjPNVazpA: 4개 구간 발견
+[2026-01-21T08:30:01.174Z] [INFO] [Backfill] 1SnDoCYRZUE: 프레임 수집 시작
+[2026-01-21T08:30:01.174Z] [INFO] [Multimodal] 1SnDoCYRZUE: 8개 구간 발견
+[2026-01-21T08:30:45.675Z] [INFO] [Multimodal] 세그먼트 1 (111s-253s): 143개 프레임 저장
+[2026-01-21T08:31:29.224Z] [INFO] [Multimodal] 세그먼트 2 (0s-95s): 96개 프레임 저장
+[2026-01-21T08:31:29.804Z] [INFO] [Backfill] 1SxiNnPoa1o: 프레임 수집 시작
+[2026-01-21T08:31:29.805Z] [INFO] [Multimodal] 1SxiNnPoa1o: 5개 구간 발견
+[2026-01-21T08:32:08.836Z] [INFO] [Multimodal] 세그먼트 3 (411s-494s): 84개 프레임 저장
+[2026-01-21T08:32:19.368Z] [INFO] [Multimodal] 세그먼트 4 (311s-330s): 20개 프레임 저장
+[2026-01-21T08:32:22.294Z] [INFO] [Backfill] G_9WMI0PNas: 프레임 수집 시작
+[2026-01-21T08:32:22.296Z] [INFO] [Multimodal] G_9WMI0PNas: 5개 구간 발견
+[2026-01-21T08:32:38.556Z] [INFO] [Multimodal] 세그먼트 1 (658s-684s): 27개 프레임 저장
+[2026-01-21T08:32:40.173Z] [INFO] [Backfill] 1ada3VIR1fQ: 프레임 수집 시작
+[2026-01-21T08:32:40.174Z] [INFO] [Multimodal] 1ada3VIR1fQ: 3개 구간 발견
+[2026-01-21T08:33:03.721Z] [INFO] [Multimodal] 세그먼트 2 (405s-456s): 52개 프레임 저장
+[2026-01-21T08:33:11.246Z] [INFO] [Backfill] 1itT_ytJ7Xc: 프레임 수집 시작
+[2026-01-21T08:33:11.247Z] [INFO] [Multimodal] 1itT_ytJ7Xc: 6개 구간 발견
+[2026-01-21T08:33:18.269Z] [INFO] [Multimodal] 세그먼트 3 (177s-203s): 27개 프레임 저장
+[2026-01-21T08:33:45.722Z] [INFO] [Backfill] 1kVddWboA0A: 프레임 수집 시작
+[2026-01-21T08:33:45.723Z] [INFO] [Multimodal] 1kVddWboA0A: 4개 구간 발견
+[2026-01-21T08:34:13.363Z] [INFO] [Multimodal] 세그먼트 4 (810s-925s): 116개 프레임 저장
+[2026-01-21T08:34:27.883Z] [INFO] [Multimodal] 세그먼트 5 (987s-1013s): 27개 프레임 저장
+[2026-01-21T08:34:30.635Z] [INFO] [Backfill] 1l2ERypH5Ls: 프레임 수집 시작
+[2026-01-21T08:34:30.636Z] [INFO] [Multimodal] 1l2ERypH5Ls: 5개 구간 발견
+[2026-01-21T08:34:30.795Z] [INFO] [Backfill] G_Oq32bGM74: 프레임 수집 시작
+[2026-01-21T08:34:30.796Z] [INFO] [Multimodal] G_Oq32bGM74: 4개 구간 발견
+[2026-01-21T08:34:43.448Z] [INFO] [Multimodal] 세그먼트 1 (643s-662s): 20개 프레임 저장
+[2026-01-21T08:34:59.058Z] [INFO] [Multimodal] 세그먼트 2 (46s-75s): 30개 프레임 저장
+[2026-01-21T08:35:10.432Z] [INFO] [Multimodal] 세그먼트 3 (167s-187s): 21개 프레임 저장
+[2026-01-21T08:35:17.847Z] [INFO] [Backfill] 1m3NVZm5n_A: 프레임 수집 시작
+[2026-01-21T08:35:17.849Z] [INFO] [Multimodal] 1m3NVZm5n_A: 6개 구간 발견
+[2026-01-21T08:35:21.580Z] [INFO] [Multimodal] 세그먼트 4 (410s-429s): 20개 프레임 저장
+[2026-01-21T08:35:25.122Z] [INFO] [Backfill] GeRkd99WZbU: 프레임 수집 시작
+[2026-01-21T08:35:25.122Z] [INFO] [Multimodal] GeRkd99WZbU: 7개 구간 발견
+[2026-01-21T08:35:47.879Z] [INFO] [Multimodal] 세그먼트 1 (721s-762s): 42개 프레임 저장
+[2026-01-21T08:35:55.372Z] [INFO] [Multimodal] 세그먼트 2 (415s-426s): 12개 프레임 저장
+[2026-01-21T08:35:56.933Z] [INFO] [Backfill] 1nVPaBoiq7I: 프레임 수집 시작
+[2026-01-21T08:35:56.934Z] [INFO] [Multimodal] 1nVPaBoiq7I: 7개 구간 발견
+[2026-01-21T08:36:02.366Z] [INFO] [Multimodal] 세그먼트 3 (652s-663s): 12개 프레임 저장
+[2026-01-21T08:36:08.765Z] [INFO] [Multimodal] 세그먼트 4 (178s-188s): 11개 프레임 저장
+[2026-01-21T08:36:25.514Z] [INFO] [Multimodal] 세그먼트 5 (207s-238s): 32개 프레임 저장
+[2026-01-21T08:37:12.781Z] [INFO] [Multimodal] 세그먼트 6 (59s-159s): 101개 프레임 저장
+[2026-01-21T08:37:25.009Z] [INFO] [Multimodal] 세그먼트 7 (603s-624s): 22개 프레임 저장
+[2026-01-21T08:37:25.592Z] [INFO] [Backfill] 1oItBKdDg_8: 프레임 수집 시작
+[2026-01-21T08:37:25.594Z] [INFO] [Multimodal] 1oItBKdDg_8: 6개 구간 발견
+[2026-01-21T08:37:27.563Z] [INFO] [Backfill] GepbPDhL1X4: 프레임 수집 시작
+[2026-01-21T08:37:27.564Z] [INFO] [Multimodal] GepbPDhL1X4: 5개 구간 발견
+[2026-01-21T08:38:10.408Z] [INFO] [Multimodal] 세그먼트 1 (33s-119s): 87개 프레임 저장
+[2026-01-21T08:38:35.378Z] [INFO] [Backfill] 1qslQO_PC9g: 프레임 수집 시작
+[2026-01-21T08:38:35.378Z] [INFO] [Multimodal] 1qslQO_PC9g: 3개 구간 발견
+[2026-01-21T08:38:51.976Z] [INFO] [Multimodal] 세그먼트 2 (649s-735s): 87개 프레임 저장
+[2026-01-21T08:38:58.168Z] [INFO] [Multimodal] 세그먼트 3 (413s-422s): 10개 프레임 저장
+[2026-01-21T08:39:06.238Z] [INFO] [Backfill] 1rSwrEPChlY: 프레임 수집 시작
+[2026-01-21T08:39:06.239Z] [INFO] [Multimodal] 1rSwrEPChlY: 4개 구간 발견
+[2026-01-21T08:39:12.132Z] [INFO] [Multimodal] 세그먼트 4 (464s-490s): 27개 프레임 저장
+[2026-01-21T08:39:22.326Z] [INFO] [Multimodal] 세그먼트 5 (168s-186s): 19개 프레임 저장
+[2026-01-21T08:39:26.077Z] [INFO] [Backfill] GiQlzDcTKj8: 프레임 수집 시작
+[2026-01-21T08:39:26.077Z] [INFO] [Multimodal] GiQlzDcTKj8: 7개 구간 발견
+[2026-01-21T08:39:42.253Z] [INFO] [Multimodal] 세그먼트 1 (409s-435s): 27개 프레임 저장
+[2026-01-21T08:40:03.576Z] [INFO] [Backfill] 1uWeJMamJDM: 프레임 수집 시작
+[2026-01-21T08:40:03.577Z] [INFO] [Multimodal] 1uWeJMamJDM: 5개 구간 발견
+[2026-01-21T08:40:41.678Z] [INFO] [Multimodal] 세그먼트 2 (73s-197s): 125개 프레임 저장
+[2026-01-21T08:40:48.411Z] [INFO] [Multimodal] 세그먼트 3 (655s-664s): 10개 프레임 저장
+[2026-01-21T08:40:56.614Z] [INFO] [Backfill] 1xtDsmbE91k: 프레임 수집 시작
+[2026-01-21T08:40:56.614Z] [INFO] [Multimodal] 1xtDsmbE91k: 4개 구간 발견
+[2026-01-21T08:41:01.981Z] [INFO] [Multimodal] 세그먼트 4 (368s-394s): 27개 프레임 저장
+[2026-01-21T08:41:27.918Z] [INFO] [Multimodal] 세그먼트 5 (565s-615s): 51개 프레임 저장
+[2026-01-21T08:41:38.315Z] [INFO] [Backfill] 2-HzvxrREac: 프레임 수집 시작
+[2026-01-21T08:41:38.315Z] [INFO] [Multimodal] 2-HzvxrREac: 5개 구간 발견
+[2026-01-21T08:41:41.289Z] [INFO] [Multimodal] 세그먼트 6 (679s-705s): 27개 프레임 저장
+[2026-01-21T08:41:55.951Z] [INFO] [Multimodal] 세그먼트 7 (450s-476s): 27개 프레임 저장
+[2026-01-21T08:41:59.765Z] [INFO] [Backfill] Gz-nspfstFI: 프레임 수집 시작
+[2026-01-21T08:41:59.765Z] [INFO] [Multimodal] Gz-nspfstFI: 7개 구간 발견
+[2026-01-21T08:42:12.446Z] [INFO] [Multimodal] 세그먼트 1 (407s-426s): 20개 프레임 저장
+[2026-01-21T08:42:13.988Z] [INFO] [Backfill] 2-QhBPvdK9w: 프레임 수집 시작
+[2026-01-21T08:42:13.989Z] [INFO] [Multimodal] 2-QhBPvdK9w: 6개 구간 발견
+[2026-01-21T08:42:59.812Z] [INFO] [Multimodal] 세그먼트 2 (36s-136s): 101개 프레임 저장
+[2026-01-21T08:43:07.343Z] [INFO] [Multimodal] 세그먼트 3 (651s-661s): 11개 프레임 저장
+[2026-01-21T08:43:14.057Z] [INFO] [Backfill] 25hLzjL0hgA: 프레임 수집 시작
+[2026-01-21T08:43:14.059Z] [INFO] [Multimodal] 25hLzjL0hgA: 4개 구간 발견
+[2026-01-21T08:43:21.383Z] [INFO] [Multimodal] 세그먼트 4 (868s-896s): 29개 프레임 저장
+[2026-01-21T08:43:28.358Z] [INFO] [Multimodal] 세그먼트 5 (171s-181s): 11개 프레임 저장
+[2026-01-21T08:43:46.977Z] [INFO] [Multimodal] 세그먼트 6 (199s-236s): 38개 프레임 저장
+[2026-01-21T08:43:55.302Z] [INFO] [Backfill] 2B7O7g9xMek: 프레임 수집 시작
+[2026-01-21T08:43:55.303Z] [INFO] [Multimodal] 2B7O7g9xMek: 3개 구간 발견
+[2026-01-21T08:44:01.722Z] [INFO] [Multimodal] 세그먼트 7 (678s-706s): 29개 프레임 저장
+[2026-01-21T08:44:03.897Z] [INFO] [Backfill] H8a1fQojZj0: 프레임 수집 시작
+[2026-01-21T08:44:03.897Z] [INFO] [Multimodal] H8a1fQojZj0: 5개 구간 발견
+[2026-01-21T08:44:24.175Z] [INFO] [Multimodal] 세그먼트 1 (642s-677s): 36개 프레임 저장
+[2026-01-21T08:44:27.237Z] [INFO] [Backfill] 2CAhj-TgMmA: 프레임 수집 시작
+[2026-01-21T08:44:27.238Z] [INFO] [Multimodal] 2CAhj-TgMmA: 2개 구간 발견
+[2026-01-21T08:44:38.004Z] [INFO] [Multimodal] 세그먼트 2 (693s-719s): 27개 프레임 저장
+[2026-01-21T08:44:47.060Z] [INFO] [Backfill] 2F1DQ2aaDQI: 프레임 수집 시작
+[2026-01-21T08:44:47.060Z] [INFO] [Multimodal] 2F1DQ2aaDQI: 7개 구간 발견
+[2026-01-21T08:44:52.235Z] [INFO] [Multimodal] 세그먼트 3 (133s-159s): 27개 프레임 저장
+[2026-01-21T08:45:16.587Z] [INFO] [Multimodal] 세그먼트 4 (50s-101s): 52개 프레임 저장
+[2026-01-21T08:45:22.721Z] [INFO] [Multimodal] 세그먼트 5 (417s-426s): 10개 프레임 저장
+[2026-01-21T08:45:25.736Z] [INFO] [Backfill] H9mug1r0UcY: 프레임 수집 시작
+[2026-01-21T08:45:25.736Z] [INFO] [Multimodal] H9mug1r0UcY: 4개 구간 발견
+[2026-01-21T08:45:57.073Z] [INFO] [Backfill] 2FhCVd2qNuo: 프레임 수집 시작
+[2026-01-21T08:45:57.073Z] [INFO] [Multimodal] 2FhCVd2qNuo: 6개 구간 발견
+[2026-01-21T08:46:29.646Z] [INFO] [Multimodal] 세그먼트 1 (633s-763s): 131개 프레임 저장
+[2026-01-21T08:46:33.239Z] [INFO] [Backfill] 2JfAGNXldxw: 프레임 수집 시작
+[2026-01-21T08:46:33.240Z] [INFO] [Multimodal] 2JfAGNXldxw: 5개 구간 발견
+[2026-01-21T08:46:37.150Z] [INFO] [Multimodal] 세그먼트 2 (415s-426s): 12개 프레임 저장
+[2026-01-21T08:46:49.218Z] [INFO] [Multimodal] 세그먼트 3 (168s-189s): 22개 프레임 저장
+[2026-01-21T08:47:01.227Z] [INFO] [Multimodal] 세그먼트 4 (920s-941s): 22개 프레임 저장
+[2026-01-21T08:47:03.238Z] [INFO] [Backfill] HFKUFBirCr0: 프레임 수집 시작
+[2026-01-21T08:47:03.239Z] [INFO] [Multimodal] HFKUFBirCr0: 2개 구간 발견
+[2026-01-21T08:47:18.731Z] [INFO] [Backfill] 2MlcYususZI: 프레임 수집 시작
+[2026-01-21T08:47:18.731Z] [INFO] [Multimodal] 2MlcYususZI: 5개 구간 발견
+[2026-01-21T08:47:58.084Z] [INFO] [Multimodal] 세그먼트 1 (2716s-2835s): 120개 프레임 저장
+[2026-01-21T08:48:05.804Z] [INFO] [Backfill] 2TYa1R-kcpc: 프레임 수집 시작
+[2026-01-21T08:48:05.805Z] [INFO] [Multimodal] 2TYa1R-kcpc: 4개 구간 발견
+[2026-01-21T08:48:40.165Z] [INFO] [Backfill] 2VO9YRB1qY4: 프레임 수집 시작
+[2026-01-21T08:48:40.166Z] [INFO] [Multimodal] 2VO9YRB1qY4: 5개 구간 발견
+[2026-01-21T08:48:51.337Z] [INFO] [Multimodal] 세그먼트 2 (1062s-1182s): 121개 프레임 저장
+[2026-01-21T08:48:55.337Z] [INFO] [Backfill] HLzgIj9j0hs: 프레임 수집 시작
+[2026-01-21T08:48:55.337Z] [INFO] [Multimodal] HLzgIj9j0hs: 10개 구간 발견
+[2026-01-21T08:49:15.704Z] [INFO] [Multimodal] 세그먼트 1 (785s-820s): 36개 프레임 저장
+[2026-01-21T08:49:34.086Z] [INFO] [Multimodal] 세그먼트 2 (157s-191s): 35개 프레임 저장
+[2026-01-21T08:49:34.235Z] [INFO] [Backfill] 2iLC-idpf28: 프레임 수집 시작
+[2026-01-21T08:49:34.235Z] [INFO] [Multimodal] 2iLC-idpf28: 3개 구간 발견
+[2026-01-21T08:50:00.465Z] [INFO] [Backfill] 2if2TjgSVEY: 프레임 수집 시작
+[2026-01-21T08:50:00.465Z] [INFO] [Multimodal] 2if2TjgSVEY: 4개 구간 발견
+[2026-01-21T08:50:03.280Z] [INFO] [Multimodal] 세그먼트 3 (863s-921s): 59개 프레임 저장
+[2026-01-21T08:50:10.836Z] [INFO] [Multimodal] 세그먼트 4 (415s-427s): 13개 프레임 저장
+[2026-01-21T08:50:23.780Z] [INFO] [Multimodal] 세그먼트 5 (639s-662s): 24개 프레임 저장
+[2026-01-21T08:50:36.922Z] [INFO] [Multimodal] 세그먼트 6 (830s-853s): 24개 프레임 저장
+[2026-01-21T08:50:38.844Z] [INFO] [Backfill] 2j45QOvYkL4: 프레임 수집 시작
+[2026-01-21T08:50:38.844Z] [INFO] [Multimodal] 2j45QOvYkL4: 3개 구간 발견
+[2026-01-21T08:50:49.771Z] [INFO] [Multimodal] 세그먼트 7 (538s-561s): 24개 프레임 저장
+[2026-01-21T08:51:03.581Z] [INFO] [Backfill] 2p1-JhJ_PZM: 프레임 수집 시작
+[2026-01-21T08:51:03.582Z] [INFO] [Multimodal] 2p1-JhJ_PZM: 4개 구간 발견
+[2026-01-21T08:51:16.633Z] [INFO] [Multimodal] 세그먼트 8 (1065s-1122s): 58개 프레임 저장
+[2026-01-21T08:51:40.489Z] [INFO] [Multimodal] 세그먼트 9 (336s-382s): 47개 프레임 저장
+[2026-01-21T08:51:44.095Z] [INFO] [Backfill] 2zKb3QGunno: 프레임 수집 시작
+[2026-01-21T08:51:44.096Z] [INFO] [Multimodal] 2zKb3QGunno: 2개 구간 발견
+[2026-01-21T08:51:58.348Z] [INFO] [Multimodal] 세그먼트 10 (572s-606s): 35개 프레임 저장
+[2026-01-21T08:51:59.728Z] [INFO] [Backfill] 2zX2zFonIEE: 프레임 수집 시작
+[2026-01-21T08:51:59.728Z] [INFO] [Multimodal] 2zX2zFonIEE: 6개 구간 발견
+[2026-01-21T08:52:02.332Z] [INFO] [Backfill] HR6dMTps16w: 프레임 수집 시작
+[2026-01-21T08:52:02.332Z] [INFO] [Multimodal] HR6dMTps16w: 2개 구간 발견
+[2026-01-21T08:52:23.378Z] [INFO] [Multimodal] 세그먼트 1 (861s-899s): 39개 프레임 저장
+[2026-01-21T08:52:43.955Z] [INFO] [Multimodal] 세그먼트 2 (542s-581s): 40개 프레임 저장
+[2026-01-21T08:52:47.234Z] [INFO] [Backfill] HRqiND6h_BE: 프레임 수집 시작
+[2026-01-21T08:52:47.235Z] [INFO] [Multimodal] HRqiND6h_BE: 7개 구간 발견
+[2026-01-21T08:53:08.877Z] [INFO] [Multimodal] 세그먼트 1 (747s-785s): 39개 프레임 저장
+[2026-01-21T08:53:09.827Z] [INFO] [Backfill] 3651eb7XF98: 프레임 수집 시작
+[2026-01-21T08:53:09.829Z] [INFO] [Multimodal] 3651eb7XF98: 3개 구간 발견
+[2026-01-21T08:53:32.562Z] [INFO] [Multimodal] 세그먼트 2 (145s-192s): 48개 프레임 저장
+[2026-01-21T08:53:33.850Z] [INFO] [Backfill] 387DTnvUyTg: 프레임 수집 시작
+[2026-01-21T08:53:33.851Z] [INFO] [Multimodal] 387DTnvUyTg: 5개 구간 발견
+[2026-01-21T08:53:43.997Z] [INFO] [Multimodal] 세그먼트 3 (410s-429s): 20개 프레임 저장
+[2026-01-21T08:53:50.236Z] [INFO] [Multimodal] 세그먼트 4 (656s-666s): 11개 프레임 저장
+[2026-01-21T08:54:06.554Z] [INFO] [Multimodal] 세그먼트 5 (583s-612s): 30개 프레임 저장
+[2026-01-21T08:54:14.565Z] [INFO] [Backfill] 3B_7UgMwjn8: 프레임 수집 시작
+[2026-01-21T08:54:14.566Z] [INFO] [Multimodal] 3B_7UgMwjn8: 1개 구간 발견
+[2026-01-21T08:54:23.451Z] [INFO] [Backfill] 3MLTE9Zqcoo: 프레임 수집 시작
+[2026-01-21T08:54:23.451Z] [INFO] [Multimodal] 3MLTE9Zqcoo: 5개 구간 발견
+[2026-01-21T08:54:26.052Z] [INFO] [Multimodal] 세그먼트 6 (63s-101s): 39개 프레임 저장
+[2026-01-21T08:54:41.743Z] [INFO] [Multimodal] 세그먼트 7 (209s-238s): 30개 프레임 저장
+[2026-01-21T08:54:45.129Z] [INFO] [Backfill] HT3oGmsf1xo: 프레임 수집 시작
+[2026-01-21T08:54:45.129Z] [INFO] [Multimodal] HT3oGmsf1xo: 5개 구간 발견
+[2026-01-21T08:55:06.777Z] [INFO] [Multimodal] 세그먼트 1 (393s-427s): 35개 프레임 저장
+[2026-01-21T08:55:20.375Z] [INFO] [Multimodal] 세그먼트 2 (56s-81s): 26개 프레임 저장
+[2026-01-21T08:55:28.029Z] [INFO] [Backfill] 3Zyb_DU2jFg: 프레임 수집 시작
+[2026-01-21T08:55:28.034Z] [INFO] [Multimodal] 3Zyb_DU2jFg: 3개 구간 발견
+[2026-01-21T08:55:31.190Z] [INFO] [Multimodal] 세그먼트 3 (651s-668s): 18개 프레임 저장
+[2026-01-21T08:55:37.716Z] [INFO] [Multimodal] 세그먼트 4 (176s-185s): 10개 프레임 저장
+[2026-01-21T08:55:52.745Z] [INFO] [Multimodal] 세그먼트 5 (586s-612s): 27개 프레임 저장
+[2026-01-21T08:55:53.105Z] [INFO] [Backfill] 3ehn7gxvWFQ: 프레임 수집 시작
+[2026-01-21T08:55:53.105Z] [INFO] [Multimodal] 3ehn7gxvWFQ: 7개 구간 발견
+[2026-01-21T08:55:56.213Z] [INFO] [Backfill] HZaDW00sldo: 프레임 수집 시작
+[2026-01-21T08:55:56.214Z] [INFO] [Multimodal] HZaDW00sldo: 5개 구간 발견
+[2026-01-21T08:56:16.066Z] [INFO] [Multimodal] 세그먼트 1 (400s-433s): 34개 프레임 저장
+[2026-01-21T08:57:07.807Z] [INFO] [Backfill] 3okMOI9wcfo: 프레임 수집 시작
+[2026-01-21T08:57:07.808Z] [INFO] [Multimodal] 3okMOI9wcfo: 4개 구간 발견
+[2026-01-21T08:57:13.371Z] [INFO] [Multimodal] 세그먼트 2 (675s-792s): 118개 프레임 저장
+[2026-01-21T08:57:20.130Z] [INFO] [Multimodal] 세그먼트 3 (654s-665s): 12개 프레임 저장
+[2026-01-21T08:57:49.964Z] [INFO] [Backfill] 48tVCdhcerE: 프레임 수집 시작
+[2026-01-21T08:57:49.965Z] [INFO] [Multimodal] 48tVCdhcerE: 5개 구간 발견
+[2026-01-21T08:58:21.566Z] [INFO] [Multimodal] 세그먼트 4 (73s-201s): 129개 프레임 저장
+[2026-01-21T08:58:40.652Z] [INFO] [Backfill] 4AlE083qq4g: 프레임 수집 시작
+[2026-01-21T08:58:40.653Z] [INFO] [Multimodal] 4AlE083qq4g: 5개 구간 발견
+[2026-01-21T08:58:58.229Z] [INFO] [Multimodal] 세그먼트 5 (833s-908s): 76개 프레임 저장
+[2026-01-21T08:59:00.424Z] [INFO] [Backfill] HddyXcoPRtw: 프레임 수집 시작
+[2026-01-21T08:59:00.424Z] [INFO] [Multimodal] HddyXcoPRtw: 2개 구간 발견
+[2026-01-21T08:59:11.983Z] [INFO] [Backfill] 4BahYG3xw5Q: 프레임 수집 시작
+[2026-01-21T08:59:11.984Z] [INFO] [Multimodal] 4BahYG3xw5Q: 5개 구간 발견
+[2026-01-21T08:59:45.115Z] [INFO] [Multimodal] 세그먼트 1 (6338s-6426s): 89개 프레임 저장
+[2026-01-21T09:00:06.026Z] [INFO] [Backfill] 4CtzkPxFc5g: 프레임 수집 시작
+[2026-01-21T09:00:06.027Z] [INFO] [Multimodal] 4CtzkPxFc5g: 4개 구간 발견
+[2026-01-21T09:00:43.092Z] [INFO] [Backfill] 4Cujb7BvlEI: 프레임 수집 시작
+[2026-01-21T09:00:43.094Z] [INFO] [Multimodal] 4Cujb7BvlEI: 10개 구간 발견
+[2026-01-21T09:02:03.807Z] [INFO] [Backfill] 4Hdavi_3o8I: 프레임 수집 시작
+[2026-01-21T09:02:03.808Z] [INFO] [Multimodal] 4Hdavi_3o8I: 3개 구간 발견
+[2026-01-21T09:02:22.070Z] [INFO] [Backfill] 4JfhLX3GdBk: 프레임 수집 시작
+[2026-01-21T09:02:22.070Z] [INFO] [Multimodal] 4JfhLX3GdBk: 5개 구간 발견
+[2026-01-21T09:03:02.104Z] [INFO] [Backfill] 4K6I8tXP_MM: 프레임 수집 시작
+[2026-01-21T09:03:02.105Z] [INFO] [Multimodal] 4K6I8tXP_MM: 4개 구간 발견
+[2026-01-21T09:03:28.972Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_14.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1340.webp"
+[2026-01-21T09:03:29.455Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_14.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1341.webp"
+[2026-01-21T09:03:29.910Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_14.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1342.webp"
+[2026-01-21T09:03:30.376Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_14.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1343.webp"
+[2026-01-21T09:03:30.910Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_14.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1344.webp"
+[2026-01-21T09:03:31.444Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_14.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1345.webp"
+[2026-01-21T09:03:31.941Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_14.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1346.webp"
+[2026-01-21T09:03:32.356Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_14.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1347.webp"
+[2026-01-21T09:03:33.215Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1348.webp"
+[2026-01-21T09:03:33.737Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1349.webp"
+[2026-01-21T09:03:34.456Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1350.webp"
+[2026-01-21T09:03:34.973Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1351.webp"
+[2026-01-21T09:03:35.406Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1352.webp"
+[2026-01-21T09:03:35.859Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1353.webp"
+[2026-01-21T09:03:36.295Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1354.webp"
+[2026-01-21T09:03:36.773Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1355.webp"
+[2026-01-21T09:03:37.214Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1356.webp"
+[2026-01-21T09:03:37.664Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1357.webp"
+[2026-01-21T09:03:38.105Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1358.webp"
+[2026-01-21T09:03:38.546Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1359.webp"
+[2026-01-21T09:03:38.968Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1360.webp"
+[2026-01-21T09:03:39.380Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1361.webp"
+[2026-01-21T09:03:39.887Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1362.webp"
+[2026-01-21T09:03:40.317Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1363.webp"
+[2026-01-21T09:03:40.770Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1364.webp"
+[2026-01-21T09:03:41.218Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1365.webp"
+[2026-01-21T09:03:41.675Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1366.webp"
+[2026-01-21T09:03:42.157Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1367.webp"
+[2026-01-21T09:03:42.652Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1368.webp"
+[2026-01-21T09:03:43.088Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1369.webp"
+[2026-01-21T09:03:43.566Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1370.webp"
+[2026-01-21T09:03:44.038Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1371.webp"
+[2026-01-21T09:03:44.474Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1372.webp"
+[2026-01-21T09:03:44.907Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1373.webp"
+[2026-01-21T09:03:45.525Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1374.webp"
+[2026-01-21T09:03:46.009Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1375.webp"
+[2026-01-21T09:03:46.481Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1376.webp"
+[2026-01-21T09:03:46.861Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1377.webp"
+[2026-01-21T09:03:47.308Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1378.webp"
+[2026-01-21T09:03:47.741Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1379.webp"
+[2026-01-21T09:03:48.193Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1380.webp"
+[2026-01-21T09:03:48.635Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1381.webp"
+[2026-01-21T09:03:49.117Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1382.webp"
+[2026-01-21T09:03:49.574Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1383.webp"
+[2026-01-21T09:03:49.993Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1384.webp"
+[2026-01-21T09:03:50.473Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1385.webp"
+[2026-01-21T09:03:50.856Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1386.webp"
+[2026-01-21T09:03:51.338Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1387.webp"
+[2026-01-21T09:03:51.763Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1388.webp"
+[2026-01-21T09:03:52.236Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1389.webp"
+[2026-01-21T09:03:52.712Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1390.webp"
+[2026-01-21T09:03:53.127Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1391.webp"
+[2026-01-21T09:03:53.616Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1392.webp"
+[2026-01-21T09:03:54.026Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1393.webp"
+[2026-01-21T09:03:54.463Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1394.webp"
+[2026-01-21T09:03:54.845Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1395.webp"
+[2026-01-21T09:03:55.308Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1396.webp"
+[2026-01-21T09:03:55.798Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1397.webp"
+[2026-01-21T09:03:56.218Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1398.webp"
+[2026-01-21T09:03:56.592Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1399.webp"
+[2026-01-21T09:03:56.999Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1400.webp"
+[2026-01-21T09:03:57.460Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1401.webp"
+[2026-01-21T09:03:57.889Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1402.webp"
+[2026-01-21T09:03:58.317Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1403.webp"
+[2026-01-21T09:03:58.779Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1404.webp"
+[2026-01-21T09:03:59.169Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1405.webp"
+[2026-01-21T09:03:59.615Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1406.webp"
+[2026-01-21T09:04:00.072Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1407.webp"
+[2026-01-21T09:04:00.519Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1408.webp"
+[2026-01-21T09:04:00.977Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1409.webp"
+[2026-01-21T09:04:01.423Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1410.webp"
+[2026-01-21T09:04:01.901Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1411.webp"
+[2026-01-21T09:04:02.378Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1412.webp"
+[2026-01-21T09:04:02.781Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1413.webp"
+[2026-01-21T09:04:03.249Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1414.webp"
+[2026-01-21T09:04:03.683Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1415.webp"
+[2026-01-21T09:04:04.144Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1416.webp"
+[2026-01-21T09:04:04.568Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1417.webp"
+[2026-01-21T09:04:05.038Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1418.webp"
+[2026-01-21T09:04:05.480Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1419.webp"
+[2026-01-21T09:04:05.873Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1420.webp"
+[2026-01-21T09:04:06.372Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1421.webp"
+[2026-01-21T09:04:06.834Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1422.webp"
+[2026-01-21T09:04:07.353Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1423.webp"
+[2026-01-21T09:04:07.831Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1424.webp"
+[2026-01-21T09:04:08.247Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1425.webp"
+[2026-01-21T09:04:08.736Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1426.webp"
+[2026-01-21T09:04:09.174Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1427.webp"
+[2026-01-21T09:04:09.606Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1428.webp"
+[2026-01-21T09:04:10.077Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1429.webp"
+[2026-01-21T09:04:10.501Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1430.webp"
+[2026-01-21T09:04:10.896Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1431.webp"
+[2026-01-21T09:04:11.359Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1432.webp"
+[2026-01-21T09:04:11.759Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1433.webp"
+[2026-01-21T09:04:12.199Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1434.webp"
+[2026-01-21T09:04:12.637Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1435.webp"
+[2026-01-21T09:04:13.059Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1436.webp"
+[2026-01-21T09:04:13.496Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_15.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1437.webp"
+[2026-01-21T09:04:14.161Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1438.webp"
+[2026-01-21T09:04:14.684Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1439.webp"
+[2026-01-21T09:04:15.131Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1440.webp"
+[2026-01-21T09:04:15.594Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1441.webp"
+[2026-01-21T09:04:15.985Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1442.webp"
+[2026-01-21T09:04:16.426Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1443.webp"
+[2026-01-21T09:04:16.874Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1444.webp"
+[2026-01-21T09:04:17.247Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1445.webp"
+[2026-01-21T09:04:17.738Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1446.webp"
+[2026-01-21T09:04:18.170Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1447.webp"
+[2026-01-21T09:04:18.596Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1448.webp"
+[2026-01-21T09:04:18.989Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1449.webp"
+[2026-01-21T09:04:19.391Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1450.webp"
+[2026-01-21T09:04:19.865Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1451.webp"
+[2026-01-21T09:04:20.277Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1452.webp"
+[2026-01-21T09:04:20.754Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1453.webp"
+[2026-01-21T09:04:21.225Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1454.webp"
+[2026-01-21T09:04:21.645Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1455.webp"
+[2026-01-21T09:04:22.045Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1456.webp"
+[2026-01-21T09:04:22.473Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1457.webp"
+[2026-01-21T09:04:22.961Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1458.webp"
+[2026-01-21T09:04:23.409Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1459.webp"
+[2026-01-21T09:04:23.808Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1460.webp"
+[2026-01-21T09:04:24.286Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1461.webp"
+[2026-01-21T09:04:24.703Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1462.webp"
+[2026-01-21T09:04:25.125Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1463.webp"
+[2026-01-21T09:04:25.663Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1464.webp"
+[2026-01-21T09:04:26.115Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1465.webp"
+[2026-01-21T09:04:26.563Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1466.webp"
+[2026-01-21T09:04:27.063Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1467.webp"
+[2026-01-21T09:04:27.552Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1468.webp"
+[2026-01-21T09:04:27.950Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1469.webp"
+[2026-01-21T09:04:28.499Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1470.webp"
+[2026-01-21T09:04:28.948Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1471.webp"
+[2026-01-21T09:04:29.467Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1472.webp"
+[2026-01-21T09:04:29.974Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1473.webp"
+[2026-01-21T09:04:30.415Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1474.webp"
+[2026-01-21T09:04:30.964Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1475.webp"
+[2026-01-21T09:04:31.398Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1476.webp"
+[2026-01-21T09:04:31.856Z] [ERROR] 프레임 추출 실패 HddyXcoPRtw: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/HddyXcoPRtw_sheet_16.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/HddyXcoPRtw/0/2_868_1477/1477.webp"
+[2026-01-21T09:04:32.026Z] [INFO] [Multimodal] 세그먼트 2 (868s-1477s): 472개 프레임 저장
+[2026-01-21T09:04:35.418Z] [INFO] [Backfill] HfyEbRuIXBU: 프레임 수집 시작
+[2026-01-21T09:04:35.418Z] [INFO] [Multimodal] HfyEbRuIXBU: 5개 구간 발견
+[2026-01-21T09:04:59.160Z] [INFO] [Multimodal] 세그먼트 1 (628s-666s): 39개 프레임 저장
+[2026-01-21T09:07:12.444Z] [INFO] [Multimodal] 세그먼트 2 (936s-1220s): 285개 프레임 저장
+[2026-01-21T09:07:26.816Z] [INFO] [Multimodal] 세그먼트 3 (406s-432s): 27개 프레임 저장
+[2026-01-21T09:08:14.365Z] [INFO] [Multimodal] 세그먼트 4 (86s-185s): 100개 프레임 저장
+[2026-01-21T09:08:28.342Z] [INFO] [Multimodal] 세그먼트 5 (468s-493s): 26개 프레임 저장
+[2026-01-21T09:08:31.897Z] [INFO] [Backfill] HmphRR9IdOk: 프레임 수집 시작
+[2026-01-21T09:08:31.897Z] [INFO] [Multimodal] HmphRR9IdOk: 5개 구간 발견
+[2026-01-21T09:08:41.292Z] [INFO] [Multimodal] 세그먼트 1 (415s-427s): 13개 프레임 저장
+[2026-01-21T09:08:59.054Z] [INFO] [Multimodal] 세그먼트 2 (628s-661s): 34개 프레임 저장
+[2026-01-21T09:09:06.723Z] [INFO] [Multimodal] 세그먼트 3 (170s-182s): 13개 프레임 저장
+[2026-01-21T09:09:14.447Z] [INFO] [Multimodal] 세그먼트 4 (490s-502s): 13개 프레임 저장
