@@ -3126,3 +3126,32 @@ Error marking filters as finished
 [2026-01-21T03:28:49.595Z] [INFO] === 프레임 백필 시작 ===
 [2026-01-21T03:28:49.597Z] [INFO] [Backfill] -1OU4tkFJns: 프레임 수집 시작
 [2026-01-21T03:28:49.598Z] [INFO] [Multimodal] -1OU4tkFJns: 6개 구간 발견
+[2026-01-21T03:29:09.743Z] [INFO] === HTTP Heatmap + Multimodal Collector Started [Channel: tzuyang] ===
+[2026-01-21T03:29:09.744Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-21T03:29:09.745Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-21T03:29:09.746Z] [INFO] Cookies loaded.
+[2026-01-21T03:29:09.746Z] [INFO] === 프레임 백필 시작 ===
+[2026-01-21T03:29:09.748Z] [INFO] [Backfill] -1OU4tkFJns: 프레임 수집 시작
+[2026-01-21T03:29:09.749Z] [INFO] [Multimodal] -1OU4tkFJns: 6개 구간 발견
+[2026-01-21T03:29:28.629Z] [INFO] [Multimodal] 세그먼트 1 (351s-383s): 33개 프레임 저장
+[2026-01-21T03:29:35.348Z] [INFO] [Multimodal] 세그먼트 2 (413s-422s): 10개 프레임 저장
+[2026-01-21T03:29:56.371Z] [INFO] [Multimodal] 세그먼트 3 (54s-94s): 41개 프레임 저장
+[2026-01-21T03:30:08.909Z] [INFO] [Multimodal] 세그먼트 4 (756s-780s): 25개 프레임 저장
+[2026-01-21T03:30:18.333Z] [INFO] [Multimodal] 세그먼트 5 (585s-601s): 17개 프레임 저장
+[2026-01-21T03:31:00.320Z] [INFO] [Multimodal] 세그먼트 6 (101s-188s): 88개 프레임 저장
+[2026-01-21T03:31:03.360Z] [INFO] [Backfill] -8wi-fVqTwk: 프레임 수집 시작
+[2026-01-21T03:31:03.360Z] [INFO] [Multimodal] -8wi-fVqTwk: 6개 구간 발견
+[2026-01-21T03:31:33.604Z] [INFO] [Multimodal] 세그먼트 1 (66s-123s): 58개 프레임 저장
+[2026-01-21T03:31:40.663Z] [INFO] [Multimodal] 세그먼트 2 (414s-425s): 12개 프레임 저장
+[2026-01-21T03:32:23.240Z] [INFO] [Multimodal] 세그먼트 3 (433s-519s): 87개 프레임 저장
+[2026-01-21T03:33:03.542Z] [INFO] [Multimodal] 세그먼트 4 (132s-217s): 86개 프레임 저장
+[2026-01-21T03:33:09.770Z] [INFO] [Multimodal] 세그먼트 5 (924s-934s): 11개 프레임 저장
+[2026-01-21T03:34:05.518Z] [INFO] [Multimodal] 세그먼트 6 (565s-679s): 115개 프레임 저장
+[2026-01-21T03:34:09.315Z] [INFO] [Backfill] -D43ezc57z8: 프레임 수집 시작
+[2026-01-21T03:34:09.316Z] [INFO] [Multimodal] -D43ezc57z8: 4개 구간 발견
+[2026-01-21T03:34:21.860Z] [INFO] [Multimodal] 세그먼트 1 (417s-435s): 19개 프레임 저장
+[2026-01-21T03:34:31.427Z] [INFO] [Multimodal] 세그먼트 2 (651s-668s): 18개 프레임 저장
+[2026-01-21T03:36:00.228Z] [INFO] [Multimodal] 세그먼트 3 (66s-234s): 169개 프레임 저장
+[2026-01-21T03:36:46.592Z] [INFO] [Multimodal] 세그먼트 4 (292s-351s): 60개 프레임 저장
+[2026-01-21T03:36:49.473Z] [INFO] [Backfill] -H-mhUeu_qk: 프레임 수집 시작
+[2026-01-21T03:36:49.473Z] [INFO] [Multimodal] -H-mhUeu_qk: 2개 구간 발견
