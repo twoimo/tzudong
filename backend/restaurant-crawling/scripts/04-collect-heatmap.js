@@ -170,15 +170,33 @@ function extractHeatmapFromHtml(html) {
             return null;
         }
 
+        // 1. "가장 많이 다시 본 장면" 마커 추출 (timedMarkerDecorations)
+        const markersDecoration = findKey(data, 'markersDecoration');
+        let mostReplayedMarkers = [];
+        if (markersDecoration && markersDecoration.timedMarkerDecorations) {
+            mostReplayedMarkers = markersDecoration.timedMarkerDecorations.filter(marker => {
+                const labelText = marker.label?.runs?.[0]?.text || '';
+                return labelText.includes('가장 많이 다시 본 장면') || labelText.toLowerCase().includes('most replayed');
+            });
+        }
+
+        // 2. 기존 히트맵 데이터도 가져오기
         const markers = findKey(data, 'markers');
+        let rawMarkers = null;
         if (markers && Array.isArray(markers) && markers.length > 0) {
-            return { type: 'raw_markers', data: markers };
+            rawMarkers = markers;
+        } else {
+            const markerGraph = findKey(data, 'markerGraph');
+            if (markerGraph && markerGraph.markers && Array.isArray(markerGraph.markers)) {
+                rawMarkers = markerGraph.markers;
+            }
         }
-        const markerGraph = findKey(data, 'markerGraph');
-        if (markerGraph && markerGraph.markers && Array.isArray(markerGraph.markers)) {
-            return { type: 'raw_markers', data: markerGraph.markers };
-        }
-        return null;
+
+        return {
+            type: 'raw_markers',
+            data: rawMarkers,
+            mostReplayedMarkers: mostReplayedMarkers
+        };
     } catch (e) {
         log('warn', `Parse Error: ${e.message}`);
         return null;
