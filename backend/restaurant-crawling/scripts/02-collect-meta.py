@@ -540,7 +540,7 @@ def collect_channel_meta(
                     # 메타는 매일 수집 (daily_collection -> recollect_vars에만 추가)
                     # 히트맵은 주 1회만 수집 (scheduled_weekly 체크)
                     
-                    # 1. 메타 데이터 수집 태그 (recollect_vars에만 추가, recollect_reason에는 설정 안 함)
+                    # 1. 메타 데이터 수집 태그 (recollect_vars에만 추가)
                     if not is_changed:
                          recollect_vars.append("daily_collection")
                          
@@ -564,15 +564,8 @@ def collect_channel_meta(
             # previous_meta가 없으면(신규) 0, 있으면 +1
             new_id = prev_id + 1 if previous_meta else 0
             
-            # recollect_reason 결정 (우선순위: 변경 > 바이럴 > 스케줄)
-            # daily_collection은 recollect_vars에만 넣고 recollect_reason에는 설정 안 함
-            if is_changed:
-                if not previous_meta:
-                    current_meta["recollect_reason"] = "new_video"
-                else:
-                    current_meta["recollect_reason"] = recollect_vars[0]
-            elif schedule_reason and schedule_reason != "daily_collection":
-                current_meta["recollect_reason"] = schedule_reason
+            # schedule_reason이 있으면 recollect_vars에 추가 (daily_collection 제외)
+            if schedule_reason and schedule_reason != "daily_collection":
                 if schedule_reason not in recollect_vars:
                     recollect_vars.append(schedule_reason)
 

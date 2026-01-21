@@ -201,9 +201,9 @@ Puppeteer로 maestra.ai / tubetranscript.com에서 자막을 수집합니다.
 ### 수집 조건
 ```javascript
 // meta.recollect_id > transcript.recollect_id
-// AND (신규 OR meta.recollect_reason == "duration_changed")
-if (!latestTranscript || recollectReason === "duration_changed") {
-    toCollect.push({ videoId, recollectReason, metaRecollectId });
+// AND (신규 OR meta.recollect_vars에 "duration_changed" 포함)
+if (!latestTranscript || recollectVars.includes("duration_changed")) {
+    toCollect.push({ videoId, recollectVars, metaRecollectId });
 }
 ```
 
@@ -226,7 +226,7 @@ if (!latestTranscript || recollectReason === "duration_changed") {
     { "start": 5.5, "text": "두 번째 세그먼트" }
   ],
   "recollect_id": 0,
-  "recollect_reason": null
+  "recollect_vars": []
 }
 ```
 
@@ -273,7 +273,7 @@ Puppeteer로 YouTube 히트맵(SVG 경로)을 수집합니다.
   "youtube_link": "https://www.youtube.com/watch?v={video_id}",
   "collected_at": "2025-12-01T12:00:00+09:00",
   "recollect_id": 0,
-  "recollect_reason": "title_changed",
+  "recollect_vars": ["title_changed"],
   "svg_path_data": "M0,0 L100,50..."
 }
 ```

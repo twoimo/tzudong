@@ -12,7 +12,6 @@
  * 
  * [사용법]
  *   node 04-collect-heatmap.js --channel tzuyang
- *   node 04-collect-heatmap.js  # 모든 채널
  */
 
 import fs from 'fs';
@@ -196,7 +195,7 @@ function shouldCollect(videoId) {
             if (content) {
                 const meta = JSON.parse(content);
                 metaRecollectId = meta.recollect_id !== undefined ? meta.recollect_id : 0;
-                recollectVars = meta.recollect_vars || (meta.recollect_reason ? [meta.recollect_reason] : []);
+                recollectVars = meta.recollect_vars || [];
                 publishedAt = meta.published_at;
             }
         } catch (e) { }
@@ -333,6 +332,24 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
     log('info', `Processing [${video_id}]...`);
 
     try {
+
+        // 메타 정보 확인
+        const metaInfo = getMetaInfo(video_id);
+
+        // [Shorts 필터] (180초 미만) - 페이지 페치 전 확인
+        if (metaInfo.duration !== null && metaInfo.duration < 180) {
+            log('info', `[Skip] Shorts detected from meta (<180s). ID: ${video_id} (Duration: ${metaInfo.duration}s)`);
+            saveVideoData(video_id, {
+                youtube_link,
+                video_id,
+                status: 'skipped_shorts',
+                recollect_id: metaInfo.recollect_id,
+                duration: metaInfo.duration,
+                collected_at: new Date().toISOString()
+            });
+            return;
+        }
+
         const html = await fetchVideoPage(video_id, cookieHeader);
         const newHeatmap = extractHeatmapFromHtml(html);
 
@@ -342,13 +359,12 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
                 youtube_link,
                 video_id,
                 status: 'no_heatmap',
+                duration: metaInfo.duration,
                 collected_at: new Date().toISOString()
             });
             return;
         }
 
-        // 메타 정보
-        const metaInfo = getMetaInfo(video_id);
         const filepath = getOutputFilePath(video_id);
 
         const formattedData = newHeatmap.data.map(item => {
@@ -361,21 +377,6 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             };
         });
 
-        // [Shorts 필터] (180초 미만)
-        if (formattedData.length > 0) {
-            const lastPoint = formattedData[formattedData.length - 1];
-            if (lastPoint.startMillis < 180000) {
-                log('info', `[Skip] Shorts detected (<180s). ID: ${video_id}`);
-                saveVideoData(video_id, {
-                    youtube_link,
-                    video_id,
-                    status: 'skipped_shorts',
-                    recollect_id: metaInfo.recollect_id,
-                    collected_at: new Date().toISOString()
-                });
-                return;
-            }
-        }
 
         if (fs.existsSync(filepath)) {
             try {
@@ -411,7 +412,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             video_id,
             collected_at: new Date().toISOString(),
             recollect_id: 0,
-            recollect_reason: 'error',
+            recollect_vars: ['error'],
             status: 'error',
             error_message: e.message
         });
@@ -432,12 +433,14 @@ function getMetaInfo(videoId) {
                 return {
                     recollect_id: meta.recollect_id !== undefined ? meta.recollect_id : 0,
                     recollect_vars: meta.recollect_vars || [],
-                    published_at: meta.published_at || null
+                    published_at: meta.published_at || null,
+                    duration: meta.duration !== undefined ? meta.duration : null,
+                    is_shorts: !!meta.is_shorts
                 };
             }
         } catch (e) { }
     }
-    return { recollect_id: 0, recollect_vars: [], published_at: null };
+    return { recollect_id: 0, recollect_vars: [], published_at: null, duration: null, is_shorts: false };
 }
 
 main();

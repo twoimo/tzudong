@@ -21,19 +21,23 @@ echo "============================================================" >> "$LOG_FIL
 
 # 1. URL 수집 (새로운 영상 탐색)
 echo "[$(date)] [Step 1] Collecting URLs..." >> "$LOG_FILE"
-python3 backend/restaurant-crawling/scripts/01-collect-urls.py >> "$LOG_FILE" 2>&1
+python3 backend/restaurant-crawling/scripts/01-collect-urls.py --channel tzuyang >> "$LOG_FILE" 2>&1
 
 # 2. 메타데이터 수집 & 스케줄링 (관제탑)
 echo "[$(date)] [Step 2] Collecting Meta & Scheduling..." >> "$LOG_FILE"
-python3 backend/restaurant-crawling/scripts/02-collect-meta.py >> "$LOG_FILE" 2>&1
+python3 backend/restaurant-crawling/scripts/02-collect-meta.py --channel tzuyang >> "$LOG_FILE" 2>&1
 
 # 3. 히트맵 수집 (02번의 트리거에 따름)
 echo "[$(date)] [Step 3] Collecting Heatmaps..." >> "$LOG_FILE"
-node backend/restaurant-crawling/scripts/04-collect-heatmap.js >> "$LOG_FILE" 2>&1
+node backend/restaurant-crawling/scripts/04-collect-heatmap.js --channel tzuyang >> "$LOG_FILE" 2>&1
 
 # 4. 자막 수집 (02번의 트리거에 따름)
 echo "[$(date)] [Step 4] Collecting Transcripts..." >> "$LOG_FILE"
-node backend/restaurant-crawling/scripts/03-collect-transcript.js >> "$LOG_FILE" 2>&1
+node backend/restaurant-crawling/scripts/03-collect-transcript.js --channel tzuyang >> "$LOG_FILE" 2>&1
+
+# 5. Gemini 분석 (자막 분석 및 리뷰 추출)
+echo "[$(date)] [Step 5] Analyzing with Gemini..." >> "$LOG_FILE"
+bash backend/restaurant-crawling/scripts/06-gemini-crawling.sh --channel tzuyang >> "$LOG_FILE" 2>&1
 
 echo "============================================================" >> "$LOG_FILE"
 echo "[$(date)] ✅ Daily Collection Pipeline Completed" >> "$LOG_FILE"
