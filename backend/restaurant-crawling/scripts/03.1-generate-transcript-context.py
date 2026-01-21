@@ -90,7 +90,7 @@ def parse_error_context(model: str, error_context: str, max_retries: int = 3) ->
     parse_error_chain = (
         parse_error_prompt | ChatOllama(model=model, temperature=0) | StrOutputParser()
     )
-    print(f"❌ error_context: {error_context}")
+    # print(f"❌ error_context: {error_context}")
     error_context_result = error_context  # 초기값
 
     for attempt in range(max_retries):
@@ -99,16 +99,16 @@ def parse_error_context(model: str, error_context: str, max_retries: int = 3) ->
         )
 
         if is_valid_context(error_context_result):
-            print(
-                f"✅ parsed_context (시도 {attempt + 1}): {error_context_result}",
-                end="\n\n",
-            )
+            # print(
+            #     f"✅ parsed_context (시도 {attempt + 1}): {error_context_result}",
+            #     end="\n\n",
+            # )
             return error_context_result
 
-        print(f"  ⚠️ parse 재시도 {attempt + 1}/{max_retries}")
+        # print(f"  ⚠️ parse 재시도 {attempt + 1}/{max_retries}")
 
     # 3회 실패 시 마지막 결과 반환
-    print(f"❌ parse 최종 실패, 마지막 결과 사용")
+    # print(f"❌ parse 최종 실패, 마지막 결과 사용")
     return error_context_result.strip()
 
 
@@ -171,7 +171,7 @@ def run_chain_with_retry(
         if is_valid_context(result) and len(result) <= max_chars:
             return result
 
-        print(f"  재시도 {attempt + 1}/{max_retries}: 형식 오류 또는 길이 초과")
+        # print(f"  재시도 {attempt + 1}/{max_retries}: 형식 오류 또는 길이 초과")
 
     result = parse_error_context(model, error_context=result).strip()
     return result
@@ -240,9 +240,9 @@ def process_video(
         )
 
         contextualized_chunk = f"문맥: {gen_context}\n\n{chunk_transcript}"
-        print(f"상황: {gen_context}\n")
-        print(f"자막: {chunk_transcript[:100]}...")
-        print("============================================\n")
+        # print(f"상황: {gen_context}\n")
+        # print(f"자막: {chunk_transcript[:100]}...")
+        # print("============================================\n")
 
         doc = Document(
             page_content=contextualized_chunk,
@@ -278,12 +278,12 @@ def main():
     parser.add_argument(
         "--prompt", type=str, default="generate_context_en.yaml", help="Prompt filename"
     )
-    parser.add_argument(
-        "--rest-interval", type=int, default=5, help="Number of videos before rest"
-    )
-    parser.add_argument(
-        "--rest-seconds", type=int, default=150, help="Rest duration in seconds"
-    )
+    # parser.add_argument(
+    #     "--rest-interval", type=int, default=5, help="Number of videos before rest"
+    # )
+    # parser.add_argument(
+    #     "--rest-seconds", type=int, default=150, help="Rest duration in seconds"
+    # )
     args = parser.parse_args()
 
     # tzuyang 전용 (다른 유튜버는 이 스크립트 사용 불가)
@@ -311,10 +311,10 @@ def main():
     skipped_count = 0
 
     for idx, data_path in enumerate(tqdm(transcript_paths, desc="Generating context")):
-        # 주기적 휴식
-        if processed_count > 0 and processed_count % args.rest_interval == 0:
-            print(f"🕐 {processed_count}개 영상 완료, {args.rest_seconds}초 휴식...")
-            time.sleep(args.rest_seconds)
+        # # 주기적 휴식
+        # if processed_count > 0 and processed_count % args.rest_interval == 0:
+        #     print(f"🕐 {processed_count}개 영상 완료, {args.rest_seconds}초 휴식...")
+        #     time.sleep(args.rest_seconds)
 
         video_id = os.path.basename(data_path).split(".")[0]
 
