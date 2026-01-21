@@ -1,6 +1,7 @@
 /**
- * 유튜브 히트맵(Most Replayed) 데이터 수집 스크립트
+ * 유튜브 히트맵(Most Replayed) + 멀티모달(Storyboard Frame) 통합 수집 스크립트
  * - HTML 파싱을 통해 '가장 많이 다시 본 구간' 데이터 추출
+ * - 히트맵 수집 직후 스토리보드 프레임 자동 추출
  * - Meta 수집기(02)가 생성한 recollect_vars 태그를 기반으로 수집 여부 결정
  * 
  * [수집 발동 조건 (TRIGGER_VARS)]
@@ -17,8 +18,12 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { exec } from 'child_process';
+import util from 'util';
 import dotenv from 'dotenv';
 import winston from 'winston';
+
+const execPromise = util.promisify(exec);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,7 +61,7 @@ function log(level, msg) {
 }
 
 // --- 상수 ---
-const COLLECTION_INTERVAL_MS = 3000;
+const COLLECTION_INTERVAL_MS = 1000;
 let CHANNEL_NAME = 'tzuyang';
 
 const args = process.argv.slice(2);
@@ -70,9 +75,16 @@ const DATA_DIR = path.join(BASE_DATA_DIR, 'heatmap');
 const META_DIR = path.join(BASE_DATA_DIR, 'meta');
 const URLS_FILE = path.join(BASE_DATA_DIR, 'urls.txt');
 
-if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-}
+// 멀티모달 관련 디렉토리
+const FRAMES_DIR = path.join(BASE_DATA_DIR, 'frames');
+const TEMP_DIR = path.join(BASE_DATA_DIR, 'temp_frames');
+const COOKIE_FILE = path.resolve(__dirname, '../data/cookies.txt');
+const YT_DLP_CMD = '/home/ubuntu/.local/bin/yt-dlp';
+
+// 디렉토리 생성
+[DATA_DIR, FRAMES_DIR, TEMP_DIR].forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
 const HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -158,15 +170,40 @@ function extractHeatmapFromHtml(html) {
             return null;
         }
 
+        // 1. "가장 많이 다시 본 장면" 마커 추출 (timedMarkerDecorations)
+        const markersDecoration = findKey(data, 'markersDecoration');
+        let mostReplayedMarkers = [];
+        if (markersDecoration && markersDecoration.timedMarkerDecorations) {
+            mostReplayedMarkers = markersDecoration.timedMarkerDecorations
+                .filter(marker => {
+                    const labelText = marker.label?.runs?.[0]?.text || '';
+                    return labelText.includes('가장 많이 다시 본 장면') || labelText.toLowerCase().includes('most replayed');
+                })
+                .map(marker => ({
+                    startMillis: marker.visibleTimeRangeStartMillis,
+                    endMillis: marker.visibleTimeRangeEndMillis,
+                    peakMillis: marker.decorationTimeMillis,
+                    label: marker.label?.runs?.[0]?.text
+                }));
+        }
+
+        // 2. 기존 히트맵 데이터도 가져오기
         const markers = findKey(data, 'markers');
+        let rawMarkers = null;
         if (markers && Array.isArray(markers) && markers.length > 0) {
-            return { type: 'raw_markers', data: markers };
+            rawMarkers = markers;
+        } else {
+            const markerGraph = findKey(data, 'markerGraph');
+            if (markerGraph && markerGraph.markers && Array.isArray(markerGraph.markers)) {
+                rawMarkers = markerGraph.markers;
+            }
         }
-        const markerGraph = findKey(data, 'markerGraph');
-        if (markerGraph && markerGraph.markers && Array.isArray(markerGraph.markers)) {
-            return { type: 'raw_markers', data: markerGraph.markers };
-        }
-        return null;
+
+        return {
+            type: 'raw_markers',
+            data: rawMarkers,
+            mostReplayedMarkers: mostReplayedMarkers
+        };
     } catch (e) {
         log('warn', `Parse Error: ${e.message}`);
         return null;
@@ -182,6 +219,333 @@ function saveVideoData(videoId, data) {
         log('error', `Failed to write to file ${filepath}: ${e.message}`);
     }
 }
+
+// =====================================================
+// 멀티모달 관련 함수 (07-collect-multimodal.js에서 통합)
+// =====================================================
+
+/**
+ * "가장 많이 다시 본 장면" 구간 식별
+ * YouTube의 timedMarkerDecorations에서 명시적으로 지정된 구간만 사용
+ * @param {Array} mostReplayedMarkers - timedMarkerDecorations에서 추출한 마커 배열
+ * @returns {Array} 세그먼트 배열: { startSec, endSec, peakSec }
+ */
+function findInterestSegments(mostReplayedMarkers) {
+    if (!mostReplayedMarkers || mostReplayedMarkers.length === 0) return [];
+
+    const segments = [];
+
+    for (const marker of mostReplayedMarkers) {
+        const startSec = Math.floor(marker.startMillis / 1000);
+        const endSec = Math.ceil(marker.endMillis / 1000);
+        const peakSec = marker.peakMillis / 1000;
+
+        segments.push({
+            startSec,
+            endSec,
+            peakSec,
+            peakIntensity: 1.0  // 명시적 마커는 최고 강도로 간주
+        });
+    }
+
+    // 시작 시간 기준 정렬
+    segments.sort((a, b) => a.startSec - b.startSec);
+
+    return segments;
+}
+
+/**
+ * Storyboard Spec 가져오기 (yt-dlp)
+ */
+async function getStoryboardSpec(videoId) {
+    if (!fs.existsSync(COOKIE_FILE)) {
+        log('warn', `쿠키 파일을 찾을 수 없음: ${COOKIE_FILE}`);
+        return null;
+    }
+
+    const cmd = `${YT_DLP_CMD} --cookies "${COOKIE_FILE}" --dump-json "https://www.youtube.com/watch?v=${videoId}"`;
+    try {
+        const { stdout } = await execPromise(cmd, { maxBuffer: 1024 * 1024 * 10 });
+        const data = JSON.parse(stdout);
+
+        if (!data.formats) return null;
+
+        const sbFormats = data.formats.filter(f => f.format_id && f.format_id.startsWith('sb'));
+        if (sbFormats.length === 0) return null;
+
+        // 고해상도 우선 선택
+        sbFormats.sort((a, b) => (b.width || 0) - (a.width || 0));
+        return sbFormats[0];
+
+    } catch (e) {
+        log('warn', `Storyboard 정보 가져오기 실패 ${videoId}: ${e.message}`);
+        return null;
+    }
+}
+
+/**
+ * Storyboard URL 템플릿에서 실제 URL 생성
+ */
+function getSheetUrl(templateUrl, sheetIndex) {
+    if (templateUrl.includes('$M')) {
+        return templateUrl.replace('$M', sheetIndex.toString());
+    }
+    if (templateUrl.match(/\/M\d+\.jpg/)) {
+        return templateUrl.replace(/\/M\d+\.jpg/, `/M${sheetIndex}.jpg`);
+    }
+    return templateUrl;
+}
+
+/**
+ * 프레임 다운로드 및 크롭
+ */
+async function downloadFrameFromStoryboard(videoId, timestamp, sbSpec, outputPath) {
+    if (fs.existsSync(outputPath)) return 'skipped';
+    if (!sbSpec) return 'failed';
+
+    const { rows, columns, width: frameWidth, height: frameHeight } = sbSpec;
+
+    if (!rows || !columns || !frameWidth || !frameHeight) {
+        log('warn', `Invalid storyboard spec for ${videoId}: Missing dims`);
+        return 'failed';
+    }
+
+    let sheetIndex = 0;
+    let frameInSheet = 0;
+    let sheetUrl = '';
+
+    if (sbSpec.fragments && sbSpec.fragments.length > 0) {
+        let accumulatedTime = 0;
+        let foundSheet = false;
+
+        for (let i = 0; i < sbSpec.fragments.length; i++) {
+            const frag = sbSpec.fragments[i];
+            const duration = frag.duration || 0;
+
+            if (timestamp < accumulatedTime + duration) {
+                sheetIndex = i;
+                sheetUrl = frag.url;
+
+                const timeInSheet = timestamp - accumulatedTime;
+
+                if (sbSpec.fps && sbSpec.fps > 0) {
+                    frameInSheet = Math.floor(timeInSheet * sbSpec.fps);
+                } else {
+                    const framesInSheet = rows * columns;
+                    frameInSheet = Math.floor((timeInSheet / duration) * framesInSheet);
+                }
+
+                foundSheet = true;
+                break;
+            }
+            accumulatedTime += duration;
+        }
+
+        if (!foundSheet) {
+            sheetIndex = sbSpec.fragments.length - 1;
+            sheetUrl = sbSpec.fragments[sheetIndex].url;
+            frameInSheet = (rows * columns) - 1;
+        }
+
+    } else {
+        const fps = sbSpec.fps || 1;
+        const frameIndexGlobal = Math.floor(timestamp * fps);
+        const framesPerSheet = rows * columns;
+        sheetIndex = Math.floor(frameIndexGlobal / framesPerSheet);
+        frameInSheet = frameIndexGlobal % framesPerSheet;
+
+        if (sbSpec.url) {
+            sheetUrl = getSheetUrl(sbSpec.url, sheetIndex);
+        }
+    }
+
+    if (!sheetUrl) {
+        log('warn', `시트 URL을 결정할 수 없음: ${videoId}`);
+        return 'failed';
+    }
+
+    if (frameInSheet >= rows * columns) frameInSheet = (rows * columns) - 1;
+
+    const colIdx = frameInSheet % columns;
+    const rowIdx = Math.floor(frameInSheet / columns);
+
+    const x = colIdx * frameWidth;
+    const y = rowIdx * frameHeight;
+
+    const tempSheetPath = path.join(TEMP_DIR, `${videoId}_sheet_${sheetIndex}.webp`);
+    const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+    try {
+        // 시트 다운로드 (업 없으면)
+        if (!fs.existsSync(tempSheetPath)) {
+            await execPromise(`curl -L -s -A "${UA}" -b "${COOKIE_FILE}" -e "https://www.youtube.com/" '${sheetUrl}' -o "${tempSheetPath}"`);
+        }
+
+        // 파일 검증: 손상된 시트 감지 (1KB 미만이면 무효)
+        if (fs.existsSync(tempSheetPath)) {
+            const stats = fs.statSync(tempSheetPath);
+            if (stats.size < 1024) {
+                fs.unlinkSync(tempSheetPath);
+                log('warn', `시트 파일 손상 (${stats.size}B), 스킵: ${videoId} sheet ${sheetIndex}`);
+                return 'failed';
+            }
+        } else {
+            return 'failed';
+        }
+
+        // WebP 품질 80 (LLM 분석용 최적화: 품질 유지 + 파일 크기 감소)
+        const cropCmd = `ffmpeg -y -v error -i "${tempSheetPath}" -vf "crop=${frameWidth}:${frameHeight}:${x}:${y}" -frames:v 1 -quality 80 "${outputPath}"`;
+        await execPromise(cropCmd);
+
+        // 시트 파일 정리
+        if (fs.existsSync(tempSheetPath)) fs.unlinkSync(tempSheetPath);
+
+        return 'success';
+    } catch (e) {
+        // ffmpeg 실패 시 손상된 시트 삭제
+        if (fs.existsSync(tempSheetPath)) {
+            try { fs.unlinkSync(tempSheetPath); } catch { }
+        }
+        log('error', `프레임 추출 실패 ${videoId}: ${e.message.split('\n')[0]}`);
+        return 'failed';
+    }
+}
+
+/**
+ * 멀티모달 프레임 추출 (히트맵 수집 직후 호출)
+ * @param {string} videoId - 비디오 ID
+ * @param {Array} mostReplayedMarkers - "가장 많이 다시 본 장면" 마커 배열
+ * @param {number} recollectId - 재수집 ID
+ * @param {number} duration - 비디오 길이 (초)
+ */
+async function extractMultimodalFrames(videoId, mostReplayedMarkers, recollectId, duration) {
+    // Shorts 필터 (2분 미만 스킵)
+    if (duration && duration < 120) {
+        log('info', `[Multimodal] ${videoId}: Shorts 스킵 (<2분)`);
+        return { status: 'skipped_shorts' };
+    }
+
+    // "가장 많이 다시 본 장면" 구간 찾기
+    const segments = findInterestSegments(mostReplayedMarkers);
+    if (segments.length === 0) {
+        log('info', `[Multimodal] ${videoId}: "가장 많이 다시 본 장면" 마커 없음`);
+        return { status: 'no_segments' };
+    }
+
+    log('info', `[Multimodal] ${videoId}: ${segments.length}개 "가장 많이 다시 본 장면" 구간 발견`);
+
+    // Storyboard 정보 가져오기
+    const sbSpec = await getStoryboardSpec(videoId);
+    if (!sbSpec) {
+        log('warn', `[Multimodal] ${videoId}: Storyboard를 찾을 수 없음`);
+        return { status: 'no_storyboard' };
+    }
+
+    let totalSaved = 0;
+
+    // 각 세그먼트 순회하며 프레임 추출
+    for (let segIdx = 0; segIdx < segments.length; segIdx++) {
+        const seg = segments[segIdx];
+        const segmentDirName = `${segIdx + 1}_${seg.startSec}_${seg.endSec}`;
+        const segmentDir = path.join(FRAMES_DIR, videoId, String(recollectId), segmentDirName);
+
+        // 폴더 생성 (이미 있으면 무시)
+        fs.mkdirSync(segmentDir, { recursive: true });
+
+        let segSavedCount = 0;
+        for (let ts = seg.startSec; ts <= seg.endSec; ts++) {
+            const frameFilePath = path.join(segmentDir, `${ts}.webp`);
+            const res = await downloadFrameFromStoryboard(videoId, ts, sbSpec, frameFilePath);
+            if (res === 'success') segSavedCount++;
+
+            // IP 차단 방지: 프레임 간 랜덤 딜레이 (100-200ms)
+            await new Promise(r => setTimeout(r, 100 + Math.random() * 100));
+        }
+
+        if (segSavedCount > 0) {
+            log('info', `[Multimodal] 세그먼트 ${segIdx + 1} (${seg.startSec}s-${seg.endSec}s): ${segSavedCount}개 프레임 저장`);
+            totalSaved += segSavedCount;
+        }
+
+        // IP 차단 방지: 세그먼트 간 딜레이 (0.5-1초)
+        if (segIdx < segments.length - 1) {
+            await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
+        }
+    }
+
+    return { status: 'success', frameCount: totalSaved, segmentCount: segments.length };
+}
+
+/**
+ * 기존 히트맵 데이터에서 프레임 미수집 건 백필
+ */
+async function backfillMissingFrames(deletedIds) {
+    log('info', `=== 프레임 백필 시작 ===`);
+
+    const heatmapFiles = fs.readdirSync(DATA_DIR).filter(f => f.endsWith('.jsonl'));
+    let backfilledCount = 0;
+
+    for (const file of heatmapFiles) {
+        const videoId = file.replace('.jsonl', '');
+
+        if (deletedIds.has(videoId)) continue;
+
+        try {
+            const content = fs.readFileSync(path.join(DATA_DIR, file), 'utf-8').trim().split('\n').pop();
+            if (!content) continue;
+
+            const data = JSON.parse(content);
+            if (data.status !== 'success') continue;
+
+            // mostReplayedMarkers가 없으면 스킵 (기존 데이터는 백필 불가)
+            if (!data.most_replayed_markers || data.most_replayed_markers.length === 0) {
+                log('info', `[Backfill] ${videoId}: most_replayed_markers 없음, 스킵`);
+                continue;
+            }
+
+            const recollectId = data.recollect_id !== undefined ? data.recollect_id : 0;
+
+            // 세그먼트 레벨에서 존재 여부 체크하므로 여기서는 스킵하지 않음
+            log('info', `[Backfill] ${videoId}: 프레임 수집 시작`);
+            const result = await extractMultimodalFrames(videoId, data.most_replayed_markers, recollectId, null);
+
+            if (result.status === 'success') {
+                backfilledCount++;
+            }
+
+            // IP 차단 방지: 비디오 간 딜레이 (0.5-1초)
+            await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
+
+        } catch (e) {
+            log('error', `[Backfill] ${videoId} 처리 실패: ${e.message}`);
+        }
+    }
+
+    log('info', `=== 프레임 백필 완료: ${backfilledCount}개 ===`);
+    return backfilledCount;
+}
+
+/**
+ * temp_frames 폴더 정리
+ */
+function cleanupTempFrames() {
+    if (fs.existsSync(TEMP_DIR)) {
+        try {
+            const files = fs.readdirSync(TEMP_DIR);
+            for (const file of files) {
+                fs.unlinkSync(path.join(TEMP_DIR, file));
+            }
+            fs.rmdirSync(TEMP_DIR);
+            log('info', `Temp 폴더 정리 완료: ${TEMP_DIR}`);
+        } catch (e) {
+            log('warn', `Temp 폴더 정리 실패: ${e.message}`);
+        }
+    }
+}
+
+// =====================================================
+// 기존 히트맵 수집 로직
+// =====================================================
 
 function shouldCollect(videoId) {
     const metaPath = getMetaFilePath(videoId);
@@ -204,12 +568,7 @@ function shouldCollect(videoId) {
     }
 
     // 1. 필수 확인: 게시 후 5일 경과 여부
-    // (일단 업로드한지 최소 5일이어야 하고(필수))
     if (!publishedAt) {
-        // published_at이 없는 경우 안전한 대체 처리 (엄격을 원치 않으면 충분히 오래된 것으로 가정)
-        // 또는 메타는 있는데 날짜가 없으면 대기할까?
-        // 알 수 없으면 통과로 가정할지, 아니면 false를 반환할지?
-        // 안전을 위해 false를 반환하고 유효한 메타를 기다리는 것이 좋음.
         return false;
     }
 
@@ -231,24 +590,15 @@ function shouldCollect(videoId) {
                 const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
 
                 if (metaRecollectId > lastRecollectId) {
-                    // 트리거 조건:
-                    // 2. ID가 증가했으면, '트리거' 변수가 포함되어 있는지 확인
-                    // (예: new_video, duration_changed, scheduled_*, viral_growth 등)
-                    if (metaRecollectId > lastRecollectId) {
-                        // heatmap 수집해야 하는 meta 변수들
-                        const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'viral_growth'];
+                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
+                    const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
-                        // recollectVars 중 하나라도 TRIGGER_VARS에 포함되면 수집
-                        const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
-
-                        if (shouldTrigger) {
-                            log('info', `[Trigger] Video ${videoId}: Found trigger variable(s) [${recollectVars.join(', ')}]`);
-                            return true;
-                        } else {
-                            // ID는 증가했지만 트리거 변수가 없으면 (예: title_changed, thumbnail_changed 등) -> 스킵
-                            log('info', `[Skip] Video ${videoId}: recurs_vars [${recollectVars.join(', ')}] do not trigger heatmap.`);
-                            return false;
-                        }
+                    if (shouldTrigger) {
+                        log('info', `[Trigger] Video ${videoId}: Found trigger variable(s) [${recollectVars.join(', ')}]`);
+                        return true;
+                    } else {
+                        log('info', `[Skip] Video ${videoId}: recurs_vars [${recollectVars.join(', ')}] do not trigger heatmap.`);
+                        return false;
                     }
                 }
                 return false;
@@ -260,7 +610,7 @@ function shouldCollect(videoId) {
 }
 
 async function main() {
-    log('info', `=== HTTP Heatmap Collector Started [Channel: ${CHANNEL_NAME}] ===`);
+    log('info', `=== HTTP Heatmap + Multimodal Collector Started [Channel: ${CHANNEL_NAME}] ===`);
     log('info', `Source: ${URLS_FILE}`);
     log('info', `Saving to: ${DATA_DIR}`);
 
@@ -283,9 +633,13 @@ async function main() {
             }
         }
 
+        // 2. 기존 히트맵 데이터 중 프레임 미수집 건 백필
+        await backfillMissingFrames(deletedIds);
+
         const urlsPath = path.join(BASE_DATA_DIR, 'urls.txt');
         if (!fs.existsSync(urlsPath)) {
             log('warn', `No urls.txt for channel ${CHANNEL_NAME}`);
+            cleanupTempFrames();
             return;
         }
 
@@ -301,7 +655,6 @@ async function main() {
             return { url, video_id: vid };
         }).filter(v => {
             if (!v.video_id) return false;
-            // 2. 삭제된 비디오 스킵
             if (deletedIds.has(v.video_id)) {
                 log('info', `[Skip] Video ID ${v.video_id} is in deleted_urls.txt.`);
                 return false;
@@ -318,13 +671,17 @@ async function main() {
             await processVideo(video_id, url, cookieHeader);
 
             if (i < batch.length - 1) {
-                const delay = COLLECTION_INTERVAL_MS + Math.random() * 2000;
+                const delay = COLLECTION_INTERVAL_MS + Math.random() * 1000;
                 await new Promise(r => setTimeout(r, delay));
             }
         }
 
+        // 완료 후 temp_frames 정리
+        cleanupTempFrames();
+
     } catch (e) {
         log('error', `Fatal Error: ${e.message}`);
+        cleanupTempFrames();
     }
 }
 
@@ -398,12 +755,19 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             youtube_link,
             video_id,
             interaction_data: formattedData,
+            most_replayed_markers: newHeatmap.mostReplayedMarkers || [],
             status: 'success',
             recollect_id: metaInfo.recollect_id,
-            recollect_vars: metaInfo.recollect_vars, // 리스트
+            recollect_vars: metaInfo.recollect_vars,
             collected_at: new Date().toISOString()
         });
-        log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
+        log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length}, MostReplayed: ${(newHeatmap.mostReplayedMarkers || []).length}개)`);
+
+        // === 멀티모달 프레임 추출 (히트맵 수집 직후) ===
+        const multimodalResult = await extractMultimodalFrames(video_id, newHeatmap.mostReplayedMarkers || [], metaInfo.recollect_id, metaInfo.duration);
+        if (multimodalResult.status === 'success') {
+            log('info', `[Multimodal] ${video_id}: ${multimodalResult.frameCount}개 프레임 저장 완료`);
+        }
 
     } catch (e) {
         log('error', `Error processing ${video_id}: ${e.message}`);

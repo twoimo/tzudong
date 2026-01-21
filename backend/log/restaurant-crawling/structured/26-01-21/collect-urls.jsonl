@@ -1,0 +1,49 @@
+{"timestamp": "2026-01-21T04:00:01.453274+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:01.453681+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "🚀 [COLLECT-URLS] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-21T04:00:01.453796+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "⏰ 시작 시간: 2026-01-21 04:00:01", "data": null}
+{"timestamp": "2026-01-21T04:00:01.453867+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "📁 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling", "data": null}
+{"timestamp": "2026-01-21T04:00:01.453921+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "   📄 text: /home/ubuntu/tzudong/backend/log/restaurant-crawling/text/26-01-21", "data": null}
+{"timestamp": "2026-01-21T04:00:01.453972+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "   📊 structured: /home/ubuntu/tzudong/backend/log/restaurant-crawling/structured/26-01-21", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454026+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "   📋 report: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-21", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454084+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454140+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454192+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "🚀 [COLLECT-URLS] 파이프라인 시작", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454302+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "⏰ 시작 시간: 2026-01-21 04:00:01", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454357+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "📁 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-21", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454407+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454449+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454491+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "  YouTube 채널 동영상 URL 수집", "data": null}
+{"timestamp": "2026-01-21T04:00:01.454537+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:01.457301+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "대상 채널: ['tzuyang', 'meatcreator']", "data": null}
+{"timestamp": "2026-01-21T04:00:01.457428+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "", "data": null}
+{"timestamp": "2026-01-21T04:00:01.457484+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "--- tzuyang 처리 시작 ---", "data": null}
+{"timestamp": "2026-01-21T04:00:01.462171+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "채널 처리: 쯔양 (tzuyang)", "data": null}
+{"timestamp": "2026-01-21T04:00:01.462326+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "채널 ID: UCfpaSruWW3S4dibonKXENjA", "data": null}
+{"timestamp": "2026-01-21T04:00:01.462390+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "URL 파일: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt", "data": null}
+{"timestamp": "2026-01-21T04:00:01.463220+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "기존 수집된 URL: 1010개", "data": null}
+{"timestamp": "2026-01-21T04:00:01.789818+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "채널: tzuyang쯔양", "data": null}
+{"timestamp": "2026-01-21T04:00:01.790024+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "업로드 플레이리스트 ID: UUfpaSruWW3S4dibonKXENjA", "data": null}
+{"timestamp": "2026-01-21T04:00:07.508270+09:00", "level": "SUCCESS", "phase": "collect-urls", "step": null, "message": "총 1011개 URL 수집 완료", "data": null}
+{"timestamp": "2026-01-21T04:00:07.508810+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "신규 저장: 1개, 스킵 (기존): 1010개", "data": null}
+{"timestamp": "2026-01-21T04:00:07.509078+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "", "data": null}
+{"timestamp": "2026-01-21T04:00:07.509164+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "--- meatcreator 처리 시작 ---", "data": null}
+{"timestamp": "2026-01-21T04:00:07.513827+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "채널 처리: 정육왕 MeatCreator (meatcreator)", "data": null}
+{"timestamp": "2026-01-21T04:00:07.513950+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "채널 ID: UC1oXmhvYHVI2bApphh3IzuQ", "data": null}
+{"timestamp": "2026-01-21T04:00:07.514014+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "URL 파일: /home/ubuntu/tzudong/backend/restaurant-crawling/data/meatcreator/urls.txt", "data": null}
+{"timestamp": "2026-01-21T04:00:07.514159+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "기존 수집된 URL: 5개", "data": null}
+{"timestamp": "2026-01-21T04:00:07.729312+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "채널: 정육왕 MeatCreator", "data": null}
+{"timestamp": "2026-01-21T04:00:07.729535+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "업로드 플레이리스트 ID: UU1oXmhvYHVI2bApphh3IzuQ", "data": null}
+{"timestamp": "2026-01-21T04:00:13.912570+09:00", "level": "SUCCESS", "phase": "collect-urls", "step": null, "message": "총 1049개 URL 수집 완료", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913330+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "신규 저장: 1044개, 스킵 (기존): 5개", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913515+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913594+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913651+09:00", "level": "SUCCESS", "phase": "collect-urls", "step": null, "message": "모든 채널 처리 완료", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913702+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913793+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "  tzuyang: 신규 1개 / 삭제 0개 / 전체 1011개", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913853+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "  meatcreator: 신규 1044개 / 삭제 0개 / 전체 1049개", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913929+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:13.913981+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "🏁 [COLLECT-URLS] 파이프라인 종료", "data": null}
+{"timestamp": "2026-01-21T04:00:13.914045+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "⏰ 종료 시간: 2026-01-21 04:00:13", "data": null}
+{"timestamp": "2026-01-21T04:00:13.914104+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "⏱️ 소요 시간: 12.5초", "data": null}
+{"timestamp": "2026-01-21T04:00:13.914148+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "============================================================", "data": null}
+{"timestamp": "2026-01-21T04:00:13.914727+09:00", "level": "INFO", "phase": "collect-urls", "step": null, "message": "📝 JSON 로그 저장: /home/ubuntu/tzudong/backend/log/restaurant-crawling/report/26-01-21/collect-urls_040001.json", "data": null}

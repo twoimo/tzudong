@@ -10,3 +10,6 @@ __pycache__/
 venv/
 .venv/
 *.egg-info/
+# backend/restaurant-crawling/data/
+backend/log/
+*.log
