@@ -524,13 +524,9 @@ async function backfillMissingFrames(deletedIds) {
             if (data.status !== 'success' || !data.interaction_data) continue;
 
             const recollectId = data.recollect_id !== undefined ? data.recollect_id : 0;
-            const frameBaseDir = path.join(FRAMES_DIR, videoId, String(recollectId));
 
-            // 이미 프레임 폴더가 있으면 스킵
-            if (fs.existsSync(frameBaseDir) && fs.readdirSync(frameBaseDir).length > 0) {
-                continue;
-            }
-
+            // 세그먼트 레벨에서 존재 여부 체크하므로 여기서는 스킵하지 않음
+            // extractMultimodalFrames 내부에서 각 세그먼트 폴더 존재 시 스킵 처리
             log('info', `[Backfill] ${videoId}: 프레임 수집 시작`);
             const result = await extractMultimodalFrames(videoId, data.interaction_data, recollectId);
 

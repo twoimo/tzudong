@@ -3295,3 +3295,150 @@
 [2026-01-21T05:39:12.154Z] [INFO] [Multimodal] 세그먼트 2 (1379s-1488s): 110개 프레임 저장
 [2026-01-21T05:39:35.976Z] [INFO] [Multimodal] 세그먼트 3 (418s-465s): 48개 프레임 저장
 [2026-01-21T05:40:06.271Z] [INFO] [Multimodal] 세그먼트 4 (124s-186s): 63개 프레임 저장
+[2026-01-21T05:41:21.403Z] [INFO] [Multimodal] 세그먼트 5 (837s-992s): 156개 프레임 저장
+[2026-01-21T05:42:27.699Z] [INFO] [Multimodal] 세그먼트 6 (248s-388s): 141개 프레임 저장
+[2026-01-21T05:43:19.544Z] [INFO] [Multimodal] 세그먼트 7 (573s-682s): 110개 프레임 저장
+[2026-01-21T05:43:23.335Z] [INFO] [Backfill] 6O0fYDDFJbk: 프레임 수집 시작
+[2026-01-21T05:43:23.335Z] [INFO] [Multimodal] 6O0fYDDFJbk: 4개 구간 발견
+[2026-01-21T05:43:36.639Z] [INFO] [Multimodal] 세그먼트 1 (650s-670s): 21개 프레임 저장
+[2026-01-21T05:44:06.472Z] [INFO] [Multimodal] 세그먼트 2 (157s-217s): 61개 프레임 저장
+[2026-01-21T05:44:13.581Z] [INFO] [Multimodal] 세그먼트 3 (413s-424s): 12개 프레임 저장
+[2026-01-21T05:44:25.505Z] [INFO] [Multimodal] 세그먼트 4 (827s-848s): 22개 프레임 저장
+[2026-01-21T05:44:28.747Z] [INFO] [Backfill] 6OX0oBeqjJU: 프레임 수집 시작
+[2026-01-21T05:44:28.748Z] [INFO] [Multimodal] 6OX0oBeqjJU: 6개 구간 발견
+[2026-01-21T05:44:45.432Z] [INFO] [Multimodal] 세그먼트 1 (404s-432s): 29개 프레임 저장
+[2026-01-21T05:45:00.762Z] [INFO] [Multimodal] 세그먼트 2 (646s-674s): 29개 프레임 저장
+[2026-01-21T05:45:16.076Z] [INFO] [Multimodal] 세그먼트 3 (175s-203s): 29개 프레임 저장
+[2026-01-21T05:46:47.523Z] [INFO] [Multimodal] 세그먼트 4 (1050s-1240s): 191개 프레임 저장
+[2026-01-21T05:47:09.176Z] [INFO] [Multimodal] 세그먼트 5 (996s-1038s): 43개 프레임 저장
+[2026-01-21T05:47:48.635Z] [INFO] [Multimodal] 세그먼트 6 (0s-81s): 82개 프레임 저장
+[2026-01-21T05:47:51.258Z] [INFO] [Backfill] 6YZCvnlAbTc: 프레임 수집 시작
+[2026-01-21T05:47:51.258Z] [INFO] [Multimodal] 6YZCvnlAbTc: 3개 구간 발견
+[2026-01-21T05:48:02.107Z] [INFO] [Multimodal] 세그먼트 1 (416s-431s): 16개 프레임 저장
+[2026-01-21T05:48:15.314Z] [INFO] [Multimodal] 세그먼트 2 (170s-194s): 25개 프레임 저장
+[2026-01-21T05:48:35.585Z] [INFO] [Multimodal] 세그먼트 3 (66s-105s): 40개 프레임 저장
+[2026-01-21T05:48:37.671Z] [INFO] [Backfill] 6p-slI6rj_Y: 프레임 수집 시작
+[2026-01-21T05:48:37.671Z] [INFO] [Multimodal] 6p-slI6rj_Y: 7개 구간 발견
+[2026-01-21T05:48:54.088Z] [INFO] [Multimodal] 세그먼트 1 (648s-675s): 28개 프레임 저장
+[2026-01-21T05:49:08.228Z] [INFO] [Multimodal] 세그먼트 2 (1030s-1056s): 27개 프레임 저장
+[2026-01-21T05:50:16.816Z] [INFO] [Multimodal] 세그먼트 3 (254s-395s): 142개 프레임 저장
+[2026-01-21T05:50:30.571Z] [INFO] [Multimodal] 세그먼트 4 (407s-433s): 27개 프레임 저장
+[2026-01-21T05:51:09.301Z] [INFO] [Multimodal] 세그먼트 5 (686s-764s): 79개 프레임 저장
+[2026-01-21T05:51:23.847Z] [INFO] [Multimodal] 세그먼트 6 (203s-229s): 27개 프레임 저장
+[2026-01-21T05:51:38.140Z] [INFO] [Multimodal] 세그먼트 7 (165s-191s): 27개 프레임 저장
+[2026-01-21T05:51:41.692Z] [INFO] [Backfill] 79LHvfqyC_0: 프레임 수집 시작
+[2026-01-21T05:51:41.692Z] [INFO] [Multimodal] 79LHvfqyC_0: 4개 구간 발견
+[2026-01-21T05:51:44.754Z] [INFO] [Multimodal] 세그먼트 1 이미 존재, 스킵
+[2026-01-21T05:51:54.883Z] [INFO] [Multimodal] 세그먼트 2 (603s-623s): 21개 프레임 저장
+[2026-01-21T05:51:56.231Z] [INFO] [Multimodal] 세그먼트 3 이미 존재, 스킵
+[2026-01-21T05:52:58.976Z] [INFO] [Multimodal] 세그먼트 4 (76s-211s): 136개 프레임 저장
+[2026-01-21T05:53:01.632Z] [INFO] [Backfill] 7M6gEUjNrKo: 프레임 수집 시작
+[2026-01-21T05:53:01.632Z] [INFO] [Multimodal] 7M6gEUjNrKo: 8개 구간 발견
+[2026-01-21T05:53:15.209Z] [INFO] [Multimodal] 세그먼트 1 (410s-430s): 21개 프레임 저장
+[2026-01-21T05:53:26.721Z] [INFO] [Multimodal] 세그먼트 2 (649s-669s): 21개 프레임 저장
+[2026-01-21T05:53:59.106Z] [INFO] [Multimodal] 세그먼트 3 (57s-125s): 69개 프레임 저장
+[2026-01-21T05:54:06.338Z] [INFO] [Multimodal] 세그먼트 4 (171s-182s): 12개 프레임 저장
+[2026-01-21T05:54:21.989Z] [INFO] [Multimodal] 세그먼트 5 (601s-631s): 31개 프레임 저장
+[2026-01-21T05:54:42.545Z] [INFO] [Multimodal] 세그먼트 6 (783s-822s): 40개 프레임 저장
+[2026-01-21T05:55:15.174Z] [INFO] [Multimodal] 세그먼트 7 (878s-946s): 69개 프레임 저장
+[2026-01-21T05:55:29.699Z] [INFO] [Multimodal] 세그먼트 8 (19s-48s): 30개 프레임 저장
+[2026-01-21T05:55:32.233Z] [INFO] [Backfill] 7YV9D3-fz9k: 프레임 수집 시작
+[2026-01-21T05:55:32.233Z] [INFO] [Multimodal] 7YV9D3-fz9k: 4개 구간 발견
+[2026-01-21T05:56:11.636Z] [INFO] [Multimodal] 세그먼트 1 (640s-714s): 75개 프레임 저장
+[2026-01-21T05:56:21.912Z] [INFO] [Multimodal] 세그먼트 2 (421s-438s): 18개 프레임 저장
+[2026-01-21T05:56:47.190Z] [INFO] [Multimodal] 세그먼트 3 (72s-122s): 51개 프레임 저장
+[2026-01-21T05:57:01.336Z] [INFO] [Multimodal] 세그먼트 4 (162s-187s): 26개 프레임 저장
+[2026-01-21T05:57:04.569Z] [INFO] [Backfill] 7kSC8-pnAzE: 프레임 수집 시작
+[2026-01-21T05:57:04.570Z] [INFO] [Multimodal] 7kSC8-pnAzE: 4개 구간 발견
+[2026-01-21T05:57:13.678Z] [INFO] [Multimodal] 세그먼트 1 (653s-664s): 12개 프레임 저장
+[2026-01-21T05:57:21.309Z] [INFO] [Multimodal] 세그먼트 2 (412s-423s): 12개 프레임 저장
+[2026-01-21T05:57:32.992Z] [INFO] [Multimodal] 세그먼트 3 (753s-774s): 22개 프레임 저장
+[2026-01-21T05:57:39.757Z] [INFO] [Multimodal] 세그먼트 4 (170s-181s): 12개 프레임 저장
+[2026-01-21T05:57:42.789Z] [INFO] [Backfill] 7n1dJibopAY: 프레임 수집 시작
+[2026-01-21T05:57:42.789Z] [INFO] [Multimodal] 7n1dJibopAY: 1개 구간 발견
+[2026-01-21T05:58:07.166Z] [INFO] [Multimodal] 세그먼트 1 (225s-267s): 43개 프레임 저장
+[2026-01-21T05:58:09.178Z] [INFO] [Backfill] 7nW5xNfUjUo: 프레임 수집 시작
+[2026-01-21T05:58:09.178Z] [INFO] [Multimodal] 7nW5xNfUjUo: 7개 구간 발견
+[2026-01-21T05:58:18.515Z] [INFO] [Multimodal] 세그먼트 1 (464s-476s): 13개 프레임 저장
+[2026-01-21T05:58:41.405Z] [INFO] [Multimodal] 세그먼트 2 (181s-227s): 47개 프레임 저장
+[2026-01-21T05:59:30.199Z] [INFO] [Multimodal] 세그먼트 3 (0s-102s): 103개 프레임 저장
+[2026-01-21T05:59:53.614Z] [INFO] [Multimodal] 세그먼트 4 (113s-159s): 47개 프레임 저장
+[2026-01-21T06:01:41.983Z] [INFO] [Multimodal] 세그먼트 5 (600s-828s): 229개 프레임 저장
+[2026-01-21T06:01:59.459Z] [INFO] [Multimodal] 세그먼트 6 (985s-1020s): 36개 프레임 저장
+[2026-01-21T06:02:16.669Z] [INFO] [Multimodal] 세그먼트 7 (1099s-1133s): 35개 프레임 저장
+[2026-01-21T06:02:20.155Z] [INFO] [Backfill] 80eJ-umeJqA: 프레임 수집 시작
+[2026-01-21T06:02:20.156Z] [INFO] [Multimodal] 80eJ-umeJqA: 3개 구간 발견
+[2026-01-21T06:03:48.502Z] [INFO] [Multimodal] 세그먼트 1 (487s-668s): 182개 프레임 저장
+[2026-01-21T06:04:02.982Z] [INFO] [Multimodal] 세그먼트 2 (436s-463s): 28개 프레임 저장
+[2026-01-21T06:04:24.195Z] [INFO] [Multimodal] 세그먼트 3 (676s-720s): 45개 프레임 저장
+[2026-01-21T06:04:27.630Z] [INFO] [Backfill] 820jZBF4eX8: 프레임 수집 시작
+[2026-01-21T06:04:27.631Z] [INFO] [Multimodal] 820jZBF4eX8: 4개 구간 발견
+[2026-01-21T06:04:35.693Z] [INFO] [Multimodal] 세그먼트 1 (654s-663s): 10개 프레임 저장
+[2026-01-21T06:04:37.588Z] [INFO] [Multimodal] 세그먼트 2 이미 존재, 스킵
+[2026-01-21T06:04:45.764Z] [INFO] [Multimodal] 세그먼트 3 (307s-324s): 18개 프레임 저장
+[2026-01-21T06:04:52.246Z] [INFO] [Multimodal] 세그먼트 4 (173s-182s): 10개 프레임 저장
+[2026-01-21T06:04:54.601Z] [INFO] [Backfill] 82O0kkLjo_w: 프레임 수집 시작
+[2026-01-21T06:04:54.601Z] [INFO] [Multimodal] 82O0kkLjo_w: 3개 구간 발견
+[2026-01-21T06:05:16.756Z] [INFO] [Multimodal] 세그먼트 1 (481s-520s): 40개 프레임 저장
+[2026-01-21T06:06:08.515Z] [INFO] [Multimodal] 세그먼트 2 (566s-671s): 106개 프레임 저장
+[2026-01-21T06:06:43.147Z] [INFO] [Multimodal] 세그먼트 3 (84s-152s): 69개 프레임 저장
+[2026-01-21T06:06:45.887Z] [INFO] [Backfill] 8AR6YsJ3SC4: 프레임 수집 시작
+[2026-01-21T06:06:45.887Z] [INFO] [Multimodal] 8AR6YsJ3SC4: 4개 구간 발견
+[2026-01-21T06:07:04.107Z] [INFO] [Multimodal] 세그먼트 1 (78s-108s): 31개 프레임 저장
+[2026-01-21T06:07:27.137Z] [INFO] [Multimodal] 세그먼트 2 (0s-47s): 48개 프레임 저장
+[2026-01-21T06:07:36.808Z] [INFO] [Multimodal] 세그먼트 3 (226s-242s): 17개 프레임 저장
+[2026-01-21T06:07:44.499Z] [INFO] [Multimodal] 세그먼트 4 (153s-164s): 12개 프레임 저장
+[2026-01-21T06:07:48.305Z] [INFO] [Backfill] 8JPoehTsgNQ: 프레임 수집 시작
+[2026-01-21T06:07:48.305Z] [INFO] [Multimodal] 8JPoehTsgNQ: 5개 구간 발견
+[2026-01-21T06:08:27.548Z] [INFO] [Multimodal] 세그먼트 1 (516s-595s): 80개 프레임 저장
+[2026-01-21T06:08:53.504Z] [INFO] [Multimodal] 세그먼트 2 (17s-70s): 54개 프레임 저장
+[2026-01-21T06:09:08.218Z] [INFO] [Multimodal] 세그먼트 3 (848s-875s): 28개 프레임 저장
+[2026-01-21T06:09:57.832Z] [INFO] [Multimodal] 세그먼트 4 (402s-508s): 107개 프레임 저장
+[2026-01-21T06:10:31.302Z] [INFO] [Multimodal] 세그먼트 5 (761s-832s): 72개 프레임 저장
+[2026-01-21T06:10:34.270Z] [INFO] [Backfill] 8Op9zyBztCo: 프레임 수집 시작
+[2026-01-21T06:10:34.270Z] [INFO] [Multimodal] 8Op9zyBztCo: 7개 구간 발견
+[2026-01-21T06:10:37.763Z] [INFO] [Multimodal] 세그먼트 1 이미 존재, 스킵
+[2026-01-21T06:10:43.714Z] [INFO] [Multimodal] 세그먼트 2 (411s-422s): 12개 프레임 저장
+[2026-01-21T06:10:56.547Z] [INFO] [Multimodal] 세그먼트 3 (876s-899s): 24개 프레임 저장
+[2026-01-21T06:11:03.982Z] [INFO] [Multimodal] 세그먼트 4 (649s-661s): 13개 프레임 저장
+[2026-01-21T06:11:05.781Z] [INFO] [Multimodal] 세그먼트 5 이미 존재, 스킵
+[2026-01-21T06:11:06.503Z] [ERROR] 프레임 추출 실패 8Op9zyBztCo: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/8Op9zyBztCo_sheet_5.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/8Op9zyBztCo/1/6_443_466/444.webp"
+[2026-01-21T06:11:08.915Z] [ERROR] 프레임 추출 실패 8Op9zyBztCo: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/8Op9zyBztCo_sheet_5.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/8Op9zyBztCo/1/6_443_466/449.webp"
+[2026-01-21T06:11:09.384Z] [ERROR] 프레임 추출 실패 8Op9zyBztCo: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/8Op9zyBztCo_sheet_5.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/8Op9zyBztCo/1/6_443_466/450.webp"
+[2026-01-21T06:11:09.793Z] [ERROR] 프레임 추출 실패 8Op9zyBztCo: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/8Op9zyBztCo_sheet_5.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/8Op9zyBztCo/1/6_443_466/451.webp"
+[2026-01-21T06:11:16.871Z] [INFO] [Multimodal] 세그먼트 6 (443s-466s): 20개 프레임 저장
+[2026-01-21T06:11:18.165Z] [INFO] [Multimodal] 세그먼트 7 이미 존재, 스킵
+[2026-01-21T06:11:21.999Z] [INFO] [Backfill] 8Pr3WLuAmmA: 프레임 수집 시작
+[2026-01-21T06:11:21.999Z] [INFO] [Multimodal] 8Pr3WLuAmmA: 3개 구간 발견
+[2026-01-21T06:12:29.794Z] [INFO] [Multimodal] 세그먼트 1 (820s-959s): 140개 프레임 저장
+[2026-01-21T06:12:36.963Z] [INFO] [Multimodal] 세그먼트 2 (1043s-1055s): 13개 프레임 저장
+[2026-01-21T06:12:59.418Z] [INFO] [Multimodal] 세그먼트 3 (596s-639s): 44개 프레임 저장
+[2026-01-21T06:13:02.628Z] [INFO] [Backfill] 8T0m8f44Kgs: 프레임 수집 시작
+[2026-01-21T06:13:02.628Z] [INFO] [Multimodal] 8T0m8f44Kgs: 3개 구간 발견
+[2026-01-21T06:13:29.854Z] [INFO] [Multimodal] 세그먼트 1 (210s-262s): 53개 프레임 저장
+[2026-01-21T06:13:45.364Z] [INFO] [Multimodal] 세그먼트 2 (298s-328s): 31개 프레임 저장
+[2026-01-21T06:14:55.841Z] [INFO] [Multimodal] 세그먼트 3 (465s-618s): 154개 프레임 저장
+[2026-01-21T06:14:58.905Z] [INFO] [Backfill] 8YSYlNg1AE4: 프레임 수집 시작
+[2026-01-21T06:14:58.905Z] [INFO] [Multimodal] 8YSYlNg1AE4: 6개 구간 발견
+[2026-01-21T06:15:16.548Z] [INFO] [Multimodal] 세그먼트 1 (414s-444s): 31개 프레임 저장
+[2026-01-21T06:15:39.669Z] [INFO] [Multimodal] 세그먼트 2 (458s-503s): 46개 프레임 저장
+[2026-01-21T06:15:55.297Z] [INFO] [Multimodal] 세그먼트 3 (1168s-1198s): 31개 프레임 저장
+[2026-01-21T06:16:11.197Z] [INFO] [Multimodal] 세그먼트 4 (162s-193s): 32개 프레임 저장
+[2026-01-21T06:16:41.531Z] [INFO] [Multimodal] 세그먼트 5 (606s-666s): 61개 프레임 저장
+[2026-01-21T06:16:57.938Z] [INFO] [Multimodal] 세그먼트 6 (295s-326s): 32개 프레임 저장
+[2026-01-21T06:17:01.482Z] [INFO] [Backfill] 8hWQnvVvLHQ: 프레임 수집 시작
+[2026-01-21T06:17:01.483Z] [INFO] [Multimodal] 8hWQnvVvLHQ: 7개 구간 발견
+[2026-01-21T06:17:14.235Z] [INFO] [Multimodal] 세그먼트 1 (862s-881s): 20개 프레임 저장
+[2026-01-21T06:17:21.073Z] [INFO] [Multimodal] 세그먼트 2 (412s-422s): 11개 프레임 저장
+[2026-01-21T06:17:28.564Z] [INFO] [Multimodal] 세그먼트 3 (655s-666s): 12개 프레임 저장
+[2026-01-21T06:17:43.485Z] [INFO] [Multimodal] 세그먼트 4 (168s-197s): 30개 프레임 저장
+[2026-01-21T06:18:03.130Z] [INFO] [Multimodal] 세그먼트 5 (749s-788s): 40개 프레임 저장
+[2026-01-21T06:18:43.951Z] [INFO] [Multimodal] 세그먼트 6 (65s-150s): 86개 프레임 저장
+[2026-01-21T06:18:50.208Z] [INFO] [Multimodal] 세그먼트 7 (918s-928s): 11개 프레임 저장
+[2026-01-21T06:18:52.619Z] [INFO] [Backfill] 8mZrN76axXY: 프레임 수집 시작
+[2026-01-21T06:18:52.619Z] [INFO] [Multimodal] 8mZrN76axXY: 3개 구간 발견
+[2026-01-21T06:20:10.961Z] [INFO] [Multimodal] 세그먼트 1 (519s-678s): 160개 프레임 저장
+[2026-01-21T06:20:34.497Z] [INFO] [Multimodal] 세그먼트 2 (429s-475s): 47개 프레임 저장
+[2026-01-21T06:20:43.518Z] [INFO] [Multimodal] 세그먼트 3 (67s-80s): 14개 프레임 저장
+[2026-01-21T06:20:46.674Z] [INFO] [Backfill] 90NJAyFx09A: 프레임 수집 시작
+[2026-01-21T06:20:46.675Z] [INFO] [Multimodal] 90NJAyFx09A: 3개 구간 발견
