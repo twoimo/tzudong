@@ -218,78 +218,31 @@ function saveVideoData(videoId, data) {
 // =====================================================
 
 /**
- * 고관심 구간 식별
- * @param {Array} interactionData - 히트맵 강도 데이터
- * @param {number} peakThreshold - 피크 식별 임계값 (기본값 0.4)
- * @param {number} boundaryThreshold - 구간 경계 확장 임계값 (기본값 0.2)
- * @returns {Array} 세그먼트 배열: { startSec, endSec, peakSec, peakIntensity }
+ * "가장 많이 다시 본 장면" 구간 식별
+ * YouTube의 timedMarkerDecorations에서 명시적으로 지정된 구간만 사용
+ * @param {Array} mostReplayedMarkers - timedMarkerDecorations에서 추출한 마커 배열
+ * @returns {Array} 세그먼트 배열: { startSec, endSec, peakSec }
  */
-function findInterestSegments(interactionData, peakThreshold = 0.4, boundaryThreshold = 0.2) {
-    if (!interactionData || interactionData.length === 0) return [];
+function findInterestSegments(mostReplayedMarkers) {
+    if (!mostReplayedMarkers || mostReplayedMarkers.length === 0) return [];
 
-    // 1. 임계값 이상의 모든 로컬 피크 찾기
-    const peaks = [];
-    for (let i = 1; i < interactionData.length - 1; i++) {
-        const prev = interactionData[i - 1].intensityScoreNormalized;
-        const curr = interactionData[i].intensityScoreNormalized;
-        const next = interactionData[i + 1].intensityScoreNormalized;
-
-        // 로컬 최대값이고 임계값 이상인 경우
-        if (curr > prev && curr >= next && curr >= peakThreshold) {
-            peaks.push({
-                index: i,
-                startMillis: parseFloat(interactionData[i].startMillis),
-                intensity: curr
-            });
-        }
-    }
-
-    if (peaks.length === 0) return [];
-
-    // 2. 각 피크를 확장하여 세그먼트 경계 찾기
     const segments = [];
-    const usedIndices = new Set();
 
-    for (const peak of peaks) {
-        if (usedIndices.has(peak.index)) continue;
-
-        let leftIdx = peak.index;
-        let rightIdx = peak.index;
-
-        // 왼쪽으로 확장
-        while (leftIdx > 0) {
-            const prevIntensity = interactionData[leftIdx - 1].intensityScoreNormalized;
-            if (prevIntensity < boundaryThreshold) break;
-            leftIdx--;
-        }
-
-        // 오른쪽으로 확장
-        while (rightIdx < interactionData.length - 1) {
-            const nextIntensity = interactionData[rightIdx + 1].intensityScoreNormalized;
-            if (nextIntensity < boundaryThreshold) break;
-            rightIdx++;
-        }
-
-        // 사용된 인덱스 표시
-        for (let j = leftIdx; j <= rightIdx; j++) {
-            usedIndices.add(j);
-        }
-
-        const startSec = parseFloat(interactionData[leftIdx].startMillis) / 1000.0;
-        const endSec = (parseFloat(interactionData[rightIdx].startMillis) +
-            parseFloat(interactionData[rightIdx].durationMillis || 0)) / 1000.0;
-        const peakSec = peak.startMillis / 1000.0;
+    for (const marker of mostReplayedMarkers) {
+        const startSec = Math.floor(marker.visibleTimeRangeStartMillis / 1000);
+        const endSec = Math.ceil(marker.visibleTimeRangeEndMillis / 1000);
+        const peakSec = marker.decorationTimeMillis / 1000;
 
         segments.push({
-            startSec: Math.floor(startSec),
-            endSec: Math.ceil(endSec),
+            startSec,
+            endSec,
             peakSec,
-            peakIntensity: peak.intensity
+            peakIntensity: 1.0  // 명시적 마커는 최고 강도로 간주
         });
     }
 
-    // 피크 강도 기준 내림차순 정렬
-    segments.sort((a, b) => b.peakIntensity - a.peakIntensity);
+    // 시작 시간 기준 정렬
+    segments.sort((a, b) => a.startSec - b.startSec);
 
     return segments;
 }
@@ -453,25 +406,26 @@ async function downloadFrameFromStoryboard(videoId, timestamp, sbSpec, outputPat
 
 /**
  * 멀티모달 프레임 추출 (히트맵 수집 직후 호출)
+ * @param {string} videoId - 비디오 ID
+ * @param {Array} mostReplayedMarkers - "가장 많이 다시 본 장면" 마커 배열
+ * @param {number} recollectId - 재수집 ID
+ * @param {number} duration - 비디오 길이 (초)
  */
-async function extractMultimodalFrames(videoId, interactionData, recollectId) {
+async function extractMultimodalFrames(videoId, mostReplayedMarkers, recollectId, duration) {
     // Shorts 필터 (2분 미만 스킵)
-    if (interactionData.length > 0) {
-        const lastPoint = interactionData[interactionData.length - 1];
-        if (lastPoint.startMillis < 120000) {
-            log('info', `[Multimodal] ${videoId}: Shorts 스킵 (<2분)`);
-            return { status: 'skipped_shorts' };
-        }
+    if (duration && duration < 120) {
+        log('info', `[Multimodal] ${videoId}: Shorts 스킵 (<2분)`);
+        return { status: 'skipped_shorts' };
     }
 
-    // 고관심 구간 찾기
-    const segments = findInterestSegments(interactionData);
+    // "가장 많이 다시 본 장면" 구간 찾기
+    const segments = findInterestSegments(mostReplayedMarkers);
     if (segments.length === 0) {
-        log('info', `[Multimodal] ${videoId}: 관심 구간 없음`);
+        log('info', `[Multimodal] ${videoId}: "가장 많이 다시 본 장면" 마커 없음`);
         return { status: 'no_segments' };
     }
 
-    log('info', `[Multimodal] ${videoId}: ${segments.length}개 구간 발견`);
+    log('info', `[Multimodal] ${videoId}: ${segments.length}개 "가장 많이 다시 본 장면" 구간 발견`);
 
     // Storyboard 정보 가져오기
     const sbSpec = await getStoryboardSpec(videoId);
@@ -534,14 +488,19 @@ async function backfillMissingFrames(deletedIds) {
             if (!content) continue;
 
             const data = JSON.parse(content);
-            if (data.status !== 'success' || !data.interaction_data) continue;
+            if (data.status !== 'success') continue;
+
+            // mostReplayedMarkers가 없으면 스킵 (기존 데이터는 백필 불가)
+            if (!data.most_replayed_markers || data.most_replayed_markers.length === 0) {
+                log('info', `[Backfill] ${videoId}: most_replayed_markers 없음, 스킵`);
+                continue;
+            }
 
             const recollectId = data.recollect_id !== undefined ? data.recollect_id : 0;
 
             // 세그먼트 레벨에서 존재 여부 체크하므로 여기서는 스킵하지 않음
-            // extractMultimodalFrames 내부에서 각 세그먼트 폴더 존재 시 스킵 처리
             log('info', `[Backfill] ${videoId}: 프레임 수집 시작`);
-            const result = await extractMultimodalFrames(videoId, data.interaction_data, recollectId);
+            const result = await extractMultimodalFrames(videoId, data.most_replayed_markers, recollectId, null);
 
             if (result.status === 'success') {
                 backfilledCount++;
@@ -789,15 +748,16 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             youtube_link,
             video_id,
             interaction_data: formattedData,
+            most_replayed_markers: newHeatmap.mostReplayedMarkers || [],
             status: 'success',
             recollect_id: metaInfo.recollect_id,
             recollect_vars: metaInfo.recollect_vars,
             collected_at: new Date().toISOString()
         });
-        log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
+        log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length}, MostReplayed: ${(newHeatmap.mostReplayedMarkers || []).length}개)`);
 
         // === 멀티모달 프레임 추출 (히트맵 수집 직후) ===
-        const multimodalResult = await extractMultimodalFrames(video_id, formattedData, metaInfo.recollect_id);
+        const multimodalResult = await extractMultimodalFrames(video_id, newHeatmap.mostReplayedMarkers || [], metaInfo.recollect_id, metaInfo.duration);
         if (multimodalResult.status === 'success') {
             log('info', `[Multimodal] ${video_id}: ${multimodalResult.frameCount}개 프레임 저장 완료`);
         }
