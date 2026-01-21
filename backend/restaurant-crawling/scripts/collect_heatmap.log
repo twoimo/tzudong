@@ -2297,3 +2297,350 @@
 [2026-01-20T10:25:04.511Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: kx3gQVt5a3I (Duration: 30s)
 [2026-01-20T10:25:08.959Z] [INFO] Processing [cr4rGpM9HcQ]...
 [2026-01-20T10:25:08.960Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: cr4rGpM9HcQ (Duration: 57s)
+[2026-01-20T19:25:21.863Z] [INFO] === HTTP Heatmap Collector Started [Channel: tzuyang] ===
+[2026-01-20T19:25:21.866Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-20T19:25:21.866Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-20T19:25:21.867Z] [INFO] Cookies loaded.
+[2026-01-20T19:25:21.870Z] [INFO] Found 1011 URLs, filtering deleted...
+[2026-01-20T19:25:21.872Z] [INFO] [Skip] Video cgVRNBLTHaM: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.873Z] [INFO] [Skip] Video -D43ezc57z8: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.873Z] [INFO] [Skip] Video 90NJAyFx09A: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.874Z] [INFO] [Skip] Video -gMCn9VDJns: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.876Z] [INFO] [Skip] Video KDVJBtFEhw8: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.877Z] [INFO] [Skip] Video pySDhYAsZa8: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.877Z] [INFO] [Skip] Video ixi_hfZlEWE: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.879Z] [INFO] [Skip] Video av8T6X8hxhk: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.879Z] [INFO] [Skip] Video aG_xeTicF0k: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.879Z] [INFO] [Trigger] Video 2if2TjgSVEY: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.880Z] [INFO] [Skip] Video 9eJHNTya2pQ: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.880Z] [INFO] [Trigger] Video Uz6Bltn0xIY: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.881Z] [INFO] [Trigger] Video INCehN6gz90: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.881Z] [INFO] [Skip] Video kdM07dwCseo: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.881Z] [INFO] [Skip] Video kdQT6LZZ_3s: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.882Z] [INFO] [Skip] Video J9mrmZ3S_ps: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.882Z] [INFO] [Trigger] Video vgTtFdb3LjE: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.883Z] [INFO] [Skip] Video SbjywgoDGF4: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.883Z] [INFO] [Skip] Video lbueoat6MJk: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.883Z] [INFO] [Skip] Video Tx_yrWwGCL4: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.884Z] [INFO] [Skip] Video cGhoGXfAVS4: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.885Z] [INFO] [Skip] Video 2j45QOvYkL4: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.885Z] [INFO] [Skip] Video c0G-lfExt64: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.885Z] [INFO] [Skip] Video bxEDXFycaXw: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.887Z] [INFO] [Skip] Video 5LMAWd-elok: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.887Z] [INFO] [Skip] Video 2C_Cboo8oUM: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.887Z] [INFO] [Skip] Video 9AeDIHDL9ZM: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.888Z] [INFO] [Skip] Video TuZddCVF-yw: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.888Z] [INFO] [Skip] Video foxU-9BowUc: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.888Z] [INFO] [Skip] Video LhCEph7vBjw: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.889Z] [INFO] [Skip] Video _ovsAbqKQAM: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.889Z] [INFO] [Trigger] Video MXKFuvCukT8: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.889Z] [INFO] [Skip] Video KKBTfD0jPHA: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.890Z] [INFO] [Skip] Video qSug9_Vw8QY: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.890Z] [INFO] [Trigger] Video dQ5FochDJEw: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.890Z] [INFO] [Trigger] Video kx3gQVt5a3I: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.891Z] [INFO] [Trigger] Video tXHO-aB-W_s: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.891Z] [INFO] [Skip] Video 9YoNoltBYPo: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.891Z] [INFO] [Skip] Video kyCVDemYa7U: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.891Z] [INFO] [Skip] Video 0JNcoJWx7R8: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.892Z] [INFO] [Skip] Video FGJdgoU5L_s: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.892Z] [INFO] [Skip] Video v7U03TXG9oc: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.892Z] [INFO] [Trigger] Video bVNb3YIH5TI: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.893Z] [INFO] [Skip] Video OLu58vHTq_8: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.893Z] [INFO] [Skip] Video NEaW-nO-UGM: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.894Z] [INFO] [Skip] Video W1Q42bEDfEU: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.894Z] [INFO] [Skip] Video XgA7Jd1yzsw: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.894Z] [INFO] [Skip] Video SSAkcsiJDak: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.894Z] [INFO] [Trigger] Video V__oVpfMi8I: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.895Z] [INFO] [Skip] Video FPg95PvRbew: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.895Z] [INFO] [Skip] Video JgmopiEN8dU: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.896Z] [INFO] [Skip] Video tgsGUDC-Gd8: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.896Z] [INFO] [Skip] Video DJrOIqKlnDo: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.896Z] [INFO] [Skip] Video 9dmuQzjhYFI: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.897Z] [INFO] [Skip] Video QuwlZxZHHq0: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.897Z] [INFO] [Skip] Video I_gpXZLUouo: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.897Z] [INFO] [Skip] Video 9mTv_ygqfOM: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.897Z] [INFO] [Skip] Video lk1SPPsutWQ: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.898Z] [INFO] [Skip] Video r23NV582e8Q: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.898Z] [INFO] [Skip] Video N1BF4F4cz9o: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.898Z] [INFO] [Skip] Video 3651eb7XF98: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.899Z] [INFO] [Skip] Video -fE1mGc-W8w: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.899Z] [INFO] [Skip] Video M3K6xj5yyg4: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.899Z] [INFO] [Skip] Video ccABGZjVvgU: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.900Z] [INFO] [Skip] Video _g7lXJtbueg: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.900Z] [INFO] [Skip] Video NNcvNxD4vVg: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.900Z] [INFO] [Skip] Video xoxVobpBW_E: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.901Z] [INFO] [Skip] Video Dhc9X5vqwNs: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.901Z] [INFO] [Skip] Video Toi35vekNN8: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.901Z] [INFO] [Trigger] Video Su915VcW8Cc: Found trigger variable(s) [daily_collection, scheduled_weekly]
+[2026-01-20T19:25:21.902Z] [INFO] [Skip] Video c2WW0RGNFgY: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.902Z] [INFO] [Skip] Video f1_7CrG6PrU: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.903Z] [INFO] [Skip] Video oRWZAJN4ZFQ: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.903Z] [INFO] [Skip] Video qqQ-X_8YWc0: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.903Z] [INFO] [Skip] Video K1Hc4cZKXt0: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.904Z] [INFO] [Skip] Video KZWOjfpg2iI: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.904Z] [INFO] [Skip] Video 2TYa1R-kcpc: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.904Z] [INFO] [Skip] Video sO8qdAuBAQs: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.905Z] [INFO] [Skip] Video JQUWY-z9Q2E: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.905Z] [INFO] [Skip] Video x6CqjKYFyiU: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.906Z] [INFO] [Skip] Video 6YZCvnlAbTc: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.906Z] [INFO] [Skip] Video Mm76nsEkOIM: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.907Z] [INFO] [Skip] Video 1itT_ytJ7Xc: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.907Z] [INFO] [Skip] Video 4vg-3uctgxQ: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.907Z] [INFO] [Skip] Video smlnESe6mGY: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.908Z] [INFO] [Skip] Video Op9zNhmj3ok: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.908Z] [INFO] [Skip] Video SCpmx_9QN0o: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.909Z] [INFO] [Skip] Video 9gVyvPCGQNA: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.910Z] [INFO] [Skip] Video x8EdsDzKuQk: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.910Z] [INFO] [Skip] Video vZnL1qrf2zs: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.910Z] [INFO] [Skip] Video 8Op9zyBztCo: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.911Z] [INFO] [Skip] Video Blh_iDc72mI: recurs_vars [daily_collection] do not trigger heatmap.
+[2026-01-20T19:25:21.911Z] [INFO] [Trigger] Video mmF70W8acHM: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.914Z] [INFO] [Trigger] Video 820jZBF4eX8: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.915Z] [INFO] [Trigger] Video RYLgZz9UKz0: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.916Z] [INFO] [Trigger] Video DApeA1Fd_gI: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.917Z] [INFO] [Trigger] Video lZIfcL_pJSU: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.920Z] [INFO] [Trigger] Video uNq8gRAzMYc: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.921Z] [INFO] [Trigger] Video sD_tYU21KxU: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.924Z] [INFO] [Trigger] Video _-szbqPsPEo: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.925Z] [INFO] [Trigger] Video rQsuysaJMsg: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.927Z] [INFO] [Trigger] Video sFm9UUP9a5M: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.927Z] [INFO] [Trigger] Video ez641ZixE1s: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.928Z] [INFO] [Trigger] Video fQv5r9A-Fks: Found trigger variable(s) [scheduled_weekly]
+[2026-01-20T19:25:21.932Z] [INFO] [Trigger] Video zngViIh42ok: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.937Z] [INFO] [Trigger] Video fXxl-YDU2uQ: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.939Z] [INFO] [Trigger] Video MXB4qnvyhyg: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.940Z] [INFO] [Trigger] Video tIj8UsDrRgM: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.941Z] [INFO] [Trigger] Video _TCOA0tdpqE: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.942Z] [INFO] [Trigger] Video os614J8b_ak: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.943Z] [INFO] [Trigger] Video u7CdpfMxPrk: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.943Z] [INFO] [Trigger] Video cUUTMXI1cSo: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.944Z] [INFO] [Trigger] Video l7KtRsZ_ouc: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.948Z] [INFO] [Trigger] Video 4BahYG3xw5Q: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.950Z] [INFO] [Trigger] Video RTbRDh2rs1g: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.950Z] [INFO] [Trigger] Video LsFquZYwzHc: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.953Z] [INFO] [Trigger] Video Q7fVpvM1-eY: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.954Z] [INFO] [Trigger] Video gJ4StqhlXqE: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.955Z] [INFO] [Trigger] Video k_wN6i_w6JE: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.958Z] [INFO] [Trigger] Video fAJ5qPMchfE: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.960Z] [INFO] [Trigger] Video mWNYaJ6ZJiQ: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.961Z] [INFO] [Trigger] Video mo6pcqz7gm0: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.977Z] [INFO] [Trigger] Video 8RdkFuFK1DY: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.980Z] [INFO] [Trigger] Video m43t03-DziE: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.980Z] [INFO] [Trigger] Video lx9-ecadk7U: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.981Z] [INFO] [Trigger] Video xVNgs8OTxV8: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.984Z] [INFO] [Trigger] Video rilnZ_dW2Hg: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.986Z] [INFO] [Trigger] Video cHKKRP4aOQw: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.988Z] [INFO] [Trigger] Video 5P9YmF-GjLI: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.989Z] [INFO] [Trigger] Video Dzo7cB0MtbI: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.991Z] [INFO] [Trigger] Video HT3oGmsf1xo: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.992Z] [INFO] [Trigger] Video yupbldBCjE4: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.996Z] [INFO] [Trigger] Video RafmGHmD8NM: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.998Z] [INFO] [Trigger] Video -RI5PUiPr3g: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:21.999Z] [INFO] [Trigger] Video vmhRdQ_9Cic: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.001Z] [INFO] [Trigger] Video NOofZgRwC8c: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.002Z] [INFO] [Trigger] Video rRAEFB6CiD0: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.003Z] [INFO] [Trigger] Video SCTo9K3Acq8: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.006Z] [INFO] [Trigger] Video SKw6kobu57Q: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.008Z] [INFO] [Trigger] Video DTkL-uQw-sU: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.012Z] [INFO] [Trigger] Video SyH1-6gqgCw: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.015Z] [INFO] [Trigger] Video 4AlE083qq4g: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.017Z] [INFO] [Trigger] Video kr3gKEdvxCo: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.017Z] [INFO] [Trigger] Video GJ0TXbKNk-g: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.017Z] [INFO] [Trigger] Video 1m3NVZm5n_A: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.018Z] [INFO] [Trigger] Video SFpOByAR_GQ: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.023Z] [INFO] [Trigger] Video CBhRIsc_14A: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.023Z] [INFO] [Trigger] Video dcxQA9WRuq8: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.027Z] [INFO] [Trigger] Video 82M8OUA1hKc: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.028Z] [INFO] [Trigger] Video nZOr__kPHjQ: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.033Z] [INFO] [Trigger] Video q8bb5sCliWE: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.034Z] [INFO] [Trigger] Video 58GslGnZcS4: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.036Z] [INFO] [Trigger] Video r27Q6U-vQkk: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.037Z] [INFO] [Trigger] Video nmnwrWov8QU: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.046Z] [INFO] [Trigger] Video _mwL-KkeYxk: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.046Z] [INFO] [Trigger] Video MjXw08tatIc: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.049Z] [INFO] [Trigger] Video hjYYEklZsgM: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.053Z] [INFO] [Trigger] Video 2B7O7g9xMek: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.056Z] [INFO] [Trigger] Video m3FE0WmS8xU: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.057Z] [INFO] [Trigger] Video nltU0bSbiME: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.059Z] [INFO] [Trigger] Video VRLYoAiVvcw: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.064Z] [INFO] [Trigger] Video _4l7KodufB4: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.066Z] [INFO] [Trigger] Video JXGKeq14Lbk: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.069Z] [INFO] [Trigger] Video -H-mhUeu_qk: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.070Z] [INFO] [Trigger] Video IdS4G6-TsKc: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.075Z] [INFO] [Trigger] Video DZTe3nfHfI4: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.076Z] [INFO] [Trigger] Video 2CAhj-TgMmA: Found trigger variable(s) [scheduled_biweekly]
+[2026-01-20T19:25:22.077Z] [INFO] Found 1011 URLs, 87 targets to process.
+[2026-01-20T19:25:22.077Z] [INFO] Processing [oloeGY3oAVg]...
+[2026-01-20T19:25:23.078Z] [WARN] No heatmap found for oloeGY3oAVg.
+[2026-01-20T19:25:27.617Z] [INFO] Processing [2if2TjgSVEY]...
+[2026-01-20T19:25:28.591Z] [INFO] Saved heatmap for 2if2TjgSVEY (Points: 100)
+[2026-01-20T19:25:31.772Z] [INFO] Processing [Uz6Bltn0xIY]...
+[2026-01-20T19:25:32.633Z] [INFO] Saved heatmap for Uz6Bltn0xIY (Points: 100)
+[2026-01-20T19:25:37.188Z] [INFO] Processing [INCehN6gz90]...
+[2026-01-20T19:25:38.076Z] [INFO] Saved heatmap for INCehN6gz90 (Points: 100)
+[2026-01-20T19:25:41.438Z] [INFO] Processing [vgTtFdb3LjE]...
+[2026-01-20T19:25:42.360Z] [INFO] Saved heatmap for vgTtFdb3LjE (Points: 100)
+[2026-01-20T19:25:45.372Z] [INFO] Processing [MXKFuvCukT8]...
+[2026-01-20T19:25:45.373Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: MXKFuvCukT8 (Duration: 56s)
+[2026-01-20T19:25:50.225Z] [INFO] Processing [dQ5FochDJEw]...
+[2026-01-20T19:25:51.029Z] [INFO] Saved heatmap for dQ5FochDJEw (Points: 100)
+[2026-01-20T19:25:54.465Z] [INFO] Processing [kx3gQVt5a3I]...
+[2026-01-20T19:25:54.465Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: kx3gQVt5a3I (Duration: 30s)
+[2026-01-20T19:25:57.466Z] [INFO] Processing [tXHO-aB-W_s]...
+[2026-01-20T19:25:58.356Z] [INFO] Saved heatmap for tXHO-aB-W_s (Points: 100)
+[2026-01-20T19:26:02.501Z] [INFO] Processing [bVNb3YIH5TI]...
+[2026-01-20T19:26:03.681Z] [INFO] Saved heatmap for bVNb3YIH5TI (Points: 100)
+[2026-01-20T19:26:06.713Z] [INFO] Processing [V__oVpfMi8I]...
+[2026-01-20T19:26:07.611Z] [INFO] Saved heatmap for V__oVpfMi8I (Points: 100)
+[2026-01-20T19:26:11.817Z] [INFO] Processing [Su915VcW8Cc]...
+[2026-01-20T19:26:12.765Z] [INFO] Saved heatmap for Su915VcW8Cc (Points: 100)
+[2026-01-20T19:26:17.394Z] [INFO] Processing [mmF70W8acHM]...
+[2026-01-20T19:26:18.404Z] [INFO] Saved heatmap for mmF70W8acHM (Points: 100)
+[2026-01-20T19:26:22.556Z] [INFO] Processing [820jZBF4eX8]...
+[2026-01-20T19:26:23.488Z] [INFO] Saved heatmap for 820jZBF4eX8 (Points: 100)
+[2026-01-20T19:26:27.281Z] [INFO] Processing [RYLgZz9UKz0]...
+[2026-01-20T19:26:28.041Z] [INFO] Saved heatmap for RYLgZz9UKz0 (Points: 100)
+[2026-01-20T19:26:32.784Z] [INFO] Processing [DApeA1Fd_gI]...
+[2026-01-20T19:26:33.740Z] [INFO] Saved heatmap for DApeA1Fd_gI (Points: 100)
+[2026-01-20T19:26:37.616Z] [INFO] Processing [lZIfcL_pJSU]...
+[2026-01-20T19:26:38.371Z] [INFO] Saved heatmap for lZIfcL_pJSU (Points: 100)
+[2026-01-20T19:26:41.445Z] [INFO] Processing [uNq8gRAzMYc]...
+[2026-01-20T19:26:42.356Z] [INFO] Saved heatmap for uNq8gRAzMYc (Points: 100)
+[2026-01-20T19:26:45.781Z] [INFO] Processing [sD_tYU21KxU]...
+[2026-01-20T19:26:46.599Z] [INFO] Saved heatmap for sD_tYU21KxU (Points: 100)
+[2026-01-20T19:26:50.857Z] [INFO] Processing [_-szbqPsPEo]...
+[2026-01-20T19:26:50.858Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: _-szbqPsPEo (Duration: 41s)
+[2026-01-20T19:26:55.693Z] [INFO] Processing [rQsuysaJMsg]...
+[2026-01-20T19:26:55.694Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: rQsuysaJMsg (Duration: 59s)
+[2026-01-20T19:27:00.537Z] [INFO] Processing [sFm9UUP9a5M]...
+[2026-01-20T19:27:01.429Z] [INFO] Saved heatmap for sFm9UUP9a5M (Points: 100)
+[2026-01-20T19:27:04.875Z] [INFO] Processing [ez641ZixE1s]...
+[2026-01-20T19:27:05.612Z] [INFO] Saved heatmap for ez641ZixE1s (Points: 100)
+[2026-01-20T19:27:09.068Z] [INFO] Processing [fQv5r9A-Fks]...
+[2026-01-20T19:27:09.966Z] [INFO] Saved heatmap for fQv5r9A-Fks (Points: 100)
+[2026-01-20T19:27:13.504Z] [INFO] Processing [zngViIh42ok]...
+[2026-01-20T19:27:14.263Z] [INFO] Saved heatmap for zngViIh42ok (Points: 100)
+[2026-01-20T19:27:18.910Z] [INFO] Processing [fXxl-YDU2uQ]...
+[2026-01-20T19:27:19.934Z] [INFO] Saved heatmap for fXxl-YDU2uQ (Points: 100)
+[2026-01-20T19:27:24.553Z] [INFO] Processing [MXB4qnvyhyg]...
+[2026-01-20T19:27:25.492Z] [INFO] Saved heatmap for MXB4qnvyhyg (Points: 100)
+[2026-01-20T19:27:28.694Z] [INFO] Processing [tIj8UsDrRgM]...
+[2026-01-20T19:27:29.300Z] [INFO] Saved heatmap for tIj8UsDrRgM (Points: 100)
+[2026-01-20T19:27:33.404Z] [INFO] Processing [_TCOA0tdpqE]...
+[2026-01-20T19:27:34.413Z] [INFO] Saved heatmap for _TCOA0tdpqE (Points: 100)
+[2026-01-20T19:27:38.189Z] [INFO] Processing [os614J8b_ak]...
+[2026-01-20T19:27:39.082Z] [INFO] Saved heatmap for os614J8b_ak (Points: 100)
+[2026-01-20T19:27:42.829Z] [INFO] Processing [u7CdpfMxPrk]...
+[2026-01-20T19:27:42.830Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: u7CdpfMxPrk (Duration: 57s)
+[2026-01-20T19:27:46.925Z] [INFO] Processing [cUUTMXI1cSo]...
+[2026-01-20T19:27:46.926Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: cUUTMXI1cSo (Duration: 163s)
+[2026-01-20T19:27:51.589Z] [INFO] Processing [l7KtRsZ_ouc]...
+[2026-01-20T19:27:51.590Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: l7KtRsZ_ouc (Duration: 56s)
+[2026-01-20T19:27:56.325Z] [INFO] Processing [4BahYG3xw5Q]...
+[2026-01-20T19:27:57.293Z] [INFO] Saved heatmap for 4BahYG3xw5Q (Points: 100)
+[2026-01-20T19:28:01.138Z] [INFO] Processing [RTbRDh2rs1g]...
+[2026-01-20T19:28:01.928Z] [INFO] Saved heatmap for RTbRDh2rs1g (Points: 100)
+[2026-01-20T19:28:06.127Z] [INFO] Processing [LsFquZYwzHc]...
+[2026-01-20T19:28:07.075Z] [INFO] Saved heatmap for LsFquZYwzHc (Points: 100)
+[2026-01-20T19:28:10.318Z] [INFO] Processing [Q7fVpvM1-eY]...
+[2026-01-20T19:28:10.319Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: Q7fVpvM1-eY (Duration: 44s)
+[2026-01-20T19:28:14.814Z] [INFO] Processing [gJ4StqhlXqE]...
+[2026-01-20T19:28:14.814Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: gJ4StqhlXqE (Duration: 26s)
+[2026-01-20T19:28:18.763Z] [INFO] Processing [k_wN6i_w6JE]...
+[2026-01-20T19:28:18.764Z] [INFO] [Skip] Shorts detected from meta (<180s). ID: k_wN6i_w6JE (Duration: 34s)
+[2026-01-20T19:28:22.196Z] [INFO] Processing [fAJ5qPMchfE]...
+[2026-01-20T19:28:23.170Z] [INFO] Saved heatmap for fAJ5qPMchfE (Points: 100)
+[2026-01-20T19:28:27.659Z] [INFO] Processing [mWNYaJ6ZJiQ]...
+[2026-01-20T19:28:28.557Z] [INFO] Saved heatmap for mWNYaJ6ZJiQ (Points: 100)
+[2026-01-20T19:28:33.452Z] [INFO] Processing [mo6pcqz7gm0]...
+[2026-01-20T19:28:34.327Z] [INFO] Saved heatmap for mo6pcqz7gm0 (Points: 100)
+[2026-01-20T19:28:37.803Z] [INFO] Processing [8RdkFuFK1DY]...
+[2026-01-20T19:28:38.447Z] [INFO] Saved heatmap for 8RdkFuFK1DY (Points: 100)
+[2026-01-20T19:28:42.489Z] [INFO] Processing [m43t03-DziE]...
+[2026-01-20T19:28:43.362Z] [INFO] Saved heatmap for m43t03-DziE (Points: 100)
+[2026-01-20T19:28:46.437Z] [INFO] Processing [lx9-ecadk7U]...
+[2026-01-20T19:28:47.233Z] [INFO] Saved heatmap for lx9-ecadk7U (Points: 100)
+[2026-01-20T19:28:50.253Z] [INFO] Processing [xVNgs8OTxV8]...
+[2026-01-20T19:28:51.016Z] [INFO] Saved heatmap for xVNgs8OTxV8 (Points: 100)
+[2026-01-20T19:28:54.711Z] [INFO] Processing [rilnZ_dW2Hg]...
+[2026-01-20T19:28:55.615Z] [INFO] Saved heatmap for rilnZ_dW2Hg (Points: 100)
+[2026-01-20T19:28:59.397Z] [INFO] Processing [cHKKRP4aOQw]...
+[2026-01-20T19:29:00.221Z] [INFO] Saved heatmap for cHKKRP4aOQw (Points: 100)
+[2026-01-20T19:29:04.696Z] [INFO] Processing [5P9YmF-GjLI]...
+[2026-01-20T19:29:05.668Z] [INFO] Saved heatmap for 5P9YmF-GjLI (Points: 100)
+[2026-01-20T19:29:09.550Z] [INFO] Processing [Dzo7cB0MtbI]...
+[2026-01-20T19:29:10.254Z] [INFO] Saved heatmap for Dzo7cB0MtbI (Points: 100)
+[2026-01-20T19:29:13.756Z] [INFO] Processing [HT3oGmsf1xo]...
+[2026-01-20T19:29:14.684Z] [INFO] Saved heatmap for HT3oGmsf1xo (Points: 100)
+[2026-01-20T19:29:17.789Z] [INFO] Processing [yupbldBCjE4]...
+[2026-01-20T19:29:18.530Z] [INFO] Saved heatmap for yupbldBCjE4 (Points: 100)
+[2026-01-20T19:29:23.108Z] [INFO] Processing [RafmGHmD8NM]...
+[2026-01-20T19:29:24.067Z] [INFO] Saved heatmap for RafmGHmD8NM (Points: 100)
+[2026-01-20T19:29:28.361Z] [INFO] Processing [-RI5PUiPr3g]...
+[2026-01-20T19:29:29.263Z] [INFO] Saved heatmap for -RI5PUiPr3g (Points: 100)
+[2026-01-20T19:29:33.601Z] [INFO] Processing [vmhRdQ_9Cic]...
+[2026-01-20T19:29:34.562Z] [INFO] Saved heatmap for vmhRdQ_9Cic (Points: 100)
+[2026-01-20T19:29:37.918Z] [INFO] Processing [NOofZgRwC8c]...
+[2026-01-20T19:29:38.704Z] [INFO] Saved heatmap for NOofZgRwC8c (Points: 100)
+[2026-01-20T19:29:42.618Z] [INFO] Processing [rRAEFB6CiD0]...
+[2026-01-20T19:29:43.359Z] [INFO] Saved heatmap for rRAEFB6CiD0 (Points: 100)
+[2026-01-20T19:29:47.651Z] [INFO] Processing [SCTo9K3Acq8]...
+[2026-01-20T19:29:48.595Z] [INFO] Saved heatmap for SCTo9K3Acq8 (Points: 100)
+[2026-01-20T19:29:51.835Z] [INFO] Processing [SKw6kobu57Q]...
+[2026-01-20T19:29:52.653Z] [INFO] Saved heatmap for SKw6kobu57Q (Points: 100)
+[2026-01-20T19:29:55.957Z] [INFO] Processing [DTkL-uQw-sU]...
+[2026-01-20T19:29:56.772Z] [INFO] Saved heatmap for DTkL-uQw-sU (Points: 100)
+[2026-01-20T19:30:00.437Z] [INFO] Processing [SyH1-6gqgCw]...
+[2026-01-20T19:30:01.247Z] [INFO] Saved heatmap for SyH1-6gqgCw (Points: 100)
+[2026-01-20T19:30:05.317Z] [INFO] Processing [4AlE083qq4g]...
+[2026-01-20T19:30:06.146Z] [INFO] Saved heatmap for 4AlE083qq4g (Points: 100)
+[2026-01-20T19:30:09.807Z] [INFO] Processing [kr3gKEdvxCo]...
+[2026-01-20T19:30:10.498Z] [INFO] Saved heatmap for kr3gKEdvxCo (Points: 100)
+[2026-01-20T19:30:13.817Z] [INFO] Processing [GJ0TXbKNk-g]...
+[2026-01-20T19:30:14.622Z] [INFO] Saved heatmap for GJ0TXbKNk-g (Points: 100)
+[2026-01-20T19:30:18.460Z] [INFO] Processing [1m3NVZm5n_A]...
+[2026-01-20T19:30:19.249Z] [INFO] Saved heatmap for 1m3NVZm5n_A (Points: 100)
+[2026-01-20T19:30:22.956Z] [INFO] Processing [SFpOByAR_GQ]...
+[2026-01-20T19:30:23.774Z] [INFO] Saved heatmap for SFpOByAR_GQ (Points: 100)
+[2026-01-20T19:30:26.968Z] [INFO] Processing [CBhRIsc_14A]...
+[2026-01-20T19:30:27.631Z] [INFO] Saved heatmap for CBhRIsc_14A (Points: 100)
+[2026-01-20T19:30:32.036Z] [INFO] Processing [dcxQA9WRuq8]...
+[2026-01-20T19:30:32.927Z] [INFO] Saved heatmap for dcxQA9WRuq8 (Points: 100)
+[2026-01-20T19:30:37.254Z] [INFO] Processing [82M8OUA1hKc]...
+[2026-01-20T19:30:38.246Z] [INFO] Saved heatmap for 82M8OUA1hKc (Points: 100)
+[2026-01-20T19:30:43.127Z] [INFO] Processing [nZOr__kPHjQ]...
+[2026-01-20T19:30:43.970Z] [INFO] Saved heatmap for nZOr__kPHjQ (Points: 100)
+[2026-01-20T19:30:47.619Z] [INFO] Processing [q8bb5sCliWE]...
+[2026-01-20T19:30:48.361Z] [INFO] Saved heatmap for q8bb5sCliWE (Points: 100)
+[2026-01-20T19:30:53.122Z] [INFO] Processing [58GslGnZcS4]...
+[2026-01-20T19:30:53.881Z] [INFO] Saved heatmap for 58GslGnZcS4 (Points: 100)
+[2026-01-20T19:30:56.978Z] [INFO] Processing [r27Q6U-vQkk]...
+[2026-01-20T19:30:57.835Z] [INFO] Saved heatmap for r27Q6U-vQkk (Points: 100)
+[2026-01-20T19:31:01.101Z] [INFO] Processing [nmnwrWov8QU]...
+[2026-01-20T19:31:02.087Z] [INFO] Saved heatmap for nmnwrWov8QU (Points: 100)
+[2026-01-20T19:31:07.050Z] [INFO] Processing [_mwL-KkeYxk]...
+[2026-01-20T19:31:07.853Z] [INFO] Saved heatmap for _mwL-KkeYxk (Points: 100)
+[2026-01-20T19:31:11.454Z] [INFO] Processing [MjXw08tatIc]...
+[2026-01-20T19:31:12.330Z] [INFO] Saved heatmap for MjXw08tatIc (Points: 100)
+[2026-01-20T19:31:15.844Z] [INFO] Processing [hjYYEklZsgM]...
+[2026-01-20T19:31:16.607Z] [INFO] Saved heatmap for hjYYEklZsgM (Points: 100)
+[2026-01-20T19:31:21.307Z] [INFO] Processing [2B7O7g9xMek]...
+[2026-01-20T19:31:22.114Z] [INFO] Saved heatmap for 2B7O7g9xMek (Points: 100)
+[2026-01-20T19:31:25.426Z] [INFO] Processing [m3FE0WmS8xU]...
+[2026-01-20T19:31:26.132Z] [INFO] Saved heatmap for m3FE0WmS8xU (Points: 100)
+[2026-01-20T19:31:29.235Z] [INFO] Processing [nltU0bSbiME]...
+[2026-01-20T19:31:29.981Z] [INFO] Saved heatmap for nltU0bSbiME (Points: 100)
+[2026-01-20T19:31:34.618Z] [INFO] Processing [VRLYoAiVvcw]...
+[2026-01-20T19:31:35.466Z] [INFO] Saved heatmap for VRLYoAiVvcw (Points: 100)
+[2026-01-20T19:31:38.523Z] [INFO] Processing [_4l7KodufB4]...
+[2026-01-20T19:31:39.254Z] [INFO] Saved heatmap for _4l7KodufB4 (Points: 100)
+[2026-01-20T19:31:43.222Z] [INFO] Processing [JXGKeq14Lbk]...
+[2026-01-20T19:31:44.081Z] [INFO] Saved heatmap for JXGKeq14Lbk (Points: 100)
+[2026-01-20T19:31:47.495Z] [INFO] Processing [-H-mhUeu_qk]...
+[2026-01-20T19:31:48.244Z] [INFO] Saved heatmap for -H-mhUeu_qk (Points: 100)
+[2026-01-20T19:31:51.976Z] [INFO] Processing [IdS4G6-TsKc]...
+[2026-01-20T19:31:52.787Z] [INFO] Saved heatmap for IdS4G6-TsKc (Points: 100)
+[2026-01-20T19:31:56.233Z] [INFO] Processing [DZTe3nfHfI4]...
+[2026-01-20T19:31:56.900Z] [INFO] Saved heatmap for DZTe3nfHfI4 (Points: 100)
+[2026-01-20T19:32:01.408Z] [INFO] Processing [2CAhj-TgMmA]...
+[2026-01-20T19:32:02.273Z] [INFO] Saved heatmap for 2CAhj-TgMmA (Points: 100)
