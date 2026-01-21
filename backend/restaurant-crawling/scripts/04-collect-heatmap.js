@@ -174,10 +174,17 @@ function extractHeatmapFromHtml(html) {
         const markersDecoration = findKey(data, 'markersDecoration');
         let mostReplayedMarkers = [];
         if (markersDecoration && markersDecoration.timedMarkerDecorations) {
-            mostReplayedMarkers = markersDecoration.timedMarkerDecorations.filter(marker => {
-                const labelText = marker.label?.runs?.[0]?.text || '';
-                return labelText.includes('가장 많이 다시 본 장면') || labelText.toLowerCase().includes('most replayed');
-            });
+            mostReplayedMarkers = markersDecoration.timedMarkerDecorations
+                .filter(marker => {
+                    const labelText = marker.label?.runs?.[0]?.text || '';
+                    return labelText.includes('가장 많이 다시 본 장면') || labelText.toLowerCase().includes('most replayed');
+                })
+                .map(marker => ({
+                    startMillis: marker.visibleTimeRangeStartMillis,
+                    endMillis: marker.visibleTimeRangeEndMillis,
+                    peakMillis: marker.decorationTimeMillis,
+                    label: marker.label?.runs?.[0]?.text
+                }));
         }
 
         // 2. 기존 히트맵 데이터도 가져오기
@@ -229,9 +236,9 @@ function findInterestSegments(mostReplayedMarkers) {
     const segments = [];
 
     for (const marker of mostReplayedMarkers) {
-        const startSec = Math.floor(marker.visibleTimeRangeStartMillis / 1000);
-        const endSec = Math.ceil(marker.visibleTimeRangeEndMillis / 1000);
-        const peakSec = marker.decorationTimeMillis / 1000;
+        const startSec = Math.floor(marker.startMillis / 1000);
+        const endSec = Math.ceil(marker.endMillis / 1000);
+        const peakSec = marker.peakMillis / 1000;
 
         segments.push({
             startSec,
