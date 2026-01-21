@@ -3216,3 +3216,17 @@ Error marking filters as finished
 [2026-01-21T03:54:28.841Z] [INFO] [Backfill] -kYYmiDGc-Y: 프레임 수집 시작
 [2026-01-21T03:54:28.841Z] [INFO] [Multimodal] -kYYmiDGc-Y: 5개 구간 발견
 [2026-01-21T03:55:12.005Z] [INFO] [Multimodal] 세그먼트 1 (740s-821s): 82개 프레임 저장
+[2026-01-21T03:55:38.840Z] [INFO] [Multimodal] 세그먼트 2 (502s-547s): 46개 프레임 저장
+[2026-01-21T03:55:54.462Z] [INFO] [Multimodal] 세그먼트 3 (405s-433s): 29개 프레임 저장
+[2026-01-21T03:56:15.125Z] [INFO] [Multimodal] 세그먼트 4 (255s-292s): 38개 프레임 저장
+[2026-01-21T03:56:51.697Z] [INFO] [Multimodal] 세그먼트 5 (617s-688s): 72개 프레임 저장
+[2026-01-21T03:56:54.872Z] [INFO] [Backfill] -kvz3B9JHWc: 프레임 수집 시작
+[2026-01-21T03:56:54.872Z] [INFO] [Multimodal] -kvz3B9JHWc: 4개 구간 발견
+[2026-01-21T03:57:27.948Z] [INFO] [Multimodal] 세그먼트 1 (140s-203s): 64개 프레임 저장
+[2026-01-21T03:57:42.437Z] [INFO] [Multimodal] 세그먼트 2 (484s-511s): 28개 프레임 저장
+[2026-01-21T03:58:45.271Z] [INFO] [Multimodal] 세그먼트 3 (0s-133s): 134개 프레임 저장
+[2026-01-21T03:59:34.444Z] [INFO] [Multimodal] 세그먼트 4 (775s-881s): 107개 프레임 저장
+[2026-01-21T03:59:38.368Z] [INFO] [Backfill] -lcUHOfTKX0: 프레임 수집 시작
+[2026-01-21T03:59:38.368Z] [INFO] [Multimodal] -lcUHOfTKX0: 3개 구간 발견
+[2026-01-21T04:00:06.863Z] [INFO] [Multimodal] 세그먼트 1 (790s-840s): 51개 프레임 저장
+[2026-01-21T04:00:19.432Z] [INFO] [Multimodal] 세그먼트 2 (533s-554s): 22개 프레임 저장
