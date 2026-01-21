@@ -61,7 +61,7 @@ function log(level, msg) {
 }
 
 // --- 상수 ---
-const COLLECTION_INTERVAL_MS = 3000;
+const COLLECTION_INTERVAL_MS = 1000;
 let CHANNEL_NAME = 'tzuyang';
 
 const args = process.argv.slice(2);
@@ -467,9 +467,9 @@ async function extractMultimodalFrames(videoId, mostReplayedMarkers, recollectId
             totalSaved += segSavedCount;
         }
 
-        // IP 차단 방지: 세그먼트 간 딜레이 (1-2초)
+        // IP 차단 방지: 세그먼트 간 딜레이 (0.5-1초)
         if (segIdx < segments.length - 1) {
-            await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+            await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
         }
     }
 
@@ -513,8 +513,8 @@ async function backfillMissingFrames(deletedIds) {
                 backfilledCount++;
             }
 
-            // IP 차단 방지: 비디오 간 딜레이 (2-4초)
-            await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+            // IP 차단 방지: 비디오 간 딜레이 (0.5-1초)
+            await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
 
         } catch (e) {
             log('error', `[Backfill] ${videoId} 처리 실패: ${e.message}`);
@@ -671,7 +671,7 @@ async function main() {
             await processVideo(video_id, url, cookieHeader);
 
             if (i < batch.length - 1) {
-                const delay = COLLECTION_INTERVAL_MS + Math.random() * 2000;
+                const delay = COLLECTION_INTERVAL_MS + Math.random() * 1000;
                 await new Promise(r => setTimeout(r, delay));
             }
         }
