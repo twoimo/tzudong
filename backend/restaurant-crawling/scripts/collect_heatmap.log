@@ -2644,3 +2644,485 @@
 [2026-01-20T19:31:56.900Z] [INFO] Saved heatmap for DZTe3nfHfI4 (Points: 100)
 [2026-01-20T19:32:01.408Z] [INFO] Processing [2CAhj-TgMmA]...
 [2026-01-20T19:32:02.273Z] [INFO] Saved heatmap for 2CAhj-TgMmA (Points: 100)
+[2026-01-21T03:07:33.640Z] [INFO] === HTTP Heatmap + Multimodal Collector Started [Channel: tzuyang] ===
+[2026-01-21T03:07:33.642Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-21T03:07:33.642Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-21T03:07:33.643Z] [INFO] Cookies loaded.
+[2026-01-21T03:07:33.644Z] [INFO] === 프레임 백필 시작 ===
+[2026-01-21T03:07:33.646Z] [INFO] [Backfill] -8wi-fVqTwk: 프레임 수집 시작
+[2026-01-21T03:07:33.646Z] [INFO] [Multimodal] -8wi-fVqTwk: 6개 구간 발견
+[2026-01-21T03:10:33.956Z] [INFO] === HTTP Heatmap + Multimodal Collector Started [Channel: tzuyang] ===
+[2026-01-21T03:10:33.957Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-21T03:10:33.958Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-21T03:10:33.958Z] [INFO] Cookies loaded.
+[2026-01-21T03:10:33.959Z] [INFO] === 프레임 백필 시작 ===
+[2026-01-21T03:10:33.961Z] [INFO] [Backfill] -D43ezc57z8: 프레임 수집 시작
+[2026-01-21T03:10:33.962Z] [INFO] [Multimodal] -D43ezc57z8: 4개 구간 발견
+[2026-01-21T03:10:44.012Z] [INFO] [Multimodal] 세그먼트 1 (417s-435s): 19개 프레임 저장
+[2026-01-21T03:10:49.808Z] [INFO] [Multimodal] 세그먼트 2 (651s-668s): 18개 프레임 저장
+[2026-01-21T03:11:44.710Z] [INFO] [Multimodal] 세그먼트 3 (66s-234s): 169개 프레임 저장
+[2026-01-21T03:12:04.598Z] [INFO] [Multimodal] 세그먼트 4 (292s-351s): 60개 프레임 저장
+[2026-01-21T03:12:05.463Z] [INFO] [Backfill] -H-mhUeu_qk: 프레임 수집 시작
+[2026-01-21T03:12:05.464Z] [INFO] [Multimodal] -H-mhUeu_qk: 2개 구간 발견
+[2026-01-21T03:12:35.671Z] [INFO] [Multimodal] 세그먼트 1 (768s-853s): 86개 프레임 저장
+[2026-01-21T03:12:39.896Z] [INFO] [Multimodal] 세그먼트 2 (543s-553s): 11개 프레임 저장
+[2026-01-21T03:12:40.597Z] [INFO] [Backfill] -HyRSLWcOeA: 프레임 수집 시작
+[2026-01-21T03:12:40.597Z] [INFO] [Multimodal] -HyRSLWcOeA: 5개 구간 발견
+[2026-01-21T03:12:47.235Z] [INFO] [Multimodal] 세그먼트 1 (656s-666s): 11개 프레임 저장
+[2026-01-21T03:12:53.607Z] [INFO] [Multimodal] 세그먼트 2 (757s-777s): 21개 프레임 저장
+[2026-01-21T03:12:57.050Z] [INFO] [Multimodal] 세그먼트 3 (175s-185s): 11개 프레임 저장
+[2026-01-21T03:13:03.663Z] [INFO] [Multimodal] 세그먼트 4 (406s-426s): 21개 프레임 저장
+[2026-01-21T03:13:23.746Z] [INFO] [Multimodal] 세그먼트 5 (73s-139s): 67개 프레임 저장
+[2026-01-21T03:13:24.355Z] [INFO] [Backfill] -LGODBDAg1c: 프레임 수집 시작
+[2026-01-21T03:13:24.355Z] [INFO] [Multimodal] -LGODBDAg1c: 7개 구간 발견
+[2026-01-21T03:13:44.553Z] [INFO] [Multimodal] 세그먼트 1 (642s-695s): 54개 프레임 저장
+[2026-01-21T03:13:55.860Z] [INFO] [Multimodal] 세그먼트 2 (526s-559s): 34개 프레임 저장
+[2026-01-21T03:14:03.123Z] [INFO] [Multimodal] 세그먼트 3 (968s-990s): 23개 프레임 저장
+[2026-01-21T03:14:20.618Z] [INFO] [Multimodal] 세그먼트 4 (231s-285s): 55개 프레임 저장
+[2026-01-21T03:15:04.482Z] [INFO] [Multimodal] 세그먼트 5 (63s-201s): 139개 프레임 저장
+[2026-01-21T03:15:09.027Z] [INFO] [Multimodal] 세그먼트 6 (410s-422s): 13개 프레임 저장
+[2026-01-21T03:15:19.827Z] [INFO] [Multimodal] 세그먼트 7 (579s-611s): 33개 프레임 저장
+[2026-01-21T03:15:20.765Z] [INFO] [Backfill] -RI5PUiPr3g: 프레임 수집 시작
+[2026-01-21T03:15:20.765Z] [INFO] [Multimodal] -RI5PUiPr3g: 3개 구간 발견
+[2026-01-21T03:15:44.476Z] [INFO] [Multimodal] 세그먼트 1 (818s-884s): 67개 프레임 저장
+[2026-01-21T03:15:50.821Z] [INFO] [Multimodal] 세그먼트 2 (409s-428s): 20개 프레임 저장
+[2026-01-21T03:15:54.274Z] [INFO] [Multimodal] 세그먼트 3 (651s-661s): 11개 프레임 저장
+[2026-01-21T03:15:54.975Z] [INFO] [Backfill] -Tf_SWz5f9k: 프레임 수집 시작
+[2026-01-21T03:15:54.975Z] [INFO] [Multimodal] -Tf_SWz5f9k: 6개 구간 발견
+[2026-01-21T03:16:26.531Z] [INFO] [Multimodal] 세그먼트 1 (48s-136s): 89개 프레임 저장
+[2026-01-21T03:16:36.500Z] [INFO] [Multimodal] 세그먼트 2 (559s-589s): 31개 프레임 저장
+[2026-01-21T03:16:43.481Z] [INFO] [Multimodal] 세그먼트 3 (482s-502s): 21개 프레임 저장
+[2026-01-21T03:17:02.635Z] [INFO] [Multimodal] 세그먼트 4 (607s-666s): 60개 프레임 저장
+[2026-01-21T03:17:09.613Z] [INFO] [Multimodal] 세그먼트 5 (800s-821s): 22개 프레임 저장
+[2026-01-21T03:17:25.347Z] [INFO] [Multimodal] 세그먼트 6 (714s-763s): 50개 프레임 저장
+[2026-01-21T03:17:26.152Z] [INFO] [Backfill] -X47382RRus: 프레임 수집 시작
+[2026-01-21T03:17:26.152Z] [INFO] [Multimodal] -X47382RRus: 3개 구간 발견
+[2026-01-21T03:17:43.691Z] [INFO] [Multimodal] 세그먼트 1 (744s-788s): 45개 프레임 저장
+[2026-01-21T03:17:47.895Z] [INFO] [Multimodal] 세그먼트 2 (414s-426s): 13개 프레임 저장
+[2026-01-21T03:17:55.073Z] [INFO] [Multimodal] 세그먼트 3 (649s-671s): 23개 프레임 저장
+[2026-01-21T03:17:56.014Z] [INFO] [Backfill] -e0ERP2rFkY: 프레임 수집 시작
+[2026-01-21T03:24:36.700Z] [INFO] === HTTP Heatmap + Multimodal Collector Started [Channel: tzuyang] ===
+[2026-01-21T03:24:36.701Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-21T03:24:36.702Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-21T03:24:36.703Z] [INFO] Cookies loaded.
+[2026-01-21T03:24:36.703Z] [INFO] === 프레임 백필 시작 ===
+[2026-01-21T03:24:36.705Z] [INFO] [Backfill] -1OU4tkFJns: 프레임 수집 시작
+[2026-01-21T03:24:36.706Z] [INFO] [Multimodal] -1OU4tkFJns: 6개 구간 발견
+[2026-01-21T03:24:51.227Z] [INFO] [Multimodal] 세그먼트 1 (351s-383s): 33개 프레임 저장
+[2026-01-21T03:24:54.689Z] [INFO] [Multimodal] 세그먼트 2 (413s-422s): 10개 프레임 저장
+[2026-01-21T03:25:08.405Z] [INFO] [Multimodal] 세그먼트 3 (54s-94s): 41개 프레임 저장
+[2026-01-21T03:25:15.982Z] [INFO] [Multimodal] 세그먼트 4 (756s-780s): 25개 프레임 저장
+[2026-01-21T03:25:22.223Z] [INFO] [Multimodal] 세그먼트 5 (585s-601s): 17개 프레임 저장
+[2026-01-21T03:25:50.168Z] [INFO] [Multimodal] 세그먼트 6 (101s-188s): 88개 프레임 저장
+[2026-01-21T03:25:50.895Z] [INFO] [Backfill] -8wi-fVqTwk: 프레임 수집 시작
+[2026-01-21T03:25:50.895Z] [INFO] [Multimodal] -8wi-fVqTwk: 6개 구간 발견
+[2026-01-21T03:26:01.100Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/89.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.160Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/90.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.221Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/91.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.281Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/92.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.341Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/93.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.400Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/94.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.459Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/95.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.518Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/96.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.577Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/97.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.635Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/98.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.693Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/99.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.752Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/100.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.809Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/101.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.867Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/102.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.926Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/103.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:01.983Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/104.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.040Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/105.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.098Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/106.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.157Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/107.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.213Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/108.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.271Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/109.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.327Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/110.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.383Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/111.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.440Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/112.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.496Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/113.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.551Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/114.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.608Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/115.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.667Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/116.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.724Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:0" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/117.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.780Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/118.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.840Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/119.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.896Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/120.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:02.951Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/121.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:03.007Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/122.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:03.064Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/1_66_123/123.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:03.064Z] [INFO] [Multimodal] 세그먼트 1 (66s-123s): 23개 프레임 저장
+[2026-01-21T03:26:06.852Z] [INFO] [Multimodal] 세그먼트 2 (414s-425s): 12개 프레임 저장
+[2026-01-21T03:26:35.355Z] [INFO] [Multimodal] 세그먼트 3 (433s-519s): 87개 프레임 저장
+[2026-01-21T03:26:35.416Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/132.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:35.485Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/133.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:35.552Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/134.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:35.614Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/135.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:35.681Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/136.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:35.745Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/137.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:35.810Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/138.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:35.897Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/139.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:35.964Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/140.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.033Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/141.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.142Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/142.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.213Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/143.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.301Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/144.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.450Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/145.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.570Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/146.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.663Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/147.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.729Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/148.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.800Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/149.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.861Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/150.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.921Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/151.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:36.979Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/152.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.038Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/153.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.097Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/154.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.157Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/155.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.216Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/156.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.275Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:0:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/157.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.332Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/158.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.390Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/159.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.447Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/160.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.505Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/161.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.562Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/162.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.620Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/163.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.677Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/164.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.733Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/165.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.789Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:320:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/166.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.850Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/167.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.906Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/168.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:37.962Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/169.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:38.021Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/170.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:38.077Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/171.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:38.135Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/172.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:38.193Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/173.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:38.253Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/174.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:38.315Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/175.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:26:38.377Z] [ERROR] 프레임 추출 실패 -8wi-fVqTwk: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/-8wi-fVqTwk_sheet_1.webp" -vf "crop=320:180:640:360" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/-8wi-fVqTwk/0/4_132_217/176.webp"
+Error while decoding stream #0:0: Invalid data found when processing input
+Cannot determine format of input stream 0:0 after EOF
+Error marking filters as finished
+
+[2026-01-21T03:28:49.590Z] [INFO] === HTTP Heatmap + Multimodal Collector Started [Channel: tzuyang] ===
+[2026-01-21T03:28:49.592Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-21T03:28:49.593Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-21T03:28:49.594Z] [INFO] Cookies loaded.
+[2026-01-21T03:28:49.595Z] [INFO] === 프레임 백필 시작 ===
+[2026-01-21T03:28:49.597Z] [INFO] [Backfill] -1OU4tkFJns: 프레임 수집 시작
+[2026-01-21T03:28:49.598Z] [INFO] [Multimodal] -1OU4tkFJns: 6개 구간 발견
