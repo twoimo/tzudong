@@ -11778,3 +11778,10 @@ Error marking filters as finished
 [2026-01-21T16:48:13.218Z] [INFO] Processing [OaHuBj6YH84]...
 [2026-01-21T16:48:13.965Z] [INFO] Saved heatmap for OaHuBj6YH84 (Points: 100, MostReplayed: 3개)
 [2026-01-21T16:48:13.965Z] [INFO] [Multimodal] OaHuBj6YH84: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T16:49:47.886Z] [INFO] [Multimodal] 세그먼트 1 (97s-294s): 198개 프레임 저장
+[2026-01-21T16:51:20.926Z] [INFO] [Multimodal] 세그먼트 2 (2249s-2446s): 198개 프레임 저장
+[2026-01-21T16:52:45.534Z] [INFO] [Multimodal] 세그먼트 3 (7043s-7239s): 197개 프레임 저장
+[2026-01-21T16:52:45.535Z] [INFO] [Multimodal] OaHuBj6YH84: 593개 프레임 저장 완료
+[2026-01-21T16:52:46.804Z] [INFO] Processing [HddyXcoPRtw]...
+[2026-01-21T16:52:47.803Z] [INFO] Saved heatmap for HddyXcoPRtw (Points: 100, MostReplayed: 1개)
+[2026-01-21T16:52:47.804Z] [INFO] [Multimodal] HddyXcoPRtw: 1개 "가장 많이 다시 본 장면" 구간 발견
