@@ -122,12 +122,12 @@ def check_thumbnail_exists(channel_data_path: Path, video_id: str, recollect_id:
 def get_schedule_frequency(published_at_str: str) -> Optional[str]:
     """
     영상 age에 따른 수집 주기 결정 (KST 기준)
-    0~6개월: 매일 (None -> 항상 수집)
-    6개월~1년: 주 1회 (scheduled_weekly)
-    1년~: 2주 1회 (scheduled_biweekly)
+    0~3개월: 매일 (None -> 항상 수집), 히트맵은 주 1회
+    3개월~1년: 2주 1회 (scheduled_biweekly)
+    1년~: 월 1회 (scheduled_monthly)
     """
     if not published_at_str:
-        return "scheduled_weekly" # fallback
+        return "scheduled_biweekly" # fallback
 
     pub_date = datetime.fromisoformat(published_at_str.replace("Z", "+00:00")).astimezone(KST)
     now = datetime.now(KST)
@@ -141,15 +141,15 @@ def get_schedule_frequency(published_at_str: str) -> Optional[str]:
         
     months_diff = days_diff / 30.0 # 대략적 계산
 
-    if months_diff < 6:
-        # 0 ~ 6개월: 매일 수집 (스케줄링 제한 없음)
+    if months_diff < 3:
+        # 0 ~ 3개월: 매일 수집 (스케줄링 제한 없음)
         return None 
     elif months_diff < 12:
-        # 6 ~ 12개월: 주 1회
-        return "scheduled_weekly"
-    else:
-        # 1년 이상: 2주 1회
+        # 3 ~ 12개월: 2주 1회
         return "scheduled_biweekly"
+    else:
+        # 1년 이상: 월 1회
+        return "scheduled_monthly"
 
 
 def check_schedule_condition(frequency: str, video_id: str) -> bool:
@@ -176,6 +176,11 @@ def check_schedule_condition(frequency: str, video_id: str) -> bool:
         # 기준일(epoch)로부터 지난 일수 % 14 == vid_hash % 14
         days_since_epoch = (today - datetime(2024, 1, 1).date()).days
         return (days_since_epoch % 14) == (vid_hash % 14)
+    
+    if frequency == "scheduled_monthly":
+        # 30일 주기
+        days_since_epoch = (today - datetime(2024, 1, 1).date()).days
+        return (days_since_epoch % 30) == (vid_hash % 30)
         
     return False
 
