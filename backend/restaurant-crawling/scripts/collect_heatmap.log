@@ -7044,3 +7044,49 @@ Error marking filters as finished
 [2026-01-21T09:42:30.039Z] [INFO] [Multimodal] 9AeDIHDL9ZM: 2개 "가장 많이 다시 본 장면" 구간 발견
 [2026-01-21T09:42:43.361Z] [INFO] [Backfill] 9YoNoltBYPo: 프레임 수집 시작
 [2026-01-21T09:42:43.361Z] [INFO] [Multimodal] 9YoNoltBYPo: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:43:08.435Z] [INFO] [Backfill] 9eJHNTya2pQ: 프레임 수집 시작
+[2026-01-21T09:43:08.435Z] [INFO] [Multimodal] 9eJHNTya2pQ: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:43:22.464Z] [INFO] [Backfill] FGJdgoU5L_s: 프레임 수집 시작
+[2026-01-21T09:43:22.465Z] [INFO] [Multimodal] FGJdgoU5L_s: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:43:37.429Z] [INFO] [Backfill] INCehN6gz90: 프레임 수집 시작
+[2026-01-21T09:43:37.430Z] [INFO] [Multimodal] INCehN6gz90: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:43:47.927Z] [INFO] [Backfill] J9mrmZ3S_ps: 프레임 수집 시작
+[2026-01-21T09:43:47.927Z] [INFO] [Multimodal] J9mrmZ3S_ps: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:44:11.146Z] [INFO] [Backfill] KDVJBtFEhw8: 프레임 수집 시작
+[2026-01-21T09:44:11.147Z] [INFO] [Multimodal] KDVJBtFEhw8: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:44:24.927Z] [INFO] [Backfill] KKBTfD0jPHA: 프레임 수집 시작
+[2026-01-21T09:44:24.929Z] [INFO] [Multimodal] KKBTfD0jPHA: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:44:42.872Z] [INFO] [Backfill] LhCEph7vBjw: 프레임 수집 시작
+[2026-01-21T09:44:42.872Z] [INFO] [Multimodal] LhCEph7vBjw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:44:49.750Z] [INFO] [Backfill] OLu58vHTq_8: 프레임 수집 시작
+[2026-01-21T09:44:49.751Z] [INFO] [Multimodal] OLu58vHTq_8: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:44:53.401Z] [ERROR] 프레임 추출 실패 OLu58vHTq_8: Command failed: ffmpeg -y -v error -i "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames/OLu58vHTq_8_sheet_4.webp" -vf "crop=320:180:320:180" -frames:v 1 -quality 80 "/home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/frames/OLu58vHTq_8/2/1_401_430/401.webp"
+[2026-01-21T09:45:06.409Z] [INFO] [Multimodal] 세그먼트 1 (401s-430s): 29개 프레임 저장
+[2026-01-21T09:45:07.083Z] [INFO] [Backfill] SbjywgoDGF4: 프레임 수집 시작
+[2026-01-21T09:45:07.083Z] [INFO] [Multimodal] SbjywgoDGF4: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:45:22.263Z] [INFO] [Backfill] TuZddCVF-yw: 프레임 수집 시작
+[2026-01-21T09:45:22.264Z] [INFO] [Multimodal] TuZddCVF-yw: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:45:37.071Z] [INFO] [Backfill] Tx_yrWwGCL4: 프레임 수집 시작
+[2026-01-21T09:45:37.072Z] [INFO] [Multimodal] Tx_yrWwGCL4: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:45:44.977Z] [INFO] [Backfill] Uz6Bltn0xIY: 프레임 수집 시작
+[2026-01-21T09:45:44.978Z] [INFO] [Multimodal] Uz6Bltn0xIY: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:45:54.290Z] [INFO] [Backfill] _ovsAbqKQAM: 프레임 수집 시작
+[2026-01-21T09:45:54.291Z] [INFO] [Multimodal] _ovsAbqKQAM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:46:05.533Z] [INFO] [Backfill] aG_xeTicF0k: 프레임 수집 시작
+[2026-01-21T09:46:05.534Z] [INFO] [Multimodal] aG_xeTicF0k: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:46:14.351Z] [INFO] [Backfill] av8T6X8hxhk: 프레임 수집 시작
+[2026-01-21T09:46:14.352Z] [INFO] [Multimodal] av8T6X8hxhk: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:46:24.522Z] [INFO] [Backfill] bVNb3YIH5TI: 프레임 수집 시작
+[2026-01-21T09:46:24.522Z] [INFO] [Multimodal] bVNb3YIH5TI: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:46:42.298Z] [INFO] [Backfill] bxEDXFycaXw: 프레임 수집 시작
+[2026-01-21T09:46:42.298Z] [INFO] [Multimodal] bxEDXFycaXw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:46:50.330Z] [INFO] [Backfill] c0G-lfExt64: 프레임 수집 시작
+[2026-01-21T09:46:50.330Z] [INFO] [Multimodal] c0G-lfExt64: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:47:01.390Z] [INFO] [Backfill] cGhoGXfAVS4: 프레임 수집 시작
+[2026-01-21T09:47:01.390Z] [INFO] [Multimodal] cGhoGXfAVS4: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:47:09.933Z] [INFO] [Backfill] cgVRNBLTHaM: 프레임 수집 시작
+[2026-01-21T09:47:09.934Z] [INFO] [Multimodal] cgVRNBLTHaM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:47:24.314Z] [INFO] [Backfill] dQ5FochDJEw: 프레임 수집 시작
+[2026-01-21T09:47:24.314Z] [INFO] [Multimodal] dQ5FochDJEw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-21T09:47:31.472Z] [INFO] [Backfill] foxU-9BowUc: 프레임 수집 시작
+[2026-01-21T09:47:31.472Z] [INFO] [Multimodal] foxU-9BowUc: 1개 "가장 많이 다시 본 장면" 구간 발견
