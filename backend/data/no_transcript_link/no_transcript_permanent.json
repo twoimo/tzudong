@@ -110,5 +110,13 @@
   {
     "youtube_link": "https://www.youtube.com/watch?v=BdmMYL3WJ2M",
     "retry_num": 1
+  },
+  {
+    "youtube_link": "https://www.youtube.com/watch?v=YB9mRivQZyI",
+    "retry_num": 1
+  },
+  {
+    "youtube_link": "https://www.youtube.com/watch?v=qfiLjXAu_Mw",
+    "retry_num": 1
   }
 ]
