@@ -470,12 +470,7 @@ async function extractMultimodalFrames(videoId, interactionData, recollectId) {
         const segmentDirName = `${segIdx + 1}_${seg.startSec}_${seg.endSec}`;
         const segmentDir = path.join(FRAMES_DIR, videoId, String(recollectId), segmentDirName);
 
-        // 이미 해당 세그먼트 폴더가 있으면 스킵
-        if (fs.existsSync(segmentDir)) {
-            log('info', `[Multimodal] 세그먼트 ${segIdx + 1} 이미 존재, 스킵`);
-            continue;
-        }
-
+        // 폴더 생성 (이미 있으면 무시)
         fs.mkdirSync(segmentDir, { recursive: true });
 
         let segSavedCount = 0;

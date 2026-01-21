@@ -6108,3 +6108,63 @@ Error marking filters as finished
 [2026-01-21T07:49:52.176Z] [INFO] [Multimodal] EuSqOJ1YjSQ: 7개 구간 발견
 [2026-01-21T07:50:09.838Z] [INFO] [Multimodal] 세그먼트 1 (330s-360s): 31개 프레임 저장
 [2026-01-21T07:50:47.531Z] [INFO] [Multimodal] 세그먼트 2 (760s-840s): 81개 프레임 저장
+[2026-01-21T07:52:10.666Z] [INFO] [Multimodal] 세그먼트 3 (50s-230s): 181개 프레임 저장
+[2026-01-21T07:52:17.600Z] [INFO] [Multimodal] 세그먼트 4 (550s-560s): 11개 프레임 저장
+[2026-01-21T07:52:55.289Z] [INFO] [Multimodal] 세그먼트 5 (660s-740s): 81개 프레임 저장
+[2026-01-21T07:53:10.274Z] [INFO] [Multimodal] 세그먼트 6 (910s-940s): 31개 프레임 저장
+[2026-01-21T07:53:17.160Z] [INFO] [Multimodal] 세그먼트 7 (600s-610s): 11개 프레임 저장
+[2026-01-21T07:53:21.120Z] [INFO] [Backfill] Ew-PClo0nek: 프레임 수집 시작
+[2026-01-21T07:53:21.121Z] [INFO] [Multimodal] Ew-PClo0nek: 4개 구간 발견
+[2026-01-21T07:53:54.677Z] [INFO] [Multimodal] 세그먼트 1 (53s-119s): 67개 프레임 저장
+[2026-01-21T07:54:01.787Z] [INFO] [Multimodal] 세그먼트 2 (893s-904s): 12개 프레임 저장
+[2026-01-21T07:54:33.434Z] [INFO] [Multimodal] 세그먼트 3 (634s-700s): 67개 프레임 저장
+[2026-01-21T07:54:45.353Z] [INFO] [Multimodal] 세그먼트 4 (408s-431s): 24개 프레임 저장
+[2026-01-21T07:54:48.306Z] [INFO] [Backfill] F1ms0elgPLQ: 프레임 수집 시작
+[2026-01-21T07:54:48.306Z] [INFO] [Multimodal] F1ms0elgPLQ: 7개 구간 발견
+[2026-01-21T07:55:03.390Z] [INFO] === HTTP Heatmap + Multimodal Collector Started [Channel: tzuyang] ===
+[2026-01-21T07:55:03.392Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-21T07:55:03.392Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-21T07:55:03.394Z] [INFO] Cookies loaded.
+[2026-01-21T07:55:03.394Z] [INFO] === 프레임 백필 시작 ===
+[2026-01-21T07:55:03.396Z] [INFO] [Backfill] -1OU4tkFJns: 프레임 수집 시작
+[2026-01-21T07:55:03.397Z] [INFO] [Multimodal] -1OU4tkFJns: 6개 구간 발견
+[2026-01-21T07:55:06.749Z] [INFO] [Multimodal] 세그먼트 1 이미 존재, 스킵
+[2026-01-21T07:55:06.749Z] [INFO] [Multimodal] 세그먼트 2 이미 존재, 스킵
+[2026-01-21T07:55:06.750Z] [INFO] [Multimodal] 세그먼트 3 이미 존재, 스킵
+[2026-01-21T07:55:06.751Z] [INFO] [Multimodal] 세그먼트 4 이미 존재, 스킵
+[2026-01-21T07:55:06.751Z] [INFO] [Multimodal] 세그먼트 5 이미 존재, 스킵
+[2026-01-21T07:55:06.751Z] [INFO] [Multimodal] 세그먼트 6 이미 존재, 스킵
+[2026-01-21T07:55:09.604Z] [INFO] [Backfill] -8wi-fVqTwk: 프레임 수집 시작
+[2026-01-21T07:55:09.604Z] [INFO] [Multimodal] -8wi-fVqTwk: 6개 구간 발견
+[2026-01-21T07:55:12.796Z] [INFO] [Multimodal] 세그먼트 1 이미 존재, 스킵
+[2026-01-21T07:55:12.797Z] [INFO] [Multimodal] 세그먼트 2 이미 존재, 스킵
+[2026-01-21T07:55:12.797Z] [INFO] [Multimodal] 세그먼트 3 이미 존재, 스킵
+[2026-01-21T07:55:12.797Z] [INFO] [Multimodal] 세그먼트 4 이미 존재, 스킵
+[2026-01-21T07:55:12.797Z] [INFO] [Multimodal] 세그먼트 5 이미 존재, 스킵
+[2026-01-21T07:55:12.797Z] [INFO] [Multimodal] 세그먼트 6 이미 존재, 스킵
+[2026-01-21T07:55:15.163Z] [INFO] [Multimodal] 세그먼트 1 (643s-691s): 49개 프레임 저장
+[2026-01-21T07:55:16.220Z] [INFO] [Backfill] -D43ezc57z8: 프레임 수집 시작
+[2026-01-21T07:55:16.221Z] [INFO] [Multimodal] -D43ezc57z8: 4개 구간 발견
+[2026-01-21T07:55:19.669Z] [INFO] [Multimodal] 세그먼트 1 이미 존재, 스킵
+[2026-01-21T07:55:19.669Z] [INFO] [Multimodal] 세그먼트 2 이미 존재, 스킵
+[2026-01-21T07:55:19.670Z] [INFO] [Multimodal] 세그먼트 3 이미 존재, 스킵
+[2026-01-21T07:55:19.670Z] [INFO] [Multimodal] 세그먼트 4 이미 존재, 스킵
+[2026-01-21T07:55:22.892Z] [INFO] [Backfill] -H-mhUeu_qk: 프레임 수집 시작
+[2026-01-21T07:55:22.895Z] [INFO] [Multimodal] -H-mhUeu_qk: 2개 구간 발견
+[2026-01-21T07:55:25.910Z] [INFO] [Multimodal] 세그먼트 2 (410s-430s): 21개 프레임 저장
+[2026-01-21T07:55:26.089Z] [INFO] [Multimodal] 세그먼트 1 이미 존재, 스킵
+[2026-01-21T07:55:26.090Z] [INFO] [Multimodal] 세그먼트 2 이미 존재, 스킵
+[2026-01-21T07:55:38.025Z] [INFO] [Multimodal] 세그먼트 3 (811s-831s): 21개 프레임 저장
+[2026-01-21T07:55:49.906Z] [INFO] [Multimodal] 세그먼트 4 (503s-523s): 21개 프레임 저장
+[2026-01-21T07:56:23.636Z] [INFO] [Multimodal] 세그먼트 5 (139s-206s): 68개 프레임 저장
+[2026-01-21T07:56:34.990Z] [INFO] [Multimodal] 세그먼트 6 (615s-635s): 21개 프레임 저장
+[2026-01-21T07:56:49.908Z] [INFO] [Multimodal] 세그먼트 7 (886s-915s): 30개 프레임 저장
+[2026-01-21T07:56:50.037Z] [INFO] === HTTP Heatmap + Multimodal Collector Started [Channel: tzuyang] ===
+[2026-01-21T07:56:50.039Z] [INFO] Source: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/urls.txt
+[2026-01-21T07:56:50.040Z] [INFO] Saving to: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/heatmap
+[2026-01-21T07:56:50.041Z] [INFO] Cookies loaded.
+[2026-01-21T07:56:50.041Z] [INFO] === 프레임 백필 시작 ===
+[2026-01-21T07:56:50.043Z] [INFO] [Backfill] -1OU4tkFJns: 프레임 수집 시작
+[2026-01-21T07:56:50.044Z] [INFO] [Multimodal] -1OU4tkFJns: 6개 구간 발견
+[2026-01-21T07:56:53.248Z] [INFO] [Backfill] F4sNpfOnZAc: 프레임 수집 시작
+[2026-01-21T07:56:53.248Z] [INFO] [Multimodal] F4sNpfOnZAc: 1개 구간 발견
