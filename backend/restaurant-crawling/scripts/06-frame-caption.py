@@ -304,6 +304,11 @@ def main():
         default="cuda",
         help="Device (cuda or cpu)",
     )
+    parser.add_argument(
+        "--video_id",
+        type=str,
+        help="Specific video ID to process (optional)",
+    )
     args = parser.parse_args()
 
     # 경로 설정
@@ -319,11 +324,17 @@ def main():
     model, processor = load_model(args.model, args.device)
 
     # video_id 폴더 목록
-    video_ids = [
-        d.name
-        for d in sorted(frames_dir.iterdir())
-        if d.is_dir() and d.name != ".DS_Store"
-    ]
+    if args.video_id:
+        video_ids = [args.video_id]
+        if not (frames_dir / args.video_id).exists():
+            print(f"❌ Video directory not found: {frames_dir / args.video_id}")
+            return
+    else:
+        video_ids = [
+            d.name
+            for d in sorted(frames_dir.iterdir())
+            if d.is_dir() and d.name != ".DS_Store"
+        ]
 
     print(f"\n{'='*60}")
     print(f"{len(video_ids)}개 비디오 폴더 발견: {frames_dir}")
