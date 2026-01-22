@@ -1,9 +1,15 @@
 ---
 name: git-commit-formatter
-description: Git commit, branch, and PR workflow conventions. Apply when committing code, creating branches, or managing pull requests via GitHub CLI.
+description: Git commit, branch, and PR workflow conventions. Apply ONLY when explicitly requested causing a commit, branch creation, or PR.
 ---
 
 # Git & GitHub Workflow
+
+## When to Use This Skill (CRITICAL)
+
+- **Explicit Request ONLY**: Activate this skill **ONLY** when the user explicitly asks to "commit", "create PR", "deploy", or "release".
+- **No Auto-Trigger**: Do NOT activate this skill automatically in subsequent turns.
+- **One-off Action**: Perform the git action once and then stop.
 
 ## Git Commit Convention
 
@@ -58,7 +64,7 @@ description: Git commit, branch, and PR workflow conventions. Apply when committ
   (Closes #IssueNumber)
   ```
 
-## Commit Workflow (auto-execute on "커밋해줘" request)
+## Commit Workflow (Execute ONLY on explicit request)
 
 1. **Check Current Branch**: `git branch --show-current`
 2. **Branching**:
@@ -80,3 +86,4 @@ description: Git commit, branch, and PR workflow conventions. Apply when committ
    - `git checkout develop && git pull origin develop`
    - `gh pr create --base main --head develop --title "[Release] <Title>" --body "..."`
    - `gh pr merge <PR#> --merge`
+   - **CRITICAL**: Do NOT delete the `develop` branch. If prompted, choose "no" or use flags to ensure it persists.

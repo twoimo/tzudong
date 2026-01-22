@@ -33,7 +33,7 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 
 
 def get_device() -> str:
-    """디바이스 자동 감지: cuda > mps > cpu"""
+    """디바이스 자동 감지 (우선순위: cuda > mps > cpu)"""
     if torch.cuda.is_available():
         return "cuda"
     elif torch.backends.mps.is_available():
@@ -68,7 +68,7 @@ def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:
             img = Image.open(f).convert("RGB")
             frames.append(img)
         except Exception as e:
-            print(f"⚠️ Failed to load frame {f}: {e}")
+            print(f"⚠️ 프레임 로드 실패 {f}: {e}")
     return frames
 
 
@@ -86,13 +86,13 @@ def load_model(model_id: str, device: str = None):
     if device is None:
         device = get_device()
 
-    print(f"🚀 Loading model: {model_id}")
-    print(f"📱 Device: {device}")
+    print(f"🚀 모델 로딩 중: {model_id}")
+    print(f"📱 디바이스: {device}")
 
     processor = LlavaNextVideoProcessor.from_pretrained(model_id)
 
-    # MPS는 float16 부분 지원, float32가 더 안정적이지만 메모리 많이 사용
-    # M3 Pro 18GB 이상이면 float16 시도
+    # MPS는 float16 부분 지원 (M3 Pro 18GB 이상 권장)
+    # CPU 모드는 float32 사용 (느리지만 안정적)
     if device == "mps":
         model = LlavaNextVideoForConditionalGeneration.from_pretrained(
             model_id,
@@ -100,21 +100,21 @@ def load_model(model_id: str, device: str = None):
             low_cpu_mem_usage=True,
         ).to(device)
     elif device == "cuda":
-        # CUDA는 bitsandbytes 없이 float16 사용
+        # CUDA: float16 사용 (device_map 자동)
         model = LlavaNextVideoForConditionalGeneration.from_pretrained(
             model_id,
             torch_dtype=torch.float16,
             device_map="auto",
         )
     else:
-        # CPU fallback
+        # CPU 폴백 (float32)
         model = LlavaNextVideoForConditionalGeneration.from_pretrained(
             model_id,
             torch_dtype=torch.float32,
             low_cpu_mem_usage=True,
         )
 
-    print(f"✅ Model loaded successfully on {device}")
+    print(f"✅ 모델 로드 완료 ({device})")
     return model, processor
 
 
@@ -197,7 +197,7 @@ def process_video_frames(
     """
     video_frames_path = frames_dir / video_id
     if not video_frames_path.exists():
-        print(f"⚠️ Frames directory not found: {video_frames_path}")
+        print(f"⚠️ 프레임 디렉토리 없음: {video_frames_path}")
         return 0
 
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -225,36 +225,36 @@ def process_video_frames(
 
             segment_info = parse_segment_folder(segment_folder.name)
             if not segment_info:
-                print(f"⚠️ Invalid segment folder name: {segment_folder.name}")
+                print(f"⚠️ 잘못된 세그먼트 폴더명: {segment_folder.name}")
                 continue
 
             rank = segment_info["rank"]
 
-            # 이미 처리된 세그먼트 스킵
+            # 이미 처리된 세그먼트는 스킵
             if (recollect_id, rank) in existing_segments:
                 print(
-                    f"⏭️ Skipping {video_id}/{recollect_id}/{segment_folder.name} (already processed)"
+                    f"⏭️ 스킵 {video_id}/{recollect_id}/{segment_folder.name} (이미 처리됨)"
                 )
                 continue
 
             # 프레임 로드
             frames = load_frames_from_segment(segment_folder)
             if not frames:
-                print(f"⚠️ No frames found in {segment_folder}")
+                print(f"⚠️ 프레임 없음: {segment_folder}")
                 continue
 
             frame_paths = get_frame_paths(segment_folder)
 
             print(
-                f"📸 Processing {video_id}/{recollect_id}/{segment_folder.name} ({len(frames)} frames)"
+                f"📸 처리 중 {video_id}/{recollect_id}/{segment_folder.name} ({len(frames)}개 프레임)"
             )
 
             # 캡션 생성
             try:
                 caption = generate_caption(model, processor, frames, prompt)
-                print(f"   💬 Caption: {caption[:100]}...")
+                print(f"   💬 캡션: {caption[:100]}...")
             except Exception as e:
-                print(f"❌ Failed to generate caption: {e}")
+                print(f"❌ 캡션 생성 실패: {e}")
                 caption = ""
 
             # 결과 저장
@@ -326,9 +326,9 @@ def main():
     ]
 
     print(f"\n{'='*60}")
-    print(f"Found {len(video_ids)} video folders in {frames_dir}")
-    print(f"Model: {args.model}")
-    print(f"Output: {output_dir}")
+    print(f"{len(video_ids)}개 비디오 폴더 발견: {frames_dir}")
+    print(f"모델: {args.model}")
+    print(f"출력 경로: {output_dir}")
     print(f"{'='*60}\n")
 
     total_processed = 0
@@ -345,8 +345,8 @@ def main():
         total_processed += count
 
     print(f"\n{'='*60}")
-    print(f"✅ Completed: {total_processed} segments processed")
-    print(f"📁 Output saved to: {output_dir}")
+    print(f"✅ 완료: {total_processed}개 세그먼트 처리")
+    print(f"📁 저장 경로: {output_dir}")
 
 
 if __name__ == "__main__":

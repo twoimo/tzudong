@@ -426,7 +426,7 @@ def get_video_meta_batch(youtube, video_ids: List[str]) -> Dict[str, Dict]:
                 },
             }
     except Exception as e:
-        print(f"Batch API Error: {e}")
+        print(f"배치 API 오류: {e}")
     
     return results
 

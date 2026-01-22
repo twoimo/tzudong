@@ -50,13 +50,13 @@ function loadChannelsConfig() {
     return yaml.load(fs.readFileSync(configPath, 'utf-8'));
 }
 
-// 텍스트 정제
+// 텍스트 정제 (제어 문자 제거, 네이버 접미사 제거)
 function cleanText(text) {
     if (!text) return null;
     return text.replace(/[\x00-\x1F\x7F]/g, '').replace(/\s*:\s*네이버.*$/, '').trim();
 }
 
-// 거리 계산 (Haversine)
+// 거리 계산 (Haversine 공식, 미터 단위)
 function calculateDistance(lat1, lng1, lat2, lng2) {
     const R = 6371000; // 지구 반경 (m)
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -68,10 +68,10 @@ function calculateDistance(lat1, lng1, lat2, lng2) {
     return R * c;
 }
 
-// 시군구 추출 (시도 제외)
+// 시군구 추출 (시도명 제외하고 시군구만 반환)
 function extractSigungu(address) {
     if (!address) return null;
-    // 시도 제거: 서울특별시, 인천광역시, 경기도 등
+    // 시도 패턴 제거: 서울특별시, 인천광역시, 경기도 등
     const withoutSido = address.replace(/^(서울특별시|부산광역시|대구광역시|인천광역시|광주광역시|대전광역시|울산광역시|세종특별자치시|경기도|강원도|충청북도|충청남도|전라북도|전라남도|경상북도|경상남도|제주특별자치도|서울시?|부산시?|대구시?|인천시?|광주시?|대전시?|울산시?|세종시?|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s*/, '');
     return withoutSido.trim();
 }
@@ -150,7 +150,7 @@ async function searchNaverApi(query) {
     return [];
 }
 
-// Puppeteer 인스턴스
+// Puppeteer 브라우저 인스턴스 (싱글톤 패턴)
 let puppeteerBrowser = null;
 let puppeteerModule = null;
 
@@ -173,6 +173,7 @@ async function initPuppeteer() {
     }
 }
 
+// 브라우저 인스턴스 반환 (없으면 생성)
 async function getBrowser() {
     if (!puppeteerModule) return null;
     if (!puppeteerBrowser) {
@@ -207,11 +208,11 @@ async function closeBrowser() {
     }
 }
 
-// 지도 URL 추출 (네이버, 카카오, 구글)
+// 설명란에서 지도 URL 추출 (네이버/카카오/구글 지도 지원)
 function extractMapUrls(text) {
     if (!text) return [];
 
-    // 텍스트 내의 literal \n을 실제 공백으로 치환하여 안전하게 처리
+    // 이스케이프된 \n 및 실제 개행문자를 공백으로 치환
     const cleanText = text.replace(/\\n/g, ' ').replace(/\n/g, ' ');
 
     const patterns = [
@@ -232,11 +233,11 @@ function extractMapUrls(text) {
         urls.push(...matches);
     }
 
-    // URL 정제 (끝에 붙은 점, 콤마 등 제거)
+    // URL 정제: 끝에 붙은 구두점 제거 및 중복 제거
     return [...new Set(urls)].map(url => url.replace(/[\.,;]+$/, '').trim());
 }
 
-// URL 타입 판별
+// URL 도메인에서 지도 타입 추출
 function getMapType(url) {
     if (url.includes('naver.com') || url.includes('naver.me')) return 'naver';
     if (url.includes('kakao.com') || url.includes('kko.to')) return 'kakao';
@@ -508,7 +509,8 @@ async function collectFromGoogleMap(page, mapUrl) {
         return null;
     }
 }
-// 층/호 정규화 (숫자층, 숫자 층, 숫자호, 숫자 호, 콤마 포함)
+// 주소 비교를 위한 정규화 (층/호수 정보 제거)
+// 예: "강남구 역삼동 123, 5층" -> "강남구 역삼동 123"
 function normalizeAddressForCompare(address) {
     if (!address) return '';
     // 맨 뒤의 "숫자층", "숫자 층", "숫자호", "숫자 호" 제거 (콤마 포함)
@@ -517,9 +519,9 @@ function normalizeAddressForCompare(address) {
     return normalized;
 }
 
-// 구글/카카오 지도에서 가져온 정보를 네이버 검색으로 보완
-// 네이버 검색 3개 결과 중 시군구 일치하는 것 선택
-// 검색 실패 또는 시군구 불일치시 null 반환 (실패 처리)
+// 구글/카카오 지도 정보를 네이버 검색 API로 보완
+// 네이버 검색 결과 3개 중 시군구가 일치하는 항목 선택
+// 검색 실패 또는 시군구 불일치 시 null 반환 (폐업/정보 불일치로 처리)
 async function enrichWithNaverSearch(placeInfo) {
     if (!placeInfo || !placeInfo.origin_name) return null;
 
@@ -581,19 +583,19 @@ async function enrichWithNaverSearch(placeInfo) {
     return placeInfo;
 }
 
-// 필수 필드 검증 (05에서는 naver_name 필수, jibunAddress, lat, lng)
+// 필수 필드 검증 (naver_name, jibunAddress, 좌표 필수)
 function hasRequiredFields(placeInfo) {
     if (!placeInfo) return false;
-    if (!placeInfo.naver_name) return false;  // 네이버 검색 통과 시 항상 있음
+    if (!placeInfo.naver_name) return false;  // 네이버 검색 통과 시 항상 존재
     if (!placeInfo.jibunAddress) return false;
     if (placeInfo.lat == null || placeInfo.lng == null) return false;
     return true;
 }
 
-// lat/lng 검증 및 지오코딩
-// 선택된 주소로 지오코딩 → 모든 주소 정보 채우기
-// 원본 좌표 있으면 20m 비교 → 초과시 null 반환 (실패 처리)
-// 원본 좌표 없으면 지오코딩 결과 그대로 사용
+// 좌표 검증 및 지오코딩
+// 1. 네이버 주소로 NCP 지오코딩 수행
+// 2. 원본 좌표 있으면 20m 이내인지 검증 (초과 시 실패)
+// 3. 원본 좌표 없으면 지오코딩 결과 사용
 async function verifyAndGeocode(placeInfo) {
     const addressToGeocode = placeInfo.roadAddress || placeInfo.jibunAddress;
     if (!addressToGeocode) {
@@ -633,7 +635,7 @@ async function verifyAndGeocode(placeInfo) {
     return placeInfo;
 }
 
-// Gemini CLI로 youtuber_review 추출
+// Gemini API/CLI로 유튜버 리뷰 및 카테고리 추출
 async function extractYoutuberReview(videoId, metaData, transcript, places) {
     const promptPath = path.resolve(__dirname, '../prompts/map_url_crawling_review.txt');
     const tempDir = path.resolve(__dirname, '../temp');
@@ -745,7 +747,7 @@ ${placeNames.join('\n')}
     return [];
 }
 
-// 응답 파싱 헬퍼 함수
+// Gemini 응답 JSON 파싱 (마크다운 코드블록 처리 포함)
 function parseGeminiResponse(text) {
     let parsed;
     try {
@@ -778,7 +780,7 @@ function parseGeminiResponse(text) {
     return parsed;
 }
 
-// 리뷰 검증 헬퍼 함수
+// 리뷰 결과 검증 (naver_name, category Enum 검증)
 function validateReviews(parsed, placeNames, validCategories) {
     if (!parsed.reviews || !Array.isArray(parsed.reviews)) {
         throw new Error('리뷰 목록 형식이 올바르지 않습니다.');
@@ -803,7 +805,7 @@ function validateReviews(parsed, placeNames, validCategories) {
     return validatedReviews;
 }
 
-// 메인 함수
+// 메인 실행 함수
 async function main() {
     const args = process.argv.slice(2);
     let targetChannel = null;

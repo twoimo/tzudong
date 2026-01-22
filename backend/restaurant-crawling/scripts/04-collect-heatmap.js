@@ -7,9 +7,10 @@
  * [수집 발동 조건 (TRIGGER_VARS)]
  * 1. new_video: 신규 영상 (무조건 수집)
  * 2. duration_changed: 길이 변경 (영상 수정됨)
- * 3. scheduled_weekly: 주간 정기 수집 (0~6개월, 6개월~1년)
- * 4. scheduled_biweekly: 격주 정기 수집 (1년 이상)
- * 5. viral_growth: 역주행 감지 (즉시 수집)
+ * 3. scheduled_weekly: 주간 정기 수집 (0~3개월)
+ * 4. scheduled_biweekly: 격주 정기 수집 (3개월~1년)
+ * 5. scheduled_monthly: 월간 정기 수집 (1년 이상)
+ * 6. viral_growth: 역주행 감지 (즉시 수집)
  * 
  * [사용법]
  *   node 04-collect-heatmap.js --channel tzuyang
@@ -45,7 +46,14 @@ if (fs.existsSync(backendEnvLocal)) {
 const logger = winston.createLogger({
     level: 'info',
     format: winston.format.combine(
-        winston.format.timestamp(),
+        winston.format.timestamp({
+            format: () => {
+                const now = new Date();
+                const kstOffset = 9 * 60 * 60 * 1000;
+                const kstDate = new Date(now.getTime() + kstOffset);
+                return kstDate.toISOString().replace('T', ' ').substring(0, 19);
+            }
+        }),
         winston.format.printf(({ timestamp, level, message }) => {
             return `[${timestamp}] [${level.toUpperCase()}] ${message}`;
         })
@@ -61,7 +69,7 @@ function log(level, msg) {
 }
 
 // --- 상수 ---
-const COLLECTION_INTERVAL_MS = 3000;
+const COLLECTION_INTERVAL_MS = 1000;
 let CHANNEL_NAME = 'tzuyang';
 
 const args = process.argv.slice(2);
@@ -170,15 +178,40 @@ function extractHeatmapFromHtml(html) {
             return null;
         }
 
+        // 1. "가장 많이 다시 본 장면" 마커 추출 (timedMarkerDecorations)
+        const markersDecoration = findKey(data, 'markersDecoration');
+        let mostReplayedMarkers = [];
+        if (markersDecoration && markersDecoration.timedMarkerDecorations) {
+            mostReplayedMarkers = markersDecoration.timedMarkerDecorations
+                .filter(marker => {
+                    const labelText = marker.label?.runs?.[0]?.text || '';
+                    return labelText.includes('가장 많이 다시 본 장면') || labelText.toLowerCase().includes('most replayed');
+                })
+                .map(marker => ({
+                    startMillis: marker.visibleTimeRangeStartMillis,
+                    endMillis: marker.visibleTimeRangeEndMillis,
+                    peakMillis: marker.decorationTimeMillis,
+                    label: marker.label?.runs?.[0]?.text
+                }));
+        }
+
+        // 2. 기존 히트맵 데이터도 가져오기
         const markers = findKey(data, 'markers');
+        let rawMarkers = null;
         if (markers && Array.isArray(markers) && markers.length > 0) {
-            return { type: 'raw_markers', data: markers };
+            rawMarkers = markers;
+        } else {
+            const markerGraph = findKey(data, 'markerGraph');
+            if (markerGraph && markerGraph.markers && Array.isArray(markerGraph.markers)) {
+                rawMarkers = markerGraph.markers;
+            }
         }
-        const markerGraph = findKey(data, 'markerGraph');
-        if (markerGraph && markerGraph.markers && Array.isArray(markerGraph.markers)) {
-            return { type: 'raw_markers', data: markerGraph.markers };
-        }
-        return null;
+
+        return {
+            type: 'raw_markers',
+            data: rawMarkers,
+            mostReplayedMarkers: mostReplayedMarkers
+        };
     } catch (e) {
         log('warn', `Parse Error: ${e.message}`);
         return null;
@@ -200,78 +233,31 @@ function saveVideoData(videoId, data) {
 // =====================================================
 
 /**
- * 고관심 구간 식별
- * @param {Array} interactionData - 히트맵 강도 데이터
- * @param {number} peakThreshold - 피크 식별 임계값 (기본값 0.4)
- * @param {number} boundaryThreshold - 구간 경계 확장 임계값 (기본값 0.2)
- * @returns {Array} 세그먼트 배열: { startSec, endSec, peakSec, peakIntensity }
+ * "가장 많이 다시 본 장면" 구간 식별
+ * YouTube의 timedMarkerDecorations에서 명시적으로 지정된 구간만 사용
+ * @param {Array} mostReplayedMarkers - timedMarkerDecorations에서 추출한 마커 배열
+ * @returns {Array} 세그먼트 배열: { startSec, endSec, peakSec }
  */
-function findInterestSegments(interactionData, peakThreshold = 0.4, boundaryThreshold = 0.2) {
-    if (!interactionData || interactionData.length === 0) return [];
+function findInterestSegments(mostReplayedMarkers) {
+    if (!mostReplayedMarkers || mostReplayedMarkers.length === 0) return [];
 
-    // 1. 임계값 이상의 모든 로컬 피크 찾기
-    const peaks = [];
-    for (let i = 1; i < interactionData.length - 1; i++) {
-        const prev = interactionData[i - 1].intensityScoreNormalized;
-        const curr = interactionData[i].intensityScoreNormalized;
-        const next = interactionData[i + 1].intensityScoreNormalized;
-
-        // 로컬 최대값이고 임계값 이상인 경우
-        if (curr > prev && curr >= next && curr >= peakThreshold) {
-            peaks.push({
-                index: i,
-                startMillis: parseFloat(interactionData[i].startMillis),
-                intensity: curr
-            });
-        }
-    }
-
-    if (peaks.length === 0) return [];
-
-    // 2. 각 피크를 확장하여 세그먼트 경계 찾기
     const segments = [];
-    const usedIndices = new Set();
 
-    for (const peak of peaks) {
-        if (usedIndices.has(peak.index)) continue;
-
-        let leftIdx = peak.index;
-        let rightIdx = peak.index;
-
-        // 왼쪽으로 확장
-        while (leftIdx > 0) {
-            const prevIntensity = interactionData[leftIdx - 1].intensityScoreNormalized;
-            if (prevIntensity < boundaryThreshold) break;
-            leftIdx--;
-        }
-
-        // 오른쪽으로 확장
-        while (rightIdx < interactionData.length - 1) {
-            const nextIntensity = interactionData[rightIdx + 1].intensityScoreNormalized;
-            if (nextIntensity < boundaryThreshold) break;
-            rightIdx++;
-        }
-
-        // 사용된 인덱스 표시
-        for (let j = leftIdx; j <= rightIdx; j++) {
-            usedIndices.add(j);
-        }
-
-        const startSec = parseFloat(interactionData[leftIdx].startMillis) / 1000.0;
-        const endSec = (parseFloat(interactionData[rightIdx].startMillis) +
-            parseFloat(interactionData[rightIdx].durationMillis || 0)) / 1000.0;
-        const peakSec = peak.startMillis / 1000.0;
+    for (const marker of mostReplayedMarkers) {
+        const startSec = Math.floor(marker.startMillis / 1000);
+        const endSec = Math.ceil(marker.endMillis / 1000);
+        const peakSec = marker.peakMillis / 1000;
 
         segments.push({
-            startSec: Math.floor(startSec),
-            endSec: Math.ceil(endSec),
+            startSec,
+            endSec,
             peakSec,
-            peakIntensity: peak.intensity
+            peakIntensity: 1.0  // 명시적 마커는 최고 강도로 간주
         });
     }
 
-    // 피크 강도 기준 내림차순 정렬
-    segments.sort((a, b) => b.peakIntensity - a.peakIntensity);
+    // 시작 시간 기준 정렬
+    segments.sort((a, b) => a.startSec - b.startSec);
 
     return segments;
 }
@@ -435,25 +421,26 @@ async function downloadFrameFromStoryboard(videoId, timestamp, sbSpec, outputPat
 
 /**
  * 멀티모달 프레임 추출 (히트맵 수집 직후 호출)
+ * @param {string} videoId - 비디오 ID
+ * @param {Array} mostReplayedMarkers - "가장 많이 다시 본 장면" 마커 배열
+ * @param {number} recollectId - 재수집 ID
+ * @param {number} duration - 비디오 길이 (초)
  */
-async function extractMultimodalFrames(videoId, interactionData, recollectId) {
+async function extractMultimodalFrames(videoId, mostReplayedMarkers, recollectId, duration) {
     // Shorts 필터 (2분 미만 스킵)
-    if (interactionData.length > 0) {
-        const lastPoint = interactionData[interactionData.length - 1];
-        if (lastPoint.startMillis < 120000) {
-            log('info', `[Multimodal] ${videoId}: Shorts 스킵 (<2분)`);
-            return { status: 'skipped_shorts' };
-        }
+    if (duration && duration < 120) {
+        log('info', `[Multimodal] ${videoId}: Shorts 스킵 (<2분)`);
+        return { status: 'skipped_shorts' };
     }
 
-    // 고관심 구간 찾기
-    const segments = findInterestSegments(interactionData);
+    // "가장 많이 다시 본 장면" 구간 찾기
+    const segments = findInterestSegments(mostReplayedMarkers);
     if (segments.length === 0) {
-        log('info', `[Multimodal] ${videoId}: 관심 구간 없음`);
+        log('info', `[Multimodal] ${videoId}: "가장 많이 다시 본 장면" 마커 없음`);
         return { status: 'no_segments' };
     }
 
-    log('info', `[Multimodal] ${videoId}: ${segments.length}개 구간 발견`);
+    log('info', `[Multimodal] ${videoId}: ${segments.length}개 "가장 많이 다시 본 장면" 구간 발견`);
 
     // Storyboard 정보 가져오기
     const sbSpec = await getStoryboardSpec(videoId);
@@ -488,9 +475,9 @@ async function extractMultimodalFrames(videoId, interactionData, recollectId) {
             totalSaved += segSavedCount;
         }
 
-        // IP 차단 방지: 세그먼트 간 딜레이 (1-2초)
+        // IP 차단 방지: 세그먼트 간 딜레이 (0.5-1초)
         if (segIdx < segments.length - 1) {
-            await new Promise(r => setTimeout(r, 1000 + Math.random() * 1000));
+            await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
         }
     }
 
@@ -516,21 +503,26 @@ async function backfillMissingFrames(deletedIds) {
             if (!content) continue;
 
             const data = JSON.parse(content);
-            if (data.status !== 'success' || !data.interaction_data) continue;
+            if (data.status !== 'success') continue;
+
+            // mostReplayedMarkers가 없으면 스킵 (기존 데이터는 백필 불가)
+            if (!data.most_replayed_markers || data.most_replayed_markers.length === 0) {
+                log('info', `[Backfill] ${videoId}: most_replayed_markers 없음, 스킵`);
+                continue;
+            }
 
             const recollectId = data.recollect_id !== undefined ? data.recollect_id : 0;
 
             // 세그먼트 레벨에서 존재 여부 체크하므로 여기서는 스킵하지 않음
-            // extractMultimodalFrames 내부에서 각 세그먼트 폴더 존재 시 스킵 처리
             log('info', `[Backfill] ${videoId}: 프레임 수집 시작`);
-            const result = await extractMultimodalFrames(videoId, data.interaction_data, recollectId);
+            const result = await extractMultimodalFrames(videoId, data.most_replayed_markers, recollectId, null);
 
             if (result.status === 'success') {
                 backfilledCount++;
             }
 
-            // IP 차단 방지: 비디오 간 딜레이 (2-4초)
-            await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+            // IP 차단 방지: 비디오 간 딜레이 (0.5-1초)
+            await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
 
         } catch (e) {
             log('error', `[Backfill] ${videoId} 처리 실패: ${e.message}`);
@@ -606,14 +598,14 @@ function shouldCollect(videoId) {
                 const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
 
                 if (metaRecollectId > lastRecollectId) {
-                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'viral_growth'];
+                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
                     const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
 
                     if (shouldTrigger) {
-                        log('info', `[Trigger] Video ${videoId}: Found trigger variable(s) [${recollectVars.join(', ')}]`);
+                        log('info', `[트리거] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
                         return true;
                     } else {
-                        log('info', `[Skip] Video ${videoId}: recurs_vars [${recollectVars.join(', ')}] do not trigger heatmap.`);
+                        log('info', `[스킵] ${videoId}: recollect_vars [${recollectVars.join(', ')}]는 히트맵 수집 대상 아님`);
                         return false;
                     }
                 }
@@ -626,13 +618,13 @@ function shouldCollect(videoId) {
 }
 
 async function main() {
-    log('info', `=== HTTP Heatmap + Multimodal Collector Started [Channel: ${CHANNEL_NAME}] ===`);
-    log('info', `Source: ${URLS_FILE}`);
-    log('info', `Saving to: ${DATA_DIR}`);
+    log('info', `=== HTTP 히트맵 + 멀티모달 수집기 시작 [채널: ${CHANNEL_NAME}] ===`);
+    log('info', `소스: ${URLS_FILE}`);
+    log('info', `저장 경로: ${DATA_DIR}`);
 
     const cookieHeader = await loadCookies();
-    if (cookieHeader) log('info', 'Cookies loaded.');
-    else log('warn', 'No cookies found.');
+    if (cookieHeader) log('info', '쿠키 로드 완료');
+    else log('warn', '쿠키 없음');
 
     try {
         // 1. deleted_ids 로드
@@ -654,7 +646,7 @@ async function main() {
 
         const urlsPath = path.join(BASE_DATA_DIR, 'urls.txt');
         if (!fs.existsSync(urlsPath)) {
-            log('warn', `No urls.txt for channel ${CHANNEL_NAME}`);
+            log('warn', `채널 ${CHANNEL_NAME}에 urls.txt 없음`);
             cleanupTempFrames();
             return;
         }
@@ -664,7 +656,7 @@ async function main() {
             .map(line => line.trim())
             .filter(line => line.length > 0);
 
-        log('info', `Found ${urls.length} URLs, filtering deleted...`);
+        log('info', `${urls.length}개 URL 발견, 삭제된 영상 필터링 중...`);
 
         const targets = urls.map(url => {
             const vid = extractVideoId(url);
@@ -672,13 +664,13 @@ async function main() {
         }).filter(v => {
             if (!v.video_id) return false;
             if (deletedIds.has(v.video_id)) {
-                log('info', `[Skip] Video ID ${v.video_id} is in deleted_urls.txt.`);
+                log('info', `[스킵] ${v.video_id}는 deleted_urls.txt에 있음`);
                 return false;
             }
             return shouldCollect(v.video_id);
         });
 
-        log('info', `Found ${urls.length} URLs, ${targets.length} targets to process.`);
+        log('info', `총 ${urls.length}개 URL, ${targets.length}개 처리 대상`);
 
         const batch = targets;
 
@@ -687,7 +679,7 @@ async function main() {
             await processVideo(video_id, url, cookieHeader);
 
             if (i < batch.length - 1) {
-                const delay = COLLECTION_INTERVAL_MS + Math.random() * 2000;
+                const delay = COLLECTION_INTERVAL_MS + Math.random() * 1000;
                 await new Promise(r => setTimeout(r, delay));
             }
         }
@@ -696,13 +688,13 @@ async function main() {
         cleanupTempFrames();
 
     } catch (e) {
-        log('error', `Fatal Error: ${e.message}`);
+        log('error', `치명적 오류: ${e.message}`);
         cleanupTempFrames();
     }
 }
 
 async function processVideo(video_id, youtube_link, cookieHeader) {
-    log('info', `Processing [${video_id}]...`);
+    log('info', `처리 중 [${video_id}]...`);
 
     try {
 
@@ -711,7 +703,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
 
         // [Shorts 필터] (180초 미만) - 페이지 페치 전 확인
         if (metaInfo.duration !== null && metaInfo.duration < 180) {
-            log('info', `[Skip] Shorts detected from meta (<180s). ID: ${video_id} (Duration: ${metaInfo.duration}s)`);
+            log('info', `[스킵] 메타에서 Shorts 감지 (<180초). ID: ${video_id} (길이: ${metaInfo.duration}초)`);
             saveVideoData(video_id, {
                 youtube_link,
                 video_id,
@@ -727,7 +719,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
         const newHeatmap = extractHeatmapFromHtml(html);
 
         if (!newHeatmap) {
-            log('warn', `No heatmap found for ${video_id}.`);
+            log('warn', `${video_id}에서 히트맵 찾을 수 없음`);
             saveVideoData(video_id, {
                 youtube_link,
                 video_id,
@@ -759,7 +751,7 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
                     if (lastLine) {
                         const lastData = JSON.parse(lastLine);
                         if (lastData.recollect_id === metaInfo.recollect_id && lastData.status !== 'error') {
-                            log('info', `[Skip] Already collected for recollect_id ${metaInfo.recollect_id}.`);
+                            log('info', `[스킵] recollect_id ${metaInfo.recollect_id}에 대해 이미 수집됨`);
                             return;
                         }
                     }
@@ -771,21 +763,22 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
             youtube_link,
             video_id,
             interaction_data: formattedData,
+            most_replayed_markers: newHeatmap.mostReplayedMarkers || [],
             status: 'success',
             recollect_id: metaInfo.recollect_id,
             recollect_vars: metaInfo.recollect_vars,
             collected_at: new Date().toISOString()
         });
-        log('info', `Saved heatmap for ${video_id} (Points: ${formattedData.length})`);
+        log('info', `${video_id} 히트맵 저장 (포인트: ${formattedData.length}개, 가장많이본장면: ${(newHeatmap.mostReplayedMarkers || []).length}개)`);
 
         // === 멀티모달 프레임 추출 (히트맵 수집 직후) ===
-        const multimodalResult = await extractMultimodalFrames(video_id, formattedData, metaInfo.recollect_id);
+        const multimodalResult = await extractMultimodalFrames(video_id, newHeatmap.mostReplayedMarkers || [], metaInfo.recollect_id, metaInfo.duration);
         if (multimodalResult.status === 'success') {
             log('info', `[Multimodal] ${video_id}: ${multimodalResult.frameCount}개 프레임 저장 완료`);
         }
 
     } catch (e) {
-        log('error', `Error processing ${video_id}: ${e.message}`);
+        log('error', `${video_id} 처리 중 오류: ${e.message}`);
         saveVideoData(video_id, {
             youtube_link,
             video_id,
