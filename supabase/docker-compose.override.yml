@@ -1,8 +1,7 @@
 services:
   studio:
-    environment:
-      DASHBOARD_USERNAME: ${DASHBOARD_USERNAME}
-      DASHBOARD_PASSWORD: ${DASHBOARD_PASSWORD}
+    ports:
+      - "3000:3000"
 
   # PostgreSQL 직접 연결 포트 (마이그레이션 스크립트용)
   db:
