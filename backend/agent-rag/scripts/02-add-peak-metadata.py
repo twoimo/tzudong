@@ -63,100 +63,43 @@ def load_heatmap_by_recollect_id(heatmap_path: Path) -> dict[int, dict]:
         return {}
 
 
-def find_interest_segments(
-    interaction_data: list[dict],
-    peak_threshold: float = 0.4,
-    boundary_threshold: float = 0.2,
-) -> list[dict]:
+def find_interest_segments(most_replayed_markers: list[dict] | None) -> list[dict]:
     """
-    고관심 구간 식별 (JS findInterestSegments 포팅)
+    "가장 많이 다시 본 장면" 구간 식별
+    YouTube의 timedMarkerDecorations에서 명시적으로 지정된 구간만 사용
 
     Args:
-        interaction_data: heatmap의 interaction_data 배열
-        peak_threshold: 피크 식별 임계값 (기본값 0.4)
-        boundary_threshold: 구간 경계 확장 임계값 (기본값 0.2)
+        most_replayed_markers: heatmap 데이터의 most_replayed_markers 배열
+                              각 마커: { startMillis, endMillis, peakMillis, label }
 
     Returns:
         세그먼트 배열: [{ 'start_sec', 'end_sec', 'peak_sec', 'peak_intensity' }, ...]
     """
-    if not interaction_data or len(interaction_data) < 3:
+    if not most_replayed_markers:
         return []
 
-    # 1. 임계값 이상의 모든 로컬 피크 찾기
-    peaks = []
-    for i in range(1, len(interaction_data) - 1):
-        prev_intensity = interaction_data[i - 1].get("intensityScoreNormalized", 0)
-        curr_intensity = interaction_data[i].get("intensityScoreNormalized", 0)
-        next_intensity = interaction_data[i + 1].get("intensityScoreNormalized", 0)
-
-        # 로컬 최대값이고 임계값 이상인 경우
-        if (
-            curr_intensity > prev_intensity
-            and curr_intensity >= next_intensity
-            and curr_intensity >= peak_threshold
-        ):
-            peaks.append(
-                {
-                    "index": i,
-                    "start_millis": float(interaction_data[i].get("startMillis", 0)),
-                    "intensity": curr_intensity,
-                }
-            )
-
-    if not peaks:
-        return []
-
-    # 2. 각 피크를 확장하여 세그먼트 경계 찾기
     segments = []
-    used_indices = set()
 
-    for peak in peaks:
-        if peak["index"] in used_indices:
-            continue
+    for marker in most_replayed_markers:
+        start_millis = marker.get("startMillis", 0)
+        end_millis = marker.get("endMillis", 0)
+        peak_millis = marker.get("peakMillis", start_millis)
 
-        left_idx = peak["index"]
-        right_idx = peak["index"]
-
-        # 왼쪽으로 확장
-        while left_idx > 0:
-            prev_intensity = interaction_data[left_idx - 1].get(
-                "intensityScoreNormalized", 0
-            )
-            if prev_intensity < boundary_threshold:
-                break
-            left_idx -= 1
-
-        # 오른쪽으로 확장
-        while right_idx < len(interaction_data) - 1:
-            next_intensity = interaction_data[right_idx + 1].get(
-                "intensityScoreNormalized", 0
-            )
-            if next_intensity < boundary_threshold:
-                break
-            right_idx += 1
-
-        # 사용된 인덱스 표시
-        for j in range(left_idx, right_idx + 1):
-            used_indices.add(j)
-
-        start_sec = float(interaction_data[left_idx].get("startMillis", 0)) / 1000.0
-        end_sec = (
-            float(interaction_data[right_idx].get("startMillis", 0))
-            + float(interaction_data[right_idx].get("durationMillis", 0))
-        ) / 1000.0
-        peak_sec = peak["start_millis"] / 1000.0
+        start_sec = int(start_millis / 1000)  # Math.floor
+        end_sec = int(end_millis / 1000) + 1  # Math.ceil
+        peak_sec = peak_millis / 1000
 
         segments.append(
             {
-                "start_sec": int(start_sec),  # Math.floor
-                "end_sec": int(end_sec) + 1,  # Math.ceil
+                "start_sec": start_sec,
+                "end_sec": end_sec,
                 "peak_sec": peak_sec,
-                "peak_intensity": peak["intensity"],
+                "peak_intensity": 1.0,  # 명시적 마커는 최고 강도로 간주
             }
         )
 
-    # 피크 강도 기준 내림차순 정렬
-    segments.sort(key=lambda x: x["peak_intensity"], reverse=True)
+    # 시작 시간 기준 정렬
+    segments.sort(key=lambda x: x["start_sec"])
 
     return segments
 
@@ -275,10 +218,12 @@ def add_peak_metadata_to_documents(docs_dir: Path, heatmap_dir: Path) -> dict:
                             continue
 
                         file_has_matching_heatmap = True
-                        interaction_data = heatmap_data.get("interaction_data", [])
+                        most_replayed_markers = heatmap_data.get(
+                            "most_replayed_markers", []
+                        )
 
-                        # 피크 세그먼트 찾기 (JS findInterestSegments와 동일)
-                        peak_segments = find_interest_segments(interaction_data)
+                        # 피크 세그먼트 찾기 (most_replayed_markers 기반)
+                        peak_segments = find_interest_segments(most_replayed_markers)
 
                         for doc in docs:
                             metadata = doc.get("metadata", {})
@@ -317,10 +262,12 @@ def add_peak_metadata_to_documents(docs_dir: Path, heatmap_dir: Path) -> dict:
                             continue
 
                         file_has_matching_heatmap = True
-                        interaction_data = heatmap_data.get("interaction_data", [])
+                        most_replayed_markers = heatmap_data.get(
+                            "most_replayed_markers", []
+                        )
 
                         # 피크 세그먼트 찾기
-                        peak_segments = find_interest_segments(interaction_data)
+                        peak_segments = find_interest_segments(most_replayed_markers)
 
                         start_time = metadata.get("start_time")
                         end_time = metadata.get("end_time")
