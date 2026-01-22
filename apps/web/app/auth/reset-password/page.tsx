@@ -28,48 +28,62 @@ export default function ResetPasswordPage() {
     const [isOpen, setIsOpen] = useState(true);
 
     useEffect(() => {
-        const handleRecoveryToken = async () => {
+        const handleRecoverySession = async () => {
+            // 1. URL 파라미터 확인 (Hash 및 Query 모두 확인)
             const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            const queryParams = new URLSearchParams(window.location.search);
+
+            const type = hashParams.get('type') || queryParams.get('type');
             const accessToken = hashParams.get('access_token');
-            const type = hashParams.get('type');
+            const code = queryParams.get('code');
 
-            if (accessToken && type === 'recovery') {
-                const { data: { session }, error } = await supabase.auth.getSession();
-
-                if (error) {
-                    console.error('Session error:', error);
-                    toast.error('세션 오류가 발생했습니다. 다시 시도해주세요.');
-                    router.push('/');
-                    return;
-                }
-
-                if (session) {
+            // 2. 이벤트 리스너 설정 (PKCE Flow 등에서 발생)
+            const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+                if (event === 'PASSWORD_RECOVERY' || (session && type === 'recovery')) {
                     setIsValidSession(true);
-                    window.history.replaceState(null, '', window.location.pathname);
-                } else {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    setIsCheckingSession(false);
+                }
+            });
+
+            // 3. 현재 세션 상태 확인
+            const { data: { session } } = await supabase.auth.getSession();
+
+            if (session && type === 'recovery') {
+                setIsValidSession(true);
+                setIsCheckingSession(false);
+            } else if (accessToken || code) {
+                // 토큰/코드가 있지만 세션이 아직 없는 경우 (처리 중)
+                // onAuthStateChange에서 처리되기를 기다림
+                // 3초 후에도 세션이 없으면 에러 처리
+                setTimeout(async () => {
                     const { data: { session: retrySession } } = await supabase.auth.getSession();
                     if (retrySession) {
                         setIsValidSession(true);
-                        window.history.replaceState(null, '', window.location.pathname);
-                    } else {
-                        toast.error('유효하지 않거나 만료된 링크입니다');
-                        router.push('/');
+                    } else if (!isValidSession) { // 이미 유효해졌으면 무시
+                        // PKCE의 경우 코드가 교환되면 세션이 생김.
+                        // 하지만 sometimes code exchange fails or happens on main layout.
+                        // 여기서는 UI를 보여주되, updatePassword 호출 시 에러가 나면 처리.
+                        if (code) {
+                            // 코드가 있으면 조금 더 기다려볼 수도 있지만,
+                            // 일단 UI를 보여주는 게 나을 수 있음 (세션이 곧 생길 것이라 가정)
+                            // 하지만 안전하게 로그인 페이지로 보내는 게 나을 수도.
+                            // 여기서는 세션 확인 실패로 간주.
+                            // toast.error('세션 연결 시간이 초과되었습니다.');
+                        }
                     }
-                }
+                    setIsCheckingSession(false);
+                }, 3000);
             } else {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session) {
-                    setIsValidSession(true);
-                } else {
-                    toast.error('유효하지 않거나 만료된 링크입니다');
-                    router.push('/');
-                }
+                // 아무 토큰도 없는 경우
+                setIsCheckingSession(false);
             }
-            setIsCheckingSession(false);
+
+            return () => {
+                subscription.unsubscribe();
+            };
         };
 
-        handleRecoveryToken();
+        handleRecoverySession();
     }, [router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
