@@ -43,12 +43,18 @@ node backend/restaurant-crawling/scripts/04-collect-heatmap.js --channel tzuyang
 echo "[$(date)] [Step 5] Analyzing with Gemini..." >> "$LOG_FILE"
 bash backend/restaurant-crawling/scripts/06-gemini-crawling.sh --channel tzuyang >> "$LOG_FILE" 2>&1
 
+
+
+# 6. Supabase 마이그레이션 (메타 데이터 동기화)
+echo "[$(date)] [Step 6] Migrating to Supabase..." >> "$LOG_FILE"
+python3 backend/restaurant-crawling/scripts/08-migrate-to-supabase.py --channel tzuyang >> "$LOG_FILE" 2>&1
+
 echo "============================================================" >> "$LOG_FILE"
 echo "[$(date)] ✅ Daily Collection Pipeline Completed" >> "$LOG_FILE"
 echo "============================================================" >> "$LOG_FILE"
 
-# 6. Git 커밋 및 푸시 (데이터 백업)
-echo "[$(date)] [Step 6] Committing and pushing changes..." >> "$LOG_FILE"
+# 7. Git 커밋 및 푸시 (데이터 백업)
+echo "[$(date)] [Step 7] Committing and pushing changes..." >> "$LOG_FILE"
 
 cd "$PROJECT_ROOT" || exit 1
 
