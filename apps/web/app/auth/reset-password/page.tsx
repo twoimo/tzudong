@@ -36,6 +36,7 @@ export default function ResetPasswordPage() {
             const type = hashParams.get('type') || queryParams.get('type');
             const accessToken = hashParams.get('access_token');
             const code = queryParams.get('code');
+            const token = queryParams.get('token');
 
             // 2. 이벤트 리스너 설정 (PKCE Flow 등에서 발생)
             const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -45,13 +46,30 @@ export default function ResetPasswordPage() {
                 }
             });
 
-            // 3. 현재 세션 상태 확인
+            // 3. 토큰 직접 검증 (PKCE Code Exchange)
+            if (token && type === 'recovery') {
+                try {
+                    // pkce_로 시작하는 토큰은 Auth Code이므로 교환해야 함
+                    const { data, error } = await supabase.auth.exchangeCodeForSession(token);
+                    if (error) throw error;
+                    if (data?.session) {
+                        setIsValidSession(true);
+                        setIsCheckingSession(false);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Code Exchange Error:', error);
+                    // 실패 시에도 세션 체크 계속
+                }
+            }
+
+            // 4. 현재 세션 상태 확인
             const { data: { session } } = await supabase.auth.getSession();
 
             if (session && type === 'recovery') {
                 setIsValidSession(true);
                 setIsCheckingSession(false);
-            } else if (accessToken || code) {
+            } else if (accessToken || code || token) {
                 // 토큰/코드가 있지만 세션이 아직 없는 경우 (처리 중)
                 // onAuthStateChange에서 처리되기를 기다림
                 // 3초 후에도 세션이 없으면 에러 처리
