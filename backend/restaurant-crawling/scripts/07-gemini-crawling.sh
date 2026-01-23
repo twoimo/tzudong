@@ -9,9 +9,9 @@
 # - transcript/{video_id}.jsonl 최신 데이터 로드 (없으면 스킵)
 # 
 # 사용법:
-#   ./06-gemini-crawling.sh --channel tzuyang
-#   ./06-gemini-crawling.sh --channel meatcreator
-#   ./06-gemini-crawling.sh  # 모든 채널
+#   ./07-gemini-crawling.sh --channel tzuyang
+#   ./07-gemini-crawling.sh --channel meatcreator
+#   ./07-gemini-crawling.sh  # 모든 채널
 
 set -e  # 에러 발생 시 즉시 종료
 
