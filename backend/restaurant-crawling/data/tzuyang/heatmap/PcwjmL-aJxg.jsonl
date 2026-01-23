@@ -1,2 +1,3 @@
 {"youtube_link":"https://www.youtube.com/watch?v=PcwjmL-aJxg","video_id":"PcwjmL-aJxg","collected_at":"2026-01-23T09:19:07.131Z","recollect_id":0,"recollect_vars":["error"],"status":"error","error_message":"Cannot read properties of null (reading 'map')"}
 {"youtube_link":"https://www.youtube.com/watch?v=PcwjmL-aJxg","video_id":"PcwjmL-aJxg","collected_at":"2026-01-23T09:20:48.335Z","recollect_id":0,"recollect_vars":["error"],"status":"error","error_message":"Cannot read properties of null (reading 'map')"}
+{"youtube_link":"https://www.youtube.com/watch?v=PcwjmL-aJxg","video_id":"PcwjmL-aJxg","status":"no_heatmap","duration":954,"collected_at":"2026-01-23T10:44:44.755Z"}
