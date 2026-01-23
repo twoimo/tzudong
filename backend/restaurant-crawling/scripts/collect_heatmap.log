@@ -14984,3 +14984,57 @@ Error marking filters as finished
 [2026-01-22 07:54:59] [INFO] [Multimodal] 세그먼트 1 (827s-855s): 29개 프레임 저장
 [2026-01-22 07:54:59] [INFO] [Multimodal] VXF0RkFUm0I: 29개 프레임 저장 완료
 [2026-01-22 07:54:59] [INFO] Temp 폴더 정리 완료: /home/ubuntu/tzudong/backend/restaurant-crawling/data/tzuyang/temp_frames
+[2026-01-23 18:06:53] [INFO] === HTTP 히트맵 + 멀티모달 수집기 시작 [채널: tzuyang] ===
+[2026-01-23 18:06:54] [INFO] 소스: C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\urls.txt
+[2026-01-23 18:06:54] [INFO] 저장 경로: C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\heatmap
+[2026-01-23 18:06:54] [INFO] 쿠키 로드 완료
+[2026-01-23 18:06:54] [INFO] === 프레임 백필 시작 ===
+[2026-01-23 18:06:54] [INFO] [Backfill] -1OU4tkFJns: 프레임 수집 시작
+[2026-01-23 18:06:54] [INFO] [Multimodal] -1OU4tkFJns: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:06:54] [WARN] Storyboard 정보 가져오기 실패 -1OU4tkFJns: Command failed: /home/ubuntu/.local/bin/yt-dlp --cookies "C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\cookies.txt" --dump-json "https://www.youtube.com/watch?v=-1OU4tkFJns"
+The system cannot find the path specified.
+
+[2026-01-23 18:06:54] [WARN] [Multimodal] -1OU4tkFJns: Storyboard를 찾을 수 없음
+[2026-01-23 18:06:55] [INFO] [Backfill] -8wi-fVqTwk: 프레임 수집 시작
+[2026-01-23 18:06:55] [INFO] [Multimodal] -8wi-fVqTwk: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:06:55] [WARN] Storyboard 정보 가져오기 실패 -8wi-fVqTwk: Command failed: /home/ubuntu/.local/bin/yt-dlp --cookies "C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\cookies.txt" --dump-json "https://www.youtube.com/watch?v=-8wi-fVqTwk"
+The system cannot find the path specified.
+
+[2026-01-23 18:06:55] [WARN] [Multimodal] -8wi-fVqTwk: Storyboard를 찾을 수 없음
+[2026-01-23 18:06:55] [INFO] [Backfill] -D43ezc57z8: 프레임 수집 시작
+[2026-01-23 18:06:55] [INFO] [Multimodal] -D43ezc57z8: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:06:55] [WARN] Storyboard 정보 가져오기 실패 -D43ezc57z8: Command failed: /home/ubuntu/.local/bin/yt-dlp --cookies "C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\cookies.txt" --dump-json "https://www.youtube.com/watch?v=-D43ezc57z8"
+The system cannot find the path specified.
+
+[2026-01-23 18:06:55] [WARN] [Multimodal] -D43ezc57z8: Storyboard를 찾을 수 없음
+[2026-01-23 18:06:56] [INFO] [Backfill] -e0ERP2rFkY: 프레임 수집 시작
+[2026-01-23 18:06:56] [INFO] [Multimodal] -e0ERP2rFkY: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:06:56] [WARN] Storyboard 정보 가져오기 실패 -e0ERP2rFkY: Command failed: /home/ubuntu/.local/bin/yt-dlp --cookies "C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\cookies.txt" --dump-json "https://www.youtube.com/watch?v=-e0ERP2rFkY"
+The system cannot find the path specified.
+
+[2026-01-23 18:06:56] [WARN] [Multimodal] -e0ERP2rFkY: Storyboard를 찾을 수 없음
+[2026-01-23 18:06:57] [INFO] [Backfill] -fE1mGc-W8w: 프레임 수집 시작
+[2026-01-23 18:06:57] [INFO] [Multimodal] -fE1mGc-W8w: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:06:57] [WARN] Storyboard 정보 가져오기 실패 -fE1mGc-W8w: Command failed: /home/ubuntu/.local/bin/yt-dlp --cookies "C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\cookies.txt" --dump-json "https://www.youtube.com/watch?v=-fE1mGc-W8w"
+The system cannot find the path specified.
+
+[2026-01-23 18:06:57] [WARN] [Multimodal] -fE1mGc-W8w: Storyboard를 찾을 수 없음
+[2026-01-23 18:06:58] [INFO] [Backfill] -gMCn9VDJns: 프레임 수집 시작
+[2026-01-23 18:06:58] [INFO] [Multimodal] -gMCn9VDJns: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:06:58] [WARN] Storyboard 정보 가져오기 실패 -gMCn9VDJns: Command failed: /home/ubuntu/.local/bin/yt-dlp --cookies "C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\cookies.txt" --dump-json "https://www.youtube.com/watch?v=-gMCn9VDJns"
+The system cannot find the path specified.
+
+[2026-01-23 18:06:58] [WARN] [Multimodal] -gMCn9VDJns: Storyboard를 찾을 수 없음
+[2026-01-23 18:14:05] [INFO] === HTTP 히트맵 + 멀티모달 수집기 시작 [채널: tzuyang] ===
+[2026-01-23 18:14:05] [INFO] 소스: C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\urls.txt
+[2026-01-23 18:14:05] [INFO] 저장 경로: C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\heatmap
+[2026-01-23 18:14:05] [INFO] 쿠키 로드 완료
+[2026-01-23 18:14:05] [INFO] === 프레임 백필 시작 ===
+[2026-01-23 18:14:05] [INFO] [Backfill] -1OU4tkFJns: 프레임 수집 시작
+[2026-01-23 18:14:05] [INFO] [Multimodal] -1OU4tkFJns: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:14:17] [INFO] [Backfill] -8wi-fVqTwk: 프레임 수집 시작
+[2026-01-23 18:14:17] [INFO] [Multimodal] -8wi-fVqTwk: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:14:37] [INFO] [Backfill] -D43ezc57z8: 프레임 수집 시작
+[2026-01-23 18:14:37] [INFO] [Multimodal] -D43ezc57z8: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-23 18:14:52] [INFO] [Backfill] -e0ERP2rFkY: 프레임 수집 시작
+[2026-01-23 18:14:52] [INFO] [Multimodal] -e0ERP2rFkY: 2개 "가장 많이 다시 본 장면" 구간 발견

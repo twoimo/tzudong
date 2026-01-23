@@ -87,7 +87,7 @@ const URLS_FILE = path.join(BASE_DATA_DIR, 'urls.txt');
 const FRAMES_DIR = path.join(BASE_DATA_DIR, 'frames');
 const TEMP_DIR = path.join(BASE_DATA_DIR, 'temp_frames');
 const COOKIE_FILE = path.resolve(__dirname, '../data/cookies.txt');
-const YT_DLP_CMD = '/home/ubuntu/.local/bin/yt-dlp';
+const YT_DLP_CMD = process.platform === 'win32' ? 'yt-dlp' : '/home/ubuntu/.local/bin/yt-dlp';
 
 // 디렉토리 생성
 [DATA_DIR, FRAMES_DIR, TEMP_DIR].forEach(dir => {

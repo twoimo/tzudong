@@ -10,8 +10,7 @@ transcript-document-with-context/{video_id}.jsonl로 저장합니다.
 - 기존 문서가 있으면 recollect_id가 더 높은 경우에만 추가
 
 사용법:
-    python 03.5-generate-transcript-context.py --youtuber tzuyang
-    python 03.5-generate-transcript-context.py --youtuber tzuyang --model llama3
+    python 03.1-generate-transcript-context.py --model cookieshake/a.x-4.0-light-imatrix:Q8_0
 """
 
 import json
@@ -216,7 +215,7 @@ def process_video(
 
     full_transcript = "\n".join([seg["text"] for seg in transcript])
     title = metadata["title"]
-    channel_name = metadata["channel_name"]
+    channel_name = metadata.get("channel_name", "tzuyang")  # 기본값 tzuyang
     video_duration = metadata.get("duration")  # 영상 전체 길이 (초)
 
     # 자막 구간별 청크에서 새로운 청크 생성 (video_duration 전달)
