@@ -723,8 +723,8 @@ async function processVideo(video_id, youtube_link, cookieHeader) {
         const html = await fetchVideoPage(video_id, cookieHeader);
         const newHeatmap = extractHeatmapFromHtml(html);
 
-        if (!newHeatmap) {
-            log('warn', `${video_id}에서 히트맵 찾을 수 없음`);
+        if (!newHeatmap || !newHeatmap.data) {
+            log('warn', `${video_id}에서 히트맵 찾을 수 없음 (데이터 없음)`);
             saveVideoData(video_id, {
                 youtube_link,
                 video_id,
