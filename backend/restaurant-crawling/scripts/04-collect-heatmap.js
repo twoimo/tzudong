@@ -77,6 +77,7 @@ const channelIdx = args.indexOf('--channel');
 if (channelIdx !== -1 && args[channelIdx + 1]) {
     CHANNEL_NAME = args[channelIdx + 1];
 }
+const DO_BACKFILL = args.includes('--backfill');
 
 const BASE_DATA_DIR = path.resolve(__dirname, `../data/${CHANNEL_NAME}`);
 const DATA_DIR = path.join(BASE_DATA_DIR, 'heatmap');
@@ -641,8 +642,10 @@ async function main() {
             }
         }
 
-        // 2. 기존 히트맵 데이터 중 프레임 미수집 건 백필
-        await backfillMissingFrames(deletedIds);
+        // 2. 기존 히트맵 데이터 중 프레임 미수집 건 백필 (옵션)
+        if (DO_BACKFILL) {
+            await backfillMissingFrames(deletedIds);
+        }
 
         const urlsPath = path.join(BASE_DATA_DIR, 'urls.txt');
         if (!fs.existsSync(urlsPath)) {
