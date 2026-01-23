@@ -14,6 +14,7 @@
  * 
  * [사용법]
  *   node 04-collect-heatmap.js --channel tzuyang
+ *   node 04-collect-heatmap.js --channel tzuyang --backfill
  */
 
 import fs from 'fs';
@@ -387,7 +388,8 @@ async function downloadFrameFromStoryboard(videoId, timestamp, sbSpec, outputPat
     try {
         // 시트 다운로드 (업 없으면)
         if (!fs.existsSync(tempSheetPath)) {
-            await execPromise(`curl -L -s -A "${UA}" -b "${COOKIE_FILE}" -e "https://www.youtube.com/" '${sheetUrl}' -o "${tempSheetPath}"`);
+            const curlCmd = process.platform === 'win32' ? 'curl.exe' : 'curl';
+            await execPromise(`${curlCmd} -L -s -A "${UA}" -b "${COOKIE_FILE}" -e "https://www.youtube.com/" "${sheetUrl}" -o "${tempSheetPath}"`);
         }
 
         // 파일 검증: 손상된 시트 감지 (1KB 미만이면 무효)
