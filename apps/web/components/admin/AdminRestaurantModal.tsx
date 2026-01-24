@@ -551,6 +551,7 @@ export function AdminRestaurantModal({
                 // 공통 필드: 모든 레코드에 적용
                 const commonData = {
                     name: formData.name.trim(),
+                    approved_name: formData.name.trim(), // approved_name 동기화
                     road_address: formData.road_address.trim(),
                     jibun_address: formData.jibun_address.trim() || null,
                     english_address: formData.english_address.trim() || null,
@@ -708,6 +709,7 @@ export function AdminRestaurantModal({
                 // 새 맛집 등록
                 const restaurantData = {
                     name: formData.name.trim(),
+                    approved_name: formData.name.trim(), // approved_name 동기화
                     road_address: formData.road_address.trim(),
                     jibun_address: formData.jibun_address.trim() || null,
                     english_address: formData.english_address.trim() || null,
