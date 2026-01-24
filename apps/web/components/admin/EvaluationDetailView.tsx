@@ -32,6 +32,7 @@ interface EvaluationDetailViewProps {
 }
 
 export const EvaluationDetailView = memo(function EvaluationDetailView({ record, className, autoHeight = false }: EvaluationDetailViewProps) {
+
     const [embedError, setEmbedError] = useState(false);
     const [videoUrl, setVideoUrl] = useState<string | null>(null);
     const iframeRef = React.useRef<HTMLIFrameElement>(null);
@@ -116,6 +117,37 @@ export const EvaluationDetailView = memo(function EvaluationDetailView({ record,
                     📊 평가 상세
                 </h3>
                 <div className="space-y-4">
+                    {/* 0. 맛집명 검증 (Name Validation) */}
+                    <div className="pl-3 border-l-4 border-pink-500">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <Badge variant="outline" className="h-5 w-5 flex items-center justify-center p-0 rounded-sm bg-pink-50 text-pink-700 border-pink-200 text-[10px] shrink-0">0</Badge>
+                            <span className="font-semibold text-gray-900 text-sm shrink-0">맛집명 검증:</span>
+                            {record.approved_name && (
+                                <Badge className="bg-green-600 text-[10px] h-5 px-1.5">승인됨: {record.approved_name}</Badge>
+                            )}
+                        </div>
+                        <div className="text-gray-600 text-xs space-y-1 mt-1">
+                            <div className="flex items-start gap-2">
+                                <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Origin Name:</span>
+                                <span className="font-bold text-gray-800 break-all">{record.origin_name || record.restaurant_name || record.name || '-'}</span>
+                                <Badge variant="outline" className="text-[10px] h-4 px-1">Gemini</Badge>
+                            </div>
+                            <div className="flex items-start gap-2">
+                                <span className="font-medium text-gray-500 shrink-0 min-w-[70px]">Naver Name:</span>
+                                <span className="font-bold text-blue-700 break-all">
+                                    {record.naver_name ||
+                                        (record.evaluation_results?.location_match_TF as any)?.matched_name ||
+                                        ((record.evaluation_results?.location_match_TF as any)?.name &&
+                                            !['Location Match', '주소 정합성', 'location_match_TF'].includes((record.evaluation_results?.location_match_TF as any)?.name)
+                                            ? (record.evaluation_results?.location_match_TF as any)?.name
+                                            : '-')
+                                    }
+                                </span>
+                                <Badge variant="outline" className="text-[10px] h-4 px-1">Rule-based</Badge>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* 1. 방문 여부 (Visit Authenticity) */}
                     <div className="pl-3 border-l-4 border-blue-500">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">

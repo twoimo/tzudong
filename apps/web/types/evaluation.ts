@@ -126,6 +126,8 @@ export interface EvaluationRecord {
   created_at: string;
   updated_at: string;
 
+
+
   // 호환성을 위한 추가 필드 (기존 코드와의 호환)
   restaurant_name?: string; // name의 별칭
   youtube_link?: string; // youtube_links[0]의 별칭
@@ -136,8 +138,9 @@ export interface EvaluationRecord {
   processed_by?: string | null;
   processed_at?: string | null;
   deleted_at?: string | null;
-
-  // 중복 검사 에러 추적
+  approved_name?: string | null; // 관리자 승인 시 저장된 맛집 이름
+  origin_name?: string | null; // AI가 추출한 맛집 이름
+  naver_name?: string | null; // 네이버 지도 검색 결과 맛집 이름
   db_error_message?: string | null;
   db_error_details?: {
     error_type: 'duplicate';

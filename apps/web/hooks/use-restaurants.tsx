@@ -261,9 +261,9 @@ export function useRestaurants(options: UseRestaurantsOptions = {}) {
             // [OPTIMIZATION] 필요한 필드만 선택하여 네트워크 전송량 및 파싱 시간 감소
             let query = supabase
                 .from("restaurants")
-                .select("id, name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
+                .select("id, name:approved_name, lat, lng, road_address, jibun_address, categories, phone, review_count, youtube_link, tzuyang_review, youtube_meta, english_address, status, created_at")
                 .eq("status", "approved") // status가 approved인 것만 조회
-                .order("name"); // 이름순으로 정렬
+                .order("approved_name"); // 이름순으로 정렬
 
             // 경계(Bounds) 필터 적용 (제공된 경우)
             if (bounds) {
@@ -352,7 +352,7 @@ export function useRestaurant(id: string | null) {
 
             const { data, error } = await supabase
                 .from("restaurants")
-                .select("*")
+                .select("*, name:approved_name")
                 .eq("id", id)
                 .single();
 

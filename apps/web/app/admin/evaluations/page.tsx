@@ -559,7 +559,7 @@ function AdminEvaluationPage() {
 
         // restaurant_info 생성 (항상 생성)
         const restaurantInfo = {
-          name: r.name as string,
+          name: (r.origin_name as string) || (r.name as string) || (r.approved_name as string) || '이름 없음',
           phone: r.phone as string | null,
           category: Array.isArray(r.categories) && r.categories.length > 0 ? r.categories[0] : '',
           origin_address: (r.origin_address as Record<string, unknown>)?.address as string || r.road_address as string || r.jibun_address as string || '',
@@ -579,8 +579,13 @@ function AdminEvaluationPage() {
 
         return {
           ...r,
-          // 호환성을 위한 별칭 추가
-          restaurant_name: r.name,
+          // 호환성을 위한 별칭 추가 - name 컬럼이 없으므로 origin_name 사용
+          name: (r.origin_name as string) || (r.name as string) || '이름 없음',
+          restaurant_name: (r.origin_name as string) || (r.name as string) || '이름 없음',
+          origin_name: r.origin_name,
+          naver_name: r.naver_name,
+          approved_name: r.approved_name,
+
           youtube_link: r.youtube_link as string || '',
           // evaluation_results는 그대로 사용 (JSONB 데이터)
           evaluation_results: evaluationResults,
@@ -860,12 +865,29 @@ function AdminEvaluationPage() {
 
   // 실제 승인 처리 실행 (중복 확인 후 재사용)
   const performApproval = async (record: EvaluationRecord) => {
-    // status를  'approved'로 업데이트
+    // Naver Name Extraction logic
+    // 1. Try DB column first
+    let naverName: string | null = record.naver_name || null;
+
+    // 2. Fallback to evaluation_results extraction
+    if (!naverName) {
+      const locationMatch = (record.evaluation_results?.location_match_TF as any);
+      if (locationMatch) {
+        if (locationMatch.matched_name) {
+          naverName = locationMatch.matched_name;
+        } else if (locationMatch.name && !['Location Match', '주소 정합성', 'location_match_TF'].includes(locationMatch.name)) {
+          naverName = locationMatch.name;
+        }
+      }
+    }
+
+    // status를 'approved'로 업데이트 및 approved_name 저장
     const { error } = await supabase
       .from('restaurants')
       // @ts-expect-error - Supabase 자동 생성 타입 문제
       .update({
         status: 'approved',
+        approved_name: naverName,
         db_error_message: null, // 에러 메시지 초기화
         db_error_details: null, // 에러 상세 초기화
         updated_at: new Date().toISOString(),
@@ -877,6 +899,7 @@ function AdminEvaluationPage() {
     // 상태 업데이트 (새로고침 없이)
     updateRecordInState(record.id, {
       status: 'approved',
+      approved_name: naverName,
       db_error_message: null,
       db_error_details: null,
       updated_at: new Date().toISOString(),

@@ -63,7 +63,7 @@ const RestaurantSearch = ({
       try {
         const { data, error } = await supabase
           .from('restaurants')
-          .select('id, name, road_address, jibun_address, english_address, status, weekly_search_count, categories, youtube_meta')
+          .select('id, name:approved_name, road_address, jibun_address, english_address, status, weekly_search_count, categories, youtube_meta')
           .eq('status', 'approved')
           .gt('weekly_search_count', 0)  // weekly_search_count가 0보다 큰 것만
           .order('weekly_search_count', { ascending: false })
@@ -352,7 +352,7 @@ const RestaurantSearch = ({
                           const { data } = await supabase
                             .from('restaurants')
                             .select('*')
-                            .eq('name', item.name)
+                            .eq('approved_name', item.name)
                             .eq('status', 'approved');
 
                           if (data && data.length > 0) {
@@ -403,7 +403,7 @@ const RestaurantSearch = ({
                           const { data } = await supabase
                             .from('restaurants')
                             .select('*')
-                            .eq('name', restaurant.name)
+                            .eq('approved_name', restaurant.name)
                             .eq('status', 'approved');
 
                           if (data && data.length > 0) {
