@@ -1291,14 +1291,14 @@ function AdminEvaluationPage() {
 
       const { data: restaurantsData } = await supabase
         .from('restaurants')
-        .select('id, name, road_address, jibun_address')
+        .select('id, approved_name, road_address, jibun_address')
         .in('id', restaurantIds);
 
       const typedProfilesData = (profilesData || []) as any[];
       const typedRestaurantsData = (restaurantsData || []) as any[];
 
       const profilesMap = new Map(typedProfilesData.map(p => [p.user_id, p.nickname]));
-      const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.name, address: r.road_address || r.jibun_address || '' }]));
+      const restaurantsMap = new Map(typedRestaurantsData.map(r => [r.id, { name: r.approved_name || '이름 없음', address: r.road_address || r.jibun_address || '' }]));
 
       return typedReviewsData.map(review => ({
         ...review,

@@ -1,4 +1,4 @@
--- 1. approve_submission_item 수정 (approved_name 추가)
+-- 1. approve_submission_item 수정 (approved_name 추가, name 제거)
 CREATE OR REPLACE FUNCTION public.approve_submission_item(p_item_id uuid, p_admin_user_id uuid, p_restaurant_data jsonb) RETURNS TABLE(success boolean, message text, created_restaurant_id uuid)
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
@@ -95,11 +95,12 @@ BEGIN
 
     -- 7. 중복 검사 (같은 youtube_link + 유사한 이름/주소)
     -- 링크가 다르면 다른 리뷰로 간주하여 승인 가능
+    -- approved_name 으로 체크 (name 컬럼 없음)
     IF EXISTS (
         SELECT 1 FROM public.restaurants r
         WHERE r.youtube_link = v_youtube_link
         AND (
-            extensions.similarity(r.name, v_name) > 0.8
+            extensions.similarity(r.approved_name, v_name) > 0.8
             OR extensions.similarity(COALESCE(r.jibun_address, ''), v_jibun_address) > 0.9
             OR extensions.similarity(COALESCE(r.road_address, ''), COALESCE(v_road_address, '')) > 0.9
         )
@@ -112,7 +113,7 @@ BEGIN
     BEGIN
         INSERT INTO public.restaurants (
             unique_id,
-            name,
+            -- name, -- [삭제] name 컬럼 존재하지 않음
             categories,
             phone,
             road_address,
@@ -129,11 +130,11 @@ BEGIN
             geocoding_success,
             created_by,
             updated_by_admin_id,
-            approved_name -- [수정] approved_name 추가
+            approved_name -- [수정] approved_name 사용
         )
         VALUES (
             v_generated_unique_id,
-            v_name,
+            -- v_name, -- [삭제]
             v_categories,
             v_phone,
             v_road_address,
@@ -187,7 +188,7 @@ BEGIN
 END;
 $$;
 
--- 2. approve_edit_submission_item 수정 (approved_name 업데이트 추가)
+-- 2. approve_edit_submission_item 수정 (approved_name 업데이트, name 제거)
 CREATE OR REPLACE FUNCTION public.approve_edit_submission_item(p_item_id uuid, p_admin_user_id uuid, p_updated_data jsonb) RETURNS TABLE(success boolean, message text, restaurant_id uuid)
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
@@ -286,7 +287,7 @@ BEGIN
         SELECT 1 FROM public.restaurants r
         WHERE r.id != v_item.target_restaurant_id
         AND (
-            (r.youtube_link = v_youtube_link AND extensions.similarity(r.name, v_name) > 0.8)
+            (r.youtube_link = v_youtube_link AND extensions.similarity(r.approved_name, v_name) > 0.8) -- approved_name 사용
             OR extensions.similarity(COALESCE(r.jibun_address, ''), v_jibun_address) > 0.9
             OR extensions.similarity(COALESCE(r.road_address, ''), COALESCE(v_road_address, '')) > 0.9
         )
@@ -298,7 +299,7 @@ BEGIN
     -- 8. restaurants 테이블 업데이트
     UPDATE public.restaurants
     SET
-        name = COALESCE(v_name, name),
+        -- name = COALESCE(v_name, name), -- [삭제] name 컬럼 없음
         phone = v_phone,
         categories = COALESCE(v_categories, categories),
         road_address = COALESCE(v_road_address, road_address),
@@ -313,7 +314,7 @@ BEGIN
         geocoding_success = TRUE,
         updated_by_admin_id = p_admin_user_id,
         updated_at = NOW(),
-        approved_name = COALESCE(v_name, name) -- [수정] approved_name도 함께 업데이트
+        approved_name = COALESCE(v_name, approved_name) -- [수정] approved_name 업데이트
     WHERE id = v_item.target_restaurant_id;
 
     -- 9. 항목 상태 업데이트
@@ -333,7 +334,7 @@ BEGIN
 END;
 $$;
 
--- 3. approve_new_restaurant_submission 수정 (approved_name 추가)
+-- 3. approve_new_restaurant_submission 수정 (approved_name 추가, name 제거)
 CREATE OR REPLACE FUNCTION public.approve_new_restaurant_submission(p_submission_id uuid, p_admin_user_id uuid, p_geocoded_data jsonb) RETURNS TABLE(success boolean, message text, created_restaurant_ids uuid[])
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
@@ -406,7 +407,7 @@ BEGIN
         -- restaurants 테이블에 INSERT
         INSERT INTO public.restaurants (
             unique_id,
-            name,
+            -- name, -- [삭제]
             categories,
             phone,
             road_address,
@@ -417,14 +418,14 @@ BEGIN
             youtube_meta,
             tzuyang_review,
             status,
-            resource_type,
+            source_type,
             created_by,
             updated_by_admin_id,
             approved_name -- [수정] approved_name 추가
         )
         VALUES (
             v_generated_unique_id,
-            v_restaurant_item->>'name',
+            -- v_restaurant_item->>'name', -- [삭제]
             ARRAY(SELECT jsonb_array_elements_text(v_restaurant_item->'categories')),
             v_restaurant_item->>'phone',
             p_geocoded_data->>(v_restaurant_item->>'name' || '_road'),
@@ -462,7 +463,7 @@ BEGIN
 END;
 $$;
 
--- 4. approve_restaurant 수정 (approved_name 업데이트 추가)
+-- 4. approve_restaurant 수정 (name 제거, approved_name 업데이트)
 CREATE OR REPLACE FUNCTION public.approve_restaurant(restaurant_id uuid, admin_user_id uuid) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
     SET search_path TO 'public'
@@ -485,11 +486,14 @@ BEGIN
     SET 
         status = 'approved',
         updated_at = now(),
-        updated_by_admin_id = admin_user_id,
-        approved_name = COALESCE(approved_name, name) -- [수정] 승인 시 approved_name이 비어있으면 name으로 채움
+        updated_by_admin_id = admin_user_id
+        -- approved_name = COALESCE(approved_name, name) -- [삭제] name이 없으므로 approved_name만 유지 혹은 origin_name 등 활용 필요. 일단 유지하되 name 참조 제거
+        -- 만약 approved_name이 NULL이라면 origin_name 등으로 채워야 할 수도 있음.
+        -- 여기서는 일단 추가 로직 없이 상태만 변경하거나, 필요한 경우 다른 컬럼 참조
     WHERE id = restaurant_id
     AND status = 'pending';
     
     RETURN FOUND;
 END;
 $$;
+
