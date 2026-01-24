@@ -11,3 +11,7 @@ venv/
 .venv/
 *.egg-info/
 *.log
+
+# Large backup files
+supabase/backup_db/*.sql
+backend/backups/*.dump

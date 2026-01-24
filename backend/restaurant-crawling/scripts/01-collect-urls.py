@@ -5,9 +5,9 @@ YouTube Data API v3 사용
 채널별로 동영상 URL을 수집하고 data/{channel}/urls.txt에 저장합니다.
 
 사용법:
-    python3 01-collect-urls.py --channel tzuyang
-    python3 01-collect-urls.py --channel meatcreator
-    python3 01-collect-urls.py  # 모든 채널
+    python 01-collect-urls.py --channel tzuyang
+    python 01-collect-urls.py --channel meatcreator
+    python 01-collect-urls.py  # 모든 채널
 """
 
 import os

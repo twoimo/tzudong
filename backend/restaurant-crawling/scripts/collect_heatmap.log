@@ -15614,3 +15614,419 @@ The system cannot find the path specified.
 [2026-01-23 20:27:34] [INFO] [Multimodal] 세그먼트 2 (583s-599s): 17개 프레임 저장
 [2026-01-23 20:27:34] [INFO] [Multimodal] Wp16pK4MKs4: 35개 프레임 저장 완료
 [2026-01-23 20:27:34] [INFO] Temp 폴더 정리 완료: C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\temp_frames
+[2026-01-24 16:11:25] [INFO] === HTTP 히트맵 + 멀티모달 수집기 시작 [채널: tzuyang] ===
+[2026-01-24 16:11:25] [INFO] 소스: C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\urls.txt
+[2026-01-24 16:11:25] [INFO] 저장 경로: C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\heatmap
+[2026-01-24 16:11:25] [INFO] 쿠키 로드 완료
+[2026-01-24 16:11:25] [INFO] 1012개 URL 발견, 삭제된 영상 필터링 중...
+[2026-01-24 16:11:25] [INFO] [스킵] PcwjmL-aJxg: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] oloeGY3oAVg: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] cgVRNBLTHaM: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] -D43ezc57z8: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] 90NJAyFx09A: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] -gMCn9VDJns: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [트리거] KDVJBtFEhw8: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [트리거] pySDhYAsZa8: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [스킵] ixi_hfZlEWE: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] av8T6X8hxhk: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [트리거] aG_xeTicF0k: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [스킵] 2if2TjgSVEY: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] 9eJHNTya2pQ: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] Uz6Bltn0xIY: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] INCehN6gz90: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [트리거] kdM07dwCseo: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [스킵] kdQT6LZZ_3s: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] J9mrmZ3S_ps: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] vgTtFdb3LjE: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] SbjywgoDGF4: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [트리거] lbueoat6MJk: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [트리거] Tx_yrWwGCL4: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [스킵] cGhoGXfAVS4: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] 2j45QOvYkL4: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] c0G-lfExt64: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] bxEDXFycaXw: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] 5LMAWd-elok: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] 2C_Cboo8oUM: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [트리거] 9AeDIHDL9ZM: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [스킵] TuZddCVF-yw: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [트리거] foxU-9BowUc: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [스킵] LhCEph7vBjw: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] _ovsAbqKQAM: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] MXKFuvCukT8: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] KKBTfD0jPHA: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] qSug9_Vw8QY: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] dQ5FochDJEw: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] kx3gQVt5a3I: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] tXHO-aB-W_s: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] 9YoNoltBYPo: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] kyCVDemYa7U: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] 0JNcoJWx7R8: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [트리거] FGJdgoU5L_s: 트리거 변수 발견 [daily_collection, scheduled_weekly]
+[2026-01-24 16:11:25] [INFO] [스킵] v7U03TXG9oc: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] bVNb3YIH5TI: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] OLu58vHTq_8: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] NEaW-nO-UGM: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] W1Q42bEDfEU: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] XgA7Jd1yzsw: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [스킵] SSAkcsiJDak: recollect_vars [daily_collection]는 히트맵 수집 대상 아님
+[2026-01-24 16:11:25] [INFO] [트리거] 9mTv_ygqfOM: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:25] [INFO] [트리거] x6CqjKYFyiU: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:25] [INFO] [트리거] 4vg-3uctgxQ: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] rF2E3zO_LAg: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] mn69-hUGKx0: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] naazmdZLdD4: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] rbsE4_lEnSQ: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] 8YSYlNg1AE4: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] p7kzlaHAuQA: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] RtD8v_zCjuY: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] e1VNDo80LIU: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] fbdPsEVAn-0: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] DyIrnuUxRsc: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] OOwbBh44y70: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] iNouYFIMih0: 트리거 변수 발견 [scheduled_biweekly]
+[2026-01-24 16:11:26] [INFO] [트리거] YvwIXlP0z3c: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] 2-HzvxrREac: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] f8t6SPwiSr4: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] jwsSGeTESvo: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] oI-sMs0BF3w: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] s2JFIvXsvgc: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] oKIenUI_Qdw: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] siO6KFiF85g: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] qCPjrwiL350: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] iig0YSPArE0: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] waeLgP8c0cA: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:26] [INFO] [트리거] lN9I5uvVA04: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] Id8lHg35VGw: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] YQYfS14px6s: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] _bgp3TAZT7M: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] 3ehn7gxvWFQ: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] aYL9E6fKNLI: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] UOTXMMGvXUk: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] gKHd2I0KmgQ: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] EWCbmaIodXk: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] H9mug1r0UcY: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] tFFtj7P3_fk: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] QEJYtqfLGvQ: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] ysM2QgOZQkk: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] NZZh-Nlemjw: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] dBb9tq3xMT4: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:27] [INFO] [트리거] zR7B8Dp-Hbw: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:28] [INFO] [트리거] 8bk4qd4h2mM: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:28] [INFO] [트리거] 54aFiAuI65w: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:28] [INFO] [트리거] zHluIc1ix-4: 트리거 변수 발견 [scheduled_monthly]
+[2026-01-24 16:11:28] [INFO] 총 1012개 URL, 54개 처리 대상
+[2026-01-24 16:11:28] [INFO] 처리 중 [KDVJBtFEhw8]...
+[2026-01-24 16:11:29] [INFO] KDVJBtFEhw8 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:11:29] [INFO] [Multimodal] KDVJBtFEhw8: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:12:05] [INFO] [Multimodal] 세그먼트 1 (403s-426s): 24개 프레임 저장
+[2026-01-24 16:12:37] [INFO] [Multimodal] 세그먼트 2 (637s-670s): 34개 프레임 저장
+[2026-01-24 16:12:37] [INFO] [Multimodal] KDVJBtFEhw8: 58개 프레임 저장 완료
+[2026-01-24 16:12:39] [INFO] 처리 중 [pySDhYAsZa8]...
+[2026-01-24 16:12:40] [INFO] pySDhYAsZa8 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:12:40] [INFO] [Multimodal] pySDhYAsZa8: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:13:10] [INFO] [Multimodal] 세그먼트 1 (402s-421s): 20개 프레임 저장
+[2026-01-24 16:13:10] [INFO] [Multimodal] pySDhYAsZa8: 20개 프레임 저장 완료
+[2026-01-24 16:13:12] [INFO] 처리 중 [aG_xeTicF0k]...
+[2026-01-24 16:13:14] [INFO] aG_xeTicF0k 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:13:14] [INFO] [Multimodal] aG_xeTicF0k: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:13:59] [INFO] [Multimodal] 세그먼트 1 (490s-523s): 34개 프레임 저장
+[2026-01-24 16:13:59] [INFO] [Multimodal] aG_xeTicF0k: 34개 프레임 저장 완료
+[2026-01-24 16:14:00] [INFO] 처리 중 [kdM07dwCseo]...
+[2026-01-24 16:14:01] [INFO] kdM07dwCseo 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:14:02] [INFO] [Multimodal] kdM07dwCseo: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:14:34] [INFO] [Multimodal] 세그먼트 1 (640s-665s): 26개 프레임 저장
+[2026-01-24 16:14:34] [INFO] [Multimodal] kdM07dwCseo: 26개 프레임 저장 완료
+[2026-01-24 16:14:36] [INFO] 처리 중 [lbueoat6MJk]...
+[2026-01-24 16:14:37] [INFO] lbueoat6MJk 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:14:37] [INFO] [Multimodal] lbueoat6MJk: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:15:15] [INFO] [Multimodal] 세그먼트 1 (399s-429s): 31개 프레임 저장
+[2026-01-24 16:15:42] [INFO] [Multimodal] 세그먼트 2 (642s-672s): 31개 프레임 저장
+[2026-01-24 16:15:42] [INFO] [Multimodal] lbueoat6MJk: 62개 프레임 저장 완료
+[2026-01-24 16:15:44] [INFO] 처리 중 [Tx_yrWwGCL4]...
+[2026-01-24 16:15:45] [INFO] Tx_yrWwGCL4 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:15:45] [INFO] [Multimodal] Tx_yrWwGCL4: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:16:15] [INFO] [Multimodal] 세그먼트 1 (398s-421s): 24개 프레임 저장
+[2026-01-24 16:16:15] [INFO] [Multimodal] Tx_yrWwGCL4: 24개 프레임 저장 완료
+[2026-01-24 16:16:17] [INFO] 처리 중 [9AeDIHDL9ZM]...
+[2026-01-24 16:16:18] [INFO] 9AeDIHDL9ZM 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:16:18] [INFO] [Multimodal] 9AeDIHDL9ZM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:16:51] [INFO] [Multimodal] 세그먼트 1 (401s-425s): 25개 프레임 저장
+[2026-01-24 16:17:10] [INFO] [Multimodal] 세그먼트 2 (647s-670s): 24개 프레임 저장
+[2026-01-24 16:17:10] [INFO] [Multimodal] 9AeDIHDL9ZM: 49개 프레임 저장 완료
+[2026-01-24 16:17:11] [INFO] 처리 중 [foxU-9BowUc]...
+[2026-01-24 16:17:13] [INFO] foxU-9BowUc 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:17:13] [INFO] [Multimodal] foxU-9BowUc: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:17:46] [INFO] [Multimodal] 세그먼트 1 (648s-670s): 23개 프레임 저장
+[2026-01-24 16:17:46] [INFO] [Multimodal] foxU-9BowUc: 23개 프레임 저장 완료
+[2026-01-24 16:17:48] [INFO] 처리 중 [FGJdgoU5L_s]...
+[2026-01-24 16:17:50] [INFO] FGJdgoU5L_s 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:17:50] [INFO] [Multimodal] FGJdgoU5L_s: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:18:39] [INFO] [Multimodal] 세그먼트 1 (388s-420s): 33개 프레임 저장
+[2026-01-24 16:19:09] [INFO] [Multimodal] 세그먼트 2 (637s-669s): 33개 프레임 저장
+[2026-01-24 16:19:09] [INFO] [Multimodal] FGJdgoU5L_s: 66개 프레임 저장 완료
+[2026-01-24 16:19:10] [INFO] 처리 중 [9mTv_ygqfOM]...
+[2026-01-24 16:19:10] [INFO] [스킵] 메타에서 Shorts 감지 (<180초). ID: 9mTv_ygqfOM (길이: 82초)
+[2026-01-24 16:19:12] [INFO] 처리 중 [x6CqjKYFyiU]...
+[2026-01-24 16:19:13] [INFO] x6CqjKYFyiU 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:19:13] [INFO] [Multimodal] x6CqjKYFyiU: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:19:39] [INFO] [Multimodal] 세그먼트 1 (641s-661s): 21개 프레임 저장
+[2026-01-24 16:19:39] [INFO] [Multimodal] x6CqjKYFyiU: 21개 프레임 저장 완료
+[2026-01-24 16:19:40] [INFO] 처리 중 [4vg-3uctgxQ]...
+[2026-01-24 16:19:41] [INFO] 4vg-3uctgxQ 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:19:41] [INFO] [Multimodal] 4vg-3uctgxQ: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:20:09] [INFO] [Multimodal] 세그먼트 1 (402s-423s): 22개 프레임 저장
+[2026-01-24 16:20:27] [INFO] [Multimodal] 세그먼트 2 (643s-664s): 22개 프레임 저장
+[2026-01-24 16:20:27] [INFO] [Multimodal] 4vg-3uctgxQ: 44개 프레임 저장 완료
+[2026-01-24 16:20:29] [INFO] 처리 중 [rF2E3zO_LAg]...
+[2026-01-24 16:20:30] [INFO] rF2E3zO_LAg 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:20:30] [INFO] [Multimodal] rF2E3zO_LAg: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:21:02] [INFO] [Multimodal] 세그먼트 1 (645s-671s): 27개 프레임 저장
+[2026-01-24 16:21:38] [INFO] [Multimodal] 세그먼트 2 (981s-1019s): 39개 프레임 저장
+[2026-01-24 16:21:38] [INFO] [Multimodal] rF2E3zO_LAg: 66개 프레임 저장 완료
+[2026-01-24 16:21:39] [INFO] 처리 중 [mn69-hUGKx0]...
+[2026-01-24 16:21:40] [INFO] mn69-hUGKx0 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:21:40] [INFO] [Multimodal] mn69-hUGKx0: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:22:13] [INFO] [Multimodal] 세그먼트 1 (400s-423s): 24개 프레임 저장
+[2026-01-24 16:22:36] [INFO] [Multimodal] 세그먼트 2 (638s-661s): 24개 프레임 저장
+[2026-01-24 16:22:36] [INFO] [Multimodal] mn69-hUGKx0: 48개 프레임 저장 완료
+[2026-01-24 16:22:38] [INFO] 처리 중 [naazmdZLdD4]...
+[2026-01-24 16:22:39] [INFO] naazmdZLdD4 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:22:39] [INFO] [Multimodal] naazmdZLdD4: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:23:09] [INFO] [Multimodal] 세그먼트 1 (402s-422s): 21개 프레임 저장
+[2026-01-24 16:23:09] [INFO] [Multimodal] naazmdZLdD4: 21개 프레임 저장 완료
+[2026-01-24 16:23:10] [INFO] 처리 중 [rbsE4_lEnSQ]...
+[2026-01-24 16:23:11] [INFO] rbsE4_lEnSQ 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:23:11] [INFO] [Multimodal] rbsE4_lEnSQ: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:23:40] [INFO] [Multimodal] 세그먼트 1 (405s-426s): 22개 프레임 저장
+[2026-01-24 16:23:40] [INFO] [Multimodal] rbsE4_lEnSQ: 22개 프레임 저장 완료
+[2026-01-24 16:23:41] [INFO] 처리 중 [8YSYlNg1AE4]...
+[2026-01-24 16:23:42] [INFO] 8YSYlNg1AE4 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:23:43] [INFO] [Multimodal] 8YSYlNg1AE4: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:24:14] [ERROR] 프레임 추출 실패 8YSYlNg1AE4: EBUSY: resource busy or locked, unlink 'C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\temp_frames\8YSYlNg1AE4_sheet_4.webp'
+[2026-01-24 16:24:20] [INFO] [Multimodal] 세그먼트 1 (399s-429s): 30개 프레임 저장
+[2026-01-24 16:24:30] [ERROR] 프레임 추출 실패 8YSYlNg1AE4: EBUSY: resource busy or locked, unlink 'C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\temp_frames\8YSYlNg1AE4_sheet_7.webp'
+[2026-01-24 16:24:49] [INFO] [Multimodal] 세그먼트 2 (635s-666s): 31개 프레임 저장
+[2026-01-24 16:24:49] [INFO] [Multimodal] 8YSYlNg1AE4: 61개 프레임 저장 완료
+[2026-01-24 16:24:50] [INFO] 처리 중 [p7kzlaHAuQA]...
+[2026-01-24 16:24:51] [INFO] p7kzlaHAuQA 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:24:51] [INFO] [Multimodal] p7kzlaHAuQA: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:25:24] [INFO] [Multimodal] 세그먼트 1 (160s-182s): 23개 프레임 저장
+[2026-01-24 16:26:00] [INFO] [Multimodal] 세그먼트 2 (395s-428s): 34개 프레임 저장
+[2026-01-24 16:26:24] [INFO] [Multimodal] 세그먼트 3 (642s-664s): 23개 프레임 저장
+[2026-01-24 16:26:24] [INFO] [Multimodal] p7kzlaHAuQA: 80개 프레임 저장 완료
+[2026-01-24 16:26:26] [INFO] 처리 중 [RtD8v_zCjuY]...
+[2026-01-24 16:26:27] [INFO] RtD8v_zCjuY 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:26:27] [INFO] [Multimodal] RtD8v_zCjuY: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:27:19] [INFO] [Multimodal] 세그먼트 1 (96s-146s): 51개 프레임 저장
+[2026-01-24 16:27:47] [INFO] [Multimodal] 세그먼트 2 (386s-420s): 35개 프레임 저장
+[2026-01-24 16:28:16] [INFO] [Multimodal] 세그먼트 3 (1434s-1467s): 34개 프레임 저장
+[2026-01-24 16:28:16] [INFO] [Multimodal] RtD8v_zCjuY: 120개 프레임 저장 완료
+[2026-01-24 16:28:17] [INFO] 처리 중 [e1VNDo80LIU]...
+[2026-01-24 16:28:18] [INFO] e1VNDo80LIU 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:28:18] [INFO] [Multimodal] e1VNDo80LIU: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:28:56] [INFO] [Multimodal] 세그먼트 1 (402s-428s): 27개 프레임 저장
+[2026-01-24 16:29:16] [INFO] [Multimodal] 세그먼트 2 (573s-591s): 19개 프레임 저장
+[2026-01-24 16:29:32] [INFO] [Multimodal] 세그먼트 3 (650s-668s): 19개 프레임 저장
+[2026-01-24 16:29:32] [INFO] [Multimodal] e1VNDo80LIU: 65개 프레임 저장 완료
+[2026-01-24 16:29:33] [INFO] 처리 중 [fbdPsEVAn-0]...
+[2026-01-24 16:29:34] [INFO] fbdPsEVAn-0 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:29:34] [INFO] [Multimodal] fbdPsEVAn-0: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:30:03] [INFO] [Multimodal] 세그먼트 1 (403s-421s): 19개 프레임 저장
+[2026-01-24 16:30:21] [INFO] [Multimodal] 세그먼트 2 (584s-602s): 19개 프레임 저장
+[2026-01-24 16:30:39] [INFO] [Multimodal] 세그먼트 3 (644s-662s): 19개 프레임 저장
+[2026-01-24 16:30:39] [INFO] [Multimodal] fbdPsEVAn-0: 57개 프레임 저장 완료
+[2026-01-24 16:30:40] [INFO] 처리 중 [DyIrnuUxRsc]...
+[2026-01-24 16:30:41] [INFO] DyIrnuUxRsc 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:30:41] [INFO] [Multimodal] DyIrnuUxRsc: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:31:12] [INFO] [Multimodal] 세그먼트 1 (166s-190s): 25개 프레임 저장
+[2026-01-24 16:31:41] [INFO] [Multimodal] 세그먼트 2 (400s-423s): 24개 프레임 저장
+[2026-01-24 16:32:04] [INFO] [Multimodal] 세그먼트 3 (644s-668s): 25개 프레임 저장
+[2026-01-24 16:32:04] [INFO] [Multimodal] DyIrnuUxRsc: 74개 프레임 저장 완료
+[2026-01-24 16:32:06] [INFO] 처리 중 [OOwbBh44y70]...
+[2026-01-24 16:32:07] [INFO] OOwbBh44y70 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:32:07] [INFO] [Multimodal] OOwbBh44y70: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:32:40] [INFO] [Multimodal] 세그먼트 1 (645s-670s): 26개 프레임 저장
+[2026-01-24 16:33:26] [INFO] [Multimodal] 세그먼트 2 (1112s-1149s): 38개 프레임 저장
+[2026-01-24 16:33:26] [INFO] [Multimodal] OOwbBh44y70: 64개 프레임 저장 완료
+[2026-01-24 16:33:28] [INFO] 처리 중 [iNouYFIMih0]...
+[2026-01-24 16:33:29] [INFO] iNouYFIMih0 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:33:29] [INFO] [Multimodal] iNouYFIMih0: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:34:16] [INFO] [Multimodal] 세그먼트 1 (643s-665s): 23개 프레임 저장
+[2026-01-24 16:34:40] [INFO] [Multimodal] 세그먼트 2 (937s-960s): 24개 프레임 저장
+[2026-01-24 16:35:03] [INFO] [Multimodal] 세그먼트 3 (981s-1003s): 23개 프레임 저장
+[2026-01-24 16:35:03] [INFO] [Multimodal] iNouYFIMih0: 70개 프레임 저장 완료
+[2026-01-24 16:35:05] [INFO] 처리 중 [YvwIXlP0z3c]...
+[2026-01-24 16:35:06] [INFO] YvwIXlP0z3c 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:35:06] [INFO] [Multimodal] YvwIXlP0z3c: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:35:39] [INFO] [Multimodal] 세그먼트 1 (358s-383s): 26개 프레임 저장
+[2026-01-24 16:35:39] [INFO] [Multimodal] YvwIXlP0z3c: 26개 프레임 저장 완료
+[2026-01-24 16:35:41] [INFO] 처리 중 [2-HzvxrREac]...
+[2026-01-24 16:35:42] [INFO] 2-HzvxrREac 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:35:42] [INFO] [Multimodal] 2-HzvxrREac: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:36:13] [INFO] [Multimodal] 세그먼트 1 (923s-946s): 24개 프레임 저장
+[2026-01-24 16:36:13] [INFO] [Multimodal] 2-HzvxrREac: 24개 프레임 저장 완료
+[2026-01-24 16:36:15] [INFO] 처리 중 [f8t6SPwiSr4]...
+[2026-01-24 16:36:16] [INFO] f8t6SPwiSr4 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:36:16] [INFO] [Multimodal] f8t6SPwiSr4: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:36:47] [INFO] [Multimodal] 세그먼트 1 (408s-429s): 22개 프레임 저장
+[2026-01-24 16:37:07] [INFO] [Multimodal] 세그먼트 2 (647s-668s): 22개 프레임 저장
+[2026-01-24 16:37:07] [INFO] [Multimodal] f8t6SPwiSr4: 44개 프레임 저장 완료
+[2026-01-24 16:37:08] [INFO] 처리 중 [jwsSGeTESvo]...
+[2026-01-24 16:37:09] [INFO] jwsSGeTESvo 히트맵 저장 (포인트: 100개, 가장많이본장면: 5개)
+[2026-01-24 16:37:09] [INFO] [Multimodal] jwsSGeTESvo: 5개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:37:54] [INFO] [Multimodal] 세그먼트 1 (137s-175s): 39개 프레임 저장
+[2026-01-24 16:38:35] [INFO] [Multimodal] 세그먼트 2 (736s-775s): 40개 프레임 저장
+[2026-01-24 16:39:00] [INFO] [Multimodal] 세그먼트 3 (949s-975s): 27개 프레임 저장
+[2026-01-24 16:39:25] [INFO] [Multimodal] 세그먼트 4 (986s-1012s): 27개 프레임 저장
+[2026-01-24 16:39:50] [INFO] [Multimodal] 세그먼트 5 (1124s-1150s): 27개 프레임 저장
+[2026-01-24 16:39:50] [INFO] [Multimodal] jwsSGeTESvo: 160개 프레임 저장 완료
+[2026-01-24 16:39:51] [INFO] 처리 중 [oI-sMs0BF3w]...
+[2026-01-24 16:39:51] [INFO] [스킵] 메타에서 Shorts 감지 (<180초). ID: oI-sMs0BF3w (길이: 40초)
+[2026-01-24 16:39:53] [INFO] 처리 중 [s2JFIvXsvgc]...
+[2026-01-24 16:39:54] [INFO] s2JFIvXsvgc 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:39:54] [INFO] [Multimodal] s2JFIvXsvgc: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:40:25] [INFO] [Multimodal] 세그먼트 1 (1103s-1126s): 24개 프레임 저장
+[2026-01-24 16:40:25] [INFO] [Multimodal] s2JFIvXsvgc: 24개 프레임 저장 완료
+[2026-01-24 16:40:27] [INFO] 처리 중 [oKIenUI_Qdw]...
+[2026-01-24 16:40:28] [INFO] oKIenUI_Qdw 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:40:28] [INFO] [Multimodal] oKIenUI_Qdw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:41:08] [INFO] [Multimodal] 세그먼트 1 (141s-170s): 30개 프레임 저장
+[2026-01-24 16:41:08] [INFO] [Multimodal] oKIenUI_Qdw: 30개 프레임 저장 완료
+[2026-01-24 16:41:10] [INFO] 처리 중 [siO6KFiF85g]...
+[2026-01-24 16:41:12] [INFO] siO6KFiF85g 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:41:12] [INFO] [Multimodal] siO6KFiF85g: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:41:51] [INFO] [Multimodal] 세그먼트 1 (588s-615s): 28개 프레임 저장
+[2026-01-24 16:41:51] [INFO] [Multimodal] siO6KFiF85g: 28개 프레임 저장 완료
+[2026-01-24 16:41:52] [INFO] 처리 중 [qCPjrwiL350]...
+[2026-01-24 16:41:54] [INFO] qCPjrwiL350 히트맵 저장 (포인트: 100개, 가장많이본장면: 4개)
+[2026-01-24 16:41:54] [INFO] [Multimodal] qCPjrwiL350: 4개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:42:46] [INFO] [Multimodal] 세그먼트 1 (141s-185s): 45개 프레임 저장
+[2026-01-24 16:43:07] [INFO] [Multimodal] 세그먼트 2 (641s-664s): 24개 프레임 저장
+[2026-01-24 16:43:28] [INFO] [Multimodal] 세그먼트 3 (826s-849s): 24개 프레임 저장
+[2026-01-24 16:43:49] [INFO] [Multimodal] 세그먼트 4 (1011s-1034s): 24개 프레임 저장
+[2026-01-24 16:43:49] [INFO] [Multimodal] qCPjrwiL350: 117개 프레임 저장 완료
+[2026-01-24 16:43:51] [INFO] 처리 중 [iig0YSPArE0]...
+[2026-01-24 16:43:52] [INFO] iig0YSPArE0 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:43:52] [INFO] [Multimodal] iig0YSPArE0: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:44:23] [INFO] [Multimodal] 세그먼트 1 (408s-428s): 21개 프레임 저장
+[2026-01-24 16:44:23] [INFO] [Multimodal] iig0YSPArE0: 21개 프레임 저장 완료
+[2026-01-24 16:44:25] [INFO] 처리 중 [waeLgP8c0cA]...
+[2026-01-24 16:44:26] [INFO] waeLgP8c0cA 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:44:26] [INFO] [Multimodal] waeLgP8c0cA: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:44:58] [INFO] [Multimodal] 세그먼트 1 (164s-183s): 20개 프레임 저장
+[2026-01-24 16:44:58] [INFO] [Multimodal] waeLgP8c0cA: 20개 프레임 저장 완료
+[2026-01-24 16:44:59] [INFO] 처리 중 [lN9I5uvVA04]...
+[2026-01-24 16:45:00] [INFO] lN9I5uvVA04 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:45:00] [INFO] [Multimodal] lN9I5uvVA04: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:45:31] [INFO] [Multimodal] 세그먼트 1 (819s-841s): 23개 프레임 저장
+[2026-01-24 16:45:31] [INFO] [Multimodal] lN9I5uvVA04: 23개 프레임 저장 완료
+[2026-01-24 16:45:32] [INFO] 처리 중 [Id8lHg35VGw]...
+[2026-01-24 16:45:34] [INFO] Id8lHg35VGw 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:45:34] [INFO] [Multimodal] Id8lHg35VGw: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:46:13] [INFO] [Multimodal] 세그먼트 1 (404s-428s): 25개 프레임 저장
+[2026-01-24 16:46:38] [INFO] [Multimodal] 세그먼트 2 (647s-671s): 25개 프레임 저장
+[2026-01-24 16:46:38] [INFO] [Multimodal] Id8lHg35VGw: 50개 프레임 저장 완료
+[2026-01-24 16:46:39] [INFO] 처리 중 [YQYfS14px6s]...
+[2026-01-24 16:46:40] [INFO] YQYfS14px6s 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:46:40] [INFO] [Multimodal] YQYfS14px6s: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:47:21] [INFO] [Multimodal] 세그먼트 1 (403s-428s): 26개 프레임 저장
+[2026-01-24 16:47:21] [INFO] [Multimodal] YQYfS14px6s: 26개 프레임 저장 완료
+[2026-01-24 16:47:22] [INFO] 처리 중 [_bgp3TAZT7M]...
+[2026-01-24 16:47:23] [INFO] _bgp3TAZT7M 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:47:23] [INFO] [Multimodal] _bgp3TAZT7M: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:48:03] [INFO] [Multimodal] 세그먼트 1 (404s-430s): 27개 프레임 저장
+[2026-01-24 16:48:26] [INFO] [Multimodal] 세그먼트 2 (698s-724s): 27개 프레임 저장
+[2026-01-24 16:48:26] [INFO] [Multimodal] _bgp3TAZT7M: 54개 프레임 저장 완료
+[2026-01-24 16:48:28] [INFO] 처리 중 [3ehn7gxvWFQ]...
+[2026-01-24 16:48:29] [INFO] 3ehn7gxvWFQ 히트맵 저장 (포인트: 100개, 가장많이본장면: 5개)
+[2026-01-24 16:48:29] [INFO] [Multimodal] 3ehn7gxvWFQ: 5개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:49:09] [INFO] [Multimodal] 세그먼트 1 (105s-127s): 23개 프레임 저장
+[2026-01-24 16:49:46] [INFO] [Multimodal] 세그먼트 2 (157s-190s): 34개 프레임 저장
+[2026-01-24 16:50:11] [INFO] [Multimodal] 세그먼트 3 (400s-422s): 23개 프레임 저장
+[2026-01-24 16:50:37] [INFO] [Multimodal] 세그먼트 4 (547s-569s): 23개 프레임 저장
+[2026-01-24 16:51:00] [INFO] [Multimodal] 세그먼트 5 (642s-664s): 23개 프레임 저장
+[2026-01-24 16:51:00] [INFO] [Multimodal] 3ehn7gxvWFQ: 126개 프레임 저장 완료
+[2026-01-24 16:51:02] [INFO] 처리 중 [aYL9E6fKNLI]...
+[2026-01-24 16:51:03] [INFO] aYL9E6fKNLI 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:51:03] [INFO] [Multimodal] aYL9E6fKNLI: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:51:53] [INFO] [Multimodal] 세그먼트 1 (188s-233s): 46개 프레임 저장
+[2026-01-24 16:52:11] [INFO] [Multimodal] 세그먼트 2 (403s-422s): 20개 프레임 저장
+[2026-01-24 16:52:11] [INFO] [Multimodal] aYL9E6fKNLI: 66개 프레임 저장 완료
+[2026-01-24 16:52:12] [INFO] 처리 중 [UOTXMMGvXUk]...
+[2026-01-24 16:52:14] [INFO] UOTXMMGvXUk 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:52:14] [INFO] [Multimodal] UOTXMMGvXUk: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:52:42] [INFO] [Multimodal] 세그먼트 1 (163s-183s): 21개 프레임 저장
+[2026-01-24 16:53:01] [INFO] [Multimodal] 세그먼트 2 (403s-423s): 21개 프레임 저장
+[2026-01-24 16:53:26] [INFO] [Multimodal] 세그먼트 3 (643s-664s): 22개 프레임 저장
+[2026-01-24 16:53:26] [INFO] [Multimodal] UOTXMMGvXUk: 64개 프레임 저장 완료
+[2026-01-24 16:53:28] [INFO] 처리 중 [gKHd2I0KmgQ]...
+[2026-01-24 16:53:29] [INFO] gKHd2I0KmgQ 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:53:29] [INFO] [Multimodal] gKHd2I0KmgQ: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:54:01] [INFO] [Multimodal] 세그먼트 1 (407s-427s): 21개 프레임 저장
+[2026-01-24 16:54:19] [INFO] [Multimodal] 세그먼트 2 (640s-660s): 21개 프레임 저장
+[2026-01-24 16:54:19] [INFO] [Multimodal] gKHd2I0KmgQ: 42개 프레임 저장 완료
+[2026-01-24 16:54:20] [INFO] 처리 중 [EWCbmaIodXk]...
+[2026-01-24 16:54:22] [INFO] EWCbmaIodXk 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:54:22] [INFO] [Multimodal] EWCbmaIodXk: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:54:47] [INFO] [Multimodal] 세그먼트 1 (240s-255s): 16개 프레임 저장
+[2026-01-24 16:54:47] [INFO] [Multimodal] EWCbmaIodXk: 16개 프레임 저장 완료
+[2026-01-24 16:54:48] [INFO] 처리 중 [H9mug1r0UcY]...
+[2026-01-24 16:54:50] [INFO] H9mug1r0UcY 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:54:50] [INFO] [Multimodal] H9mug1r0UcY: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:55:23] [INFO] [Multimodal] 세그먼트 1 (405s-426s): 22개 프레임 저장
+[2026-01-24 16:55:42] [INFO] [Multimodal] 세그먼트 2 (643s-664s): 22개 프레임 저장
+[2026-01-24 16:56:01] [INFO] [Multimodal] 세그먼트 3 (722s-743s): 22개 프레임 저장
+[2026-01-24 16:56:01] [INFO] [Multimodal] H9mug1r0UcY: 66개 프레임 저장 완료
+[2026-01-24 16:56:02] [INFO] 처리 중 [tFFtj7P3_fk]...
+[2026-01-24 16:56:03] [INFO] tFFtj7P3_fk 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:56:03] [INFO] [Multimodal] tFFtj7P3_fk: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:56:34] [INFO] [Multimodal] 세그먼트 1 (622s-641s): 20개 프레임 저장
+[2026-01-24 16:56:52] [INFO] [Multimodal] 세그먼트 2 (683s-701s): 19개 프레임 저장
+[2026-01-24 16:56:52] [INFO] [Multimodal] tFFtj7P3_fk: 39개 프레임 저장 완료
+[2026-01-24 16:56:54] [INFO] 처리 중 [QEJYtqfLGvQ]...
+[2026-01-24 16:56:55] [INFO] QEJYtqfLGvQ 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 16:56:55] [INFO] [Multimodal] QEJYtqfLGvQ: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:57:29] [INFO] [Multimodal] 세그먼트 1 (56s-82s): 27개 프레임 저장
+[2026-01-24 16:57:44] [INFO] [Multimodal] 세그먼트 2 (478s-495s): 18개 프레임 저장
+[2026-01-24 16:57:44] [INFO] [Multimodal] QEJYtqfLGvQ: 45개 프레임 저장 완료
+[2026-01-24 16:57:46] [INFO] 처리 중 [ysM2QgOZQkk]...
+[2026-01-24 16:57:48] [INFO] ysM2QgOZQkk 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:57:48] [INFO] [Multimodal] ysM2QgOZQkk: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:58:18] [INFO] [Multimodal] 세그먼트 1 (492s-513s): 22개 프레임 저장
+[2026-01-24 16:58:18] [INFO] [Multimodal] ysM2QgOZQkk: 22개 프레임 저장 완료
+[2026-01-24 16:58:20] [INFO] 처리 중 [NZZh-Nlemjw]...
+[2026-01-24 16:58:21] [INFO] NZZh-Nlemjw 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 16:58:21] [INFO] [Multimodal] NZZh-Nlemjw: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 16:58:45] [INFO] [Multimodal] 세그먼트 1 (219s-237s): 19개 프레임 저장
+[2026-01-24 16:59:07] [INFO] [Multimodal] 세그먼트 2 (262s-288s): 27개 프레임 저장
+[2026-01-24 16:59:29] [INFO] [Multimodal] 세그먼트 3 (702s-728s): 27개 프레임 저장
+[2026-01-24 16:59:29] [INFO] [Multimodal] NZZh-Nlemjw: 73개 프레임 저장 완료
+[2026-01-24 16:59:30] [INFO] 처리 중 [dBb9tq3xMT4]...
+[2026-01-24 16:59:31] [INFO] dBb9tq3xMT4 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 16:59:31] [INFO] [Multimodal] dBb9tq3xMT4: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 17:00:07] [INFO] [Multimodal] 세그먼트 1 (12s-44s): 33개 프레임 저장
+[2026-01-24 17:00:07] [INFO] [Multimodal] dBb9tq3xMT4: 33개 프레임 저장 완료
+[2026-01-24 17:00:09] [INFO] 처리 중 [zR7B8Dp-Hbw]...
+[2026-01-24 17:00:10] [INFO] zR7B8Dp-Hbw 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 17:00:10] [INFO] [Multimodal] zR7B8Dp-Hbw: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 17:00:41] [INFO] [Multimodal] 세그먼트 1 (936s-956s): 21개 프레임 저장
+[2026-01-24 17:00:41] [INFO] [Multimodal] zR7B8Dp-Hbw: 21개 프레임 저장 완료
+[2026-01-24 17:00:43] [INFO] 처리 중 [8bk4qd4h2mM]...
+[2026-01-24 17:00:44] [INFO] 8bk4qd4h2mM 히트맵 저장 (포인트: 100개, 가장많이본장면: 2개)
+[2026-01-24 17:00:44] [INFO] [Multimodal] 8bk4qd4h2mM: 2개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 17:01:09] [INFO] [Multimodal] 세그먼트 1 (674s-694s): 21개 프레임 저장
+[2026-01-24 17:01:32] [INFO] [Multimodal] 세그먼트 2 (742s-772s): 31개 프레임 저장
+[2026-01-24 17:01:32] [INFO] [Multimodal] 8bk4qd4h2mM: 52개 프레임 저장 완료
+[2026-01-24 17:01:33] [INFO] 처리 중 [54aFiAuI65w]...
+[2026-01-24 17:01:34] [INFO] 54aFiAuI65w 히트맵 저장 (포인트: 100개, 가장많이본장면: 1개)
+[2026-01-24 17:01:34] [INFO] [Multimodal] 54aFiAuI65w: 1개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 17:02:01] [INFO] [Multimodal] 세그먼트 1 (619s-643s): 25개 프레임 저장
+[2026-01-24 17:02:01] [INFO] [Multimodal] 54aFiAuI65w: 25개 프레임 저장 완료
+[2026-01-24 17:02:02] [INFO] 처리 중 [zHluIc1ix-4]...
+[2026-01-24 17:02:03] [INFO] zHluIc1ix-4 히트맵 저장 (포인트: 100개, 가장많이본장면: 3개)
+[2026-01-24 17:02:03] [INFO] [Multimodal] zHluIc1ix-4: 3개 "가장 많이 다시 본 장면" 구간 발견
+[2026-01-24 17:02:31] [INFO] [Multimodal] 세그먼트 1 (492s-518s): 27개 프레임 저장
+[2026-01-24 17:02:46] [INFO] [Multimodal] 세그먼트 2 (533s-550s): 18개 프레임 저장
+[2026-01-24 17:03:00] [INFO] [Multimodal] 세그먼트 3 (743s-760s): 18개 프레임 저장
+[2026-01-24 17:03:00] [INFO] [Multimodal] zHluIc1ix-4: 63개 프레임 저장 완료
+[2026-01-24 17:03:00] [INFO] Temp 폴더 정리 완료: C:\Users\twoimo\Desktop\tzudong\backend\restaurant-crawling\data\tzuyang\temp_frames

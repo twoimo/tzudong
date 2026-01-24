@@ -7,9 +7,9 @@ YouTube 메타데이터 & 썸네일 수집 스크립트 (recollect_id 기반)
 - 주기적 수집 스케줄링 적용
 
 사용법:
-    python3 02-collect-meta.py --channel tzuyang
-    python3 02-collect-meta.py --channel meatcreator
-    python3 02-collect-meta.py  # 모든 채널
+    python 02-collect-meta.py --channel tzuyang
+    python 02-collect-meta.py --channel meatcreator
+    python 02-collect-meta.py  # 모든 채널
 """
 
 import os
