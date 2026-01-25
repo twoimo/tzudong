@@ -1,8 +1,0 @@
-{
-  "hasSeenIdeIntegrationNudge": true,
-  "security": {
-    "auth": {
-      "selectedType": "oauth-personal"
-    }
-  }
-}
