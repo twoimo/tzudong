@@ -36,6 +36,7 @@ def cleanup_channel(channel_name):
     meta_dir = channel_path / "meta"
     heatmap_dir = channel_path / "heatmap"
     frames_dir = channel_path / "frames"
+    thumb_dir = channel_path / "thumbnails"
     
     if not meta_dir.exists():
         print("Meta directory not found.")
@@ -48,14 +49,11 @@ def cleanup_channel(channel_name):
         if not records:
             continue
             
-        # 중복 감지 로직
-        # 같은 날짜(KST 기준)에 'scheduled_weekly' 등으로 수집된 레코드가 여러 개 있는지 확인
-        # 또는 단순히 timestamp 차이가 매우 적은 경우 (1시간 이내?)
-        
         unique_records = []
         last_kept_record = None
         removed_ids = []
         
+        # 1. 중복 제거 단계
         for record in records:
             if not last_kept_record:
                 unique_records.append(record)
@@ -74,68 +72,123 @@ def cleanup_channel(channel_name):
                 curr_dt = datetime.fromisoformat(curr_time_str.replace("Z", "+00:00")).astimezone(KST)
                 prev_dt = datetime.fromisoformat(prev_time_str.replace("Z", "+00:00")).astimezone(KST)
                 
-                # 조건: 같은 날짜 AND 같은 recollect_vars (또는 scheduled_weekly 포함)
-                # 문제 사례: ID 4 (scheduled_weekly), ID 5 (scheduled_weekly) - 13분 차이
-                
                 is_same_day = curr_dt.date() == prev_dt.date()
                 curr_vars = record.get("recollect_vars", [])
-                
-                # 중복 조건:
-                # 1. 같은 날짜에 'scheduled_weekly'가 중복 발생
-                # 2. 또는 수집 간격이 너무 짧음 (< 1시간) (Viral 제외)
                 
                 is_duplicate = False
                 if is_same_day:
                     if "scheduled_weekly" in curr_vars and "scheduled_weekly" in last_kept_record.get("recollect_vars", []):
                         is_duplicate = True
-                        print(f"  [Meta Check] Duplicate Weekly found for {video_id}: ID {record.get('recollect_id')} (Time: {curr_dt.strftime('%H:%M:%S')}) vs ID {last_kept_record.get('recollect_id')} (Time: {prev_dt.strftime('%H:%M:%S')})")
-                    elif (curr_dt - prev_dt).total_seconds() < 3600: # 1시간 이내 재수집
-                        # 단, viral_growth나 new_video 등 특수 사유가 있으면 허용할 수도 있음
-                        # 하지만 여기서는 '잘못 연달아 수집된' 케이스를 잡는 것이므로 제거 대상
+                        print(f"  [Meta Check] Duplicate Weekly found for {video_id}: ID {record.get('recollect_id')}")
+                    elif (curr_dt - prev_dt).total_seconds() < 3600:
                         if "viral_growth" not in curr_vars and "new_video" not in curr_vars:
                              is_duplicate = True
-                             print(f"  [Meta Check] Rapid re-collection found for {video_id}: ID {record.get('recollect_id')} (+{(curr_dt - prev_dt).total_seconds()/60:.1f} min)")
+                             print(f"  [Meta Check] Rapid re-collection found for {video_id}: ID {record.get('recollect_id')}")
 
                 if is_duplicate:
                     removed_ids.append(record.get('recollect_id'))
-                    print(f"  -> Marking ID {record.get('recollect_id')} for REMOVAL")
-                    # last_kept_record는 업데이트하지 않음 (이전 것이 유효하다고 가정)
-                    # 만약 '최신'을 남기고 '이전'을 지워야 한다면 로직이 복잡해짐 (이미 리스트에 들어갔으므로)
-                    # 보통 나중 것이 중복이므로 제거
                 else:
                     unique_records.append(record)
                     last_kept_record = record
                     
             except Exception as e:
-                # 파싱 에러 시 일단 유지
                 unique_records.append(record)
                 last_kept_record = record
 
-        # 변경사항 적용
-        if removed_ids:
-            print(f"  💾 Updating Meta: {video_id} (Removed IDs: {removed_ids})")
-            save_jsonl(meta_file, unique_records)
+        # 2. Reordering 단계 (ID 재정렬 및 파일/폴더 동기화)
+        reordered_records = []
+        id_mapping = {} # old_id -> new_id
+        
+        for idx, record in enumerate(unique_records):
+            old_id = record.get('recollect_id')
+            new_id = idx # 0부터 순차 할당
             
-            # Heatmap 정리
-            heatmap_file = heatmap_dir / f"{video_id}.jsonl"
-            if heatmap_file.exists():
-                heatmaps = load_jsonl(heatmap_file)
-                new_heatmaps = [h for h in heatmaps if h.get('recollect_id') not in removed_ids]
-                if len(heatmaps) != len(new_heatmaps):
-                     print(f"  💾 Updating Heatmap: {video_id} (Removed {len(heatmaps)-len(new_heatmaps)} records)")
-                     save_jsonl(heatmap_file, new_heatmaps)
+            if old_id != new_id:
+                id_mapping[old_id] = new_id
+                record['recollect_id'] = new_id
+                
+            reordered_records.append(record)
+
+        if removed_ids or id_mapping:
+            print(f"  Processing {video_id}: Removed {len(removed_ids)}, Reordered {len(id_mapping)}")
             
-            # Frames 폴더 정리
+            # 메타 파일 저장
+            save_jsonl(meta_file, reordered_records)
+            
+            # 히트맵 파일 처리
+            h_path = heatmap_dir / f"{video_id}.jsonl"
+            if h_path.exists():
+                heatmaps = load_jsonl(h_path)
+                new_heatmaps = []
+                for h in heatmaps:
+                    rid = h.get('recollect_id')
+                    if rid in removed_ids:
+                        continue # 삭제된 ID는 히트맵도 제외
+                    
+                    if rid in id_mapping:
+                        h['recollect_id'] = id_mapping[rid]
+                    new_heatmaps.append(h)
+                
+                save_jsonl(h_path, new_heatmaps)
+
+            # Frames 폴더 처리
+            # 먼저 삭제
             for rid in removed_ids:
-                if rid is None: continue
-                # rid가 정수일 수도 있고 문자열일 수도 있음
-                frame_path = frames_dir / video_id / str(rid)
-                if frame_path.exists():
-                    print(f"  🗑️ Deleting Frame Dir: {frame_path}")
+                f_path = frames_dir / video_id / str(rid)
+                if f_path.exists():
+                    try: shutil.rmtree(f_path) 
+                    except: pass
+            
+            # 그 다음 이름 변경 (높은 번호 -> 낮은 번호 순으로 바뀌므로 충돌 가능성? -> 3->2, 4->3..
+            # 임시 이름으로 먼저 바꾸고 다시 바꾸는 게 안전하지만, 
+            # 여기선 순차 증가(gap filling)이므로 작은 숫자가 이미 점유될 일은 없음 (clean상태라면)
+            # 하지만 4->3으로 갈 때 3이 이미 있으면? (근데 3이 있었으면 id_mapping에 없을 것)
+            # id_mapping은 {4:3, 6:4} 이런 식이 될 것. 
+            # 순서가 중요함. 낮은 ID부터 처리하면 안됨. 
+            # 예: 0, 1, 3(->2), 4(->3). 
+            # 3->2는 2가 이미 있으므로(원래 2번 데이터) 불가?
+            # 아님. unique_records 순서대로 0,1,2,3... 이 되니까.
+            # 원래 0 -> 0 (mapping x)
+            # 원래 1 -> 1 (mapping x)
+            # 원래 3 -> 2 (mapping o) -> 폴더 '3'을 '2'로? 아니 '2'는 원래 '2'가 있었으면... 
+            # 아, removed_ids에 2가 있었으면 폴더 2는 지워짐.
+            # removed_ids에 없었으면 폴더 2는 2로 남음 (mapping x).
+            # 즉, target ID (new_id)가 이미 존재하는 폴더면 충돌.
+            # 따라서 id_mapping에 있는 애들은 "이동해야 할" 애들임.
+            # 충돌 방지를 위해 정렬: 작은 ID로 이동하는 경우, 작은 ID쪽이 비어있어야 함.
+            # Gap filling은 항상 큰 ID -> 작은 ID 이동이므로, 작은 ID 순서대로 처리하면...
+            # 예: 2제거. 3->2, 4->3.
+            # 3->2 처리 시 2는 이미 삭제됨(removed). OK.
+            # 4->3 처리 시 3은 이미 '2'로 갔음. OK.
+            # 따라서 작은 new_id 순서대로 처리하면 됨.
+            
+            sorted_mapping = sorted(id_mapping.items(), key=lambda x: x[1]) # new_id 오름차순
+            
+            for old_id, new_id in sorted_mapping:
+                old_f_path = frames_dir / video_id / str(old_id)
+                new_f_path = frames_dir / video_id / str(new_id)
+                
+                if old_f_path.exists():
+                    if new_f_path.exists():
+                        print(f"    ⚠️ Conflict: {new_f_path} already exists. Skipping move {old_id}->{new_id}")
+                    else:
+                        try:
+                            old_f_path.rename(new_f_path)
+                            print(f"    📂 Moved Frames: {old_id} -> {new_id}")
+                        except Exception as e:
+                            print(f"    ❌ Move failed: {e}")
+
+                # Thumbnail 처리
+                # 파일명: {video_id}-{old_id}.ext
+                # glob으로 찾기
+                for t_file in thumb_dir.glob(f"{video_id}-{old_id}.*"):
+                    ext = t_file.suffix
+                    new_t_name = f"{video_id}-{new_id}{ext}"
+                    new_t_path = thumb_dir / new_t_name
                     try:
-                        shutil.rmtree(frame_path)
-                    except Exception as e:
-                        print(f"    Error deleting frames: {e}")
+                        t_file.rename(new_t_path)
+                        # print(f"    🖼️ Renamed Thumb: {old_id} -> {new_id}")
+                    except: pass
 
 if __name__ == "__main__":
     cleanup_channel("tzuyang")
