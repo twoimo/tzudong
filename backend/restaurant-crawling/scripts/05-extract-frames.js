@@ -20,7 +20,7 @@
  * --fps       : 초당 추출 프레임 수 (기본: 1.0)
  * --buffer    : 피크 지점 기준 앞뒤 여유 시간(초) (기본: 0.0)
  * --quality   : 다운로드 화질 (예: 1080p,720p,360p) (기본: 360p) - 쉼표로 구분하여 다중 지정 가능
- * --ext       : 이미지 포맷 (webp, png, jpg, bmp) (기본: webp)
+ * --ext       : 이미지 포맷 (예: webp,png,jpg) (기본: webp) - 쉼표로 구분하여 다중 지정 가능
  */
 
 import fs from 'fs';
@@ -55,7 +55,7 @@ function parseArgs() {
         fps: 1.0,
         buffer: 0.0,
         quality: ['360p'], // 배열로 변경
-        ext: 'webp' // 기본 포맷: WebP (무손실)
+        ext: ['webp'] // 배열로 변경
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -65,7 +65,7 @@ function parseArgs() {
             case '--fps': params.fps = parseFloat(args[++i]); break;
             case '--buffer': params.buffer = parseFloat(args[++i]); break;
             case '--quality': params.quality = args[++i].split(','); break; // 콤마로 구분하여 배열로 변환
-            case '--ext': params.ext = args[++i].toLowerCase(); break; // jpg, png, webp, bmp
+            case '--ext': params.ext = args[++i].toLowerCase().split(','); break; // 콤마로 구분하여 배열로 변환
             case '--delete-cache': params.deleteCache = true; break;
         }
     }
@@ -515,7 +515,10 @@ async function processSingleVideo(videoId, params) {
 
     // 모든 화질에 대해 반복 처리
     const qualities = Array.isArray(quality) ? quality : [quality];
+    const extensions = Array.isArray(ext) ? ext : [ext];
+
     log('info', `🎯 처리할 화질 목록: [${qualities.join(', ')}]`);
+    log('info', `🎨 처리할 포맷 목록: [${extensions.join(', ')}]`);
 
     for (const currentQuality of qualities) {
         log('info', `\n🚀 화질 처리 시작: ${currentQuality}`);
@@ -535,12 +538,16 @@ async function processSingleVideo(videoId, params) {
                 continue; // 다음 화질 처리
             }
 
-            // 3. 프레임 추출
+            // 3. 프레임 추출 (모든 확장자에 대해 반복)
             const recollectId = getMetaRecollectId(channel, videoId);
             const outputDir = getFramesOutputDir(channel, videoId, recollectId);
-            await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, ext);
+
+            for (const currentExt of extensions) {
+                await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
+            }
 
             // [옵션] 작업 완료 후 캐시 삭제 (디스크 공간 확보용)
+            // 주의: 모든 확장자 처리가 끝난 후 삭제해야 함
             if (params.deleteCache && videoPath.startsWith(VIDEO_CACHE_DIR)) {
                 try {
                     fs.unlinkSync(videoPath);
@@ -592,7 +599,7 @@ async function main() {
         params.url = `https://www.youtube.com/watch?v=${videoId}`;
 
         log('info', `=== 비디오 Frame 추출 시작: ${videoId} ===`);
-        log('info', `설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality.join(', ')}, 포맷=${params.ext.toUpperCase()}`);
+        log('info', `설정: FPS=${params.fps}, Buffer=${params.buffer}초, 화질=${params.quality.join(', ')}, 포맷=${params.ext.join(', ').toUpperCase()}`);
 
         if (params.channel === 'manual') {
             fs.mkdirSync(path.join(BASE_DATA_DIR, 'manual'), { recursive: true });
