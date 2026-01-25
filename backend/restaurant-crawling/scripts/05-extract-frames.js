@@ -364,25 +364,34 @@ async function downloadVideo(videoId, outputDir, quality) {
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
     const cmd = `python -m yt_dlp ${cookieArg} --js-runtimes "node:${nodePath}" --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
-    log('info', `📥 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) [Python Module + NoPart + Auto Format]`);
-    try {
-        await execPromise(cmd);
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            log('info', `📥 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) [시도 ${attempt}/${maxRetries}]`);
+            await execPromise(cmd);
 
-        // 다운로드된 파일 찾기
-        const files = fs.readdirSync(outputDir);
-        const videoFile = files.find(f => f.startsWith(videoId) && (f.endsWith('.mp4') || f.endsWith('.webm') || f.endsWith('.mkv')));
+            // 다운로드된 파일 찾기
+            const files = fs.readdirSync(outputDir);
+            const videoFile = files.find(f => f.startsWith(videoId) && (f.endsWith('.mp4') || f.endsWith('.webm') || f.endsWith('.mkv')));
 
-        if (videoFile) {
-            return path.join(outputDir, videoFile);
+            if (videoFile) {
+                return path.join(outputDir, videoFile);
+            }
+
+            log('warn', `❌ 다운로드 완료 보고되었으나 파일 없음 (재시도 대기...)`);
+
+        } catch (e) {
+            log('warn', `❌ 다운로드 실패 (시도 ${attempt}/${maxRetries}): ${e.message}`);
         }
 
-        log('error', '❌ 파일 다운로드는 완료되었으나 파일을 찾을 수 없습니다.');
-        return null;
-
-    } catch (e) {
-        log('error', `❌ 다운로드 실패: ${e.message}`);
-        return null;
+        // 재시도 전 대기 (2초)
+        if (attempt < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
     }
+
+    log('error', '❌ 최대 재시도 횟수 초과. 다운로드 포기.');
+    return null;
 }
 
 // [수정] quality 인자 추가
@@ -401,9 +410,9 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
     const ext = compress ? 'png' : 'bmp';
     log('info', `🖼️ 이미지 포맷 설정: ${ext.toUpperCase()} (압축: ${compress ? 'ON' : 'OFF'})`);
 
-    for (let i = 0; i < segments.length; i++) {
-        const seg = segments[i];
-
+    // [최적화] Promise.all을 사용하여 모든 구간을 병렬로 처리 (CPU 활용 극대화)
+    // 주의: FFMPEG는 로컬 작업이므로 유튜브 네트워크 요청 제한과 무관함 -> 안심하고 병렬 처리 가능
+    await Promise.all(segments.map(async (seg, i) => {
         // [수정] 피크 지점 기준이 아닌, 마커의 전체 범위(startSec ~ endSec)에 버퍼를 더한 구간 추출
         const startTime = Math.max(0, seg.startSec - bufferSec);
         const endTime = Math.min(duration || 99999, seg.endSec + bufferSec);
@@ -417,7 +426,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
         const segDirPath = path.join(outputBaseDir, segDirName, ext, configDirName);
         fs.mkdirSync(segDirPath, { recursive: true });
 
-        log('info', `   ✂️ 구간 추출 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 (Peak: ${seg.peakSec.toFixed(1)}s) -> .../${ext}/${configDirName}`);
+        log('info', `   ✂️ 구간 추출 시작 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 -> .../${configDirName}`);
 
         let segDuration = endTime - startTime;
         if (segDuration < (1.0 / fps)) {
@@ -445,12 +454,12 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
                     count++;
                 }
             }
-            log('info', `      ✅ 추출 완료: ${count}장`);
+            log('info', `      ✅ 추출 완료 [${i + 1}/${segments.length}]: ${count}장`);
 
         } catch (e) {
-            log('error', `      ❌ FFmpeg 오류: ${e.message}`);
+            log('error', `      ❌ FFmpeg 오류 [${i + 1}/${segments.length}]: ${e.message}`);
         }
-    }
+    }));
 }
 
 async function processSingleVideo(videoId, params) {
