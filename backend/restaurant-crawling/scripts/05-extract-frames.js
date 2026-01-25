@@ -434,7 +434,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
     // 확장자별 FFMPEG 인코딩 옵션 설정
     let encodingOpts = '';
     if (ext === 'webp') {
-        encodingOpts = '-c:v libwebp -lossless 1'; // WebP 무손실
+        encodingOpts = '-c:v libwebp -lossless 1 -q:v 100'; // WebP 무손실 + 최대 압축 (용량 최소화)
     } else if (ext === 'png') {
         encodingOpts = '-c:v png -compression_level 3'; // PNG (속도/압축 균형)
     } else if (ext === 'jpg' || ext === 'jpeg') {
