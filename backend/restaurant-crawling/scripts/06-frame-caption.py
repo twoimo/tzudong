@@ -16,10 +16,15 @@ frame-caption/{video_id}.jsonl로 저장합니다.
 
 import json
 import os
+
+# MPS 메모리 제한 해제 (시스템 메모리 최대한 사용)
+os.environ["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
+
 import re
 import glob
 import argparse
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from PIL import Image
 import torch
@@ -61,7 +66,9 @@ def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:
     """
     세그먼트 폴더에서 모든 jpg 프레임 로드 (시간순 정렬)
     """
-    frame_files = sorted(segment_path.glob("*.jpg"), key=lambda x: int(x.stem))
+    # .webp 또는 .jpg 파일 검색 (webp 우선)
+    frame_files = list(segment_path.glob("*.webp")) + list(segment_path.glob("*.jpg"))
+    frame_files = sorted(frame_files, key=lambda x: int(x.stem))
     frames = []
     for f in frame_files:
         try:
@@ -74,7 +81,9 @@ def load_frames_from_segment(segment_path: Path) -> list[Image.Image]:
 
 def get_frame_paths(segment_path: Path) -> list[str]:
     """세그먼트 폴더 내 프레임 경로 목록 반환"""
-    frame_files = sorted(segment_path.glob("*.jpg"), key=lambda x: int(x.stem))
+    # .webp 또는 .jpg 파일 검색
+    frame_files = list(segment_path.glob("*.webp")) + list(segment_path.glob("*.jpg"))
+    frame_files = sorted(frame_files, key=lambda x: int(x.stem))
     return [str(f) for f in frame_files]
 
 
@@ -122,7 +131,7 @@ def generate_caption(
     model,
     processor,
     frames: list[Image.Image],
-    prompt: str = "이 장면은 어떤 상황인지 한국어로 간결하게 설명해주세요.",
+    prompt: str = "이 장면의 촬영 구도와 상황(누가, 무엇을, 어떻게)을 한국어로 자세하게 설명해주세요.",
 ) -> str:
     """
     프레임들을 기반으로 캡션 생성
@@ -149,7 +158,7 @@ def generate_caption(
         videos=[frames],  # 프레임 리스트를 비디오로 전달
         return_tensors="pt",
         padding=True,
-    ).to(model.device)
+    ).to(model.device, dtype=torch.float16)
 
     # 생성
     with torch.no_grad():
@@ -208,7 +217,10 @@ def process_video_frames(
 
     processed_count = 0
 
-    # recollect_id 폴더들 순회
+    # 병렬 처리를 위한 작업 큐 생성
+    tasks = []
+
+    # 1. 모든 작업 수집
     for recollect_folder in sorted(video_frames_path.iterdir()):
         if not recollect_folder.is_dir():
             continue
@@ -218,60 +230,86 @@ def process_video_frames(
         except ValueError:
             continue
 
-        # 세그먼트 폴더들 순회 (순번_시작초_끝초)
         for segment_folder in sorted(recollect_folder.iterdir()):
             if not segment_folder.is_dir():
                 continue
 
             segment_info = parse_segment_folder(segment_folder.name)
             if not segment_info:
-                print(f"⚠️ 잘못된 세그먼트 폴더명: {segment_folder.name}")
                 continue
 
             rank = segment_info["rank"]
-
-            # 이미 처리된 세그먼트는 스킵
             if (recollect_id, rank) in existing_segments:
-                print(
-                    f"⏭️ 스킵 {video_id}/{recollect_id}/{segment_folder.name} (이미 처리됨)"
-                )
                 continue
 
-            # 프레임 로드
-            frames = load_frames_from_segment(segment_folder)
-            if not frames:
-                print(f"⚠️ 프레임 없음: {segment_folder}")
-                continue
-
-            frame_paths = get_frame_paths(segment_folder)
-
-            print(
-                f"📸 처리 중 {video_id}/{recollect_id}/{segment_folder.name} ({len(frames)}개 프레임)"
+            tasks.append(
+                {
+                    "video_id": video_id,
+                    "recollect_id": recollect_id,
+                    "rank": rank,
+                    "start_sec": segment_info["start_sec"],
+                    "end_sec": segment_info["end_sec"],
+                    "folder": segment_folder,
+                }
             )
 
-            # 캡션 생성
+    if not tasks:
+        return 0
+
+    # 2. 병렬 로딩 및 순차 처리 (Prefetching 효과)
+    # 이미지 로딩(I/O, CPU)은 멀티스레드로 미리 하고, 추론(GPU)은 메인 스레드에서 순차적으로 수행
+
+    processed_count = 0
+
+    print(f"🔄 작업 수집 완료: {len(tasks)}개 세그먼트 (병렬 처리 시작)", flush=True)
+
+    # 최대 1개 세그먼트만 미리 로딩 (메모리 절약을 위해 직렬 처리로 변경)
+    # MPS OOM 방지를 위해 동시 실행 제한
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        # Future -> Task 매핑
+        future_to_task = {
+            executor.submit(load_frames_from_segment, task["folder"]): task
+            for task in tasks
+        }
+
+        # 완료되는대로 순서 상관없이 처리 (어차피 결과는 JSONL에 append)
+        for future in as_completed(future_to_task):
+            task = future_to_task[future]
+
             try:
+                frames = future.result()
+                if not frames:
+                    print(f"⚠️ 프레임 없음: {task['folder']}")
+                    continue
+
+                frame_paths = get_frame_paths(task["folder"])
+
+                print(
+                    f"📸 처리 중 {task['video_id']}/{task['recollect_id']}/{task['rank']} ({len(frames)}장)"
+                )
+
+                # GPU 추론 (메인 프로세스)
                 caption = generate_caption(model, processor, frames, prompt)
                 print(f"   💬 캡션: {caption[:100]}...")
+
+                # 저장
+                result = {
+                    "video_id": task["video_id"],
+                    "recollect_id": task["recollect_id"],
+                    "rank": task["rank"],
+                    "start_sec": task["start_sec"],
+                    "end_sec": task["end_sec"],
+                    "frames": frame_paths,
+                    "caption": caption,
+                }
+
+                with open(caption_path, "a", encoding="utf-8") as f:
+                    f.write(json.dumps(result, ensure_ascii=False) + "\n")
+
+                processed_count += 1
+
             except Exception as e:
-                print(f"❌ 캡션 생성 실패: {e}")
-                caption = ""
-
-            # 결과 저장
-            result = {
-                "video_id": video_id,
-                "recollect_id": recollect_id,
-                "rank": rank,
-                "start_sec": segment_info["start_sec"],
-                "end_sec": segment_info["end_sec"],
-                "frames": frame_paths,
-                "caption": caption,
-            }
-
-            with open(caption_path, "a", encoding="utf-8") as f:
-                f.write(json.dumps(result, ensure_ascii=False) + "\n")
-
-            processed_count += 1
+                print(f"❌ 처리 실패 {task['folder']}: {e}")
 
     return processed_count
 
@@ -295,14 +333,14 @@ def main():
     parser.add_argument(
         "--prompt",
         type=str,
-        default="이 음식 영상 장면에서 무엇이 보이는지 한국어로 간결하게 설명해주세요. 음식, 장소, 상황을 포함해 주세요.",
+        default="이 장면의 촬영 구도와 상황(누가, 무엇을, 어떻게)을 한국어로 자세하게 설명해주세요.",
         help="Caption generation prompt",
     )
     parser.add_argument(
         "--device",
         type=str,
-        default="cuda",
-        help="Device (cuda or cpu)",
+        default=None,
+        help="Device (cuda, mps, or cpu). If not specified, auto-detects.",
     )
     parser.add_argument(
         "--video_id",

@@ -205,12 +205,52 @@ def add_peak_metadata_to_documents(docs_dir: Path, heatmap_dir: Path) -> dict:
 
                         # 해당 recollect_id의 heatmap 찾기
                         heatmap_data = heatmap_by_id.get(doc_recollect_id)
+                        matched_recollect_id = (
+                            doc_recollect_id if heatmap_data else None
+                        )
+
+                        # fallback 로직: 매칭되는 heatmap이 없으면 duration이 같은 *가장 최신(recollect_id가 큰)* 히트맵 찾기
                         if not heatmap_data:
-                            # 매칭되는 heatmap이 없으면 기본값 설정
+                            # 문서의 duration 확인 (첫 번째 문서 기준)
+                            doc_duration = docs[0].get("metadata", {}).get("duration")
+
+                            if doc_duration:
+                                # heatmap_by_id 키(recollect_id)를 정렬하여 doc_recollect_id보다 큰 것들 탐색
+                                sorted_recollect_ids = sorted(
+                                    [
+                                        rid
+                                        for rid in heatmap_by_id.keys()
+                                        if rid > doc_recollect_id
+                                    ]
+                                )
+
+                                for rid in sorted_recollect_ids:
+                                    candidate_data = heatmap_by_id[rid]
+                                    candidate_duration = candidate_data.get("duration")
+
+                                    # duration이 같으면 후보로 채택하고 계속 탐색 (더 큰 ID가 있을 수 있으므로)
+                                    if candidate_duration == doc_duration:
+                                        heatmap_data = candidate_data
+                                        matched_recollect_id = rid
+
+                                    # duration이 달라지는 순간, 그 이후는 다른 버전이므로 탐색 중단
+                                    elif (
+                                        candidate_duration is not None
+                                        and candidate_duration != doc_duration
+                                    ):
+                                        break
+
+                        # (로그용) Fallback 매칭 확인
+                        # if matched_recollect_id and matched_recollect_id != doc_recollect_id:
+                        #     print(f"  ↪️ Fallback 매칭 ({video_id}): doc={doc_recollect_id} -> heatmap={matched_recollect_id}")
+
+                        if not heatmap_data:
+                            # 여전히 매칭되는 heatmap이 없으면 기본값 설정
                             for doc in docs:
                                 metadata = doc.get("metadata", {})
                                 metadata["is_peak"] = False
                                 metadata["peak_score"] = 0.0
+                                metadata["matched_heatmap_recollect_id"] = None
                                 doc["metadata"] = metadata
                                 stats["total_docs"] += 1
                                 stats["non_peak_docs"] += 1
@@ -237,6 +277,9 @@ def add_peak_metadata_to_documents(docs_dir: Path, heatmap_dir: Path) -> dict:
 
                             metadata["is_peak"] = is_peak
                             metadata["peak_score"] = round(peak_score, 4)
+                            metadata["matched_heatmap_recollect_id"] = (
+                                matched_recollect_id
+                            )
                             doc["metadata"] = metadata
 
                             stats["total_docs"] += 1
@@ -251,10 +294,43 @@ def add_peak_metadata_to_documents(docs_dir: Path, heatmap_dir: Path) -> dict:
                         metadata = docs.get("metadata", {})
                         doc_recollect_id = metadata.get("recollect_id", 0)
 
+                        # 해당 recollect_id의 heatmap 찾기
                         heatmap_data = heatmap_by_id.get(doc_recollect_id)
+                        matched_recollect_id = (
+                            doc_recollect_id if heatmap_data else None
+                        )
+
+                        # fallback 로직 (단일 문서)
+                        if not heatmap_data:
+                            doc_duration = metadata.get("duration")
+                            if doc_duration:
+                                sorted_recollect_ids = sorted(
+                                    [
+                                        rid
+                                        for rid in heatmap_by_id.keys()
+                                        if rid > doc_recollect_id
+                                    ]
+                                )
+                                for rid in sorted_recollect_ids:
+                                    candidate_data = heatmap_by_id[rid]
+                                    candidate_duration = candidate_data.get("duration")
+
+                                    # duration이 같으면 후보로 채택 (더 최신 것이 있으면 덮어씀)
+                                    if candidate_duration == doc_duration:
+                                        heatmap_data = candidate_data
+                                        matched_recollect_id = rid
+
+                                    # duration 달라지면 중단
+                                    elif (
+                                        candidate_duration is not None
+                                        and candidate_duration != doc_duration
+                                    ):
+                                        break
+
                         if not heatmap_data:
                             metadata["is_peak"] = False
                             metadata["peak_score"] = 0.0
+                            metadata["matched_heatmap_recollect_id"] = None
                             docs["metadata"] = metadata
                             stats["total_docs"] += 1
                             stats["non_peak_docs"] += 1
@@ -279,6 +355,7 @@ def add_peak_metadata_to_documents(docs_dir: Path, heatmap_dir: Path) -> dict:
 
                         metadata["is_peak"] = is_peak
                         metadata["peak_score"] = round(peak_score, 4)
+                        metadata["matched_heatmap_recollect_id"] = matched_recollect_id
                         docs["metadata"] = metadata
 
                         stats["total_docs"] += 1

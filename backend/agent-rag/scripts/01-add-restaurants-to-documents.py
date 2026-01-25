@@ -14,17 +14,19 @@ import os
 import re
 from pathlib import Path
 from collections import defaultdict
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import os
+import re
+from pathlib import Path
+from collections import defaultdict
+from supabase import create_client, Client
+from dotenv import load_dotenv
 
-# 로컬 PostgreSQL 설정
-LOCAL_DB = {
-    "host": "localhost",
-    "port": 5432,
-    "database": "tzudong",
-    "user": "postgres",
-    "password": "password",
-}
+# .env 로드
+load_dotenv()
+
+# Supabase 설정
+SUPABASE_URL = os.getenv("PUBLIC_SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
 # 경로 설정
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -53,31 +55,25 @@ def extract_video_id_from_youtube_link(youtube_link: str) -> str | None:
     return None
 
 
-def get_restaurants_by_video_id(conn) -> dict[str, list[dict]]:
+def get_restaurants_by_video_id(supabase: Client) -> dict[str, list[dict]]:
     """
-    Docker PostgreSQL에서 approved 음식점을 video_id별로 그룹화하여 반환
+    Supabase에서 approved 음식점을 video_id별로 그룹화하여 반환
 
     Returns:
         {video_id: [{"origin_name": "...", "approved_name": "..."}, ...]}
     """
-    print("📥 Docker PostgreSQL에서 음식점 조회 중...")
-
-    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    print("📥 Supabase에서 음식점 조회 중...")
 
     # approved 상태인 음식점만 조회
-    cursor.execute(
-        """
-        SELECT 
-            youtube_link,
-            origin_name,
-            approved_name
-        FROM restaurants 
-        WHERE status = 'approved'
-        AND youtube_link IS NOT NULL
-    """
+    result = (
+        supabase.table("restaurants")
+        .select("youtube_link, origin_name, approved_name")
+        .eq("status", "approved")
+        .not_.is_("youtube_link", "null")
+        .execute()
     )
 
-    rows = cursor.fetchall()
+    rows = result.data
     print(f"  총 {len(rows)}개 approved 음식점 조회됨")
 
     # video_id별로 그룹화
@@ -93,6 +89,7 @@ def get_restaurants_by_video_id(conn) -> dict[str, list[dict]]:
                 }
             )
 
+    # 딕셔너리로 변환하여 반환
     print(f"  {len(video_restaurants)}개 video_id에 음식점 매핑됨")
     return dict(video_restaurants)
 
@@ -207,30 +204,30 @@ def verify_output():
 
 def main():
     print("=" * 60)
-    print("자막 문서에 음식점 정보 추가")
+    print("자막 문서에 음식점 정보 추가 (Supabase)")
     print("=" * 60)
 
-    # 1. PostgreSQL 연결
-    print("\n🔌 Docker PostgreSQL 연결 중...")
-    conn = psycopg2.connect(**LOCAL_DB)
+    # 1. Supabase 연결
+    if not SUPABASE_URL or not SUPABASE_KEY:
+        print("❌ SUPABASE_URL 또는 SUPABASE_SERVICE_ROLE_KEY가 없습니다")
+        return
+
+    print(f"\n🔌 Supabase 연결: {SUPABASE_URL}")
+    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("✅ 연결 성공")
 
-    try:
-        # 2. 음식점 조회
-        video_restaurants = get_restaurants_by_video_id(conn)
+    # 2. 음식점 조회
+    video_restaurants = get_restaurants_by_video_id(supabase)
 
-        # 3. 문서 처리
-        process_documents(video_restaurants)
+    # 3. 문서 처리
+    process_documents(video_restaurants)
 
-        # 4. 검증
-        verify_output()
+    # 4. 검증
+    verify_output()
 
-        print("\n" + "=" * 60)
-        print("✅ 완료!")
-        print("=" * 60)
-
-    finally:
-        conn.close()
+    print("\n" + "=" * 60)
+    print("✅ 완료!")
+    print("=" * 60)
 
 
 if __name__ == "__main__":

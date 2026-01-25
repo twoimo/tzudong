@@ -279,9 +279,9 @@ def embed_and_store(supabase: Client, documents: list[dict], batch_size: int = 5
                     }
                 )
 
-            # upsert로 중복 처리
+            # upsert로 중복 처리 (버전별 저장)
             supabase.table("document_embeddings").upsert(
-                records, on_conflict="video_id,chunk_index"
+                records, on_conflict="video_id,chunk_index,recollect_id"
             ).execute()
 
             inserted += len(batch)
