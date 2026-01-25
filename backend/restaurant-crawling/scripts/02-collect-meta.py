@@ -520,6 +520,18 @@ def collect_channel_meta(
             # 2. 변경 사항 감지 -> List[str] (viral 포함)
             recollect_vars = detect_changes(current_meta, previous_meta, channel_path, vid)
             is_changed = bool(recollect_vars)
+
+            # [수정] 오늘 이미 수집되었는지 확인 (중복 수집 방지)
+            already_collected_today = False
+            if previous_meta and previous_meta.get("collected_at"):
+                try:
+                    last_collected_str = previous_meta.get("collected_at")
+                    # 타임존 처리 (ISO 포맷)
+                    last_dt = datetime.fromisoformat(last_collected_str.replace("Z", "+00:00")).astimezone(KST)
+                    if last_dt.date() == datetime.now(KST).date():
+                        already_collected_today = True
+                except Exception:
+                    pass
             
             # 3. 스케줄링 결정
             schedule_reason = None
@@ -562,6 +574,11 @@ def collect_channel_meta(
                 prev_id = previous_meta.get("recollect_id", 0)
                 if not check_thumbnail_exists(channel_path, vid, prev_id):
                     save_thumbnail_file(channel_path, vid, prev_id, current_meta.get("thumbnail_url"))
+                continue
+
+            # [수정] 변경사항 없이 스케줄링에 의한 수집인 경우, 하루 1회만 허용
+            if not is_changed and is_scheduled and already_collected_today:
+                logger.debug(f"  ⏭️ 오늘 이미 수집됨 (스킵): {vid}")
                 continue
 
             # 5. 수집 확정 -> ID 계산
