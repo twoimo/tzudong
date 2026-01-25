@@ -54,7 +54,8 @@ function parseArgs() {
         fps: 1.0,
         buffer: 0.0,
         quality: ['360p'], // 배열로 변경
-        ext: ['jpg'] // 배열로 변경
+        ext: ['jpg'], // 배열로 변경
+        force: false // [추가] 기본값 false
     };
 
     for (let i = 0; i < args.length; i++) {
@@ -66,6 +67,7 @@ function parseArgs() {
             case '--quality': params.quality = args[++i].split(','); break; // 콤마로 구분하여 배열로 변환
             case '--ext': params.ext = args[++i].toLowerCase().split(','); break; // 콤마로 구분하여 배열로 변환
             case '--delete-cache': params.deleteCache = true; break;
+            case '--force': params.force = true; break; // [추가] 강제 수집 플래그
         }
     }
     return params;
@@ -175,7 +177,8 @@ function getMetaInfo(channelName, videoId) {
     return null;
 }
 
-function shouldCollect(channelName, videoId) {
+// [수정] ignoreExisting 파라미터 추가
+function shouldCollect(channelName, videoId, ignoreExisting = false) {
     const metaInfo = getMetaInfo(channelName, videoId);
     let metaRecollectId = -1;
     let recollectVars = [];
@@ -214,6 +217,11 @@ function shouldCollect(channelName, videoId) {
         // 하지만 04 스크립트 로직에 따르면 5일 미만은 무조건 false 입니다.
         log('info', `[스킵] ${videoId}: 게시 후 5일 미만 (${diffDays}일)`);
         return false;
+    }
+
+    // [수정] 강제 수집 모드일 경우 기존 파일 확인 스킵
+    if (ignoreExisting) {
+        return true;
     }
 
     // 이미 프레임이 추출된 상태인지 확인 (recollect_id 비교)
@@ -640,16 +648,67 @@ async function processSingleVideo(videoId, params) {
         // 다운로드 및 처리 로직
         let videoPath = null;
         try {
+            // [최적화] 스마트 재개: 이미 모든 구간의 프레임이 추출되어 있다면 다운로드/추출 스킵
+            const recollectId = getMetaRecollectId(channel, videoId);
+            const outputDir = getFramesOutputDir(channel, videoId, recollectId);
+            const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
+            const configDirName = `${currentQuality}_${fpsStr}fps`;
+
+            let allSegmentsExist = true;
+            for (const currentExt of extensions) {
+                // 하나라도 구간이 없으면 다시 진행
+                const segmentCheck = segments.every((seg, i) => {
+                    const startTime = Math.max(0, seg.startSec - buffer);
+                    // duration 몰라도 폴더명 매칭을 위해 대략적 추론 or 단순 존재 여부 체크
+                    // 정확한 폴더명을 알기 어려우므로(duration 필요), 
+                    // 해당 recollectId 폴더 내에 configDirName을 포함한 경로가 세그먼트 수만큼 있는지 체크는 복잡.
+                    // 대신 extractFrames 내부 스킵 로직에 의존하되, 여기서는 '비디오 다운로드'를 막는게 핵심.
+                    // 간단히: outputDir 내의 폴더들을 뒤져서 configDirName을 가진 폴더가 segments.length 만큼 되는지 확인?
+                    return false; // 구현 복잡도로 인해 아래 로직으로 대체
+                });
+
+                // 더 확실한 방법: 이미 추출된 폴더 개수 확인
+                // 구조: frames/VID/RID/SEG/EXT/CONF
+                // SEG 폴더들을 순회하며 EXT/CONF가 있는지 확인
+                if (!fs.existsSync(outputDir)) {
+                    allSegmentsExist = false;
+                    break;
+                }
+
+                const segDirs = fs.readdirSync(outputDir);
+                // 세그먼트 폴더 개수가 히트맵 구간 수와 비슷하거나 같다고 가정
+                let completedSegs = 0;
+                for (const sd of segDirs) {
+                    const targetPath = path.join(outputDir, sd, currentExt, configDirName);
+                    if (fs.existsSync(targetPath) && fs.readdirSync(targetPath).length > 0) {
+                        completedSegs++;
+                    }
+                }
+
+                if (completedSegs < segments.length) {
+                    allSegmentsExist = false;
+                    break;
+                }
+            }
+
+            if (allSegmentsExist) {
+                log('info', `⏭️ [스마트 스킵] ${videoId}: 이미 ${currentQuality} 프레임 수집 완료됨.`);
+                continue;
+            }
+
             videoPath = await downloadVideo(videoId, tempDir, currentQuality);
 
             if (!videoPath) {
                 log('error', `❌ 비디오 파일 확보 실패 (${currentQuality}). 건너뜁니다.`);
+                logFailedUrl(channel, url); // [추가] 실패 로깅
                 continue; // 다음 화질 처리
             }
 
             // 3. 프레임 추출 (모든 확장자에 대해 반복)
-            const recollectId = getMetaRecollectId(channel, videoId);
-            const outputDir = getFramesOutputDir(channel, videoId, recollectId);
+            // [수정] 위에서 이미 선언했으므로 재사용
+            // const recollectId = ... 
+            // const outputDir = ... 
+
 
             for (const currentExt of extensions) {
                 await extractFrames(videoPath, segments, outputDir, currentQuality, fps, buffer, currentExt);
@@ -691,6 +750,17 @@ async function processSingleVideo(videoId, params) {
                 log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
             }
         }
+    }
+}
+
+// [추가] 실패한 URL 로깅 함수
+function logFailedUrl(channel, url) {
+    const failedPath = path.join(getChannelDir(channel), 'failed_urls.txt');
+    try {
+        fs.appendFileSync(failedPath, url + '\n', 'utf8');
+        log('info', `📝 실패 목록에 추가됨: ${failedPath}`);
+    } catch (e) {
+        log('error', `실패 목록 저장 실패: ${e.message}`);
     }
 }
 
@@ -765,15 +835,23 @@ async function processBatch(params) {
             continue;
         }
 
-        if (shouldCollect(channel, videoId)) {
+        if (shouldCollect(channel, videoId, params.force)) { // [수정] force 플래그 전달
             log('info', `\n--- [${processedCount + 1}] 처리 시작: ${videoId} ---`);
             params.url = url; // 현재 URL 설정
             await processSingleVideo(videoId, params);
             processedCount++;
 
-            // IP 차단 방지 딜레이 (1 ~ 3초)
-            const delay = 1000 + Math.random() * 2000;
+            // IP 차단 방지 딜레이 강화 (10 ~ 30초)
+            const delay = 10000 + Math.random() * 20000;
+            log('info', `⏳ 대기: ${(delay / 1000).toFixed(1)}초...`);
             await new Promise(r => setTimeout(r, delay));
+
+            // [추가] 10개마다 긴 휴식 (1분 ~ 3분)
+            if (processedCount % 10 === 0) {
+                const longPause = 60000 + Math.random() * 120000;
+                log('info', `☕ 긴 휴식 (IP 차단 방지): ${(longPause / 1000).toFixed(1)}초...`);
+                await new Promise(r => setTimeout(r, longPause));
+            }
         } else {
             skippedCount++;
             // log('info', `[스킵] ${videoId} (수집 조건 미달)`);
