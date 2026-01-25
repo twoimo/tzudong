@@ -185,6 +185,13 @@ function shouldCollect(channelName, videoId) {
         metaRecollectId = metaInfo.recollect_id !== undefined ? metaInfo.recollect_id : 0;
         recollectVars = metaInfo.recollect_vars || [];
         publishedAt = metaInfo.published_at;
+
+        // [추가] 180초(3분) 미만 영상은 Shorts로 간주하여 자동 수집 제외
+        const duration = metaInfo.duration || 0;
+        if (duration < 180) {
+            log('info', `[스킵] ${videoId}: 3분 미만 영상 (${duration}초)`);
+            return false;
+        }
     } else {
         // 메타 정보 없으면 수집 대상 (또는 정책에 따라 스킵 할 수도 있음)
         // 여기서는 일단 수집 시도 (히트맵 수집 과정에서 메타 없으면 어차피 실패할 수 있음)
