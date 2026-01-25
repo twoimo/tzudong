@@ -528,7 +528,13 @@ async function processSingleVideo(videoId, params) {
         if (params.deleteCache && videoPath.startsWith(VIDEO_CACHE_DIR)) {
             try {
                 fs.unlinkSync(videoPath);
-                log('info', `🗑️ 비디오 캐시 삭제 완료: ${videoPath}`);
+                log('info', `🗑️ 비디오 캐시 파일 삭제 완료: ${videoPath}`);
+
+                // 폴더가 비었으면 폴더도 삭제
+                if (fs.readdirSync(VIDEO_CACHE_DIR).length === 0) {
+                    fs.rmdirSync(VIDEO_CACHE_DIR);
+                    log('info', `🗑️ 비디오 캐시 폴더 삭제 완료: ${VIDEO_CACHE_DIR}`);
+                }
             } catch (e) {
                 log('warn', `캐시 삭제 실패: ${e.message}`);
             }
@@ -537,19 +543,20 @@ async function processSingleVideo(videoId, params) {
     } catch (e) {
         log('error', `오류 발생: ${e.message}`);
     } finally {
-        // 4. 임시 파일 정리 (캐시된 파일은 삭제하지 않음)
-        // videoPath가 캐시 폴더에 있다면 삭제 건너뜀
-        if (videoPath && videoPath.startsWith(VIDEO_CACHE_DIR)) {
-            // log('info', '♻️ 캐시된 파일이므로 삭제하지 않습니다.');
-        } else {
-            try {
-                if (fs.existsSync(tempDir)) {
-                    // Node.js 14.14+ required for recursive: true
-                    fs.rmSync(tempDir, { recursive: true, force: true });
-                }
-            } catch (e) {
-                log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
+        // 4. 임시 파일 정리 (항상 수행)
+        // tempDir은 매번 생성되는 고유 임시 폴더이므로 무조건 삭제해도 안전함 (캐시 폴더와 무관)
+        try {
+            if (fs.existsSync(tempDir)) {
+                fs.rmSync(tempDir, { recursive: true, force: true });
             }
+
+            // 상위 temp_video 폴더가 비어있으면 삭제 시도
+            const parentTempDir = path.dirname(tempDir);
+            if (fs.existsSync(parentTempDir) && fs.readdirSync(parentTempDir).length === 0) {
+                fs.rmdirSync(parentTempDir);
+            }
+        } catch (e) {
+            log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
         }
     }
 }
