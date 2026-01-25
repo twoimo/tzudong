@@ -1,22 +1,21 @@
 /**
- * 유튜브 히트맵 기반 고화질 프레임 추출기 (Node.js 버전)
+ * 유튜브 히트맵 기반 고화질 프레임 추출 및 자동 수집기
  *
- * 이 스크립트는 유튜브 영상의 '가장 많이 다시 본 장면(Heatmap Peak)' 데이터를 분석하여,
+ * 이 스크립트는 유튜브 영상의 '가장 많이 다시 본 장면(Heatmap Peak)'을 분석하여
  * 해당 구간의 고화질 프레임을 자동으로 추출합니다.
  *
- * [주요 기능]
- * 1. 히트맵 데이터 수집: 웹 페이지 파싱을 통해 'Most Replayed' 구간 식별
- * 2. 스마트 다운로드: `yt-dlp`를 사용하여 지정된 화질(기본 1080p)로 영상 다운로드
- * 3. 정밀 프레임 추출: `ffmpeg`를 사용하여 피크 시점 전후(Buffer) 구간을 프레임 단위로 저장
- * 4. 자동 메타데이터 연동: 기존 수집된 메타 정보(recollect_id 등)를 자동으로 감지하여 데이터 일관성 유지
- * 5. 포맷 지원: WebP(기본/무손실), BMP, PNG, JPG 등 다양한 포맷 지원
+ * [실행 모드]
+ * 1. 자동 배치 수집 (Automatic Batch Mode)
+ *    - 사용법: node 05-extract-frames-with-heatmap.js
+ *    - 동작: `urls.txt`의 모든 영상을 순회하며 수집 조건(게시 5일 경과, 역주행 등)을 만족하는 경우에만 실행
  *
- * [사용법]
- * node 05-extract-frames.js --url "https://youtu.be/..." --fps 1 --buffer 0 --quality 360p [--ext webp]
+ * 2. 단일 영상 수집 (Single Video Mode)
+ *    - 사용법: node 05-extract-frames-with-heatmap.js --url "https://youtu.be/..."
+ *    - 동작: 조건과 관계없이 지정된 영상의 프레임을 즉시 추출
  *
  * [옵션]
- * --url       : 대상 유튜브 영상 URL (필수)
- * --channel   : 채널명 (기본: manual)
+ * --url       : 대상 유튜브 영상 URL (생략 시 자동 배치 모드 작동)
+ * --channel   : 채널명 (기본: tzuyang)
  * --fps       : 초당 추출 프레임 수 (기본: 1.0)
  * --buffer    : 피크 지점 기준 앞뒤 여유 시간(초) (기본: 0.0)
  * --quality   : 다운로드 화질 (예: 1080p,720p,360p) (기본: 360p) - 쉼표로 구분하여 다중 지정 가능
