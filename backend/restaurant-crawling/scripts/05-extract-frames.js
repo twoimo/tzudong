@@ -74,12 +74,10 @@ function getChannelDir(channelName) {
     return path.join(BASE_DATA_DIR, channelName);
 }
 
-// 프레임 저장 경로 생성: channel/high_res_frames/videoId/[bmp|png]/quality_fps/
-function getFramesOutputDir(channelName, videoId, quality, fps, compress) {
-    const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
-    const dirName = `${quality}_${fpsStr}fps`;
-    const formatFolder = compress ? 'png' : 'bmp'; // 포맷명을 폴더명으로 사용
-    return path.join(getChannelDir(channelName), 'high_res_frames', videoId, formatFolder, dirName);
+// 프레임 저장 경로: channel/high_res_frames/videoId/recollectId/
+function getFramesOutputDir(channelName, videoId, recollectId) {
+    const rId = recollectId !== undefined && recollectId !== null ? recollectId.toString() : '0';
+    return path.join(getChannelDir(channelName), 'high_res_frames', videoId, rId);
 }
 
 function getHeatmapOutputPath(channelName, videoId) {
@@ -278,6 +276,30 @@ function parseHeatmap(html) {
 
 // 히트맵 데이터 수집 및 저장
 async function fetchAndSaveHeatmap(channel, videoId, url) {
+    const outPath = getHeatmapOutputPath(channel, videoId);
+
+    // [수정] 이미 데이터가 존재하면 다시 수집하지 않고 읽어서 반환 (중복 저장 방지)
+    if (fs.existsSync(outPath)) {
+        try {
+            const lines = fs.readFileSync(outPath, 'utf-8').trim().split('\n');
+            if (lines.length > 0) {
+                const lastLine = lines[lines.length - 1]; // 가장 최신 데이터 사용
+                // 마지막 줄이 완전하지 않을 경우 대비 (간단 체크)
+                if (lastLine.endsWith('}')) {
+                    const existingData = JSON.parse(lastLine);
+                    log('info', `♻️ 기존 히트맵 데이터 사용: ${outPath}`);
+                    return existingData.most_replayed_markers.map(m => ({
+                        startSec: m.startMillis / 1000,
+                        endSec: m.endMillis / 1000,
+                        peakSec: m.peakMillis / 1000
+                    }));
+                }
+            }
+        } catch (e) {
+            log('warn', `기존 파일 읽기 실패 (재수집 진행): ${e.message}`);
+        }
+    }
+
     const cookieHeader = await loadCookies();
     const html = await fetchPage(url, cookieHeader);
     const parsed = parseHeatmap(html);
@@ -310,7 +332,6 @@ async function fetchAndSaveHeatmap(channel, videoId, url) {
         recollect_vars: getRecollectVars(channel, videoId)
     };
 
-    const outPath = getHeatmapOutputPath(channel, videoId);
     fs.appendFileSync(outPath, JSON.stringify(saveData) + '\n', 'utf8');
     log('info', `💾 히트맵 데이터 저장됨: ${outPath} (포인트: ${formattedInteraction.length}개)`);
 
@@ -341,9 +362,9 @@ async function downloadVideo(videoId, outputDir, quality) {
     const outputFileTemplate = path.join(outputDir, `${videoId}.%(ext)s`);
 
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
-    const cmd = `python -m yt_dlp ${cookieArg} --js-runtimes "node:${nodePath}" --remote-components ejs:github -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    const cmd = `python -m yt_dlp ${cookieArg} --js-runtimes "node:${nodePath}" --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
-    log('info', `📥 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) [Python Module + Node.js + Auto Format]`);
+    log('info', `📥 영상 다운로드 시작: ${videoId} (목표 화질: ${height}p) [Python Module + NoPart + Auto Format]`);
     try {
         await execPromise(cmd);
 
@@ -381,28 +402,32 @@ async function extractFrames(videoPath, segments, outputBaseDir, fps, bufferSec,
 
     for (let i = 0; i < segments.length; i++) {
         const seg = segments[i];
-        const startTime = Math.max(0, seg.peakSec - bufferSec);
-        const endTime = Math.min(duration || 99999, seg.peakSec + bufferSec);
+
+        // [수정] 피크 지점 기준이 아닌, 마커의 전체 범위(startSec ~ endSec)에 버퍼를 더한 구간 추출
+        const startTime = Math.max(0, seg.startSec - bufferSec);
+        const endTime = Math.min(duration || 99999, seg.endSec + bufferSec);
 
         const segDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
-        const segDir = path.join(outputBaseDir, segDirName);
-        fs.mkdirSync(segDir, { recursive: true });
 
-        log('info', `   ✂️ 구간 추출 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 -> ${segDirName}`);
+        // 구조: high_res_frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/FORMAT_DIR/frame_x.ext
+        const segDirPath = path.join(outputBaseDir, segDirName, ext);
+        fs.mkdirSync(segDirPath, { recursive: true });
+
+        log('info', `   ✂️ 구간 추출 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 (Peak: ${seg.peakSec.toFixed(1)}s) -> ${segDirName}/${ext}`);
 
         let segDuration = endTime - startTime;
         if (segDuration < (1.0 / fps)) {
             segDuration = 1.0 / fps; // 최소 1프레임 보장
         }
 
-        // ffmpeg 명령 생성: 지정된 fps로 프레임 추출
-        const cmd = `ffmpeg -y -ss ${startTime} -t ${segDuration} -i "${videoPath}" -vf "fps=${fps}" -frame_pts 1 "${path.join(segDir, `frame_%d.${ext}`)}"`;
+        // ffmpeg 명령 생성
+        const cmd = `ffmpeg -y -ss ${startTime} -t ${segDuration} -i "${videoPath}" -vf "fps=${fps}" -frame_pts 1 "${path.join(segDirPath, `frame_%d.${ext}`)}"`;
 
         try {
             await execPromise(cmd);
 
             // 파일명 정리: frame_1.bmp -> 정확한 시간(초).bmp 로 변경
-            const files = fs.readdirSync(segDir).filter(f => f.startsWith('frame_'));
+            const files = fs.readdirSync(segDirPath).filter(f => f.startsWith('frame_'));
             let count = 0;
             for (const file of files) {
                 const match = file.match(new RegExp(`frame_(\\d+)\\.${ext}`));
@@ -412,7 +437,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, fps, bufferSec,
                     const actualTime = startTime + timeOffset;
                     const newName = `${actualTime.toFixed(2)}.${ext}`;
 
-                    fs.renameSync(path.join(segDir, file), path.join(segDir, newName));
+                    fs.renameSync(path.join(segDirPath, file), path.join(segDirPath, newName));
                     count++;
                 }
             }
@@ -436,33 +461,40 @@ async function processSingleVideo(videoId, params) {
 
     log('info', `🔎 ${videoId}: ${segments.length}개의 주요 구간 발견`);
 
-    // 2. 영상 다운로드 (임시 폴더)
-    const tempDir = path.join(getChannelDir(channel), 'temp_video');
-    if (fs.existsSync(tempDir)) {
-        // 기존 임시 파일 정리
-        fs.readdirSync(tempDir).forEach(f => fs.unlinkSync(path.join(tempDir, f)));
-    } else {
-        fs.mkdirSync(tempDir, { recursive: true });
-    }
+    // 2. 영상 다운로드 (임시 폴더) - 파일 잠금 충돌 방지용 랜덤 접미사
+    const uniqueSuffix = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const tempDir = path.join(getChannelDir(channel), 'temp_video', uniqueSuffix);
+    fs.mkdirSync(tempDir, { recursive: true });
 
-    // 다운로드 실행 (경로가 아닌 폴더 전달, 실제 다운로드된 파일 경로 반환)
-    const videoPath = await downloadVideo(videoId, tempDir, quality);
-
-    if (!videoPath) {
-        log('error', '❌ 비디오 파일 확보 실패. 종료합니다.');
-        return;
-    }
-
-    // 3. 프레임 추출
-    const outputDir = getFramesOutputDir(channel, videoId, quality, fps, compress);
-    await extractFrames(videoPath, segments, outputDir, fps, buffer, compress);
-
-    // 4. 임시 파일 정리
+    // 다운로드 및 처리 로직
+    let videoPath = null;
     try {
-        if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
-        if (fs.readdirSync(tempDir).length === 0) fs.rmdirSync(tempDir);
+        videoPath = await downloadVideo(videoId, tempDir, quality);
+
+        if (!videoPath) {
+            log('error', '❌ 비디오 파일 확보 실패. 종료합니다.');
+            return;
+        }
+
+        // 3. 프레임 추출
+        const recollectId = getMetaRecollectId(channel, videoId);
+        const outputDir = getFramesOutputDir(channel, videoId, recollectId);
+        await extractFrames(videoPath, segments, outputDir, fps, buffer, compress);
+
     } catch (e) {
-        log('warn', `청소 중 오류 (치명적이지 않음): ${e.message}`);
+        log('error', `오류 발생: ${e.message}`);
+    } finally {
+        // 4. 임시 파일 정리 (강력 삭제)
+        try {
+            if (fs.existsSync(tempDir)) {
+                // Node.js 14.14+ required for recursive: true
+                // 만약 구버전이면 rmdirSync(tempDir, { recursive: true }) 사용
+                fs.rmdirSync(tempDir, { recursive: true });
+                // log('info', `🧹 임시 폴더 삭제 완료: ${tempDir}`);
+            }
+        } catch (e) {
+            log('warn', `임시 폴더 청소 중 오류 (치명적이지 않음): ${e.message}`);
+        }
     }
 }
 
