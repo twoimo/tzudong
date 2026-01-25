@@ -51,7 +51,7 @@ function parseArgs() {
     const args = process.argv.slice(2);
     const params = {
         url: null,
-        channel: 'manual',
+        channel: 'tzuyang', // 기본 채널 변경: tzuyang
         fps: 1.0,
         buffer: 0.0,
         quality: ['360p'], // 배열로 변경
@@ -153,6 +153,104 @@ function getRecollectVars(channelName, videoId) {
         }
     }
     return [];
+}
+
+function getKSTDate() {
+    const now = new Date();
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    return new Date(utc + (9 * 60 * 60 * 1000));
+}
+
+function getMetaInfo(channelName, videoId) {
+    const metaPath = getMetaOutputPath(channelName, videoId);
+    if (fs.existsSync(metaPath)) {
+        try {
+            const content = fs.readFileSync(metaPath, 'utf-8').trim().split('\n').pop();
+            if (content) {
+                return JSON.parse(content);
+            }
+        } catch (e) {
+            log('warn', `메타 파일 읽기 실패: ${e.message}`);
+        }
+    }
+    return null;
+}
+
+function shouldCollect(channelName, videoId) {
+    const metaInfo = getMetaInfo(channelName, videoId);
+    let metaRecollectId = -1;
+    let recollectVars = [];
+    let publishedAt = null;
+
+    if (metaInfo) {
+        metaRecollectId = metaInfo.recollect_id !== undefined ? metaInfo.recollect_id : 0;
+        recollectVars = metaInfo.recollect_vars || [];
+        publishedAt = metaInfo.published_at;
+    } else {
+        // 메타 정보 없으면 수집 대상 (또는 정책에 따라 스킵 할 수도 있음)
+        // 여기서는 일단 수집 시도 (히트맵 수집 과정에서 메타 없으면 어차피 실패할 수 있음)
+        return true;
+    }
+
+    // 1. 필수 확인: 게시 후 5일 경과 여부
+    if (!publishedAt) {
+        return false;
+    }
+
+    const pubDate = new Date(publishedAt);
+    const now = getKSTDate();
+    // diffTime을 ms 단위로 계산
+    const diffTime = Math.abs(now - pubDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // 올림 처리
+
+    if (diffDays < 5) {
+        // [중요] 5일 미만이라도 'new_video' 같은 즉시 수집 트리거가 있으면 수집해야 할 수도 있음.
+        // 하지만 04 스크립트 로직에 따르면 5일 미만은 무조건 false 입니다.
+        log('info', `[스킵] ${videoId}: 게시 후 5일 미만 (${diffDays}일)`);
+        return false;
+    }
+
+    // 이미 프레임이 추출된 상태인지 확인 (recollect_id 비교)
+    // 여기서는 frames 폴더 존재 여부로 1차 판단 가능
+    const framesDir = getFramesOutputDir(channelName, videoId, metaRecollectId);
+
+    // frames 폴더가 있고 비어있지 않다면 이미 수집된 것으로 간주
+    if (fs.existsSync(framesDir) && fs.readdirSync(framesDir).length > 0) {
+        // 메타의 recollect_id가 더 높아졌다면 재수집 필요
+        // 하지만 현 구조상 이전 recollect_id를 어디서 가져올지 애매하므로 (heatmap 파일 참조 필요)
+        const heatmapPath = getHeatmapOutputPath(channelName, videoId);
+        if (fs.existsSync(heatmapPath)) {
+            try {
+                const lines = fs.readFileSync(heatmapPath, 'utf-8').trim().split('\n');
+                if (lines.length > 0) {
+                    const lastLine = lines[lines.length - 1];
+                    const lastData = JSON.parse(lastLine);
+                    const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
+
+                    if (metaRecollectId > lastRecollectId) {
+                        const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
+                        const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
+
+                        if (shouldTrigger) {
+                            log('info', `[트리거] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
+                            return true;
+                        } else {
+                            log('info', `[스킵] ${videoId}: recollect_vars [${recollectVars.join(', ')}]는 히트맵 수집 대상 아님`);
+                            return false;
+                        }
+                    } else {
+                        // recollect_id가 같거나 작으면 이미 최신
+                        // log('info', `[스킵] ${videoId}: 이미 최신 버전 (RecollectID: ${metaRecollectId})`);
+                        return false;
+                    }
+                }
+            } catch (e) { }
+        }
+        // 히트맵 파일조차 없다면 수집 해야 함
+        return true;
+    }
+
+    return true;
 }
 
 // --- 데이터 수집 및 다운로드 로직 ---
@@ -607,11 +705,71 @@ async function main() {
 
         await processSingleVideo(videoId, params);
 
-    } else if (params.channel !== 'manual') {
-        log('warn', '채널 일괄 모드는 현재 지원하지 않음 (단일 URL 모드 사용 권장)');
     } else {
-        log('info', '사용법: node 05-extract-frames.js --url <YouTube_URL> ...');
+        // 자동 배치 수집 모드
+        log('info', `\n=== 자동 배치 수집 모드 시작 [채널: ${params.channel}] ===`);
+        await processBatch(params);
     }
+}
+
+async function processBatch(params) {
+    const { channel } = params;
+    const urlsPath = path.join(getChannelDir(channel), 'urls.txt');
+    const deletedPath = path.join(getChannelDir(channel), 'deleted_urls.txt');
+
+    if (!fs.existsSync(urlsPath)) {
+        log('error', `urls.txt를 찾을 수 없습니다: ${urlsPath}`);
+        return;
+    }
+
+    // 1. deleted_ids 로드
+    const deletedIds = new Set();
+    if (fs.existsSync(deletedPath)) {
+        try {
+            const lines = fs.readFileSync(deletedPath, 'utf8').split('\n');
+            for (const line of lines) {
+                const vid = extractVideoId(line);
+                if (vid) deletedIds.add(vid);
+            }
+        } catch (e) { log('warn', `deleted_urls.txt 로드 실패: ${e.message}`); }
+    }
+
+    const urls = fs.readFileSync(urlsPath, 'utf8')
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+    log('info', `총 ${urls.length}개 URL 발견`);
+
+    let processedCount = 0;
+    let skippedCount = 0;
+
+    for (const url of urls) {
+        const videoId = extractVideoId(url);
+        if (!videoId) continue;
+
+        if (deletedIds.has(videoId)) {
+            // log('info', `[스킵] ${videoId} (삭제된 영상)`);
+            skippedCount++;
+            continue;
+        }
+
+        if (shouldCollect(channel, videoId)) {
+            log('info', `\n--- [${processedCount + 1}] 처리 시작: ${videoId} ---`);
+            params.url = url; // 현재 URL 설정
+            await processSingleVideo(videoId, params);
+            processedCount++;
+
+            // IP 차단 방지 딜레이 (1 ~ 3초)
+            const delay = 1000 + Math.random() * 2000;
+            await new Promise(r => setTimeout(r, delay));
+        } else {
+            skippedCount++;
+            // log('info', `[스킵] ${videoId} (수집 조건 미달)`);
+        }
+    }
+
+    log('info', `=== 배치 작업 완료: 처리 ${processedCount}개, 스킵 ${skippedCount}개 ===`);
 }
 
 main().catch(e => console.error(e));
