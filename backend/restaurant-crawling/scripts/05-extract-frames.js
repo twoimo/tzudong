@@ -74,10 +74,10 @@ function getChannelDir(channelName) {
     return path.join(BASE_DATA_DIR, channelName);
 }
 
-// 프레임 저장 경로: channel/high_res_frames/videoId/recollectId/
+// 프레임 저장 경로: channel/frames/videoId/recollectId/
 function getFramesOutputDir(channelName, videoId, recollectId) {
     const rId = recollectId !== undefined && recollectId !== null ? recollectId.toString() : '0';
-    return path.join(getChannelDir(channelName), 'high_res_frames', videoId, rId);
+    return path.join(getChannelDir(channelName), 'frames', videoId, rId);
 }
 
 function getHeatmapOutputPath(channelName, videoId) {
@@ -385,7 +385,8 @@ async function downloadVideo(videoId, outputDir, quality) {
     }
 }
 
-async function extractFrames(videoPath, segments, outputBaseDir, fps, bufferSec, compress) {
+// [수정] quality 인자 추가
+async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, bufferSec, compress) {
     if (!fs.existsSync(videoPath)) return;
 
     let duration = 0;
@@ -409,11 +410,14 @@ async function extractFrames(videoPath, segments, outputBaseDir, fps, bufferSec,
 
         const segDirName = `${i + 1}_${Math.floor(startTime)}_${Math.floor(endTime)}`;
 
-        // 구조: high_res_frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/FORMAT_DIR/frame_x.ext
-        const segDirPath = path.join(outputBaseDir, segDirName, ext);
+        // 구조: frames/VIDEO_ID/RECOLLECT_ID/SEGMENT_DIR/FORMAT_DIR/QUALITY_FPS/frame_x.ext
+        const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
+        const configDirName = `${quality}_${fpsStr}fps`;
+
+        const segDirPath = path.join(outputBaseDir, segDirName, ext, configDirName);
         fs.mkdirSync(segDirPath, { recursive: true });
 
-        log('info', `   ✂️ 구간 추출 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 (Peak: ${seg.peakSec.toFixed(1)}s) -> ${segDirName}/${ext}`);
+        log('info', `   ✂️ 구간 추출 [${i + 1}/${segments.length}]: ${startTime.toFixed(1)}초 ~ ${endTime.toFixed(1)}초 (Peak: ${seg.peakSec.toFixed(1)}s) -> .../${ext}/${configDirName}`);
 
         let segDuration = endTime - startTime;
         if (segDuration < (1.0 / fps)) {
@@ -479,7 +483,7 @@ async function processSingleVideo(videoId, params) {
         // 3. 프레임 추출
         const recollectId = getMetaRecollectId(channel, videoId);
         const outputDir = getFramesOutputDir(channel, videoId, recollectId);
-        await extractFrames(videoPath, segments, outputDir, fps, buffer, compress);
+        await extractFrames(videoPath, segments, outputDir, quality, fps, buffer, compress);
 
     } catch (e) {
         log('error', `오류 발생: ${e.message}`);
