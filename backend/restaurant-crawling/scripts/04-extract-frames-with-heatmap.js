@@ -28,6 +28,11 @@ import { fileURLToPath } from 'url';
 import { exec } from 'child_process';
 import util from 'util';
 import https from 'https';
+// [추가] 정적 빌드 FFmpeg/FFprobe 경로 로드
+import ffmpegStatic from 'ffmpeg-static';
+import ffprobeStatic from 'ffprobe-static';
+const ffmpegPath = ffmpegStatic;
+const ffprobePath = ffprobeStatic.path;
 
 const execPromise = util.promisify(exec);
 const __filename = fileURLToPath(import.meta.url);
@@ -490,7 +495,9 @@ async function downloadVideo(videoId, outputDir, quality) {
     }
 
     // --merge-output-format 제거: 원본 컨테이너 그대로 저장
-    const cmd = `python -m yt_dlp ${cookieArg} --js-runtimes "node:${nodePath}" --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
+    // [수정] 시스템 python 대신 Anaconda python 명시적 사용 (yt-dlp 모듈 보유)
+    const pythonPath = "C:\\Users\\twoimo\\anaconda3\\python.exe";
+    const cmd = `"${pythonPath}" -m yt_dlp ${cookieArg} --js-runtimes "node:${nodePath}" --remote-components ejs:github --no-part -f "${format}" -o "${outputFileTemplate}" "https://www.youtube.com/watch?v=${videoId}"`;
 
     const maxRetries = 3;
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -539,7 +546,7 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
 
     let duration = 0;
     try {
-        const { stdout } = await execPromise(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`);
+        const { stdout } = await execPromise(`"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${videoPath}"`);
         duration = parseFloat(stdout);
         log('info', `🎞️ 영상 길이 확인: ${duration}초`);
     } catch (e) {
@@ -590,7 +597,8 @@ async function extractFrames(videoPath, segments, outputBaseDir, quality, fps, b
         }
 
         // ffmpeg 명령 생성 (인코딩 옵션 추가)
-        const cmd = `ffmpeg -y -ss ${startTime} -t ${segDuration} -i "${videoPath}" -vf "fps=${fps}" ${encodingOpts} -frame_pts 1 "${path.join(segDirPath, `frame_%d.${ext}`)}"`;
+        // [수정] 정적 ffmpeg 경로 사용
+        const cmd = `"${ffmpegPath}" -y -ss ${startTime} -t ${segDuration} -i "${videoPath}" -vf "fps=${fps}" ${encodingOpts} -frame_pts 1 "${path.join(segDirPath, `frame_%d.${ext}`)}"`;
 
         try {
             await execPromise(cmd);
