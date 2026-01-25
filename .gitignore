@@ -15,6 +15,4 @@ venv/
 # Large backup files
 supabase/backup_db/*.sql
 backend/backups/*.dump
-
-# 캐시 삭제
-backend/restaurant-crawling/data/video_cache/*
+backend/restaurant-crawling/data/*

@@ -182,8 +182,9 @@ function getMetaInfo(channelName, videoId) {
     return null;
 }
 
-// [수정] ignoreExisting 파라미터 추가
-function shouldCollect(channelName, videoId, ignoreExisting = false) {
+// [수정] params 객체를 통해 quality, fps 등 상세 조건 확인
+function shouldCollect(channelName, videoId, params) {
+    const { force: ignoreExisting, quality, fps, ext } = params;
     const metaInfo = getMetaInfo(channelName, videoId);
     let metaRecollectId = -1;
     let recollectVars = [];
@@ -229,46 +230,92 @@ function shouldCollect(channelName, videoId, ignoreExisting = false) {
         return true;
     }
 
+
+
     // 이미 프레임이 추출된 상태인지 확인 (recollect_id 비교)
-    // 여기서는 frames 폴더 존재 여부로 1차 판단 가능
     const framesDir = getFramesOutputDir(channelName, videoId, metaRecollectId);
 
-    // frames 폴더가 있고 비어있지 않다면 이미 수집된 것으로 간주
-    if (fs.existsSync(framesDir) && fs.readdirSync(framesDir).length > 0) {
-        // 메타의 recollect_id가 더 높아졌다면 재수집 필요
-        // 하지만 현 구조상 이전 recollect_id를 어디서 가져올지 애매하므로 (heatmap 파일 참조 필요)
-        const heatmapPath = getHeatmapOutputPath(channelName, videoId);
-        if (fs.existsSync(heatmapPath)) {
-            try {
-                const lines = fs.readFileSync(heatmapPath, 'utf-8').trim().split('\n');
-                if (lines.length > 0) {
-                    const lastLine = lines[lines.length - 1];
-                    const lastData = JSON.parse(lastLine);
-                    const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
+    // frames 폴더 확인
+    if (fs.existsSync(framesDir)) {
+        // [수정] 단순히 폴더가 있는지가 아니라, 요청한 설정(Quality/FPS)의 데이터가 있는지 확인해야 함
+        // 구조: frames/VID/RID/SEG/EXT/CONF
+        // 예: 1/jpg/360p_1.0fps
 
-                    if (metaRecollectId > lastRecollectId) {
-                        const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
-                        const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
+        // 세그먼트 폴더들을 순회
+        try {
+            const segDirs = fs.readdirSync(framesDir).filter(f => !f.startsWith('.')); // 숨김파일 제외
+            if (segDirs.length > 0) {
+                // 하나라도 세그먼트 폴더가 있다면 체크 시작
+                const fpsStr = Number.isInteger(fps) ? `${fps}.0` : `${fps}`;
 
-                        if (shouldTrigger) {
-                            log('info', `[트리거] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
-                            return true;
-                        } else {
-                            log('info', `[스킵] ${videoId}: recollect_vars [${recollectVars.join(', ')}]는 히트맵 수집 대상 아님`);
-                            return false;
+                // 요청된 화질/포맷 중 하나라도 없으면 수집 대상 (False 반환 -> True 반환해야 함)
+                // 모든 요청 포맷이 존재해야 "이미 수집됨"으로 간주
+                const qualities = Array.isArray(quality) ? quality : [quality];
+                const extensions = Array.isArray(ext) ? ext : [ext];
+
+                let isFullyCollected = true;
+
+                for (const q of qualities) {
+                    const configDirName = `${q}_${fpsStr}fps`;
+
+                    for (const e of extensions) {
+                        // 모든 세그먼트에 대해 해당 설정이 존재하는지 확인
+                        // (세그먼트 개수가 몇 개인지는 히트맵 까봐야 알지만, 여기선 존재하는 세그먼트 폴더 기준)
+                        // 적어도 존재하는 세그먼트 폴더들에는 다 있어야 함.
+                        const missingInSegments = segDirs.some(sd => {
+                            const targetPath = path.join(framesDir, sd, e, configDirName);
+                            // 폴더가 없거나 비어있으면 누락된 것
+                            return !fs.existsSync(targetPath) || fs.readdirSync(targetPath).length === 0;
+                        });
+
+                        if (missingInSegments) {
+                            log('info', `[체크] ${videoId}: ${configDirName} (${e}) 데이터 누락 확인 -> 수집 필요`);
+                            isFullyCollected = false;
+                            break;
                         }
-                    } else {
-                        // recollect_id가 같거나 작으면 이미 최신
-                        // log('info', `[스킵] ${videoId}: 이미 최신 버전 (RecollectID: ${metaRecollectId})`);
-                        return false;
                     }
+                    if (!isFullyCollected) break;
                 }
-            } catch (e) { }
+
+                if (isFullyCollected) {
+                    // 데이터는 다 있음. 이제 트리거 체크 (recollect_id 증가 여부 등)
+                    // 하지만 recollect_id가 같은데 데이터가 다 있다면 -> 진짜 다 있는 것.
+                    // 메타 recollect_id가 더 높은지 체크
+                    const heatmapPath = getHeatmapOutputPath(channelName, videoId);
+                    if (fs.existsSync(heatmapPath)) {
+                        try {
+                            const lines = fs.readFileSync(heatmapPath, 'utf-8').trim().split('\n');
+                            if (lines.length > 0) {
+                                const lastLine = lines[lines.length - 1];
+                                const lastData = JSON.parse(lastLine);
+                                const lastRecollectId = lastData.recollect_id !== undefined ? lastData.recollect_id : -1;
+
+                                if (metaRecollectId > lastRecollectId) {
+                                    // ... 트리거 로직 ...
+                                    const TRIGGER_VARS = ['new_video', 'duration_changed', 'scheduled_weekly', 'scheduled_biweekly', 'scheduled_monthly', 'viral_growth'];
+                                    const shouldTrigger = recollectVars.some(variable => TRIGGER_VARS.includes(variable));
+                                    if (shouldTrigger) {
+                                        log('info', `[트리거] ${videoId}: 트리거 변수 발견 [${recollectVars.join(', ')}]`);
+                                        return true;
+                                    }
+                                }
+                            }
+                        } catch (e) { }
+                    }
+                    // 데이터도 있고 트리거도 없으면 스킵
+                    // log('info', `[스킵] ${videoId}: 이미 최신 데이터 보유 (${qualities.join(', ')})`);
+                    return false;
+                }
+
+                // isFullyCollected가 false면 수집해야 함
+                return true;
+            }
+        } catch (e) {
+            log('warn', `프레임 폴더 체크 중 오류 ${videoId}: ${e.message}`);
         }
-        // 히트맵 파일조차 없다면 수집 해야 함
-        return true;
     }
 
+    // 폴더가 없거나 비어있으면 수집 필요
     return true;
 }
 
@@ -843,7 +890,7 @@ async function processBatch(params) {
             continue;
         }
 
-        if (shouldCollect(channel, videoId, params.force)) { // [수정] force 플래그 전달
+        if (shouldCollect(channel, videoId, params)) { // [수정] params 객체 전달
             log('info', `\n--- [${processedCount + 1}] 처리 시작: ${videoId} ---`);
             params.url = url; // 현재 URL 설정
             await processSingleVideo(videoId, params);
